@@ -656,8 +656,13 @@ effect or statement joins its guarded ones, or when its guard is a constant
   fires only when the resolved dependencies of the expectation intersect the
   names in the subject.
 - `BROAD_EXCEPT_ADDED` is treated as an **oracle** rule when it lands in a
-  test-role file: a broad `except` around an assertion is tampering there,
-  whatever it means in production code.
+  file the test rules judge (§2) or in a `conftest.py`: a broad `except`
+  around an assertion is tampering there, whatever it means in production
+  code. It has no unit, so a sibling test's evidence never reaches it, and its
+  only repair evidence is an opaque production change (§5 clause 3). In a
+  Python test file or conftest it refuses that too (#419), so there it
+  escalates to high unless an exemption covers it. In a JS/TS test the opaque
+  change still holds it at warn (THREATMODEL 131).
 
 ## 4b. Artifacts are never evidence
 
@@ -687,9 +692,9 @@ From a subdirectory (§9), the task path is mapped lexically: `--task` is taken 
 
 | id | condition | effect |
 |---|---|---|
-| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below); a blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` instead (§4) | warn → high |
+| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) that no de-escalator below holds. The id stays E1, and the label says why it applies: a blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` (§4); otherwise a finding that may not take the diff's opaque production change (clause 3 below) is labelled `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` (#419); every other such finding is labelled `NO_PROD_CHANGE_IN_DIFF` | warn → high |
 | E2 `ORACLE_FREEZE` | contract declares `oracle_freeze: true` | warn → high |
-| E3 `HARDCODE_FINGERPRINT` | `EXPECTED_VALUE_HARDCODED` hit | → high |
+| E3 `HARDCODE_FINGERPRINT` | **Retired** (#419, D-141). Nothing implements it: `EXPECTED_VALUE_HARDCODED` is an oracle rule and goes through E1 and D1 like the others (`gating.py` `ORACLE_RULES`; `expected_hardcoded_pos` pins warn with `REPAIR_EVIDENCE`) | none |
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |
 | E5 `HIDDEN_CONTROL_CHARS` | `HIDDEN_UNICODE` hit | → high |
 | E6 `CI_TEST_COMMAND_WEAKENED` | CI diff weakens the test command as defined in §4 `CI_WORKFLOW_TOUCHED` | → high |
@@ -739,21 +744,45 @@ finding stays in the report (D10, like D2, at `info`; the rest at `warn`),
 visible and allowlistable.
 
 **Repair evidence** answers one question — is there a production change that
-plausibly explains editing *this* test? E1 and D1 are the two sides of it, so
-exactly one of them applies to every oracle finding. Evidence exists when:
+plausibly explains editing *this* test? E1 and D1 are the two sides of it: D1
+holds an oracle finding that has evidence, and E1 escalates one that has none
+and that no other de-escalator holds. Evidence exists when:
 
-1. a symbol the test calls changed behaviour (AST fingerprint of that symbol,
-   docstrings stripped), or
+1. the normalized AST fingerprint of a symbol the test calls changed, which is
+   not a behaviour change: docstrings are stripped, and
+   `_normalize_for_fingerprint` drops annotations, non-leading string
+   statements, value-less annotated assignments and function-local dead
+   literal bindings. Any other edit counts, an alpha-rename, `+ 0`, a
+   single-use temporary or a dead branch included (THREATMODEL 93, #419), or
 2. a symbol the test calls itself calls a changed symbol (one hop — a test
    going through `format_invoice` is legitimately updated when the
    `compute_total` it calls changes), or
-3. the diff **changes** a prod file greenwash cannot analyse (non-Python,
-   deleted, or unparseable) — conservative, see THREATMODEL #4. A file the
+3. the diff **modifies** an existing production file checkwash cannot
+   analyse: code in another language, a template, a data file, or Python that
+   did not parse at base — conservative, see THREATMODEL #4. The inert files
+   (`roles.py`: type stubs, docs-site config, repo metadata), generated
+   artifacts (§4b), files beneath a test-support directory and files whose
+   content runs a test runner (§2) are not such files. A deletion does not
+   count, and neither does unparseability the diff causes: a production `.py`
+   that parsed at base and does not parse at head is reported unparseable
+   instead (THREATMODEL 78, 80). A path renamed onto production from one that
+   was not production is not pre-existing production (row 79). A file the
    diff *adds* does not count: it cannot be the repair of behaviour that
    predates it, and a genuinely new implementation arrives with the Python
    that reaches it. Told to defeat this tool and handed its source, an agent
    wrote a three-line json file nothing imports, purely to satisfy this
    clause (row 73).
+   This clause is not evidence for `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
+   `TEST_DISABLED`, `TOLERANCE_LOOSENED` or `BROAD_EXCEPT_ADDED` when the
+   finding's file is a Python file the test rules judge (§2) or a
+   `conftest.py` (#419). Python test code reaches its subject through Python,
+   which clauses 1 and 2 read. Every other oracle finding still takes it:
+   findings in JS/TS test files, whose production code checkwash does not
+   parse, until the JS/TS history replay (#212) prices the change
+   (THREATMODEL 131); and, in every language, the expectation family
+   (`EXPECTED_VALUE_*`, `EXPECTATION_DEFINITION_CHANGED`, `SUBJECT_*`),
+   `ASSERT_SUBSTITUTED`, `TEST_PATCHES_SUBJECT` and `CONFTEST_PATCHES_PROD`
+   (THREATMODEL 130).
 
 `EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
 (`PACKAGE_REPAIR`): the test file imports a package in which the diff changed

@@ -10531,6 +10531,255 @@ The agent wrote this entry in the release PR, beside D-131 to D-139. All of
 those but D-134 come from drafts the maintainer approved on 2026-10-15
 (「照草稿全部核准」); the maintainer approves D-134 and this entry there.
 
+## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
+
+Oracle findings start at warn. E1 raises one to high only when it has neither
+repair evidence nor a compensation. #419 showed that the evidence could be
+bought with a no-op edit:
+- **Route A:** any AST edit to a function the test calls that the fingerprint
+  normalisation keeps (`+ 0`, a temporary, a dead branch, a rename).
+- **Route B:** a byte change to an existing production file the engine does
+  not parse (a template, C or Rust source, a data file, a shell script that
+  runs no tests, any JS/TS module). It sets `prod_opaque_change`, which gave
+  evidence to every oracle finding in the diff except an unguarded suite
+  control (D-028; `gating.py:280-289`, `306-307` at 2c15f2d).
+
+Either route held a weakened, removed or skipped assertion at warn, so it
+passed at the default `fail_on = "high"`. SPEC §5 also listed an E3 that no
+code implements (`gating.py:47-50`).
+
+**Rulings** (owner, 2026-10-14, 「P1 全部照建議」; #419 issuecomment-6170353038):
+- **419.Q1 (b).** `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
+  `TOLERANCE_LOOSENED` and `BROAD_EXCEPT_ADDED` refuse opaque-change evidence
+  in Python test and conftest files. JS/TS tests keep it until #212 prices
+  the change; the expectation family, `ASSERT_SUBSTITUTED` and `*_PATCHES_*`
+  keep it in every language. Symbol evidence and compensations do not change.
+  If (b) exceeds the Q6 line, the round stops and (d) comes back for a ruling.
+- **419.Q2 (a).** Symbol evidence is unchanged. A report-only counterfactual
+  arm counts the blocks (b) and (c) would add.
+- **419.Q3 (b).** No new identity folds. Row 93 widens to any AST edit the
+  normalisation keeps, within one hop (direct calls only for `TEST_DISABLED`),
+  plus #420's hop once it lands. Row 4 stays a closure claim and sends kept
+  in-symbol edits to row 93. SPEC §5 clause 1 says the normalized fingerprint
+  changed, which is not a behaviour change, and the E3 row is marked retired.
+- **419.Q4 (a).** README "Know the limits" and docs/enterprise.md name
+  `gate.fail_on = "warn"` and a base-side `--task` contract with
+  `oracle_freeze: true`, with each option's measured cost from this round's
+  sweep. The text ships with or after #421's fix, not in this round's PR.
+- **419.Q5 (b).** A refused opaque change keeps the E1 id and prints
+  `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. An unguarded suite control keeps
+  `COLLECTION_CONTROL_UNEXPLAINED`; `NO_PROD_CHANGE_IN_DIFF` is unchanged
+  otherwise. "Unread" stays #448's word.
+- **419.Q6 (a).** The acceptance line below, pre-registered before any
+  engine runs.
+- **419.Q7 (a).** Snapshot suppression is a THREATMODEL residual (row 132),
+  including that any new `.py` file buys it, and a follow-up issue is filed
+  (#463).
+- **419.Q8 (a).** `ASSERT_SUBSTITUTED` and `*_PATCHES_*` stay out of this
+  round. They are named as residuals (row 130) and get report-only
+  counterfactual arms.
+
+Rule 2: the expectation changes named in the recommendation are approved
+exactly as described; anything else that moves stops and asks. The round
+lands after #447 and #448, both merged.
+
+**Second ruling** (owner, 2026-10-16, 「照建議a」; issuecomment-6209791221,
+after the implementation stop issuecomment-6209672882). Two #448 rows that
+the first ruling's analysis base predates move the same way as the seven
+re-pins: `data_read` and `data_edited_at_the_limit` in
+`tests/test_issue415_oversized_sources.py` keep their inputs and block with
+`OPAQUE_PROD_CHANGE_NOT_EVIDENCE`; their block-side assertions accept that
+label as well as `NO_PROD_CHANGE_IN_DIFF`; each gets an expectation-family
+sibling that keeps `REPAIR_EVIDENCE` at warn. The new block for an
+`except`-guarded (non-import) conftest control is the literal effect of
+Q1 (b), needs no rule-2 approval, and is pinned by a new `_pos` fixture.
+
+**The split, as implemented.** `gating.py` is the escalation policy, so this
+is frozen-zone code approved by the maintainer, as in D-048.
+`OPAQUE_REFUSED_RULES` holds the five rules. A finding whose rule is one of
+them, whose file is Python (`FileIR.language`), and which is judged a test
+or has role `conftest` (the set that makes `BROAD_EXCEPT_ADDED` an oracle
+rule) does not take `prod_opaque_change` as evidence: with a unit, through
+`_repair_evidence(opaque=False)`; without one, through
+`_file_repair_evidence(opaque=False)`. Every symbol route, compensation and
+`MILD_WEAKENING` is computed as before, and a refused finding now reaches
+them. If it then reaches E1 in a diff with the flag, it prints
+`OPAQUE_PROD_CHANGE_NOT_EVIDENCE`, after the unguarded-suite-control label
+and before `NO_PROD_CHANGE_IN_DIFF`. `PACKAGE_REPAIR` and `DEPENDENCY_DRIFT`
+never applied to these five rules. E2 is unchanged. The flag stays a
+diff-level fact in the IR.
+
+**Why the split falls there.** Python test code reaches its subject through
+Python, and checkwash reads Python production changes as symbol evidence. An
+opaque edit beside a weakened Python oracle explains it only when a called
+Python symbol also changed, and clauses 1 and 2 already credit that case.
+JS/TS production code is never parsed, so opaque evidence is the only
+evidence a JS/TS test can earn; refusing it there would block every honest JS
+assertion change beside a production edit, at a cost no corpus has priced
+(#212). Removing a credit creates no bypass.
+
+The gain is narrower than it looks, and the documents say so. An informed
+agent reaches the same result at the same cost through a rule that keeps the
+credit (row 130) or through Route A (row 93). What (b) reliably catches is an
+agent that weakens a Python test beside a template, JS or native edit it was
+making anyway, and a broad except added around an assertion, which has no
+unit and could only take Route B.
+
+**Refused: identity folds (Q3).** Folding `+ 0`, `* 1`, `- 0`, single-use
+temporaries and constant-false branches in `_normalize_for_fingerprint` was
+considered and refused. No fold list closes the class: `* 1.0`,
+`x if x else x`, a no-op call or a rename buys the evidence again. Some folds
+are wrong in Python: `True + 0` is `1` and `'a' + 0` raises, so folding `+ 0`
+can deny evidence for a real change, and `if False: x = 1` makes `x` local to
+the function. A published fold list is chosen by the attacker, as the decline
+set D-029 threw away was. The residual is described instead (THREATMODEL 93).
+
+**The E3 correction.** SPEC §5 listed E3 `HARDCODE_FINGERPRINT` as an
+unconditional escalation for `EXPECTED_VALUE_HARDCODED`. No code implements
+it: the rule is in `ORACLE_RULES` and goes through E1 and D1
+(`gating.py:47-50`), and `expected_hardcoded_pos` pins it at warn with
+`REPAIR_EVIDENCE`. The row is marked retired. Like D-047, the text follows
+the code and the fixture, and no behaviour changes.
+
+**Moves and renames (rule 2, as ruled).** Seven cases move from
+`ASSERT_WEAKENED` warn to high with `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. Each
+moves to a `_pos` successor with byte-identical inputs. The old `_neg` name
+is reused by an expectation-family sibling, an `EXPECTED_VALUE_CHANGED`
+beside the same opaque file at warn with `REPAIR_EVIDENCE`, which keeps
+"opaque still counts" pinned and keeps references such as THREATMODEL row
+68's true:
+- `c_extension_still_opaque_neg` → `c_extension_still_opaque_pos` (`src/app/_speedups.c`);
+- `build_makefile_stays_prod_neg` → `build_makefile_stays_prod_pos` (a `Makefile` that builds);
+- `deploy_script_still_opaque_neg` → `deploy_script_still_opaque_pos` (`scripts/deploy.sh`);
+- `unparseable_prod_still_opaque_neg` → `unparseable_prod_still_opaque_pos` (`src/app/native.py`, unparseable on both sides);
+- `runner_opaque_native_neg` → `runner_opaque_native_pos` (`src/core.rs`);
+- `runner_build_makefile_neg` → `runner_build_makefile_pos` (a `Makefile` that builds);
+- `runner_one_hop_build_neg` → `runner_one_hop_build_pos` (`scripts/ci.sh` calling `scripts/compile.sh`).
+
+The last two keep their "not ci" discrimination: the exact-count match still
+forbids a `CI_WORKFLOW_TOUCHED` finding, in the successor and in the sibling.
+Two cases stay at warn, and their de-escalator changes from `REPAIR_EVIDENCE`
+to `COMPAT_GATE`: `conftest_hook_guard_opaque_prod_neg` and
+`tests/test_issue208_209_suite_guards.py::test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one`
+(name kept). The two #448 rows move as the second ruling says; the CLI test
+checks the row's reason by membership, as main did, and the engine test
+exactly, as main did. Eleven moves in all. In the previous-release verdict
+gate a move toward block is listed and does not fail; only the maintainer
+removes a stale acceptance entry.
+
+**This amends the reading of 209.Q4 (D-088) for opaque evidence.** 209.Q4
+holds as written: an unguarded suite control is never de-escalated by repair
+evidence. The reading "only an unguarded control refuses repair evidence"
+(conftest_hook_guard_opaque_prod_neg, THREATMODEL rows 72 and 116,
+`test_issue208_209_suite_guards.py`) no longer covers opaque evidence. A
+conftest `<suite>` unit calls nothing, so its only evidence was the opaque
+blanket (D-066). Since this round every `TEST_DISABLED` in a Python conftest
+refuses it, guarded or not, so a guarded control is held by its own D6
+`COMPAT_GATE` or not at all:
+- A guarded collection control earns `COMPAT_GATE` on its guard alone
+  (D-028, 209.Q1): an `if` guard that can be false, or the import gate, a
+  `try` body of plain imports (`import X` or `from X import ...`) under
+  `except ImportError` or `except ModuleNotFoundError`, which the frontend
+  records as `find_spec("X") is None` (`_handler_guard`, `_IMPORT_ERRORS`;
+  THREATMODEL 83). Its verdict does not change.
+- Any other `except` guard is recorded as the exception text, which is no
+  condition D6 can read. `guard_can_be_false` still counts it, so the control
+  is not a suite control, and `compat_gate_for` grants nothing. Beside an
+  opaque edit it moves from warn (`REPAIR_EVIDENCE`) to high, labelled
+  `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. This is the literal effect of Q1 (b)
+  (second ruling), a newly blocking shape for the release notes, pinned by
+  `opaque_refused_conftest_except_guard_pos`.
+- A runtime control (`conftest.runtime.*`: #84's hooks, #422's exit status,
+  #432's swaps, a fixture whose setup always skips) does not move. Its marker
+  carries no guard: a hook's condition is hashed into its name (SPEC §2b;
+  432.Q5). So it is unguarded, refused all repair evidence before this round,
+  and still is. A fixture that skips only under a condition is no suite
+  control: it is judged on the test units that request it (#351), as in the
+  first bullet's general shape.
+
+**D-028's caution.** D-028 re-swept 1,800 commits with the whole blanket
+disabled: 35 blocks before, 35 after. It warned that these were six
+pure-Python projects, and that "a repository with a C extension or a template
+engine is exactly where it would start doing work". This round answers in
+three parts. First, the refusal is narrower than D-028's experiment: five
+rules, only in Python tests and conftests. A native or template change still
+explains an expectation rewrite, a substituted assertion, a stand-in, and
+anything in a JS/TS test. Second, for those five rules the work D-028
+foresaw is exactly the case this round blocks: a Python assertion weakened,
+removed, skipped or loosened, or a broad except added, beside a native or
+template edit, with no called Python symbol changed. The likely honest blocks
+are a tolerance loosened beside a native numeric change, a test deleted
+together with a native feature (D8 reads only Python symbols), and an
+assertion removed beside a template change. Third, the price is measured
+where D-028 said it would be, before release: the pre-registered polyglot arm
+holds C-extension, Cython, Rust and template-heavy repositories, under its
+own line. Exceeding it stops the round and brings fallback (d) back for a
+ruling. D-028's 35→35 is the prediction for the pure-Python arms, not
+evidence for the polyglot one.
+
+**Pre-registered line (419.Q6).** checkwash-lab commit
+`8e291a4a90818d90b19017f27562ae1a5f3a9157`, branch
+`prep/acceptance-sweep-419-20261016`, file
+`workloads/acceptance_sweep/preregistration-419.md`, sha256
+`70562cd7c7055ae738f2a3b39f29d71fc6d01df51f00390527ff5f86047263be`,
+published before any engine run and still DRAFT for the owner's approval.
+Correction C1 (owner, 2026-10-16; lab commit `1309456`, sha256
+`f1b7ed40f7c765a1c9944462169c5050295d901ca6f0c80b72fbae42438221ae`): the PR
+merges on green CI under the delegation, the sweep runs before the next
+release, and a stop blocks that release; `main` is then the first parent of
+the PR's merge commit.
+Arms 1-5 compare the candidate with `main`, and arm 7 compares it with
+report-only variants. They run on the EC pool, or on LAPTOP-01AGNPJU under EC
+POLICY `checkwash-pju-sweep` (T-546), never on LAPTOP-16NUA5I8:
+1. `standard` (1,800: attrs, click, flask, httpx, rich, starlette): any
+   verdict move stops the round.
+2. `d088` (1,263: D-088's 895 plus pytest's 368), unfiltered: any verdict
+   move stops the round.
+3. `opaque419` (the eleven `d088` histories through the shared filter, size
+   N3 recorded at selection): predicted 0 as ruled; any verdict move stops
+   the round.
+4. `polyglot419` (pydantic, cryptography, markupsafe, msgpack-python, pyyaml,
+   uvloop, pandas, django at recorded heads; K = 150 filtered commits within
+   S = 3,000 per repository, both proposed and open to the owner before
+   selection): more than 5 new blocks adjudicated false stops the round and
+   brings (d) back; more than 5 false plus unclear stops it for the owner;
+   two raters each; any other outcome move stops the round.
+5. `javascript` (#212's 1,800): any verdict move stops the round.
+6. Gates: the PR's CI, with only the eleven authorised moves; any red leg or
+   natural-arm block stops the round.
+7. Report-only: Q2 (b) and (c), Q8 for `ASSERT_SUBSTITUTED` and for
+   `*_PATCHES_*`, and Q4's `fail_on = "warn"` and `oracle_freeze: true`.
+
+**Residuals.** Row 93: Route A. Row 130: Route B for the expectation family,
+`ASSERT_SUBSTITUTED` and `*_PATCHES_*`. Row 131: Route B for JS/TS tests,
+pending #212. Row 132: snapshot suppression, including a new `.py` module
+(#463). If fallback (d) is ever ruled, Route B through native files remains
+in repositories that have them. The documents say plainly that (b) catches
+incidental co-changes, not an agent that has read this rule.
+
+**Contracts.** No fingerprint moves: severity and escalators are outside
+`make_fingerprint` (`findings.py:127-131`). No `FINDINGS_VERSION` or
+`IR_VERSION` bump: the label is a new value in the existing `escalators`
+list, as `COLLECTION_CONTROL_UNEXPLAINED` was (D-066). It is a behaviour
+change that newly blocks, so it ships in a minor release whose notes name the
+newly blocking shapes: a weakening-class finding in a Python test or conftest
+beside a modified production file checkwash cannot read, with no symbol
+evidence, compensation or `MILD_WEAKENING`; and a conftest control guarded
+only by an `except` clause D6 cannot read, beside such a file.
+
+**Tests and fixtures.** Seventeen new `.gwcase` files: the seven successors,
+five `opaque_refused_*` Route B cases, `opaque_refused_conftest_except_guard_pos`,
+two residual pins (`opaque_residual_js_assert_weakened_template_neg`,
+`opaque_residual_assert_substituted_template_neg`) and two Route A pins
+(`route_a_assert_weakened_plus_zero_neg`, `route_a_skip_marker_plus_zero_neg`).
+`tests/test_issue419_opaque_refusal.py` (6) and the two #415 siblings. None
+carries a `bypass:` line. Documented count 18394 → 18419.
+
+**Sweep.** NOT_RUN: work-machine rule (POLICY work-machine-local). No arm has
+run, and no number in this entry was measured in this round. The results and
+every new block's adjudication are recorded in this entry when the sweep has
+run.
+
 ## D-142 (2026-10-16): the Claude Code Stop hook reads its window from the session's start (#418)
 
 Ruling 418 (owner, 2026-10-14, 「P1 全部照建議」) answered its seven questions
