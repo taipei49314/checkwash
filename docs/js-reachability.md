@@ -61,7 +61,10 @@ TAUTOLOGY, as `assert f(x) == f(x)` is in Python (THREATMODEL row 10):
   and formatting are taken out of each, and the outer no-op arithmetic Python
   strips: `x + 0`, `0 + x`, `x - 0`, `x * 1`, `1 * x` and `x / 1`, again and
   again (`(x + 0) * 1`). Only the outermost operation is stripped, as in
-  Python: `a + b * 1` keeps its `* 1`, and `x + -0` its `-0`.
+  Python: `a + b * 1` keeps its `* 1`, and `x + -0` its `-0`. The stripping
+  is Python's reading, not an evaluation: `x + 0` reads as `x` although
+  JavaScript makes `-0 + 0` positive zero, which `toBe` tells apart, and
+  `"a" + 0` a string.
 - Nothing is evaluated. The subject may be any expression:
   `expect(total).toBe(total)` where `total` is awaited, a parameter, a
   property or a destructured name, and `expect(f(x)).toBe(f( x ))`.
@@ -106,6 +109,14 @@ does not change.
 - Spellings that evaluate alike but read differently: `a.b` and `a["b"]`,
   the comma operator `(x, x)`, TypeScript's angle-bracket assertion
   `<number>x`, and arithmetic Python does not strip.
+- A property's value compared with that property
+  (`expect(order).to.have.property("total", order.total)`,
+  `assert.propertyVal(order, "total", order.total)`) is no self-comparison:
+  it still asserts that the property is there.
+- A negated self-comparison records `positive=True`, as `x != x` does in
+  Python, so paired with a negated check of a value
+  (`.not.toBe(5)` -> `.not.toBe(x)`, or back) it reads as a change of form
+  and polarity.
 - An operand that is not a literal makes the assertion a real one, even where
   its outcome is decided: `expect(1).toBeCloseTo(1, places)`,
   `expect(1).to.be.within(0, limit)`, `expect(1).toEqual(expect.anything())`.
