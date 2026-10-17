@@ -14,6 +14,11 @@ An operand that is not a literal is still recorded by its text
 (`operand_text`), and the names it reads (`operand_names`), so that two
 spellings of one operand compare as the same and a name replaced by another
 one can be told apart (#198).
+
+Whether an operand is a literal at all, containers included, and whether two
+operands spell one expression are read too (`literal_operand`,
+`same_operand`): an assertion either makes true can never fail (#429). They
+read the text only and record no value.
 """
 
 from __future__ import annotations
@@ -679,3 +684,450 @@ def operand_names(source: str) -> tuple[str, ...]:
         if match.group() not in _KEYWORDS:
             names.add(match.group())
     return tuple(sorted(names))
+
+
+# Assertions that can never fail (#429). SPEC §3 puts an assertion whose
+# operands are all literals, and an equality whose two sides are one
+# expression, on the TAUTOLOGY rung. These read that from the operands' text;
+# nothing is evaluated, and a name is never a literal: what it holds is the
+# binding scan's question.
+_NUMBER_LITERAL = re.compile(
+    r"(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+"
+    r"|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9][0-9_]*)(?:[eE][+-]?[0-9][0-9_]*)?)n?"
+)
+_TEMPLATE_LITERAL = re.compile(r"`(?:\\[\s\S]|\$(?!\{)|[^`\\$])*`")
+_REGEX_LITERAL = re.compile(r"/(?![*/])(?:\\.|\[(?:\\.|[^\]\\\r\n])*\]|[^/\\\[\r\n])+/[A-Za-z]*")
+_LITERAL_DEPTH = 8
+_OPERAND_PUNCTUATORS = sorted((
+    ">>>=", "...", "===", "!==", "**=", "<<=", ">>=", ">>>", "&&=", "||=", "??=", "=>", "==", "!=",
+    "<=", ">=", "&&", "||", "??", "?.", "**", "++", "--", "<<", ">>", "+=", "-=", "*=", "/=", "%=",
+    "&=", "|=", "^=", "{", "}", "(", ")", "[", "]", ";", ",", "<", ">", "+", "-", "*", "/", "%", "&",
+    "|", "^", "!", "~", "?", ":", "=", ".", "@", "#",
+), key=len, reverse=True)
+# Words after which a `/` starts a regular expression: they leave an operand to come.
+_OPERAND_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "in", "instanceof", "of",
+                                   "yield", "return", "throw", "case", "do", "else"})
+# A cast these readers take out: to one named type (`as number`, `as const`, `as Foo.Bar[]`).
+_SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*\s*\Z")
+# JavaScript's line terminators: a `//` comment ends at the first of them.
+_LINE_TERMINATOR = re.compile("[\n\r\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
+# Statement heads whose `)` a regular expression may follow: `if (ok) /a/.test(s)`.
+_STATEMENT_HEADS = frozenset({"if", "while", "for", "with"})
+# The one named type a cast inside an operand names: `as number`, `as Foo.Bar[]`.
+_ONE_TYPE = re.compile(r"\s+[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*")
+
+
+def _string_end(source: str, start: int) -> int | None:
+    """The index after the quoted string opening at `start`, or None when it does not close on its line."""
+    quote, i = source[start], start + 1
+    while i < len(source):
+        if source[i] == "\\":
+            i += 2
+        elif source[i] == quote:
+            return i + 1
+        elif source[i] in "\r\n":
+            return None
+        else:
+            i += 1
+    return None
+
+
+def _template_end(source: str, start: int, depth: int = 0) -> int | None:
+    """The index after the template opening at `start`, its `${...}` substitutions nested."""
+    i = start + 1
+    while i < len(source):
+        if source[i] == "\\":
+            i += 2
+        elif source[i] == "`":
+            return i + 1
+        elif source.startswith("${", i):
+            end = _substitution_end(source, i + 2, depth + 1)
+            if end is None:
+                return None
+            i = end
+        else:
+            i += 1
+    return None
+
+
+def _substitution_end(source: str, start: int, depth: int) -> int | None:
+    """The index after the `}` that closes a template substitution."""
+    if depth > _LITERAL_DEPTH:
+        return None
+    braces, i = 1, start
+    while i < len(source):
+        char = source[i]
+        if char in "'\"":
+            end = _string_end(source, i)
+        elif char == "`":
+            end = _template_end(source, i, depth)
+        elif source.startswith("/*", i):
+            closing = source.find("*/", i + 2)
+            end = None if closing < 0 else closing + 2
+        elif source.startswith("//", i):
+            terminator = _LINE_TERMINATOR.search(source, i + 2)
+            end = None if terminator is None else terminator.end()
+        elif char == "/":
+            return None  # a division or a regular expression, which may hold a `}`: unread
+        elif char in "{}":
+            braces += 1 if char == "{" else -1
+            if not braces:
+                return i + 1
+            end = i + 1
+        else:
+            end = i + 1
+        if end is None:
+            return None
+        i = end
+    return None
+
+
+def _ends_operand(tokens: list[str]) -> bool:
+    """Does the code read so far end an operand, so that a `/` divides?"""
+    if not tokens:
+        return False
+    last = tokens[-1]
+    if last[:1] in "'\"`" or last in {")", "]", "}", "++", "--"}:
+        return True
+    if last[:1] == "/" and last not in _OPERAND_PUNCTUATORS:
+        return True  # a regular expression
+    if last[:1].isdigit() or (last[:1] == "." and last[1:2].isdigit()):
+        return True
+    return bool(_NAME.fullmatch(last)) and last not in _OPERAND_PREFIX_WORDS
+
+
+def operand_tokens(source: str) -> list[str] | None:
+    """An operand's or a condition's tokens, as JavaScript reads them, or None (#429).
+
+    Strings, templates (their substitutions nested) and regular expressions
+    are one token each, as written; comments are left out, a `//` one up to
+    any line terminator. A `/` after an operand divides, and elsewhere starts
+    a regular expression; right after a `}` or a statement head's `)` it may
+    be either (`if (ok) /a/.test(s)`), and gives None. A token this does not
+    read, an unterminated literal, an Annex B HTML-like comment (`<!--`,
+    `-->`), a `/` inside a substitution or more than 4096 characters gives
+    None too.
+    """
+    if len(source) > 4096:
+        return None
+    tokens: list[str] = []
+    opens: list[int] = []  # the tokens that open a parenthesis
+    heads: set[int] = set()  # the tokens that close a statement head's parenthesis
+    i = 0
+    while i < len(source):
+        char = source[i]
+        if char in _WHITESPACE:
+            i += 1
+            continue
+        if source.startswith(("<!--", "-->"), i):
+            return None
+        if source.startswith("//", i):
+            terminator = _LINE_TERMINATOR.search(source, i + 2)
+            i = len(source) if terminator is None else terminator.end()
+            continue
+        if source.startswith("/*", i):
+            closing = source.find("*/", i + 2)
+            if closing < 0:
+                return None
+            i = closing + 2
+            continue
+        if char == "/" and tokens and (tokens[-1] == "}" or len(tokens) - 1 in heads):
+            return None  # after a block or a statement head it starts a regular expression, else it divides
+        if char in "'\"":
+            end = _string_end(source, i)
+        elif char == "`":
+            end = _template_end(source, i)
+        elif char == "/" and not _ends_operand(tokens):
+            regex = _REGEX_LITERAL.match(source, i)
+            end = None if regex is None else regex.end()
+        elif char.isdigit() or (char == "." and source[i + 1:i + 2].isdigit()):
+            number = _NUMBER_LITERAL.match(source, i)
+            end = None if number is None else number.end()
+        elif _NAME.match(source, i):
+            end = _NAME.match(source, i).end()
+        else:
+            punctuator = next((p for p in _OPERAND_PUNCTUATORS if source.startswith(p, i)), None)
+            end = None if punctuator is None else i + len(punctuator)
+        if end is None:
+            return None
+        token = source[i:end]
+        if token == "(":
+            opens.append(len(tokens))
+        elif token == ")" and opens:
+            opening = opens.pop()
+            before = tokens[max(0, opening - 2):opening]
+            if before[-1:] and (before[-1] in _STATEMENT_HEADS or before == ["for", "await"]):
+                heads.add(len(tokens))
+        tokens.append(token)
+        i = end
+    return tokens
+
+
+def _clean(expression: str) -> str | None:
+    """An operand's tokens joined by single spaces: no comments, its literals as written.
+
+    Each regular expression and template stands as a placeholder spelled
+    from its text: the quote and bracket scanners that read this text skip
+    the placeholder whole, where a quote, bracket or nested template in the
+    literal would misplace their depth, and two of them match only when
+    their text does. Every one is replaced, so no literal as written can
+    spell another's placeholder.
+    """
+    tokens = operand_tokens(expression)
+    return None if tokens is None else " ".join(_shielded(token) for token in tokens)
+
+
+def _shielded(token: str) -> str:
+    """A regular expression or a template as a placeholder, any other token as it is.
+
+    A template keeps whether it has a substitution: `t...` without, `${t...}`
+    with one, so the literal reader still tells the two apart.
+    """
+    spelled = token.encode("utf-8", "surrogatepass").hex()
+    if token[:1] == "/" and token not in _OPERAND_PUNCTUATORS:
+        return "/r" + spelled + "/"
+    if token[:1] == "`":
+        return "`t" + spelled + "`" if _TEMPLATE_LITERAL.fullmatch(token) else "`${t" + spelled + "}`"
+    return token
+
+
+def _simple_cast(source: str) -> str | None:
+    """`_cast_operand`, for a cast to one named type only: `x as any || y` is no cast of `x`."""
+    for index, depth in _top_level(source):
+        cast = _CAST.match(source, index) if depth == 0 else None
+        if (cast is None or index == 0 or source[index - 1] not in _WHITESPACE
+                or cast.end() >= len(source) or source[cast.end()] not in _WHITESPACE):
+            continue
+        if not _SIMPLE_TYPE.fullmatch(source, cast.end()):
+            return None
+        head = source[:index].strip(_WHITESPACE)
+        signs = {match.end() for match in _EXPONENT_SIGN.finditer(head)}
+        operators = [i for i, level in _top_level(head)
+                     if level == 0 and head[i] in "?:=|&<>,+-*/%^" and i not in signs]
+        if not head or any(i > 0 or head[i] not in "+-" for i in operators):
+            return None
+        return head
+    return None
+
+
+def _strict_peel(source: str) -> str:
+    """`_peel` with `_simple_cast`: parentheses, `x!` and a cast to one named type."""
+    while True:
+        source = source.strip(_WHITESPACE)
+        inner = _parenthesized(source)
+        if inner is None and len(source) > 1 and source.endswith("!"):
+            inner = source[:-1]
+        if inner is None:
+            inner = _simple_cast(source)
+        if inner is None or not inner.strip(_WHITESPACE):
+            return source
+        source = inner
+
+
+def _quoted_end(source: str, start: int) -> int:
+    """The index after the string or template opening at `start`, as `_top_level` skips it."""
+    quote, i = source[start], start + 1
+    while i < len(source) and source[i] != quote:
+        i += 2 if source[i] == "\\" else 1
+    return i + 1
+
+
+def _members(source: str) -> list[str] | None:
+    """The comma-separated pieces inside the one bracket pair that encloses `source`."""
+    pieces: list[str] = []
+    start, last = 1, None
+    for index, depth in _top_level(source):
+        if depth < 0 or (depth == 0 and index < len(source) - 1):
+            return None  # `[1] + [2]`: the first pair closes early
+        if depth == 1 and source[index] == ",":
+            pieces.append(source[start:index])
+            start = index + 1
+        last = (index, depth)
+    if last != (len(source) - 1, 0):
+        return None
+    pieces.append(source[start:len(source) - 1])
+    if len(pieces) == 1 and not pieces[0].strip(_WHITESPACE):
+        return []  # `[]`, `{}`
+    if len(pieces) > 1 and not pieces[-1].strip(_WHITESPACE):
+        pieces.pop()  # a trailing comma; an empty piece left is a hole
+    return pieces
+
+
+def _literal_property(piece: str, depth: int) -> bool:
+    """`key: literal`, with a name, a quoted string or a number as its key."""
+    colon = next((index for index, level in _top_level(piece) if level == 0 and piece[index] == ":"), None)
+    if colon is None:
+        return False  # shorthand, spread, method or accessor
+    key = piece[:colon].strip(_WHITESPACE)
+    if not (_NAME.fullmatch(key) or _NUMBER_LITERAL.fullmatch(key)
+            or (key[:1] in "\"'" and _string(key) is not _UNKNOWN)):
+        return False  # a computed key
+    return _literal(piece[colon + 1:], depth)
+
+
+def _literal(source: str, depth: int) -> bool:
+    source = _strict_peel(source)
+    if not source or depth > _LITERAL_DEPTH:
+        return False
+    if source in {"true", "false", "null"}:
+        return True
+    if source[0] in "+-":
+        return bool(_NUMBER_LITERAL.fullmatch(_strict_peel(source[1:])))
+    if _NUMBER_LITERAL.fullmatch(source) or _TEMPLATE_LITERAL.fullmatch(source) or _REGEX_LITERAL.fullmatch(source):
+        return True
+    if source[0] in "\"'":
+        return _string(source) is not _UNKNOWN
+    if (source[0], source[-1]) in {("[", "]"), ("{", "}")}:
+        pieces = _members(source)
+        if pieces is None:
+            return False
+        if source[0] == "[":
+            return all(_literal(piece, depth + 1) for piece in pieces)  # a hole or a spread is none
+        return all(_literal_property(piece, depth + 1) for piece in pieces)
+    return False
+
+
+def literal_operand(expression: str) -> bool:
+    """Is the operand an exact literal (#429 Q2)?
+
+    A number, BigInt, string, template without a substitution, regular
+    expression, `true`, `false` or `null`, or an array or plain object of
+    them, as Python reads a container of literals as a literal. Read from
+    `operand_tokens`, through comments, parentheses, `x!` and a cast to one
+    named type; a sign belongs to a number. A name is none: `undefined`,
+    `NaN` and `Infinity` are globals a file can shadow, and so is a hole, a
+    spread, a computed key or a shorthand property.
+    """
+    source = _clean(expression)
+    return source is not None and _literal(source, 0)
+
+
+def _numeral(source: str) -> float | None:
+    """The Number an unsigned numeric literal writes, through parentheses: Python's `Constant`."""
+    source = _strict_peel(source)
+    return None if not source or source[0] in "+-" else _number(source)
+
+
+def _no_op_operand(source: str) -> str | None:
+    """The operand of an outermost `x + 0`, `0 + x`, `x - 0`, `x * 1`, `1 * x` or `x / 1`.
+
+    Python strips exactly these from both sides of a self-comparison
+    (`_strip_identity`, THREATMODEL row 10), and only as the expression's
+    outermost operation: `a + b * 1` keeps its `* 1`, `x + -0` its `-0`, and
+    an operator that binds looser than `+` (a comparison, `&&`, `?:`, `,`,
+    an assignment) or anything this does not read leaves the text whole. A
+    cast to one named type is read as TypeScript binds it, looser than the
+    arithmetic before it: that arithmetic is the cast's own operand, and
+    what follows applies to the cast. `x as number + 0` is
+    `(x as number) + 0`, and `0 + x as T * 2` is `((0 + x) as T) * 2`, which
+    keeps its `0 +`.
+    """
+    additive: list[tuple[int, str]] = []
+    multiplicative: list[tuple[int, str]] = []
+    ended = False  # does the code read so far end an operand?
+    depth = i = 0
+    while i < len(source):
+        char = source[i]
+        if char in _WHITESPACE:
+            i += 1
+        elif char in _QUOTES:
+            i, ended = _quoted_end(source, i), True
+        elif char in _CLOSING:
+            depth, ended, i = depth + 1, False, i + 1
+        elif char in ")]}":
+            depth, ended, i = depth - 1, True, i + 1
+            if depth < 0:
+                return None
+        elif depth:
+            i += 1
+        elif char.isdigit() or (char == "." and source[i + 1:i + 2].isdigit()):
+            number = _NUMBER_LITERAL.match(source, i)
+            if number is None:
+                return None
+            i, ended = number.end(), True
+        elif _NAME.match(source, i):
+            word = _NAME.match(source, i).group()
+            if word in {"as", "satisfies"} and ended:
+                cast = _ONE_TYPE.match(source, i + len(word))
+                if cast is None:
+                    return None
+                additive.clear()  # the arithmetic so far is the cast's operand, not the outer operation
+                multiplicative.clear()
+                i = cast.end()  # the operand stays ended; a `|`, `&` or `<` after the type is unread
+                continue
+            if word in {"in", "instanceof", "as", "satisfies", "yield"}:
+                return None
+            i, ended = i + len(word), word not in {"typeof", "void", "delete", "await", "new"}
+        elif source.startswith(("++", "--"), i):
+            i += 2  # postfix keeps an operand ended; prefix still awaits one
+        elif source.startswith("**", i) and not source.startswith("**=", i):
+            i, ended = i + 2, False
+        elif source.startswith("?.", i) and not source[i + 2:i + 3].isdigit():
+            i, ended = i + 2, False
+        elif char == "." and not source.startswith("...", i):
+            i, ended = i + 1, False
+        elif char in "!~" and not source.startswith("!=", i):
+            i, ended = i + 1, False
+        elif char == "/" and not ended:
+            regex = _REGEX_LITERAL.match(source, i)
+            if regex is None:
+                return None
+            i, ended = regex.end(), True
+        elif char in "+-*/%" and source[i + 1:i + 2] != "=":
+            if char in "+-" and ended:
+                additive.append((i, char))
+            elif char in "*/%":
+                if not ended:
+                    return None
+                multiplicative.append((i, char))
+            i, ended = i + 1, False
+        else:
+            return None
+    if depth:
+        return None
+    for operators, identity, commuting, inverse in ((additive, 0, "+", "-"), (multiplicative, 1, "*", "/")):
+        if not operators:
+            continue
+        position, operator = operators[-1]
+        left, right = source[:position], source[position + 1:]
+        if operator in (commuting, inverse) and _numeral(right) == identity:
+            return left
+        if len(operators) == 1 and operator == commuting and _numeral(left) == identity:
+            return right
+        return None
+    return None
+
+
+def _identity_core(expression: str) -> str | None:
+    """An operand's tokens without comments, parentheses, TS wrappers or outer no-op arithmetic.
+
+    Strings read in double quotes; templates and regular expressions compare
+    as written, whitespace included. A spread (`...pair`) is no operand.
+    """
+    source = _clean(expression)
+    if source is None or source.startswith("..."):
+        return None
+    for _ in range(4 * _LITERAL_DEPTH):
+        source = _strict_peel(source)
+        inner = _no_op_operand(source)
+        if inner is None or not inner.strip(_WHITESPACE):
+            break
+        source = inner
+    tokens = operand_tokens(source)
+    if not tokens:
+        return None
+    return " ".join(_double_quoted(token) if token[:1] in "'\"" else token for token in tokens)
+
+
+def same_operand(left: str, right: str) -> bool:
+    """Do two operands spell one expression (#429 Q7)?
+
+    Python's row-10 reading: the two token sequences compare once comments,
+    parentheses, `x!`, a cast to one named type and outer no-op arithmetic
+    are taken out of each (`f(x)` and `(f(x) as number) + 0`), with quoted
+    strings read in double quotes. Nothing is evaluated: two names bound to
+    one value, `x` and `+x`, `a.b` and `a["b"]`, or two spreads are
+    different operands.
+    """
+    first, second = _identity_core(left), _identity_core(right)
+    return first is not None and first == second

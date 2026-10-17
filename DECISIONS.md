@@ -11446,3 +11446,169 @@ for approval of this PR's SPEC (a332ad42), THREATMODEL (87e932ca), D-146
 (285f5d4f) and user-doc (f6f9c3db) text and of the two pinned tests outside
 the ruled list. The second half of that reply chose this host for the
 ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
+
+## D-147 (2026-10-17): a JS/TS assertion that can never fail reads as TAUTOLOGY (#429, first change)
+
+Ruling 429 (owner, 2026-10-14, 「P1 全部照建議」) answered its ten
+questions as recommended. Q8 (b) splits the round into two changes, each
+with its own qualification and sweep; this entry is the first (Q2, Q6,
+Q7). D-145 (#306) and D-146 (#421) are on main, so this entry is D-147.
+
+#429 reports three one-line JS/TS edits that the Python frontend blocks and
+the JS/TS frontend passed with zero findings. This change closes the first:
+`expect(total).toBe(total)`. The frontend rated every equality EXACT_VALUE
+without comparing its operands, so nothing under
+`frontends/javascript/` produced TAUTOLOGY, and `toBe`, `strictEqual`,
+chai `equal` and `t.is` state `eq_strict` on both sides of such a pair,
+which the predicate relation read as the same predicate. An assertion on
+literals alone (`expect(3).toBe(3)` in place of `expect(total()).toBe(3)`)
+passed the same way.
+
+How each ruling answer is implemented:
+
+- Q2 (a), literal assertions. `literal_operand` in
+  `frontends/javascript/literals.py` reads an exact literal from the tokens
+  of `operand_tokens`, a lexer that reads strings, templates (substitutions
+  nested) and regular expressions whole and leaves comments out: a number,
+  BigInt, string, template without a substitution, regular expression,
+  `true`, `false` or `null`, or an array or plain object of them, through
+  parentheses, `x!` and a cast to one named type (`as number`, `as const`;
+  `x as any || y` is more than a cast). A name
+  never is one, `undefined`, `NaN` and `Infinity` included. `_rate_tautology`
+  in `frontend.py` rates TAUTOLOGY an assertion whose subject as written and
+  every operand its predicate reads are literals, in each scan: the Jest
+  matchers, chai `expect` and `should` chains, the chai and node:assert
+  calls, and AVA and tap. A message argument is no operand.
+- Q7 (b), self-comparison. `same_operand` compares the token sequences of
+  two operands, quoted strings read in double quotes and templates and
+  regular expressions as written, once comments, parentheses, `x!` and a
+  cast to one named type are taken out of each, together with
+  Python's outer no-op arithmetic (`x + 0`, `0 + x`, `x - 0`, `x * 1`,
+  `1 * x`, `x / 1`, repeatedly, only as the outermost operation). An
+  equality (`toBe`, `toEqual`, `toStrictEqual`, chai `equal`, `eql`,
+  `deep.equal` and the assert equalities, node:assert's four, AVA `is` and
+  `deepEqual`, tap `equal`, `same`, `strictSame`, and their negations) or an
+  inclusive bound (`toBeGreaterThanOrEqual`, `toBeLessThanOrEqual`, chai
+  `least`, `most`, `isAtLeast`, `isAtMost`) whose two sides compare so is
+  TAUTOLOGY. Truthy spellings (`assert.ok(x === x)`) are a residual.
+- Q6 (a), recording. A tautology keeps `left`, text, span and operand
+  evidence as read, so `fingerprint_text` and every finding key stay as they
+  were, and records form `tautology`, strength TAUTOLOGY, no predicate key and
+  `positive=True`. A self-comparison in an oracle's place is a strength drop
+  (`ASSERT_WEAKENED`), and on a local bound to one call it reports that
+  instead of `EXPECTATION_DEFINITION_CHANGED`, whose JS channel reads only
+  unweakened `compare_eq` pairs.
+- Q10 (a). #431's fix landed first (#449, v0.8.0), so this change carries
+  its fixtures, which stay in the suite unchanged, and restates #431's "IR
+  form or strength" line in THREATMODEL row 129 and
+  `docs/js-catch-swallowing.md`.
+- Q4 (a). Row 10 gets its JS/TS clause, pointing to the new
+  `docs/js-reachability.md`. Rows 8, 29 and 48 get theirs with the second
+  change, which reads reachability (Q1, Q3, Q5).
+- Q9 (b). Dead test registration is outside both changes.
+
+Readings left to the implementation, accepted with this entry:
+
+1. The ruling's premise for Q10 does not hold as written: #431's
+   `HandlerReader.passing_literal` reads the assertion's `left`, `predicate`
+   and `positive`, not only source tokens. Q6's "no predicate key" would turn
+   every literal-only catch from `catch always-passing assertion` back into
+   no evidence. So the frontend sets form and strength when it reads an
+   assertion, after its operand evidence, and drops the key and polarity of
+   a tautology only after `swallowing_handlers` has read the file. #431's
+   outputs do not change; the catch proof never reads the rating.
+2. "Expected operand (if any)" is read as every operand the predicate
+   reads: the expected value, a bound, a tolerance (`toBeCloseTo`'s
+   precision, chai `closeTo`'s delta, both `within` bounds) and a property
+   name. One that is not a literal leaves the assertion a real one.
+3. Arrays, plain objects and regular expressions of literals are exact
+   literals, as a container of literals is in Python. This moves two of the
+   three existing expected outputs below. The owner ruled so on 2026-10-17
+   (rule 2, below).
+4. A negated self-comparison is TAUTOLOGY too, as Python reads `x != x`;
+   it can never pass and states no oracle. With `positive=True` (Q6), paired
+   with a negated check of a value it reads as a change of form and
+   polarity, as in Python. Exclusive bounds (`x < x`), which Python does not
+   read either, keep their rung, and so do `toBeCloseTo(x)`, `toContain(x)`,
+   `include`, `toMatch` and `within`. So does a property's value compared
+   with that property (`.property("total", order.total)`,
+   `assert.propertyVal`), which still asserts that the property is there.
+   The row-10 stripping is Python's reading, not an evaluation: `x + 0`
+   reads as `x` although `-0 + 0` is positive zero under `Object.is`.
+5. An assertion whose predicate is not read (strength None: `raises`,
+   `unknown`) keeps strength None.
+6. What the lexer cannot read gives no literal and no operand to compare,
+   so the assertion keeps its rung: a `/` right after a `}` or a statement
+   head's `)` (`if (ok) /a/.test(s)` in a callback inside the operand),
+   which may start a regular expression or divide; a `/` inside a template
+   substitution, which may hold a `}`; and an Annex B HTML-like comment. A
+   `//` comment ends at any line terminator, U+2028 and U+2029 included.
+   Regular expressions and templates reach the quote and bracket scanners
+   as placeholders spelled from their text, every one of them, so a quote,
+   bracket or nested template inside one hides no operator
+   (`f(/'/) || g(/'/) + 0` keeps its `+ 0`) and no template as written
+   spells another's placeholder. These came from a read-only review workflow and were
+   checked by Claude.
+7. A cast to one named type inside an operand binds as TypeScript binds
+   it: looser than the arithmetic before it, which is the cast's own
+   operand, while what follows applies to the cast. `total as number + 0`
+   is `(total as number) + 0` and reads as `total`, as the parenthesized
+   spelling did; `0 + s as any * 2` is `((0 + s) as any) * 2` and keeps its
+   `0 +`. A cast to anything more, or a type followed by `|`, `&` or `<`,
+   still leaves the operand whole. Raised by GLM, verified by Claude; the
+   precedence before the cast came from a review workflow.
+
+Rule 2. By reading, the ruling expected no existing output to move. Three
+do, in
+`tests/test_issue215_chai_grammar.py::test_a_should_chain_reads_as_its_expect_chain`
+(commit 1800f5c9): `(5).should.equal(5)` (compare_eq/90),
+`[1, 2].should.have.lengthOf(2)` (type_shape/50) and
+`'abc'.should.match(/b/)` (pattern/60) become tautology/10, with subject,
+polarity and value unchanged. The first moves under any reading of Q2; the
+other two under reading 3. The owner approved exactly these three on
+2026-10-17: 「a」, in reply to the relayed question, where (a) read
+「包含（跟 Python 把容器字面值當字面值一致）：三列都改成 tautology/10，left、極性、值都不變」
+and (b) was scalars only. Anything else that moves still stops the round.
+The three confirmations the ruling asks for are pinned in
+`tests/test_issue429_js_tautology.py`:
+
+- `test_js_handrolled_tolerance.py:78`,
+  `expect(0.01).toBeGreaterThan(Math.abs(...))`, stays BOUND: Q2 reads the
+  source operands, and the bound is not a literal
+  (`test_a_literal_bound_is_not_a_literal_assertion`).
+- The #363 and #431 catch cases hold: the full assertion list, keys
+  included, reaches `swallowing_handlers` before any key is dropped
+  (`test_the_catch_proof_reads_the_predicate_before_it_is_dropped`; both
+  test files are unchanged).
+- A removed `expect(1).toBe(1)` keeps its identity: the content-bound key
+  (#421) is computed from the legacy pre-image `expect(1).toBe(`
+  (`test_a_removed_literal_assertion_keeps_its_fingerprint`).
+
+No `.gwcase` expectation and nothing under `tests/gates` changed.
+
+**Fingerprints.** No fingerprint scheme changes, and a finding on a
+tautology's own evidence keeps its key (the pin above). The message of a
+removed literal assertion says `strength TAUTOLOGY` instead of the rung it
+read before, and pairs that were silent now report `ASSERT_WEAKENED` under
+new keys. A pair whose after side is now a tautology is judged as a strength
+drop: where main read it as a keyed relation (`toBe(27)` ->
+`.not.toBe(total)`, polarity inverted), the finding's kind, message and v2
+key change. #421's content-bound keys (#477) landed
+first, so the pin above checks the legacy pre-image each key is computed
+from, as `tests/test_js_assertion_identity.py` does.
+
+Evidence status: the change was prepared on a work machine where no pytest,
+checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 252 collected items in
+  `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
+  (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
+  `bypass: 10`, `js_literal_replaces_oracle_pos` and
+  `js_tautology_reformatted_neg`).
+- The documented test count is 19030 (18774 + 256).
+- The sweep measures the change (ruling): the standard set, the D-088 sets
+  and the JS batch, with the refactor, tamper, decoy and recorded gates.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
+
+The agent wrote this entry in #429's first fix PR #482. It waits for the
+maintainer's approval.
