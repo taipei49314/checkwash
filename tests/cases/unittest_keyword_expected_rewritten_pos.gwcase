@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 134
+rule: EXPECTED_VALUE_CHANGED
+title: self.assertEqual(first=value(), second=[1, 2]) -> second=[1, 3] rewrites the expected value, as its positional twin does
+origin: #462 — keyword operands were not read, so the rewrite passed with zero findings
+=== before: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(first=value(), second=[1, 2])
+=== after: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(first=value(), second=[1, 3])
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

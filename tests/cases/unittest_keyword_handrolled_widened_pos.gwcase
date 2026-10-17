@@ -1,0 +1,29 @@
+=== meta ===
+rule: TOLERANCE_LOOSENED
+title: self.assertLess(a=abs(total() - 78.75), b=0.01) -> b=1e12 widens the tolerance the hand-rolled bound states
+origin: #462 — keyword operands were not read, so the hand-rolled bound recorded no tolerance and the widening passed with zero findings (positional twin: handrolled_tolerance_widened_pos)
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 78.75
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertLess(a=abs(total() - 78.75), b=0.01)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def test_total(self):
+        self.assertLess(a=abs(total() - 78.75), b=1e12)
+=== expect ===
+[{"rule": "TOLERANCE_LOOSENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

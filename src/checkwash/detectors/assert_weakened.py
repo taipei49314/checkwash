@@ -6,7 +6,9 @@ proven same or stronger predicate is no weakening whatever the rungs say, and
 a widened, contradicting, inverted or unverifiable one is reported with what
 was established. A JS approximate comparison or hand-rolled bound whose
 tolerance was known and is now one checkwash cannot read is not preserved
-either: unknown evidence is not the same evidence (#196 190.4, 189.1).
+either: unknown evidence is not the same evidence (#196 190.4, 189.1). Nor is
+a known oracle whose replacement passes its operands through `*` or `**`
+(`self.assertEqual(**case)`), which checkwash cannot bind (#462 Q2).
 """
 
 from __future__ import annotations
@@ -87,6 +89,21 @@ def _tolerance_lost(path: str, b: Assertion, a: Assertion) -> str | None:
     return b.epsilon if "=" in b.epsilon else f"{b.epsilon_kind or 'places'}={b.epsilon}"
 
 
+def _operands_lost(b: Assertion, a: Assertion) -> bool:
+    """A known oracle replaced by one whose operands checkwash cannot bind (#462 Q2).
+
+    `self.assertEqual(total(), 78.75)` -> `self.assertEqual(**case)` keeps the
+    method and its rung, but what the new call compares comes through `*` or
+    `**` and is unknown: unknown evidence is not the same evidence, as for an
+    unreadable tolerance (#222, #196 190.4). The old side must be an oracle
+    checkwash read: a known strength above the tautology rung, operands of its
+    own, and not trivial. An unbound call replaced by another stays silent
+    here (462.Q2); the other rules still judge such a pair as any other.
+    """
+    return (a.unbound_operands and not b.unbound_operands
+            and b.strength is not None and b.strength > S.TAUTOLOGY and not b.trivial)
+
+
 def _keyed_message(qualname: str, relation: str, b: Assertion, a: Assertion) -> str:
     """The finding message for a keyed pair the relation does not accept."""
     old, new = P.describe(b), P.describe(a)
@@ -135,6 +152,35 @@ def detect(ir: IR) -> list[Finding]:
                     if origin in seen_inherited:
                         continue
                     seen_inherited.add(origin)
+                # Operands that cannot be bound (#462 Q2): the new call records
+                # no subject, so this comes before the subject comparison. It
+                # is never mild, like the unreadable tolerance below.
+                if _operands_lost(b, a):
+                    findings.append(
+                        Finding(
+                            rule="ASSERT_WEAKENED",
+                            severity="warn",
+                            message=(
+                                f"{unit.qualname}: assertion replaced; checkwash cannot verify the "
+                                f"replacement is equivalent (operands {b.text.strip()[:60]} -> "
+                                f"{a.text.strip()[:60]}: passed through * or **, which it cannot bind)"
+                            ),
+                            path=file.path,
+                            unit=unit.qualname,
+                            before=Evidence(text=b.text, span=b.span),
+                            after=Evidence(text=a.text, span=a.span),
+                            fingerprint=make_fingerprint(
+                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                            ),
+                            # 999, as for an unverifiable predicate or tolerance:
+                            # MILD_WEAKENING needs a drop under 30, so it never
+                            # holds this. The subject is unknown, not unchanged.
+                            strength_drop=999,
+                            strength_after=a.strength,
+                            subject_changed=None,
+                        )
+                    )
+                    continue
                 # Same structural compare SUBSTITUTED uses. Reformatting or
                 # extra parens is not a subject change; wrapping or replacing
                 # it is (E6 / review 2026-08-11 Issue 4). For a hand-rolled

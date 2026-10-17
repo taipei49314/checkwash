@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertEqual(value(), [1, 2]) -> assertEqual(value(), second=[1, 2]) is the same assertion: no finding
+origin: #462 — the record lost its expected value, so it read as EXACT_STRUCT(100) -> EXACT_VALUE(90), a warn held by MILD_WEAKENING that blocked under fail_on = "warn"
+=== before: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), [1, 2])
+=== after: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), second=[1, 2])
+=== expect ===
+[]

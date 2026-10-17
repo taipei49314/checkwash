@@ -10887,3 +10887,71 @@ pytest, checkwash or Python ran.
 
 The agent wrote this entry in #418's fix PR. The maintainer approves it
 there.
+
+## D-143 (2026-10-17): unittest and approx operands are read by name as well as by position (#462)
+
+Ruling 462 (owner, 2026-10-16, 「全部照建議」) answered its three questions
+as recommended. D-141 and D-142 are on main, so this entry is D-143.
+
+#462 reports that the unittest reader took an assertion's operands from the
+call's positional arguments only. With its operands passed by name, the
+record had no subject, no expected value and no operand-derived strength,
+and it was trivial. A rewritten expectation passed with zero findings, and
+a container literal respelled with keywords blocked as a weakening.
+`pytest.approx(expected=)` had the same defect.
+
+How each ruling answer is implemented:
+
+- Q1 (b), scope. `_unittest_operands` binds each operand by position or,
+  failing that, by its unittest parameter name. `_UNITTEST_OPERANDS`
+  follows the `unittest.TestCase` signatures, and the raises family is not
+  in it. A call that states every operand by position gives exactly its
+  positional arguments, so those records are byte-identical. Every
+  operand read in `_classify_unittest_call` and `_unittest_bound` uses the
+  bound list. `_approx_expected` reads approx's first argument, or else
+  `expected=`.
+- Q2 (b), unbindable operands. No operand is read from a position at or
+  after a starred argument; its keyword is read instead. Without a keyword
+  in a call with `*` or `**`, the call is unbound. It records the method's
+  form and strength, no subject, expected value or names, `trivial=False`,
+  and the new optional IR field `unbound_operands`. That field is optional,
+  so IR_VERSION stays 2 (docs/stability.md, D-067). ASSERT_WEAKENED
+  reports "cannot verify" when a known oracle is replaced by an unbound
+  call. A known oracle here has a strength above TAUTOLOGY, is not
+  trivial, and is not itself unbound. The finding carries
+  `strength_drop = 999`, as an unverifiable predicate or tolerance does,
+  so MILD_WEAKENING never holds it. `gating.py` is unchanged. An unbound
+  call replaced by another is not reported by this branch.
+- Q3 (a), priority: P1, next after #419.
+
+Effects beyond the ruling's text, accepted with this entry:
+
+- An unbound `assertAlmostEqual` records a tolerance only when `places=`
+  or `delta=` states one. It does not record the default `places=7`,
+  since the spread may carry either.
+- The new finding's `subject_changed` is null, not false: the new
+  subject is unknown.
+- `self.assertEqual(x, *rest)` and `self.assertEqual(x, **kw)` are
+  unbound, although the first operand is known. Before the fix, the
+  first recorded `x` as its subject and `*rest` as its expected node, and
+  the second recorded `x` with no expected value.
+
+Row 134 is Closed, with the residuals listed there: spreads on both sides,
+aliases of `self.assertX`, the raises family, and the bounded unittest
+projections.
+
+Evidence status: the change was prepared on a work machine where no
+pytest, checkwash or Python ran. CI ran the tests.
+
+- Tests were only added: 17 `.gwcase` fixtures, and 90 collected items in
+  `tests/test_issue462_keyword_operands.py`. None is under `tests/gates`.
+  No existing fixture or test expectation changed. Two of the new
+  fixtures carry `bypass: 134`, which the owner allowed.
+- The documented test count is 18566 (18459 + 107). #472's CI on
+  `80eb6ba` passed all nine test legs, `checkwash`, `dogfood` and the
+  verdict gate.
+- The sweep measures the new findings on keyword-form tests (ruling).
+
+The agent wrote this entry in #462's fix PR #472. The maintainer approved it
+on 2026-10-16: 「#472 的維護者文字照草稿核准（SPEC §3 note、THREATMODEL row
+134、D-143），允許在 fixture 加 bypass: 134。」

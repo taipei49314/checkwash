@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+title: pytest.approx(expected=105.0) -> pytest.approx(105.0) states the same expected value: no finding
+origin: #462 — approx's expected value was read by position only, so the cleanup read as "independent expected call replaced by literal 105.0" and blocked at high
+=== before: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(expected=105.0)
+=== after: tests/test_billing.py ===
+import pytest
+
+import app
+
+
+def test_total():
+    items = [50.0, 50.0]
+    assert app.invoice_total(items, 0.05) == pytest.approx(105.0)
+=== expect ===
+[]

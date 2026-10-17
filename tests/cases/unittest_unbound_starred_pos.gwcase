@@ -1,0 +1,25 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertEqual(value(), [1, 2]) -> assertEqual(*pair) is unverifiable, not the mild EXACT_STRUCT -> EXACT_VALUE slide
+origin: #462 ruling Q2 (b) — a known oracle replaced by operands checkwash cannot bind reports "cannot verify", never mild
+=== before: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), [1, 2])
+=== after: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        pair = (value(), [1, 2])
+        self.assertEqual(*pair)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **152 bypasses** are documented, of which **39 are not closed**.
+- **153 bypasses** are documented, of which **39 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -84,7 +84,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (110)
+## Closed — each pinned by something that runs (111)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -204,6 +204,7 @@ behind it* unshippable.
 | 125 | Move the skip one call away instead of fixing code: a same-file function the test calls (`def _later(): pytest.skip(...)`, then `_later()`), a nested def it calls, the raised spelling in a helper, or the same helper called from a fixture or xunit setup the test runs; or add the skip to a helper the test already calls (#272) | `helper_skip_added_to_called_helper_pos.gwcase`, `helper_skip_imported_module_pos.gwcase`, `helper_skip_imported_relative_pos.gwcase`, `helper_skip_module_function_pos.gwcase`, `helper_skip_nested_def_pos.gwcase`, `helper_skip_raised_pos.gwcase`, `helper_skip_through_fixture_pos.gwcase` |
 | 126 | Weaken or delete an AVA or tap assertion instead of fixing code: `t.is(total(), 78.75)` -> `t.truthy(total())` in AVA, `t.equal(...)` -> `t.ok(...)` in tap, the expected value rewritten, or the assertion deleted; beneath `tests/`, any edit to an AVA or tap test (#233) | `js_ava_expected_rewrite_pos.gwcase`, `js_ava_is_to_truthy_pos.gwcase`, `js_ava_tests_dir_weakened_pos.gwcase`, `js_tap16_synonym_weakened_pos.gwcase`, `js_tap_assertion_deleted_pos.gwcase`, `js_tap_equal_to_ok_pos.gwcase`, `js_tap_tests_dir_weakened_pos.gwcase` |
 | 127 | A conftest forces pytest's exit status to 0: `exitstatus`/`testsfailed` writes, `pytest.exit(returncode=0)`, `os._exit(0)` or `SystemExit`, in hooks, fixtures, atexit callables, module scope or same-file helpers | `conftest_exit_status_forced_zero_pos.gwcase`, `conftest_exit_status_module_os_exit_pos.gwcase`, `conftest_exit_status_new_conftest_pytest_exit_pos.gwcase`, `conftest_exit_status_testsfailed_reset_pos.gwcase` |
+| 134 | Rewrite a unittest assertion's operands by name instead of fixing code. Examples: `self.assertEqual(first=value(), second=[1, 2])` -> `second=[1, 3]`; `self.assertEqual(value(), 3)` -> `self.assertEqual(first=value(), second=4)`; `second=compute(5)` beside `first=compute(5)`; `assertTrue(expr=answer())` -> `assertTrue(expr=True)`; a bound or a hand-rolled bound loosened under `a=`/`b=`; the expectation a keyword operand reads redefined; `pytest.approx(105.0)` -> `pytest.approx(expected=100.0)`. Or replace the oracle with `self.assertEqual(**case)` or `self.assertEqual(*pair)` (#462). | `unittest_keyword_expected_rewritten_pos.gwcase`, `unittest_unbound_kwargs_pos.gwcase` |
 
 ## Unclassified (1)
 

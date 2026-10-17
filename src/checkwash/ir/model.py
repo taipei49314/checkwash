@@ -58,6 +58,13 @@ class Assertion:
     # conversion of a literal (`float('75')`, `Decimal('75')`,
     # `Number('75')`) is no such call: `right_value` records its value.
     unevaluated_expected: str | None = None
+    # True when the assertion's operands cannot be bound: a unittest method
+    # called with `*` or `**` operands (`self.assertEqual(**case)`,
+    # `self.assertEqual(*pair)`). Its form and strength are the method's, it
+    # records no subject, expected value or names, and it is not trivial: what
+    # it compares is unknown. A known oracle replaced by one is unverifiable
+    # (ASSERT_WEAKENED, #462 Q2); one replaced by another stays silent.
+    unbound_operands: bool = False
     # Names appearing in the asserted subject's own expression, and the names
     # the expectation transitively depends on after in-body assignments are
     # followed (`expected = sum(items)` -> ("items", "sum")). Both sorted.

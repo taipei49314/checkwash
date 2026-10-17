@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertEqual(value(), [1, 2]) -> assertEqual(first=value(), second=[1, 2]) is the same assertion: no finding
+origin: #462 — the keyword record had no subject, so it read as EXACT_STRUCT(100) -> EXACT_VALUE(90) with the subject changed, and blocked at high
+=== before: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), [1, 2])
+=== after: tests/test_values.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(first=value(), second=[1, 2])
+=== expect ===
+[]

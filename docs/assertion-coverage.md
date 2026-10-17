@@ -325,6 +325,41 @@ tolerances against one, so it is compared kind by kind and reads as new slack
 even where the new bound is tighter for the values compared. The source tests
 are in [`tests/test_tolerance_calls.py`](../tests/test_tolerance_calls.py).
 
+### Python operands bound by name
+
+Issue [#462](https://github.com/taipei49314/checkwash/issues/462) showed
+that unittest assertion methods were read by position only. With its operands
+passed by name, `self.assertEqual(first=value(), second=[1, 2])` recorded no
+subject, no expected value and no strength from its operands, and it was
+trivial. Rewriting its expected value passed with zero findings, and
+respelling `self.assertEqual(value(), [1, 2])` that way blocked as
+EXACT_STRUCT(100) -> EXACT_VALUE(90). Each operand is now taken by position
+or, failing that, by its unittest parameter name: `first`/`second`,
+`list1`/`list2`, `tuple1`/`tuple2`, `set1`/`set2`, `d1`/`d2`, `seq1`/`seq2`,
+`expr1`/`expr2` (`assertIs`, `assertIsNot`), `member`/`container`,
+`obj`/`cls` (`assertIsInstance`), `a`/`b` (the ordering methods),
+`text`/`expected_regex` (`unexpected_regex` for `assertNotRegex`), `expr`
+(`assertTrue`, `assertFalse`) and `obj` (`assertIsNone`, `assertIsNotNone`).
+A keyword or mixed spelling records what its positional twin records, so the
+container upgrade, the literal-side flip, the `len()` shape rule, the
+tautology checks, `assertIs(x, None)`, the hand-rolled bounds, the bound keys
+and the triviality test all read it. `pytest.approx(expected=105.0)` records
+its expected value as `pytest.approx(105.0)` does. A call that states every
+operand by position records what it recorded before. The raises family keeps
+its positional reading.
+
+As for a tolerance call, no operand is read from a position at or after a
+starred argument; its keyword is read instead. An operand that comes through
+`*` or `**` instead (`self.assertEqual(**case)`, `self.assertEqual(*pair)`,
+`self.assertEqual(x, **kw)`) cannot be bound (462.Q2). Such a call records
+the method's form and strength, no subject, expected value or names, and a
+tolerance only when `places=` or `delta=` states one. It is not trivial. A
+known oracle replaced by one is an unverifiable replacement (ASSERT_WEAKENED,
+never mild), and one such call replaced by another is not reported. A call
+through an alias of `self.assertEqual` is not read as an assertion at all.
+The source tests are in
+[`tests/test_issue462_keyword_operands.py`](../tests/test_issue462_keyword_operands.py).
+
 ### chai expect chains and the assert interface
 
 Issue [#180](https://github.com/taipei49314/checkwash/issues/180) found that

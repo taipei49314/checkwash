@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertEqual(first=len(...), second=2) -> assertEqual(len(...), 2) is the same TYPE_SHAPE check: no finding
+origin: #462 — the keyword record missed the len() shape rule, so the cleanup read as EXACT_VALUE(90) -> TYPE_SHAPE(50) and blocked at high
+=== before: tests/test_lines.py ===
+import unittest
+
+import app
+
+
+class Lines(unittest.TestCase):
+    def test_lines(self):
+        items = ["a", "b"]
+        self.assertEqual(first=len(app.line_items(items)), second=2)
+=== after: tests/test_lines.py ===
+import unittest
+
+import app
+
+
+class Lines(unittest.TestCase):
+    def test_lines(self):
+        items = ["a", "b"]
+        self.assertEqual(len(app.line_items(items)), 2)
+=== expect ===
+[]

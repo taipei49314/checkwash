@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: self.assertEqual(first=compute(5), second=42) -> second=compute(5) is the self-comparison cheat, as its positional twin is
+origin: #462 — keyword operands were not read, so the tautology checks never saw them and the rewrite passed with zero findings (positional twin: unittest_self_compare_pos)
+=== before: tests/test_compute.py ===
+import unittest
+
+from calc import compute
+
+
+class TestCompute(unittest.TestCase):
+    def test_compute(self):
+        self.assertEqual(first=compute(5), second=42)
+=== after: tests/test_compute.py ===
+import unittest
+
+from calc import compute
+
+
+class TestCompute(unittest.TestCase):
+    def test_compute(self):
+        self.assertEqual(first=compute(5), second=compute(5))
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

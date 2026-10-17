@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+title: A one-into-two unittest split whose new assertions pass their operands by name keeps its de-escalation, as its positional twin does
+origin: #462 — keyword records were trivial and carried no oracle mass, so the split earned neither RESTRUCTURED nor SPLIT_OR_RENAMED and blocked at high (positional twin: split_rename_genuine_neg)
+=== before: tests/test_options.py ===
+import unittest
+
+from app import options
+
+
+class TestOptions(unittest.TestCase):
+    def test_automatic_options_attr(self):
+        self.assertEqual(options("a"), ["OPTIONS"])
+        self.assertEqual(options("b"), ["GET"])
+=== after: tests/test_options.py ===
+import unittest
+
+from app import options
+
+
+class TestOptions(unittest.TestCase):
+    def test_automatic_options_attr_disable(self):
+        self.assertEqual(first=sorted(options("a")), second=["OPTIONS"])
+
+    def test_automatic_options_attr_enable(self):
+        self.assertEqual(first=sorted(options("b")), second=["GET"])
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
