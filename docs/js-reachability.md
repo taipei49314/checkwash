@@ -206,14 +206,17 @@ after the stop keeps its reading:
   template is read again as the operand reader reads it, so a quoted `}` or
   a `//` comment in a substitution hides none, and one it leaves unread, such
   as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a
-  block too, or a TypeScript `<T>x` assertion), or an Annex B HTML-like
-  comment (`<!--`, `-->`); such a callback is not walked at all;
+  block too, or a TypeScript `<T>x` assertion), a regular expression after a
+  block or a statement head that the mask reads as division, or an Annex B
+  HTML-like comment (`<!--`, `-->`); such a callback is not walked at all;
 - a dead body that is no block, when its end at a line break is in doubt
   (`if (false) skip()` with a `{` block on the next line, which JavaScript
-  runs, a line ending in `x!`, `Map<K, V>`, `() => void`, `yield`, `async`
-  or `await`, or any line after a TypeScript cast or type annotation
-  (`as Config`, `var x: T`), where TypeScript or a restricted production may
-  end the statement): it is not killed;
+  runs, a line starting with `(` or `[`, a line after a `}` (an arrow's
+  body cannot be called or indexed), a line ending in `x!`, `Map<K, V>`,
+  `() => void`, `yield`, `async` or `await`, or any line after a TypeScript
+  cast or type annotation (`as Config`, `var x: T`), where JavaScript,
+  TypeScript or a restricted production may end the statement): it is not
+  killed;
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
   generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
