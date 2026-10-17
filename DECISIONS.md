@@ -11121,3 +11121,153 @@ The agent wrote this entry in #424's fix PR #474. The maintainer approved it
 on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
 row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
 #306。」
+
+## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
+
+Rulings 306 (owner, 2026-10-08, "裁決依照你建議": Q1 (a), Q2 (a); and
+2026-10-14, 「P1 全部照建議」: Sub-Q1 to Sub-Q11, each as recommended).
+D-144 is #424's, so this entry is D-145.
+
+#306 reports that in a `unittest.TestCase` (or a pytest class) whose test
+calls a helper method, `self._check(total(...))`, the frontend named the
+call by its root, `self`, and never walked the method. A helper method's
+assertion weakened (A1) or deleted (A2), and a skip in a helper method the
+test calls (H2) or its `setUp` calls (S1), passed with zero findings. The
+same helper as a module function blocked (THREATMODEL row 91).
+
+How each ruling answer is implemented:
+
+- Q1 (a), assertions and skips. In a method unit, a call
+  `<receiver>.<name>(...)` whose receiver is the method's first positional
+  parameter (and is never rebound) runs the helper method resolved below.
+  That method is followed as a module helper is, once per entry site with
+  that site's reaching keys (#55), at most four calls deep. The walk goes
+  through further calls on the method's own instance and through the
+  module helpers it calls. Its assertions are the unit's, with
+  `inherited: true` and the new optional IR field `via`, the method's
+  class-qualified name (`TotalTest._check`). Its skips are read as #272
+  reads a helper's (`HelperOutcomes.of_method`): as a setup callback, with
+  its receiver, so `self.skipTest` is an outcome. The marker is
+  `helper.<method>.<effect>`. A class's setup callbacks and fixtures read
+  the methods they call the same way (`SetupScope(methods=)`), which gives
+  S1.
+- Q2 (a). The method is the one the class running the test resolves: the
+  method's own class, or for an inherited test the collecting subclass.
+- Sub-Q1 (a), rule 2. The H2 and S1 pins flip and are renamed (below).
+- Sub-Q2 (a), the order. A local C3 over the module's top-level classes,
+  each base the file does not define kept as an opaque entry. The name
+  resolves only in a same-file class reached before the first opaque
+  entry. It stays unresolved on a C3 failure, a class name the module binds
+  more than once, a decorator on the running class or on any class up to
+  the one that binds the name, or a class keyword (a metaclass),
+  `__init_subclass__` or `__getattribute__` on any same-file class in the
+  order.
+- Sub-Q3 (a), name-specific. In the first class of the order that binds
+  the name, its one binding is a plain def in the class body, not under
+  `if` or `try`. The call stays unresolved on any of these anywhere in the
+  module: a store or del of `.<name>`, a `.__dict__[...]` store or del,
+  `setattr`/`delattr`/`object.__setattr__` with the literal name (or a
+  computed name on the receiver or on a class of the order),
+  `patch.object` or `monkeypatch.setattr` naming it, or `__setattr__` on a
+  class of the order.
+- Sub-Q4 (a). Only an undecorated `def` or `async def` resolves.
+- Sub-Q5 (a). A helper method's guard is read under the running class's
+  attributes, through `setup_outcome(..., receiver=True, attrs=env(...))`,
+  as `setUp`'s is. `credit_base` admits `helper.` markers and reads them
+  again under each crediting subclass.
+- Sub-Q6 (a). A name `unittest.TestCase` defines is never followed, in any
+  class. `self_methods.TESTCASE_NAMES` is a fixed literal list: the union
+  over Python 3.11-3.14 (3.11's `Lib/unittest/case.py`, the aliases 3.12
+  removed, the assertions 3.14 added), never read from the running
+  interpreter. Shadowing stays row 91a.
+- Sub-Q7 (a). A helper method moved to a base in another module is behind
+  an opaque entry, so the move reads as ASSERT_REMOVED. It is pinned as a
+  stated cost (`self_method_moved_to_imported_base_pos`) and counted by the
+  sweep. A follow-up for a one-hop read of a `from M import Base` base is
+  filed only if the cost proves real.
+- Sub-Q8 (c), evidence per finding. Each followed method's callees go into
+  `helper_calls` under its class-qualified name. They count as repair
+  evidence only for a finding about an assertion reached through that
+  method, identified by its `via` (`gating._finding_via`, by the cited
+  span). `invoked` does not change.
+- Sub-Q9 (a). The maintainer text covers THREATMODEL rows 91, 92, 104, 118
+  and 125, SPEC §3 "What counts as a unit's assertions", the SPEC §4
+  TEST_DISABLED helper-skip clause, and SPEC §5's compensation text and
+  repair-evidence item 2.
+- Sub-Q10 (b). A disappeared unit keeps today's identity: its `via`
+  assertions stay out of the finding's text and fingerprint.
+- Sub-Q11 (b), a detection-only overlay. Own assertions are paired, judged
+  and credited exactly as on main (`diffalign._match_assertions`). `via`
+  assertions then pair among themselves and with the after side's own
+  assertions left unpaired, by the same stages. A `via` assertion earns no
+  credit and adds no requirement: it counts in no D2 move credit, no D5
+  oracle mass, no D4 newly written assertion and no split/rename budget,
+  and a disappeared unit needs none of its `via` assertions moved. A finding
+  about a `via` assertion takes the credits a module helper's inherited
+  assertion takes. #272 reading 7's moved-skip pairing reads `helper.`
+  markers in both directions, so it covers helper methods unchanged.
+
+This entry supersedes D-111 reading 2's sentence "A method reached through
+`self` is no scope `_executed_scopes` resolves, for assertions either": since
+#306, such a method is followed by this entry's resolution, for assertions
+and skips.
+
+Why Sub-Q3 departs from D-095 reading 2. D-095 reads a class *value* for a
+guard, and makes it unknown on any reflective call in the module and for
+any private name, because unittest sets private attributes on the
+instance. A helper method is a *def* that a call names, and the ruling made
+its rebinding test name-specific. A `setattr` on an unrelated object
+elsewhere in the module therefore leaves the helper resolved. A private
+name (`_check`, the usual spelling of a helper method) resolves unless it
+is one `unittest.TestCase` defines (Sub-Q6). A computed-name `setattr` on
+the receiver or on a class of the order still leaves every name of that
+class unresolved.
+
+Effects beyond the ruling's text, accepted with this entry:
+
+- The running class must be a top-level class of the module. A method of a
+  nested class, or of a class defined under `if`, keeps today's reading.
+- A call through another name for the instance (`other = self;
+  other._check()`) is not followed.
+- `cls.<name>()` in a classmethod unit is read as `self.<name>()` is, its
+  receiver being its first parameter.
+
+Rule 2. Sub-Q1 approved these expectation changes, made exactly as
+described: in `tests/test_issue272_helper_skips.py`, H2
+`test_a_method_reached_through_self_is_not_followed` flips from `[]` to
+`helper._later.skip`, and S1
+`test_a_method_the_setup_reaches_through_self_is_not_followed` to
+`helper._offline.skip`. Both are renamed `..._is_followed`, to pin the
+closure, as D-088 did for #208's pins. No other existing fixture or test
+expectation changed, and none under `tests/gates`.
+
+**Fingerprints and IR.** No fingerprint moves (Sub-Q10): the `via`
+assertions are new records, and a finding on one is a new finding. In
+`--emit-ir`, every assertion gains `"via": null`, which is an optional field
+(docs/stability.md: IR_VERSION stays 2, as for D-067's keys and D-111's
+`markers_moved`). A file whose test follows a helper method also gains its
+`via` assertions and a class-qualified `helper_calls` key. The count of
+records this changes in `tools/emit_corpus.py`'s output comes from CI's
+artifacts (NOT_RUN on the work machine), and the next release guide names
+the field.
+
+**Cost.** NOT_RUN: work-machine rule (POLICY work-machine-local); the sweep
+was not run on the work machine. The ruling asks the sweep to measure it,
+with resolution toggled in both directions and with what Sub-Q8 (a) and
+Sub-Q11 (a) would have changed. The two stated costs are pinned: a helper
+method moved to a base in another module (Sub-Q7), and a conversion to
+`staticmethod` (Sub-Q4). A skip added together with a decorator still
+passes with zero findings, as on main.
+
+Evidence status: the change was prepared on a work machine where no
+pytest, checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 10 `.gwcase` fixtures and 51 collected items in
+  `tests/test_issue306_self_methods.py`. The two pins above changed.
+- The diffalign and `gating.py` changes for Sub-Q8 and Sub-Q11 are in their
+  own commit, for the owner's approval as the ruling asks.
+
+The agent wrote this entry in #306's fix PR #476. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
+(93c25a6) text and of the diffalign and gating commit ea98b62.
