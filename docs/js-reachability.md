@@ -225,11 +225,16 @@ after the stop keeps its reading:
   but an operator, a punctuator such as `(` or `,`, or a keyword such as
   `return` that is no property name), or an Annex B HTML-like comment
   (`<!--`, `-->`); such a callback is not walked at all;
-- a dead body that is no block, when its end lies past a line break
-  (`if (false) skip()` with a `{` block on the next line, which JavaScript
-  runs; `x!`, `as Config` or an arrow's `}` at a line's end; `.5` or `[1]`
-  at the next line's start): JavaScript or TypeScript may end the
-  statement at that line break, so the body is not killed;
+- a dead body that is no block, or a literal-decided `&&`/`||` statement,
+  when a line break inside it does not follow an operator that leaves the
+  expression unfinished (`if (false) skip()` with a `{` block on the next
+  line, which JavaScript runs; `x!`, `as Config` or an arrow's `}` at a
+  line's end; `.5` or `[1]` at the next line's start): JavaScript or
+  TypeScript may end the statement at that line break, so the body is not
+  killed and the statement not decided (`false &&` then `expect(...)` on
+  the next line is still decided);
+- a statement keyword (`do`, `while`) inside a statement read on past a
+  line break: the binder read past the statement's end;
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
   generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
