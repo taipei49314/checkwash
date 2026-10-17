@@ -36,7 +36,11 @@ library the frontend reads: Jest and Vitest `expect` matchers, chai `expect`,
   `false` or `null`, or an array or plain object of them
   (`[1, "a"]`, `{ total: 1 }`). They are read as JavaScript tokenizes
   them, so a `//` in a template or a quote in a regular expression is part
-  of it. Comments, parentheses, `x!` and a cast to one named type
+  of it, and a `//` comment ends at any line terminator, U+2028 and U+2029
+  included. Where the tokens cannot tell how JavaScript reads a `/` (right
+  after a `}`, after a statement head such as `if (ok)`, or inside a
+  template substitution), the operand is not read, and the assertion keeps
+  its rung. Comments, parentheses, `x!` and a cast to one named type
   (`as number`, `satisfies Total`, `as const`) are read through, and a sign
   belongs to a number. A cast to anything more (`0 as any || x`) leaves the
   operand whole.
