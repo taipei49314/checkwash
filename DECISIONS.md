@@ -11121,3 +11121,139 @@ The agent wrote this entry in #424's fix PR #474. The maintainer approved it
 on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
 row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
 #306。」
+
+## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
+
+Ruling 421 (owner, 2026-10-14, 「P1 全部照建議」) answered its six questions
+as recommended, and the order decision puts round 1 before #429 and #428.
+D-145 is #306's entry in PR #476, so this entry is D-146.
+
+#421 reports that an assertion-level exemption was keyed on rule, path, unit
+and the normalized before text. While the base still held the original line,
+one `checkwash allow` for a reviewed rewrite also passed any other rewrite of
+that line the same rule reported, until the entry expired. The key was broader
+in four more ways. The event kind was not in it, so an approved strength drop
+also covered an inversion. A Jest or Vitest assertion was keyed by its text
+through the matcher's `(`, so `toBe(1)` and `toBe(2)` on one subject shared a
+key. TOLERANCE_LOOSENED was keyed by `kind:old value`, so one approval covered
+any widening of a tolerance with that kind and old value in the unit. And
+identical before lines collided.
+
+How each answer is implemented:
+
+- Q1 (b) and Q2 (b), the scope. ASSERT_WEAKENED (its five branches),
+  ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
+  EXPECTED_VALUE_CHANGED at assertion level, EXPECTED_VALUE_DERIVED,
+  EXPECTATION_DEFINITION_CHANGED (the aligned emitter and the helper/loop
+  provenance channel), SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (both
+  forms of each) now emit `make_assertion_fingerprint`. TEST_DISABLED waits
+  for round 2 under its own issue and ruling. EXPECTED_VALUE_HARDCODED,
+  CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT and the rules that are not
+  oracle rules keep `make_fingerprint`.
+- Q3 (b), the identity. `assertion_identity` builds it and `assertion_key`
+  hashes it: `rule/path/unit/v2:<64hex>`, the full SHA256 of ASCII canonical
+  JSON under the scheme name `checkwash/assertion-fingerprint/v2`. It holds
+  the legacy pre-image exactly as `make_fingerprint` builds it, the complete
+  before and after texts, the event kind, the before side's ordinal and
+  count of the text (`assertion_position`), and the rule's context. The
+  texts are in `identity_text`'s form: `normalize_text` with the backtick
+  added to its quotes, through a new keyword-only parameter whose default
+  leaves pairing, move detection and the legacy keys as they were. A span
+  only finds the assertion among its copies. Spans, line numbers, messages,
+  strengths, severities, file digests and revision labels stay out. Nothing
+  raises: an unreadable text is null, and a context JSON cannot encode is
+  recorded as null.
+- Q4 (a), legacy keys. `fingerprint_state` retires a legacy key of these
+  nine rules. It is still parsed and counted, never eligible, and `allow`
+  refuses it (exit 2) with a message that names #421. `doctor` and `check`
+  report it as they report the five D-055 namespaces. Nothing is migrated.
+  The legacy entries in checkwash's own ledger cover merged PRs, so no
+  current verdict changes; they stay as ignored records until they expire
+  or are removed through the GUARDRAIL_TOUCHED route.
+- Q5 (a), versioning. The next minor (or 1.0), never a patch.
+  FINDINGS_VERSION and IR_VERSION stay at 2: no IR field is added. The
+  release needs the one-time authorization in AGENTS.md rule 5.
+- Q6 (b), the report listing, is filed separately at P3.
+
+Readings the ruling leaves to the implementation:
+
+1. **The context per rule.** TOLERANCE_LOOSENED: the tolerance kind and both
+   recorded values. EXPECTATION_DEFINITION_CHANGED (aligned): for each name
+   whose definition moved, its reaching definition, local binding,
+   parametrize column, parametrize rows, module constant and same-file
+   fixture, before and after. EXPECTED_VALUE_DERIVED: the names the new
+   expectation shares with the subject. SUBJECT_INPUT_CHANGED: the changed
+   inputs. SUBJECT_NORMALIZED (aligned): both resolved subjects.
+   ASSERT_WEAKENED: whether the subject changed in the polarity branch, and
+   the tolerance an unreadable one lost; its other branches need nothing
+   beyond the kind and the texts. The provenance channel and both table
+   forms already put their whole event in the legacy text.
+2. **Which assertion a tolerance change came from.** `tolerance_changes`
+   records values only. The detector takes, in alignment order, the next
+   pair whose tolerances are those values; when there is none, the texts
+   and the position are null and the key still differs by its context.
+3. **Literal-table SUBJECT_NORMALIZED events carry no position.** The record
+   alone is the identity, so it survives the JSON round trip of the events
+   without the units. Duplicate suppression, between the two forms and
+   between equal records, stays on the legacy keys, so no finding count
+   changes.
+4. **The stored expectation.** `EXPECTED_VALUE_CHANGED/path/-/v2:<64hex>`
+   stays the D-055 file form. The same rule with a unit is now an
+   assertion-level v2 key, so the key that was `invalid` at
+   `test_snapshot_expectations.py:125` is `supported`.
+
+This supersedes, for these nine namespaces, D-055's "Keep unaffected
+identities ... unchanged" and D-077's list of the keys that stay (six rules
+keying a JS assertion by its legacy matcher identity; TOLERANCE_LOOSENED,
+EXPECTED_VALUE_CHANGED and EXPECTED_VALUE_DERIVED keeping every other key).
+The D-084 practice, a changed assertion riding on an existing exemption whose
+key binds only the before text, ends.
+
+**Fingerprints.** Every finding of the nine rules has a new key, so every
+recorded exemption for them stops matching and the reviewed change must be
+re-run and approved again. Other rules keep their keys. Findings of one rule
+in one unit sort by key, so their order in a report can change.
+
+**Pinned tests (rule 2).** Changed as approved:
+`test_js_assertion_identity.py`'s four named tests, which now pin the
+legacy pre-image inside the v2 identity (`_refines`);
+`test_tolerance_absolute_bound.py`'s
+`test_a_finding_reported_before_keeps_its_fingerprint`, likewise;
+`test_snapshot_expectations.py:125,127` (its name, which says assertion
+keys are not retired, is left as approved);
+`test_doctor.py:537-546`, whose over-cap entry becomes a v2 key;
+`test_human_encoding.py:120-121`; and `test_fingerprint_scope.py:189-233`,
+moved to BROAD_EXCEPT_ADDED. Beyond that list, two, for the owner's approval:
+`test_issue416_subdirectory_root.py`'s `FINGERPRINT`, a legacy ASSERT_WEAKENED
+key its three tests pass to `checkwash allow`, becomes a v2 key (an input; no
+expectation changes); and `tests/e2e/test_cli.py::test_sarif_format_is_github_code_scanning_subset`
+reads the ASSERT_WEAKENED result's `partialFingerprints` under `checkwash/v2`,
+as SPEC §6 says. No `.gwcase` expectation changes.
+`allowlist_future_created_pos` still passes, now also because its legacy key
+is retired; `test_a_future_created_content_bound_key_is_still_capped` pins the
+cap on a v2 key.
+
+**Cost.**
+- **New blocks:** a rewrite of an assertion under an exemption recorded for
+  another rewrite of the same line, for another identical copy, or for
+  another context.
+- **Re-review:** every recorded exemption for the nine rules.
+- **Not measured here:** the sweep (ruling: the standard set and D-088's
+  sets), which runs on the pool.
+
+Row 136 is Closed. Its residuals: TEST_DISABLED (its own round),
+EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
+before-only keys; an approval still covers the identical reviewed rewrite on a
+later diff, as D-055 intends; and the identity holds what the frontends
+record. Rows 100 and 101 now point to it.
+
+Evidence status: the change was prepared on a work machine where no pytest,
+checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 34 collected items in
+  `tests/test_issue421_assertion_keys.py` and one `.gwcase` fixture,
+  `assertion_key_before_only_reuse_pos` (`bypass: 136`). None is under
+  `tests/gates`.
+- The documented test count is 18710 (18675 + 35).
+
+The agent wrote this entry in #421's fix PR; the maintainer approves it there.
