@@ -150,6 +150,15 @@ def test_a_different_operand_keeps_the_exact_rung(expected):
     # A property's value compared with that property still asserts that the property is there.
     (CHAI, "expect(order).to.have.property('total', order.total);", "compare_eq", S.EXACT_VALUE),
     (CHAI, "assert.propertyVal(order, 'total', order.total);", "compare_eq", S.EXACT_VALUE),
+    # Templates and regular expressions are read whole: a `//` in one is no comment, and
+    # the whitespace a regex matches is not formatting.
+    (NODE, "assert.strictEqual(`http://${host}/a`, `http://${expected}/a`);", "compare_eq", S.EXACT_VALUE),
+    (VITEST, 'expect(text.replace(/  /g, "_")).toBe(text.replace(/ /g, "_"));', "compare_eq", S.EXACT_VALUE),
+    # A cast is taken out only to one named type: `as any || fallback` is more than a cast.
+    (VITEST, "expect(value as any || fallback).toEqual(value);", "compare_eq", S.EXACT_VALUE),
+    # A spread on both sides compares two different elements.
+    (NODE, "assert.equal(...pair, ...pair);", "compare_eq", S.EXACT_VALUE),
+    (AVA, "t.is(...pair, ...pair);", "compare_eq", S.EXACT_VALUE),
 ])
 def test_named_residuals_keep_their_rung(header, body, form, strength):
     assertion = _assertion(header, body)
@@ -176,6 +185,9 @@ def test_named_residuals_keep_their_rung(header, body, form, strength):
     (VITEST, "expect('abc').toMatch(/b/);"),
     (VITEST, "expect([1, 2]).toContain(2);"),
     (VITEST, "expect(1, 'message').toBe(1);"),
+    (VITEST, "expect(`it's`).toBe(\"it's\");"),
+    (VITEST, "expect(`http://x`).toBe('http://x');"),
+    (VITEST, "expect('https://x').toMatch(/^https?:\\/\\//);"),
     (NODE, "assert.ok(true);"),
     (NODE, "assert(false);"),
     (NODE, "assert.ok(true, 'always');"),
@@ -211,6 +223,8 @@ def test_an_assertion_on_literals_alone_reads_as_a_tautology(header, body):
     (VITEST, "expect({ [key]: 1 }).toEqual({});"),
     (VITEST, "expect([1, , 2]).toEqual([1, 2]);"),
     (VITEST, "expect(`${total}`).toBe('1');"),
+    (VITEST, "expect(`/* ${banner} */`).toBe('/* v1 */');"),
+    (VITEST, "expect((0 as number, total)).toBe(0);"),
     (VITEST, "expect(-total).toBe(1);"),
     (VITEST, "expect(!true).toBe(false);"),
     (VITEST, "expect(1 + 1).toBe(2);"),
@@ -250,6 +264,8 @@ def test_an_assertion_whose_predicate_is_not_read_keeps_no_strength(body):
     ("[1,,2]", False), ("[...x]", False), ("{ a }", False), ("{ [a]: 1 }", False),
     ("{ a() { return 1; } }", False), ("{ ...a }", False), ("1 + 1", False), ("-x", False),
     ("--1", False), ("!0", False), ("[1] + [2]", False), ("f(1)", False), ("'a' + 'b'", False),
+    ("`it's`", True), ("/'/", True), ("`http://x`", True), ("1e-5 as number", True),
+    ("`/* ${a} */`", False), ("0 as number, x", False), ("1 as any || 2", False), ("<!-- 1", False),
 ])
 def test_the_literal_reader(operand, literal):
     assert literal_operand(operand) is literal
@@ -262,6 +278,9 @@ def test_the_literal_reader(operand, literal):
     ("x", "x + 1", False), ("x", "x + -0", False), ("x", "-x", False), ("x", "0 - x", False),
     ("x", "x * 1 ** 2", False), ("a + b", "a + b * 1", False), ("x", "x << 0", False),
     ("x", "x || 0", False), ("a.b", "a['b']", False), ("x", "y", False), ("x", "", False),
+    ("x", "(x as number)", True), ("`a ${x}`", "`a ${x}`", True), ("/a b/", "/a b/", True),
+    ("`http://${a}/x`", "`http://${b}/x`", False), ("/  /g", "/ /g", False), ("...p", "...p", False),
+    ("v as any || w", "v", False), ("`${`a`}`", "`${`b`}`", False),
 ])
 def test_the_operand_comparison(left, right, same):
     assert same_operand(left, right) is same
