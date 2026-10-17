@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a helper method's skip under an OS condition is a D6 gate, held at warn as the same skip in the body is
+origin: #306, ruling 306 Q1 (a) - read as #272 reads a helper's guarded skip
+=== before: tests/test_billing.py ===
+import sys
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+=== after: tests/test_billing.py ===
+import sys
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    def _later(self):
+        if sys.platform == "win32":
+            self.skipTest("not on Windows")
+
+    def test_total(self):
+        self._later()
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

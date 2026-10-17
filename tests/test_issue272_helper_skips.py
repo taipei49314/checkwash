@@ -10,9 +10,9 @@ assertions, the helper is read as a setup callback is: an outcome every call
 reaches is unconditional, and one reached under a condition keeps it, with
 the call site's conditions and every helper's on the way conjoined. 272.Q3:
 the marker is `helper.<function>.<effect>`, and its message says the skip
-was added to a helper this test calls. A method reached through `self` is not
-such a scope (#306); a helper imported from another module is the ruling's
-second stage (272.Q2).
+was added to a helper this test calls. A method reached through `self` is
+followed since #306, as the class running the test resolves it; a helper
+imported from another module is the ruling's second stage (272.Q2).
 """
 import datetime
 
@@ -325,25 +325,25 @@ def test_a_conftest_fixtures_helper_is_not_followed():
 
 # --- residuals of this stage ----------------------------------------------------------------
 
-def test_a_method_reached_through_self_is_not_followed():
-    """H2: `self._later()` names no scope `_executed_scopes` resolves (#306)."""
+def test_a_method_reached_through_self_is_followed():
+    """H2: `self._later()` runs the method the class running the test resolves (#306)."""
     after = (
         "import unittest\n\n\nclass TotalTest(unittest.TestCase):\n"
         "    def _later(self):\n        self.skipTest('later')\n\n"
         "    def test_total(self):\n        self._later()\n        self.assertEqual(1, 1)\n"
     )
-    assert markers(after, "TotalTest.test_total") == []
+    assert markers(after, "TotalTest.test_total") == [("helper._later.skip", "self.skipTest('later')", None)]
 
 
-def test_a_method_the_setup_reaches_through_self_is_not_followed():
-    """S1: `setUp` calling `self._offline()` is the same residual (#306)."""
+def test_a_method_the_setup_reaches_through_self_is_followed():
+    """S1: `setUp` calling `self._offline()` runs that method too (#306)."""
     after = (
         "import unittest\n\n\nclass TotalTest(unittest.TestCase):\n"
         "    def _offline(self):\n        self.skipTest('flaky')\n\n"
         "    def setUp(self):\n        self._offline()\n        self.items = [1]\n\n"
         "    def test_total(self):\n        self.assertEqual(self.items, [1])\n"
     )
-    assert markers(after, "TotalTest.test_total") == []
+    assert markers(after, "TotalTest.test_total") == [("helper._offline.skip", "self.skipTest('flaky')", None)]
 
 
 def test_a_nested_helper_sees_the_names_its_test_imports():
