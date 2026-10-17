@@ -294,6 +294,11 @@ def test_the_literal_reader(operand, literal):
     ("f(/'/) || g(/'/) + 0", "f(/'/) || g(/'/)", False), ("f(/\\(/) || g(/\\)/) + 0", "f(/\\(/) || g(/\\)/)", False),
     ("`${`a`}`", "(`${`a`}`)", True), ("`${ x // }`\n}`", "`${ x // }`\n}`", True),
     ("`${ a / b }`", "`${ a / b }`", False),
+    # A cast to one named type binds before the no-op arithmetic around it, as TypeScript reads it.
+    ("total", "total as number + 0", True), ("total", "0 + total as number", True),
+    ("total", "total satisfies number + 0", True), ("x", "x as T + 1", False), ("x", "x as T * 2", False),
+    # A template as written cannot spell another's placeholder.
+    ("`${`a`}`", "`${t60247b6061607d60}`", False),
 ])
 def test_the_operand_comparison(left, right, same):
     assert same_operand(left, right) is same
@@ -308,6 +313,7 @@ def test_the_operand_comparison(left, right, same):
     (CHAI, "expect(total).to.equal(27);", "expect(total).to.equal(total);"),
     (AVA, "t.is(total, 27);", "t.is(total, total);"),
     (VITEST, "expect(total).toBe(27);", "expect(total).toBe((total as number) + 0);"),
+    (VITEST, "expect(total).toBe(27);", "expect(total).toBe(total as number + 0);"),
 ])
 def test_a_self_comparison_in_an_oracles_place_is_weakened(header, before, after):
     """The pair no longer reads as two spellings of `eq_strict`: the lattice judges it."""

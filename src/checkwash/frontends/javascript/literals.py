@@ -743,6 +743,8 @@ _SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\
 _LINE_TERMINATOR = re.compile("[\n\r\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
 # Statement heads whose `)` a regular expression may follow: `if (ok) /a/.test(s)`.
 _STATEMENT_HEADS = frozenset({"if", "while", "for", "with"})
+# The one named type a cast inside an operand names: `as number`, `as Foo.Bar[]`.
+_CAST_TYPE = re.compile(r"\s+[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*")
 
 
 def _string_end(source: str, start: int) -> int | None:
@@ -894,22 +896,28 @@ def operand_tokens(source: str) -> list[str] | None:
 def _clean(expression: str) -> str | None:
     """An operand's tokens joined by single spaces: no comments, its literals as written.
 
-    A regular expression, and a template that holds another, stands as a
-    placeholder spelled from its text: the quote and bracket scanners that
-    read this text skip the placeholder whole, where a quote or bracket in
-    the literal would misplace their depth, and two of them still match only
-    when their text does.
+    Each regular expression and template stands as a placeholder spelled
+    from its text: the quote and bracket scanners that read this text skip
+    the placeholder whole, where a quote, bracket or nested template in the
+    literal would misplace their depth, and two of them match only when
+    their text does. Every one is replaced, so no literal as written can
+    spell another's placeholder.
     """
     tokens = operand_tokens(expression)
     return None if tokens is None else " ".join(_shielded(token) for token in tokens)
 
 
 def _shielded(token: str) -> str:
-    """A regular expression or a template that holds another as a placeholder, any other token as it is."""
+    """A regular expression or a template as a placeholder, any other token as it is.
+
+    A template keeps whether it has a substitution: `t...` without, `${t...}`
+    with one, so the literal reader still tells the two apart.
+    """
+    spelled = token.encode("utf-8", "surrogatepass").hex()
     if token[:1] == "/" and token not in _OPERAND_PUNCTUATORS:
-        return "/r" + token.encode("utf-8", "surrogatepass").hex() + "/"
-    if token[:1] == "`" and _quoted_end(token, 0) != len(token):
-        return "`${t" + token.encode("utf-8", "surrogatepass").hex() + "}`"
+        return "/r" + spelled + "/"
+    if token[:1] == "`":
+        return "`t" + spelled + "`" if _TEMPLATE_LITERAL.fullmatch(token) else "`${t" + spelled + "}`"
     return token
 
 
@@ -1037,7 +1045,9 @@ def _no_op_operand(source: str) -> str | None:
     (`_strip_identity`, THREATMODEL row 10), and only as the expression's
     outermost operation: `a + b * 1` keeps its `* 1`, `x + -0` its `-0`, and
     an operator that binds looser than `+` (a comparison, `&&`, `?:`, `,`,
-    an assignment) or anything this does not read leaves the text whole.
+    an assignment) or anything this does not read leaves the text whole. A
+    cast to one named type is read as TypeScript binds it: `x as number + 0`
+    is `(x as number) + 0`, and `0 + x as number` is `(0 + x) as number`.
     """
     additive: list[tuple[int, str]] = []
     multiplicative: list[tuple[int, str]] = []
@@ -1064,6 +1074,12 @@ def _no_op_operand(source: str) -> str | None:
             i, ended = number.end(), True
         elif _NAME.match(source, i):
             word = _NAME.match(source, i).group()
+            if word in {"as", "satisfies"} and ended:
+                cast = _CAST_TYPE.match(source, i + len(word))
+                if cast is None:
+                    return None
+                i = cast.end()  # the operand stays ended; a `|`, `&` or `<` after the type is unread
+                continue
             if word in {"in", "instanceof", "as", "satisfies", "yield"}:
                 return None
             i, ended = i + len(word), word not in {"typeof", "void", "delete", "await", "new"}
