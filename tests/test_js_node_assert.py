@@ -1,4 +1,7 @@
-"""Issue #164: Node's exact assertions must not disappear from oracle checks."""
+"""Issue #164: Node's exact assertions must not disappear from oracle checks.
+
+credit: @arsen-ask-lx (#164)
+"""
 
 import datetime
 import json
