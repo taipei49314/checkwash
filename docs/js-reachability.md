@@ -186,7 +186,8 @@ as JavaScript compares them) or two booleans; and
 `undefined` and `NaN` only where they name the unshadowed global: where
 the binder sees no declaration of them, and every spelling of the name in
 the file is a plain read (no parameter, enum, namespace or hoisted block
-function, no `with` or `eval`, none hidden in text the mask misreads).
+function, no `with` or `eval`, no `\u` escape, none hidden in text the mask
+misreads).
 Anything
 else is unknown and the branch keeps its reading: a name, a `const` binding
 (`const off = false; if (off)`), a call, arithmetic, `typeof`, `void`,
