@@ -817,6 +817,39 @@ Each recorded call stays visible as a coverage diagnostic (below), with a
 reason that says its rewrite is not judged. The source tests are in
 [`tests/test_js_unjudged_assertions.py`](../tests/test_js_unjudged_assertions.py).
 
+### Expected-failure records a test runner reads
+
+Known limit ([#468](https://github.com/taipei49314/checkwash/issues/468)).
+Some runners read a test's expected results from a data file and pass any
+run that matches it. No rule reads such a file, so recording a regressed
+case as an expected failure passes with zero findings.
+
+The known case is undici's Web Platform Tests record,
+`test/web-platform-tests/expectation.json`. Its runner:
+
+- compares each subtest with its recorded `success`;
+- does not compare a case marked `flaky`, and does not run a file marked
+  `skip`;
+- writes the file back from the results it observed.
+
+So marking a newly failing subtest `success: false` or `flaky: true`, or its
+file `skip`, makes a failing run pass. Breaking a subtest, running the suite
+and committing the rewritten file is enough.
+
+How checkwash treats the file depends on its size:
+
+- Under 1,000,000 bytes it has the `test` role, as any non-Python file
+  beneath `test/` does (SPEC §2, #217). It earns no repair evidence, and
+  no rule reads its content.
+- Over that size it is set aside unread (#415).
+
+Either way the change passes. Review the diff of such a file by hand.
+
+A detector for this one format, recognised by its path and shape, is
+planned. It would report a subtest recorded as passing that no longer is,
+and a file newly marked `skip` or `flaky`. It waits for a ruling on reading
+the format past the size limit, and for a pool sweep of its cost (#468).
+
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node,
