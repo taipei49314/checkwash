@@ -11706,19 +11706,20 @@ Readings left to the implementation, accepted with this entry:
     `literals` reads it, a quoted `}` or a `//` comment in a substitution
     included, and one it leaves unread refuses the callback too), JSX or a
     TypeScript `<T>x` assertion (a `<` where no operand ends, or right after
-    a block's `}`), a `/` the mask reads as division right after a `}` or a
-    statement head's `)`, where JavaScript starts a regular expression, or an
+    a block's `}`), a `/` the mask reads as a division where JavaScript
+    starts a regular expression (after a `}`, a statement head's `)`, an
+    update or an operator, or first on its line), a regular expression the
+    mask reads right after a `}` or `)`, where JavaScript may divide, or an
     Annex B `<!--` or `-->` comment.
-11. `_end` reads on past a line break where JavaScript or TypeScript may end
-    a statement: before a `{`, `(` or `[` and after a `}` (an arrow's body
-    or a postfix update cannot be called or indexed), after a `!`, `>`,
-    `void`, `yield`, `async` or `await`, which the binder reads as operators
-    (`x!`, `Map<K, V>`, `() => void`), and anywhere after a top-level `as`,
-    `satisfies` or `:`,
-    where a TypeScript type ends at the line break and `[` or `(` starts the
-    next statement. That only shortens a cut after a `return`, but
-    it could lengthen a kill, so a dead body that is no block is not killed
-    where such a line break lies in it, and the walk of that list stops.
+11. `_end` reads on past a line break wherever the binder's ASI reading
+    continues the statement, and JavaScript or TypeScript may end it there
+    (`x!`, `as Config`, an arrow's `}` or `() => void` at a line's end, `{`,
+    `(`, `[` or `.5` at the next line's start). Reading on only shortens a
+    cut after a `return`, but
+    it could lengthen a kill, so a dead body that is no block is killed
+    only when no line break lies inside it; otherwise the walk of that list
+    stops. A prefix `++` or `--` at a line's end takes the next line as its
+    operand, so a `return ++` there does not end the statement.
 12. The folder reads tokens from `literals.operand_tokens`, so a `/` after a
     postfix `++` divides and a nested template is one token, and it gives
     up past 64 levels of `!` or parentheses rather than recursing further.
@@ -11748,11 +11749,11 @@ nothing, now reports `ASSERT_REMOVED` under the key its deletion has.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 242 collected items in
+- Tests were added: 248 collected items in
   `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
   nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
   issue's own edits, `js_issue429_repro_pos`).
-- The documented test count is 19284 (19030 + 254).
+- The documented test count is 19290 (19030 + 260).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
