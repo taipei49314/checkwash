@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: expect(total([1, 2])).toBe(3) -> expect(3).toBe(3) keeps the expected value and drops the oracle
+origin: #429 (Q2) — an assertion on literals alone is TAUTOLOGY, as `assert 3 == 3` is in Python
+=== before: tests/total.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/total";
+
+test("totals", () => {
+  expect(total([1, 2])).toBe(3);
+});
+=== after: tests/total.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/total";
+
+test("totals", () => {
+  expect(3).toBe(3);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
