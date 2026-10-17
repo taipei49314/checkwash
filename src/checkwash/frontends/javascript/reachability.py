@@ -98,6 +98,11 @@ _REGEX_AFTER = frozenset({
 })
 _REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw", "void", "delete", "in",
                                 "instanceof", "new"})
+# Tokens after which a name is read, never bound, and heads whose `(` is no call.
+_READ_AFTER = frozenset({"!", "&", "|", "?", "==", "===", "!=", "!==", "=", "return", "typeof", "void", "case"})
+_NOT_CALLS = frozenset({"for", "catch", "function", "switch", "with", "if", "while", "async"})
+# A `with` statement or `eval` anywhere in the text, comments and strings included.
+_SCOPE_CHANGERS = re.compile(r"(?<![\w$])(?:with\s*\(|eval(?![\w$]))")
 
 
 class _Folder:
@@ -330,15 +335,8 @@ class Reachability:
                            re.finditer("[\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]", bindings.text)]
         self.dead: list[tuple[int, int]] = []
         self.assertions: dict[int, int] = {}
-        # Shadows of `undefined` and `NaN` the binder does not scope: a `with`
-        # statement anywhere, and a function or class declared in a block,
-        # which Annex B hoists in sloppy code.
-        words = [token for token, _start, _end in self.tokens]
-        self.with_statement = any(word == "with" and following == "("
-                                  for word, following in zip(words, words[1:]))
-        self.declared = {name for index, name in enumerate(words[1:], 1)
-                         if words[index - 1] in {"function", "class"}
-                         or (words[index - 1] == "*" and words[index - 2:index - 1] == ["function"])}
+        # Whether each global the folder reads is spelled only as plain reads in the file.
+        self.read_only: dict[str, bool] = {}
         # Line breaks where JavaScript may end a statement that `_end` reads on past.
         self.doubtful = 0
 
@@ -386,7 +384,7 @@ class Reachability:
                 position += 1
             previous = bisect_left(self.bindings.token_starts, run) - 1
             if _misread_run(text, run, position, self.token(previous) if previous >= 0 else "",
-                            self.token(previous - 1) in {".", "?."}):
+                            self.token(previous - 1) in {".", "?.", "#"}):
                 return True
         for index in range(first, closing):
             token, following = self.token(index), self.token(index + 1)
@@ -481,8 +479,43 @@ class Reachability:
 
     def _global(self, name: str, position: int) -> bool:
         """Is `name` the unshadowed global at `position`?"""
-        return (not self.with_statement and name not in self.declared
-                and self.bindings.is_global((name,), position))
+        if name not in self.read_only:
+            self.read_only[name] = self._only_read(name)
+        return self.read_only[name] and self.bindings.is_global((name,), position)
+
+    def _only_read(self, name: str) -> bool:
+        """Is every spelling of `name` in the file a read this walk can see?
+
+        The binder scopes declarations, but not everything that binds a name:
+        a parameter before a TypeScript type, an enum or namespace, a block's
+        function that Annex B hoists, `with`, `eval`, or text the mask hides.
+        So each spelling must be a token, right after an operator, `return`,
+        `typeof`, `void` or `case`, or first in an `if` or `while` head or a
+        call's arguments, and never before `=`, `=>` or a type's `:`.
+        """
+        text = self.bindings.text
+        if self.separators or _SCOPE_CHANGERS.search(text):
+            return False
+        visible = {start: index for index, (token, start, _end) in enumerate(self.tokens) if token == name}
+        for match in re.finditer(r"(?<![\w$])" + name + r"(?![\w$])", text):
+            index = visible.get(match.start())
+            if index is None:
+                return False  # in a string, comment, template or regular expression, or hidden
+            before, after = self.token(index - 1), self.token(index + 1)
+            if after in {"=", "=>"} or (after == ":" and before not in {"?", "case"}):
+                return False
+            if before in _READ_AFTER:
+                continue
+            if before == "(":
+                head, closing = self.token(index - 2), self.pairs.get(index - 1)
+                if head in {"if", "while"}:
+                    continue
+                if (closing is not None and (_NAME.fullmatch(head) or head in {")", "]"})
+                        and head not in _NOT_CALLS and self.token(index - 3) not in {"function", "*"}
+                        and self.token(closing + 1) not in {"{", "=>", ":"}):
+                    continue  # a call's first argument
+            return False
+        return True
 
     def _if(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
         head = first + 1

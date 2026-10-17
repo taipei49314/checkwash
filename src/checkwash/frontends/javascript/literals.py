@@ -867,8 +867,8 @@ def operand_tokens(source: str) -> list[str] | None:
             continue
         if char == "/" and tokens and (tokens[-1] == "}" or len(tokens) - 1 in heads):
             return None  # after a block or a statement head it starts a regular expression, else it divides
-        if char == "/" and tokens and (tokens[-1] in _EITHER_WAY
-                                       or (tokens[-1] in _OPERAND_PREFIX_WORDS and tokens[-2:-1] in (["."], ["?."]))):
+        if char == "/" and tokens and (tokens[-1] in _EITHER_WAY or (
+                tokens[-1] in _OPERAND_PREFIX_WORDS and tokens[-2:-1] in (["."], ["?."], ["#"]))):
             return None  # a prefix or postfix update, `x!` or `!x`, a type's `>`, a name or a property
         if char in "'\"":
             end = _string_end(source, i)

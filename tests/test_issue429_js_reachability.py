@@ -144,6 +144,8 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "if (++/ || true || x/.lastIndex && false) {} else { " + ORACLE + " }",
     # Annex B hoists a block's function declaration: `undefined` is no longer the global.
     "{ function undefined() {} }\nif (undefined) { " + ORACLE + " }",
+    # A keyword after `#` is a private name: a division follows it.
+    "if (false) { x = Suite.#new / 2 } { z / (" + TEXT + ") }",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -227,9 +229,23 @@ def test_a_branch_the_folder_cannot_decide_or_that_runs_keeps_the_assertion(stat
     ("!" * 1000 + "true", None), ("(" * 400 + "false" + ")" * 400, None),
     ("i++ / 2 || x / 1 && false", None), ("x <!-- || true", None), ("x --> 0 || true", None),
     ("`${ x // }` && false && `\n}`", None), ("++/ || true || x/.lastIndex && false", None),
+    ("this.#new / 2 || true || 1 / 1 && false", None),
 ])
 def test_the_condition_folder(condition, truth):
     assert fold_condition(condition, lambda _name: True) is truth
+
+
+@pytest.mark.parametrize("prelude", [
+    "// note\N{LINE SEPARATOR}var undefined = 1;\n",  # JavaScript ends the comment at U+2028
+    "h = n.new / 2; var undefined = 1; re = /x/;\n",  # the mask reads `/ 2; ... /` as one literal
+    "enum undefined { A }\n",
+    "function check(undefined: number): void {}\n",
+])
+def test_a_spelling_of_undefined_the_walk_cannot_read_leaves_it_unfolded(prelude):
+    text = HEADER + prelude + 'it("value", () => {\nif (undefined) { ' + ORACLE + " }\n});\n"
+    parsed = parse_javascript(text.encode())
+    assert TEXT in [assertion.text for unit in parsed.units for assertion in unit.side.assertions]
+    assert parsed.unreachable_assertion_spans == ()
 
 
 def test_a_with_statement_in_the_file_leaves_undefined_unfolded():
