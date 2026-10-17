@@ -311,6 +311,23 @@ def _file_repair_evidence(path: str, ir: IR, *, opaque: bool = True) -> bool:
     return opaque and ir.globals.prod_opaque_change
 
 
+def _finding_via(f: Finding, unit: Unit | None) -> str | None:
+    """The helper method a finding's assertion was reached through (#306), or None.
+
+    An assertion finding cites its assertion's span on one side; one reached
+    through `self.<method>()` carries the method's class-qualified name.
+    """
+    if unit is None:
+        return None
+    for evidence, side in ((f.before, unit.before), (f.after, unit.after)):
+        if evidence is None or side is None:
+            continue
+        for a in side.assertions:
+            if a.via is not None and a.span == evidence.span:
+                return a.via
+    return None
+
+
 def _repair_evidence(
     unit: Unit | None,
     ir: IR,
@@ -318,6 +335,7 @@ def _repair_evidence(
     *,
     via_helper: bool = True,
     opaque: bool = True,
+    via: str | None = None,
 ) -> bool:
     """Did production change in a way that plausibly explains editing THIS test?
 
@@ -353,6 +371,13 @@ def _repair_evidence(
                 callees = file.helper_calls.get(name)
                 if callees and _symbol_match(callees, ir.globals.prod_symbols_changed, imports):
                     return True
+            # A helper method's callees, under its class-qualified name, are
+            # evidence for the findings about assertions reached through it,
+            # and for no other (306 Sub-Q8).
+            if via is not None:
+                callees = file.helper_calls.get(via)
+                if callees and _symbol_match(callees, ir.globals.prod_symbols_changed, imports):
+                    return True
     return False
 
 
@@ -370,7 +395,7 @@ def _same_unit_rewrite(unit: Unit | None) -> bool:
     if not unit.delta.assertions_removed:
         return False
     before_texts = {normalize_text(a.text) for a in unit.before.assertions}
-    return any(_is_real_assertion(a) and normalize_text(a.text) not in before_texts
+    return any(_is_real_assertion(a) and a.via is None and normalize_text(a.text) not in before_texts
                for a in unit.after.assertions)
 
 
@@ -380,7 +405,9 @@ def _is_real_assertion(a) -> bool:
 
 
 def _oracle_mass(side) -> int:
-    strong = sum(1 for a in side.assertions if _is_real_assertion(a))
+    # An assertion reached through a helper method neither earns a credit nor
+    # adds a requirement (306 Sub-Q11).
+    strong = sum(1 for a in side.assertions if _is_real_assertion(a) and a.via is None)
     return strong * max(1, side.param_cases or 1)
 
 
@@ -446,7 +473,7 @@ def _split_or_renamed(
             elif unit.after is not None and unit.before is None:
                 if not unit_is_live(unit.after, file_constants.get(file.path)):
                     continue
-                if any(_is_real_assertion(a) for a in unit.after.assertions):
+                if any(_is_real_assertion(a) and a.via is None for a in unit.after.assertions):
                     budget[leaf] = budget.get(leaf, 0) + _oracle_mass(unit.after)
         if not gone or not budget:
             continue
@@ -624,7 +651,9 @@ def apply_gates(
                 f.severity = "info"
                 f.deescalators.append("DUPLICATE_REMAINS")
                 continue
-            texts = [normalize_text(a.text) for a in unit.before.assertions]
+            # What a disappeared unit needs moved is its own assertions: those
+            # it reached through a helper method add no requirement (306 Sub-Q11).
+            texts = [normalize_text(a.text) for a in unit.before.assertions if a.via is None]
             needed = collections.Counter(texts)
             if texts and all(moved[t] >= n for t, n in needed.items()):
                 moved.subtract(needed)
@@ -773,6 +802,7 @@ def apply_gates(
                 unit, ir, f.path,
                 via_helper=f.rule != "TEST_DISABLED",
                 opaque=not refuses_opaque,
+                via=_finding_via(f, unit),
             )
         )
         package_only = (
