@@ -713,6 +713,8 @@ _SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\
 _LINE_TERMINATOR = re.compile("[\n\r\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
 # Statement heads whose `)` a regular expression may follow: `if (ok) /a/.test(s)`.
 _STATEMENT_HEADS = frozenset({"if", "while", "for", "with"})
+# The one named type a cast inside an operand names: `as number`, `as Foo.Bar[]`.
+_CAST_TYPE = re.compile(r"\s+[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*")
 
 
 def _string_end(source: str, start: int) -> int | None:
@@ -1007,7 +1009,9 @@ def _no_op_operand(source: str) -> str | None:
     (`_strip_identity`, THREATMODEL row 10), and only as the expression's
     outermost operation: `a + b * 1` keeps its `* 1`, `x + -0` its `-0`, and
     an operator that binds looser than `+` (a comparison, `&&`, `?:`, `,`,
-    an assignment) or anything this does not read leaves the text whole.
+    an assignment) or anything this does not read leaves the text whole. A
+    cast to one named type is read as TypeScript binds it: `x as number + 0`
+    is `(x as number) + 0`, and `0 + x as number` is `(0 + x) as number`.
     """
     additive: list[tuple[int, str]] = []
     multiplicative: list[tuple[int, str]] = []
@@ -1034,6 +1038,12 @@ def _no_op_operand(source: str) -> str | None:
             i, ended = number.end(), True
         elif _NAME.match(source, i):
             word = _NAME.match(source, i).group()
+            if word in {"as", "satisfies"} and ended:
+                cast = _CAST_TYPE.match(source, i + len(word))
+                if cast is None:
+                    return None
+                i = cast.end()  # the operand stays ended; a `|`, `&` or `<` after the type is unread
+                continue
             if word in {"in", "instanceof", "as", "satisfies", "yield"}:
                 return None
             i, ended = i + len(word), word not in {"typeof", "void", "delete", "await", "new"}
