@@ -205,6 +205,10 @@ after the stop keeps its reading:
 
 - a line break next to a template or regular expression
   (`return /x/\n.test(...)`, a template spanning lines);
+- a `return` or `throw` with an operand that ends at a line break without a
+  `;`: TypeScript types, class heritage and decorators may go on past it
+  (`return x as readonly` then `string[]`, `implements` then `Base`, `@dec`
+  then `class`), so nothing after it is cut;
 - an unpaired bracket, a call the frontend could only recover, or U+2028 or
   U+2029 anywhere in the callback, and text the token stream misreads as
   code anywhere in it: a template nested in another's substitution (each
