@@ -267,9 +267,11 @@ def test_a_deleted_property_assertion_is_removed_at_its_rung():
     ('order.should.have.property("total").that.equals(78.75);', [("compare_eq", 90, "order.total", True, "78.75")]),
     ("order?.total.should.equal(78.75);", [("compare_eq", 90, "order?.total", True, "78.75")]),
     ("res.body.items[0].should.equal(78.75);", [("compare_eq", 90, "res.body.items[0]", True, "78.75")]),
-    ("(5).should.equal(5);", [("compare_eq", 90, "(5)", True, "5.0")]),
-    ("[1, 2].should.have.lengthOf(2);", [("type_shape", 50, "[1, 2]", True, None)]),
-    ("'abc'.should.match(/b/);", [("pattern", 60, "'abc'", True, None)]),
+    # Literal subjects and operands alone: TAUTOLOGY since #429 (Q2), the
+    # subject, polarity and value read as before.
+    ("(5).should.equal(5);", [("tautology", 10, "(5)", True, "5.0")]),
+    ("[1, 2].should.have.lengthOf(2);", [("tautology", 10, "[1, 2]", True, None)]),
+    ("'abc'.should.match(/b/);", [("tautology", 10, "'abc'", True, None)]),
     # `new` binds before the member access: the subject is the new instance.
     ("new Date(0).getTime().should.equal(0);", [("compare_eq", 90, "new Date(0).getTime()", True, "0.0")]),
 ])
