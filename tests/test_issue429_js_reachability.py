@@ -160,6 +160,11 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "\\u{61}return / 1;\n" + ORACLE,
     # TypeScript ends `x!` at the line break; the binder reads on into `do`.
     "const el = find()!\ndo el.reset(); while (false)\n" + ORACLE,
+    # A `return` with an operand that ends at a line break without a `;`: TypeScript may go on.
+    "return class H implements\n  Base { static { " + ORACLE + " } };",
+    "return value() as readonly\n  string[] || " + TEXT + ";",
+    "return @register\n  class { static { " + ORACLE + " } };",
+    "return value\n" + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))

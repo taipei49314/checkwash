@@ -718,7 +718,10 @@ class Reachability:
                     return None  # `x!` then `do ...`: TypeScript ends the statement where the binder reads on
                 if (completes and not bindings._continues(cursor)
                         and self.token(cursor) not in {"extends", "implements"}):
-                    return cursor
+                    # A `return` or `throw` ended here would cut what follows, but
+                    # TypeScript types, class heritage and decorators may go on past
+                    # this line break (`as readonly` then `string[]`): not proved.
+                    return None if keyword in _JUMPS else cursor
                 # JavaScript or TypeScript may end the statement here (`x = 1` then
                 # `.5`, `x = load() as T` then `[1]`, `x!` then `{`); this reads on.
                 self.doubtful += 1
