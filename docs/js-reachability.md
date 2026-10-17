@@ -35,9 +35,12 @@ library the frontend reads: Jest and Vitest `expect` matchers, chai `expect`,
 - A literal is a number (`1`, `-1.5e3`, `0x1F`), a BigInt (`10n`), a quoted
   string, a template with no substitution, a regular expression, `true`,
   `false` or `null`, or an array or plain object of them
-  (`[1, "a"]`, `{ total: 1 }`). Comments, parentheses and the TypeScript
-  wrappers (`as T`, `satisfies T`, `x!`) are read through, and a sign belongs
-  to a number.
+  (`[1, "a"]`, `{ total: 1 }`). They are read as JavaScript tokenizes
+  them, so a `//` in a template or a quote in a regular expression is part
+  of it. Comments, parentheses, `x!` and a cast to one named type
+  (`as number`, `satisfies Total`, `as const`) are read through, and a sign
+  belongs to a number. A cast to anything more (`0 as any || x`) leaves the
+  operand whole.
 - A name is never a literal. That includes `undefined`, `NaN` and `Infinity`,
   which a file can shadow, and a shorthand property, a spread, a hole or a
   computed key in a container. `expect(undefined).toBeUndefined()` keeps its
@@ -57,8 +60,10 @@ TAUTOLOGY, as `assert f(x) == f(x)` is in Python (THREATMODEL row 10):
   and their negations.
 - A negated one (`expect(x).not.toBe(x)`) can never pass. It is no oracle
   either, and it reads as Python reads `x != x`.
-- The two texts compare once comments, parentheses, the TypeScript wrappers
-  and formatting are taken out of each, and the outer no-op arithmetic Python
+- The two token sequences compare once comments, parentheses, `x!`, a cast
+  to one named type and formatting are taken out of each (quoted strings in
+  double quotes; templates and regular expressions as written, whitespace
+  included), and the outer no-op arithmetic Python
   strips: `x + 0`, `0 + x`, `x - 0`, `x * 1`, `1 * x` and `x / 1`, again and
   again (`(x + 0) * 1`). Only the outermost operation is stripped, as in
   Python: `a + b * 1` keeps its `* 1`, and `x + -0` its `-0`. The stripping
@@ -72,8 +77,11 @@ TAUTOLOGY, as `assert f(x) == f(x)` is in Python (THREATMODEL row 10):
 ### How it is recorded
 
 A tautology keeps the subject, text, span and operand evidence it was read
-with, so every finding identity stays what it was: a removed
-`expect(1).toBe(1)` keeps its key. It records form `tautology`, strength
+with, so a finding on its own evidence keeps its identity: a removed
+`expect(1).toBe(1)` keeps its key. A pair whose new side is a tautology is a
+strength drop, so where the old reading was a keyed relation (a `.not` that
+flipped: `toBe(27)` -> `.not.toBe(total)`), the finding is now the drop,
+under another key. It records form `tautology`, strength
 TAUTOLOGY, no predicate key and `positive=True`. Without a key, the predicate
 relation (SPEC §3) never reads `toBe(27)` -> `toBe(total)` as two spellings of
 one `eq_strict`, which is what let the self-comparison through.
@@ -106,6 +114,8 @@ does not change.
   names bound to one value.
 - Self-comparison outside equalities and inclusive bounds: `toBeCloseTo(x)`,
   `toContain(x)`, chai `include(x)`, `toMatch`, `within(x, x)`.
+- A spread on both sides (`assert.equal(...pair, ...pair)`) compares two
+  elements, not one operand.
 - Spellings that evaluate alike but read differently: `a.b` and `a["b"]`,
   the comma operator `(x, x)`, TypeScript's angle-bracket assertion
   `<number>x`, and arithmetic Python does not strip.
