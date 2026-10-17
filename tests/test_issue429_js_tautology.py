@@ -147,6 +147,9 @@ def test_a_different_operand_keeps_the_exact_rung(expected):
     (VITEST, "expect(total === total).toBe(true);", "compare_eq", S.EXACT_VALUE),
     # Two spellings of one property are two operands: nothing is evaluated.
     (VITEST, 'expect(order.total).toBe(order["total"]);', "compare_eq", S.EXACT_VALUE),
+    # A property's value compared with that property still asserts that the property is there.
+    (CHAI, "expect(order).to.have.property('total', order.total);", "compare_eq", S.EXACT_VALUE),
+    (CHAI, "assert.propertyVal(order, 'total', order.total);", "compare_eq", S.EXACT_VALUE),
 ])
 def test_named_residuals_keep_their_rung(header, body, form, strength):
     assertion = _assertion(header, body)

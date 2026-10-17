@@ -775,8 +775,11 @@ def _chai_assertion(
         key = _equality_key(operands[1], strict=meaning == "strict_equal", undefined_global=undefined_global)
     _state_predicate(assertion, key, rule.asserts, not positive)
     subject, names = origin or (operands[0], [])
+    # A property's value compared with that property still asserts that the
+    # property is there (`.property("total", order.total)`), so it is no
+    # self-comparison.
     _rate_tautology(assertion, subject, [*names, *operands[1:rule.operands]],
-                    (operands[0], operands[1]) if meaning in _SELF_MEANINGS else None)
+                    (operands[0], operands[1]) if meaning in _SELF_MEANINGS and not names else None)
     return assertion
 
 
