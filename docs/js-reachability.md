@@ -212,7 +212,9 @@ after the stop keeps its reading:
 - an unpaired bracket or a call the frontend could only recover anywhere
   in the callback, and U+2028 or U+2029 or text the token stream misreads
   as code anywhere from the file's start to the callback's end, since a
-  misreading shifts what the mask reads from there on: a template nested in
+  misreading shifts what the mask reads from there on (JSX or a regular
+  expression at the file's very start or after `export default` included):
+  a template nested in
   another's substitution (each
   template is read again as the operand reader reads it, so a quoted `}` or
   a `//` comment in a substitution hides none, and one it leaves unread, such
