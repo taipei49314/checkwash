@@ -11452,8 +11452,7 @@ ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
 Ruling 429 (owner, 2026-10-14, 「P1 全部照建議」) answered its ten
 questions as recommended. Q8 (b) splits the round into two changes, each
 with its own qualification and sweep; this entry is the first (Q2, Q6,
-Q7). D-145 (#306) is on main and D-146 (#421) is drafted in its open PR, so this
-entry is D-147.
+Q7). D-145 (#306) and D-146 (#421) are on main, so this entry is D-147.
 
 #429 reports three one-line JS/TS edits that the Python frontend blocks and
 the JS/TS frontend passed with zero findings. This change closes the first:
@@ -11551,7 +11550,8 @@ The three confirmations the ruling asks for are pinned in
   included, reaches `swallowing_handlers` before any key is dropped
   (`test_the_catch_proof_reads_the_predicate_before_it_is_dropped`; both
   test files are unchanged).
-- A removed `expect(1).toBe(1)` keeps its legacy key, `expect(1).toBe(`
+- A removed `expect(1).toBe(1)` keeps its identity: the content-bound key
+  (#421) is computed from the legacy pre-image `expect(1).toBe(`
   (`test_a_removed_literal_assertion_keeps_its_fingerprint`).
 
 No `.gwcase` expectation and nothing under `tests/gates` changed.
@@ -11559,8 +11559,9 @@ No `.gwcase` expectation and nothing under `tests/gates` changed.
 **Fingerprints.** No fingerprint scheme or existing key changes. The
 message of a removed literal assertion says `strength TAUTOLOGY` instead of
 the rung it read before, and pairs that were silent now report
-`ASSERT_WEAKENED` under new keys. If #421's content-bound keys (#477) land
-first, the pin above checks the legacy pre-image instead of the key itself.
+`ASSERT_WEAKENED` under new keys. #421's content-bound keys (#477) landed
+first, so the pin above checks the legacy pre-image each key is computed
+from, as `tests/test_js_assertion_identity.py` does.
 
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
@@ -11570,7 +11571,7 @@ checkwash or Python ran. CI ran the tests.
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 18942 (18736 + 206).
+- The documented test count is 18980 (18774 + 206).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
