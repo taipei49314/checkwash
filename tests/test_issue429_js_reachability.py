@@ -197,9 +197,17 @@ def test_an_unproved_boundary_keeps_todays_reading(body):
     "const s = `${'`'}`; /* '\n",
     # JavaScript ends the `//` comment at U+2028, so `/*` opens a block comment the mask does not see.
     "// note\N{LINE SEPARATOR}/* '\n",
+    # After `export default` a `/` starts a regular expression; the mask divides.
+    "export default /'/; /* '\n",
 ])
 def test_a_misreading_before_the_callback_refuses_it(prelude):
     text = HEADER + prelude + 'it("a", () => {\nreturn;\n// */ it("a", () => {\n' + ORACLE + "\n});\n"
+    assert parse_javascript(text.encode()).unreachable_assertion_spans == ()
+
+
+def test_jsx_at_the_file_start_refuses_the_callbacks_after_it():
+    """The `'` in the JSX text opens a string for the mask, which then hides the `/*`."""
+    text = "<p>it's</p>; /* '\n" + HEADER + 'it("a", () => {\nreturn;\n// */ it("a", () => {\n' + ORACLE + "\n});\n"
     assert parse_javascript(text.encode()).unreachable_assertion_spans == ()
 
 

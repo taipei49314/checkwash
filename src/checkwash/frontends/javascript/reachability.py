@@ -110,6 +110,10 @@ _UNFINISHED = frozenset({
     "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "=>", "in", "instanceof", "typeof", "new", "delete",
     "extends",
 })
+# Reserved words the binder may read as completing a name, which never end an
+# operand unless a `.`, `?.` or `#` makes them a property name.
+_NO_OPERAND = frozenset({"default", "export", "case", "else", "do", "return", "throw", "typeof", "void",
+                         "delete", "new", "in", "instanceof", "extends", "yield", "await"})
 # Statements whose end is a token they own (`;` or their closing `}`), not a line break.
 _COMPOUND = frozenset({"{", "if", "for", "while", "do", "try", "switch", "function", "class", "with"})
 # Keywords that start a statement and never continue an expression.
@@ -425,17 +429,22 @@ class Reachability:
                              or (token == "--" and following == ">")):
                 found.append(start)
                 break
-            if token == "<" and index > 0 and (self.token(index - 1) == "}" or (
-                    not self.bindings._completes(index - 1)
+            if token == "<" and (index == 0 or self.token(index - 1) == "}" or (
+                    not self._completes(index - 1)
                     and (_NAME.fullmatch(following) or following in {">", "/"}))):
-                found.append(start)  # JSX (after a block too), or a TypeScript `<T>` assertion
+                found.append(start)  # JSX (at the start or after a block too), or a TypeScript `<T>` assertion
                 break
-            if token in {"/", "/="} and index > 0 and (
-                    self.token(index - 1) in {"}", "++", "--"} or not self.bindings._completes(index - 1)
+            if token in {"/", "/="} and (
+                    index == 0 or self.token(index - 1) in {"}", "++", "--"} or not self._completes(index - 1)
                     or self.bindings._line_break(index)):
                 found.append(start)  # a regular expression the mask read as a division
                 break
         return min(found) if found else None
+
+    def _completes(self, index: int) -> bool:
+        """The binder's `_completes`, with a reserved word that is no property name ending nothing."""
+        return self.bindings._completes(index) and not (
+            self.token(index) in _NO_OPERAND and self.token(index - 1) not in {".", "?.", "#"})
 
     def _kill(self, first: int, after: int) -> None:
         """Statements from token `first` up to token `after` never run.
