@@ -212,7 +212,9 @@ after the stop keeps its reading:
   a `//` comment in a substitution hides none, and one it leaves unread, such
   as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a
   block too, or a TypeScript `<T>x` assertion), a token outside a string that
-  is not ASCII (a non-ASCII name, U+FEFF, which JavaScript reads as a space), a `/` the mask reads as a
+  is not ASCII (a non-ASCII name, U+FEFF, which JavaScript reads as a space),
+  a dead region holding a `function`, whose hoisted body a call before it
+  may run, a `/` the mask reads as a
   division where JavaScript starts a regular expression (after a block, a
   statement head, an update or an operator, or at a line's start), a
   regular expression it reads where JavaScript may divide (after anything
@@ -227,7 +229,12 @@ after the stop keeps its reading:
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
   generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
-  statements.
+  statements;
+- every callback in a file with a `\` outside a string: an identifier escape
+  (`return\u0041` is one name), which the binder splits;
+- a statement whose line ends in a token that completes no operand (`x!`)
+  when the next line starts with a statement keyword (`do`, `if`, `while`):
+  TypeScript ends the statement there, the binder reads on.
 
 ### Not read
 
