@@ -11709,8 +11709,9 @@ Readings left to the implementation, accepted with this entry:
     a block's `}`), a `/` the mask reads as a division where JavaScript
     starts a regular expression (after a `}`, a statement head's `)`, an
     update or an operator, or first on its line), a regular expression the
-    mask reads right after a `}` or `)`, where JavaScript may divide, or an
-    Annex B `<!--` or `-->` comment.
+    mask reads where JavaScript may divide (it is trusted only after an
+    operator, a punctuator such as `(` or `,`, or a keyword such as `return`
+    that is no property name), or an Annex B `<!--` or `-->` comment.
 11. `_end` reads on past a line break wherever the binder's ASI reading
     continues the statement, and JavaScript or TypeScript may end it there
     (`x!`, `as Config`, an arrow's `}` or `() => void` at a line's end, `{`,
@@ -11720,9 +11721,17 @@ Readings left to the implementation, accepted with this entry:
     only when no line break lies inside it; otherwise the walk of that list
     stops. A prefix `++` or `--` at a line's end takes the next line as its
     operand, so a `return ++` there does not end the statement.
-12. The folder reads tokens from `literals.operand_tokens`, so a `/` after a
-    postfix `++` divides and a nested template is one token, and it gives
+12. The folder reads tokens from `literals.operand_tokens`, so a nested
+    template is one token, and a `/` that may divide or start a regular
+    expression (after `++`, `--`, `!`, `>`, `of`, `await`, `yield` or a
+    keyword used as a property name) leaves the condition unknown; it gives
     up past 64 levels of `!` or parentheses rather than recursing further.
+13. `undefined` and `NaN` fold as the globals only where the binder finds no
+    declaration in scope, the file holds no `with` statement, and no
+    function or class of that name is declared anywhere in it: Annex B
+    hoists a function declared in a block to the function's scope in sloppy
+    code, which the binder does not scope. These came from the sixth review
+    round.
 
 Rule 2. By reading, no existing expected output moves, and none does: no
 existing fixture or test spells an assertion after a `return` or `throw`,
@@ -11749,11 +11758,11 @@ nothing, now reports `ASSERT_REMOVED` under the key its deletion has.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 248 collected items in
+- Tests were added: 254 collected items in
   `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
   nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
   issue's own edits, `js_issue429_repro_pos`).
-- The documented test count is 19290 (19030 + 260).
+- The documented test count is 19296 (19030 + 266).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.

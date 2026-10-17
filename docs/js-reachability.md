@@ -209,9 +209,10 @@ after the stop keeps its reading:
   block too, or a TypeScript `<T>x` assertion), a `/` the mask reads as a
   division where JavaScript starts a regular expression (after a block, a
   statement head, an update or an operator, or at a line's start), a
-  regular expression it reads right after a `}` or `)`, where JavaScript
-  may divide, or an Annex B HTML-like comment (`<!--`, `-->`); such a
-  callback is not walked at all;
+  regular expression it reads where JavaScript may divide (after anything
+  but an operator, a punctuator such as `(` or `,`, or a keyword such as
+  `return` that is no property name), or an Annex B HTML-like comment
+  (`<!--`, `-->`); such a callback is not walked at all;
 - a dead body that is no block, when its end lies past a line break
   (`if (false) skip()` with a `{` block on the next line, which JavaScript
   runs; `x!`, `as Config` or an arrow's `}` at a line's end; `.5` or `[1]`
