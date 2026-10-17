@@ -11117,5 +11117,7 @@ pytest, checkwash or Python ran. CI ran the tests.
   Q9 shapes and try-wrapped defs; the refactor gate (60, expected no
   change), tamper, decoy and recorded (no regression) and the perf gate.
 
-The agent wrote this entry in #424's fix PR #474, for the maintainer's
-approval.
+The agent wrote this entry in #424's fix PR #474. The maintainer approved it
+on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
+row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
+#306。」
