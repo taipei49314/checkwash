@@ -29,6 +29,7 @@ from checkwash.findings import (
     ASSERTION_FINGERPRINT_RULES,
     assertion_identity,
     assertion_key,
+    assertion_position,
     canonical,
     fingerprint_issue,
     fingerprint_state,
@@ -36,7 +37,7 @@ from checkwash.findings import (
     make_assertion_fingerprint,
     make_fingerprint,
 )
-from checkwash.ir.model import normalize_text
+from checkwash.ir.model import Assertion, UnitSide, normalize_text
 from checkwash.report.sarif import _result
 
 TODAY = datetime.date(2026, 9, 6)
@@ -134,10 +135,24 @@ def test_two_identical_assertions_are_two_approvals(monkeypatch):
 
 
 def test_the_count_is_part_of_the_identity():
+    # The same texts at ordinal 0 on both sides: only the count tells them apart.
     alone = _keys("ASSERT_WEAKENED", BEFORE, _test("assert add(2, 3) >= 0"))
-    beside = _keys("ASSERT_WEAKENED", _test("assert add(2, 3) == 5", "assert add(2, 3) == 5"),
-                   _test("assert add(2, 3) >= 0", "assert add(2, 3) == 5"))
-    assert len(alone) == len(beside) == 1 and alone != beside
+    both = _keys("ASSERT_WEAKENED", _test("assert add(2, 3) == 5", "assert add(2, 3) == 5"),
+                 _test("assert add(2, 3) >= 0", "assert add(2, 3) >= 0"))
+    assert len(alone) == 1 and len(both) == 2 and not set(alone) & set(both)
+
+
+def test_identical_copies_are_ordered_as_the_side_holds_them():
+    # Own and same-file assertions in source order, copies of one helper line
+    # by call site, then other files: never re-sorted by span, which mixes files
+    # and cannot tell copies apart (raised by a review of #477).
+    own = Assertion("a0", "compare_eq", 90, "assert r == 200", (400, 415), left="r")
+    first = Assertion("a1", "compare_eq", 90, "assert r == 200", (90, 105), left="r", inherited=True)
+    second = Assertion("a2", "compare_eq", 90, "assert r == 200", (90, 105), left="r", inherited=True)
+    side = UnitSide(span=(0, 500), assertions=[own, first, second])
+    assert [assertion_position(side, a) for a in (own, first, second)] == [(0, 3), (1, 3), (2, 3)]
+    assert assertion_position(side, Assertion("a3", "compare_eq", 90, "assert s == 1", (0, 9))) == (None, None)
+    assert assertion_position(None, own) == (None, None)
 
 
 def test_a_removed_assertion_is_keyed_by_its_place_among_copies():
@@ -220,11 +235,55 @@ def test_template_literal_whitespace_is_part_of_the_identity():
     assert identity_text("expect( x ).toBe(`a b`)") == identity_text("expect(x).toBe(`a b`)")
     assert identity_text('assert x == "a  b"') == normalize_text('assert x == "a  b"')
     assert identity_text(None) is None
+    # The code of a `${...}` is code (raised by a review of #477).
+    assert identity_text("expect(x).toBe(`a ${ b + c } d`)") == identity_text("expect(x).toBe(`a ${b+c} d`)")
+    assert identity_text("expect(x).toBe(`a ${b} d`)") != identity_text("expect(x).toBe(`a  ${b} d`)")
+    assert identity_text("t(`x ${ `y ${ z }` } w`)") == identity_text("t(`x ${`y ${z}`} w`)")
+    assert identity_text("t(`${ {a: 1}.a }`)") == identity_text("t(`${{a:1}.a}`)")
+
+
+def test_a_unit_named_with_a_slash_keeps_a_valid_key():
+    # A JS unit is the raw test title (raised by a review of #477).
+    for unit in ("GET /", "/", "a/b", "redirects to /"):
+        key = make_assertion_fingerprint("ASSERT_WEAKENED", "test/app.test.js", unit, "expect(status()).toBe(",
+                                         before="expect(status()).toBe(200)", after="expect(status()).toBeTruthy()",
+                                         kind="strength")
+        assert fingerprint_state(key) == "supported", key
+        assert active_fingerprints([_entry(key)], TODAY) == {key}
+    assert fingerprint_state("ASSERT_WEAKENED/a.py/v2:" + "0" * 64) == "invalid"
+
+    def source(body):
+        return ('test("GET /", () => { ' + body + " });\n").encode()
+
+    _ir, findings, _verdict = analyze(
+        [FileChange("tests/app.test.ts", "modified", source("expect(status()).toBe(200);"),
+                    source("expect(status()).toBeTruthy();"))],
+        Config(), Contract(), [], TODAY)
+    hit, = [f for f in findings if f.rule == "ASSERT_WEAKENED"]
+    assert hit.unit == "GET /" and fingerprint_state(hit.fingerprint) == "supported"
+
+
+def test_a_tolerance_change_is_keyed_by_the_assertion_that_changed(monkeypatch):
+    # The unchanged `places=2` beside it records a bare `2` as well (raised by a
+    # review of #477): the change is matched as alignment records it.
+    identities = _identities(monkeypatch)
+    head = "import unittest\n\nfrom calc import a, b\n\n\nclass T(unittest.TestCase):\n    def test_t(self):\n"
+    before = head + ("        self.assertAlmostEqual(a(), 1.0, places=2)\n"
+                     "        self.assertAlmostEqual(b(), 2.0, places=2)\n")
+    after = before.replace("2.0, places=2", "2.0, delta=2")
+    _ir, findings, _verdict = analyze([FileChange(PATH, "modified", before.encode(), after.encode())],
+                                      Config(), Contract(), [], TODAY)
+    hit, = [f for f in findings if f.rule == "TOLERANCE_LOOSENED"]
+    identity = next(i for i in identities if assertion_key(i) == hit.fingerprint)
+    assert identity["before"] == identity_text("self.assertAlmostEqual(b(), 2.0, places=2)")
+    assert identity["after"] == identity_text("self.assertAlmostEqual(b(), 2.0, delta=2)")
 
 
 def test_a_context_that_cannot_be_encoded_is_recorded_as_null():
+    loop = []
+    loop.append(loop)
     identity = assertion_identity("ASSERT_WEAKENED", PATH, "test_add", "assert x", before="assert x",
-                                  after=None, kind="k", context={"a": 1, 2: "b"})
+                                  after=None, kind="k", context=loop)
     assert assertion_key(identity) == assertion_key({**identity, "context": None})
     assert assertion_key(identity).startswith(f"ASSERT_WEAKENED/{PATH}/test_add/v2:")
 
@@ -233,6 +292,8 @@ def test_a_set_in_the_context_keys_the_same_under_every_hash_seed():
     # `ast.literal_eval` makes sets of literal arguments and table cells, and a
     # set's order follows the hash seed (raised by GLM, verified by Claude).
     assert canonical([{"b", "a"}, frozenset({3, 1, 2}), (b"x",)]) == [["a", "b"], [1, 2, 3], ["b'x'"]]
+    # A key that is not text is written as json.dumps writes an int key.
+    assert canonical({1: "a", (1, 2): "b", None: "c"}) == {"1": "a", "[1, 2]": "b", "null": "c"}
     snippet = (
         "import sys; sys.path.insert(0, 'src');"
         "from checkwash.findings import assertion_identity, assertion_key;"

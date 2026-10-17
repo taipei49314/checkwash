@@ -36,7 +36,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "ASSERT_REMOVED", file.path, unit.qualname, fingerprint_text(file.path, a),
                             before=a.text, after=None, kind="removed",
-                            position=assertion_position(unit.before, a.text, a.span),
+                            position=assertion_position(unit.before, a),
                         ),
                     )
                 )

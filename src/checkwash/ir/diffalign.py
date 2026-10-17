@@ -238,46 +238,9 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False
                 before_id=b.id, after_id=a.id, strength_change=change, fallback=fallback
             )
         )
-        # A fallback pair is paired by position, not identity. When both
-        # halves moved, the subject and the expected literal alike, the old
-        # check is gone and another holds its slot: EXPECTED_VALUE_CHANGED
-        # reports this pair on the same conditions, usually beside
-        # ASSERT_SUBSTITUTED, and the slack of the new check is no widening
-        # of the old one's. `abs(a - 1) < 0.01` deleted beside an added
-        # `abs(b - 2) < 1` is such a pair, and `abs(x - c) < eps` read as
-        # `abs=eps` makes them commoner (#196 189.2). A subject that moved
-        # alone is still compared: `t = total()` hoisted above
-        # `assertAlmostEqual(t, 78.75, delta=1e12)` is the old check
-        # widened, and so is any rename. A side with no recorded subject (a
-        # bare `pytest.approx` comparison) or no literal is compared too.
-        if (
-            fallback
-            and change is not None
-            and change >= 0
-            and b.left is not None
-            and a.left is not None
-            and not same_expr(b.left, a.left)
-            and b.right_value is not None
-            and a.right_value is not None
-            and b.right_value != a.right_value
-        ):
-            continue
-        if b.epsilon is not None and a.epsilon is not None:
-            kind = a.epsilon_kind or b.epsilon_kind or "abs"
-            old = b.epsilon
-            # A change takes the new side's kind, and a bare value reads as
-            # that kind. A bare value of another kind is keyed with its own
-            # (#196 190.3): `places=2` -> `delta=10` is not "delta=2 ->
-            # delta=10", and `places=7` -> `delta=7` is no value left alone.
-            if "=" not in old and b.epsilon_kind not in (None, kind):
-                old = f"{b.epsilon_kind}={old}"
-            if old != a.epsilon:
-                try:
-                    respelled = old == b.epsilon and Decimal(a.epsilon) == Decimal(b.epsilon)
-                except InvalidOperation:
-                    respelled = False
-                if not respelled:
-                    tolerance_changes.append((kind, old, a.epsilon))
+        recorded = tolerance_change(b, a, fallback, change)
+        if recorded is not None:
+            tolerance_changes.append(recorded)
 
     # A marker is kept when its identity is on the base side (#332); one that
     # is not is matched against the base's leftovers as a skip moved into or
@@ -424,6 +387,55 @@ def _param_rows_lost(
     without_deletions = _product(b - deleted for b, deleted, _ in per_table)
     surviving = _product(b - lost for b, _, lost in per_table)
     return original - surviving, without_deletions - surviving
+
+
+def tolerance_change(b, a, fallback: bool, change: int | None) -> tuple[str, str, str] | None:
+    """The (kind, before, after) tolerance change a paired assertion records, or None.
+
+    Alignment records the changes and TOLERANCE_LOOSENED finds each one's
+    pair with this same reading (#421), so neither can drift from the other.
+    """
+    # A fallback pair is paired by position, not identity. When both
+    # halves moved, the subject and the expected literal alike, the old
+    # check is gone and another holds its slot: EXPECTED_VALUE_CHANGED
+    # reports this pair on the same conditions, usually beside
+    # ASSERT_SUBSTITUTED, and the slack of the new check is no widening
+    # of the old one's. `abs(a - 1) < 0.01` deleted beside an added
+    # `abs(b - 2) < 1` is such a pair, and `abs(x - c) < eps` read as
+    # `abs=eps` makes them commoner (#196 189.2). A subject that moved
+    # alone is still compared: `t = total()` hoisted above
+    # `assertAlmostEqual(t, 78.75, delta=1e12)` is the old check
+    # widened, and so is any rename. A side with no recorded subject (a
+    # bare `pytest.approx` comparison) or no literal is compared too.
+    if (
+        fallback
+        and change is not None
+        and change >= 0
+        and b.left is not None
+        and a.left is not None
+        and not same_expr(b.left, a.left)
+        and b.right_value is not None
+        and a.right_value is not None
+        and b.right_value != a.right_value
+    ):
+        return None
+    if b.epsilon is None or a.epsilon is None:
+        return None
+    kind = a.epsilon_kind or b.epsilon_kind or "abs"
+    old = b.epsilon
+    # A change takes the new side's kind, and a bare value reads as
+    # that kind. A bare value of another kind is keyed with its own
+    # (#196 190.3): `places=2` -> `delta=10` is not "delta=2 ->
+    # delta=10", and `places=7` -> `delta=7` is no value left alone.
+    if "=" not in old and b.epsilon_kind not in (None, kind):
+        old = f"{b.epsilon_kind}={old}"
+    if old == a.epsilon:
+        return None
+    try:
+        respelled = old == b.epsilon and Decimal(a.epsilon) == Decimal(b.epsilon)
+    except InvalidOperation:
+        respelled = False
+    return None if respelled else (kind, old, a.epsilon)
 
 
 def align_file(

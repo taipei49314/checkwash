@@ -507,7 +507,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "EXPECTATION_DEFINITION_CHANGED", file.path, unit.qualname, b.text,
                             before=b.text, after=a.text, kind="definition_changed",
-                            position=assertion_position(unit.before, b.text, b.span),
+                            position=assertion_position(unit.before, b),
                             context={name: _definitions(file, unit, b, a, name) for name in moved},
                         ),
                     )

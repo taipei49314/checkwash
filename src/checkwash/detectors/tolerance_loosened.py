@@ -20,6 +20,7 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 
 from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.ir.diffalign import tolerance_change
 from checkwash.ir.model import IR, judged_as_test
 
 # The kinds that state an absolute bound (#196 190.3).
@@ -150,19 +151,23 @@ def _sources(unit) -> list[tuple]:
 
     `tolerance_changes` keeps the values only, and a content-bound identity
     needs the assertions too (#421 Q3). Alignment records the changes in
-    pair order, so each one is the next pair whose tolerances are these.
+    pair order with `tolerance_change`, so each one is the next pair that
+    records exactly that change.
     """
     b_by_id = {x.id: x for x in unit.before.assertions}
     a_by_id = {x.id: x for x in unit.after.assertions}
-    pairs = [(b_by_id.get(p.before_id), a_by_id.get(p.after_id)) for p in unit.delta.assertion_pairs]
+    pairs = []
+    for p in unit.delta.assertion_pairs:
+        b, a = b_by_id.get(p.before_id), a_by_id.get(p.after_id)
+        if b is not None and a is not None:
+            pairs.append((b, a, tolerance_change(b, a, p.fallback, p.strength_change)))
     out = []
     cursor = 0
-    for _kind, before_eps, after_eps in unit.delta.tolerance_changes:
+    for change in unit.delta.tolerance_changes:
         found = (None, None)
         for index in range(cursor, len(pairs)):
-            b, a = pairs[index]
-            if (b is not None and a is not None and b.epsilon is not None and a.epsilon == after_eps
-                    and before_eps in (b.epsilon, f"{b.epsilon_kind}={b.epsilon}")):
+            b, a, recorded = pairs[index]
+            if recorded is not None and tuple(recorded) == tuple(change):
                 found, cursor = (b, a), index + 1
                 break
         out.append(found)
@@ -213,10 +218,7 @@ def detect(ir: IR) -> list[Finding]:
                             before=b_pair.text if b_pair is not None else None,
                             after=a_pair.text if a_pair is not None else None,
                             kind="loosened",
-                            position=(
-                                assertion_position(unit.before, b_pair.text, b_pair.span)
-                                if b_pair is not None else (None, None)
-                            ),
+                            position=assertion_position(unit.before, b_pair),
                             context={"kind": kind, "before": before_eps, "after": after_eps},
                         ),
                     )

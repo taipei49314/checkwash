@@ -337,7 +337,7 @@ def detect(ir: IR) -> list[Finding]:
                             "SUBJECT_INPUT_CHANGED", file.path, unit.qualname,
                             json.dumps(identity, ensure_ascii=True, separators=(",", ":")),
                             before=b.text, after=a.text, kind="table_row",
-                            position=assertion_position(unit.before, b.text, b.span),
+                            position=assertion_position(unit.before, b),
                         )
                         old_inputs = [old_row[c] for c in input_cols]
                         new_inputs = [new_row[c] for c in input_cols]
@@ -384,7 +384,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "SUBJECT_INPUT_CHANGED", file.path, unit.qualname, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="input_changed",
-                            position=assertion_position(unit.before, b.text, b.span),
+                            position=assertion_position(unit.before, b),
                             context=[[label, old, new] for label, old, new in changes],
                         ),
                     )

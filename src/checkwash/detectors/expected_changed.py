@@ -259,7 +259,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "EXPECTED_VALUE_CHANGED", file.path, unit.qualname, b.text,
                             before=b.text, after=a.text, kind="expected_changed",
-                            position=assertion_position(unit.before, b.text, b.span),
+                            position=assertion_position(unit.before, b),
                         ),
                     )
                 )
@@ -343,7 +343,7 @@ def detect_derived(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "EXPECTED_VALUE_DERIVED", file.path, unit.qualname, b.text,
                             before=b.text, after=a.text, kind="expected_derived",
-                            position=assertion_position(unit.before, b.text, b.span), context={"shared": list(shared)},
+                            position=assertion_position(unit.before, b), context={"shared": list(shared)},
                         ),
                     )
                 )

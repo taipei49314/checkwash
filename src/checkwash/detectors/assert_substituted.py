@@ -160,7 +160,7 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "ASSERT_SUBSTITUTED", file.path, unit.qualname, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="substituted",
-                            position=assertion_position(unit.before, b.text, b.span),
+                            position=assertion_position(unit.before, b),
                         ),
                     )
                 )

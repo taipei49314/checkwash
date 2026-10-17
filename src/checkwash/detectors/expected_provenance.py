@@ -72,7 +72,8 @@ def detect(ir, existing):
                     "EXPECTATION_DEFINITION_CHANGED", file.path, name,
                     json.dumps(identity, ensure_ascii=True, separators=(",", ":")),
                     before=old_text, after=new_text, kind="provenance_changed",
-                    position=assertion_position(unit.before, old_text, old_span),
+                    position=assertion_position(
+                        unit.before, next((x for x in unit.before.assertions if tuple(x.span) == tuple(old_span)), None)),
                 ),
             ))
     return findings

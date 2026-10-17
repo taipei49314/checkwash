@@ -29,6 +29,7 @@ from checkwash.findings import (
     Evidence,
     Finding,
     assertion_position,
+    identity_text,
     make_assertion_fingerprint,
     make_fingerprint,
 )
@@ -104,8 +105,8 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=make_assertion_fingerprint(
                             "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="normalized",
-                            position=assertion_position(unit.before, b.text, b.span),
-                            context=[before_subject, after_subject],
+                            position=assertion_position(unit.before, b),
+                            context=[identity_text(before_subject), identity_text(after_subject)],
                         ),
                     )
                 )
