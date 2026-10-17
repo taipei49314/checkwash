@@ -252,18 +252,37 @@ def assertion_identity(
     }
 
 
+def canonical(value):
+    """`value` as JSON-native data whose encoding does not depend on the process.
+
+    A set or frozenset (`ast.literal_eval` makes them from literal arguments
+    and table cells) becomes a list sorted by its members' encodings: its own
+    iteration order, and so `str()` of it, follows the hash seed. Tuples
+    become lists; another value JSON has no form for (bytes, complex,
+    Ellipsis) becomes its `repr`. Dict keys are left as they are.
+    """
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, dict):
+        return {k: canonical(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [canonical(v) for v in value]
+    if isinstance(value, (set, frozenset)):
+        members = [canonical(v) for v in value]
+        return sorted(members, key=lambda v: json.dumps(v, sort_keys=True, ensure_ascii=True, default=repr))
+    return repr(value)
+
+
 def assertion_key(identity: dict) -> str:
     """`rule/path/unit/v2:<64hex>`: the full SHA256 of an identity's canonical JSON.
 
     It never raises: a context it cannot encode is recorded as null.
     """
     try:
-        # A context value JSON has no form for is recorded as its text; a
-        # caller passes lists and dicts, never sets, so the order is stable.
-        encoded = json.dumps(identity, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+        encoded = json.dumps(canonical(identity), sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     except (TypeError, ValueError, RecursionError):
         identity = {**identity, "context": None}
-        encoded = json.dumps(identity, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+        encoded = json.dumps(canonical(identity), sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     digest = hashlib.sha256(encoded.encode("ascii")).hexdigest()
     return f"{identity['rule']}/{identity['path']}/{identity['unit'] or '-'}/v2:{digest}"
 

@@ -44,7 +44,7 @@ import json
 
 from collections import Counter
 
-from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.findings import Evidence, Finding, assertion_position, canonical, make_assertion_fingerprint
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.expectation_identity import same_known_js_scalar
 from checkwash.ir.markers import parse_text
@@ -330,10 +330,12 @@ def detect(ir: IR) -> list[Finding]:
                     rewrites = _table_input_rewrites(file, unit, b, a)
                     table_reported = bool(rewrites)
                     for old_row, new_row, expected_cols, input_cols in rewrites:
-                        identity = (unit.qualname, old_row, new_row)
+                        # Canonical, so a literal set in a cell encodes the same in every
+                        # process (#421); other rows encode as they always have.
+                        identity = canonical((unit.qualname, old_row, new_row))
                         fingerprint = make_assertion_fingerprint(
                             "SUBJECT_INPUT_CHANGED", file.path, unit.qualname,
-                            json.dumps(identity, ensure_ascii=True, separators=(",", ":"), default=str),
+                            json.dumps(identity, ensure_ascii=True, separators=(",", ":")),
                             before=b.text, after=a.text, kind="table_row",
                             position=assertion_position(unit.before, b.text, b.span),
                         )

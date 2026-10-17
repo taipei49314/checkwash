@@ -11,6 +11,10 @@ rules are retired at once: parsed, never honoured, refused by `allow`
 """
 
 import datetime
+import os
+import pathlib
+import subprocess
+import sys
 
 import pytest
 
@@ -25,6 +29,7 @@ from checkwash.findings import (
     ASSERTION_FINGERPRINT_RULES,
     assertion_identity,
     assertion_key,
+    canonical,
     fingerprint_issue,
     fingerprint_state,
     identity_text,
@@ -222,6 +227,28 @@ def test_a_context_that_cannot_be_encoded_is_recorded_as_null():
                                   after=None, kind="k", context={"a": 1, 2: "b"})
     assert assertion_key(identity) == assertion_key({**identity, "context": None})
     assert assertion_key(identity).startswith(f"ASSERT_WEAKENED/{PATH}/test_add/v2:")
+
+
+def test_a_set_in_the_context_keys_the_same_under_every_hash_seed():
+    # `ast.literal_eval` makes sets of literal arguments and table cells, and a
+    # set's order follows the hash seed (raised by GLM, verified by Claude).
+    assert canonical([{"b", "a"}, frozenset({3, 1, 2}), (b"x",)]) == [["a", "b"], [1, 2, 3], ["b'x'"]]
+    snippet = (
+        "import sys; sys.path.insert(0, 'src');"
+        "from checkwash.findings import assertion_identity, assertion_key;"
+        "print(assertion_key(assertion_identity('SUBJECT_INPUT_CHANGED', 'tests/test_calc.py', 'test_add', 'x',"
+        " before='x', after='y', kind='input_changed',"
+        " context=[['argument 0', {'d', 'c', 'b', 'a'}, frozenset({'f', 'e'})]])))"
+    )
+    keys = set()
+    for seed in ("0", "1", "42", "12345", "99999"):
+        proc = subprocess.run([sys.executable, "-c", snippet], capture_output=True,
+                              cwd=str(pathlib.Path(__file__).resolve().parent.parent),
+                              env={**os.environ, "PYTHONHASHSEED": seed})
+        assert proc.returncode == 0, proc.stderr
+        keys.add(proc.stdout.decode().strip())
+    assert len(keys) == 1
+    assert keys.pop().startswith("SUBJECT_INPUT_CHANGED/tests/test_calc.py/test_add/v2:")
 
 
 def test_sarif_reports_an_assertion_key_as_content_bound():
