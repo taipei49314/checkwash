@@ -909,8 +909,10 @@ JavaScript template literal is kept, since it is the literal's value;
 pairing and move detection keep the legacy form. Spans, line numbers,
 messages, strengths, severities, file digests and revision labels are
 excluded, so reformatting outside string literals and moving the line keep
-the key. Computing the identity never raises: an input that cannot be read
-is null, and so is a context that cannot be encoded. A different after on
+the key. A set (a literal argument or table cell) is encoded as a list in
+sorted order, so the key does not depend on the hash seed. Computing the
+identity never raises: an input that cannot be read is null, and so is a
+context that cannot be encoded. A different after on
 the same before, another copy of the same assertion, or a different relevant
 context requires a different approval.
 

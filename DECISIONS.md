@@ -11201,6 +11201,13 @@ Readings the ruling leaves to the implementation:
    stays the D-055 file form. The same rule with a unit is now an
    assertion-level v2 key, so the key that was `invalid` at
    `test_snapshot_expectations.py:125` is `supported`.
+5. **Sets.** `ast.literal_eval` makes sets of literal arguments and table
+   cells, and a set's iteration order, so its `str()`, follows the hash seed.
+   `canonical` encodes a set as a list sorted by its members' encodings, and
+   another value JSON has no form for as its `repr`, so a key is the same in
+   every process. SUBJECT_INPUT_CHANGED's table-row legacy text goes through
+   it too; a row without a set encodes as it always has. Raised by a GLM
+   review of #477 and verified by the agent.
 
 This supersedes, for these nine namespaces, D-055's "Keep unaffected
 identities ... unchanged" and D-077's list of the keys that stay (six rules
@@ -11229,17 +11236,20 @@ key its three tests pass to `checkwash allow`, becomes a v2 key (an input; no
 expectation changes); and `tests/e2e/test_cli.py::test_sarif_format_is_github_code_scanning_subset`
 reads the ASSERT_WEAKENED result's `partialFingerprints` under `checkwash/v2`,
 as SPEC §6 says. No `.gwcase` expectation changes.
-`allowlist_future_created_pos` still passes, now also because its legacy key
-is retired; `test_a_future_created_content_bound_key_is_still_capped` pins the
-cap on a v2 key.
+`allowlist_future_created_pos` is unaffected: the golden runner passes it no
+ledger either, so its `bypass: 39` claim holds no exemption, a gap that
+predates #421. `test_a_future_created_content_bound_key_is_still_capped` pins
+the cap on a v2 key with a real entry.
 
 **Cost.**
 - **New blocks:** a rewrite of an assertion under an exemption recorded for
   another rewrite of the same line, for another identical copy, or for
   another context.
 - **Re-review:** every recorded exemption for the nine rules.
-- **Not measured here:** the sweep (ruling: the standard set and D-088's
-  sets), which runs on the pool.
+- **Not measured yet:** the sweep (ruling: the standard set and D-088's
+  sets). The owner chose to run it on LAPTOP-01AGNPJU, under POLICY
+  `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared run whose
+  manifest and engine commits he approves first.
 
 Row 136 is Closed. Its residuals: TEST_DISABLED (its own round),
 EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
@@ -11250,10 +11260,13 @@ record. Rows 100 and 101 now point to it.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 34 collected items in
-  `tests/test_issue421_assertion_keys.py` and one `.gwcase` fixture,
-  `assertion_key_before_only_reuse_pos` (`bypass: 136`). None is under
-  `tests/gates`.
+- Tests were added: 35 collected items in
+  `tests/test_issue421_assertion_keys.py`. None is under `tests/gates`.
+  Row 136 is pinned through `E2E_PINNED` by
+  `test_the_reviewed_rewrite_is_exempt_and_another_still_blocks`: the
+  golden runner passes no ledger, so the `.gwcase` first written for it held
+  no exemption at all (raised by a GLM review of #477 and verified by the
+  agent), and it was removed.
 - The documented test count is 18710 (18675 + 35).
 
 The agent wrote this entry in #421's fix PR #477. The maintainer approved it
