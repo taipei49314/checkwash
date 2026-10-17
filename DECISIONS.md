@@ -11537,6 +11537,17 @@ Readings left to the implementation, accepted with this entry:
    reads as `x` although `-0 + 0` is positive zero under `Object.is`.
 5. An assertion whose predicate is not read (strength None: `raises`,
    `unknown`) keeps strength None.
+6. What the lexer cannot read gives no literal and no operand to compare,
+   so the assertion keeps its rung: a `/` right after a `}` or a statement
+   head's `)` (`if (ok) /a/.test(s)` in a callback inside the operand),
+   which may start a regular expression or divide; a `/` inside a template
+   substitution, which may hold a `}`; and an Annex B HTML-like comment. A
+   `//` comment ends at any line terminator, U+2028 and U+2029 included.
+   Regular expressions, and templates nested in a substitution, reach the
+   quote and bracket scanners as placeholders spelled from their text, so
+   a quote or bracket inside one hides no operator: `f(/'/) || g(/'/) + 0`
+   keeps its `+ 0`. These came from a read-only review workflow and were
+   checked by Claude.
 
 Rule 2. By reading, the ruling expected no existing output to move. Three
 do, in
@@ -11580,12 +11591,12 @@ from, as `tests/test_js_assertion_identity.py` does.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 230 collected items in
+- Tests were added: 245 collected items in
   `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 19008 (18774 + 234).
+- The documented test count is 19023 (18774 + 249).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
