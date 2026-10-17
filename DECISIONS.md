@@ -11104,18 +11104,69 @@ names and `exec`, metaclasses and class decorators, wrappers that drop the
 test, a function-level `__test__ = False` (Q8), an unresolvable subclass
 (Q9), and a capture under a condition.
 
-Evidence status: the change was prepared on a work machine where no
-pytest, checkwash or Python ran. CI ran the tests.
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 29 `.gwcase` fixtures, 79 collected items in
   `tests/test_issue424_rebinding.py` and one new test in
   `tests/test_frontend.py`. None is under `tests/gates`. Five of the new
   fixtures carry `bypass: 135`.
 - The documented test count is 18675 (18566 + 109).
-- The sweep measures the change (ruling): the standard set, the D-088
-  set, and a target set of commits with duplicate names, rebinding, the
-  Q9 shapes and try-wrapped defs; the refactor gate (60, expected no
-  change), tamper, decoy and recorded (no regression) and the perf gate.
+- The sweep the ruling asks for ran in part on 2026-10-17, on
+  LAPTOP-01AGNPJU under POLICY `checkwash-pju-sweep` (T-546), as a
+  checkwash-lab-declared run whose manifest (`54706f99…c88c`) and engine
+  commits the owner approved first. It is labelled human-authorized
+  local PJU, NOT EC pool. It compares main before this change
+  (`2422b3ce`) with it (`f541f748`):
+  - **Standard set** (1,800 commits): no change.
+  - **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088
+    batch, and the 45 that are also in the standard set ran in the
+    standard batch, where none changes): 10 commits differ, all beyond
+    fingerprints. One verdict goes from block to pass and one from pass
+    to block. 19 of the 1,218 end in the same engine error on both
+    engines and are not judged.
+  - **Source review** (read-only, after the run; agents read the
+    upstream commits, the engine source and the harness's result files,
+    and a second agent tried to refute each verdict change and the
+    survey of the other eight. Nothing was rerun, so the mechanisms
+    below are read from source, not observed:
+    `NOT_RUN：工作機規則（POLICY work-machine-local），no engine run or IR emission`):
+    both verdict changes are right.
+    pytest `242fb7852b` deletes the copy of a duplicated test that
+    pytest collected; the copy that keeps the name has the same
+    decorator and assertion, so the old TEST_DISABLED high was false.
+    rich `a13b2a9d75` appends a Windows-only `test_render` that shadows
+    the original, so the original expectation is checked nowhere. It
+    blocks on EXPECTATION_DEFINITION_CHANGED high (the collected test
+    compares against a different value), and the skip on Linux and
+    macOS reports only at warn under D6. Five of the other eight only
+    drop the finding on a copy pytest never collected, as Q1 (b)
+    intends (the harness lists it under `name#2`, because the collected
+    copy now takes the bare name). In the last three the pairing
+    changes: rich `a2b4a959dc` now reports the real skips on Python 3.8
+    and 3.9 (two warns, COMPAT_GATE) in place of a skip on a def pytest
+    never collects; rich `8105943b89` still blocks, but on an
+    expectation change between two defs that run on disjoint platforms,
+    while the real loss, Windows' only `test_render`, reports at warn;
+    and pytest `15ec5a898c` trades one false warn for another: the live
+    def is renamed away and a dead def of the same name takes the name,
+    so the old live body is compared with the revived dead one. This
+    entry names R1 and the deletion of one of two identical copies, but
+    not this case.
+  - Not run: the target set of commits with duplicate names, rebinding,
+    the Q9 shapes and try-wrapped defs, which has not been derived.
+  - Not run by the sweep: the refactor gate (60, expected no change),
+    tamper, decoy and recorded (no regression) and the perf gate. They
+    are pytest suites, which T-546 does not cover:
+    `NOT_RUN：工作機規則（POLICY work-machine-local），the gates are test suites`.
+    CI runs them in every test leg (the perf gate's two budget checks
+    skip on macOS). All nine legs passed on `2422b3ce` and on
+    `f541f748`, and neither `tests/gates` nor the gates' `expected.json`
+    tables changed between them.
+  - The counts are read from the harness output. The summaries and the
+    source review's records are in checkwash-lab
+    `prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+    `runs/acceptance-sweep-421/20261017-pju/`.
 
 The agent wrote this entry in #424's fix PR #474. The maintainer approved it
 on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
