@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `del BillingTests` after a same-file subclass leaves the base's tests, which the subclass still runs
+origin: #424, ruling 424 Q9 (a) - a rebound class an earlier collected subclass runs stays as on main
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class BillingTests(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+
+
+class EuroBillingTests(BillingTests):
+    pass
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class BillingTests(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+
+
+class EuroBillingTests(BillingTests):
+    pass
+
+
+del BillingTests
+=== expect ===
+[]

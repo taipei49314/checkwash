@@ -15,6 +15,7 @@ import operator
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
+from types import SimpleNamespace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
@@ -47,6 +48,9 @@ from checkwash.frontends.python.helper_skips import (
     imported_helper_names,
 )
 from checkwash.frontends.python.inherited_tests import inherited_test_methods
+from checkwash.frontends.python.rebindings import Reader as _BindingReader
+from checkwash.frontends.python.rebindings import Status as BindingStatus
+from checkwash.frontends.python.rebindings import final_bindings
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
 from checkwash.frontends.python.literal_conversions import (
@@ -146,6 +150,10 @@ _SETUP_OUTCOME_TOKENS = ("skip", "Skip", "xfail", "XFail")
 # AssertionError belongs here: catching it is precisely how you swallow an
 # oracle, and it is the obvious variant of the broad-except cheat.
 _BROAD_EXCEPTIONS = {"Exception", "BaseException", "AssertionError"}
+
+# A module spells one of these, if it binds a name inside an expression or
+# through a literal-name call (#424 Q4); one without them skips that walk.
+_EXPRESSION_BINDING_TOKENS = (":=", "setattr", "delattr", "globals", "vars(", "locals(")
 
 # conftest.py is where pytest lets you disable collection for a whole tree.
 # These are the curated suite-level controls TEST_DISABLED watches for.
@@ -4129,9 +4137,14 @@ def _parse_python(
                 if want_symbols:
                     symbols[qual] = _fingerprint(child)
                     symbol_calls[qual] = _callees(child)
-                if collect_tests and collectible and _is_test_name(child.name):
+                # pytest collects the last binding of a name (#424): a def a
+                # later binding certainly replaces is no unit, and one it may
+                # replace carries that binding as a marker.
+                bound = rebound.get(id(child))
+                if collect_tests and collectible and _is_test_name(child.name) and not (bound and bound.dropped):
                     unit = _collect_unit(
-                        child, qual, text, off, inherited + setup_markers(child, scopes, classes),
+                        child, qual, text, off,
+                        inherited + (bound.markers if bound else []) + setup_markers(child, scopes, classes),
                         module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
                         attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
@@ -4149,10 +4162,14 @@ def _parse_python(
                 # So does a `pytestmark` in the class body, and only those
                 # (#260 Q1).
                 class_markers = class_marks(child) if collect_tests else []
+                bound = rebound.get(id(child))
+                if bound is not None:
+                    class_markers = class_markers + bound.markers
                 class_collectible = (
                     collectible
                     and (_is_test_class(child) or child.name in test_class_names)
                     and not _test_attr_disabled(child.body)
+                    and not (bound and bound.dropped)
                 )
                 frames.append((
                     ast.iter_child_nodes(child),
@@ -4177,12 +4194,42 @@ def _parse_python(
                 frames.append((ast.iter_child_nodes(child), prefix, inherited, collectible,
                                scopes, aliases, None, classes))
 
+    # What later bindings of each name do to the defs and classes they rebind
+    # (#424): read once per test module, before any unit is collected.
+    rebound: dict[int, BindingStatus] = {}
+    if collect_tests and not conftest:
+        rebound = final_bindings(
+            tree,
+            _BindingReader(
+                condition=condition,
+                truth=_static_truth,
+                handler_guard=_handler_guard,
+                match_dead=_match_is_dead,
+                never_iterates=lambda stmt: _is_literal(stmt.iter) and not _truthy_literal(stmt.iter),
+                marks=lambda decorators, cls: _decorator_markers(
+                    SimpleNamespace(decorator_list=list(decorators)), text, off,
+                    aliases_of(cls) if cls is not None else module_aliases,
+                ),
+                cite=lambda node: ((text.seg(node) or "").split("\n")[0], off.span(node)),
+                collectible_class=lambda cls: (
+                    (_is_test_class(cls) or cls.name in test_class_names) and not _test_attr_disabled(cls.body)
+                ),
+            ),
+            expressions=any(token in raw for token in _EXPRESSION_BINDING_TOKENS),
+        )
+
     visit(tree, "", module_markers, True, setup_scopes, module_aliases)
     if collect_tests:
         for cls, owner, method in inherited_test_methods(tree):
+            # A class its own later binding replaces takes the units it
+            # inherits with it, as it does its own (#424).
+            through = rebound.get(id(cls))
+            if through is not None and through.gone:
+                continue
             units.append(_collect_unit(
                 method, f"{cls.name}.{method.name}", text, off,
                 module_markers + class_marks(owner) + class_marks(cls)
+                + (through.markers + through.rebound if through is not None else [])
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls), (cls,)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),

@@ -111,15 +111,29 @@ def is_helper_skip(name: str) -> bool:
     return name.startswith("helper.")
 
 
+# The marker a Python test def or class carries when a later binding of its
+# name may replace it (#424, `frontends/python/rebindings.py`). Its guard is
+# the condition that binding runs under, and None when no condition D6 can
+# read says when: a loop body, a conditional binder, a `match` case, mid-way
+# through a `try` body. A binding that certainly replaces it leaves no unit.
+REBOUND = "collection.rebound"
+
+
+def is_rebound(name: str) -> bool:
+    """A later binding of the test's name that may replace it (#424)."""
+    return name == REBOUND
+
+
 def is_guarded_skip(name: str) -> bool:
     """Does this marker's recorded guard say when it fires?
 
     The body skips D6 reads, a skip in the setup a unit runs, whose guard
-    is the condition its setup callback reaches it under (#196 183.2), and
-    one a helper ends in, whose guard is the condition its call reaches it
-    under (#272).
+    is the condition its setup callback reaches it under (#196 183.2), one
+    a helper ends in, whose guard is the condition its call reaches it
+    under (#272), and a later binding of the test's name, whose guard is
+    the condition that binding runs under (#424).
     """
-    return name in GUARDED_SKIP_CALLS or is_setup_skip(name) or is_helper_skip(name)
+    return name in GUARDED_SKIP_CALLS or is_setup_skip(name) or is_helper_skip(name) or is_rebound(name)
 
 
 def skip_condition(marker, side) -> str | None:
@@ -133,11 +147,12 @@ def skip_condition(marker, side) -> str | None:
     keeps the skip from firing. Loop bodies and `match` cases record no
     condition (#196 183.2). A setup skip's guard already holds its `except`
     blocks, and its evidence lies in a fixture or callback outside the unit,
-    which no handler of the unit encloses.
+    which no handler of the unit encloses. So does a rebinding's: it is a
+    statement after the test, never inside it (#424).
     """
     if marker.guard:
         return marker.guard
-    if is_setup_skip(marker.name) or is_helper_skip(marker.name):
+    if is_setup_skip(marker.name) or is_helper_skip(marker.name) or is_rebound(marker.name):
         # These spans belong to a callback/helper, possibly in another
         # file. Equal offsets do not mean the unit's handler encloses it.
         return None

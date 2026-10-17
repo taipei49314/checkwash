@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a rebinding under a condition that is no interpreter or OS gate is judged as a guarded skip, and blocks
+origin: #424, ruling 424 Q2 (a), Q6 (a) - a conditional rebinding carries its guard; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import os
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+if os.environ.get("CI"):
+    del test_total
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "test_total"}]

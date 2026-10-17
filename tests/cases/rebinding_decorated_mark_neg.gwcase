@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `test_total = pytest.mark.slow(test_total)` is a decoration, and the test stays live
+origin: #424, ruling 424 Q5 (a) - an unknown wrapper keeps the test live
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import pytest
+
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+test_total = pytest.mark.slow(test_total)
+=== expect ===
+[]

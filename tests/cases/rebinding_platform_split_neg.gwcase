@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: defs of one name on the two arms of an if/else do not rebind each other
+origin: #424, ruling 424 Q6 (a) - bindings on exclusive paths
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+import sys
+
+from app.billing import total
+
+
+if sys.platform == "win32":
+    def test_total():
+        assert total([50.0, 28.75]) == 78.75
+else:
+    def test_total():
+        assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[]

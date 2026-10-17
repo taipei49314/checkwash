@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from checkwash.frontends.python.frontend import _SKIP_DECORATORS
 from checkwash.frontends.python.setup_skip_controls import BODY_MARKERS
+from checkwash.ir.markers import is_rebound
 
 # A conftest control that changes what pytest collects (SPEC §2b).
 COLLECTION = "collection"
@@ -42,6 +43,9 @@ SKIP_MARK = "skip_mark"
 SKIP_CALL = "skip_call"
 # A skip or xfail a helper ends in, same-file or imported, called by the test or its setup (#272).
 HELPER = "helper"
+# A later binding of the test's name that may replace it, so that pytest
+# collects something else under the name (#424).
+REBINDING = "rebinding"
 
 # `_conftest_unit` mints these names, and only these, for collection controls.
 COLLECTION_NAMES = frozenset({
@@ -72,6 +76,8 @@ def marker_kind(name: str) -> str | None:
         return HELPER
     if name.startswith("module."):
         return MODULE
+    if is_rebound(name):
+        return REBINDING
     if name in BODY_MARKERS:
         return SKIP_CALL
     # `_marker_identity` appends a mark's condition: `pytest.mark.skipif(cond)`.
