@@ -72,7 +72,8 @@ TAUTOLOGY, as `assert f(x) == f(x)` is in Python (THREATMODEL row 10):
   again (`(x + 0) * 1`). Only the outermost operation is stripped, as in
   Python: `a + b * 1` keeps its `* 1`, and `x + -0` its `-0`. A cast to one
   named type binds as TypeScript binds it, so `total as number + 0` is
-  `(total as number) + 0` and reads as `total`. The stripping
+  `(total as number) + 0` and reads as `total`, while `0 + s as any * 2` is
+  `((0 + s) as any) * 2` and keeps its `0 +`. The stripping
   is Python's reading, not an evaluation: `x + 0` reads as `x` although
   JavaScript makes `-0 + 0` positive zero, which `toBe` tells apart, and
   `"a" + 0` a string.
