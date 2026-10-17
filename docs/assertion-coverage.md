@@ -821,8 +821,9 @@ reason that says its rewrite is not judged. The source tests are in
 
 Known limit ([#468](https://github.com/taipei49314/checkwash/issues/468)).
 Some runners read a test's expected results from a data file and pass any
-run that matches it. No rule reads such a file, so recording a regressed
-case as an expected failure passes with zero findings.
+run that matches it. Unless its path matches a snapshot glob (SPEC §2), no
+rule reads such a file, so recording a regressed case as an expected failure
+passes with zero findings.
 
 The known case is undici's Web Platform Tests record,
 `test/web-platform-tests/expectation.json`. Its runner:
@@ -838,9 +839,10 @@ and committing the rewritten file is enough.
 
 How checkwash treats the file depends on its size:
 
-- Under 1,000,000 bytes it has the `test` role, as any non-Python file
-  beneath `test/` does (SPEC §2, #217). It earns no repair evidence, and
-  no rule reads its content.
+- Under 1,000,000 bytes it has the `test` role: its path matches no
+  snapshot glob, and a non-Python file beneath `test/` that would be
+  `prod` is `test` (SPEC §2, #217). It earns no repair evidence, and no
+  rule reads its content.
 - Over that size it is set aside unread (#415).
 
 Either way the change passes. Review the diff of such a file by hand.
