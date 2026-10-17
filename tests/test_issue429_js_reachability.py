@@ -191,6 +191,18 @@ def test_an_unproved_boundary_keeps_todays_reading(body):
     assert parsed.unreachable_assertion_spans == ()
 
 
+@pytest.mark.parametrize("prelude", [
+    # JavaScript reads a block comment from `/*` to the `*/` of the fourth line; the mask, whose
+    # template ends at the backtick inside `'`'`, hides the `/*` and reads a test with a `return`.
+    "const s = `${'`'}`; /* '\n",
+    # JavaScript ends the `//` comment at U+2028, so `/*` opens a block comment the mask does not see.
+    "// note\N{LINE SEPARATOR}/* '\n",
+])
+def test_a_misreading_before_the_callback_refuses_it(prelude):
+    text = HEADER + prelude + 'it("a", () => {\nreturn;\n// */ it("a", () => {\n' + ORACLE + "\n});\n"
+    assert parse_javascript(text.encode()).unreachable_assertion_spans == ()
+
+
 def test_a_cut_holding_a_function_declaration_is_refused():
     """A call before the `return` may run the hoisted declaration's body."""
     parsed = parse_javascript(source("check(value()); return; function check<T>(v: T) { expect(v).toBe(1); }"))

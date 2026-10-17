@@ -358,6 +358,9 @@ class Reachability:
         # which the binder splits: no callback in the file is walked.
         self.escaped = any(token == "\\" for token, _start, _end in self.tokens)
         self.hoisted = False
+        # Where the token stream first misreads the text as code: from there on
+        # the mask may read code where JavaScript reads a comment or a string.
+        self.desync = self._first_misread()
         # Line breaks where JavaScript may end a statement that `_end` reads on past.
         self.doubtful = 0
 
@@ -378,53 +381,61 @@ class Reachability:
                 or self.tokens[closing][0] != "}" or self.tokens[closing][1] != end
                 or self.pairs.get(opening) != closing
                 or _within(self.unpaired, opening, closing + 1)
-                or _within(self.separators, start, end)
+                or (self.separators and self.separators[0] < end)
                 or self.escaped
-                or self._misread(first, closing, start, end)):
-            return []
+                or (self.desync is not None and self.desync < end)):
+            return []  # a misreading anywhere before the callback's end may shift its tokens
         self.dead, self.hoisted = [], False
         self.assertions = dict(assertions)
         self._list(first, closing, 0)
         return [] if self.hoisted else sorted(self.dead)
 
-    def _misread(self, first: int, closing: int, start: int, end: int) -> bool:
-        """Does the token stream misread this callback: a nested template, JSX, an HTML-like comment?
+    def _first_misread(self) -> int | None:
+        """Where the token stream first misreads the file's text as code, or None.
 
         The shared mask ends a template at its first backtick, so a template
         nested in a substitution leaves its text to be read as code; JSX text
         reads as code too, and Annex B's `<!--` and `-->` comments as
-        operators. A callback holding any of them is not walked.
+        operators. A misreading shifts what the mask reads as code from there
+        on, so no callback that ends after it is walked.
         """
         text, code = self.bindings.text, self.code
-        position = start
-        while position < end:
+        found: list[int] = []
+        position = 0
+        while position < len(text):
             if code[position]:
                 position += 1
                 continue
             run = position
-            while position < end and not code[position]:
+            while position < len(text) and not code[position]:
                 position += 1
             previous = bisect_left(self.bindings.token_starts, run) - 1
             if _misread_run(text, run, position, self.token(previous) if previous >= 0 else "",
                             self.token(previous - 1) in {".", "?.", "#"}):
-                return True
-        for index in range(first, closing):
-            token, following = self.token(index), self.token(index + 1)
-            if not token.isascii() and token[:1] not in "'\"":
-                return True  # a name or a space the binder does not read: a non-ASCII name, U+FEFF
+                found.append(run)
+                break
+        for index, (token, start, _end) in enumerate(self.tokens):
+            following = self.token(index + 1)
+            if (not token.isascii() and token[:1] not in "'\""
+                    and not (start == 0 and token == "\N{ZERO WIDTH NO-BREAK SPACE}")):
+                found.append(start)  # a name or a space the binder does not read: a non-ASCII name, U+FEFF
+                break
             adjacent = index + 1 < len(self.tokens) and self.tokens[index][2] == self.tokens[index + 1][1]
             if adjacent and ((token == "<" and following == "!" and self.token(index + 2) == "--")
                              or (token == "--" and following == ">")):
-                return True
+                found.append(start)
+                break
             if token == "<" and index > 0 and (self.token(index - 1) == "}" or (
                     not self.bindings._completes(index - 1)
                     and (_NAME.fullmatch(following) or following in {">", "/"}))):
-                return True  # JSX (after a block too), or a TypeScript `<T>` assertion
+                found.append(start)  # JSX (after a block too), or a TypeScript `<T>` assertion
+                break
             if token in {"/", "/="} and index > 0 and (
                     self.token(index - 1) in {"}", "++", "--"} or not self.bindings._completes(index - 1)
                     or self.bindings._line_break(index)):
-                return True  # a regular expression the mask read as a division
-        return False
+                found.append(start)  # a regular expression the mask read as a division
+                break
+        return min(found) if found else None
 
     def _kill(self, first: int, after: int) -> None:
         """Statements from token `first` up to token `after` never run.
