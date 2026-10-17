@@ -102,11 +102,13 @@ _REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw
 _READ_AFTER = frozenset({"!", "&", "|", "?", "==", "===", "!=", "!==", "=", "return", "typeof", "void", "case"})
 _NOT_CALLS = frozenset({"for", "catch", "function", "switch", "with", "if", "while", "async"})
 # Tokens after which a line break cannot end a statement in JavaScript or
-# TypeScript: the expression is unfinished (`false &&` then `expect(...)`).
+# TypeScript: the expression is unfinished (`false &&` then `expect(...)`). Not
+# `.`, which may end a number (`1.`), and the reserved words only where no `.`,
+# `?.` or `#` makes them a property name (`cache.delete`).
 _UNFINISHED = frozenset({
-    "&", "|", "^", "=", "+", "-", "*", "/", "%", ",", "?", ":", ".", "?.", "<", "==", "===", "!=", "!==",
+    "&", "|", "^", "=", "+", "-", "*", "/", "%", ",", "?", ":", "<", "==", "===", "!=", "!==",
     "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "=>", "in", "instanceof", "typeof", "new", "delete",
-    "as", "satisfies", "keyof", "extends",
+    "extends",
 })
 # Keywords that start a statement and never continue an expression.
 _STATEMENT_KEYWORDS = frozenset({
@@ -733,7 +735,7 @@ class Reachability:
                 # Unless an operator leaves the expression unfinished, JavaScript or
                 # TypeScript may end the statement here (`x = 1` then `.5`,
                 # `x = load() as T` then `[1]`, `x!` then `{`); this reads on.
-                if self.token(cursor - 1) not in _UNFINISHED:
+                if self.token(cursor - 1) not in _UNFINISHED or self.token(cursor - 2) in {".", "?.", "#"}:
                     self.doubtful += 1
             token = self.token(cursor)
             if (cursor > first and token in _STATEMENT_KEYWORDS

@@ -170,6 +170,11 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "const f = () => {}\n{ } do step(); while (0) " + ORACLE,
     "enum Mode { A } do step(); while (false) " + ORACLE,
     "true || a\n.0 || " + TEXT + ";",
+    # `1.` is a whole number and `cache.delete` a whole operand: JavaScript ends the line there.
+    "if (false) n = 1.\n" + ORACLE,
+    "if (false) drop = cache.delete\n" + ORACLE,
+    "false && n === 1.\nok && " + TEXT + ";",
+    "false && cache.delete\nready && " + TEXT + ";",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
