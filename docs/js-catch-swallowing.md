@@ -63,7 +63,10 @@ An always-failing assertion stays inspection: `expect(true).toBe(false)` and
 Anything the proof cannot read keeps the existing exemption. The try side is
 unchanged: an always-passing assertion inside the guarded block still counts
 as a protected assertion, and the assertion's IR form and strength are not
-changed by this rule.
+changed by this rule. Since #429 an assertion on literals alone reads as
+TAUTOLOGY inside a try as outside one (`js-reachability.md`); this proof reads
+the predicate and polarity the assertion spells, which the frontend drops from
+a tautology only after the proof has run, and never that rating.
 
 Such a catch reports its own evidence text, `catch always-passing
 assertion`. A catch that reaches no assertion keeps `catch assertion`,
@@ -93,7 +96,8 @@ Named residuals, which keep the exemption:
 
 Literal, message-argument and proved self-comparison spellings are expected
 to close through a shared always-pass helper (#429), keyed on the evaluated
-outcome, never on the TAUTOLOGY strength rating. A catch holding only AVA or
+outcome, never on the TAUTOLOGY strength rating. #429's first change rates
+them TAUTOLOGY but adds no such helper, so they stay residuals here. A catch holding only AVA or
 tap `t.pass()` is already reported, because `t.pass()` is not an assertion.
 Equal-count exchange of two `catch always-passing assertion` sites, like
 that of two `catch assertion` sites, remains a residual of the multiset
