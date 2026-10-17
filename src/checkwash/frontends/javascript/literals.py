@@ -709,6 +709,10 @@ _OPERAND_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "
                                    "yield", "return", "throw", "case", "do", "else"})
 # A cast these readers take out: to one named type (`as number`, `as const`, `as Foo.Bar[]`).
 _SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*\s*\Z")
+# JavaScript's line terminators: a `//` comment ends at the first of them.
+_LINE_TERMINATOR = re.compile("[\n\r\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
+# Statement heads whose `)` a regular expression may follow: `if (ok) /a/.test(s)`.
+_STATEMENT_HEADS = frozenset({"if", "while", "for", "with"})
 
 
 def _string_end(source: str, start: int) -> int | None:
@@ -758,6 +762,11 @@ def _substitution_end(source: str, start: int, depth: int) -> int | None:
         elif source.startswith("/*", i):
             closing = source.find("*/", i + 2)
             end = None if closing < 0 else closing + 2
+        elif source.startswith("//", i):
+            terminator = _LINE_TERMINATOR.search(source, i + 2)
+            end = None if terminator is None else terminator.end()
+        elif char == "/":
+            return None  # a division or a regular expression, which may hold a `}`: unread
         elif char in "{}":
             braces += 1 if char == "{" else -1
             if not braces:
@@ -789,14 +798,19 @@ def operand_tokens(source: str) -> list[str] | None:
     """An operand's or a condition's tokens, as JavaScript reads them, or None (#429).
 
     Strings, templates (their substitutions nested) and regular expressions
-    are one token each, as written; comments are left out. A `/` after an
-    operand divides, and elsewhere starts a regular expression. A token this
-    does not read, an unterminated literal, an Annex B HTML-like comment
-    (`<!--`, `-->`) or more than 4096 characters gives None.
+    are one token each, as written; comments are left out, a `//` one up to
+    any line terminator. A `/` after an operand divides, and elsewhere starts
+    a regular expression; right after a `}` or a statement head's `)` it may
+    be either (`if (ok) /a/.test(s)`), and gives None. A token this does not
+    read, an unterminated literal, an Annex B HTML-like comment (`<!--`,
+    `-->`), a `/` inside a substitution or more than 4096 characters gives
+    None too.
     """
     if len(source) > 4096:
         return None
     tokens: list[str] = []
+    opens: list[int] = []  # the tokens that open a parenthesis
+    heads: set[int] = set()  # the tokens that close a statement head's parenthesis
     i = 0
     while i < len(source):
         char = source[i]
@@ -806,8 +820,8 @@ def operand_tokens(source: str) -> list[str] | None:
         if source.startswith(("<!--", "-->"), i):
             return None
         if source.startswith("//", i):
-            newline = source.find("\n", i + 2)
-            i = len(source) if newline < 0 else newline + 1
+            terminator = _LINE_TERMINATOR.search(source, i + 2)
+            i = len(source) if terminator is None else terminator.end()
             continue
         if source.startswith("/*", i):
             closing = source.find("*/", i + 2)
@@ -815,6 +829,8 @@ def operand_tokens(source: str) -> list[str] | None:
                 return None
             i = closing + 2
             continue
+        if char == "/" and tokens and (tokens[-1] == "}" or len(tokens) - 1 in heads):
+            return None  # after a block or a statement head it starts a regular expression, else it divides
         if char in "'\"":
             end = _string_end(source, i)
         elif char == "`":
@@ -832,15 +848,39 @@ def operand_tokens(source: str) -> list[str] | None:
             end = None if punctuator is None else i + len(punctuator)
         if end is None:
             return None
-        tokens.append(source[i:end])
+        token = source[i:end]
+        if token == "(":
+            opens.append(len(tokens))
+        elif token == ")" and opens:
+            opening = opens.pop()
+            before = tokens[max(0, opening - 2):opening]
+            if before[-1:] and (before[-1] in _STATEMENT_HEADS or before == ["for", "await"]):
+                heads.add(len(tokens))
+        tokens.append(token)
         i = end
     return tokens
 
 
 def _clean(expression: str) -> str | None:
-    """An operand's tokens joined by single spaces: no comments, its literals as written."""
+    """An operand's tokens joined by single spaces: no comments, its literals as written.
+
+    A regular expression, and a template that holds another, stands as a
+    placeholder spelled from its text: the quote and bracket scanners that
+    read this text skip the placeholder whole, where a quote or bracket in
+    the literal would misplace their depth, and two of them still match only
+    when their text does.
+    """
     tokens = operand_tokens(expression)
-    return None if tokens is None else " ".join(tokens)
+    return None if tokens is None else " ".join(_shielded(token) for token in tokens)
+
+
+def _shielded(token: str) -> str:
+    """A regular expression or a template that holds another as a placeholder, any other token as it is."""
+    if token[:1] == "/" and token not in _OPERAND_PUNCTUATORS:
+        return "/r" + token.encode("utf-8", "surrogatepass").hex() + "/"
+    if token[:1] == "`" and _quoted_end(token, 0) != len(token):
+        return "`${t" + token.encode("utf-8", "surrogatepass").hex() + "}`"
+    return token
 
 
 def _simple_cast(source: str) -> str | None:
@@ -1040,8 +1080,8 @@ def _no_op_operand(source: str) -> str | None:
 def _identity_core(expression: str) -> str | None:
     """An operand's tokens without comments, parentheses, TS wrappers or outer no-op arithmetic.
 
-    Strings read in double quotes; templates and regular expressions stay as
-    written, whitespace included. A spread (`...pair`) is no operand.
+    Strings read in double quotes; templates and regular expressions compare
+    as written, whitespace included. A spread (`...pair`) is no operand.
     """
     source = _clean(expression)
     if source is None or source.startswith("..."):

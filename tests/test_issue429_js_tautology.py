@@ -228,6 +228,7 @@ def test_an_assertion_on_literals_alone_reads_as_a_tautology(header, body):
     (VITEST, "expect(-total).toBe(1);"),
     (VITEST, "expect(!true).toBe(false);"),
     (VITEST, "expect(1 + 1).toBe(2);"),
+    (VITEST, "expect(total).toBe(total // was\N{LINE SEPARATOR}+ 1\n);"),
     # SPEC §5's `trivial` reading (a subject of literals and builtins) is a named residual.
     (VITEST, "expect(String(1)).toBe('1');"),
     (VITEST, "expect(1).toEqual(expect.anything());"),
@@ -266,6 +267,10 @@ def test_an_assertion_whose_predicate_is_not_read_keeps_no_strength(body):
     ("--1", False), ("!0", False), ("[1] + [2]", False), ("f(1)", False), ("'a' + 'b'", False),
     ("`it's`", True), ("/'/", True), ("`http://x`", True), ("1e-5 as number", True),
     ("`/* ${a} */`", False), ("0 as number, x", False), ("1 as any || 2", False), ("<!-- 1", False),
+    # A `//` comment ends at U+2028 too; a bracket or quote in a regular expression is part of it,
+    # and `/[/, x, /]/` is one regular expression, its class holding `/, x, /`.
+    ("1 // c\N{LINE SEPARATOR}+ x", False), ("[/[/, x, /]/]", True), ("[/]/, x]", False),
+    ("{ a: /}/ }", True), ("`${`a`}`", False),
 ])
 def test_the_literal_reader(operand, literal):
     assert literal_operand(operand) is literal
@@ -281,6 +286,14 @@ def test_the_literal_reader(operand, literal):
     ("x", "(x as number)", True), ("`a ${x}`", "`a ${x}`", True), ("/a b/", "/a b/", True),
     ("`http://${a}/x`", "`http://${b}/x`", False), ("/  /g", "/ /g", False), ("...p", "...p", False),
     ("v as any || w", "v", False), ("`${`a`}`", "`${`b`}`", False),
+    ("total", "total // was\N{LINE SEPARATOR}+ 1\n", False), ("(a + b) / 2", "(a + b) / 2", True),
+    # A `/` after a statement head or a block may start a regular expression: unread.
+    ("run(() => { if (ok) / a/.test(s) })", "run(() => { if (ok) /a/.test(s) })", False),
+    ("run(() => { {} / a/.test(s) })", "run(() => { {} /a/.test(s) })", False),
+    # A quote or bracket in a regular expression hides no operator.
+    ("f(/'/) || g(/'/) + 0", "f(/'/) || g(/'/)", False), ("f(/\\(/) || g(/\\)/) + 0", "f(/\\(/) || g(/\\)/)", False),
+    ("`${`a`}`", "(`${`a`}`)", True), ("`${ x // }`\n}`", "`${ x // }`\n}`", True),
+    ("`${ a / b }`", "`${ a / b }`", False),
 ])
 def test_the_operand_comparison(left, right, same):
     assert same_operand(left, right) is same
