@@ -360,6 +360,36 @@ def number_operand(expression: str) -> float | None:
     return _number(_peel(source))
 
 
+_BIGINT = re.compile(r"(?:0[xX](?P<hex>[0-9a-fA-F](?:_?[0-9a-fA-F])*)|0[bB](?P<bin>[01](?:_?[01])*)"
+                     r"|0[oO](?P<oct>[0-7](?:_?[0-7])*)|(?P<dec>0|[1-9](?:_?[0-9])*))n")
+
+
+def scalar_literal(source: str) -> tuple[str, object] | None:
+    """(type, value) of one exact scalar literal token, else None (#429 Q5).
+
+    A Number is the finite value `_number` reads, a BigInt its exact integer,
+    a quoted string its UTF-16 value as `_string` decodes it, and a template
+    with no substitution and no escape its text. `true`, `false` and `null`
+    are their keywords. Names, `undefined` and `NaN` included, are the
+    caller's question.
+    """
+    if source in {"true", "false"}:
+        return ("boolean", source == "true")
+    if source == "null":
+        return ("null", None)
+    if source[:1] in "\"'":
+        value = _string(source)
+        return None if value is _UNKNOWN else ("string", value)
+    if source[:1] == "`":
+        return ("string", source[1:-1]) if re.fullmatch(r"`[^`\\$]*`", source) else None
+    bigint = _BIGINT.fullmatch(source)
+    if bigint is not None:
+        radix = {"hex": 16, "bin": 2, "oct": 8, "dec": 10}[bigint.lastgroup]
+        return ("bigint", int(bigint.group(bigint.lastgroup).replace("_", ""), radix))
+    number = _number(source) if source[:1] not in "+-" else None
+    return None if number is None else ("number", number)
+
+
 def keyword_operand(expression: str) -> str | None:
     """`null`, `undefined`, `true` or `false` when the operand is exactly that word.
 

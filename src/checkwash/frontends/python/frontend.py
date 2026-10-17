@@ -218,6 +218,11 @@ class ParsedFile:
     # (name, span, text) -> that conftest's path. Its text and span are in
     # that file, so a report locates it there, not in this one.
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = field(default_factory=dict)
+    # JS only (#429): the spans of assertions a test callback spells but never
+    # reaches, with a strength and without one. Not IR: they keep the coverage
+    # inventory from reading them as calls the scan does not represent.
+    unreachable_assertion_spans: tuple[tuple[int, int], ...] = ()
+    unreachable_unjudged_assertion_spans: tuple[tuple[int, int], ...] = ()
 
 
 # One parse's walks of a subtree (#344). A unit's tree is walked by several

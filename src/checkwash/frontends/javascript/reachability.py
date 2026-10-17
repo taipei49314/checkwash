@@ -1,0 +1,647 @@
+"""Which statements of a JS/TS test callback run (#429: Q1, Q3, Q5).
+
+The JS/TS twin of the Python frontend's reachability walk
+(`_unreachable_ids`, SPEC §2b). One bounded walker reads the statements of a
+test callback's block body. It cuts after an unconditional `return` or
+`throw`, and skips a branch whose condition `fold_condition` decides: the
+body of `if (false)`, `while (false)` and `for (; false; )`, and the `else`
+of `if (true)`. It descends into blocks, loop and `do` bodies,
+`try`/`catch`/`finally` blocks and labeled statements. Only a block and a
+statically selected branch pass their termination on, as only a statically
+selected branch does in Python; a loop, `do`, `try` or labeled body never
+does. It never enters a function, arrow or class body, so the `return` of an
+iterator callback ends nothing outside it. A literal-decided `&&`/`||`
+expression statement drops the assertion it ends with (Q3).
+
+Not a parser. The token stream omits templates and regular expressions, so a
+line break next to one, an unpaired bracket, a `switch` or `with` body, a
+TypeScript-annotated function declaration, or any statement whose end is not
+proved stops the walk of its statement list there, and everything after it
+keeps today's reading. The same holds for a callback whose text holds U+2028
+or U+2029, which the shared line-break test does not read.
+"""
+
+from __future__ import annotations
+
+import math
+import re
+from bisect import bisect_left
+from collections.abc import Callable
+
+from checkwash.frontends.javascript.bindings import NAME, Bindings
+from checkwash.frontends.javascript.literals import scalar_literal
+
+_MAX_DEPTH = 32
+_BRACKETS = {"(": ")", "[": "]", "{": "}"}
+_CLOSERS = frozenset(_BRACKETS.values())
+_NAME = re.compile(NAME + r"\Z")
+# Statement words this walk does not read: a statement starting with one
+# ends the walk of its list.
+_UNREAD = frozenset({"with", "import", "export", "else", "catch", "finally", "case", "default"})
+_JUMPS = frozenset({"return", "throw", "break", "continue"})
+_TRIVIA_SPACE = " \t\n\v\f\N{ZERO WIDTH NO-BREAK SPACE}"
+
+
+def _trivia(text: str) -> bool:
+    """Whitespace and comments only: no operand the token stream leaves out."""
+    cursor = 0
+    while cursor < len(text):
+        if text[cursor] in _TRIVIA_SPACE:
+            cursor += 1
+        elif text.startswith("//", cursor):
+            newline = text.find("\n", cursor + 2)
+            cursor = len(text) if newline < 0 else newline + 1
+        elif text.startswith("/*", cursor):
+            closing = text.find("*/", cursor + 2)
+            if closing < 0:
+                return False
+            cursor = closing + 2
+        else:
+            return False
+    return True
+
+
+def _within(positions: list[int], first: int, last: int) -> bool:
+    index = bisect_left(positions, first)
+    return index < len(positions) and positions[index] < last
+
+
+# --- Q5: the literal-only condition folder ---------------------------------------------------
+
+_PUNCTUATORS = sorted((
+    ">>>=", "...", "===", "!==", "**=", "<<=", ">>=", ">>>", "&&=", "||=", "??=", "=>", "==", "!=",
+    "<=", ">=", "&&", "||", "??", "?.", "**", "++", "--", "<<", ">>", "+=", "-=", "*=", "/=", "%=",
+    "&=", "|=", "^=", "{", "}", "(", ")", "[", "]", ";", ",", "<", ">", "+", "-", "*", "/", "%", "&",
+    "|", "^", "!", "~", "?", ":", "=", ".", "@", "#",
+), key=len, reverse=True)
+_NUMBER = re.compile(
+    r"(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+"
+    r"|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9][0-9_]*)(?:[eE][+-]?[0-9][0-9_]*)?)n?"
+)
+_WORD = re.compile(NAME)
+_REGEX = re.compile(r"/(?![*/])(?:\\.|\[(?:\\.|[^\]\\\r\n])*\]|[^/\\\[\r\n])+/[A-Za-z]*")
+# Operators that bind looser than `&&` and `||`, or that are no part of a
+# condition this folder reads.
+_LOOSER = frozenset({
+    ",", "?", ":", "??", "=", "=>", "...", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", ">>>=",
+    "&=", "|=", "^=", "&&=", "||=", "??=", "yield",
+})
+_EQUALITY = frozenset({"===", "!==", "==", "!="})
+_RELATIONAL = frozenset({"<", ">", "<=", ">="})
+# Tokens after which a `/` divides: they end an operand.
+_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "in", "instanceof", "of", "yield",
+                           "return", "throw", "case", "do", "else"})
+
+
+def _condition_tokens(source: str) -> list[str] | None:
+    """The tokens of a condition's text, or None for anything this folder does not read."""
+    tokens: list[str] = []
+    i = 0
+    while i < len(source):
+        char = source[i]
+        if char in _TRIVIA_SPACE:
+            i += 1
+            continue
+        if source.startswith("//", i):
+            newline = source.find("\n", i + 2)
+            i = len(source) if newline < 0 else newline + 1
+            continue
+        if source.startswith("/*", i):
+            closing = source.find("*/", i + 2)
+            if closing < 0:
+                return None
+            i = closing + 2
+            continue
+        if char in "'\"`":
+            close = i + 1
+            while close < len(source) and source[close] != char:
+                if char != "`" and source[close] == "\n":
+                    return None
+                if char == "`" and source.startswith("${", close):
+                    return None  # a substitution is no literal
+                close += 2 if source[close] == "\\" else 1
+            if close >= len(source):
+                return None
+            tokens.append(source[i:close + 1])
+            i = close + 1
+            continue
+        operand_ends = bool(tokens) and (
+            tokens[-1][:1] in "'\"`/" or tokens[-1] in {")", "]", "}"}
+            or (bool(_WORD.fullmatch(tokens[-1])) and tokens[-1] not in _PREFIX_WORDS)
+            or tokens[-1][:1].isdigit() or tokens[-1][:1] == ".")
+        if char.isdigit() or (char == "." and source[i + 1:i + 2].isdigit()):
+            match = _NUMBER.match(source, i)
+        elif _WORD.match(source, i):
+            match = _WORD.match(source, i)
+        elif char == "/" and not operand_ends:
+            match = _REGEX.match(source, i)
+        else:
+            match = None
+        if match is not None:
+            tokens.append(match.group())
+            i = match.end()
+            continue
+        punctuator = next((p for p in _PUNCTUATORS if source.startswith(p, i)), None)
+        if punctuator is None:
+            return None
+        tokens.append(punctuator)
+        i += len(punctuator)
+    return tokens
+
+
+class _Folder:
+    """Python's `_static_truth`, over one condition's tokens.
+
+    A value is `(type, value)`: number, bigint, string, boolean, null or
+    undefined, or `("truth", bool)` for the result of `&&` and `||`, whose
+    truthiness alone is known. None is unknown.
+    """
+
+    def __init__(self, tokens: list[str], is_global: Callable[[str], bool]):
+        self.tokens = tokens
+        self.is_global = is_global
+        self.pairs: dict[int, int] = {}
+        stack: list[int] = []
+        self.balanced = True
+        for index, token in enumerate(tokens):
+            if token in _BRACKETS:
+                stack.append(index)
+            elif token in _CLOSERS:
+                if not stack or _BRACKETS[tokens[stack[-1]]] != token:
+                    self.balanced = False
+                    return
+                self.pairs[stack.pop()] = index
+        self.balanced = not stack
+
+    def _top(self, lo: int, hi: int):
+        index = lo
+        while index < hi:
+            yield index
+            index = self.pairs.get(index, index) + 1
+
+    def _split(self, lo: int, hi: int, operator: str) -> list[tuple[int, int]]:
+        parts, start = [], lo
+        for index in self._top(lo, hi):
+            if self.tokens[index] == operator:
+                parts.append((start, index))
+                start = index + 1
+        parts.append((start, hi))
+        return parts
+
+    def expression(self, lo: int, hi: int):
+        if lo >= hi or any(self.tokens[index] in _LOOSER for index in self._top(lo, hi)):
+            return None
+        for operator, decides in (("||", True), ("&&", False)):
+            parts = self._split(lo, hi, operator)
+            if len(parts) > 1:
+                truths = [self.truth(self.expression(first, last)) for first, last in parts]
+                if decides in truths:
+                    return ("truth", decides)
+                if all(truth is (not decides) for truth in truths):
+                    return ("truth", not decides)
+                return None
+        return self._comparison(lo, hi)
+
+    def _comparison(self, lo: int, hi: int):
+        operators = [index for index in self._top(lo, hi)
+                     if self.tokens[index] in _EQUALITY | _RELATIONAL | {"in", "instanceof"}]
+        if not operators:
+            return self._unary(lo, hi)
+        if len(operators) != 1 or self.tokens[operators[0]] in {"in", "instanceof"}:
+            return None
+        index = operators[0]
+        left, right = self._literal(lo, index), self._literal(index + 1, hi)
+        if left is None or right is None:
+            return None
+        result = _compare(self.tokens[index], left, right)
+        return None if result is None else ("boolean", result)
+
+    def _unary(self, lo: int, hi: int):
+        if lo >= hi:
+            return None
+        if self.tokens[lo] == "!":
+            truth = self.truth(self._unary(lo + 1, hi))
+            return None if truth is None else ("boolean", not truth)
+        if self.tokens[lo] == "(" and self.pairs.get(lo) == hi - 1:
+            return self.expression(lo + 1, hi - 1)
+        return self._literal(lo, hi)
+
+    def _literal(self, lo: int, hi: int):
+        """A literal, through parentheses; a sign belongs to a number."""
+        while hi - lo > 2 and self.tokens[lo] == "(" and self.pairs.get(lo) == hi - 1:
+            lo, hi = lo + 1, hi - 1
+        if hi - lo == 2 and self.tokens[lo] in {"-", "+"}:
+            value = self._literal(lo + 1, hi)
+            if value is None or value[0] not in {"number", "bigint"} or (
+                    value[0] == "bigint" and self.tokens[lo] == "+"):
+                return None
+            return value if self.tokens[lo] == "+" else (value[0], -value[1])
+        if hi - lo != 1:
+            return None
+        token = self.tokens[lo]
+        if token == "undefined":
+            return ("undefined", None) if self.is_global("undefined") else None
+        if token == "NaN":
+            return ("number", math.nan) if self.is_global("NaN") else None
+        if token[:1] == "/" or (_WORD.fullmatch(token) and token not in {"true", "false", "null"}):
+            return None
+        return scalar_literal(token)
+
+    @staticmethod
+    def truth(value) -> bool | None:
+        if value is None:
+            return None
+        kind, content = value
+        if kind in {"truth", "boolean"}:
+            return content
+        if kind in {"null", "undefined"}:
+            return False
+        if kind == "number":
+            return not (content == 0 or math.isnan(content))
+        if kind == "bigint":
+            return content != 0
+        return content != ""
+
+
+def _compare(operator: str, left, right) -> bool | None:
+    """`===`, `!==`, and `==`, `!=`, `<`, `<=`, `>`, `>=` between literals of one primitive type."""
+    if left[0] == "truth" or right[0] == "truth":
+        return None
+    if operator in {"===", "!=="}:
+        same = left[0] == right[0] and left[1] == right[1]
+        return same if operator == "===" else not same
+    if left[0] != right[0]:
+        return None  # a coercion this folder does not evaluate
+    if operator in {"==", "!="}:
+        return (left[1] == right[1]) == (operator == "==")
+    kind = left[0]
+    if kind not in {"number", "bigint", "string", "boolean"}:
+        return None
+    a, b = left[1], right[1]
+    if kind == "number" and (math.isnan(a) or math.isnan(b)):
+        return False
+    if kind == "string":
+        # JavaScript orders strings by UTF-16 code units.
+        a, b = a.encode("utf-16-be", "surrogatepass"), b.encode("utf-16-be", "surrogatepass")
+    return {"<": a < b, "<=": a <= b, ">": a > b, ">=": a >= b}[operator]
+
+
+def fold_condition(source: str, is_global: Callable[[str], bool]) -> bool | None:
+    """The truthiness of a condition this folder can decide, else None (#429 Q5).
+
+    Exact and literal-only: literals, `!`, parentheses, `&&` and `||` read as
+    Python's `_static_truth` reads `and` and `or` (one false conjunct
+    decides an `&&`, one true disjunct an `||`, whatever the others are),
+    `===` and `!==` between literals, the other comparisons between literals
+    of one primitive type, and `undefined` and `NaN` only where `is_global`
+    says the name is the unshadowed global. Anything else is unknown: a
+    name, a call, arithmetic, `??`, `?:`, a `const` binding (a residual).
+    `_truth()` in `frontend.py` keeps reading liveness options.
+    """
+    if len(source) > 4096:
+        return None
+    tokens = _condition_tokens(source)
+    if not tokens:
+        return None
+    folder = _Folder(tokens, is_global)
+    if not folder.balanced:
+        return None
+    return folder.truth(folder.expression(0, len(tokens)))
+
+
+# --- Q1, Q3: the statement walker ------------------------------------------------------------
+
+class Reachability:
+    """The spans of each test callback in one file that never run, read on demand."""
+
+    def __init__(self, bindings: Bindings):
+        self.bindings = bindings
+        self.tokens = bindings.tokens
+        self.pairs = bindings.pairs
+        # Pair every bracket again rather than trust the binder's recovery.
+        unpaired: list[int] = []
+        stack: list[int] = []
+        for index, (token, _start, _end) in enumerate(self.tokens):
+            if token in _BRACKETS:
+                stack.append(index)
+            elif token in _CLOSERS:
+                if not stack:
+                    unpaired.append(index)
+                    continue
+                opening = stack.pop()
+                if _BRACKETS[self.tokens[opening][0]] != token or self.pairs.get(opening) != index:
+                    unpaired.extend((opening, index))
+        unpaired.extend(stack)
+        self.unpaired = sorted(unpaired)
+        self.separators = [match.start() for match in
+                           re.finditer("[\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]", bindings.text)]
+        self.dead: list[tuple[int, int]] = []
+        self.assertions: dict[int, int] = {}
+
+    def token(self, index: int) -> str:
+        return self.bindings.token(index)
+
+    def unreachable(self, start: int, end: int, assertions: list[tuple[int, int]]) -> list[tuple[int, int]]:
+        """Character spans of the block body `start`..`end` that never run; empty when none is proved.
+
+        `assertions` are the unit's assertion spans: a literal-decided
+        `&&`/`||` statement drops one only when it ends the statement.
+        """
+        starts = self.bindings.token_starts
+        first = bisect_left(starts, start)
+        opening, closing = first - 1, bisect_left(starts, end)
+        if (opening < 0 or closing >= len(self.tokens)
+                or self.tokens[opening][0] != "{" or self.tokens[opening][2] != start
+                or self.tokens[closing][0] != "}" or self.tokens[closing][1] != end
+                or self.pairs.get(opening) != closing
+                or _within(self.unpaired, opening, closing + 1)
+                or _within(self.separators, start, end)):
+            return []
+        self.dead = []
+        self.assertions = dict(assertions)
+        self._list(first, closing, 0)
+        return sorted(self.dead)
+
+    def _kill(self, first: int, after: int) -> None:
+        """Statements from token `first` up to token `after` never run."""
+        if first < after:
+            self.dead.append((self.tokens[first][1], self.tokens[after - 1][2]))
+
+    def _gap(self, before: int, index: int) -> str:
+        return self.bindings.text[self.tokens[before][2]:self.tokens[index][1]]
+
+    def _list(self, first: int, last: int, depth: int) -> bool:
+        """Walk the statements from `first` to `last`; does the list end every run of it?"""
+        cursor = first
+        while cursor < last:
+            if self.token(cursor) == ";":
+                cursor += 1
+                continue
+            statement = self._statement(cursor, last, depth)
+            if statement is None:
+                return False  # what follows keeps today's reading
+            after, terminates = statement
+            if after <= cursor or after > last:
+                return False
+            if terminates:
+                self._kill(after, last)
+                return True
+            cursor = after
+        return False
+
+    def _statement(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
+        """(the index after the statement at `first`, whether it ends the run), or None when unproved."""
+        if depth >= _MAX_DEPTH or first >= last:
+            return None
+        token = self.token(first)
+        if token == ";":
+            return first + 1, False  # an empty statement, as the body of `if (x);`
+        if token == "{":
+            closing = self.pairs.get(first)
+            if closing is None or closing >= last:
+                return None
+            return closing + 1, self._list(first + 1, closing, depth + 1)
+        if token == "if":
+            return self._if(first, last, depth)
+        if token in {"while", "for"}:
+            return self._loop(first, last, depth)
+        if token == "do":
+            return self._do(first, last, depth)
+        if token == "try":
+            return self._try(first, last, depth)
+        if token == "switch":
+            closing = self.pairs.get(first + 1) if self.token(first + 1) == "(" else None
+            body = self.pairs.get(closing + 1) if closing is not None and self.token(closing + 1) == "{" else None
+            return (body + 1, False) if body is not None and body < last else None
+        if token == "function" or (token == "async" and self.token(first + 1) == "function"
+                                   and not self.bindings._line_break(first + 1)):
+            return self._function(first, last)
+        if token == "class":
+            return self._class(first, last)
+        if _NAME.fullmatch(token) and self.token(first + 1) == ":" and token not in _UNREAD:
+            body = self._statement(first + 2, last, depth + 1)  # a labeled body keeps its end
+            return None if body is None else (body[0], False)
+        if token in _UNREAD or token in _CLOSERS:
+            return None
+        end = self._end(first, last)
+        if end is None:
+            return None
+        if token in {"return", "throw"}:
+            return end, True
+        if token not in _JUMPS:
+            self._literal_decided(first, end)
+        return end, False
+
+    def _fold(self, before: int, after: int) -> bool | None:
+        """The truth of the condition between tokens `before` and `after`."""
+        position = self.tokens[before][2]
+        return fold_condition(self._gap(before, after),
+                              lambda name: self.bindings.is_global((name,), position))
+
+    def _if(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
+        head = first + 1
+        closing = self.pairs.get(head) if self.token(head) == "(" else None
+        if closing is None or closing >= last:
+            return None
+        truth = self._fold(head, closing)
+        yes = self._statement(closing + 1, last, depth + 1)
+        if yes is None:
+            return None
+        after, yes_terminates = yes
+        no = None
+        if after < last and self.token(after) == "else":
+            no = self._statement(after + 1, last, depth + 1)
+            if no is None:
+                if truth is False:
+                    self._kill(closing + 1, after)
+                return None
+        if truth is False:
+            self._kill(closing + 1, after)
+            return no if no is not None else (after, False)
+        end = no[0] if no is not None else after
+        if truth is True:
+            if no is not None:
+                self._kill(after + 1, end)
+            return end, yes_terminates
+        return end, False
+
+    def _loop(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
+        head = first + 1
+        if self.token(first) == "for" and self.token(head) == "await":
+            head += 1
+        closing = self.pairs.get(head) if self.token(head) == "(" else None
+        if closing is None or closing >= last:
+            return None
+        truth = None
+        if self.token(first) == "while":
+            truth = self._fold(head, closing)
+        else:
+            semicolons = []
+            index = head + 1
+            while index < closing:
+                if self.token(index) == ";":
+                    semicolons.append(index)
+                index = self.pairs.get(index, index) + 1 if self.token(index) in _BRACKETS else index + 1
+            if len(semicolons) == 2:
+                # An absent condition is true: `for (;;)` runs its body.
+                truth = True if _trivia(self._gap(semicolons[0], semicolons[1])) else self._fold(*semicolons)
+            elif semicolons:
+                return None
+        body = self._statement(closing + 1, last, depth + 1)
+        if body is None:
+            return None
+        if truth is False:
+            self._kill(closing + 1, body[0])
+        return body[0], False
+
+    def _do(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
+        body = self._statement(first + 1, last, depth + 1)
+        if body is None:
+            return None
+        after = body[0]
+        closing = self.pairs.get(after + 1) if self.token(after) == "while" and self.token(after + 1) == "(" else None
+        if closing is None or closing >= last:
+            return None
+        end = closing + 1
+        return (end + 1 if end < last and self.token(end) == ";" else end), False
+
+    def _try(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
+        blocks: list[tuple[int, int]] = []
+        cursor = first + 1
+        for word in ("try", "catch", "finally"):
+            if word != "try":
+                if self.token(cursor) != word:
+                    continue
+                cursor += 1
+                if word == "catch" and self.token(cursor) == "(":
+                    parameters = self.pairs.get(cursor)
+                    if parameters is None:
+                        return None
+                    cursor = parameters + 1
+            closing = self.pairs.get(cursor) if self.token(cursor) == "{" else None
+            if closing is None or closing >= last:
+                return None
+            blocks.append((cursor, closing))
+            cursor = closing + 1
+        if len(blocks) < 2:
+            return None
+        for opening, closing in blocks:
+            self._list(opening + 1, closing, depth + 1)
+        return cursor, False
+
+    def _function(self, first: int, last: int) -> tuple[int, bool] | None:
+        """A function declaration, whose body runs only when it is called."""
+        cursor = first + (2 if self.token(first) == "async" else 1)
+        if self.token(cursor) == "*":
+            cursor += 1
+        if _NAME.fullmatch(self.token(cursor)):
+            cursor += 1
+        closing = self.pairs.get(cursor) if self.token(cursor) == "(" else None
+        if closing is None or self.token(closing + 1) != "{":
+            return None  # a TypeScript return type or an overload
+        body = self.pairs.get(closing + 1)
+        return (body + 1, False) if body is not None and body < last else None
+
+    def _class(self, first: int, last: int) -> tuple[int, bool] | None:
+        cursor = first + 1
+        while cursor < last and self.token(cursor) != "{":
+            if self.token(cursor) in {"(", "["}:
+                closing = self.pairs.get(cursor)
+                if closing is None:
+                    return None
+                cursor = closing + 1
+            elif self.token(cursor) in {";", "}", ")", "]"}:
+                return None
+            else:
+                cursor += 1
+        body = self.pairs.get(cursor) if cursor < last else None
+        return (body + 1, False) if body is not None and body < last else None
+
+    def _end(self, first: int, last: int) -> int | None:
+        """The index after the simple statement at `first`, with an explicit unknown.
+
+        The shared ASI reading (a line break where the token before completes
+        an operand and the one after cannot continue it), proved only where
+        the text between the two tokens is whitespace and comments: a
+        template or regular expression there is an operand the tokens omit.
+        `return`, `throw`, `break` and `continue` end at a line break right
+        after the word.
+        """
+        bindings = self.bindings
+        keyword = self.token(first)
+        if keyword in _JUMPS:
+            if first + 1 >= last:
+                return last if _trivia(self._gap(first, last)) else None
+            if not _trivia(self._gap(first, first + 1)):
+                return None
+            if bindings._line_break(first + 1):
+                return first + 1
+            if self.token(first + 1) == ";":
+                return first + 2
+            if keyword in {"break", "continue"}:
+                if not _NAME.fullmatch(self.token(first + 1)):
+                    return None
+                label = first + 2
+                if label >= last:
+                    return last if _trivia(self._gap(first + 1, last)) else None
+                if self.token(label) == ";" and _trivia(self._gap(first + 1, label)):
+                    return label + 1
+                if bindings._line_break(label) and _trivia(self._gap(first + 1, label)):
+                    return label
+                return None
+        cursor = first
+        while cursor < last:
+            if cursor > first and bindings._line_break(cursor):
+                if not _trivia(self._gap(cursor - 1, cursor)):
+                    return None
+                if bindings._completes(cursor - 1) and not bindings._continues(cursor):
+                    return cursor
+            token = self.token(cursor)
+            if token == ";":
+                if cursor == first or not (bindings._completes(cursor - 1)
+                                           or not _trivia(self._gap(cursor - 1, cursor))):
+                    return None
+                return cursor + 1
+            if token in _BRACKETS:
+                closing = self.pairs.get(cursor)
+                if closing is None or closing >= last:
+                    return None
+                cursor = closing + 1
+            elif token in _CLOSERS:
+                return None
+            else:
+                cursor += 1
+        if bindings._completes(last - 1) or not _trivia(self._gap(last - 1, last)):
+            return last
+        return None
+
+    def _literal_decided(self, first: int, end: int) -> None:
+        """Q3: `false && expect(...)` or `true || expect(...)`, as one expression statement.
+
+        The statement starts on a boundary this walk proved, so its literal
+        cannot continue the line before; the assertion is the last operand of
+        the last top-level `&&` or `||` and runs to the statement's end; and
+        what comes before that operator folds to the value that skips it.
+        Ternary, `??` and comma forms are residuals.
+        """
+        stop = end - 1 if self.token(end - 1) == ";" else end
+        operators = []
+        index = first
+        while index < stop:
+            if self.token(index) in {"&&", "||"}:
+                operators.append(index)
+            index = self.pairs.get(index, index) + 1 if self.token(index) in _BRACKETS else index + 1
+        if not operators or operators[-1] + 1 >= stop:
+            return
+        operator = operators[-1]
+        start_char, end_char = self.tokens[operator + 1][1], self.tokens[stop - 1][2]
+        if self.assertions.get(start_char) != end_char:
+            return
+        if stop < end and not _trivia(self._gap(stop - 1, stop)):
+            return  # an operand the tokens omit continues the statement
+        before = first - 1
+        source = self.bindings.text[self.tokens[before][2]:self.tokens[operator][1]] if before >= 0 else ""
+        position = self.tokens[first][1]
+        truth = fold_condition(source, lambda name: self.bindings.is_global((name,), position))
+        if truth is (self.token(operator) == "||"):
+            self.dead.append((start_char, end_char))
