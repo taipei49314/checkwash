@@ -11345,8 +11345,8 @@ Readings left to the implementation, accepted with this entry:
    name. One that is not a literal leaves the assertion a real one.
 3. Arrays, plain objects and regular expressions of literals are exact
    literals, as a container of literals is in Python. This moves two of the
-   three existing expected outputs below; if the owner rules that only
-   scalars count, `literal_operand` drops them and those two rows stay.
+   three existing expected outputs below. The owner ruled so on 2026-10-17
+   (rule 2, below).
 4. A negated self-comparison is TAUTOLOGY too, as Python reads `x != x`;
    it can never pass and states no oracle. Exclusive bounds (`x < x`),
    which Python does not read either, keep their rung, and so do
@@ -11356,13 +11356,17 @@ Readings left to the implementation, accepted with this entry:
 
 Rule 2. By reading, the ruling expected no existing output to move. Three
 do, in
-`tests/test_issue215_chai_grammar.py::test_a_should_chain_reads_as_its_expect_chain`,
-and wait for the owner's approval (commit 1800f5c9): `(5).should.equal(5)`
-(compare_eq/90), `[1, 2].should.have.lengthOf(2)` (type_shape/50) and
+`tests/test_issue215_chai_grammar.py::test_a_should_chain_reads_as_its_expect_chain`
+(commit 1800f5c9): `(5).should.equal(5)` (compare_eq/90),
+`[1, 2].should.have.lengthOf(2)` (type_shape/50) and
 `'abc'.should.match(/b/)` (pattern/60) become tautology/10, with subject,
 polarity and value unchanged. The first moves under any reading of Q2; the
-other two under reading 3. The three confirmations the ruling asks for are
-pinned in `tests/test_issue429_js_tautology.py`:
+other two under reading 3. The owner approved exactly these three on
+2026-10-17: 「a」, in reply to the relayed question, where (a) read
+「包含（跟 Python 把容器字面值當字面值一致）：三列都改成 tautology/10，left、極性、值都不變」
+and (b) was scalars only. Anything else that moves still stops the round.
+The three confirmations the ruling asks for are pinned in
+`tests/test_issue429_js_tautology.py`:
 
 - `test_js_handrolled_tolerance.py:78`,
   `expect(0.01).toBeGreaterThan(Math.abs(...))`, stays BOUND: Q2 reads the
