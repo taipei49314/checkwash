@@ -1793,6 +1793,7 @@ def comparison_magnitude(source: str) -> str | None:
 def _node_assertions(text: str, code: bytearray, start: int, end: int,
                      bindings: Bindings | None = None) -> list[Assertion]:
     """Direct assertion calls: node:assert and chai's assert interface."""
+    return []  # mutation check for #479: the v0.4.0 state
     assertions: list[Assertion] = []
     bindings = bindings or Bindings(text, code, _code_positions(text, keep_strings=True))
     for match in _ASSERT_RE.finditer(bindings.masked, start, end):
