@@ -11680,6 +11680,18 @@ Readings left to the implementation, accepted with this entry:
    IR_VERSION nor FINDINGS_VERSION changes.
 9. An imperative skip (`t.skip()`) in dead code still marks its test, as
    before.
+10. A callback is not walked when the shared token stream misreads its text
+    as code: a template nested in another's substitution (the mask ends a
+    template at its first backtick), JSX or a TypeScript `<T>x` assertion (a
+    `<` where no operand ends), or an Annex B `<!--` or `-->` comment.
+11. `_end` reads on past a line break where JavaScript may end a statement
+    (a completed operand before a `{`, or a `!` or `yield` before a token
+    that cannot continue it). That only shortens a cut after a `return`, but
+    it could lengthen a kill, so a dead body that is no block is not killed
+    where such a line break lies in it, and the walk of that list stops.
+12. The folder reads tokens from `literals.operand_tokens`, so a `/` after a
+    postfix `++` divides and a nested template is one token, and it gives
+    up past 64 levels of `!` or parentheses rather than recursing further.
 
 Rule 2. By reading, no existing expected output moves, and none does: no
 existing fixture or test spells an assertion after a `return` or `throw`,
@@ -11706,11 +11718,11 @@ nothing, now reports `ASSERT_REMOVED` under the key its deletion has.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 212 collected items in
+- Tests were added: 224 collected items in
   `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
   nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
   issue's own edits, `js_issue429_repro_pos`).
-- The documented test count is 19206 (18982 + 224).
+- The documented test count is 19244 (19008 + 236).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
