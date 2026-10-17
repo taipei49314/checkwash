@@ -11417,10 +11417,37 @@ the cap on a v2 key with a real entry.
   another rewrite of the same line, for another identical copy, or for
   another context.
 - **Re-review:** every recorded exemption for the nine rules.
-- **Not measured yet:** the sweep (ruling: the standard set and D-088's
-  sets). The owner chose to run it on LAPTOP-01AGNPJU, under POLICY
+- **Measured:** the sweep (ruling: the standard set and D-088's sets)
+  ran on 2026-10-17, 14:37Z to 16:22Z, on LAPTOP-01AGNPJU, under POLICY
   `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared run whose
-  manifest and engine commits he approves first.
+  manifest (`54706f99…c88c`) and engine commits the owner approved
+  first. It is labelled human-authorized local PJU, NOT EC pool. It
+  compares #306's engine (`81c69d28`) with this entry's (`a6426671`):
+  - **Standard set** (1,800 commits): 96 commits differ, and none still
+    differs once fingerprints are left out.
+  - **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088
+    batch, and the 45 that are also in the standard set ran in the
+    standard batch and are counted above): 194 of the 1,218 differ, and
+    none differs beyond fingerprints. 19 of the 1,218 end in the same
+    engine error (exit 2) on both engines, so neither judges them: 12 at
+    an engine limit, 4 at a nonregular source and 3 at flask's
+    `docs/_themes` submodule.
+  - No outcome or verdict changes, and every commit keeps its findings'
+    rules, severities, paths and units. Besides the outcome, the verdict
+    and any error, the harness compares only those four fields and each
+    finding's key, as a sorted list; it reads no message or assertion
+    text. In the 106 shard results the harness wrote, which are kept on
+    the host and not archived, every other field of every finding is
+    unchanged as well. Only keys move, and with them, as **Fingerprints**
+    above says, the order of findings of one rule in one unit.
+  - No finding in the sweep is exempted on either engine: the replayed
+    repositories hold no checkwash ledger. So the sweep does not measure
+    the new blocks or the re-review above.
+  - The counts are read from the harness output. The summaries and a
+    record of the owner's approval of the manifest and engine commits
+    (「核可」, 2026-10-17 14:36Z) are in checkwash-lab
+    `prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+    `runs/acceptance-sweep-421/20261017-pju/`.
 
 Row 136 is Closed. Its residuals: TEST_DISABLED (its own round),
 EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
@@ -11428,8 +11455,8 @@ before-only keys; an approval still covers the identical reviewed rewrite on a
 later diff, as D-055 intends; and the identity holds what the frontends
 record. Rows 100 and 101 now point to it.
 
-Evidence status: the change was prepared on a work machine where no pytest,
-checkwash or Python ran. CI ran the tests.
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 38 collected items in
   `tests/test_issue421_assertion_keys.py`. None is under `tests/gates`.
