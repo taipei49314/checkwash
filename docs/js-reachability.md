@@ -5,8 +5,8 @@ test with zero findings: a self-comparison (`expect(total).toBe(total)`), an
 assertion parked under a constant-false branch, and a `return` before the
 assertion. Each assertion stayed in the unit at its original strength, so no
 rule fired. This page states what the JS/TS frontend now reads in their
-place, and what it still does not. THREATMODEL rows 8, 10, 29 and 48 point
-here for their JS/TS clauses.
+place, and what it still does not. THREATMODEL row 10 points here for its
+JS/TS clause.
 
 The ruling (issue #429, 2026-10-14) splits the work into two changes. The
 first, described below, rates an assertion that can never fail at SPEC §3's
