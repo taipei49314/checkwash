@@ -11612,3 +11612,195 @@ checkwash or Python ran. CI ran the tests.
 
 The agent wrote this entry in #429's first fix PR #482. It waits for the
 maintainer's approval.
+
+## D-148 (2026-10-17): an assertion a JS/TS test callback never reaches is not its assertion (#429, second change)
+
+Ruling 429 (owner, 2026-10-14, 「P1 全部照建議」) answered its ten
+questions as recommended. Q8 (b) splits the round into two changes; this
+entry is the second (Q1, Q3, Q5). D-147 is the first change's, so this
+entry is D-148.
+
+#429's other two edits were an assertion parked under `if (false)` and a
+`return;` before one. The JS/TS unit scan collected every assertion call
+inside a test callback: `owned()` excluded only nested functions and
+parameter positions, and nothing read a `return` or a branch condition.
+Python stops at an unconditional `return` or `raise` and constant-folds
+branch conditions (SPEC §2b), so both edits block there and passed here.
+
+How each ruling answer is implemented:
+
+- Q1 (b), the walker. `Reachability` in the new
+  `frontends/javascript/reachability.py` is built once per file and reads
+  each scanned unit's block-bodied callback once, when its call parsed and
+  it has assertions. It cuts the rest of a statement list after an
+  unconditional `return` or `throw`, and skips the branches the Q5 folder
+  decides: the body of `if`, `while` and a three-part `for` whose condition
+  folds false, and the `else` of an `if` whose condition folds true. It
+  descends into blocks, loop and `do` bodies, `try`/`catch`/`finally`
+  blocks and labeled statements; a loop, `do`, `try` or labeled body never
+  passes its termination out. It never enters a function, arrow or class
+  body, D-106 iterator callbacks included. Where it cannot prove a
+  statement's end, it stops reading that list and what follows keeps
+  today's reading. It replaces draft #402's reader, which never merged, and
+  reuses its proven pieces: the re-pairing of every bracket in the
+  callback, the `return` restricted-production test (a line break right
+  after the word ends the statement, proved only when the text between is
+  whitespace and comments), the U+2028/U+2029 guard, the exclusion of a
+  recovered call, and the cut spans on `ParsedFile` that keep the coverage
+  inventory from reading a cut assertion as one it missed.
+  `swallowing_handlers` still receives the full uncut list, so #363's
+  catch evidence is unchanged.
+- Q3 (a). An expression statement whose last top-level `&&` or `||` has an
+  assertion as its right operand, running to the statement's end, drops
+  that assertion when everything before the operator folds to the value
+  that skips it (false for `&&`, true for `||`). The statement starts on a
+  boundary the walk proved, so its first token cannot continue the line
+  before. Ternary, `??` and comma forms stay residuals.
+- Q5 (b), the folder. `fold_condition` tokenizes a condition's text and
+  reads literals, `!`, parentheses, `&&` and `||`, `===` and `!==` between
+  literals, the other comparisons between literals of one primitive type,
+  and `undefined` and `NaN` only where `Bindings.is_global` says they name
+  the unshadowed global. Anything else is unknown, `const` bindings
+  included. `literals.scalar_literal` reads one literal token's value.
+  `_truth()` keeps reading test liveness options, unchanged.
+- Q4 (a). Rows 8, 29 and 48 get their JS/TS clauses, pointing to
+  `docs/js-reachability.md`, and the new fixtures cite them.
+- Q9 (b). A test registered in dead code is outside this change; the
+  follow-up for the JS TEST_DISABLED channel is filed separately.
+
+Readings left to the implementation, accepted with this entry:
+
+1. A plain block passes its termination on: `{ return; }` ends the
+   statements after it. Q1 names the bodies that do not (loop, `do`,
+   `try`/`catch`/`finally`, labeled); a block runs its statements in order.
+2. An `if` whose condition is unknown passes nothing on, even when both
+   branches end, as Python's `_unreachable_ids` reads it ("only a
+   statically selected branch inherits its body's termination").
+3. Only `return` and `throw` cut, as only `return` and `raise` do in Python;
+   `break` and `continue` do not.
+4. An absent three-part `for` condition is true. A `for ... of` or
+   `for ... in`, a `do ... while` condition, `switch` and `with` are not
+   folded. A `switch` body is not read: the walk steps over it, so a
+   `return` in a case cuts nothing and a `return` after the `switch` still
+   cuts. A `with` statement stops the walk of its list.
+5. `&&` and `||` fold as Python's `_static_truth` folds `and` and `or`: one
+   false operand decides an `&&` and one true operand an `||`, wherever it
+   stands. Their truthiness is JavaScript's, whatever is evaluated first.
+6. For Q3, folding everything before the last top-level `&&`/`||` to the
+   skipping value proves that the last operand never runs, whatever the
+   operators before it: `a || b && E` skips `E` when `a || b` is false.
+   Only that last operand is dropped.
+7. A boundary is proved only where the text between two tokens is
+   whitespace and comments. A `;` after an operand the tokens omit (a
+   template or regular expression) still ends a statement. A function
+   declaration with a TypeScript return type, `import`, `export` and `with`
+   stop the walk.
+8. The cut spans are carried on `ParsedFile` (`unreachable_assertion_spans`
+   and `unreachable_unjudged_assertion_spans`), not in the IR, so neither
+   IR_VERSION nor FINDINGS_VERSION changes.
+9. An imperative skip (`t.skip()`) in dead code still marks its test, as
+   before.
+10. A callback is not walked when the shared token stream misreads its text
+    as code: a template nested in another's substitution (the mask ends a
+    template at its first backtick; each template is read again as
+    `literals` reads it, a quoted `}` or a `//` comment in a substitution
+    included, and one it leaves unread refuses the callback too), JSX or a
+    TypeScript `<T>x` assertion (a `<` where no operand ends, or right after
+    a block's `}`), a token outside a string that is not ASCII (the binder
+    reads names as ASCII and U+FEFF as a token, where JavaScript reads a
+    name and a space), a `\` outside a string anywhere in the file (an
+    identifier escape: `return\u0041` is one name), a dead region holding a
+    `function` (a call before it may run the hoisted body, which the binder
+    does not always scope: `function f<T>()`), a `/` the mask reads as a division where JavaScript
+    starts a regular expression (after a `}`, a statement head's `)`, an
+    update or an operator, or first on its line), a regular expression the
+    mask reads where JavaScript may divide (it is trusted only after an
+    operator, a punctuator such as `(` or `,`, or a keyword such as `return`
+    that is no property name), or an Annex B `<!--` or `-->` comment.
+11. `_end` reads on past a line break wherever the binder's ASI reading
+    continues the statement, and JavaScript or TypeScript may end it there
+    (`x!`, `as Config`, an arrow's `}` or `() => void` at a line's end, `{`,
+    `(`, `[` or `.5` at the next line's start). Reading on only shortens a
+    cut after a `return`, but
+    it could lengthen a kill, so a dead body that is no block is killed,
+    and a literal-decided `&&`/`||` statement (Q3) decided, only when every
+    line break inside it follows a token that leaves the expression
+    unfinished: an operator such as `&&`, `+`, `,`, `=` or `=>`, or a
+    reserved word such as `typeof` or `delete` where no `.`, `?.` or `#`
+    makes it a property name (`cache.delete` is a whole operand), and not
+    `.`, which may end a number (`1.`);
+    otherwise the walk of that list stops, or the statement stays
+    undecided. A statement keyword met inside a statement (`do` after a
+    `{ }` the binder read on into) stops the walk (twelfth review round). A
+    statement with a template or regular expression right before it (one
+    that is the whole body of `if (false)`) stops it too, and Q3 decides a
+    statement only after a `;` or a statement's own `}`, never at a boundary
+    ASI gives, which TypeScript may read past (`v is` then `false`), as the
+    ruling's "narrowly" asks (fourteenth review round). A prefix `++` or `--` at a line's end takes the next line as its
+    operand, so a `return ++` there does not end the statement, and neither
+    does a line starting with `extends` or `implements` after a class
+    expression. A class whose heritage holds a class, a function or an arrow
+    stops the walk: its first `{` is not the class body. After a token that
+    completes no operand, a line starting with a statement keyword (`do`,
+    `if`, `while`, `return`) stops it too: TypeScript ends `x!` there. And
+    a `return` or `throw` whose operand ends at a line break by that reading
+    stops the walk instead of cutting: TypeScript types (`readonly`), class
+    heritage (`implements`) and decorators (`@dec` then `class`) continue
+    such a statement where the binder ends it. (Eleventh review round.)
+12. The folder reads tokens from `literals.operand_tokens`, so a nested
+    template is one token, and a `/` that may divide or start a regular
+    expression (after `++`, `--`, `!`, `>`, `of`, `await`, `yield` or a
+    keyword used as a property name, after `.`, `?.` or `#`) leaves the
+    condition unknown; it gives
+    up past 64 levels of `!` or parentheses rather than recursing further.
+13. `undefined` and `NaN` fold as the globals only where the binder finds no
+    declaration in scope and every spelling of the name in the file is a
+    plain read the walk can see: a token (none in a string, comment,
+    template or regular expression, and no U+2028 or U+2029 in the file),
+    right after an operator, `return`, `typeof`, `void` or `case`, or first
+    in an `if` or `while` head or a call's arguments, and never before `=`,
+    `=>` or a type's `:`; and the file holds no `with` (a comment before its
+    `(` included), no `eval` and no `\u` escape, which may spell the name.
+    The binder
+    does not scope everything that binds them (a parameter before a
+    TypeScript type, an enum or namespace, a block's function Annex B
+    hoists), so anything else leaves them unknown, as the ruling's "only as
+    unshadowed globals" asks. These came from the sixth and seventh review
+    rounds.
+
+Rule 2. By reading, no existing expected output moves, and none does: no
+existing fixture or test spells an assertion after a `return` or `throw`,
+or under a decidable branch, in a test callback, except the #363 and #431
+catch tests, which read `swallowing_handlers` only, and that still receives
+every assertion. The three confirmations are pinned in
+`tests/test_issue429_js_reachability.py`:
+
+- the catch evidence reads the uncut list
+  (`test_the_catch_evidence_still_reads_every_assertion_the_callback_spells`);
+- the coverage inventory reads a cut assertion as represented, and an
+  unread one keeps its reason
+  (`test_an_unread_assertion_no_statement_reaches_keeps_its_coverage_reason`);
+- a parked assertion is `ASSERT_REMOVED` with the key a deleted one has
+  (`test_a_parked_assertion_is_removed_with_the_key_a_deleted_one_has`),
+  whichever key scheme is on main.
+
+No `.gwcase` expectation and nothing under `tests/gates` changed.
+
+**Fingerprints.** No fingerprint scheme or existing key changes. An
+assertion parked where the callback never reaches it, which reported
+nothing, now reports `ASSERT_REMOVED` under the key its deletion has.
+
+Evidence status: the change was prepared on a work machine where no pytest,
+checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 289 collected items in
+  `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
+  nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
+  issue's own edits, `js_issue429_repro_pos`).
+- The documented test count is 19331 (19030 + 301).
+- The sweep measures the change (ruling): the standard set, the D-088 sets
+  and the JS batch, with the refactor, tamper, decoy and recorded gates, and
+  the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
+
+The agent wrote this entry in #429's second fix PR. It waits for the
+maintainer's approval.

@@ -84,8 +84,12 @@ def javascript_coverage_gaps(
     masked = bindings.masked
     represented = {a.span[0] for unit in parsed.units for a in unit.side.assertions
                    if a.strength is not None}
+    # An assertion no statement reaches is read, not missed (#429 Q1); one
+    # with no strength keeps its reason.
+    represented.update(start for start, _end in parsed.unreachable_assertion_spans)
     unjudged = {a.span[0] for unit in parsed.units for a in unit.side.assertions
                 if a.strength is None}
+    unjudged.update(start for start, _end in parsed.unreachable_unjudged_assertion_spans)
     candidates: dict[int, tuple[str, str]] = {}
 
     calls = re.compile(
