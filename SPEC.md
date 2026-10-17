@@ -475,6 +475,24 @@ helpers) get strength `null` and are **excluded** from weakening comparisons
 assertion API whose predicate it does not read the same way: `raises` for a
 throw check, `unknown` otherwise (#196 190.5).
 
+**Operands bound by name (#462).** The Python frontend reads each operand
+of a unittest assertion method by position or, failing that, by the
+method's own parameter name: `first`/`second`, `list1`/`list2`,
+`tuple1`/`tuple2`, `set1`/`set2`, `d1`/`d2`, `seq1`/`seq2`, `expr1`/`expr2`,
+`member`/`container`, `obj`/`cls`, `a`/`b`, `text` with `expected_regex` or
+`unexpected_regex`, `expr`, and `obj`. It reads `pytest.approx`'s expected
+value by position or as `expected=`. A keyword or mixed spelling is rated as
+its positional twin is, so `assertEqual` on a container literal is
+EXACT_STRUCT however its operands are passed. No operand is read from a
+position at or after a starred argument. Some calls pass an operand
+through `*` or `**` and have no keyword for it, so the operand cannot be
+bound (`self.assertEqual(**case)`, `self.assertEqual(*pair)`). Such a call
+records the method's form and strength and no subject, expected value or
+names, and it is not trivial. A known oracle replaced by one is an
+unverifiable replacement (ASSERT_WEAKENED, never mild). One such call
+replaced by another is not compared (462.Q2). The raises family keeps its
+positional reading.
+
 A frontend may also record the predicate an assertion states, as one key of
 `ir/predicate.py` (the JavaScript frontend does, since #198, and the Python
 frontend records the bound keys, since #224): presence
