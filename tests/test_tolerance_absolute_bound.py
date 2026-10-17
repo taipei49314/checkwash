@@ -290,6 +290,8 @@ def test_a_finding_reported_before_keeps_its_fingerprint(outcome, path, unit, ke
     # old value as recorded; keying the old value's kind changes the message only.
     # The content-bound key (#421) holds that key's pre-image unchanged.
     identities = _identities(monkeypatch)
+    # `_analyze` is cached across tests: analyze again, so the identity is recorded.
+    _analyze.cache_clear()
     finding, = _loosened(outcome())
     assert finding.fingerprint.startswith(f"TOLERANCE_LOOSENED/{path}/{unit}/v2:")
     legacy = f"TOLERANCE_LOOSENED/{path}/{unit}/{key}"
