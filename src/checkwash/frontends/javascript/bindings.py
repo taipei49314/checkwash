@@ -984,7 +984,7 @@ class Bindings:
         # `chai.should()`'s object (#215), and an undeclared `chai` is chai's
         # module: karma-chai's adapter and chai's own suite set the global
         # (#311).
-        return {"assert": Value("node"), "expect": Value("expect"), "t": Value("context"),
+        return {"expect": Value("expect"), "t": Value("context"),
                 "test": Value("runner"), "it": Value("runner"), "require": Value("require"),
                 "should": Value("chai_should"), "chai": Value("chai")}.get(name, UNKNOWN)
 
