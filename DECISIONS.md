@@ -11725,7 +11725,10 @@ Readings left to the implementation, accepted with this entry:
     it could lengthen a kill, so a dead body that is no block is killed,
     and a literal-decided `&&`/`||` statement (Q3) decided, only when every
     line break inside it follows a token that leaves the expression
-    unfinished (an operator such as `&&` or `+`, `.`, `,`, `=`, `=>`);
+    unfinished: an operator such as `&&`, `+`, `,`, `=` or `=>`, or a
+    reserved word such as `typeof` or `delete` where no `.`, `?.` or `#`
+    makes it a property name (`cache.delete` is a whole operand), and not
+    `.`, which may end a number (`1.`);
     otherwise the walk of that list stops, or the statement stays
     undecided. A statement keyword met inside a statement (`do` after a
     `{ }` the binder read on into) stops the walk (twelfth review round). A prefix `++` or `--` at a line's end takes the next line as its
@@ -11785,11 +11788,11 @@ nothing, now reports `ASSERT_REMOVED` under the key its deletion has.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 280 collected items in
+- Tests were added: 284 collected items in
   `tests/test_issue429_js_reachability.py` and twelve `.gwcase` fixtures,
   nine of which carry `bypass:` (8, 29 and 48, and 8, 10 and 29 on the
   issue's own edits, `js_issue429_repro_pos`).
-- The documented test count is 19322 (19030 + 292).
+- The documented test count is 19326 (19030 + 296).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.

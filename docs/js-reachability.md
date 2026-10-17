@@ -227,7 +227,9 @@ after the stop keeps its reading:
   (`<!--`, `-->`); such a callback is not walked at all;
 - a dead body that is no block, or a literal-decided `&&`/`||` statement,
   when a line break inside it does not follow an operator that leaves the
-  expression unfinished (`if (false) skip()` with a `{` block on the next
+  expression unfinished (`&&`, `+`, `,`, `=`, `=>`, or `typeof` and the like
+  where no `.` makes them a property name; not `.`, which may end `1.`)
+  (`if (false) skip()` with a `{` block on the next
   line, which JavaScript runs; `x!`, `as Config` or an arrow's `}` at a
   line's end; `.5` or `[1]` at the next line's start): JavaScript or
   TypeScript may end the statement at that line break, so the body is not
