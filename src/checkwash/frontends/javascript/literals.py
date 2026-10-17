@@ -728,6 +728,182 @@ _NUMBER_LITERAL = re.compile(
 _TEMPLATE_LITERAL = re.compile(r"`(?:\\[\s\S]|\$(?!\{)|[^`\\$])*`")
 _REGEX_LITERAL = re.compile(r"/(?![*/])(?:\\.|\[(?:\\.|[^\]\\\r\n])*\]|[^/\\\[\r\n])+/[A-Za-z]*")
 _LITERAL_DEPTH = 8
+_OPERAND_PUNCTUATORS = sorted((
+    ">>>=", "...", "===", "!==", "**=", "<<=", ">>=", ">>>", "&&=", "||=", "??=", "=>", "==", "!=",
+    "<=", ">=", "&&", "||", "??", "?.", "**", "++", "--", "<<", ">>", "+=", "-=", "*=", "/=", "%=",
+    "&=", "|=", "^=", "{", "}", "(", ")", "[", "]", ";", ",", "<", ">", "+", "-", "*", "/", "%", "&",
+    "|", "^", "!", "~", "?", ":", "=", ".", "@", "#",
+), key=len, reverse=True)
+# Words after which a `/` starts a regular expression: they leave an operand to come.
+_OPERAND_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "in", "instanceof", "of",
+                                   "yield", "return", "throw", "case", "do", "else"})
+# A cast these readers take out: to one named type (`as number`, `as const`, `as Foo.Bar[]`).
+_SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*\s*\Z")
+
+
+def _string_end(source: str, start: int) -> int | None:
+    """The index after the quoted string opening at `start`, or None when it does not close on its line."""
+    quote, i = source[start], start + 1
+    while i < len(source):
+        if source[i] == "\\":
+            i += 2
+        elif source[i] == quote:
+            return i + 1
+        elif source[i] in "\r\n":
+            return None
+        else:
+            i += 1
+    return None
+
+
+def _template_end(source: str, start: int, depth: int = 0) -> int | None:
+    """The index after the template opening at `start`, its `${...}` substitutions nested."""
+    i = start + 1
+    while i < len(source):
+        if source[i] == "\\":
+            i += 2
+        elif source[i] == "`":
+            return i + 1
+        elif source.startswith("${", i):
+            end = _substitution_end(source, i + 2, depth + 1)
+            if end is None:
+                return None
+            i = end
+        else:
+            i += 1
+    return None
+
+
+def _substitution_end(source: str, start: int, depth: int) -> int | None:
+    """The index after the `}` that closes a template substitution."""
+    if depth > _LITERAL_DEPTH:
+        return None
+    braces, i = 1, start
+    while i < len(source):
+        char = source[i]
+        if char in "'\"":
+            end = _string_end(source, i)
+        elif char == "`":
+            end = _template_end(source, i, depth)
+        elif source.startswith("/*", i):
+            closing = source.find("*/", i + 2)
+            end = None if closing < 0 else closing + 2
+        elif char in "{}":
+            braces += 1 if char == "{" else -1
+            if not braces:
+                return i + 1
+            end = i + 1
+        else:
+            end = i + 1
+        if end is None:
+            return None
+        i = end
+    return None
+
+
+def _ends_operand(tokens: list[str]) -> bool:
+    """Does the code read so far end an operand, so that a `/` divides?"""
+    if not tokens:
+        return False
+    last = tokens[-1]
+    if last[:1] in "'\"`" or last in {")", "]", "}", "++", "--"}:
+        return True
+    if last[:1] == "/" and last not in _OPERAND_PUNCTUATORS:
+        return True  # a regular expression
+    if last[:1].isdigit() or (last[:1] == "." and last[1:2].isdigit()):
+        return True
+    return bool(_NAME.fullmatch(last)) and last not in _OPERAND_PREFIX_WORDS
+
+
+def operand_tokens(source: str) -> list[str] | None:
+    """An operand's or a condition's tokens, as JavaScript reads them, or None (#429).
+
+    Strings, templates (their substitutions nested) and regular expressions
+    are one token each, as written; comments are left out. A `/` after an
+    operand divides, and elsewhere starts a regular expression. A token this
+    does not read, an unterminated literal, an Annex B HTML-like comment
+    (`<!--`, `-->`) or more than 4096 characters gives None.
+    """
+    if len(source) > 4096:
+        return None
+    tokens: list[str] = []
+    i = 0
+    while i < len(source):
+        char = source[i]
+        if char in _WHITESPACE:
+            i += 1
+            continue
+        if source.startswith(("<!--", "-->"), i):
+            return None
+        if source.startswith("//", i):
+            newline = source.find("\n", i + 2)
+            i = len(source) if newline < 0 else newline + 1
+            continue
+        if source.startswith("/*", i):
+            closing = source.find("*/", i + 2)
+            if closing < 0:
+                return None
+            i = closing + 2
+            continue
+        if char in "'\"":
+            end = _string_end(source, i)
+        elif char == "`":
+            end = _template_end(source, i)
+        elif char == "/" and not _ends_operand(tokens):
+            regex = _REGEX_LITERAL.match(source, i)
+            end = None if regex is None else regex.end()
+        elif char.isdigit() or (char == "." and source[i + 1:i + 2].isdigit()):
+            number = _NUMBER_LITERAL.match(source, i)
+            end = None if number is None else number.end()
+        elif _NAME.match(source, i):
+            end = _NAME.match(source, i).end()
+        else:
+            punctuator = next((p for p in _OPERAND_PUNCTUATORS if source.startswith(p, i)), None)
+            end = None if punctuator is None else i + len(punctuator)
+        if end is None:
+            return None
+        tokens.append(source[i:end])
+        i = end
+    return tokens
+
+
+def _clean(expression: str) -> str | None:
+    """An operand's tokens joined by single spaces: no comments, its literals as written."""
+    tokens = operand_tokens(expression)
+    return None if tokens is None else " ".join(tokens)
+
+
+def _simple_cast(source: str) -> str | None:
+    """`_cast_operand`, for a cast to one named type only: `x as any || y` is no cast of `x`."""
+    for index, depth in _top_level(source):
+        cast = _CAST.match(source, index) if depth == 0 else None
+        if (cast is None or index == 0 or source[index - 1] not in _WHITESPACE
+                or cast.end() >= len(source) or source[cast.end()] not in _WHITESPACE):
+            continue
+        if not _SIMPLE_TYPE.fullmatch(source, cast.end()):
+            return None
+        head = source[:index].strip(_WHITESPACE)
+        signs = {match.end() for match in _EXPONENT_SIGN.finditer(head)}
+        operators = [i for i, level in _top_level(head)
+                     if level == 0 and head[i] in "?:=|&<>,+-*/%^" and i not in signs]
+        if not head or any(i > 0 or head[i] not in "+-" for i in operators):
+            return None
+        return head
+    return None
+
+
+def _strict_peel(source: str) -> str:
+    """`_peel` with `_simple_cast`: parentheses, `x!` and a cast to one named type."""
+    while True:
+        source = source.strip(_WHITESPACE)
+        inner = _parenthesized(source)
+        if inner is None and len(source) > 1 and source.endswith("!"):
+            inner = source[:-1]
+        if inner is None:
+            inner = _simple_cast(source)
+        if inner is None or not inner.strip(_WHITESPACE):
+            return source
+        source = inner
 
 
 def _quoted_end(source: str, start: int) -> int:
@@ -772,13 +948,13 @@ def _literal_property(piece: str, depth: int) -> bool:
 
 
 def _literal(source: str, depth: int) -> bool:
-    source = _peel(source)
+    source = _strict_peel(source)
     if not source or depth > _LITERAL_DEPTH:
         return False
     if source in {"true", "false", "null"}:
         return True
     if source[0] in "+-":
-        return bool(_NUMBER_LITERAL.fullmatch(_peel(source[1:])))
+        return bool(_NUMBER_LITERAL.fullmatch(_strict_peel(source[1:])))
     if _NUMBER_LITERAL.fullmatch(source) or _TEMPLATE_LITERAL.fullmatch(source) or _REGEX_LITERAL.fullmatch(source):
         return True
     if source[0] in "\"'":
@@ -798,21 +974,19 @@ def literal_operand(expression: str) -> bool:
 
     A number, BigInt, string, template without a substitution, regular
     expression, `true`, `false` or `null`, or an array or plain object of
-    them, as Python reads a container of literals as a literal. Read through
-    comments, parentheses and the TypeScript wrappers, as the rest of this
-    module reads an operand; a sign belongs to a number. A name is none:
-    `undefined`, `NaN` and `Infinity` are globals a file can shadow, and so
-    is a hole, a spread, a computed key or a shorthand property.
+    them, as Python reads a container of literals as a literal. Read from
+    `operand_tokens`, through comments, parentheses, `x!` and a cast to one
+    named type; a sign belongs to a number. A name is none: `undefined`,
+    `NaN` and `Infinity` are globals a file can shadow, and so is a hole, a
+    spread, a computed key or a shorthand property.
     """
-    if len(expression) > 4096:
-        return False
-    source = _without_comments(expression)
+    source = _clean(expression)
     return source is not None and _literal(source, 0)
 
 
 def _numeral(source: str) -> float | None:
     """The Number an unsigned numeric literal writes, through parentheses: Python's `Constant`."""
-    source = _peel(source)
+    source = _strict_peel(source)
     return None if not source or source[0] in "+-" else _number(source)
 
 
@@ -894,30 +1068,34 @@ def _no_op_operand(source: str) -> str | None:
 
 
 def _identity_core(expression: str) -> str | None:
-    """An operand without comments, parentheses, TS wrappers, outer no-op arithmetic or formatting."""
-    if len(expression) > 4096:
-        return None
-    source = _without_comments(expression)
-    if source is None:
+    """An operand's tokens without comments, parentheses, TS wrappers or outer no-op arithmetic.
+
+    Strings read in double quotes; templates and regular expressions stay as
+    written, whitespace included. A spread (`...pair`) is no operand.
+    """
+    source = _clean(expression)
+    if source is None or source.startswith("..."):
         return None
     for _ in range(4 * _LITERAL_DEPTH):
-        source = _peel(source)
+        source = _strict_peel(source)
         inner = _no_op_operand(source)
         if inner is None or not inner.strip(_WHITESPACE):
             break
         source = inner
-    text = operand_text(source)
-    return None if text is None else comparable_operand(text)
+    tokens = operand_tokens(source)
+    if not tokens:
+        return None
+    return " ".join(_double_quoted(token) if token[:1] in "'\"" else token for token in tokens)
 
 
 def same_operand(left: str, right: str) -> bool:
     """Do two operands spell one expression (#429 Q7)?
 
-    Python's row-10 reading: the two texts compare once comments,
-    parentheses, the TypeScript wrappers and outer no-op arithmetic are
-    taken out of each (`f(x)` and `(f(x) as number) + 0`), and the
-    formatting `comparable_operand` takes out. Nothing is evaluated: two
-    names bound to one value, `x` and `+x`, or `a.b` and `a["b"]` are
+    Python's row-10 reading: the two token sequences compare once comments,
+    parentheses, `x!`, a cast to one named type and outer no-op arithmetic
+    are taken out of each (`f(x)` and `(f(x) as number) + 0`), with quoted
+    strings read in double quotes. Nothing is evaluated: two names bound to
+    one value, `x` and `+x`, `a.b` and `a["b"]`, or two spreads are
     different operands.
     """
     first, second = _identity_core(left), _identity_core(right)

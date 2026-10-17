@@ -552,16 +552,21 @@ included. An assertion is TAUTOLOGY, whatever it evaluates to, when its
 subject as written and every operand its predicate reads (an expected value,
 a bound, a tolerance, a property name; never a message) are exact literals: a
 number, BigInt, string, template without a substitution, regular expression,
-`true`, `false` or `null`, or an array or plain object of them, read through
-comments, parentheses and the TypeScript wrappers. A name is never a literal,
-`undefined`, `NaN` and `Infinity` included. An equality or an inclusive bound
-is TAUTOLOGY, negated or not, when its two sides are one operand: the same
-text once comments, parentheses, the TypeScript wrappers, formatting and the
-outer no-op arithmetic Python strips (`+ 0`, `0 +`, `- 0`, `* 1`, `1 *`,
-`/ 1`) are taken out of each. Such an assertion keeps its subject, text, span
-and operand evidence, so no finding identity changes, and records form
-`tautology` with no predicate key and `positive=True`, so the predicate
-relation below never reads it as the predicate it replaced. A truthy spelling
+`true`, `false` or `null`, or an array or plain object of them, read as
+JavaScript tokenizes them (a `//` inside a template is no comment), through
+comments, parentheses, `x!` and a cast to one named type. A name is never a
+literal, `undefined`, `NaN` and `Infinity` included. An equality or an
+inclusive bound is TAUTOLOGY, negated or not, when its two sides are one
+operand: the same tokens once comments, parentheses, `x!`, a cast to one
+named type, formatting and the outer no-op arithmetic Python strips (`+ 0`,
+`0 +`, `- 0`, `* 1`, `1 *`, `/ 1`) are taken out of each; a spread and a
+property value compared with its property are none. Such an assertion keeps
+its subject, text, span and operand evidence, so a finding on its own
+evidence keeps its identity, and records form `tautology` with no predicate
+key and `positive=True`, so the predicate relation below never reads it as
+the predicate it replaced. A pair whose new side is a tautology is a strength
+drop, so where the relation had read it (`toBe(27)` -> `.not.toBe(total)`,
+polarity inverted), the finding now reports the drop, under another key. A truthy spelling
 (`assert.ok(x === x)`), the `trivial` reading of §5 and the other residuals
 `docs/js-reachability.md` names are not read.
 

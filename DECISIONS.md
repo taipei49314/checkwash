@@ -11467,18 +11467,22 @@ passed the same way.
 How each ruling answer is implemented:
 
 - Q2 (a), literal assertions. `literal_operand` in
-  `frontends/javascript/literals.py` reads an exact literal from the text:
-  a number, BigInt, string, template without a substitution, regular
-  expression, `true`, `false` or `null`, or an array or plain object of
-  them, through comments, parentheses and the TypeScript wrappers. A name
+  `frontends/javascript/literals.py` reads an exact literal from the tokens
+  of `operand_tokens`, a lexer that reads strings, templates (substitutions
+  nested) and regular expressions whole and leaves comments out: a number,
+  BigInt, string, template without a substitution, regular expression,
+  `true`, `false` or `null`, or an array or plain object of them, through
+  parentheses, `x!` and a cast to one named type (`as number`, `as const`;
+  `x as any || y` is more than a cast). A name
   never is one, `undefined`, `NaN` and `Infinity` included. `_rate_tautology`
   in `frontend.py` rates TAUTOLOGY an assertion whose subject as written and
   every operand its predicate reads are literals, in each scan: the Jest
   matchers, chai `expect` and `should` chains, the chai and node:assert
   calls, and AVA and tap. A message argument is no operand.
-- Q7 (b), self-comparison. `same_operand` compares two operands as one
-  text once comments, parentheses, the TypeScript wrappers and
-  `comparable_operand`'s formatting are taken out of each, together with
+- Q7 (b), self-comparison. `same_operand` compares the token sequences of
+  two operands, quoted strings read in double quotes and templates and
+  regular expressions as written, once comments, parentheses, `x!` and a
+  cast to one named type are taken out of each, together with
   Python's outer no-op arithmetic (`x + 0`, `0 + x`, `x - 0`, `x * 1`,
   `1 * x`, `x / 1`, repeatedly, only as the outermost operation). An
   equality (`toBe`, `toEqual`, `toStrictEqual`, chai `equal`, `eql`,
@@ -11562,22 +11566,26 @@ The three confirmations the ruling asks for are pinned in
 
 No `.gwcase` expectation and nothing under `tests/gates` changed.
 
-**Fingerprints.** No fingerprint scheme or existing key changes. The
-message of a removed literal assertion says `strength TAUTOLOGY` instead of
-the rung it read before, and pairs that were silent now report
-`ASSERT_WEAKENED` under new keys. #421's content-bound keys (#477) landed
+**Fingerprints.** No fingerprint scheme changes, and a finding on a
+tautology's own evidence keeps its key (the pin above). The message of a
+removed literal assertion says `strength TAUTOLOGY` instead of the rung it
+read before, and pairs that were silent now report `ASSERT_WEAKENED` under
+new keys. A pair whose after side is now a tautology is judged as a strength
+drop: where main read it as a keyed relation (`toBe(27)` ->
+`.not.toBe(total)`, polarity inverted), the finding's kind, message and v2
+key change. #421's content-bound keys (#477) landed
 first, so the pin above checks the legacy pre-image each key is computed
 from, as `tests/test_js_assertion_identity.py` does.
 
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 204 collected items in
+- Tests were added: 230 collected items in
   `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 18982 (18774 + 208).
+- The documented test count is 19008 (18774 + 234).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
