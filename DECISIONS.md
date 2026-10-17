@@ -11277,7 +11277,7 @@ for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
 Ruling 429 (owner, 2026-10-14, 「P1 全部照建議」) answered its ten
 questions as recommended. Q8 (b) splits the round into two changes, each
 with its own qualification and sweep; this entry is the first (Q2, Q6,
-Q7). D-145 (#306) and D-146 (#421) are drafted in their open PRs, so this
+Q7). D-145 (#306) is on main and D-146 (#421) is drafted in its open PR, so this
 entry is D-147.
 
 #429 reports three one-line JS/TS edits that the Python frontend blocks and
@@ -11391,7 +11391,7 @@ checkwash or Python ran. CI ran the tests.
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 18881 (18675 + 206).
+- The documented test count is 18942 (18736 + 206).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
