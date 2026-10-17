@@ -379,6 +379,9 @@ class Reachability:
                     not self.bindings._completes(index - 1)
                     and (_NAME.fullmatch(following) or following in {">", "/"}))):
                 return True  # JSX (after a block too), or a TypeScript `<T>` assertion
+            if token in {"/", "/="} and index > 0 and (self.token(index - 1) == "}" or (
+                    self.token(index - 1) == ")" and not self.bindings._completes(index - 1))):
+                return True  # a regular expression after a block or a statement head, read as division
         return False
 
     def _kill(self, first: int, after: int) -> None:
@@ -630,7 +633,7 @@ class Reachability:
                 completes = bindings._completes(cursor - 1)
                 if completes and not bindings._continues(cursor):
                     return cursor
-                if (typed or self.token(cursor) == "{"
+                if (typed or self.token(cursor) in {"{", "(", "["} or self.token(cursor - 1) == "}"
                         or (not completes and self.token(cursor - 1) in _DOUBTFUL_ENDS)):
                     self.doubtful += 1  # JavaScript or TypeScript may end the statement here; this reads on
             token = self.token(cursor)

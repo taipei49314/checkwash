@@ -122,6 +122,12 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     # A TypeScript type ends at the line break; `[` or `(` on the next line starts a statement.
     "if (false) config = load() as Config\n[value()].forEach(() => { " + ORACLE + " });",
     "if (false) var settings: Settings\n[value()].forEach(() => { " + ORACLE + " });",
+    # An arrow's body or a postfix update cannot be called or indexed: the next line is a statement.
+    "if (false) handler = () => {}\n[value()].forEach(() => { " + ORACLE + " });",
+    "if (false) count++\n[value()].forEach(() => { " + ORACLE + " });",
+    # A regular expression after a block or a statement head, which the mask may read as division.
+    "skip: {}\n/x; return; y/.test(s);\n" + ORACLE,
+    "if (ok) /x; return; y/.test(s);\n" + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
