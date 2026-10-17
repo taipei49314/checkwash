@@ -155,10 +155,21 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "return load()\n\N{ZERO WIDTH NO-BREAK SPACE}.then(() => { " + ORACLE + " });",
     "const view = <\N{GREEK CAPITAL LETTER OMEGA}>Saved; return; later</\N{GREEK CAPITAL LETTER OMEGA}>; "
     "const ratio = done / total;\n" + ORACLE,
+    # An identifier escape the binder splits: `return\u0041` is one name, not `return`.
+    "let return\\u0041; return\\u0041 = 5; " + ORACLE,
+    "\\u{61}return / 1;\n" + ORACLE,
+    # TypeScript ends `x!` at the line break; the binder reads on into `do`.
+    "const el = find()!\ndo el.reset(); while (false)\n" + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
     assert TEXT in [assertion.text for assertion in parsed.units[0].side.assertions]
+    assert parsed.unreachable_assertion_spans == ()
+
+
+def test_a_cut_holding_a_function_declaration_is_refused():
+    """A call before the `return` may run the hoisted declaration's body."""
+    parsed = parse_javascript(source("check(value()); return; function check<T>(v: T) { expect(v).toBe(1); }"))
     assert parsed.unreachable_assertion_spans == ()
 
 

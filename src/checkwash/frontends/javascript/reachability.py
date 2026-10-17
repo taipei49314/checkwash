@@ -101,6 +101,11 @@ _REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw
 # Tokens after which a name is read, never bound, and heads whose `(` is no call.
 _READ_AFTER = frozenset({"!", "&", "|", "?", "==", "===", "!=", "!==", "=", "return", "typeof", "void", "case"})
 _NOT_CALLS = frozenset({"for", "catch", "function", "switch", "with", "if", "while", "async"})
+# Keywords that start a statement and never continue an expression.
+_STATEMENT_KEYWORDS = frozenset({
+    "do", "if", "for", "while", "return", "throw", "var", "let", "const", "try", "switch", "break",
+    "continue", "with", "debugger", "export", "else", "case", "default", "catch", "finally",
+})
 # A `with (` or `eval` anywhere in the text, comments and strings included; one
 # pass, no backtracking. A comment between `with` and `(` is caught on the tokens.
 _SCOPE_CHANGERS = re.compile(r"(?<![\w$])(?:with[\s\N{ZERO WIDTH NO-BREAK SPACE}]*\(|eval(?![\w$]))")
@@ -338,6 +343,10 @@ class Reachability:
         self.assertions: dict[int, int] = {}
         # Whether each global the folder reads is spelled only as plain reads in the file.
         self.read_only: dict[str, bool] = {}
+        # A `\` outside a string is an identifier escape (`return\u0041` is one name),
+        # which the binder splits: no callback in the file is walked.
+        self.escaped = any(token == "\\" for token, _start, _end in self.tokens)
+        self.hoisted = False
         # Line breaks where JavaScript may end a statement that `_end` reads on past.
         self.doubtful = 0
 
@@ -359,12 +368,13 @@ class Reachability:
                 or self.pairs.get(opening) != closing
                 or _within(self.unpaired, opening, closing + 1)
                 or _within(self.separators, start, end)
+                or self.escaped
                 or self._misread(first, closing, start, end)):
             return []
-        self.dead = []
+        self.dead, self.hoisted = [], False
         self.assertions = dict(assertions)
         self._list(first, closing, 0)
-        return sorted(self.dead)
+        return [] if self.hoisted else sorted(self.dead)
 
     def _misread(self, first: int, closing: int, start: int, end: int) -> bool:
         """Does the token stream misread this callback: a nested template, JSX, an HTML-like comment?
@@ -406,8 +416,14 @@ class Reachability:
         return False
 
     def _kill(self, first: int, after: int) -> None:
-        """Statements from token `first` up to token `after` never run."""
+        """Statements from token `first` up to token `after` never run.
+
+        Where they hold a `function`, a call before them may run its hoisted
+        body, which the binder does not always scope (`function f<T>()`): the
+        callback is then refused.
+        """
         if first < after:
+            self.hoisted = self.hoisted or any(self.token(index) == "function" for index in range(first, after))
             self.dead.append((self.tokens[first][1], self.tokens[after - 1][2]))
 
     def _gap(self, before: int, index: int) -> str:
@@ -698,6 +714,8 @@ class Reachability:
                         cursor - 1 == first or bindings._line_break(cursor - 1)
                         or not bindings._completes(cursor - 2)):
                     completes = False  # a prefix update: its operand is on the next line
+                if not completes and self.token(cursor) in _STATEMENT_KEYWORDS:
+                    return None  # `x!` then `do ...`: TypeScript ends the statement where the binder reads on
                 if (completes and not bindings._continues(cursor)
                         and self.token(cursor) not in {"extends", "implements"}):
                     return cursor
