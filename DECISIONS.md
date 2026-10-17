@@ -11548,6 +11548,11 @@ Readings left to the implementation, accepted with this entry:
    a quote or bracket inside one hides no operator: `f(/'/) || g(/'/) + 0`
    keeps its `+ 0`. These came from a read-only review workflow and were
    checked by Claude.
+7. A cast to one named type inside an operand binds as TypeScript binds
+   it, before the no-op arithmetic around it: `total as number + 0` is
+   `(total as number) + 0` and reads as `total`, as the parenthesized
+   spelling did. A cast to anything more, or a type followed by `|`, `&` or
+   `<`, still leaves the operand whole. Raised by GLM, verified by Claude.
 
 Rule 2. By reading, the ruling expected no existing output to move. Three
 do, in
@@ -11591,12 +11596,12 @@ from, as `tests/test_js_assertion_identity.py` does.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 245 collected items in
+- Tests were added: 251 collected items in
   `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 19023 (18774 + 249).
+- The documented test count is 19029 (18774 + 255).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
