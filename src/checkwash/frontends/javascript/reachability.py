@@ -89,6 +89,15 @@ _EQUALITY = frozenset({"===", "!==", "==", "!="})
 _RELATIONAL = frozenset({"<", ">", "<=", ">="})
 # How deep `!` and parentheses nest before the folder gives up: unknown.
 _FOLD_DEPTH = 64
+# Tokens after which a `/` can only start a regular expression, and words that
+# do so unless they are a property name (`x.new / 2` divides).
+_REGEX_AFTER = frozenset({
+    "", "(", ",", "=", ":", "[", "{", ";", "?", "&", "|", "^", "~", "+", "-", "*", "%", "<", "=>",
+    "==", "===", "!=", "!==", "+=", "-=", "*=", "%=", "&=", "|=", "^=", "<=", ">=", "**=", "<<=",
+    ">>=", ">>>=", "&&=", "||=", "??=", "??", "&&", "||", "**", "<<", ">>", ">>>",
+})
+_REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw", "void", "delete", "in",
+                                "instanceof", "new"})
 
 
 class _Folder:
@@ -253,18 +262,19 @@ def fold_condition(source: str, is_global: Callable[[str], bool]) -> bool | None
 
 # --- Q1, Q3: the statement walker ------------------------------------------------------------
 
-def _misread_run(text: str, start: int, end: int, before: str) -> bool:
+def _misread_run(text: str, start: int, end: int, before: str, dotted: bool) -> bool:
     """Does the mask misread this run of literals and comments?
 
     It ends a template at the next backtick, where one nested in a
     substitution may stand: each template is read again as the operand
     reader reads it, its substitutions nested. And it may read a division as
-    a regular expression, hiding code: a regular expression right after a
-    `}` or a `)` (`before`, the token before the run) is one JavaScript may
-    read as a division. (A U+2028 or U+2029, which ends a `//` comment the
-    mask runs on to a line feed, refuses the whole callback before this.)
+    a regular expression, hiding code: one is trusted only after a token
+    after which JavaScript cannot divide (`before`, the token before the run;
+    `dotted` when a `.` comes before that). (A U+2028 or U+2029, which ends a
+    `//` comment the mask runs on to a line feed, refuses the whole callback
+    before this.)
     """
-    last = before
+    last = before if before in _REGEX_AFTER or (before in _REGEX_AFTER_WORDS and not dotted) else "?)"
     index = start
     while index < end:
         char = text[index]
@@ -284,8 +294,8 @@ def _misread_run(text: str, start: int, end: int, before: str) -> bool:
             newline = text.find("\n", index + 2)
             index = end if newline < 0 else newline + 1
         elif char == "/":
-            if last in {"}", ")"}:
-                return True  # after an object or a call this `/` divides
+            if last not in _REGEX_AFTER and last not in _REGEX_AFTER_WORDS:
+                return True  # after an operand JavaScript may read this `/` as a division
             regex = _REGEX_LITERAL.match(text, index)
             index, last = index + 1 if regex is None else regex.end(), char
         else:
@@ -320,6 +330,15 @@ class Reachability:
                            re.finditer("[\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]", bindings.text)]
         self.dead: list[tuple[int, int]] = []
         self.assertions: dict[int, int] = {}
+        # Shadows of `undefined` and `NaN` the binder does not scope: a `with`
+        # statement anywhere, and a function or class declared in a block,
+        # which Annex B hoists in sloppy code.
+        words = [token for token, _start, _end in self.tokens]
+        self.with_statement = any(word == "with" and following == "("
+                                  for word, following in zip(words, words[1:]))
+        self.declared = {name for index, name in enumerate(words[1:], 1)
+                         if words[index - 1] in {"function", "class"}
+                         or (words[index - 1] == "*" and words[index - 2:index - 1] == ["function"])}
         # Line breaks where JavaScript may end a statement that `_end` reads on past.
         self.doubtful = 0
 
@@ -366,7 +385,8 @@ class Reachability:
             while position < end and not code[position]:
                 position += 1
             previous = bisect_left(self.bindings.token_starts, run) - 1
-            if _misread_run(text, run, position, self.token(previous) if previous >= 0 else ""):
+            if _misread_run(text, run, position, self.token(previous) if previous >= 0 else "",
+                            self.token(previous - 1) in {".", "?."}):
                 return True
         for index in range(first, closing):
             token, following = self.token(index), self.token(index + 1)
@@ -457,8 +477,12 @@ class Reachability:
     def _fold(self, before: int, after: int) -> bool | None:
         """The truth of the condition between tokens `before` and `after`."""
         position = self.tokens[before][2]
-        return fold_condition(self._gap(before, after),
-                              lambda name: self.bindings.is_global((name,), position))
+        return fold_condition(self._gap(before, after), lambda name: self._global(name, position))
+
+    def _global(self, name: str, position: int) -> bool:
+        """Is `name` the unshadowed global at `position`?"""
+        return (not self.with_statement and name not in self.declared
+                and self.bindings.is_global((name,), position))
 
     def _if(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
         head = first + 1
@@ -690,6 +714,6 @@ class Reachability:
         before = first - 1
         source = self.bindings.text[self.tokens[before][2]:self.tokens[operator][1]] if before >= 0 else ""
         position = self.tokens[first][1]
-        truth = fold_condition(source, lambda name: self.bindings.is_global((name,), position))
+        truth = fold_condition(source, lambda name: self._global(name, position))
         if truth is (self.token(operator) == "|"):
             self.dead.append((start_char, end_char))

@@ -741,6 +741,10 @@ _OPERAND_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "
 _SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*\s*\Z")
 # JavaScript's line terminators: a `//` comment ends at the first of them.
 _LINE_TERMINATOR = re.compile("[\n\r\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
+# Tokens after which a `/` may divide or start a regular expression: `++` and
+# `--` prefix or postfix, `!` TypeScript's `x!` or a negation, `>` a type's or a
+# comparison's, and words that may be names.
+_EITHER_WAY = frozenset({"++", "--", "!", ">", "of", "await", "yield"})
 # Statement heads whose `)` a regular expression may follow: `if (ok) /a/.test(s)`.
 _STATEMENT_HEADS = frozenset({"if", "while", "for", "with"})
 # The one named type a cast inside an operand names: `as number`, `as Foo.Bar[]`.
@@ -863,6 +867,9 @@ def operand_tokens(source: str) -> list[str] | None:
             continue
         if char == "/" and tokens and (tokens[-1] == "}" or len(tokens) - 1 in heads):
             return None  # after a block or a statement head it starts a regular expression, else it divides
+        if char == "/" and tokens and (tokens[-1] in _EITHER_WAY
+                                       or (tokens[-1] in _OPERAND_PREFIX_WORDS and tokens[-2:-1] in (["."], ["?."]))):
+            return None  # a prefix or postfix update, `x!` or `!x`, a type's `>`, a name or a property
         if char in "'\"":
             end = _string_end(source, i)
         elif char == "`":

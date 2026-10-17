@@ -137,6 +137,13 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "if (false) x = y\nas(" + TEXT + ");",
     # A prefix update at a line's end takes the next line as its operand.
     "return ++\ncounter[" + TEXT + "];",
+    # A division the mask reads as a regular expression after a property, `x!` or `of`.
+    "if (false) { x = n.new / 2 } { z / (" + TEXT + ") }",
+    "if (false) { x = total! / 2 } { z / (" + TEXT + ") }",
+    # A regular expression the folder would read as a division after a prefix update.
+    "if (++/ || true || x/.lastIndex && false) {} else { " + ORACLE + " }",
+    # Annex B hoists a block's function declaration: `undefined` is no longer the global.
+    "{ function undefined() {} }\nif (undefined) { " + ORACLE + " }",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -219,10 +226,16 @@ def test_a_branch_the_folder_cannot_decide_or_that_runs_keeps_the_assertion(stat
     ("(", None), ("1 /* c */ === // d\n 1", True), ("1 in x", None),
     ("!" * 1000 + "true", None), ("(" * 400 + "false" + ")" * 400, None),
     ("i++ / 2 || x / 1 && false", None), ("x <!-- || true", None), ("x --> 0 || true", None),
-    ("`${ x // }` && false && `\n}`", None),
+    ("`${ x // }` && false && `\n}`", None), ("++/ || true || x/.lastIndex && false", None),
 ])
 def test_the_condition_folder(condition, truth):
     assert fold_condition(condition, lambda _name: True) is truth
+
+
+def test_a_with_statement_in_the_file_leaves_undefined_unfolded():
+    """`with ({ undefined: 1 })` around a test shadows the global the binder sees."""
+    text = HEADER + 'with ({ undefined: 1 }) {\nit("value", () => {\nif (undefined) { ' + ORACLE + " }\n});\n}\n"
+    assert parse_javascript(text.encode()).unreachable_assertion_spans == ()
 
 
 def test_undefined_and_nan_fold_only_as_unshadowed_globals():
