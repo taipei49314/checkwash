@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `if (!true)` parks an assertion as dead as `if (false)` does
+origin: #429 (Q5) — the JS/TS twin of dead_branch_not_true_pos
+=== before: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  expect(total(3)).toBe(6);
+});
+=== after: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  if (!true) {
+    expect(total(3)).toBe(6);
+  }
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

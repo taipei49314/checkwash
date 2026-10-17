@@ -1,0 +1,22 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: an assertion under `if (false)` never runs
+origin: #429 (Q1, Q5) — the JS/TS twin of if_false_assertion_pos
+=== before: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { calc } from "../src/calc";
+
+test("calc", () => {
+  expect(calc()).toBe(3);
+});
+=== after: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { calc } from "../src/calc";
+
+test("calc", () => {
+  if (false) {
+    expect(calc()).toBe(3);
+  }
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
