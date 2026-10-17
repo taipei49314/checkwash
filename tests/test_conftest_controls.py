@@ -23,6 +23,7 @@ from checkwash.frontends.python import conftest_controls as cc
 from checkwash.frontends.python.frontend import _CONFTEST_HOOKS, _SKIP_DECORATORS, parse_python
 from checkwash.frontends.python.setup_skip_controls import BODY_MARKERS
 from checkwash.frontends.python.runtime_controls import _HOOKS as RUNTIME_HOOKS
+from checkwash.ir.markers import REBOUND
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "src" / "checkwash" / "frontends" / "python"
@@ -138,6 +139,7 @@ SITES = sorted([
     ("frontend", "_pytestmark_markers", "call _marker_identity"),
     ("frontend", "_helper_marker", "helper.{}"),
     ("frontend", "setup_markers", "setup.{}"),
+    ("rebindings", "_rebound_marker", "name REBOUND"),
     ("exit_status_controls", "exit_status_controls", "conftest.runtime.exit.{}"),
     ("runtime_controls", "runtime_controls", "conftest.runtime.{}"),
     ("runtime_controls", "runtime_controls", "from exit_status_controls"),
@@ -168,6 +170,8 @@ FAMILIES = {
     # A skip or xfail a helper the unit or its setup calls ends in, in this file or
     # imported from another (#272).
     "helper.{}": (cc.HELPER, ["helper._later.skip", "helper.offline.xfail"]),
+    # A later binding of the test's name that may replace it (#424).
+    "name REBOUND": (cc.REBINDING, [REBOUND]),
     "conftest.runtime.{}": (cc.RUNTIME, [f"conftest.runtime.{hook}.report-passed.e3b0c44298fc1c14"
                                          for hook in sorted(RUNTIME_HOOKS)]),
     "result = conftest.runtime.pytest_runtest_setup.{}": (cc.RUNTIME, ["conftest.runtime.pytest_runtest_setup.skip",
