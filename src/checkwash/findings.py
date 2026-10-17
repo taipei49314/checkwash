@@ -177,6 +177,26 @@ def identity_text(text: str | None) -> str | None:
         return None
 
 
+# The spans of a side's assertions, in source order, by `identity_text`, for
+# the last sides asked about: a unit that loses a thousand assertions asks a
+# thousand times, and rebuilding the index each time is quadratic. An entry
+# holds its side, so the id cannot be reused while it is cached.
+_POSITIONS: dict[int, tuple] = {}
+
+
+def _position_index(side) -> dict[str | None, list[tuple]]:
+    entry = _POSITIONS.get(id(side))
+    if entry is not None and entry[0] is side and entry[1] == len(side.assertions):
+        return entry[2]
+    index: dict[str | None, list[tuple]] = {}
+    for a in sorted(side.assertions, key=lambda a: tuple(a.span)):
+        index.setdefault(identity_text(a.text), []).append(tuple(a.span))
+    if len(_POSITIONS) >= 64:
+        _POSITIONS.clear()
+    _POSITIONS[id(side)] = (side, len(side.assertions), index)
+    return index
+
+
 def assertion_position(side, text: str | None, span) -> tuple[int | None, int | None]:
     """(ordinal, count) among the before side's assertions that read as `text`, or (None, None).
 
@@ -189,10 +209,9 @@ def assertion_position(side, text: str | None, span) -> tuple[int | None, int | 
         wanted = identity_text(text)
         if side is None or wanted is None:
             return None, None
-        same = [a for a in sorted(side.assertions, key=lambda a: tuple(a.span))
-                if identity_text(a.text) == wanted]
-        ordinal = next((i for i, a in enumerate(same) if tuple(a.span) == tuple(span)), None)
-        return ordinal, len(same)
+        same = _position_index(side).get(wanted, [])
+        where = tuple(span)
+        return (same.index(where) if where in same else None), len(same)
     except (AttributeError, TypeError, RecursionError):
         return None, None
 
