@@ -1,4 +1,5 @@
 === meta ===
+bypass: 135
 rule: TEST_DISABLED
 title: `del test_total` appended after an unchanged test takes it out of the run
 origin: #424 R2, ruling 424 Q1 (b) - a def a later binding certainly replaces is not a unit; v0.8.0 reported nothing

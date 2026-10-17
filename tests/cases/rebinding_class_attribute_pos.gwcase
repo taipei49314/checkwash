@@ -1,4 +1,5 @@
 === meta ===
+bypass: 135
 rule: TEST_DISABLED
 title: `TestTotal.test_total = None` after the class takes the method out of the run
 origin: #424 R4, ruling 424 Q1 (b) - a module-level `Cls.name = ...` binds the name in the class; v0.8.0 reported nothing

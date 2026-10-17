@@ -1,4 +1,5 @@
 === meta ===
+bypass: 135
 rule: ASSERT_REMOVED
 title: a no-op def appended under an unchanged test's name is the test pytest runs: an in-place rewrite
 origin: #424 R1, ruling 424 Q1 (b) - the earlier def is not collected, so the later one pairs with the base test; v0.8.0 reported nothing
