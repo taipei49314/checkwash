@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an identical copy that a later binding takes out of the run is no surviving duplicate
+origin: #424, ruling 424 Q1 (b) - a rebound copy earns no D10 survivor credit; v0.8.0 held it at info
+=== head: tests/test_confirm.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+
+
+del test_confirm_repeat
+=== before: tests/test_utils.py ===
+from app import confirm
+
+
+def test_confirm_repeat(monkeypatch):
+    monkeypatch.setattr("app.input", lambda _: "y")
+    assert confirm("go?") is True
+    assert confirm("go?") is True
+
+
+def test_untouched():
+    assert confirm is not None
+=== after: tests/test_utils.py ===
+from app import confirm
+
+
+def test_untouched():
+    assert confirm is not None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "test_confirm_repeat"}]

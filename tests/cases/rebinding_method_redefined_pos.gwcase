@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a no-op method appended under an unchanged method's name is an in-place rewrite of it
+origin: #424 R4, ruling 424 Q1 (b) - the earlier method is not collected, so the later one pairs with the base test; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([50.0, 28.75]) == 78.75
+
+    def test_total(self):
+        pass
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "unit": "TestTotal.test_total"}]

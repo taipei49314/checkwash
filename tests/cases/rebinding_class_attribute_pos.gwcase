@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `TestTotal.test_total = None` after the class takes the method out of the run
+origin: #424 R4, ruling 424 Q1 (b) - a module-level `Cls.name = ...` binds the name in the class; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([50.0, 28.75]) == 78.75
+
+
+TestTotal.test_total = None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "TestTotal.test_total"}]

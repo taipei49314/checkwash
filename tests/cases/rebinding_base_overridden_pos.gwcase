@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `del BillingTests` takes the base's test out of the run when the only subclass overrides it
+origin: #424, ruling 424 Q9 (a) - same-file C3 resolution proves no collected class runs it
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class BillingTests(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+
+
+class EuroBillingTests(BillingTests):
+    def test_total(self):
+        self.assertEqual(total([50.0]), 50.0)
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class BillingTests(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total([50.0, 28.75]), 78.75)
+
+
+class EuroBillingTests(BillingTests):
+    def test_total(self):
+        self.assertEqual(total([50.0]), 50.0)
+
+
+del BillingTests
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "BillingTests.test_total"}]

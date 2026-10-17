@@ -1,0 +1,24 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `except ... as test_total` binds and deletes the name whenever the handler runs
+origin: #424, ruling 424 Q4 (b), Q6 (a) - a conditional binder; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+try:
+    open("missing.cfg")
+except OSError as test_total:
+    pass
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "test_total"}]
