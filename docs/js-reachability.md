@@ -209,9 +209,10 @@ after the stop keeps its reading:
   comment (`<!--`, `-->`); such a callback is not walked at all;
 - a dead body that is no block, when its end at a line break is in doubt
   (`if (false) skip()` with a `{` block on the next line, which JavaScript
-  runs, or a line ending in `x!`, `Map<K, V>`, `() => void`, `yield`,
-  `async` or `await`, where TypeScript or a restricted production may end
-  the statement): it is not killed;
+  runs, a line ending in `x!`, `Map<K, V>`, `() => void`, `yield`, `async`
+  or `await`, or any line after a TypeScript cast or type annotation
+  (`as Config`, `var x: T`), where TypeScript or a restricted production may
+  end the statement): it is not killed;
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
   generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
