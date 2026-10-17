@@ -211,7 +211,8 @@ after the stop keeps its reading:
   template is read again as the operand reader reads it, so a quoted `}` or
   a `//` comment in a substitution hides none, and one it leaves unread, such
   as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a
-  block too, or a TypeScript `<T>x` assertion), a `/` the mask reads as a
+  block too, or a TypeScript `<T>x` assertion), a token outside a string that
+  is not ASCII (a non-ASCII name, U+FEFF, which JavaScript reads as a space), a `/` the mask reads as a
   division where JavaScript starts a regular expression (after a block, a
   statement head, an update or an operator, or at a line's start), a
   regular expression it reads where JavaScript may divide (after anything
