@@ -11543,10 +11543,11 @@ Readings left to the implementation, accepted with this entry:
    which may start a regular expression or divide; a `/` inside a template
    substitution, which may hold a `}`; and an Annex B HTML-like comment. A
    `//` comment ends at any line terminator, U+2028 and U+2029 included.
-   Regular expressions, and templates nested in a substitution, reach the
-   quote and bracket scanners as placeholders spelled from their text, so
-   a quote or bracket inside one hides no operator: `f(/'/) || g(/'/) + 0`
-   keeps its `+ 0`. These came from a read-only review workflow and were
+   Regular expressions and templates reach the quote and bracket scanners
+   as placeholders spelled from their text, every one of them, so a quote,
+   bracket or nested template inside one hides no operator
+   (`f(/'/) || g(/'/) + 0` keeps its `+ 0`) and no template as written
+   spells another's placeholder. These came from a read-only review workflow and were
    checked by Claude.
 7. A cast to one named type inside an operand binds as TypeScript binds
    it, before the no-op arithmetic around it: `total as number + 0` is
@@ -11596,12 +11597,12 @@ from, as `tests/test_js_assertion_identity.py` does.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 251 collected items in
+- Tests were added: 252 collected items in
   `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
   (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
   `bypass: 10`, `js_literal_replaces_oracle_pos` and
   `js_tautology_reformatted_neg`).
-- The documented test count is 19029 (18774 + 255).
+- The documented test count is 19030 (18774 + 256).
 - The sweep measures the change (ruling): the standard set, the D-088 sets
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
