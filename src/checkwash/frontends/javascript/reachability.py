@@ -110,6 +110,8 @@ _UNFINISHED = frozenset({
     "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "=>", "in", "instanceof", "typeof", "new", "delete",
     "extends",
 })
+# Statements whose end is a token they own (`;` or their closing `}`), not a line break.
+_COMPOUND = frozenset({"{", "if", "for", "while", "do", "try", "switch", "function", "class", "with"})
 # Keywords that start a statement and never continue an expression.
 _STATEMENT_KEYWORDS = frozenset({
     "do", "if", "for", "while", "return", "throw", "var", "let", "const", "try", "switch", "break",
@@ -440,12 +442,12 @@ class Reachability:
 
     def _list(self, first: int, last: int, depth: int) -> bool:
         """Walk the statements from `first` to `last`; does the list end every run of it?"""
-        cursor = first
+        cursor, explicit = first, True  # did the statement before end on a token, not a line break?
         while cursor < last:
             if self.token(cursor) == ";":
-                cursor += 1
+                cursor, explicit = cursor + 1, True
                 continue
-            statement = self._statement(cursor, last, depth)
+            statement = self._statement(cursor, last, depth, explicit)
             if statement is None:
                 return False  # what follows keeps today's reading
             after, terminates = statement
@@ -454,13 +456,22 @@ class Reachability:
             if terminates:
                 self._kill(after, last)
                 return True
+            closer = self.token(after - 1)
+            explicit = closer == ";" or (closer == "}" and self.token(cursor) in _COMPOUND)
             cursor = after
         return False
 
-    def _statement(self, first: int, last: int, depth: int) -> tuple[int, bool] | None:
-        """(the index after the statement at `first`, whether it ends the run), or None when unproved."""
+    def _statement(self, first: int, last: int, depth: int,
+                   explicit: bool = True) -> tuple[int, bool] | None:
+        """(the index after the statement at `first`, whether it ends the run), or None when unproved.
+
+        `explicit`: the statement before ended on a `;` or its own `}` (or
+        there is none), not at a line break, which TypeScript may read past.
+        """
         if depth >= _MAX_DEPTH or first >= last:
             return None
+        if first > 0 and not _trivia(self._gap(first - 1, first)):
+            return None  # a template or regular expression the tokens omit stands before it
         token = self.token(first)
         if token == ";":
             return first + 1, False  # an empty statement, as the body of `if (x);`
@@ -497,8 +508,8 @@ class Reachability:
             return None
         if token in {"return", "throw"}:
             return end, True
-        if token not in _JUMPS and self.doubtful == mark:
-            self._literal_decided(first, end)  # only a statement whose every line break is proved
+        if token not in _JUMPS and explicit and self.doubtful == mark:
+            self._literal_decided(first, end)  # on a boundary a token proves, its every line break proved
         return end, False
 
     def _fold(self, before: int, after: int) -> bool | None:

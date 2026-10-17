@@ -175,6 +175,15 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "if (false) drop = cache.delete\n" + ORACLE,
     "false && n === 1.\nok && " + TEXT + ";",
     "false && cache.delete\nready && " + TEXT + ";",
+    # A body the tokens omit: a template or regular expression is the whole body.
+    "if (false) `skip`\n{ " + ORACLE + " }",
+    "while (false) `x`\n{ " + ORACLE + " }",
+    "if (true) {} else /x/\n{ " + ORACLE + " }",
+    "do `x`\nwhile (false)\n" + ORACLE,
+    # Q3 only after a `;` or a statement's own `}`: TypeScript may read past a line break
+    # (`v is` then `false`), so a boundary ASI gives is not proved.
+    "const y: any = get();\n y as (v: unknown) => v is\n false && " + TEXT + ";",
+    "setup()\nfalse && " + ORACLE,
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -308,7 +317,7 @@ def test_undefined_and_nan_fold_only_as_unshadowed_globals():
 @pytest.mark.parametrize("statement", [
     "false && " + ORACLE, "0 && " + ORACLE, "!true && " + ORACLE, "null && " + ORACLE,
     "true || " + ORACLE, "(false) && " + ORACLE, "false && flag && " + ORACLE,
-    "setup();\nfalse && " + ORACLE, "setup()\nfalse && " + ORACLE, "if (flag) false && " + ORACLE,
+    "setup();\nfalse && " + ORACLE, "if (flag) false && " + ORACLE,
     "false && assert.strictEqual(value(), 1);", "false &&\n  " + ORACLE,
 ])
 def test_a_literal_decided_and_or_statement_drops_its_last_assertion(statement):
