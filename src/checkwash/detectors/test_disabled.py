@@ -80,9 +80,12 @@ def detect(ir: IR) -> list[Finding]:
             continue
         for unit in file.units:
             if unit.before is not None and unit.after is None:
-                # whole unit disappeared
-                text = "\n".join(a.text for a in unit.before.assertions) or unit.qualname
-                identity = "\n".join(fingerprint_text(file.path, a) for a in unit.before.assertions) or unit.qualname
+                # whole unit disappeared. Its identity is what it has always
+                # been: the assertions reached through a helper method stay
+                # out of it, so no fingerprint moves (306 Sub-Q10).
+                own = [a for a in unit.before.assertions if a.via is None]
+                text = "\n".join(a.text for a in own) or unit.qualname
+                identity = "\n".join(fingerprint_text(file.path, a) for a in own) or unit.qualname
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",

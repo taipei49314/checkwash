@@ -120,8 +120,27 @@ def _marker_key(marker, python: bool) -> object:
 
 
 def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False) -> UnitDelta:
-    b_asserts = list(before.side.assertions)
-    a_asserts = list(after.side.assertions)
+    # A unit's own assertions pair exactly as they always have. Those it
+    # reaches through a helper method (`via`, #306) are a detection-only
+    # overlay (306 Sub-Q11): they pair afterwards, among themselves and with
+    # the after side's own assertions left unpaired.
+    b_own = [b for b in before.side.assertions if b.via is None]
+    a_own = [a for a in after.side.assertions if a.via is None]
+    pairs, removed, added = _match_assertions(b_own, a_own, python)
+    b_via = [b for b in before.side.assertions if b.via is not None]
+    a_via = [a for a in after.side.assertions if a.via is not None]
+    if b_via or a_via:
+        rest = sorted(a_via + added, key=lambda x: x.span)
+        via_pairs, via_removed, added = _match_assertions(b_via, rest, python)
+        pairs += via_pairs
+        removed += via_removed
+    return _delta(before, after, pairs, removed, added, python)
+
+
+def _match_assertions(b_asserts: list, a_asserts: list, python: bool) -> tuple[list, list, list]:
+    """(pairs, removed, added) for two lists of assertions: the staged matching below."""
+    b_asserts = list(b_asserts)
+    a_asserts = list(a_asserts)
     pairs: list[tuple] = []  # (before, after, from_order_fallback)
 
     # 0. exact (normalized text, reaching context) matches (multiset).
@@ -225,7 +244,10 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False
             used[idx] = True
             pairs.append((b, a_rest2[idx], True))
     added = [a for j, a in enumerate(a_rest2) if not used[j]]
+    return pairs, removed, added
 
+
+def _delta(before: ParsedUnit, after: ParsedUnit, pairs: list, removed: list, added: list, python: bool) -> UnitDelta:
     pairs.sort(key=lambda p: p[0].span)
     assertion_pairs = []
     tolerance_changes: list[tuple[str, str]] = []
