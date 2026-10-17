@@ -146,6 +146,11 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "{ function undefined() {} }\nif (undefined) { " + ORACLE + " }",
     # A keyword after `#` is a private name: a division follows it.
     "if (false) { x = Suite.#new / 2 } { z / (" + TEXT + ") }",
+    # A `\u` escape may spell `undefined`; a class heritage may hold a class; a class
+    # expression goes on past a line break before `extends`.
+    "const \\u0075ndefined = 1;\nif (undefined) { " + ORACLE + " }",
+    "class H extends class {} {\n return() {}\n}\n" + ORACLE,
+    "return class H\n extends Base { static { " + ORACLE + " } };",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -248,9 +253,10 @@ def test_a_spelling_of_undefined_the_walk_cannot_read_leaves_it_unfolded(prelude
     assert parsed.unreachable_assertion_spans == ()
 
 
-def test_a_with_statement_in_the_file_leaves_undefined_unfolded():
+@pytest.mark.parametrize("head", ["with (", "with /* s */ ("])
+def test_a_with_statement_in_the_file_leaves_undefined_unfolded(head):
     """`with ({ undefined: 1 })` around a test shadows the global the binder sees."""
-    text = HEADER + 'with ({ undefined: 1 }) {\nit("value", () => {\nif (undefined) { ' + ORACLE + " }\n});\n}\n"
+    text = HEADER + head + '{ undefined: 1 }) {\nit("value", () => {\nif (undefined) { ' + ORACLE + " }\n});\n}\n"
     assert parse_javascript(text.encode()).unreachable_assertion_spans == ()
 
 

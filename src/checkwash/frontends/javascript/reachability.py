@@ -101,8 +101,10 @@ _REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw
 # Tokens after which a name is read, never bound, and heads whose `(` is no call.
 _READ_AFTER = frozenset({"!", "&", "|", "?", "==", "===", "!=", "!==", "=", "return", "typeof", "void", "case"})
 _NOT_CALLS = frozenset({"for", "catch", "function", "switch", "with", "if", "while", "async"})
-# A `with` statement or `eval` anywhere in the text, comments and strings included.
-_SCOPE_CHANGERS = re.compile(r"(?<![\w$])(?:with\s*\(|eval(?![\w$]))")
+# A `with` statement or `eval` anywhere in the text, comments and strings included,
+# a comment or U+FEFF between `with` and its `(` too.
+_SCOPE_CHANGERS = re.compile(
+    r"(?<![\w$])(?:with(?:[\s\N{ZERO WIDTH NO-BREAK SPACE}]|/\*[\s\S]*?\*/|//[^\n]*)*\(|eval(?![\w$]))")
 
 
 class _Folder:
@@ -488,14 +490,15 @@ class Reachability:
 
         The binder scopes declarations, but not everything that binds a name:
         a parameter before a TypeScript type, an enum or namespace, a block's
-        function that Annex B hoists, `with`, `eval`, or text the mask hides.
+        function that Annex B hoists, `with`, `eval`, a spelling with a `\\u`
+        escape, or text the mask hides.
         So each spelling must be a token, right after an operator, `return`,
         `typeof`, `void` or `case`, or first in an `if` or `while` head or a
         call's arguments, and never before `=`, `=>` or a type's `:`.
         """
         text = self.bindings.text
-        if self.separators or _SCOPE_CHANGERS.search(text):
-            return False
+        if self.separators or "\\u" in text or _SCOPE_CHANGERS.search(text):
+            return False  # a line separator, a `\u` escape that may spell the name, `with`, `eval`
         visible = {start: index for index, (token, start, _end) in enumerate(self.tokens) if token == name}
         for match in re.finditer(r"(?<![\w$])" + name + r"(?![\w$])", text):
             index = visible.get(match.start())
@@ -642,8 +645,8 @@ class Reachability:
                 if closing is None:
                     return None
                 cursor = closing + 1
-            elif self.token(cursor) in {";", "}", ")", "]"}:
-                return None
+            elif self.token(cursor) in {";", "}", ")", "]", "class", "function", "=>"}:
+                return None  # a heritage holding a class or function: its `{` is not the body
             else:
                 cursor += 1
         body = self.pairs.get(cursor) if cursor < last else None
@@ -691,7 +694,8 @@ class Reachability:
                         cursor - 1 == first or bindings._line_break(cursor - 1)
                         or not bindings._completes(cursor - 2)):
                     completes = False  # a prefix update: its operand is on the next line
-                if completes and not bindings._continues(cursor):
+                if (completes and not bindings._continues(cursor)
+                        and self.token(cursor) not in {"extends", "implements"}):
                     return cursor
                 # JavaScript or TypeScript may end the statement here (`x = 1` then
                 # `.5`, `x = load() as T` then `[1]`, `x!` then `{`); this reads on.
