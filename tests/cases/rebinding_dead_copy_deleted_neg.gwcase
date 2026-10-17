@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+title: deleting a def that a later def of the same name already replaced is quiet: pytest never ran it
+origin: #424, ruling 424 Q1 (b) - the dead def was no unit at base either
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+def test_total():
+    assert total([1.0]) == 1.0
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([1.0]) == 1.0
+=== expect ===
+[]

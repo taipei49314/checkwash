@@ -119,6 +119,14 @@ class Assertion:
     # their call site's signature, which is what tells N copies of one helper
     # assert apart; "" for cross-file and fixture-channel inherited ones.
     reaching_sig: str = ""
+    # The class-qualified name of the helper method the unit reached this
+    # assertion through (`TotalTest._check` for `self._check(...)`, #306),
+    # None for every other assertion. Such an assertion is a detection-only
+    # overlay (306 Sub-Q11): it is paired after the unit's own assertions,
+    # earns no credit, adds no requirement for another finding, and takes
+    # repair evidence from that method's callees only for findings about
+    # itself (306 Sub-Q8). Optional, so IR_VERSION stays 2.
+    via: str | None = None
 
 
 @dataclass

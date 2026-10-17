@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test a collected name captured before its name was deleted still runs under that name
+origin: #424, ruling 424 Q9 (a) - a function a collected name captured stays as it was
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+test_total_alias = test_total
+del test_total
+=== expect ===
+[]

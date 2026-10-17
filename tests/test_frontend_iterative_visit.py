@@ -55,13 +55,15 @@ async def test_repeat():
 """
     parsed = parse_python(source, collect_tests=True)
     assert parsed.parse_ok
+    # The first `test_repeat` is not collected: the async def rebinds its
+    # name (ruling 424 Q1 (b), Q7).
     assert [unit.qualname for unit in parsed.units] == [
         "TestSkipped.test_a", "TestSkipped.TestInner.test_b",
-        "TestLive.test_c", "test_repeat", "test_repeat#2",
+        "TestLive.test_c", "test_repeat",
     ]
     assert all(len(unit.side.assertions) == 1 for unit in parsed.units)
     marks = [[marker.name for marker in unit.side.markers] for unit in parsed.units]
-    assert marks == [["pytest.mark.skip"], ["pytest.mark.skip"], [], [], []]
+    assert marks == [["pytest.mark.skip"], ["pytest.mark.skip"], [], []]
 
 
 def test_symbol_scope_and_call_edges_survive_descent_and_return():

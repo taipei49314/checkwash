@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 135
+rule: TEST_DISABLED
+title: `del test_total` appended after an unchanged test takes it out of the run
+origin: #424 R2, ruling 424 Q1 (b) - a def a later binding certainly replaces is not a unit; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+del test_total
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "test_total"}]

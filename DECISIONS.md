@@ -10955,3 +10955,319 @@ pytest, checkwash or Python ran. CI ran the tests.
 The agent wrote this entry in #462's fix PR #472. The maintainer approved it
 on 2026-10-16: 「#472 的維護者文字照草稿核准（SPEC §3 note、THREATMODEL row
 134、D-143），允許在 fixture 加 bypass: 134。」
+
+## D-144 (2026-10-17): pytest collects the last binding of a test's name (#424)
+
+Ruling 424 (owner, 2026-10-14, 「P1 全部照建議」) answered its nine
+questions as recommended. D-141 to D-143 are on main, so this entry is
+D-144.
+
+#424 reports that pytest collects a module's or a class's tests from its
+`__dict__`, so only the last binding of a name runs. The Python frontend
+read every lexical `def test*` as a live unit and never read a later
+statement that rebinds or deletes the name. One appended line took an
+unchanged failing test out of the run, or swapped in a passing no-op, with
+zero findings. A rebound copy still counted as live for the D2 move credit,
+the D10 survivor credit and the restructure and split/rename budgets. In the
+other direction, deleting one of two byte-identical copies reported
+`test_x#2: test unit disappeared` at high.
+
+How each ruling answer is implemented, in the new
+`frontends/python/rebindings.py`, read once per test module (never for a
+conftest) before units are collected:
+
+- Q1 (b) with Q9 (a), the unit model. A def or class that a later binding
+  certainly replaces is not a unit: a straight-line path, or branches whose
+  conditions fold to true. A rebound class takes its units with it, and so
+  do the units `inherited_test_methods` gives it. The remaining same-named
+  units keep file-order `name#N`. R1, a no-op def appended under the
+  test's name, is therefore an in-place rewrite of the test, and the
+  issue's acceptance reads so.
+- Q2 (a), severity. A conditional rebinding is a new marker,
+  `collection.rebound` (kind `rebinding` in `conftest_controls`), on the
+  unit it may replace. It is judged as a body skip is:
+  `ir/markers.is_guarded_skip` and `skip_condition` read it, D6 reads its
+  guard in `compat.py`, and TEST_DISABLED reports it added ("a later
+  binding of this test's name may replace it") and its guard weakened or
+  removed. A certain rebinding is a disappearance. The gating table is
+  unchanged.
+- Q3 (a). There was no interim row; row 135 closes with the fix.
+- Q4 (b), the bindings. A def, a class, an import (not a star import), `=`
+  (annotated, augmented, and each target of a tuple or list), `with ... as`,
+  a walrus, a `match` capture, `del`, and, for a class's names, a
+  module-level `Cls.name = ...` or `del Cls.name`, or a literal-name
+  `setattr` / `delattr` on it. `globals()[...]` with a literal key counts
+  in a module, as an assignment or `del` target or through `.pop`,
+  `.update`, `__setitem__` or `__delitem__`. So do `vars()` and `locals()`,
+  which in a class body are the class namespace. `except ... as` and a for
+  target bind only when they run. A for over a constant-empty iterable and
+  an annotation without a value bind nothing.
+- Q5 (a). `X = f(X)` and nested one-argument chains (`f(g(X))`) are read
+  as `@f @g` would be, for a def or a class, at module or class scope, and
+  as `Cls.x = f(Cls.x)`. A skip or xfail applied this way is that mark,
+  through `_decorator_markers`, with the binding's condition as its guard.
+  An unknown wrapper keeps the test live, and `X = X` binds nothing.
+- Q6 (a), paths. Each binding carries its path: the compound statement
+  and arm of every level. Two bindings in different arms of one `if`,
+  `match`, or two handlers, or a handler and the try `else`, are
+  exclusive. A try-body binding and a handler binding are exclusive when
+  the try-body one is a statement of the try body itself and nothing after
+  it there can raise. A later binding on a non-exclusive path needs the
+  conditions of the arms it enters beyond the shared ones. An `if` test,
+  `not (...)` for an `else`, and an `except` block's condition
+  (`_handler_guard`) are joined into its guard. Dead arms bind nothing.
+  A loop body (shared or not), a conditional binder, a `match` case, a
+  try `else` or a statement mid-way through a try body leave the guard
+  empty, which D6 never holds. The marker's identity is its name alone:
+  neither the guard nor the line.
+- Q7 (a), rule 2. The two pins changed exactly as approved (below).
+- Q8 (a). A function-level `test_x.__test__ = False` is not read here. It
+  waits for a reproduction run and its own issue.
+- Q9 (a). A def or class that a collected name captured before the
+  rebinding (`test_y = test_x`, `TestAlias = TestX`) stays as on main. So
+  does a rebound class's method that a same-file subclass, defined while
+  the class was bound, still runs. Only when C3 resolution proves that no
+  collected subclass runs the method is it dropped or marked as above.
+
+Effects beyond the ruling's text, accepted with this entry:
+
+- "Nothing after the try-body binding can raise" is read strictly. Only
+  these count: `pass`, a docstring, a constant assigned to plain names, an
+  undecorated def whose defaults are constants and whose annotations are
+  constants (or not evaluated, under `from __future__ import annotations`),
+  and an undecorated class with no bases or keywords whose body is made of
+  these. A def followed by anything else in the try body is rebound by the
+  handler's def under the handler's condition.
+- A binding mid-way through a try body is certain only when it is a
+  statement of the try body itself, nothing before it there can raise, and
+  it surely binds once it runs: `del` of names, an assignment of a
+  constant, a name or a lambda, or a def or class that cannot raise.
+  Otherwise it is "mid-try-body" and carries no guard.
+- A capture counts when the capturing name is one pytest collects (`test*`
+  for a function; `Test*`, or a same-file `*TestCase` subclass, for a
+  class) and no later binding certainly replaces it. A capture under a
+  condition counts too (row 135 residual 9).
+- A subclass counts for Q9 when the frontend collects it (`_is_test_class`
+  or `_transitive_test_classes`), it does not set `__test__ = False`, and
+  its own later binding does not certainly replace it. Its method
+  resolution order is read with same-scope bases resolved to the class
+  statement current at the subclass, and other bases as opaque. A
+  decorator, a keyword (a metaclass), or a body statement other than a
+  def, a class, a plain assignment, `pass` or a docstring, on the subclass
+  or on a same-scope class before the rebound one, leaves the order
+  unread, and the method is kept. So does an opaque base before the
+  rebound class in the order. A class that a `Cls.name = ...` reaches from
+  outside its body is not read either.
+- `Cls.name = ...`, `setattr`, `delattr` and `globals()[...]` are read in
+  module-level statements, and `vars()` / `locals()` also in a class body.
+  The same spellings inside a function or another class body are not
+  (row 135 residual 11).
+- The expression walk (walrus targets and literal-name calls) runs only in
+  a module whose source spells `:=`, `setattr`, `delattr`, `globals`,
+  `vars(` or `locals(`.
+- TEST_DISABLED words a weakened rebinding guard as "skip guard of a later
+  binding of this test's name now always fires" and a removed one as "skip
+  guard removed of a later binding of this test's name", in the
+  shape the setup and suite-control guards already use.
+
+Rule 2. The ruling approved these expectation changes, made exactly as
+described:
+
+- `tests/test_frontend.py`: `test_x#2` is re-pinned on exclusive if/else
+  defs, and a new pin says that an unconditionally rebound def is not a
+  unit.
+- `tests/test_frontend_iterative_visit.py`: the first `test_repeat` is
+  dropped from the qualname and marks lists.
+
+`tests/test_conftest_controls.py` lists the new minting site and family,
+as that test requires of any new marker family. No existing entry,
+`.gwcase` expectation or `tests/gates` expectation changed.
+
+**Fingerprints.** For the X.release-and-fingerprints batch:
+
+- In a file with same-named defs, a def that a later binding certainly
+  replaces is no longer a unit. The units that remain are renumbered, and
+  the last binding takes the bare name, so a finding keyed by such a
+  unit's qualname changes its fingerprint. rich's `tests/test_console.py`
+  is the known example (the triage case behind `name#N`). A recorded
+  exemption on a `name#2` unit, or on the dead def's `name`, stops
+  matching.
+- `collection.rebound` adds TEST_DISABLED fingerprints of its own
+  (`<path>`, `<unit>`, `collection.rebound`; `guard:collection.rebound` for
+  a weakened guard). No existing fingerprint scheme changes.
+- `docs/stability.md` lists fingerprints as frozen within a release line,
+  so the release that carries this records the move in its D-063-style
+  entry. Whether that release is a minor is the owner's call.
+
+Row 135 is Closed, with eleven residuals listed there, including computed
+names and `exec`, metaclasses and class decorators, wrappers that drop the
+test, a function-level `__test__ = False` (Q8), an unresolvable subclass
+(Q9), and a capture under a condition.
+
+Evidence status: the change was prepared on a work machine where no
+pytest, checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 29 `.gwcase` fixtures, 79 collected items in
+  `tests/test_issue424_rebinding.py` and one new test in
+  `tests/test_frontend.py`. None is under `tests/gates`. Five of the new
+  fixtures carry `bypass: 135`.
+- The documented test count is 18675 (18566 + 109).
+- The sweep measures the change (ruling): the standard set, the D-088
+  set, and a target set of commits with duplicate names, rebinding, the
+  Q9 shapes and try-wrapped defs; the refactor gate (60, expected no
+  change), tamper, decoy and recorded (no regression) and the perf gate.
+
+The agent wrote this entry in #424's fix PR #474. The maintainer approved it
+on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
+row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
+#306。」
+
+## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
+
+Rulings 306 (owner, 2026-10-08, "裁決依照你建議": Q1 (a), Q2 (a); and
+2026-10-14, 「P1 全部照建議」: Sub-Q1 to Sub-Q11, each as recommended).
+D-144 is #424's, so this entry is D-145.
+
+#306 reports that in a `unittest.TestCase` (or a pytest class) whose test
+calls a helper method, `self._check(total(...))`, the frontend named the
+call by its root, `self`, and never walked the method. A helper method's
+assertion weakened (A1) or deleted (A2), and a skip in a helper method the
+test calls (H2) or its `setUp` calls (S1), passed with zero findings. The
+same helper as a module function blocked (THREATMODEL row 91).
+
+How each ruling answer is implemented:
+
+- Q1 (a), assertions and skips. In a method unit, a call
+  `<receiver>.<name>(...)` whose receiver is the method's first positional
+  parameter (and is never rebound) runs the helper method resolved below.
+  That method is followed as a module helper is, once per entry site with
+  that site's reaching keys (#55), at most four calls deep. The walk goes
+  through further calls on the method's own instance and through the
+  module helpers it calls. Its assertions are the unit's, with
+  `inherited: true` and the new optional IR field `via`, the method's
+  class-qualified name (`TotalTest._check`). Its skips are read as #272
+  reads a helper's (`HelperOutcomes.of_method`): as a setup callback, with
+  its receiver, so `self.skipTest` is an outcome. The marker is
+  `helper.<method>.<effect>`. A class's setup callbacks and fixtures read
+  the methods they call the same way (`SetupScope(methods=)`), which gives
+  S1.
+- Q2 (a). The method is the one the class running the test resolves: the
+  method's own class, or for an inherited test the collecting subclass.
+- Sub-Q1 (a), rule 2. The H2 and S1 pins flip and are renamed (below).
+- Sub-Q2 (a), the order. A local C3 over the module's top-level classes,
+  each base the file does not define kept as an opaque entry. The name
+  resolves only in a same-file class reached before the first opaque
+  entry. It stays unresolved on a C3 failure, a class name the module binds
+  more than once, a decorator on the running class or on any class up to
+  the one that binds the name, or a class keyword (a metaclass),
+  `__init_subclass__` or `__getattribute__` on any same-file class in the
+  order.
+- Sub-Q3 (a), name-specific. In the first class of the order that binds
+  the name, its one binding is a plain def in the class body, not under
+  `if` or `try`. The call stays unresolved on any of these anywhere in the
+  module: a store or del of `.<name>`, a `.__dict__[...]` store or del,
+  `setattr`/`delattr`/`object.__setattr__` with the literal name (or a
+  computed name on the receiver or on a class of the order),
+  `patch.object` or `monkeypatch.setattr` naming it, or `__setattr__` on a
+  class of the order.
+- Sub-Q4 (a). Only an undecorated `def` or `async def` resolves.
+- Sub-Q5 (a). A helper method's guard is read under the running class's
+  attributes, through `setup_outcome(..., receiver=True, attrs=env(...))`,
+  as `setUp`'s is. `credit_base` admits `helper.` markers and reads them
+  again under each crediting subclass.
+- Sub-Q6 (a). A name `unittest.TestCase` defines is never followed, in any
+  class. `self_methods.TESTCASE_NAMES` is a fixed literal list: the union
+  over Python 3.11-3.14 (3.11's `Lib/unittest/case.py`, the aliases 3.12
+  removed, the assertions 3.14 added), never read from the running
+  interpreter. Shadowing stays row 91a.
+- Sub-Q7 (a). A helper method moved to a base in another module is behind
+  an opaque entry, so the move reads as ASSERT_REMOVED. It is pinned as a
+  stated cost (`self_method_moved_to_imported_base_pos`) and counted by the
+  sweep. A follow-up for a one-hop read of a `from M import Base` base is
+  filed only if the cost proves real.
+- Sub-Q8 (c), evidence per finding. Each followed method's callees go into
+  `helper_calls` under its class-qualified name. They count as repair
+  evidence only for a finding about an assertion reached through that
+  method, identified by its `via` (`gating._finding_via`, by the cited
+  span). `invoked` does not change.
+- Sub-Q9 (a). The maintainer text covers THREATMODEL rows 91, 92, 104, 118
+  and 125, SPEC §3 "What counts as a unit's assertions", the SPEC §4
+  TEST_DISABLED helper-skip clause, and SPEC §5's compensation text and
+  repair-evidence item 2.
+- Sub-Q10 (b). A disappeared unit keeps today's identity: its `via`
+  assertions stay out of the finding's text and fingerprint.
+- Sub-Q11 (b), a detection-only overlay. Own assertions are paired, judged
+  and credited exactly as on main (`diffalign._match_assertions`). `via`
+  assertions then pair among themselves and with the after side's own
+  assertions left unpaired, by the same stages. A `via` assertion earns no
+  credit and adds no requirement: it counts in no D2 move credit, no D5
+  oracle mass, no D4 newly written assertion and no split/rename budget,
+  and a disappeared unit needs none of its `via` assertions moved. A finding
+  about a `via` assertion takes the credits a module helper's inherited
+  assertion takes. #272 reading 7's moved-skip pairing reads `helper.`
+  markers in both directions, so it covers helper methods unchanged.
+
+This entry supersedes D-111 reading 2's sentence "A method reached through
+`self` is no scope `_executed_scopes` resolves, for assertions either": since
+#306, such a method is followed by this entry's resolution, for assertions
+and skips.
+
+Why Sub-Q3 departs from D-095 reading 2. D-095 reads a class *value* for a
+guard, and makes it unknown on any reflective call in the module and for
+any private name, because unittest sets private attributes on the
+instance. A helper method is a *def* that a call names, and the ruling made
+its rebinding test name-specific. A `setattr` on an unrelated object
+elsewhere in the module therefore leaves the helper resolved. A private
+name (`_check`, the usual spelling of a helper method) resolves unless it
+is one `unittest.TestCase` defines (Sub-Q6). A computed-name `setattr` on
+the receiver or on a class of the order still leaves every name of that
+class unresolved.
+
+Effects beyond the ruling's text, accepted with this entry:
+
+- The running class must be a top-level class of the module. A method of a
+  nested class, or of a class defined under `if`, keeps today's reading.
+- A call through another name for the instance (`other = self;
+  other._check()`) is not followed.
+- `cls.<name>()` in a classmethod unit is read as `self.<name>()` is, its
+  receiver being its first parameter.
+
+Rule 2. Sub-Q1 approved these expectation changes, made exactly as
+described: in `tests/test_issue272_helper_skips.py`, H2
+`test_a_method_reached_through_self_is_not_followed` flips from `[]` to
+`helper._later.skip`, and S1
+`test_a_method_the_setup_reaches_through_self_is_not_followed` to
+`helper._offline.skip`. Both are renamed `..._is_followed`, to pin the
+closure, as D-088 did for #208's pins. No other existing fixture or test
+expectation changed, and none under `tests/gates`.
+
+**Fingerprints and IR.** No fingerprint moves (Sub-Q10): the `via`
+assertions are new records, and a finding on one is a new finding. In
+`--emit-ir`, every assertion gains `"via": null`, which is an optional field
+(docs/stability.md: IR_VERSION stays 2, as for D-067's keys and D-111's
+`markers_moved`). A file whose test follows a helper method also gains its
+`via` assertions and a class-qualified `helper_calls` key. The count of
+records this changes in `tools/emit_corpus.py`'s output comes from CI's
+artifacts (NOT_RUN on the work machine), and the next release guide names
+the field.
+
+**Cost.** NOT_RUN: work-machine rule (POLICY work-machine-local); the sweep
+was not run on the work machine. The ruling asks the sweep to measure it,
+with resolution toggled in both directions and with what Sub-Q8 (a) and
+Sub-Q11 (a) would have changed. The two stated costs are pinned: a helper
+method moved to a base in another module (Sub-Q7), and a conversion to
+`staticmethod` (Sub-Q4). A skip added together with a decorator still
+passes with zero findings, as on main.
+
+Evidence status: the change was prepared on a work machine where no
+pytest, checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 10 `.gwcase` fixtures and 51 collected items in
+  `tests/test_issue306_self_methods.py`. The two pins above changed.
+- The diffalign and `gating.py` changes for Sub-Q8 and Sub-Q11 are in their
+  own commit, for the owner's approval as the ruling asks.
+
+The agent wrote this entry in #306's fix PR #476. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
+(93c25a6) text and of the diffalign and gating commit ea98b62.

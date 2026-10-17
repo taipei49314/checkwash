@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 135
+rule: TEST_DISABLED
+title: an empty class appended under a test class's name takes all its tests out of the run
+origin: #424 R5, ruling 424 Q1 (b) - a rebound test class takes its units with it; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+class TestTotal:
+    def test_total(self):
+        assert total([50.0, 28.75]) == 78.75
+
+
+class TestTotal:
+    pass
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "TestTotal.test_total"}]

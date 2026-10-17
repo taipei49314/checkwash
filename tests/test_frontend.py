@@ -185,14 +185,29 @@ def test_behaviour_change_is_nontrivial():
 
 
 def test_duplicate_test_names_disambiguated():
-    # Two defs sharing a name shadow each other; name-keyed alignment made
-    # phantom findings on comment-only diffs (triage, rich 6c48a5c).
+    # Two defs sharing a name on exclusive paths are both collected somewhere;
+    # name-keyed alignment made phantom findings on comment-only diffs
+    # (triage, rich 6c48a5c). Re-pinned on if/else defs by ruling 424 Q7.
+    src = (
+        "import sys\n\n"
+        "if sys.platform == 'win32':\n"
+        "    def test_x():\n        assert f() == 1\n"
+        "else:\n"
+        "    def test_x():\n        assert g() == 2\n"
+    )
+    parsed = parse_python(src.encode(), collect_tests=True)
+    assert [u.qualname for u in parsed.units] == ["test_x", "test_x#2"]
+
+
+def test_a_def_a_later_def_certainly_replaces_is_not_a_unit():
+    # pytest collects the last binding of a name (ruling 424 Q1 (b), Q7).
     src = (
         "def test_x():\n    assert f() == 1\n\n"
         "def test_x():\n    assert g() == 2\n"
     )
     parsed = parse_python(src.encode(), collect_tests=True)
-    assert [u.qualname for u in parsed.units] == ["test_x", "test_x#2"]
+    assert [u.qualname for u in parsed.units] == ["test_x"]
+    assert [a.text for a in parsed.units[0].side.assertions] == ["assert g() == 2"]
 
 
 def test_raises_match_is_a_pattern_assertion():

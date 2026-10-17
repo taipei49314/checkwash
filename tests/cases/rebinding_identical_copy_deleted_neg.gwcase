@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+title: deleting one of two byte-identical copies (a flake8 F811 cleanup) is quiet
+origin: #424 - v0.8.0 reported `test_total#2: test unit disappeared` at high
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== expect ===
+[]

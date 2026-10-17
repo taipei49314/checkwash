@@ -1,0 +1,31 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a comment beside an unchanged helper method is quiet
+origin: #306 - the method's assertion pairs with itself
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TotalTest(unittest.TestCase):
+    def _check(self, value):
+        self.assertEqual(value, 78.75)
+
+    def test_total(self):
+        self._check(total([50.0, 28.75]))
+=== after: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+# billing totals
+class TotalTest(unittest.TestCase):
+    def _check(self, value):
+        self.assertEqual(value, 78.75)
+
+    def test_total(self):
+        self._check(total([50.0, 28.75]))
+=== expect ===
+[]

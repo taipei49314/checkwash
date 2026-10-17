@@ -1,0 +1,21 @@
+=== meta ===
+rule: TEST_DISABLED
+title: an import bound over an unchanged test's name takes it out of the run
+origin: #424, ruling 424 Q4 (b) - every syntactic binding counts, imports included; v0.8.0 reported nothing
+=== before: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+=== after: tests/test_billing.py ===
+from app.billing import total
+
+
+def test_total():
+    assert total([50.0, 28.75]) == 78.75
+
+
+from os import sep as test_total
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "unit": "test_total"}]
