@@ -295,7 +295,7 @@ def test_the_literal_reader(operand, literal):
     ("`${`a`}`", "(`${`a`}`)", True), ("`${ x // }`\n}`", "`${ x // }`\n}`", True),
     ("`${ a / b }`", "`${ a / b }`", False),
     # A cast to one named type binds before the no-op arithmetic around it, as TypeScript reads it.
-    ("total", "total as number + 0", True), ("total", "0 + total as number", True),
+    ("total", "total as number + 0", True), ("s as any * 2", "0 + s as any * 2", False),
     ("total", "total satisfies number + 0", True), ("x", "x as T + 1", False), ("x", "x as T * 2", False),
     # A template as written cannot spell another's placeholder.
     ("`${`a`}`", "`${t60247b6061607d60}`", False),
