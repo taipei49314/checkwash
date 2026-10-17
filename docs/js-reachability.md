@@ -199,12 +199,17 @@ after the stop keeps its reading:
   (`return /x/\n.test(...)`, a template spanning lines);
 - an unpaired bracket, a call the frontend could only recover, or U+2028 or
   U+2029 anywhere in the callback, and text the token stream misreads as
-  code anywhere in it: a template nested in another's substitution, JSX
-  (`<p>...</p>`, or a TypeScript `<T>x` assertion), or an Annex B HTML-like
+  code anywhere in it: a template nested in another's substitution (each
+  template is read again as the operand reader reads it, so a quoted `}` or
+  a `//` comment in a substitution hides none, and one it leaves unread, such
+  as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a
+  block too, or a TypeScript `<T>x` assertion), or an Annex B HTML-like
   comment (`<!--`, `-->`); such a callback is not walked at all;
 - a dead body that is no block, when its end at a line break is in doubt
   (`if (false) skip()` with a `{` block on the next line, which JavaScript
-  runs): it is not killed;
+  runs, or a line ending in `x!`, `Map<K, V>`, `() => void`, `yield`,
+  `async` or `await`, where TypeScript or a restricted production may end
+  the statement): it is not killed;
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
   generic function declaration (`function f(): T {}`);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
