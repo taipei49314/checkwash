@@ -89,13 +89,6 @@ _EQUALITY = frozenset({"===", "!==", "==", "!="})
 _RELATIONAL = frozenset({"<", ">", "<=", ">="})
 # How deep `!` and parentheses nest before the folder gives up: unknown.
 _FOLD_DEPTH = 64
-# Tokens after which TypeScript or a restricted production may end a statement
-# at a line break, where the binder reads an operator: `x!`, `Map<K, V>`,
-# `() => void`, `yield`, `async`, and `await` outside an async function.
-_DOUBTFUL_ENDS = frozenset({"!", ">", "yield", "void", "async", "await"})
-# A TypeScript type follows these in a statement and ends at a line break,
-# which the binder may read on past: `x = load() as Config` then `[1].forEach(...)`.
-_TYPE_MARKS = frozenset({"as", "satisfies", ":"})
 
 
 class _Folder:
@@ -260,15 +253,18 @@ def fold_condition(source: str, is_global: Callable[[str], bool]) -> bool | None
 
 # --- Q1, Q3: the statement walker ------------------------------------------------------------
 
-def _misread_run(text: str, start: int, end: int) -> bool:
+def _misread_run(text: str, start: int, end: int, before: str) -> bool:
     """Does the mask misread this run of literals and comments?
 
     It ends a template at the next backtick, where one nested in a
     substitution may stand: each template is read again as the operand
-    reader reads it, its substitutions nested. (A U+2028 or U+2029, which
-    ends a `//` comment the mask runs on to a line feed, refuses the whole
-    callback before this.)
+    reader reads it, its substitutions nested. And it may read a division as
+    a regular expression, hiding code: a regular expression right after a
+    `}` or a `)` (`before`, the token before the run) is one JavaScript may
+    read as a division. (A U+2028 or U+2029, which ends a `//` comment the
+    mask runs on to a line feed, refuses the whole callback before this.)
     """
+    last = before
     index = start
     while index < end:
         char = text[index]
@@ -278,9 +274,9 @@ def _misread_run(text: str, start: int, end: int) -> bool:
                 shallow += 2 if text[shallow] == "\\" else 1
             if _template_end(text, index) != shallow + 1:
                 return True  # a template nested in a substitution, or one the reader leaves unread
-            index = shallow + 1
+            index, last = shallow + 1, char
         elif char in "'\"":
-            index = _string_end(text, index) or index + 1
+            index, last = _string_end(text, index) or index + 1, char
         elif text.startswith("/*", index):
             closing = text.find("*/", index + 2)
             index = end if closing < 0 else closing + 2
@@ -288,8 +284,10 @@ def _misread_run(text: str, start: int, end: int) -> bool:
             newline = text.find("\n", index + 2)
             index = end if newline < 0 else newline + 1
         elif char == "/":
+            if last in {"}", ")"}:
+                return True  # after an object or a call this `/` divides
             regex = _REGEX_LITERAL.match(text, index)
-            index = index + 1 if regex is None else regex.end()
+            index, last = index + 1 if regex is None else regex.end(), char
         else:
             index += 1
     return False
@@ -367,7 +365,8 @@ class Reachability:
             run = position
             while position < end and not code[position]:
                 position += 1
-            if _misread_run(text, run, position):
+            previous = bisect_left(self.bindings.token_starts, run) - 1
+            if _misread_run(text, run, position, self.token(previous) if previous >= 0 else ""):
                 return True
         for index in range(first, closing):
             token, following = self.token(index), self.token(index + 1)
@@ -379,9 +378,10 @@ class Reachability:
                     not self.bindings._completes(index - 1)
                     and (_NAME.fullmatch(following) or following in {">", "/"}))):
                 return True  # JSX (after a block too), or a TypeScript `<T>` assertion
-            if token in {"/", "/="} and index > 0 and (self.token(index - 1) == "}" or (
-                    self.token(index - 1) == ")" and not self.bindings._completes(index - 1))):
-                return True  # a regular expression after a block or a statement head, read as division
+            if token in {"/", "/="} and index > 0 and (
+                    self.token(index - 1) in {"}", "++", "--"} or not self.bindings._completes(index - 1)
+                    or self.bindings._line_break(index)):
+                return True  # a regular expression the mask read as a division
         return False
 
     def _kill(self, first: int, after: int) -> None:
@@ -625,19 +625,21 @@ class Reachability:
                     return label
                 return None
         cursor = first
-        typed = False  # a top-level `as`, `satisfies` or `:` came before
         while cursor < last:
             if cursor > first and bindings._line_break(cursor):
                 if not _trivia(self._gap(cursor - 1, cursor)):
                     return None
                 completes = bindings._completes(cursor - 1)
+                if self.token(cursor - 1) in {"++", "--"} and (
+                        cursor - 1 == first or bindings._line_break(cursor - 1)
+                        or not bindings._completes(cursor - 2)):
+                    completes = False  # a prefix update: its operand is on the next line
                 if completes and not bindings._continues(cursor):
                     return cursor
-                if (typed or self.token(cursor) in {"{", "(", "["} or self.token(cursor - 1) == "}"
-                        or (not completes and self.token(cursor - 1) in _DOUBTFUL_ENDS)):
-                    self.doubtful += 1  # JavaScript or TypeScript may end the statement here; this reads on
+                # JavaScript or TypeScript may end the statement here (`x = 1` then
+                # `.5`, `x = load() as T` then `[1]`, `x!` then `{`); this reads on.
+                self.doubtful += 1
             token = self.token(cursor)
-            typed = typed or token in _TYPE_MARKS
             if token == ";":
                 if cursor == first or not (bindings._completes(cursor - 1)
                                            or not _trivia(self._gap(cursor - 1, cursor))):

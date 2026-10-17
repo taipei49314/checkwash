@@ -128,6 +128,15 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     # A regular expression after a block or a statement head, which the mask may read as division.
     "skip: {}\n/x; return; y/.test(s);\n" + ORACLE,
     "if (ok) /x; return; y/.test(s);\n" + ORACLE,
+    "let re: RegExp\n/x; return; y/.test(s);\n" + ORACLE,
+    "a\n++/x; return; y/.lastIndex\n" + ORACLE,
+    # A division the mask may read as a regular expression, after an object.
+    "if (false) x = a || {} / 2; b / (" + TEXT + ");",
+    # Any line break a dead body's end lies past keeps the body: JavaScript may end it there.
+    "if (false) x = 1\n.5 + " + TEXT + ";",
+    "if (false) x = y\nas(" + TEXT + ");",
+    # A prefix update at a line's end takes the next line as its operand.
+    "return ++\ncounter[" + TEXT + "];",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
