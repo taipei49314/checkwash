@@ -101,6 +101,13 @@ _REGEX_AFTER_WORDS = frozenset({"return", "typeof", "case", "do", "else", "throw
 # Tokens after which a name is read, never bound, and heads whose `(` is no call.
 _READ_AFTER = frozenset({"!", "&", "|", "?", "==", "===", "!=", "!==", "=", "return", "typeof", "void", "case"})
 _NOT_CALLS = frozenset({"for", "catch", "function", "switch", "with", "if", "while", "async"})
+# Tokens after which a line break cannot end a statement in JavaScript or
+# TypeScript: the expression is unfinished (`false &&` then `expect(...)`).
+_UNFINISHED = frozenset({
+    "&", "|", "^", "=", "+", "-", "*", "/", "%", ",", "?", ":", ".", "?.", "<", "==", "===", "!=", "!==",
+    "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "=>", "in", "instanceof", "typeof", "new", "delete",
+    "as", "satisfies", "keyof", "extends",
+})
 # Keywords that start a statement and never continue an expression.
 _STATEMENT_KEYWORDS = frozenset({
     "do", "if", "for", "while", "return", "throw", "var", "let", "const", "try", "switch", "break",
@@ -482,13 +489,14 @@ class Reachability:
             return None if body is None else (body[0], False)
         if token in _UNREAD or token in _CLOSERS:
             return None
+        mark = self.doubtful
         end = self._end(first, last)
         if end is None:
             return None
         if token in {"return", "throw"}:
             return end, True
-        if token not in _JUMPS:
-            self._literal_decided(first, end)
+        if token not in _JUMPS and self.doubtful == mark:
+            self._literal_decided(first, end)  # only a statement whose every line break is proved
         return end, False
 
     def _fold(self, before: int, after: int) -> bool | None:
@@ -722,10 +730,15 @@ class Reachability:
                     # TypeScript types, class heritage and decorators may go on past
                     # this line break (`as readonly` then `string[]`): not proved.
                     return None if keyword in _JUMPS else cursor
-                # JavaScript or TypeScript may end the statement here (`x = 1` then
-                # `.5`, `x = load() as T` then `[1]`, `x!` then `{`); this reads on.
-                self.doubtful += 1
+                # Unless an operator leaves the expression unfinished, JavaScript or
+                # TypeScript may end the statement here (`x = 1` then `.5`,
+                # `x = load() as T` then `[1]`, `x!` then `{`); this reads on.
+                if self.token(cursor - 1) not in _UNFINISHED:
+                    self.doubtful += 1
             token = self.token(cursor)
+            if (cursor > first and token in _STATEMENT_KEYWORDS
+                    and self.token(cursor - 1) not in {".", "?.", "#", "as"}):
+                return None  # a statement keyword inside the statement: its end was read past
             if token == ";":
                 if cursor == first or not (bindings._completes(cursor - 1)
                                            or not _trivia(self._gap(cursor - 1, cursor))):

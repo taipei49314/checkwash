@@ -165,6 +165,11 @@ def test_a_return_that_is_not_unconditional_here_keeps_the_assertion(body):
     "return value() as readonly\n  string[] || " + TEXT + ";",
     "return @register\n  class { static { " + ORACLE + " } };",
     "return value\n" + ORACLE,
+    # A statement keyword inside a statement read on past its end; a literal-decided
+    # statement across a line break JavaScript may end it at (`.0` is a number).
+    "const f = () => {}\n{ } do step(); while (0) " + ORACLE,
+    "enum Mode { A } do step(); while (false) " + ORACLE,
+    "true || a\n.0 || " + TEXT + ";",
 ])
 def test_an_unproved_boundary_keeps_todays_reading(body):
     parsed = parse_javascript(source(body))
@@ -299,7 +304,7 @@ def test_undefined_and_nan_fold_only_as_unshadowed_globals():
     "false && " + ORACLE, "0 && " + ORACLE, "!true && " + ORACLE, "null && " + ORACLE,
     "true || " + ORACLE, "(false) && " + ORACLE, "false && flag && " + ORACLE,
     "setup();\nfalse && " + ORACLE, "setup()\nfalse && " + ORACLE, "if (flag) false && " + ORACLE,
-    "false && assert.strictEqual(value(), 1);",
+    "false && assert.strictEqual(value(), 1);", "false &&\n  " + ORACLE,
 ])
 def test_a_literal_decided_and_or_statement_drops_its_last_assertion(statement):
     assert TEXT not in assertions(statement)
