@@ -866,22 +866,28 @@ def operand_tokens(source: str) -> list[str] | None:
 def _clean(expression: str) -> str | None:
     """An operand's tokens joined by single spaces: no comments, its literals as written.
 
-    A regular expression, and a template that holds another, stands as a
-    placeholder spelled from its text: the quote and bracket scanners that
-    read this text skip the placeholder whole, where a quote or bracket in
-    the literal would misplace their depth, and two of them still match only
-    when their text does.
+    Each regular expression and template stands as a placeholder spelled
+    from its text: the quote and bracket scanners that read this text skip
+    the placeholder whole, where a quote, bracket or nested template in the
+    literal would misplace their depth, and two of them match only when
+    their text does. Every one is replaced, so no literal as written can
+    spell another's placeholder.
     """
     tokens = operand_tokens(expression)
     return None if tokens is None else " ".join(_shielded(token) for token in tokens)
 
 
 def _shielded(token: str) -> str:
-    """A regular expression or a template that holds another as a placeholder, any other token as it is."""
+    """A regular expression or a template as a placeholder, any other token as it is.
+
+    A template keeps whether it has a substitution: `t...` without, `${t...}`
+    with one, so the literal reader still tells the two apart.
+    """
+    spelled = token.encode("utf-8", "surrogatepass").hex()
     if token[:1] == "/" and token not in _OPERAND_PUNCTUATORS:
-        return "/r" + token.encode("utf-8", "surrogatepass").hex() + "/"
-    if token[:1] == "`" and _quoted_end(token, 0) != len(token):
-        return "`${t" + token.encode("utf-8", "surrogatepass").hex() + "}`"
+        return "/r" + spelled + "/"
+    if token[:1] == "`":
+        return "`t" + spelled + "`" if _TEMPLATE_LITERAL.fullmatch(token) else "`${t" + spelled + "}`"
     return token
 
 

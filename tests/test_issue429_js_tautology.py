@@ -297,6 +297,8 @@ def test_the_literal_reader(operand, literal):
     # A cast to one named type binds before the no-op arithmetic around it, as TypeScript reads it.
     ("total", "total as number + 0", True), ("total", "0 + total as number", True),
     ("total", "total satisfies number + 0", True), ("x", "x as T + 1", False), ("x", "x as T * 2", False),
+    # A template as written cannot spell another's placeholder.
+    ("`${`a`}`", "`${t60247b6061607d60}`", False),
 ])
 def test_the_operand_comparison(left, right, same):
     assert same_operand(left, right) is same
