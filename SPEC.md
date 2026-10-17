@@ -884,8 +884,9 @@ ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
 EXPECTED_VALUE_CHANGED (assertion level), EXPECTED_VALUE_DERIVED,
 EXPECTATION_DEFINITION_CHANGED (both emitters), SUBJECT_NORMALIZED and
 SUBJECT_INPUT_CHANGED (both forms) use assertion-level content-bound v2
-fingerprints (#421), emitted as `rule/path/qualname/v2:<64hex>`. The digest
-is the complete SHA256 of ASCII canonical JSON (sorted keys, compact
+fingerprints (#421), emitted as `rule/path/qualname/v2:<64hex>`. A JS
+qualname is the raw test title and may hold `/`, even last; only the last
+segment is read as the digest. The digest is the complete SHA256 of ASCII canonical JSON (sorted keys, compact
 separators) of an identity under the scheme name
 `checkwash/assertion-fingerprint/v2`. The identity holds:
 
@@ -895,18 +896,23 @@ separators) of an identity under the scheme name
 - the complete before and after assertion texts, null for an absent side;
 - the event kind (for ASSERT_WEAKENED: unbindable operands, an unreadable
   tolerance, a predicate relation, a polarity change, or a strength drop);
-- the ordinal, in source order, and the count of the before side's
-  assertions with the same text, so identical copies are separate approvals;
-- the rule's context: the tolerance kind with both recorded values; every
-  recorded definition an unchanged expectation reads (reaching definition,
-  local binding, parametrize column and rows, module constant, same-file
-  fixture), before and after; the changed subject inputs; the resolved
-  subjects of a normalization; the names a derived expectation shares with
-  the subject.
+- the ordinal and the count of the before side's assertions with the same
+  text, in the unit's own order (its own and same-file assertions in source
+  order, the copies of one helper assertion in the order of their call
+  sites, then those from other files), so identical copies are separate
+  approvals;
+- the rule's context: the tolerance kind with both recorded values; for
+  each name whose definition moved under an unchanged expectation, its
+  recorded definitions (reaching definition, local binding, parametrize
+  column and rows, module constant, same-file fixture), before and after;
+  the changed subject inputs; the resolved subjects of a normalization, in
+  the same normal form as the texts; the names a derived expectation shares
+  with the subject.
 
-Texts use the legacy normalization, except that whitespace inside a
-JavaScript template literal is kept, since it is the literal's value;
-pairing and move detection keep the legacy form. Spans, line numbers,
+Texts use the legacy normalization, except that a JavaScript template
+literal is kept as written, since it is the literal's value, and the code of
+each `${...}` in it is normalized as code; pairing and move detection keep
+the legacy form. Spans, line numbers,
 messages, strengths, severities, file digests and revision labels are
 excluded, so reformatting outside string literals and moving the line keep
 the key. A set (a literal argument or table cell) is encoded as a list in

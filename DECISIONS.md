@@ -11156,9 +11156,11 @@ How each answer is implemented:
   the legacy pre-image exactly as `make_fingerprint` builds it, the complete
   before and after texts, the event kind, the before side's ordinal and
   count of the text (`assertion_position`), and the rule's context. The
-  texts are in `identity_text`'s form: `normalize_text` with the backtick
-  added to its quotes, through a new keyword-only parameter whose default
-  leaves pairing, move detection and the legacy keys as they were. A span
+  texts are in `identity_text`'s form, a v2-only scanner: `normalize_text`'s
+  form, except that a JS template literal is kept as written and the code
+  of each `${...}` in it is normalized as code. `normalize_text` is
+  unchanged, so pairing, move detection and the legacy keys are as they
+  were. A span
   only finds the assertion among its copies. Spans, line numbers, messages,
   strengths, severities, file digests and revision labels stay out. Nothing
   raises: an unreadable text is null, and a context JSON cannot encode is
@@ -11206,8 +11208,27 @@ Readings the ruling leaves to the implementation:
    `canonical` encodes a set as a list sorted by its members' encodings, and
    another value JSON has no form for as its `repr`, so a key is the same in
    every process. SUBJECT_INPUT_CHANGED's table-row legacy text goes through
-   it too; a row without a set encodes as it always has. Raised by a GLM
-   review of #477 and verified by the agent.
+   it too. A row without a set encodes as it always has, and so does a dict
+   with int, float or None keys; a tuple key, on which json.dumps raised,
+   is now written as its JSON encoding. Raised by a GLM review of #477 and
+   verified by the agent.
+6. **Which copy.** The ordinal counts in the side's own order, not by span:
+   spans of assertions from other files share no coordinates with the
+   unit's, and the copies of one helper line share a span. Own and
+   same-file assertions come in source order, a helper line's copies by
+   call site, then those from other files; an assertion is found by itself,
+   never by its span.
+7. **A unit named with `/`.** A JS unit is the raw test title, so
+   `fingerprint_state` reads only the last segment as the digest, after a
+   non-empty path and unit: `it("GET /")` keeps an exemptible key.
+8. **TOLERANCE_LOOSENED's pair.** Alignment and the detector share
+   `tolerance_change`, so each recorded change is matched to the pair that
+   records exactly it, not to another pair whose values merely fit.
+9. **SUBJECT_NORMALIZED's subjects** are in the texts' normal form, so
+   reformatting outside string literals keeps the key.
+
+Readings 6 to 9 were raised by a read-only Claude review workflow of #477 and
+verified against the source by the agent.
 
 This supersedes, for these nine namespaces, D-055's "Keep unaffected
 identities ... unchanged" and D-077's list of the keys that stay (six rules
@@ -11260,14 +11281,14 @@ record. Rows 100 and 101 now point to it.
 Evidence status: the change was prepared on a work machine where no pytest,
 checkwash or Python ran. CI ran the tests.
 
-- Tests were added: 35 collected items in
+- Tests were added: 38 collected items in
   `tests/test_issue421_assertion_keys.py`. None is under `tests/gates`.
   Row 136 is pinned through `E2E_PINNED` by
   `test_the_reviewed_rewrite_is_exempt_and_another_still_blocks`: the
   golden runner passes no ledger, so the `.gwcase` first written for it held
   no exemption at all (raised by a GLM review of #477 and verified by the
   agent), and it was removed.
-- The documented test count is 18710 (18675 + 35).
+- The documented test count is 18713 (18675 + 38).
 
 The agent wrote this entry in #421's fix PR #477. The maintainer approved it
 on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
