@@ -1,4 +1,5 @@
 === meta ===
+bypass: 10
 rule: ASSERT_WEAKENED
 title: expect(total).toBe(total) can never fail, as `assert total == total` cannot in Python
 origin: #429 (Q7) — the issue's first repro edit

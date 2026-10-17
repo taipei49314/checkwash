@@ -1,4 +1,5 @@
 === meta ===
+bypass: 10
 rule: ASSERT_WEAKENED
 title: assert.equal(sum, sum + 0) on a local bound to one call is a self-comparison, not a new expectation
 origin: #429 (Q6, Q7) — Python's row-10 stripping; ASSERT_WEAKENED instead of EXPECTATION_DEFINITION_CHANGED
