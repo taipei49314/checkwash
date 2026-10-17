@@ -20,12 +20,13 @@ from decimal import Decimal
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.detectors.tolerance_loosened import _absolute_bound, _mixed, _recorded
 from checkwash.engine import analyze
-from checkwash.findings import make_fingerprint
+from checkwash.findings import assertion_key
 
 PY_PATH = "tests/test_physics.py"
 JS_PATH = "src/total.test.ts"
@@ -62,6 +63,19 @@ def _changes(outcome):
     ir, _findings, _verdict = outcome
     return [change for file in ir.files for unit in file.units if unit.delta is not None
             for change in unit.delta.tolerance_changes]
+
+
+def _identities(monkeypatch):
+    """Every assertion-level identity computed while the test runs (#421)."""
+    seen = []
+    real = findings_module.assertion_identity
+
+    def record(*args, **kwargs):
+        seen.append(real(*args, **kwargs))
+        return seen[-1]
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
 
 
 def _loosened(outcome):
@@ -271,8 +285,14 @@ def test_the_fingerprint_reads_the_value_as_its_frontend_recorded_it(value, reco
     (lambda: _js("expect(total()).toBeCloseTo(78.75);", "expect(total()).to.be.closeTo(78.75, Infinity);"),
      JS_PATH, "total", "abs:2"),
 ])
-def test_a_finding_reported_before_keeps_its_fingerprint(outcome, path, unit, key):
+def test_a_finding_reported_before_keeps_its_fingerprint(outcome, path, unit, key, monkeypatch):
     # Each of these was reported before 190.3, keyed `kind:old value` with the
     # old value as recorded; keying the old value's kind changes the message only.
+    # The content-bound key (#421) holds that key's pre-image unchanged.
+    identities = _identities(monkeypatch)
+    # `_analyze` is cached across tests: analyze again, so the identity is recorded.
+    _analyze.cache_clear()
     finding, = _loosened(outcome())
-    assert finding.fingerprint == make_fingerprint("TOLERANCE_LOOSENED", path, unit, key)
+    assert finding.fingerprint.startswith(f"TOLERANCE_LOOSENED/{path}/{unit}/v2:")
+    legacy = f"TOLERANCE_LOOSENED/{path}/{unit}/{key}"
+    assert finding.fingerprint in {assertion_key(i) for i in identities if i["legacy"] == legacy}

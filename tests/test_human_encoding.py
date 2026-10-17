@@ -11,7 +11,7 @@ import pytest
 
 from checkwash.cli import main
 from checkwash.demo import run as run_demo
-from checkwash.findings import make_fingerprint
+from checkwash.findings import make_assertion_fingerprint, make_fingerprint
 from checkwash.report.textio import write_text
 
 
@@ -117,7 +117,10 @@ def test_doctor_hook_status_and_errors_keep_their_exits(tmp_path, encoding, monk
     assert DISPLAY[encoding] in output.getvalue().decode(encoding)
     assert main(["doctor", "--repo", str(root)]) == 1
     assert "configured locally but not in CI" in output.getvalue().decode(encoding)
-    fingerprint = make_fingerprint("ASSERT_WEAKENED", "test_發票.py", "test_發票", "assert amount() == 5")
+    fingerprint = make_assertion_fingerprint(
+        "ASSERT_WEAKENED", "test_發票.py", "test_發票", "assert amount() == 5",
+        before="assert amount() == 5", after="assert amount() > 0", kind="strength",
+    )
     assert main(["allow", fingerprint, "--reason", "reviewed", "--repo", str(root)]) == 0
     assert "recorded exemption in" in output.getvalue().decode(encoding)
 
