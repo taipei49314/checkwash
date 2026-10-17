@@ -11267,4 +11267,7 @@ pytest, checkwash or Python ran. CI ran the tests.
 - The diffalign and `gating.py` changes for Sub-Q8 and Sub-Q11 are in their
   own commit, for the owner's approval as the ruling asks.
 
-The agent wrote this entry in #306's fix PR, for the maintainer's approval.
+The agent wrote this entry in #306's fix PR #476. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
+(93c25a6) text and of the diffalign and gating commit ea98b62.
