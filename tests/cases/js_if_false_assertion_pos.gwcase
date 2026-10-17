@@ -1,4 +1,5 @@
 === meta ===
+bypass: 29,48
 rule: ASSERT_REMOVED
 title: an assertion under `if (false)` never runs
 origin: #429 (Q1, Q5) — the JS/TS twin of if_false_assertion_pos

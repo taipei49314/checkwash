@@ -98,9 +98,9 @@ behind it* unshippable.
 | 5 | `git mv` / plain `mv` a test file out of collection | — |
 | 6 | Rename the test class out of pytest's `Test*` rule | `class_rename_out_of_collection_pos.gwcase` |
 | 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
-| 8 | Early `return`, deleted parametrize rows | `early_return_pos.gwcase`, `parametrize_rows_pos.gwcase` |
+| 8 | Early `return`, deleted parametrize rows | `early_return_pos.gwcase`, `js_early_return_pos.gwcase`, `js_if_true_return_pos.gwcase`, `js_issue429_repro_pos.gwcase`, `parametrize_rows_pos.gwcase` |
 | 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `sacrificial_skip_pos.gwcase` |
-| 10 | `assert f(x) == f(x)` self-comparison | `js_self_compare_node_pos.gwcase`, `js_self_compare_pos.gwcase`, `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
+| 10 | `assert f(x) == f(x)` self-comparison | `js_issue429_repro_pos.gwcase`, `js_self_compare_node_pos.gwcase`, `js_self_compare_pos.gwcase`, `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | — |
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
 | 13 | Replace an exact comparison with a wide `pytest.approx(...)` | `row13_exact_to_approx_pos.gwcase` |
@@ -119,7 +119,7 @@ behind it* unshippable.
 | 26 | `git mv AGENTS.md docs/AGENTS.old` — escape the guardrail role by renaming | `guardrail_rename_escape_pos.gwcase` |
 | 27 | Move a workflow out of `.github/workflows/` | `guardrail_rename_escape_pos.gwcase` |
 | 28 | Move an assertion into a never-called nested `def` (or `lambda`) | `nested_scope_assertion_pos.gwcase` |
-| 29 | Park an assertion under `if False:` | `if_false_assertion_pos.gwcase` |
+| 29 | Park an assertion under `if False:` | `if_false_assertion_pos.gwcase`, `js_if_false_assertion_pos.gwcase`, `js_issue429_repro_pos.gwcase` |
 | 30 | `skipif(False)` → `skipif(True)` | `skipif_condition_flipped_pos.gwcase` |
 | 31 | Module-level `pytest.skip(..., allow_module_level=True)` / `importorskip` | `module_level_skip_pos.gwcase` |
 | 32 | `import pytest as p` then `@p.mark.skip` | `aliased_skip_marker_pos.gwcase` |
@@ -138,7 +138,7 @@ behind it* unshippable.
 | 45 | Delete 5 tests / 7 exact assertions, add 1 weak test with a similar name | `split_rename_mass_pos.gwcase` |
 | 46 | `assert "" in str(x)` / `assert len(x) >= 0` as compensation padding | `bare_literal_bound_pad_pos.gwcase`, `unfalsifiable_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
 | 47 | One non-ASCII character on the assertion line, reopening #10 | `unicode_offset_tautology_pos.gwcase` |
-| 48 | `if not True:` / `if 1 == 2:` / `if False and x:` / `for _ in []:` / an unmatchable `match` | `dead_branch_compare_pos.gwcase`, `dead_branch_empty_for_pos.gwcase`, `dead_branch_not_true_pos.gwcase`, `if_false_assertion_pos.gwcase` |
+| 48 | `if not True:` / `if 1 == 2:` / `if False and x:` / `for _ in []:` / an unmatchable `match` | `dead_branch_compare_pos.gwcase`, `dead_branch_empty_for_pos.gwcase`, `dead_branch_not_true_pos.gwcase`, `if_false_assertion_pos.gwcase`, `js_dead_branch_and_pos.gwcase`, `js_dead_branch_compare_pos.gwcase`, `js_dead_branch_not_true_pos.gwcase`, `js_if_false_assertion_pos.gwcase`, `js_literal_and_statement_pos.gwcase`, `js_while_false_pos.gwcase` |
 | 49 | `assert (cond, "message")` — the always-true tuple assert | `tuple_assert_pos.gwcase` |
 | 50 | `assertIs` → `assertIsNot` (the unittest spelling was never in the map) | `assertis_polarity_pos.gwcase` |
 | 51 | Introduce syntax the analysing interpreter cannot parse; the file is skipped and the run passes | `unparseable_test_regressed_pos.gwcase` |

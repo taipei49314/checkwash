@@ -1,4 +1,5 @@
 === meta ===
+bypass: 8,10,29
 rule: ASSERT_REMOVED
 title: the three one-line edits of #429 block, as their Python twins do
 origin: #429 — a self-comparison (Q7), an assertion under `if (false)` (Q5) and a `return;` before one (Q1)

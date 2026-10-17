@@ -1,4 +1,5 @@
 === meta ===
+bypass: 8
 rule: ASSERT_REMOVED
 title: a `return;` at the top of a JS test leaves its assertions in the file but kills them
 origin: #429 (Q1) — the JS/TS twin of early_return_pos

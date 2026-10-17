@@ -1,4 +1,5 @@
 === meta ===
+bypass: 48
 rule: ASSERT_REMOVED
 title: `if (!true)` parks an assertion as dead as `if (false)` does
 origin: #429 (Q5) — the JS/TS twin of dead_branch_not_true_pos

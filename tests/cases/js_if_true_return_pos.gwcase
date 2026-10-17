@@ -1,4 +1,5 @@
 === meta ===
+bypass: 8
 rule: ASSERT_REMOVED
 title: `if (true) { return; }` returns as surely as a bare `return;`
 origin: #429 (Q1, Q5) — a statically selected branch passes its termination on
