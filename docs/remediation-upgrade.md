@@ -62,6 +62,30 @@ JSON retains it with `allowlisted: true`; the terminal's visible count and
 SARIF omit suppressed findings. Neither the visible count nor a lower severity
 is a record of all originally detected findings.
 
+### Assertion-level rules (next minor, #421)
+
+Through v0.8.0, ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED,
+TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED,
+EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED
+key a finding by its rule, path, unit and the old assertion's text only. While
+the base still holds that line, an exemption recorded for one rewrite of it
+also allows every other rewrite the same rule reports, and identical copies of
+one assertion share a key.
+
+The next minor release gives these rules content-bound keys as well:
+`rule/path/unit/v2:` followed by the complete 64-character SHA256 digest. The
+key binds the old and the new assertion text, what kind of change it is, which
+of several identical copies changed, and the rule's context: a tolerance's old
+and new values, or the definition an unchanged expectation now reads.
+Reformatting outside string literals and moving the line keep the key.
+
+Legacy keys of these rules are retired as the five above were: kept as
+records, never honoured, refused by `allow`, and reported by doctor and check.
+To keep an approval, re-run the reviewed change with the new version and record
+its new key with the four steps above. TEST_DISABLED, EXPECTED_VALUE_HARDCODED,
+CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep their legacy keys for now.
+IR_VERSION and FINDINGS_VERSION stay 2.
+
 ## Machine interfaces and SARIF
 
 The candidate advances IR_VERSION and FINDINGS_VERSION to 2. Existing
@@ -85,7 +109,8 @@ error; new root extraction receives no credit. Consumers must adapt before
 repinning their in-process engine.
 
 SARIF remains 2.1.0. Migrated identities use `partialFingerprints.checkwash/v2`;
-other identities retain `checkwash/v1`. Source location comes from the analyzed
+other identities retain `checkwash/v1`. From the next minor (#421), the nine
+assertion-level rules above are migrated identities too. Source location comes from the analyzed
 head snapshot, including an inherited assertion's helper file. When no precise
 head location exists, the result is file-level with evidence text and side in
 properties. A projected root-helper assertion instead points to its concrete

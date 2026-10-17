@@ -122,9 +122,10 @@ def test_stored_expectation_keys_are_validated_without_retiring_assertion_keys()
     assert fingerprint_state(key) == 'supported'
     assert fingerprint_state(key[:-1]) == 'invalid'
     assert fingerprint_state(key, 'ASSERT_REMOVED') == 'invalid'
-    assert fingerprint_state(key.replace('/-/v2:', '/test_fake/v2:')) == 'invalid'
+    # A unit makes it an assertion-level content-bound key (#421).
+    assert fingerprint_state(key.replace('/-/v2:', '/test_fake/v2:')) == 'supported'
     assert fingerprint_state('EXPECTED_VALUE_CHANGED/v2:broken') == 'invalid'
-    assert fingerprint_state('EXPECTED_VALUE_CHANGED/tests/test_api.py/test_one/abcdef123456') == 'supported'
+    assert fingerprint_state('EXPECTED_VALUE_CHANGED/tests/test_api.py/test_one/abcdef123456') == 'retired'
 
 
 def test_stored_expectation_sarif_uses_content_bound_version():

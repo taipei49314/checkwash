@@ -270,3 +270,83 @@ reason = "PR #464 (#419 ruling Q1 (b)): a guarded collection hook beside an opaq
 author = "taipei49314"
 created = "2026-10-16"
 expires = "2026-11-15"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_legacy_rules_keep_their_key_and_gain_complete_evidence/f9fd6d255083"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; legacy key for the published engine"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_new_expected_value_rule_uses_the_complete_before_assertion/5ea1c50bc1f8"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; legacy key for the published engine"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_node_finding_identity_remains_the_complete_assertion/1d51c76e8c0f"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; legacy key for the published engine"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_vitest_diagnostic_message_keeps_its_established_fingerprint/3da076527142"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; legacy key for the published engine"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_tolerance_absolute_bound.py/test_a_finding_reported_before_keeps_its_fingerprint/ed1a41016edf"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; legacy key for the published engine"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_legacy_rules_keep_their_key_and_gain_complete_evidence/v2:54d31066bdc8b225f2fdb53f5cf60c268cbc32281614a1538d706297e9138883"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; v2 key for the engine #477 builds"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_new_expected_value_rule_uses_the_complete_before_assertion/v2:7e3b8bcf9b183f949bf60fd00841c46bbe01d636e61e899e6b22df0b583c6d1b"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; v2 key for the engine #477 builds"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_node_finding_identity_remains_the_complete_assertion/v2:9c32583dcc673a1c45a7d67f4df7ee54f7dd85198c961d4b873f95accd33c3c6"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; v2 key for the engine #477 builds"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_vitest_diagnostic_message_keeps_its_established_fingerprint/v2:1dc8d86a982d34b6e0d9bc96d6364219e808a004500c950b64d29e7fcada33d2"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; v2 key for the engine #477 builds"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_tolerance_absolute_bound.py/test_a_finding_reported_before_keeps_its_fingerprint/v2:5c550eb10e9e40df230b2fcc5e9ae7a6e8ace514c21906089febb090e1f90e3d"
+rule = "ASSERT_WEAKENED"
+reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with ==; assertion-level keys are now content-bound v2 keys, so it checks that the v2 identity holds the same legacy pre-image instead; owner-approved in the #421 ruling of 2026-10-14 (issuecomment-6170353557, rule 2) and on 2026-10-17; v2 key for the engine #477 builds"
+author = "taipei49314"
+created = "2026-10-17"
+expires = "2026-11-16"

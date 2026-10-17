@@ -1,0 +1,33 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a helper method moved to a base in another module reads as its assertion removed: a stated cost
+origin: #306, ruling 306 Sub-Q7 (a) - a base outside the file is opaque, so the moved method is not followed
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class TestTotal(unittest.TestCase):
+    def _check(self, value):
+        self.assertEqual(value, 78.75)
+
+    def test_total(self):
+        self._check(total([50.0, 28.75]))
+=== after: tests/test_billing.py ===
+from app.billing import total
+from tests.checks import Checks
+
+
+class TestTotal(Checks):
+    def test_total(self):
+        self._check(total([50.0, 28.75]))
+=== after: tests/checks.py ===
+import unittest
+
+
+class Checks(unittest.TestCase):
+    def _check(self, value):
+        self.assertEqual(value, 78.75)
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "unit": "TestTotal.test_total"}]
