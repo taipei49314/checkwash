@@ -11256,4 +11256,9 @@ checkwash or Python ran. CI ran the tests.
   `tests/gates`.
 - The documented test count is 18710 (18675 + 35).
 
-The agent wrote this entry in #421's fix PR; the maintainer approves it there.
+The agent wrote this entry in #421's fix PR #477. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (a332ad42), THREATMODEL (87e932ca), D-146
+(285f5d4f) and user-doc (f6f9c3db) text and of the two pinned tests outside
+the ruled list. The second half of that reply chose this host for the
+ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
