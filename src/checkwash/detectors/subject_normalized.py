@@ -25,7 +25,13 @@ from __future__ import annotations
 import json
 
 from checkwash.change import EngineError
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    assertion_position,
+    make_assertion_fingerprint,
+    make_fingerprint,
+)
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through
 from checkwash.ir.expectation_identity import same_known_js_scalar
@@ -34,6 +40,7 @@ from checkwash.ir.model import IR, judged_as_test
 
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
+    legacy: set[str] = set()
     for file in ir.files:
         if not judged_as_test(file) and file.role != "conftest":
             continue
@@ -94,13 +101,22 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
-                        fingerprint=make_fingerprint(
-                            "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                        fingerprint=make_assertion_fingerprint(
+                            "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                            before=b.text, after=a.text, kind="normalized",
+                            position=assertion_position(unit.before, b.text, b.span),
+                            context=[before_subject, after_subject],
                         ),
                     )
                 )
+                legacy.add(make_fingerprint(
+                    "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                ))
     seen = {(f.path, f.unit, tuple(f.before.span), tuple(f.after.span)) for f in findings}
-    fingerprints = {f.fingerprint for f in findings}
+    # Duplicates are told apart by the legacy identity, as before: the
+    # content-bound key adds an ordinal and a count, and must not change how
+    # many findings there are (#421).
+    fingerprints = set(legacy)
     for file in ir.files:
         if not judged_as_test(file) and file.role != "conftest":
             continue
@@ -119,11 +135,17 @@ def detect(ir: IR) -> list[Finding]:
             if (file.path, unit, tuple(before_span), tuple(after_span)) in seen:
                 continue
             identity = (unit, before_text, after_text, before_subject, after_subject, operator, expected)
-            fingerprint = make_fingerprint("SUBJECT_NORMALIZED", file.path, unit,
-                                           json.dumps(identity, ensure_ascii=True, separators=(",", ":")))
-            if fingerprint in fingerprints:
+            encoded = json.dumps(identity, ensure_ascii=True, separators=(",", ":"))
+            key = make_fingerprint("SUBJECT_NORMALIZED", file.path, unit, encoded)
+            if key in fingerprints:
                 continue
-            fingerprints.add(fingerprint)
+            fingerprints.add(key)
+            # The event alone is the identity, with no position: a JSON
+            # round trip of the events keeps it without the units (#421).
+            fingerprint = make_assertion_fingerprint(
+                "SUBJECT_NORMALIZED", file.path, unit, encoded,
+                before=before_text, after=after_text, kind="table_normalized",
+            )
             findings.append(Finding(
                 rule="SUBJECT_NORMALIZED", severity="warn", path=file.path, unit=unit,
                 message=(f"{unit}: a literal parameter row wraps the asserted subject "

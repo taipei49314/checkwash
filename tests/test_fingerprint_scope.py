@@ -187,7 +187,7 @@ def test_v2_rule_spoofing_and_malformed_new_keys_are_rejected():
 
 
 def test_unmigrated_namespace_keeps_existing_metadata_compatibility():
-    key = make_fingerprint("ASSERT_REMOVED", "tests/test_x.py", "test_x", "assert actual == 5")
+    key = make_fingerprint("BROAD_EXCEPT_ADDED", "tests/test_x.py", None, "except Exception:")
     entry = _entry(key, rule="GUARDRAIL_TOUCHED")
     assert fingerprint_issue(key, entry.rule) is None
     assert active_fingerprints([entry], TODAY) == {key}
@@ -196,7 +196,7 @@ def test_unmigrated_namespace_keeps_existing_metadata_compatibility():
 def test_mixed_ledger_has_shared_expiry_retirement_and_invalid_counts():
     key = _fingerprint()
     legacy = make_fingerprint("GUARDRAIL_TOUCHED", PATH, None, PATH)
-    unchanged = make_fingerprint("ASSERT_REMOVED", "tests/test_x.py", "test_x", "assert actual == 5")
+    unchanged = make_fingerprint("BROAD_EXCEPT_ADDED", "tests/test_x.py", None, "except Exception:")
     entries = [
         _entry(key), _entry(unchanged), _entry(legacy),
         _entry(key, rule="ASSERT_REMOVED"),
@@ -225,12 +225,13 @@ def test_sarif_versions_only_the_changed_identity_scheme():
     from checkwash.report.sarif import findings_to_sarif
 
     ir, findings, _ = _analyze()
-    unchanged = make_fingerprint("ASSERT_REMOVED", "test_x.py", "test_x", "assert x")
-    findings.append(Finding("ASSERT_REMOVED", "high", "removed", "test_x.py", "test_x", fingerprint=unchanged))
+    unchanged = make_fingerprint("BROAD_EXCEPT_ADDED", "test_x.py", None, "except Exception:")
+    findings.append(Finding("BROAD_EXCEPT_ADDED", "warn", "broad except added", "test_x.py", None,
+                            fingerprint=unchanged))
     results = json.loads(findings_to_sarif(ir, findings))["runs"][0]["results"]
     keys = {result["ruleId"]: result["partialFingerprints"] for result in results}
     assert keys["GUARDRAIL_TOUCHED"] == {"checkwash/v2": _fingerprint()}
-    assert keys["ASSERT_REMOVED"] == {"checkwash/v1": unchanged}
+    assert keys["BROAD_EXCEPT_ADDED"] == {"checkwash/v1": unchanged}
 
 
 def test_unparseable_identity_binds_content_pair_and_parser_state():

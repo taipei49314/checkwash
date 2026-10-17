@@ -5,7 +5,7 @@ import json
 
 from checkwash.change import EngineError
 from checkwash.detectors.expected_changed import detect as detect_changed, detect_derived
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
 from checkwash.ir.markers import parse_text
 from checkwash.ir.model import judged_as_test
 
@@ -68,7 +68,11 @@ def detect(ir, existing):
                 message=(f"{name}: expected provenance changed {old_expected} -> {new_expected} "
                          f"for the same subject/input {subject}; helper or loop substitution keeps the answer visible"),
                 before=Evidence(old_text, tuple(old_span)), after=Evidence(new_text, tuple(new_span)),
-                fingerprint=make_fingerprint("EXPECTATION_DEFINITION_CHANGED", file.path, name,
-                                             json.dumps(identity, ensure_ascii=True, separators=(",", ":"))),
+                fingerprint=make_assertion_fingerprint(
+                    "EXPECTATION_DEFINITION_CHANGED", file.path, name,
+                    json.dumps(identity, ensure_ascii=True, separators=(",", ":")),
+                    before=old_text, after=new_text, kind="provenance_changed",
+                    position=assertion_position(unit.before, old_text, old_span),
+                ),
             ))
     return findings

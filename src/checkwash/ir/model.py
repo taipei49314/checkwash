@@ -578,19 +578,21 @@ def to_jsonable(obj: Any) -> Any:
     return obj
 
 
-def normalize_text(text: str) -> str:
+def normalize_text(text: str, *, quotes: str = "\"'") -> str:
     """Normal form for pairing, moves and fingerprints.
 
     Strips whitespace *outside* string literals only: whitespace inside a
     quoted string is semantics, and erasing it would let a relocated
     assertion with a silently edited expected value count as "moved
-    verbatim" (SPEC §5 D2 — confirmed red-team finding).
+    verbatim" (SPEC §5 D2 — confirmed red-team finding). `quotes` are the
+    characters that open one; the content-bound keys of #421 add the JS
+    template literal's backtick, and everything else keeps the default.
     """
     out: list[str] = []
     i, n = 0, len(text)
     while i < n:
         ch = text[i]
-        if ch in "\"'":
+        if ch in quotes:
             quote = ch * 3 if text[i : i + 3] == ch * 3 else ch
             out.append(quote)
             i += len(quote)

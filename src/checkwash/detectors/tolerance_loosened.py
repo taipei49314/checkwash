@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
 from checkwash.ir.model import IR, judged_as_test
 
 # The kinds that state an absolute bound (#196 190.3).
@@ -145,6 +145,30 @@ def _recorded(value: str) -> str:
     return number if sep and key in _BARE else value
 
 
+def _sources(unit) -> list[tuple]:
+    """The assertion pair each tolerance change came from, in order; (None, None) when unknown.
+
+    `tolerance_changes` keeps the values only, and a content-bound identity
+    needs the assertions too (#421 Q3). Alignment records the changes in
+    pair order, so each one is the next pair whose tolerances are these.
+    """
+    b_by_id = {x.id: x for x in unit.before.assertions}
+    a_by_id = {x.id: x for x in unit.after.assertions}
+    pairs = [(b_by_id.get(p.before_id), a_by_id.get(p.after_id)) for p in unit.delta.assertion_pairs]
+    out = []
+    cursor = 0
+    for _kind, before_eps, after_eps in unit.delta.tolerance_changes:
+        found = (None, None)
+        for index in range(cursor, len(pairs)):
+            b, a = pairs[index]
+            if (b is not None and a is not None and b.epsilon is not None and a.epsilon == after_eps
+                    and before_eps in (b.epsilon, f"{b.epsilon_kind}={b.epsilon}")):
+                found, cursor = (b, a), index + 1
+                break
+        out.append(found)
+    return out
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
@@ -153,7 +177,8 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
-            for kind, before_eps, after_eps in unit.delta.tolerance_changes:
+            sources = _sources(unit)
+            for (kind, before_eps, after_eps), (b_pair, a_pair) in zip(unit.delta.tolerance_changes, sources):
                 mixed = _mixed(kind, before_eps, after_eps)
                 if mixed is not None:
                     loosened, b_show, a_show = mixed
@@ -182,9 +207,17 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=b_show, span=unit.before.span),
                         after=Evidence(text=a_show, span=unit.after.span),
-                        fingerprint=make_fingerprint(
+                        fingerprint=make_assertion_fingerprint(
                             "TOLERANCE_LOOSENED", file.path, unit.qualname,
                             f"{kind}:{_recorded(before_eps)}",
+                            before=b_pair.text if b_pair is not None else None,
+                            after=a_pair.text if a_pair is not None else None,
+                            kind="loosened",
+                            position=(
+                                assertion_position(unit.before, b_pair.text, b_pair.span)
+                                if b_pair is not None else (None, None)
+                            ),
+                            context={"kind": kind, "before": before_eps, "after": after_eps},
                         ),
                     )
                 )

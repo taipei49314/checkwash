@@ -69,7 +69,7 @@ from __future__ import annotations
 import ast
 from collections import Counter
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
 from checkwash.ir.markers import parse_text
 from checkwash.ir.model import IR, ParamTable, judged_as_test, normalize_text, param_tables
 from checkwash.detectors.expected_provenance import detect as detect_provenance
@@ -376,6 +376,26 @@ def _name_closure(seeds: set[str], bindings: dict[str, str]) -> set[str]:
     return seen
 
 
+def _definitions(file, unit, b, a, name: str) -> list:
+    """Each recorded definition of `name` the assertion's expectation reads, before then after (#421 Q3).
+
+    A content-bound identity holds what the expectation now reads, so a later
+    redefinition of the same unchanged line needs its own approval.
+    """
+    def rows(side):
+        return [[list(t.names), [list(r) for r in t.rows], list(t.disabled)]
+                for t in param_tables(side) if name in t.names]
+
+    return [
+        [(b.reaching or {}).get(name), (a.reaching or {}).get(name)],
+        [unit.before.bindings.get(name), unit.after.bindings.get(name)],
+        [unit.before.param_columns.get(name), unit.after.param_columns.get(name)],
+        [rows(unit.before), rows(unit.after)],
+        [file.module_constants_before.get(name), file.module_constants.get(name)],
+        [file.fixture_defs_before.get(name), file.fixture_defs.get(name)],
+    ]
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
@@ -484,8 +504,11 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
-                        fingerprint=make_fingerprint(
-                            "EXPECTATION_DEFINITION_CHANGED", file.path, unit.qualname, b.text
+                        fingerprint=make_assertion_fingerprint(
+                            "EXPECTATION_DEFINITION_CHANGED", file.path, unit.qualname, b.text,
+                            before=b.text, after=a.text, kind="definition_changed",
+                            position=assertion_position(unit.before, b.text, b.span),
+                            context={name: _definitions(file, unit, b, a, name) for name in moved},
                         ),
                     )
                 )

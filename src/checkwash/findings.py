@@ -14,6 +14,16 @@ CHANGE_FINGERPRINT_RULES = frozenset({
     "GUARDRAIL_TOUCHED", "CI_WORKFLOW_TOUCHED", "TEST_FILE_UNPARSEABLE", "SCOPE_DRIFT",
     "SNAPSHOT_CODE_COCHANGE",
 })
+# The assertion-level oracle namespaces with content-bound v2 identities
+# (#421, ruling Q2 (b)): a different after state on the same before needs a
+# different approval. TEST_DISABLED is round 2 under its own ruling;
+# EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT and
+# the non-oracle rules keep their legacy keys.
+ASSERTION_FINGERPRINT_RULES = frozenset({
+    "ASSERT_WEAKENED", "ASSERT_SUBSTITUTED", "TOLERANCE_LOOSENED", "EXPECTED_VALUE_CHANGED",
+    "EXPECTED_VALUE_DERIVED", "EXPECTATION_DEFINITION_CHANGED", "SUBJECT_NORMALIZED",
+    "SUBJECT_INPUT_CHANGED", "ASSERT_REMOVED",
+})
 _CHANGE_DIGEST = re.compile(r"v2:[0-9a-f]{64}\Z")
 _CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -27,7 +37,20 @@ def fingerprint_state(fingerprint: str, rule: str | None = None) -> str:
     stored_expectation = (
         key_rule == "EXPECTED_VALUE_CHANGED"
         and fingerprint.rsplit("/", 1)[-1].startswith("v2:")
+        and len(parts) == 3 and parts[1] == "-"
     )
+    if key_rule in ASSERTION_FINGERPRINT_RULES and not stored_expectation:
+        # Assertion-level: `rule/path/unit/v2:<64hex>`. A legacy before-only
+        # key is retired: still parsed, never eligible (#421 Q4 (a)).
+        if len(parts) != 3 or not parts[0] or not parts[1]:
+            return "invalid"
+        if not parts[2].startswith("v2:"):
+            return "retired"
+        if not _CHANGE_DIGEST.fullmatch(parts[2]):
+            return "invalid"
+        if rule and rule != key_rule:
+            return "invalid"
+        return "supported"
     if key_rule in CHANGE_FINGERPRINT_RULES or stored_expectation:
         if len(parts) != 3 or not parts[0] or parts[1] != "-":
             return "invalid"
@@ -44,7 +67,7 @@ def is_content_bound_fingerprint(fingerprint: str, rule: str | None = None) -> b
     """Recognize supported v2 identities, including stored-expectation variants."""
     key_rule = fingerprint.split("/", 1)[0]
     return (
-        key_rule in CHANGE_FINGERPRINT_RULES | {"EXPECTED_VALUE_CHANGED"}
+        key_rule in CHANGE_FINGERPRINT_RULES | ASSERTION_FINGERPRINT_RULES
         and bool(_CHANGE_DIGEST.fullmatch(fingerprint.rsplit("/", 1)[-1]))
         and fingerprint_state(fingerprint, rule) == "supported"
     )
@@ -61,6 +84,13 @@ def fingerprint_issue(fingerprint: str, rule: str | None = None) -> str | None:
     state = fingerprint_state(fingerprint, rule)
     if state == "supported":
         return None
+    if state == "retired" and key_rule in ASSERTION_FINGERPRINT_RULES:
+        return (
+            f"{key_rule} requires a content-bound v2 fingerprint; legacy before-only "
+            "exemptions are retired, because they also covered every other rewrite "
+            "of the same line (#421). Re-run the reviewed diff with this version and "
+            "review its new fingerprint before recording an exemption"
+        )
     if state == "retired":
         return (
             f"{key_rule} requires a content-bound v2 fingerprint; legacy file-wide "
@@ -129,6 +159,99 @@ def make_fingerprint(rule: str, path: str, qualname: str | None, before_text: st
         "/".join([rule, path, qualname or "", normalize_text(before_text)]).encode("utf-8")
     ).hexdigest()[:12]
     return f"{rule}/{path}/{qualname or '-'}/{digest}"
+
+
+def identity_text(text: str | None) -> str | None:
+    """The v2 identities' normal form of an assertion's text, or None.
+
+    `normalize_text` with one difference: whitespace inside a JS template
+    literal is kept, since it is the literal's value. Pairing and move
+    detection keep reading the default form (#421 Q3). Never raises: text
+    that cannot be read is None.
+    """
+    if text is None:
+        return None
+    try:
+        return normalize_text(text, quotes="\"'`")
+    except (RecursionError, MemoryError, TypeError):
+        return None
+
+
+def assertion_position(side, text: str | None, span) -> tuple[int | None, int | None]:
+    """(ordinal, count) among the before side's assertions that read as `text`, or (None, None).
+
+    Two identical assertions in one unit are two approvals: the ordinal, in
+    source order, tells them apart, and the count catches one deleted in a
+    later change (#421 Q3). `span` only finds the assertion among them; it
+    is never part of an identity, so a line shift keeps the key.
+    """
+    try:
+        wanted = identity_text(text)
+        if side is None or wanted is None:
+            return None, None
+        same = [a for a in sorted(side.assertions, key=lambda a: tuple(a.span))
+                if identity_text(a.text) == wanted]
+        ordinal = next((i for i, a in enumerate(same) if tuple(a.span) == tuple(span)), None)
+        return ordinal, len(same)
+    except (AttributeError, TypeError, RecursionError):
+        return None, None
+
+
+def assertion_identity(
+    rule: str,
+    path: str,
+    qualname: str | None,
+    legacy_text: str,
+    *,
+    before: str | None,
+    after: str | None,
+    kind: str,
+    position: tuple[int | None, int | None] = (None, None),
+    context=None,
+) -> dict:
+    """What a content-bound assertion-level key is computed from (#421 Q3).
+
+    It holds the exact pre-image of the legacy key (`make_fingerprint`'s), so
+    every v2 key refines its legacy key, plus the complete before and after
+    texts, the event kind, the before side's ordinal and count of that text,
+    and the rule's context. Spans, line numbers, messages, strengths,
+    severities, file digests and revision labels stay out.
+    """
+    ordinal, count = position
+    return {
+        "scheme": "checkwash/assertion-fingerprint/v2",
+        "rule": rule,
+        "path": path,
+        "unit": qualname,
+        "legacy": "/".join([rule, path, qualname or "", normalize_text(legacy_text)]),
+        "before": identity_text(before),
+        "after": identity_text(after),
+        "kind": kind,
+        "ordinal": ordinal,
+        "count": count,
+        "context": context,
+    }
+
+
+def assertion_key(identity: dict) -> str:
+    """`rule/path/unit/v2:<64hex>`: the full SHA256 of an identity's canonical JSON.
+
+    It never raises: a context it cannot encode is recorded as null.
+    """
+    try:
+        # A context value JSON has no form for is recorded as its text; a
+        # caller passes lists and dicts, never sets, so the order is stable.
+        encoded = json.dumps(identity, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+    except (TypeError, ValueError, RecursionError):
+        identity = {**identity, "context": None}
+        encoded = json.dumps(identity, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha256(encoded.encode("ascii")).hexdigest()
+    return f"{identity['rule']}/{identity['path']}/{identity['unit'] or '-'}/v2:{digest}"
+
+
+def make_assertion_fingerprint(rule: str, path: str, qualname: str | None, legacy_text: str, **evidence) -> str:
+    """The content-bound key of an assertion-level finding (#421): `assertion_identity`, hashed."""
+    return assertion_key(assertion_identity(rule, path, qualname, legacy_text, **evidence))
 
 
 def change_identity(file: FileIR) -> dict:
