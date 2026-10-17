@@ -683,11 +683,14 @@ class SetupScope:
     name. Either keeps a request from falling through to a conftest (#223).
     `helpers` reads what the helpers a provider calls end in, same-file or
     imported (`helper_skips.HelperOutcomes`, #272): `fixture_helpers` and
-    `implicit_helpers` map each provider to those outcomes.
+    `implicit_helpers` map each provider to those outcomes. In a class body,
+    `methods` is (key, follow) for the class running the test: a provider's
+    calls through its instance run the methods `follow` resolves, and what
+    they end in joins its helpers' (#306, `HelperOutcomes.method_calls`).
     """
 
     def __init__(self, body, bindings, *, in_class=False, marks=(), bases=None, condition=ast.unparse,
-                 attrs=None, helpers=None):
+                 attrs=None, helpers=None, methods=None):
         self.bindings = bindings
         self.fixtures = {}
         self.implicit = {}
@@ -724,6 +727,9 @@ class SetupScope:
                                                      per_test=_test_request(statement)))
                 if helpers is not None:
                     self.fixture_helpers[name] = helpers.of_scope(statement, bindings, method=in_class)
+                    if in_class and methods is not None:
+                        self.fixture_helpers[name] = self.fixture_helpers[name] + helpers.method_calls(
+                            statement, bindings, methods[0], attrs=attrs, follow=methods[1])
             elif statement.name in callbacks:
                 decorators = statement.decorator_list
                 plain = (isinstance(statement, ast.FunctionDef) and not _generator(statement)
@@ -737,6 +743,9 @@ class SetupScope:
                 if helpers is not None:
                     self.implicit_helpers[statement.name] = (
                         helpers.of_scope(statement, bindings, method=in_class and not decorators) if plain else [])
+                    if plain and in_class and not decorators and methods is not None:
+                        self.implicit_helpers[statement.name] = self.implicit_helpers[statement.name] + (
+                            helpers.method_calls(statement, bindings, methods[0], attrs=attrs, follow=methods[1]))
         module_setup = last.get('setUpModule')
         if (not in_class and isinstance(module_setup, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and not module_setup.decorator_list):

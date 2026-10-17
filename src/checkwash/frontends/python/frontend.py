@@ -51,6 +51,7 @@ from checkwash.frontends.python.inherited_tests import inherited_test_methods
 from checkwash.frontends.python.rebindings import Reader as _BindingReader
 from checkwash.frontends.python.rebindings import Status as BindingStatus
 from checkwash.frontends.python.rebindings import final_bindings
+from checkwash.frontends.python.self_methods import TESTCASE_NAMES, Methods, instance_calls, receiver
 from checkwash.frontends.python.doctest_oracles import checked_examples, module_examples
 from checkwash.frontends.python.literal_string_methods import literal_string_replace
 from checkwash.frontends.python.literal_conversions import (
@@ -3067,6 +3068,64 @@ def _vacuous_bound_asserts(func: ast.AST) -> set[int]:
     return out
 
 
+class _Instance:
+    """Calls through the instance of one class running a test (#306).
+
+    `methods` builds the module's resolution (`self_methods.Methods`) the
+    first time a call needs it: most units only call TestCase's own
+    methods through `self`, and those are never followed.
+    """
+
+    def __init__(self, methods, running: ast.ClassDef) -> None:
+        self._methods = methods
+        self.running = running
+        self._receivers: dict[int, str | None] = {}
+
+    def receiver(self, scope) -> str | None:
+        if id(scope) not in self._receivers:
+            method = isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef))
+            self._receivers[id(scope)] = receiver(scope) if method else None
+        return self._receivers[id(scope)]
+
+    def resolve(self, scope, node):
+        """(method, the class defining it) a call in `scope` through its instance runs, or None."""
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name) and node.func.attr not in TESTCASE_NAMES):
+            return None
+        name = self.receiver(scope)
+        if name is None or node.func.value.id != name:
+            return None
+        return self._methods().resolve(self.running, node.func.attr, name)
+
+    def follow(self, scope, node):
+        found = self.resolve(scope, node)
+        return found[0] if found is not None else None
+
+    def closure(self, method, module_scopes, caches, max_depth: int = 4) -> list:
+        """`method` and every scope it reaches: the helpers it calls by plain name,
+        as `_executed_scopes` follows them, and the methods it calls through its
+        own instance, at most `max_depth` calls from the test."""
+        out: list = []
+        seen: set[int] = set()
+        frontier = [(method, 0)]
+        nodes_cache = caches[0] if caches is not None else None
+        while frontier:
+            scope, depth = frontier.pop(0)
+            if id(scope) in seen or depth >= max_depth:
+                continue
+            seen.add(id(scope))
+            out.append(scope)
+            for reached in _executed_scopes(scope, module_scopes, max_depth=max_depth - 1 - depth, caches=caches)[1:]:
+                if id(reached) not in seen:
+                    seen.add(id(reached))
+                    out.append(reached)
+            for call, _name in instance_calls(_scope_nodes_cached(scope, nodes_cache), self.receiver(scope)):
+                found = self.resolve(scope, call)
+                if found is not None:
+                    frontier.append((found[0], depth + 1))
+        return out
+
+
 def _helper_marker(helper, effect, evidence, guard, text, off, origins) -> Marker:
     """The `helper.<function>.<effect>` marker for an outcome a unit reaches through a helper (#272).
 
@@ -3100,7 +3159,12 @@ def _collect_unit(
     attrs=None,
     helpers: HelperOutcomes | None = None,
     origins: dict | None = None,
+    instance: _Instance | None = None,
+    resolved: dict | None = None,
 ) -> ParsedUnit:
+    """`instance`: the class running a method unit, for the helper methods it
+    reaches through `self` (#306); `resolved` collects each one it follows,
+    by its class-qualified name."""
     assertions: list[Assertion] = []
     calls: set[str] = set()
     patches: set[tuple[str, str]] = set()
@@ -3174,6 +3238,8 @@ def _collect_unit(
     # to a name a top-level `from M import f` binds: a helper whose run ends
     # in a skip skips this unit too (#272).
     helper_calls: list[ast.Call] = []
+    # Calls through the instance that run, for the helper methods they reach (#306).
+    method_calls: list[ast.Call] = []
 
     for node in _walk(func):
         if id(node) in dead:
@@ -3186,6 +3252,8 @@ def _collect_unit(
                  or helpers.imported is not None and node.func.id in helpers.imported)
         ):
             helper_calls.append(node)
+        if instance is not None and isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            method_calls.append(node)
         # A native skip or xfail, called or raised (`raise unittest.SkipTest`
         # is the same act as `pytest.skip()`), read through the bindings (#220).
         if isinstance(node, (ast.Call, ast.Raise)):
@@ -3328,6 +3396,13 @@ def _collect_unit(
             func, module_names, helper_calls, method=method, local_scopes=local_scopes
         ):
             markers.append(_helper_marker(helper, effect, evidence, guard, text, off, origins))
+    # A skip a helper method the unit calls through its instance ends in, read
+    # under the running class's attributes (#306 Q1, Sub-Q5).
+    if helpers is not None and method_calls:
+        for helper, effect, evidence, guard in helpers.method_calls(
+            func, module_names, id(instance.running), attrs=attrs, follow=instance.follow, calls=method_calls
+        ):
+            markers.append(_helper_marker(helper, effect, evidence, guard, text, off, origins))
 
     # The other half: assertions the unit runs that are not written inside it.
     # `assert_sum(add(2, 3), 5)` is a *call*, so without this the unit records
@@ -3347,6 +3422,68 @@ def _collect_unit(
     # vanishing into a same-size set.
     root_closures: dict[str, list] = {}
     inherited_rows: dict[int, list] = {}
+
+    def rows_of(scope) -> list:
+        rows = inherited_rows.get(id(scope))
+        if rows is None:
+            rows = []
+            for node in _scope_nodes_cached(scope, nodes_cache):
+                if isinstance(node, ast.Assert):
+                    if id(node) in own_assert_ids:
+                        continue
+                    c = _classify_assert(node, text)
+                    trivial = _is_trivial_subject(node.test) or c.trivial or id(node) in vacuous
+                elif isinstance(node, ast.Call):
+                    c = _classify_unittest_call(node, text) or _tolerance_statement_classified(node, text)
+                    if c is None:
+                        continue
+                    trivial = c.trivial
+                else:
+                    continue
+                rows.append((node, c, trivial))
+            inherited_rows[id(scope)] = rows
+        return rows
+
+    def inherit(site_node, scope, via=None) -> None:
+        nonlocal counter
+        for node, c, trivial in rows_of(scope):
+            seg = text.seg(node) or ""
+            direct = set(c.left_names) | set(c.right_names)
+            reach = _reaching_keys(
+                site_node,
+                _positional_closure(
+                    site_node, c.left_names + c.right_names, ordered_bindings
+                ),
+                ordered_bindings,
+            )
+            assertions.append(
+                Assertion(
+                    id=f"a{counter}",
+                    form=c.form,
+                    strength=c.strength,
+                    text=seg,
+                    span=off.span(node),
+                    left=c.left,
+                    right_literal=c.right_literal,
+                    right_value=c.right_value,
+                    epsilon=c.epsilon,
+                    epsilon_kind=c.epsilon_kind,
+                    predicate=c.predicate,
+                    operand_source=c.operand_source,
+                    unevaluated_expected=c.unevaluated_expected,
+                    unbound_operands=c.unbound_operands,
+                    trivial=trivial,
+                    positive=c.positive,
+                    left_names=c.left_names,
+                    right_depends_on=c.right_names,
+                    inherited=True,
+                    reaching=reach,
+                    reaching_sig=_reaching_sig(reach, direct),
+                    via=via,
+                )
+            )
+            counter += 1
+
     for site_node, root in _helper_entry_sites(func, nodes_cache):
         if id(site_node) in dead or root not in local_scopes:
             continue
@@ -3358,60 +3495,28 @@ def _collect_unit(
         for scope in closure:
             if scope is func:
                 continue
-            rows = inherited_rows.get(id(scope))
-            if rows is None:
-                rows = []
-                for node in _scope_nodes_cached(scope, nodes_cache):
-                    if isinstance(node, ast.Assert):
-                        if id(node) in own_assert_ids:
-                            continue
-                        c = _classify_assert(node, text)
-                        trivial = _is_trivial_subject(node.test) or c.trivial or id(node) in vacuous
-                    elif isinstance(node, ast.Call):
-                        c = _classify_unittest_call(node, text) or _tolerance_statement_classified(node, text)
-                        if c is None:
-                            continue
-                        trivial = c.trivial
-                    else:
-                        continue
-                    rows.append((node, c, trivial))
-                inherited_rows[id(scope)] = rows
-            for node, c, trivial in rows:
-                seg = text.seg(node) or ""
-                direct = set(c.left_names) | set(c.right_names)
-                reach = _reaching_keys(
-                    site_node,
-                    _positional_closure(
-                        site_node, c.left_names + c.right_names, ordered_bindings
-                    ),
-                    ordered_bindings,
-                )
-                assertions.append(
-                    Assertion(
-                        id=f"a{counter}",
-                        form=c.form,
-                        strength=c.strength,
-                        text=seg,
-                        span=off.span(node),
-                        left=c.left,
-                        right_literal=c.right_literal,
-                        right_value=c.right_value,
-                        epsilon=c.epsilon,
-                        epsilon_kind=c.epsilon_kind,
-                        predicate=c.predicate,
-                        operand_source=c.operand_source,
-                        unevaluated_expected=c.unevaluated_expected,
-                        unbound_operands=c.unbound_operands,
-                        trivial=trivial,
-                        positive=c.positive,
-                        left_names=c.left_names,
-                        right_depends_on=c.right_names,
-                        inherited=True,
-                        reaching=reach,
-                        reaching_sig=_reaching_sig(reach, direct),
-                    )
-                )
-                counter += 1
+            inherit(site_node, scope)
+
+    # A helper method reached through the instance (#306): followed as a
+    # module helper is, once per entry site, and its assertions carry the
+    # method's class-qualified name as `via` (306 Sub-Q11).
+    if instance is not None:
+        method_closures: dict[int, list] = {}
+        for site_node in sorted(method_calls, key=lambda node: (node.lineno, node.col_offset)):
+            found = instance.resolve(func, site_node)
+            if found is None:
+                continue
+            target, owner = found
+            via = f"{owner.name}.{target.name}"
+            if resolved is not None:
+                resolved[via] = target
+            closure = method_closures.get(id(target))
+            if closure is None:
+                closure = instance.closure(target, module_scopes or {}, caches)
+                method_closures[id(target)] = closure
+            for scope in closure:
+                if scope is not func:
+                    inherit(site_node, scope, via)
 
     assertions.extend(checked_examples(func, doctests or [], dead))
     body = text.seg(func) or ""
@@ -3995,6 +4100,27 @@ def _parse_python(
     def attrs_of(cls: ast.ClassDef | None):
         return class_attrs.env(cls) if class_attrs is not None and cls is not None else None
 
+    # The module's resolution of calls through an instance (#306), built the
+    # first time a unit calls a method TestCase does not define, and one view
+    # of it per class running a test.
+    methods_built: list[Methods] = []
+    instances: dict[int, _Instance] = {}
+    # Each helper method a unit follows, by its class-qualified name, whose
+    # callees are repair evidence for its own assertions only (306 Sub-Q8).
+    resolved_methods: dict[str, ast.AST] = {}
+
+    def methods_of() -> Methods:
+        if not methods_built:
+            methods_built.append(Methods(tree))
+        return methods_built[0]
+
+    def instance_of(cls: ast.ClassDef | None) -> _Instance | None:
+        if cls is None or not collect_tests or conftest:
+            return None
+        if id(cls) not in instances:
+            instances[id(cls)] = _Instance(methods_of, cls)
+        return instances[id(cls)]
+
     def nested_setup(
         scopes: tuple[SetupScope, ...], *classes: ast.ClassDef, instance: ast.ClassDef | None = None
     ) -> tuple[SetupScope, ...]:
@@ -4002,7 +4128,8 @@ def _parse_python(
 
         `instance` is the class whose instance runs the setup, when it is not
         the class that defines it: its class attributes are the ones a
-        guard reads (#254).
+        guard reads (#254), and its methods are the ones a setup callback's
+        calls through `self` run (#306).
         """
         if not scopes:
             return scopes
@@ -4010,9 +4137,11 @@ def _parse_python(
             owner = instance if instance is not None else cls
             key = (id(cls), id(owner))
             if key not in class_setup:
+                running = instance_of(owner)
                 class_setup[key] = SetupScope(
                     cls.body, scopes[0].bindings, in_class=True, marks=cls.decorator_list, bases=cls.bases,
                     condition=condition, attrs=attrs_of(owner), helpers=helper_outcomes,
+                    methods=(id(owner), running.follow) if running is not None else None,
                 )
             scopes = scopes + (class_setup[key],)
         return scopes
@@ -4087,11 +4216,14 @@ def _parse_python(
         # with no guard (`_collect_unit`, `setup_outcome`); one that still
         # has a guard may not hold on the base, and a decorator, class or
         # module mark (named for the mark, or `module.*`) is one a subclass
-        # shares.
+        # shares. A skip a helper ends in is admitted too, and read again
+        # under each subclass (#306 Sub-Q5).
         if class_attrs is None or not markers or any(
-            not (m.name in BODY_MARKERS or m.name.startswith("setup.")) or m.guard is not None for m in markers
+            not (m.name in BODY_MARKERS or m.name.startswith(("setup.", "helper."))) or m.guard is not None
+            for m in markers
         ):
             return unit
+        helper_marked = any(m.name.startswith("helper.") for m in markers)
         # Every skip the body spells, called or raised, read as the unit
         # reads it (#220): one dead under the base's attributes may still run
         # under a subclass's.
@@ -4106,6 +4238,23 @@ def _parse_python(
                 continue
             if setup_markers(func, nested_setup(setup_scopes, cls, instance=subclass), (subclass,)):
                 continue
+            if helper_marked and helper_outcomes is not None:
+                calls = [node for node in _walk(func) if isinstance(node, ast.Call) and id(node) not in dead]
+                scopes_seen = _local_scopes(func, module_scopes)
+                plain = [
+                    node for node in calls
+                    if isinstance(node.func, ast.Name)
+                    and (node.func.id in scopes_seen
+                         or helper_outcomes.imported is not None and node.func.id in helper_outcomes.imported)
+                ]
+                if plain and helper_outcomes.reached(func, body_names, plain, method=True, local_scopes=scopes_seen):
+                    continue
+                running = instance_of(subclass)
+                if running is not None and helper_outcomes.method_calls(
+                    func, body_names, id(subclass), attrs=attrs_of(subclass), follow=running.follow,
+                    calls=[node for node in calls if isinstance(node.func, ast.Attribute)],
+                ):
+                    continue
             return ParsedUnit(
                 qualname=unit.qualname, span=unit.span,
                 side=replace(unit.side, markers=[]), shingles=unit.shingles,
@@ -4153,6 +4302,8 @@ def _parse_python(
                         module_scopes, file_caches, branch_fixtures, doctests, aliases,
                         outcome_bindings=body_names, method="." in qual, outcome_roots=body_roots,
                         attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
+                        instance=instance_of(owner if owner is not None else classes[-1]) if classes else None,
+                        resolved=resolved_methods,
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -4238,7 +4389,8 @@ def _parse_python(
                 + setup_markers(method, nested_setup(setup_scopes, owner, cls, instance=cls), (cls,)),
                 module_scopes, file_caches, branch_fixtures, doctests, aliases_of(owner),
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
-                helpers=helper_outcomes, origins=marker_origins,
+                helpers=helper_outcomes, origins=marker_origins, instance=instance_of(cls),
+                resolved=resolved_methods,
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
@@ -4324,6 +4476,10 @@ def _parse_python(
     if collect_tests:
         helper_asserts, fixture_asserts, autouse = _module_oracle_scopes(tree, text, off)
         helper_calls = _module_helper_calls(tree)
+        # A helper method's callees, under its class-qualified name: evidence
+        # only for the assertions reached through it (306 Sub-Q8).
+        for via, method_node in sorted(resolved_methods.items()):
+            helper_calls[via] = _callees(method_node)
     else:
         helper_asserts, fixture_asserts, autouse = {}, {}, ()
         helper_calls = {}
