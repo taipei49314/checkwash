@@ -24,6 +24,7 @@ from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.exception_handlers import swallowing_handlers
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
+    literal_operand,
     number_operand,
     operand_callee,
     operand_text,
@@ -31,6 +32,7 @@ from checkwash.frontends.javascript.literals import (
     populate_expectation,
     populate_precision,
     read_bound,
+    same_operand,
 )
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
@@ -655,6 +657,38 @@ def _state_predicate(assertion: Assertion, key: str | None, asserts: bool, negat
     assertion.positive = asserts != negated
 
 
+# The matchers that read no operand, and the equalities and inclusive bounds
+# whose two sides being one operand means they cannot fail (#429 Q7), as
+# `x == x`, `x <= x` and `x >= x` cannot in Python (THREATMODEL row 10). A
+# negated one cannot pass, which is no oracle either; Python reads `x != x`
+# the same way.
+_UNARY_MATCHERS = frozenset({"toBeTruthy", "toBeFalsy", "toBeDefined", "toBeUndefined", "toBeNull"})
+_SELF_MATCHERS = frozenset({"toBe", "toEqual", "toStrictEqual", "toBeGreaterThanOrEqual", "toBeLessThanOrEqual"})
+_SELF_MEANINGS = frozenset({"strict_equal", "loose_equal", "deep_equal", "least", "most"})
+
+
+def _rate_tautology(assertion: Assertion, subject: str, operands: list[str],
+                    compared: tuple[str, str] | None = None) -> None:
+    """Rate an assertion that can never fail at SPEC §3's TAUTOLOGY rung (#429).
+
+    Either its subject as written and every operand its predicate reads are
+    exact literals, whatever they evaluate to (Q2: `expect(1).toBe(2)`,
+    `assert.ok(true)`, `expect("a").toBeTruthy()`), or `compared`, the two
+    sides of an equality or an inclusive bound, are one operand (Q7:
+    `expect(total).toBe(total)`). A message argument is no operand. An
+    assertion whose predicate is not read keeps strength None. Only form and
+    strength change here: `left`, text, span and operand evidence stay as
+    read, so no finding's identity moves (Q6). `parse_javascript` drops the
+    predicate key once the catch evidence has been read.
+    """
+    if assertion.strength is None:
+        return
+    if (literal_operand(subject) and all(literal_operand(operand) for operand in operands)
+            or compared is not None and same_operand(*compared)):
+        assertion.form = "tautology"
+        assertion.strength = S.TAUTOLOGY
+
+
 def _bound_readers(
     bindings: Bindings, position: int,
 ) -> tuple[Callable[[str], str | None], Callable[[tuple[str, ...]], bool]]:
@@ -700,11 +734,14 @@ def _unevaluated_call(assertion: Assertion, bindings: Bindings | None, position:
 def _chai_assertion(
     meaning: str, operands: list[str], source: str, span: tuple[int, int], positive: bool = True,
     undefined_global: bool = True, bindings: Bindings | None = None,
+    origin: tuple[str, list[str]] | None = None,
 ) -> Assertion | None:
     """One chai assertion from subject-first operands; None when incomplete.
 
     Without `bindings` a closeTo delta is read as a literal only: no name
-    is followed and no global is taken as unshadowed.
+    is followed and no global is taken as unshadowed. `origin` is the
+    subject as written and the property names a chain moved it through
+    (#215), when the first operand is the property they reach.
     """
     rule = _CHAI[meaning]
     if len(operands) < rule.operands or any(
@@ -737,6 +774,9 @@ def _chai_assertion(
     if meaning in {"strict_equal", "loose_equal"}:
         key = _equality_key(operands[1], strict=meaning == "strict_equal", undefined_global=undefined_global)
     _state_predicate(assertion, key, rule.asserts, not positive)
+    subject, names = origin or (operands[0], [])
+    _rate_tautology(assertion, subject, [*names, *operands[1:rule.operands]],
+                    (operands[0], operands[1]) if meaning in _SELF_MEANINGS else None)
     return assertion
 
 
@@ -828,7 +868,8 @@ def _should_assertions(text: str, code: bytearray, bindings: Bindings, start: in
             span = (subject_start, span_end)
             assertion = target and _chai_assertion(meaning, [target, *operands], text[span[0]:span[1]],
                                                    span, positive, undefined_global=undefined_global,
-                                                   bindings=bindings)
+                                                   bindings=bindings,
+                                                   origin=(subject, [name for name, _nested in properties]))
             if assertion is not None:
                 assertions.append(assertion)
                 continue
@@ -1851,16 +1892,18 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
         undefined_global = bindings.is_global(("undefined",), match.start())
         if is_chai:
             meaning = _CHAI_ASSERT.get(method or "ok")
+            origin = None
             if method in _CHAI_ASSERT_PROPERTY:
                 # assert.propertyVal(object, name, value) asserts on object[name].
                 meaning, nested = _CHAI_ASSERT_PROPERTY[method]
                 subject = property_subject(arguments[0], arguments[1], nested) if len(arguments) >= 2 else None
                 if subject is None:
                     continue
+                origin = (arguments[0], [arguments[1]])
                 arguments = [subject, *arguments[2:]]
             chai_call = _chai_assertion(meaning, arguments,
                                         text[match.start():span_end], (match.start(), span_end),
-                                        undefined_global=undefined_global, bindings=bindings)
+                                        undefined_global=undefined_global, bindings=bindings, origin=origin)
             if chai_call is not None:
                 assertions.append(chai_call)
             continue
@@ -1898,6 +1941,9 @@ def _node_assertions(text: str, code: bytearray, start: int, end: int,
                 key = hand.key
                 assertion.operand_source = hand.operand
         _state_predicate(assertion, key, True, False)
+        equality = form == "compare_eq"
+        _rate_tautology(assertion, arguments[0], arguments[1:2] if equality else [],
+                        (arguments[0], arguments[1]) if equality else None)
         assertions.append(assertion)
     return assertions
 
@@ -2256,7 +2302,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
                     chai_call = subject and _chai_assertion(meaning, [subject, *operands],
                                                             text[span[0]:span[1]], span, positive,
                                                             undefined_global=undefined_global,
-                                                            bindings=bindings)
+                                                            bindings=bindings,
+                                                            origin=(subject_arguments[0],
+                                                                    [name for name, _nested in properties]))
                     if chai_call is not None:
                         assertions.append(chai_call)
                 continue
@@ -2323,6 +2371,10 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
                         key, asserts = hand.key, True
                         assertion.operand_source = hand.operand
             _state_predicate(assertion, key, asserts, negated)
+            # toBeCloseTo reads its precision as well as its expected value.
+            _rate_tautology(assertion, subject,
+                            [] if matcher in _UNARY_MATCHERS else arguments[:2 if form == "approx" else 1],
+                            (subject, arguments[0]) if matcher in _SELF_MATCHERS and asymmetric is None else None)
             assertions.append(assertion)
         assertions.extend(assertion for assertion in _node_assertions(text, code, start, end, bindings)
                           if owned(assertion.span[0]))
@@ -2348,5 +2400,14 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     declares_tests = bool(units) or any(
         (d.callback or _test_body(text, code, bindings, d)) is not None for d in declarations)
     handlers = swallowing_handlers(bindings, [a for unit in units for a in unit.side.assertions])
+    # A tautology states no predicate (#429 Q6): two keyed spellings on one
+    # subject would read as the same predicate, and `toBe(27)` -> `toBe(total)`
+    # as no change at all. The catch evidence above reads the key and the
+    # polarity each assertion spells, which is how a literal-only catch is
+    # proved to always pass (#431), so both are dropped only now.
+    for unit in units:
+        for assertion in unit.side.assertions:
+            if assertion.form == "tautology":
+                assertion.predicate, assertion.positive = None, True
     return ParsedFile(parse_ok=True, units=units, focus=focus, declares_tests=declares_tests,
                       swallowing_handlers=handlers)

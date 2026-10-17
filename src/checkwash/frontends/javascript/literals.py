@@ -14,6 +14,11 @@ An operand that is not a literal is still recorded by its text
 (`operand_text`), and the names it reads (`operand_names`), so that two
 spellings of one operand compare as the same and a name replaced by another
 one can be told apart (#198).
+
+Whether an operand is a literal at all, containers included, and whether two
+operands spell one expression are read too (`literal_operand`,
+`same_operand`): an assertion either makes true can never fail (#429). They
+read the text only and record no value.
 """
 
 from __future__ import annotations
@@ -679,3 +684,211 @@ def operand_names(source: str) -> tuple[str, ...]:
         if match.group() not in _KEYWORDS:
             names.add(match.group())
     return tuple(sorted(names))
+
+
+# Assertions that can never fail (#429). SPEC §3 puts an assertion whose
+# operands are all literals, and an equality whose two sides are one
+# expression, on the TAUTOLOGY rung. These read that from the operands' text;
+# nothing is evaluated, and a name is never a literal: what it holds is the
+# binding scan's question.
+_NUMBER_LITERAL = re.compile(
+    r"(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+"
+    r"|(?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9][0-9_]*)(?:[eE][+-]?[0-9][0-9_]*)?)n?"
+)
+_TEMPLATE_LITERAL = re.compile(r"`(?:\\[\s\S]|\$(?!\{)|[^`\\$])*`")
+_REGEX_LITERAL = re.compile(r"/(?![*/])(?:\\.|\[(?:\\.|[^\]\\\r\n])*\]|[^/\\\[\r\n])+/[A-Za-z]*")
+_LITERAL_DEPTH = 8
+
+
+def _quoted_end(source: str, start: int) -> int:
+    """The index after the string or template opening at `start`, as `_top_level` skips it."""
+    quote, i = source[start], start + 1
+    while i < len(source) and source[i] != quote:
+        i += 2 if source[i] == "\\" else 1
+    return i + 1
+
+
+def _members(source: str) -> list[str] | None:
+    """The comma-separated pieces inside the one bracket pair that encloses `source`."""
+    pieces: list[str] = []
+    start, last = 1, None
+    for index, depth in _top_level(source):
+        if depth < 0 or (depth == 0 and index < len(source) - 1):
+            return None  # `[1] + [2]`: the first pair closes early
+        if depth == 1 and source[index] == ",":
+            pieces.append(source[start:index])
+            start = index + 1
+        last = (index, depth)
+    if last != (len(source) - 1, 0):
+        return None
+    pieces.append(source[start:len(source) - 1])
+    if len(pieces) == 1 and not pieces[0].strip(_WHITESPACE):
+        return []  # `[]`, `{}`
+    if len(pieces) > 1 and not pieces[-1].strip(_WHITESPACE):
+        pieces.pop()  # a trailing comma; an empty piece left is a hole
+    return pieces
+
+
+def _literal_property(piece: str, depth: int) -> bool:
+    """`key: literal`, with a name, a quoted string or a number as its key."""
+    colon = next((index for index, level in _top_level(piece) if level == 0 and piece[index] == ":"), None)
+    if colon is None:
+        return False  # shorthand, spread, method or accessor
+    key = piece[:colon].strip(_WHITESPACE)
+    if not (_NAME.fullmatch(key) or _NUMBER_LITERAL.fullmatch(key)
+            or (key[:1] in "\"'" and _string(key) is not _UNKNOWN)):
+        return False  # a computed key
+    return _literal(piece[colon + 1:], depth)
+
+
+def _literal(source: str, depth: int) -> bool:
+    source = _peel(source)
+    if not source or depth > _LITERAL_DEPTH:
+        return False
+    if source in {"true", "false", "null"}:
+        return True
+    if source[0] in "+-":
+        return bool(_NUMBER_LITERAL.fullmatch(_peel(source[1:])))
+    if _NUMBER_LITERAL.fullmatch(source) or _TEMPLATE_LITERAL.fullmatch(source) or _REGEX_LITERAL.fullmatch(source):
+        return True
+    if source[0] in "\"'":
+        return _string(source) is not _UNKNOWN
+    if (source[0], source[-1]) in {("[", "]"), ("{", "}")}:
+        pieces = _members(source)
+        if pieces is None:
+            return False
+        if source[0] == "[":
+            return all(_literal(piece, depth + 1) for piece in pieces)  # a hole or a spread is none
+        return all(_literal_property(piece, depth + 1) for piece in pieces)
+    return False
+
+
+def literal_operand(expression: str) -> bool:
+    """Is the operand an exact literal (#429 Q2)?
+
+    A number, BigInt, string, template without a substitution, regular
+    expression, `true`, `false` or `null`, or an array or plain object of
+    them, as Python reads a container of literals as a literal. Read through
+    comments, parentheses and the TypeScript wrappers, as the rest of this
+    module reads an operand; a sign belongs to a number. A name is none:
+    `undefined`, `NaN` and `Infinity` are globals a file can shadow, and so
+    is a hole, a spread, a computed key or a shorthand property.
+    """
+    if len(expression) > 4096:
+        return False
+    source = _without_comments(expression)
+    return source is not None and _literal(source, 0)
+
+
+def _numeral(source: str) -> float | None:
+    """The Number an unsigned numeric literal writes, through parentheses: Python's `Constant`."""
+    source = _peel(source)
+    return None if not source or source[0] in "+-" else _number(source)
+
+
+def _no_op_operand(source: str) -> str | None:
+    """The operand of an outermost `x + 0`, `0 + x`, `x - 0`, `x * 1`, `1 * x` or `x / 1`.
+
+    Python strips exactly these from both sides of a self-comparison
+    (`_strip_identity`, THREATMODEL row 10), and only as the expression's
+    outermost operation: `a + b * 1` keeps its `* 1`, `x + -0` its `-0`, and
+    an operator that binds looser than `+` (a comparison, `&&`, `?:`, `,`,
+    an assignment) or anything this does not read leaves the text whole.
+    """
+    additive: list[tuple[int, str]] = []
+    multiplicative: list[tuple[int, str]] = []
+    ended = False  # does the code read so far end an operand?
+    depth = i = 0
+    while i < len(source):
+        char = source[i]
+        if char in _WHITESPACE:
+            i += 1
+        elif char in _QUOTES:
+            i, ended = _quoted_end(source, i), True
+        elif char in _CLOSING:
+            depth, ended, i = depth + 1, False, i + 1
+        elif char in ")]}":
+            depth, ended, i = depth - 1, True, i + 1
+            if depth < 0:
+                return None
+        elif depth:
+            i += 1
+        elif char.isdigit() or (char == "." and source[i + 1:i + 2].isdigit()):
+            number = _NUMBER_LITERAL.match(source, i)
+            if number is None:
+                return None
+            i, ended = number.end(), True
+        elif _NAME.match(source, i):
+            word = _NAME.match(source, i).group()
+            if word in {"in", "instanceof", "as", "satisfies", "yield"}:
+                return None
+            i, ended = i + len(word), word not in {"typeof", "void", "delete", "await", "new"}
+        elif source.startswith(("++", "--"), i):
+            i += 2  # postfix keeps an operand ended; prefix still awaits one
+        elif source.startswith("**", i) and not source.startswith("**=", i):
+            i, ended = i + 2, False
+        elif source.startswith("?.", i) and not source[i + 2:i + 3].isdigit():
+            i, ended = i + 2, False
+        elif char == "." and not source.startswith("...", i):
+            i, ended = i + 1, False
+        elif char in "!~" and not source.startswith("!=", i):
+            i, ended = i + 1, False
+        elif char == "/" and not ended:
+            regex = _REGEX_LITERAL.match(source, i)
+            if regex is None:
+                return None
+            i, ended = regex.end(), True
+        elif char in "+-*/%" and source[i + 1:i + 2] != "=":
+            if char in "+-" and ended:
+                additive.append((i, char))
+            elif char in "*/%":
+                if not ended:
+                    return None
+                multiplicative.append((i, char))
+            i, ended = i + 1, False
+        else:
+            return None
+    if depth:
+        return None
+    for operators, identity, commuting, inverse in ((additive, 0, "+", "-"), (multiplicative, 1, "*", "/")):
+        if not operators:
+            continue
+        position, operator = operators[-1]
+        left, right = source[:position], source[position + 1:]
+        if operator in (commuting, inverse) and _numeral(right) == identity:
+            return left
+        if len(operators) == 1 and operator == commuting and _numeral(left) == identity:
+            return right
+        return None
+    return None
+
+
+def _identity_core(expression: str) -> str | None:
+    """An operand without comments, parentheses, TS wrappers, outer no-op arithmetic or formatting."""
+    if len(expression) > 4096:
+        return None
+    source = _without_comments(expression)
+    if source is None:
+        return None
+    for _ in range(4 * _LITERAL_DEPTH):
+        source = _peel(source)
+        inner = _no_op_operand(source)
+        if inner is None or not inner.strip(_WHITESPACE):
+            break
+        source = inner
+    text = operand_text(source)
+    return None if text is None else comparable_operand(text)
+
+
+def same_operand(left: str, right: str) -> bool:
+    """Do two operands spell one expression (#429 Q7)?
+
+    Python's row-10 reading: the two texts compare once comments,
+    parentheses, the TypeScript wrappers and outer no-op arithmetic are
+    taken out of each (`f(x)` and `(f(x) as number) + 0`), and the
+    formatting `comparable_operand` takes out. Nothing is evaluated: two
+    names bound to one value, `x` and `+x`, or `a.b` and `a["b"]` are
+    different operands.
+    """
+    first, second = _identity_core(left), _identity_core(right)
+    return first is not None and first == second
