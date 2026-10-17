@@ -356,3 +356,83 @@ def test_node_assertions_through_worktree_and_committed_cli(tmp_path, before, af
         else:
             assert payload["verdict"] == "pass"
             assert payload["findings"] == []
+
+
+# The reproduction in #164 as reported: `assert` is not imported, the file is
+# tests/sum.test.js and each side is one line, byte for byte what the report's
+# `echo` wrote.
+_REPORTED = "test('s', () => {{ {} }});\n"
+
+
+def _analyze_reported(before, after):
+    return analyze(
+        [FileChange("tests/sum.test.js", "modified", _REPORTED.format(before).encode(),
+                    _REPORTED.format(after).encode())],
+        Config(), Contract(), [], datetime.date(2026, 9, 23),
+    )
+
+
+@pytest.mark.parametrize("method,strength", _EXACT_METHODS)
+@pytest.mark.parametrize("weak_callee", ["assert.ok", "assert"])
+def test_reported_unimported_exact_to_truthiness_blocks(method, strength, weak_callee):
+    ir, findings, verdict = _analyze_reported(
+        f"assert.{method}(sum(2, 2), 4);", f"{weak_callee}(sum(2, 2));",
+    )
+    unit, = ir.files[0].units
+    assert unit.before.assertions[0].strength == strength
+    assert unit.after.assertions[0].strength == S.TRUTHY
+    finding, = findings
+    assert (finding.rule, finding.severity, verdict) == ("ASSERT_WEAKENED", "high", "block")
+    assert "NO_PROD_CHANGE_IN_DIFF" in finding.escalators
+
+
+@pytest.mark.parametrize("before,after", [
+    ("assert.equal(sum(2, 2), 4);", "assert.strictEqual(sum(2, 2), 4);"),
+    ("assert.ok(sum(2, 2));", "assert.equal(sum(2, 2), 4);"),
+])
+def test_reported_unimported_preserving_rewrites_do_not_flag(before, after):
+    _ir, findings, verdict = _analyze_reported(before, after)
+    assert findings == []
+    assert verdict == "pass"
+
+
+@pytest.mark.parametrize("before,after", [
+    ("expect(sum(2, 2)).toBe(4);", "expect(sum(2, 2)).toBeTruthy();"),
+    ("assert.equal(sum(2, 2), 4);", "assert.ok(sum(2, 2));"),
+    ("assert.strictEqual(sum(2, 2), 4);", "assert.ok(sum(2, 2));"),
+])
+def test_reported_table_blocks_through_the_committed_cli(tmp_path, before, after):
+    # The report's three rows, run as its script runs them: two commits, then
+    # `checkwash check HEAD~1..HEAD` from inside the repository.
+    def git(*args):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+
+    git("init", "-b", "main")
+    git("config", "user.name", "e2e")
+    git("config", "user.email", "e2e@example.invalid")
+    git("config", "commit.gpgsign", "false")
+    (tmp_path / "tests").mkdir()
+    test_file = tmp_path / "tests" / "sum.test.js"
+    test_file.write_text(_REPORTED.format(before), encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-m", "a")
+    test_file.write_text(_REPORTED.format(after), encoding="utf-8")
+    git("commit", "-am", "b")
+
+    def check(*args):
+        return subprocess.run(
+            [sys.executable, "-m", "checkwash", "check", "HEAD~1..HEAD", *args],
+            cwd=tmp_path, capture_output=True, text=True,
+            env={**os.environ, "GREENWASH_TODAY": "2026-09-23", "NO_COLOR": "1"},
+        )
+
+    result = check()
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "verdict=block" in result.stdout
+    result = check("--format", "json")
+    assert result.returncode == 1, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["verdict"] == "block"
+    finding, = payload["findings"]
+    assert (finding["rule"], finding["severity"]) == ("ASSERT_WEAKENED", "high")
+    assert "NO_PROD_CHANGE_IN_DIFF" in finding["escalators"]
