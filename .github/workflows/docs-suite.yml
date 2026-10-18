@@ -5,7 +5,8 @@ name: docs suite
 # documented test count, benchmarks/FAILURES.md), so this job runs the whole
 # suite once on one leg instead. A pull request that also changes anything else
 # runs both this job and the full ci.yml matrix.
-# Keep this list identical to the paths-ignore list in ci.yml.
+# Keep the Markdown patterns identical to the paths-ignore list in ci.yml. The
+# last entry makes a change to this workflow run it.
 on:
   pull_request:
     paths:
@@ -13,6 +14,7 @@ on:
       - "docs/**/*.md"
       - "action/**/*.md"
       - "benchmarks/**/*.md"
+      - ".github/workflows/docs-suite.yml"
 
 permissions:
   contents: read
