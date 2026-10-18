@@ -5,6 +5,15 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+    # A pull request that changes only these Markdown files skips the matrix;
+    # docs-suite.yml runs the whole suite once for it instead, so the tests that
+    # read the documents still gate it. Pushes to main and tags run everything.
+    # Keep this list identical to the paths in docs-suite.yml.
+    paths-ignore:
+      - "*.md"
+      - "docs/**/*.md"
+      - "action/**/*.md"
+      - "benchmarks/**/*.md"
 
 permissions:
   contents: read
