@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "checkwash findings JSON, checkwash_findings_version 2",
+  "description": "The document that `checkwash check --format json` writes to standard output, as UTF-8 bytes, when it exits 0 (pass) or 1 (block); with `--emit-ir` it writes the IR instead. On exit 2, a usage, input or engine error, do not read standard output as this document; the reason is on standard error. A release can add optional keys without changing checkwash_findings_version, so a consumer must ignore keys it does not know; checkwash's own tests reject any key it emits that this schema does not declare. The contract and its change rules are in docs/stability.md; embedding guidance is in docs/embedding.md.",
+  "type": "object",
+  "required": ["checkwash_findings_version", "run", "findings", "summary", "skipped_files", "config_errors", "verdict"],
+  "properties": {
+    "checkwash_findings_version": {
+      "description": "The version of this document's shape, 2 since v0.3.0. It changes when a key is removed, renamed or changes meaning, or a required key is added, and such a change comes with a minor release. It does not change for an optional key, a new rule id or label, or a fingerprint change.",
+      "type": "integer",
+      "const": 2
+    },
+    "run": {"$ref": "#/$defs/run"},
+    "findings": {
+      "description": "Every finding, including those an exemption covers (`allowlisted` true) and those below the blocking threshold. The order is deterministic for one version, but it is not a contract across versions.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "summary": {"$ref": "#/$defs/summary"},
+    "skipped_files": {
+      "description": "Repository-relative paths of files checkwash could not parse on the base or the head side (currently Python files only).",
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "config_errors": {
+      "description": "Problems with the base side's checkwash configuration or exemption ledger: a file that could not be parsed, in which case defaults or no exemptions are in effect, and configuration values that are not valid. Display text.",
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "verdict": {
+      "description": "`block` when a finding no exemption covers reaches the effective `fail_on` severity (`--fail-on`, else the base side's `gate.fail_on`, else `high`), otherwise `pass`. The threshold is not recorded in this document. Exit status 1 goes with `block` and 0 with `pass`.",
+      "enum": ["pass", "block"]
+    }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "required": ["base", "head", "checkwash_version"],
+      "properties": {
+        "base": {
+          "description": "The base revision label: an abbreviated commit id, whose length follows Git's settings, or the merge base of an A...B range. Not a timestamp.",
+          "type": "string",
+          "minLength": 1
+        },
+        "head": {
+          "description": "The head revision label: an abbreviated commit id, or `worktree` when no range is given and the working tree is checked.",
+          "type": "string",
+          "minLength": 1
+        },
+        "checkwash_version": {
+          "description": "The checkwash version that wrote the document. A build from unreleased source can report the previous release's number.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "rule", "severity", "message", "path", "unit", "before", "after", "escalators",
+        "deescalators", "fingerprint", "allowlisted", "strength_drop", "strength_after",
+        "subject_changed", "shape"
+      ],
+      "properties": {
+        "rule": {
+          "description": "A rule id from SPEC.md §4, or EXEMPTION_ADDED. Ids are never renamed or reused, but new ids can appear without a version change.",
+          "$ref": "#/$defs/label"
+        },
+        "severity": {
+          "description": "Detectors report `warn`; only checkwash's gating moves a finding to `info`, `high` or `critical`.",
+          "enum": ["info", "warn", "high", "critical"]
+        },
+        "message": {
+          "description": "An explanation for people. Display it and do not parse it; its wording can change in any release.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The repository-relative path, with forward slashes. For EXEMPTION_ADDED, the path of an exemption ledger the diff added to.",
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "description": "The test the finding is about: a Python qualified name, with `#N` appended when several same-named definitions remain, `<suite>` for a conftest-wide control, or a JavaScript test title, which can contain `/`, `.` and spaces. Null for a finding about a whole file.",
+          "type": ["string", "null"]
+        },
+        "before": {
+          "description": "Evidence from the base side, or null.",
+          "anyOf": [{"$ref": "#/$defs/evidence"}, {"type": "null"}]
+        },
+        "after": {
+          "description": "Evidence from the head side, a description of the change where the head side has none (a removed workflow), or null.",
+          "anyOf": [{"$ref": "#/$defs/evidence"}, {"type": "null"}]
+        },
+        "escalators": {
+          "description": "Labels gating attached when it raised the severity, most of them described in SPEC.md §5, and GUARDRAIL_CREATED, which marks a newly created guardrail file left at `warn`. New labels can appear without a version change.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/label"}
+        },
+        "deescalators": {
+          "description": "Labels for the evidence gating found to hold or lower the severity, most of them described in SPEC.md §5. A later ORACLE_FREEZE escalation overrides them, so a `high` finding can carry one, and an inert conftest `pytestmark` is lowered to `info` with none. `ALLOWLISTED` marks a finding an exemption covers. New labels can appear without a version change.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/label"}
+        },
+        "fingerprint": {
+          "description": "The finding's identity, the key an exemption records. Compare it for equality and do not parse it: the unit part can contain `/`. When fingerprints change is described in docs/stability.md and docs/embedding.md.",
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*/"
+        },
+        "allowlisted": {
+          "description": "True when an active exemption read from the base side covers the finding. Such a finding never blocks, and it stays in `findings` and in `summary`.",
+          "type": "boolean"
+        },
+        "strength_drop": {
+          "description": "ASSERT_WEAKENED only: how far the assertion's strength fell. 999 is a marker, not a distance: an inverted or contradicting assertion, a reversed bound, or a replacement checkwash cannot verify, none of which is ever a mild weakening. Null for other rules.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "strength_after": {
+          "description": "ASSERT_WEAKENED only: the strength the assertion landed on, or null when it is unknown. Null for other rules.",
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "subject_changed": {
+          "description": "ASSERT_WEAKENED only: whether the assertion's subject was rewritten as well as its check, or null when an operand is unbound. It is also false when neither side recorded a subject, as for a bare truthy assert. Null for other rules.",
+          "type": ["boolean", "null"]
+        },
+        "shape": {
+          "description": "TEST_DISABLED only: the kind of event, such as `unit_removed`, `marker_added`, `collection_control`, `guard_weakened`, `param_cases_removed` or `inert_mark`. Null for other rules. New kinds can appear without a version change.",
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["text", "span"],
+      "properties": {
+        "text": {
+          "description": "The source text checkwash read, or a short description of what it read. It need not equal the text at `span`.",
+          "type": "string"
+        },
+        "span": {
+          "description": "[start, end) offsets, in Unicode code points, into the text of the file the evidence was read from, on that side, after a UTF-8 byte order mark is removed, bytes that are not UTF-8 become U+FFFD, and CRLF and CR line endings become LF. That file is usually `path`, but an assertion inherited from a conftest fixture or an imported helper, and a skip in a conftest fixture's setup, keep their span in that other file, which this document does not name. [0, 0] means no location.",
+          "type": "array",
+          "prefixItems": [
+            {"type": "integer", "minimum": 0},
+            {"type": "integer", "minimum": 0}
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "summary": {
+      "description": "How many entries of `findings` have each severity, allowlisted ones included. This is not the number of blocking findings.",
+      "type": "object",
+      "required": ["critical", "high", "warn", "info"],
+      "properties": {
+        "critical": {"type": "integer", "minimum": 0},
+        "high": {"type": "integer", "minimum": 0},
+        "warn": {"type": "integer", "minimum": 0},
+        "info": {"type": "integer", "minimum": 0}
+      }
+    },
+    "label": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    }
+  }
+}
