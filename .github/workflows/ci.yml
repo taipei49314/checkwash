@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # A newer push to the same pull request supersedes its running matrix. Every
+  # push to main or a tag gets a group of its own and is never cancelled.
+  group: ci-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     strategy:
