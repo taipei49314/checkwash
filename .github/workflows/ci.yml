@@ -32,9 +32,13 @@ jobs:
         id: python
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install -e ".[dev]"
+      # pytest-xdist splits the suite over two worker processes. Two rather than
+      # one per vCPU: the hosted runners have 3-4 vCPUs (2 physical cores on
+      # Linux and Windows), and the wall-clock budgets in tests/gates/test_perf.py
+      # and tests/test_perf_*.py need a core to themselves.
+      - run: pip install -e ".[dev]" "pytest-xdist==3.8.0"
         id: install
-      - run: pytest
+      - run: pytest -n 2 --dist worksteal
       - name: emit corpus findings (determinism artifact)
         id: emit
         if: ${{ !cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.install.outcome == 'success' }}

@@ -14,7 +14,7 @@ def job(text, name):
 def test_ordinary_ci_runs_the_full_suite_and_public_visitor():
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     candidate = job(ci, "test")
-    assert re.search(r"^      - run: pytest\s*$", candidate, re.M)
+    assert re.search(r"^      - run: pytest -n 2 --dist worksteal\s*$", candidate, re.M)
     assert all(token not in candidate for token in ("--ignore", " -k ", " -m ", "continue-on-error"))
     visitor = job(ci, "install-from-tag")
     assert "PRE_TAG_CANDIDATE" not in visitor and "exit 0" not in visitor
