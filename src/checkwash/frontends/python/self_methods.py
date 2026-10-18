@@ -16,9 +16,29 @@ answer it (ruling 306, 2026-10-14):
   resolves only in a same-file class reached before the first opaque entry.
   It stays unresolved on a C3 failure, a class name the module binds more
   than once, a decorator on the running class or on any class up to the one
-  that binds the name, or a metaclass (or any class keyword),
-  `__init_subclass__` or `__getattribute__` on any same-file class in the
-  order.
+  that binds the name, unless it returns the class it decorates, or a
+  metaclass (or any class keyword), `__init_subclass__` or
+  `__getattribute__` on any same-file class in the order. Only the module's
+  own name counts as bound again (#487): a statement at module scope, under
+  a compound statement too, the header of a def, class or lambda there, or
+  an assignment expression in a comprehension there binds it; a function,
+  lambda or class body is read as binding a local name, unless a body
+  declares it `global` (a metaclass whose `__prepare__` returns the module's
+  namespace is not read). The decorators that return the class are a fixed
+  list (#487), read through the module's import bindings with no `*` or
+  `**` argument: `pytest.mark.<name>`, bare or called, but not with one
+  positional argument that is not a constant, which pytest returns to
+  decorate the class itself; and unittest's `skip(<str>)`,
+  `skipIf(<condition>, <str>)` and `skipUnless(<condition>, <str>)`, with
+  the reason a string literal, and bare `expectedFailure`. A form that can
+  disable a test (unittest's, `parametrize`, or a mark that is not only a
+  label) is transparent only on the running class and only where its units
+  carry it: a skip in a spelling the frontend reads as one, or a
+  `usefixtures` of literal names. A root the module binds more than once,
+  declares `global` or stores or deletes an attribute or item under, or
+  that a star import may bind, is opaque, and so is every form of a package
+  that a store, setter or patch reaches through its target, by any name an
+  import binds into the package or by a dotted string.
 - Sub-Q3: in the first class of the order that binds the name, its one
   binding is a plain def in the class body, not under `if` or `try`. Nowhere
   in the module does code store or delete `.<name>`, store into a
@@ -72,6 +92,125 @@ _DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
 _LOOKUP = ("__init_subclass__", "__getattribute__")
 _SETATTR = {"setattr", "delattr", "object.__setattr__", "object.__delattr__",
             "builtins.setattr", "builtins.delattr"}
+# The last names of calls that write into their first argument (#487).
+_SETTERS = frozenset({"setattr", "delattr", "setitem", "delitem",
+                      "__setattr__", "__delattr__", "__setitem__", "__delitem__"})
+_DICT_SETTERS = frozenset({"update", "setdefault", "pop", "popitem", "clear", "__setitem__", "__delitem__"})
+# unittest's class decorators that return the class they decorate, as a
+# fixed literal list read through the bindings to `unittest` or
+# `unittest.case` (#487; `Lib/unittest/case.py` of CPython 3.11 to 3.14):
+# each skip by the position of its reason, which `reason=` may pass instead.
+# Bare, a skip returns its inner function; and a function passed as the
+# reason comes back wrapped, so only a string literal is read.
+_SKIPS = {
+    "unittest.skip": 0, "unittest.case.skip": 0,
+    "unittest.skipIf": 1, "unittest.case.skipIf": 1,
+    "unittest.skipUnless": 1, "unittest.case.skipUnless": 1,
+}
+_EXPECTED = frozenset({"unittest.expectedFailure", "unittest.case.expectedFailure"})
+# The marks that skip or xfail a test, as `frontend._SKIP_DECORATORS` reads them.
+_SKIP_MARKS = frozenset({"skip", "skipif", "xfail"})
+_COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+
+
+def _is_mark(full: str) -> bool:
+    """Is this dotted target `pytest.mark.<name>`? `MarkGenerator.__getattr__`
+    rejects a name that starts with `_`."""
+    parts = full.split(".")
+    return len(parts) == 3 and parts[:2] == ["pytest", "mark"] and not parts[2].startswith("_")
+
+
+def _skips(full: str) -> bool:
+    """Is this transparent form one the frontend reads as a skip of the class it decorates?"""
+    return full in _SKIPS or full in _EXPECTED or (_is_mark(full) and full.rsplit(".", 1)[-1] in _SKIP_MARKS)
+
+
+def _disables(full: str) -> bool:
+    """Can this transparent form disable the tests of the class it decorates?
+
+    unittest's forms skip or xfail; a mark can unless it only labels an
+    item (#209 Q2): `usefixtures`, `dependency` and any mark named for a
+    skip or an xfail; and `parametrize`, whose class-level rows the frontend
+    does not read (an empty list skips every test).
+    """
+    from checkwash.frontends.python.hook_guards import _labelling
+
+    mark = full.rsplit(".", 1)[-1]
+    return _skips(full) or (_is_mark(full) and (mark == "parametrize" or not _labelling(mark)))
+
+
+def _carried(full: str, name: str, call: ast.Call | None) -> bool:
+    """Do the units of the class this disabling form decorates carry it?
+
+    The frontend reads a skip by its trailing name (`frontend._canonical_marker`),
+    so not under another one (`from unittest import skipIf as when`), and a
+    `usefixtures` of literal names (`setup_skip_controls._usefixtures`).
+    Nothing reads `dependency`, a mark only named for a skip, or a class's
+    `parametrize` rows.
+    """
+    if _skips(full):
+        from checkwash.frontends.python.frontend import _canonical_marker
+
+        return _canonical_marker(name) is not None
+    if full == "pytest.mark.usefixtures":
+        return call is None or (not call.keywords and all(_literal(arg) is not None for arg in call.args))
+    return False
+
+
+def _through_dict(node) -> bool:
+    """Is this `x.__dict__` or `vars(x)`?"""
+    return getattr(node, "attr", None) == "__dict__" or (
+        isinstance(node, ast.Call) and dotted_name(node.func) == "vars")
+
+
+def _module(target: str) -> str:
+    """The package of a native dotted target; `_pytest` and `py.test` are pytest's."""
+    top = target.split(".")[0]
+    return "pytest" if top in ("_pytest", "py") else top
+
+
+def _header(node) -> list:
+    """The parts of a def, class or lambda that run in the scope holding it."""
+    if isinstance(node, ast.ClassDef):
+        return [*node.decorator_list, *node.bases, *node.keywords]
+    if isinstance(node, ast.Lambda):
+        return [node.args]
+    return [*node.decorator_list, node.args, *([node.returns] if node.returns is not None else [])]
+
+
+def _module_binds(tree: ast.Module):
+    """(name, node) for each binding of a name in module scope (ruling 487 (c)).
+
+    That is each statement at module scope, under a compound statement too,
+    with an `except ... as` or a match capture there, and the header of each
+    def, class and lambda in it: decorators, bases, class keywords, defaults
+    and annotations. A comprehension's own targets bind its scope, but an
+    assignment expression in it binds this one (PEP 572). No function,
+    lambda or class body is read: what it binds is local, unless it declares
+    the name `global`, which the caller reads.
+    """
+    stack = [(statement, False) for statement in tree.body]
+    while stack:
+        node, comprehension = stack.pop()
+        if isinstance(node, (*_DEFS, ast.ClassDef, ast.Lambda)):
+            if not isinstance(node, ast.Lambda):
+                yield node.name, node
+            children = _header(node)
+        elif isinstance(node, ast.NamedExpr):
+            yield node.target.id, node.target
+            children = [node.value]
+        else:
+            if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and not comprehension:
+                yield node.id, node
+            elif isinstance(node, ast.alias):
+                yield node.asname or node.name.split(".")[0], node
+            elif isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)) and node.name:
+                yield node.name, node
+            elif isinstance(node, ast.MatchMapping) and node.rest:
+                yield node.rest, node
+            children = list(ast.iter_child_nodes(node))
+            comprehension = comprehension or isinstance(node, _COMPREHENSIONS)
+        stack.extend((child, comprehension) for child in children)
 
 
 def _literal(node) -> str | None:
@@ -115,6 +254,8 @@ class Methods:
     """One module's same-file method resolution for calls through an instance."""
 
     def __init__(self, tree: ast.Module) -> None:
+        from checkwash.frontends.python.setup_skip_controls import _names, module_bindings
+
         self.classes: dict[str, ast.ClassDef] = {}
         counts: dict[str, int] = {}
         for statement in tree.body:
@@ -126,26 +267,64 @@ class Methods:
             if isinstance(statement, (*_DEFS, ast.ClassDef)) and statement.name in self.classes:
                 counts[statement.name] = counts.get(statement.name, 0) + 1
         self.rebound.update(name for name, count in counts.items() if count > 1)
+        # Only a binding of the module's own name rebinds it (ruling 487 (c)).
+        # Another class or def of that name under a module-level `if` or `try`
+        # may be the one that runs (Sub-Q2); one in a body is local.
+        scoped: dict[str, int] = {}
+        for name, node in _module_binds(tree):
+            scoped[name] = scoped.get(name, 0) + 1
+            if name in self.classes and node is not self.classes[name]:
+                self.rebound.add(name)
+        # A class decorator is read through the module's import bindings
+        # (#487). A decorator runs when its class statement does, so a root
+        # bound more than once is opaque in any order: counted per top-level
+        # statement, as `OwnMarks` counts (#358), and per binding in module
+        # scope, which also reads the headers `_names` stops at. A star
+        # import may bind any root.
+        self._bindings = module_bindings(tree)
+        per_statement: dict[str, int] = {}
+        for statement in tree.body:
+            for name in _names([statement]):
+                per_statement[name] = per_statement.get(name, 0) + 1
+        self._opaque = {name for name, count in (*per_statement.items(), *scoped.items()) if count > 1}
+        self._star = "*" in scoped
+        # A store, `setattr` or patch under any name an import anywhere binds
+        # into a package changes that package for every spelling of it
+        # (#487): `pytest.mark.slow = wrap` reaches `@mark.slow` too, and
+        # `from _pytest.mark.structures import MarkDecorator` is pytest's.
+        self._imported: dict[str, set[str]] = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    local = alias.asname or alias.name.split(".")[0]
+                    self._imported.setdefault(local, set()).add(_module(alias.name))
+            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                for alias in node.names:
+                    if alias.name != "*":
+                        self._imported.setdefault(alias.asname or alias.name, set()).add(_module(node.module))
+        self._mutated: set[str] = set()
         # Attribute names something stores or deletes, and literal names
         # reflective calls or patches name, anywhere in the module.
         self.stored: set[str] = set()
         self.dict_store = False
         self.computed: set[str] = set()  # receiver roots of a computed-name setattr/delattr
         for node in ast.walk(tree):
-            if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and node.id in self.classes:
-                self.rebound.add(node.id)
-            elif isinstance(node, ast.alias) and (node.asname or node.name.split(".")[0]) in self.classes:
-                self.rebound.add(node.asname or node.name.split(".")[0])
-            elif (isinstance(node, (*_DEFS, ast.ClassDef)) and node.name in self.classes
-                  and node is not self.classes[node.name]):
-                # Another class or def of that name anywhere, under a module-level
-                # `if` or `try` too, may be the one that runs (Sub-Q2).
-                self.rebound.add(node.name)
+            if isinstance(node, ast.Global):
+                # A body that declares the name `global` binds the module's
+                # (ruling 487 (c)).
+                self.rebound.update(name for name in node.names if name in self.classes)
+                self._opaque.update(node.names)
             elif isinstance(node, ast.Attribute) and isinstance(node.ctx, (ast.Store, ast.Del)):
                 self.stored.add(node.attr)
+                # A stored `pytest.mark.slow` wins over the mark
+                # `MarkGenerator.__getattr__` would make (#487).
+                self._opaque.add(_root(node) or "")
+                self._mutate(node)
             elif isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del)):
                 if isinstance(node.value, ast.Attribute) and node.value.attr == "__dict__":
                     self.dict_store = True
+                self._opaque.add(_root(node) or "")
+                self._mutate(node)
             elif isinstance(node, ast.Call):
                 self._call(node)
         self._orders: dict[int, tuple | None] = {}
@@ -154,6 +333,7 @@ class Methods:
 
     def _call(self, node: ast.Call) -> None:
         name = dotted_name(node.func) or ""
+        self._writes(node, name)
         if name in _SETATTR and len(node.args) >= 2:
             key = _literal(node.args[1])
             if key is not None:
@@ -169,6 +349,85 @@ class Methods:
             target = _literal(_argument(node, 0, "target"))
             if target is not None:
                 self.stored.add(target.rsplit(".", 1)[-1])
+
+    def _writes(self, node: ast.Call, name: str) -> None:
+        """Record the packages a call that may write into its target reaches (#487).
+
+        A setter or deleter by its last name (`setattr`, `b.setattr`,
+        `type.__setattr__`, `monkeypatch.setitem`), any `patch` (`patch.object`,
+        `patch.multiple`, `patch.dict`, a dotted-string target), and a dict
+        method on `x.__dict__` or `vars(x)` write into their first argument,
+        a bound `x.__setattr__(...)` into `x`. Only the target is read, never
+        the value: `patch.object(Total, "rate", mock.Mock())` reaches no
+        package through `mock`.
+        """
+        func = node.func
+        last = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        owner = func.value if isinstance(func, ast.Attribute) else None
+        dict_owner = owner is not None and _through_dict(owner)
+        if not (last in _SETTERS or "patch" in name.split(".")
+                or last in _DICT_SETTERS and (dict_owner or node.args and _through_dict(node.args[0]))):
+            return
+        if any(isinstance(arg, ast.Starred) for arg in node.args):
+            # `setattr(*(target, name, value))`: any argument may be the target.
+            targets = list(node.args)
+        else:
+            first = node.args[0] if node.args else _argument(node, 0, "target") or _argument(node, 0, "in_dict")
+            targets = [first] if first is not None else []
+        if owner is not None and (last.startswith("__") or dict_owner):
+            targets.append(owner)
+        for target in targets:
+            self._mutate(target)
+            text = _literal(target)
+            if text is not None:
+                # `mock.patch("pytest.mark.slow", wrap)`
+                self._mutated.add(_module(text))
+
+    def _mutate(self, target) -> None:
+        """Record the packages a store's, `setattr`'s or patch's target names (#487)."""
+        for node in ast.walk(target):
+            if isinstance(node, ast.Name):
+                self._mutated.update(self._imported.get(node.id, ()))
+
+    def _transparent(self, decorator, running: bool) -> bool:
+        """Does this class decorator return the class it decorates (#487)?
+
+        `running` says whether it decorates the class running the test.
+        """
+        call = decorator if isinstance(decorator, ast.Call) else None
+        name = dotted_name(call.func if call is not None else decorator)
+        if name is None:
+            return False
+        first, dot, rest = name.partition(".")
+        target = self._bindings.get(first)
+        if not target or first in self._opaque or self._star or _module(target) in self._mutated:
+            return False
+        full = target + dot + rest
+        if _disables(full) and not (running and _carried(full, name, call)):
+            # A form that can disable a test is admitted only where the units
+            # carry it: a base's decorators reach only its own units
+            # (THREATMODEL row 117), and the running class's units carry only
+            # what the frontend reads (#487).
+            return False
+        if call is None:
+            return _is_mark(full) or full in _EXPECTED
+        if any(isinstance(arg, ast.Starred) for arg in call.args) or any(k.arg is None for k in call.keywords):
+            # `*` and `**` pass what the call does not spell.
+            return False
+        if _is_mark(full):
+            # `MarkDecorator` returns a lone class or function argument, and
+            # that then decorates the class.
+            return not (len(call.args) == 1 and not call.keywords and not isinstance(call.args[0], ast.Constant))
+        position = _SKIPS.get(full)
+        if position is None:
+            return False
+        if len(call.args) == position + 1 and not call.keywords:
+            reason = call.args[position]
+        elif len(call.args) == position and [k.arg for k in call.keywords] == ["reason"]:
+            reason = call.keywords[0].value
+        else:
+            return False
+        return _literal(reason) is not None
 
     def binds(self, cls: ast.ClassDef) -> dict[str, list[ast.stmt]]:
         if id(cls) not in self._binds:
@@ -247,7 +506,8 @@ class Methods:
             if isinstance(entry, tuple):
                 # An opaque base may define it or not.
                 return None
-            if entry.decorator_list:
+            if not all(self._transparent(decorator, entry is cls) for decorator in entry.decorator_list):
+                # Any other decorator may replace the class (#487).
                 return None
             bindings = self.binds(entry).get(name)
             if not bindings:
