@@ -149,9 +149,12 @@ The document did not change. These round entries in `DECISIONS.md` record
 moved fingerprints of existing findings, which the v0.7.0 release notes do not
 mention: D-097 (CI_WORKFLOW_TOUCHED reasons); D-100 (a skip raised in a test
 body became TEST_DISABLED); D-102, D-103 and D-104 (findings that changed
-rule); and D-102, D-112, D-115, D-117 and D-118 (removed tests whose recorded
-assertions changed). The list comes from those entries, not from a sweep. Some
-Git input failures that used to pass exit 2 instead
+rule); and D-102, D-112, D-115 and D-117 (removed tests whose recorded
+assertions changed). D-118 (AVA and tap) records no moved key in its own
+fingerprint section, but its sweep of five JavaScript histories found 39
+records where only a fingerprint or a message changed. Apart from D-118's
+sweep, the list comes from the entries, not from real history. Some Git input
+failures that used to pass exit 2 instead
 ([known issues](KNOWN-ISSUES-v0.7.0.md)).
 
 ### Unreleased changes on main
