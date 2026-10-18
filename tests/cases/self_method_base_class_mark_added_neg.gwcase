@@ -1,0 +1,37 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a pytest mark added to the same-file base that defines the helper method leaves it resolved, so its assertion pairs with itself
+origin: #487, ruling 487 (a) - every class up to the binder may carry a mark that returns the class it decorates
+=== before: tests/test_billing.py ===
+import unittest
+
+from app.billing import total
+
+
+class Checks(unittest.TestCase):
+    def _check(self, value):
+        self.assertEqual(value, 78.75)
+
+
+class TotalTest(Checks):
+    def test_total(self):
+        self._check(total([50.0, 28.75]))
+=== after: tests/test_billing.py ===
+import unittest
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.mark.slow
+class Checks(unittest.TestCase):
+    def _check(self, value):
+        self.assertEqual(value, 78.75)
+
+
+class TotalTest(Checks):
+    def test_total(self):
+        self._check(total([50.0, 28.75]))
+=== expect ===
+[]

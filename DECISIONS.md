@@ -12007,3 +12007,279 @@ seven later commits that change it (`3ee503f7`, `16601f48`, `80842f81`,
 In the same reply the owner chose 「開 follow-up，先選 (c)」: the class of
 misreadings no refusal notices is a documented residual for now, filed
 as #490.
+
+## D-149 (2026-10-18): a transparent class decorator and a function-local class name leave a helper method resolved (#487)
+
+Ruling 487 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"; #487
+issuecomment-6248630528, stating each decision in full, as the list it
+answers, whose item 8 is #487, was prepared off GitHub): (a) adopted with
+the stdlib forms, (b) not adopted, (c) adopted. #487: since #306's fix
+(D-145, #476, `81c69d28`), a decorator on any class of the order up to the
+binder left every helper method reached through `self` unresolved
+(`self_methods.py:250-251@81c69d28`), so adding one read its `via`
+assertions as removed (ASSERT_REMOVED at warn, raised to high under
+NO_PROD_CHANGE_IN_DIFF), unstated in D-145 and row 91; and a class local
+to a test method, named like the test class, was read as rebinding the
+module's class (scrapy `02ed71d887`).
+
+Implementation, in `frontends/python/self_methods.py` only (lines at this PR):
+
+- (a), with the stdlib forms, superseding D-145 Sub-Q2's decorator clause:
+  a class of the order up to the binder leaves the call unresolved only
+  when a decorator on it is not transparent (`Methods._resolve`,
+  `:509-511`; `Methods._transparent`, `:392-430`). Names are read through
+  `setup_skip_controls.module_bindings` with its default `mutated=True`
+  (`:284`, not #220's `mutated=False`), so `@pt.mark.slow` under
+  `import pytest as pt` is `pytest.mark.slow`, and no call with a starred
+  or `**` argument is transparent (`:414-416`). Transparent are
+  `pytest.mark.<name>` with no leading `_` (`_is_mark`, `:116-120`), bare
+  or called, but not with one positional argument, and no keyword, that is
+  no `ast.Constant` (`:417-420`; the rule of `own_marks.py:528-532`, #358,
+  D-126, replacing the issue's wider list); and, from `unittest` or
+  `unittest.case`, a fixed literal list as Sub-Q6's (`_SKIPS`, `_EXPECTED`,
+  `:105-110`): `skip(<str>)`, `skipIf(<condition>, <str>)` and
+  `skipUnless(<condition>, <str>)`, the reason a `str` constant at its
+  position or as the only keyword, `reason=` (`:421-430`), and bare
+  `expectedFailure`; a form that can disable a test only as the two
+  departures below allow. Not transparent: bare `@unittest.skip`, a reason
+  that is no string literal, `expectedFailure(...)` called, a name that
+  resolves to `twisted.trial`, every other decorator (#306
+  issuecomment-6170351314, item 2), a same-file value such as
+  `slow = pytest.mark.slow` (not followed this round), and, as ruled, a
+  form under a root the module binds more than once (as
+  `own_marks.py:306-334` counts) or stores or deletes an attribute under
+  (`pytest.mark.slow = wrap`), or that readings 1 to 4 and 11 make opaque
+  (`:401-404`), all read in any order, as a class decorator runs with its
+  class statement.
+- Sources, read on 2026-10-18 as text: CPython's `Lib/unittest/case.py`,
+  `def skip` to `expectedFailure` and `_id`, is the same on 3.11 to 3.14
+  and main (101-102 and 147-185 on 3.11, 102-103 and 157-195 on 3.14), the
+  four names exported eagerly; pytest `cb6ff97b`, as main `420cf37a`, has
+  `istestfunc`, `MarkDecorator.__call__` and `MarkGenerator.__getattr__` at
+  `src/_pytest/mark/structures.py:56-57, 420-433, 610-649` (`_` rejected at
+  612-613). Run time is looser twice, leaving unresolved a call that could
+  resolve: `skip` returns the class for any reason but a plain function,
+  `skipIf` and `skipUnless` through `_id` when the condition does not skip.
+- (b), not adopted, in general or for class decorators (a value judgement;
+  the owner took the agent's lean): a helper resolved at the parent only
+  keeps reading as its assertions removed (`ir/diffalign.py:127-136`),
+  which catches row 91's "stop invoking it while leaving it in place" and
+  which #502 (#306's residual spellings) relies on; (b) would return those
+  commits to #306's zero findings, and with (a) clears no measured finding.
+  Instead a fourth stated cost joins D-145's three (Sub-Q7's, Sub-Q4's
+  two): a class decorator outside the admitted list, added to a class up
+  to the binder, reads as the helper's assertions removed
+  (`self_method_class_decorator_added_pos`,
+  `test_stated_cost_an_arbitrary_class_decorator_added_reads_as_the_helpers_assertions_removed`),
+  and removed reads nothing as removed (`ir/diffalign.py:130-136`,
+  `test_an_arbitrary_class_decorator_removed_reads_nothing_as_removed`); an
+  admitted form left unresolved costs the same. As with Sub-Q7, a
+  follow-up for vetted class-returning decorators (`mock.patch` on a class,
+  Django's `override_settings`) waits until the cost proves real: D-145's
+  review puts every decorator finding of the standard and D-088 sets in
+  the six commits below, all admitted; elsewhere it is unmeasured (the
+  #421 cache's eleven repositories include no Django).
+- (c), adopted: only a binding of the module's own name rebinds a module
+  class, as D-145 Sub-Q2's "a class name the module binds more than once"
+  says (ruling 306: "a duplicate or rebound class name"); D-145's Cost
+  said the old any-depth walk (`self_methods.py:134-143@81c69d28`) went
+  beyond it. A binding `_module_binds` (`:181-213`) yields, but the class's
+  own statement, rebinds it (`:270-277`): a statement at module scope,
+  under a module-level `if`, `try`, `for`, `while`, `with` or `match` too,
+  with an `except ... as` or match capture (missed before); an assignment
+  expression there, in a comprehension too (PEP 572); a def's, class's or
+  lambda's header there (`_header`, `:172-178`: decorators, bases, class
+  keywords, defaults, annotations), as `class Other((TotalTest := Fake))`;
+  and any body declaring the name `global` (`:312-316`). Other bodies bind
+  locally (`setup_skip_controls._names` alone reads no header or body); the
+  top-level class and def count (`:265-269`) and Sub-Q3's walk stay.
+
+**Two departures from the ruling, for the owner's approval.** The ruling
+admits (a)'s forms on any class up to the binder in any spelling, since,
+as a subset of what the frontend reports as TEST_DISABLED
+(`frontend.py:124-136`), their effect stays reported. That holds only
+where a unit carries the decorator; elsewhere a form that can disable a
+test leaves the call resolved on both sides, and the commit can pass with
+no finding where main `54294b47` reads the helper's assertions as removed.
+Such a form (`_disables`, `:128-139`) is a skip form (`_skips`,
+`:123-125`: the unittest forms, the marks `skip`, `skipif`, `xfail`),
+`usefixtures`, `dependency`, another mark named for a skip or xfail (#209
+Q2, `hook_guards._labelling`), or `parametrize`, whose class-level rows
+the frontend does not read (an empty list skips every test). It is
+transparent only (`:406-411`):
+
+1. On the class running the test (`entry is cls`, `:509`): a unit carries
+   its own class's decorators and, for an inherited test, the defining
+   class's (`frontend.class_marks`, `frontend.py:4197-4201, 4387`), not a
+   base's (THREATMODEL row 117). Pinned by
+   `test_a_skip_on_a_base_up_to_the_binder_leaves_the_call_unresolved` (11 forms)
+   and `test_a_skip_added_to_a_base_keeps_reading_as_the_helpers_assertions_removed`.
+2. Where the running class's units carry it (`_carried`, `:142-157`): a
+   skip form only when `frontend._canonical_marker` reads its name as
+   spelled, by trailing parts (`frontend.py:1831-1851`, used at `:1898`;
+   it resolves no name, accepting `*.mark.skip` from any root): a last
+   part `skip`, `skipIf`, `skipUnless` or `expectedFailure`, or last two
+   `mark.skip`, `mark.skipif` or `mark.xfail`, so not `@when(...)` under
+   `from unittest import skipIf as when` or `@m.xfail` under
+   `from pytest import mark as m`; a `usefixtures` only bare or with only
+   str-literal positional arguments and no keyword, as
+   `setup_skip_controls._usefixtures` (`setup_skip_controls.py:627-632`)
+   reads; never `dependency`, a mark only named for a skip, or
+   `parametrize`. Pinned by
+   `test_a_skip_spelled_as_the_frontend_does_not_read_it_leaves_the_call_unresolved` and
+   `test_a_disabling_mark_the_running_classs_units_do_not_carry_leaves_the_call_unresolved`.
+
+The alternative to each is the ruling's scope, with a further stated cost:
+such a form added to a base up to the binder (1), or to the running class
+in a form its units do not carry (2), disables tests with no finding.
+
+Readings where the ruling is silent, accepted with this entry (1 to 7 err
+toward unresolved, 8 and 9 follow (c), 10 keeps the old walk's reading):
+
+1. A store or del under a root (`_root`, `:220-228`: `type(x).y` is under
+   `x`) is read anywhere, bodies included (`:317-327`), and a write reaches
+   a package through any name any `import` or absolute `from ... import`
+   binds (`:291-305`, `_mutate` at `:386-390`; `_module`, `:166-169`, reads
+   `_pytest` and `py` as pytest), as `MarkDecorator.__call__ = wrap` does
+   under `from _pytest.mark.structures import MarkDecorator`.
+2. A star import makes every root opaque (`:290`).
+3. A root is bound more than once by either count (`:273-275`,
+   `:285-289`), per top-level statement or per binding: `import unittest`
+   beside `import unittest.mock` makes `unittest` opaque.
+4. `global <root>` anywhere, at module level too, makes it opaque (`:316`).
+5. A root no import binds is not transparent.
+6. Only `pytest.mark.<name>`: not `py.test.mark.<name>`, `pytest.mark._x`
+   or `pytest.mark.<name>.with_args(...)`.
+7. `skip` takes one positional argument or only `reason=`; `skipIf` and
+   `skipUnless` take the condition by position only (not `condition=`);
+   nothing further. The reason is a `str` constant (empty or implicitly
+   concatenated too), not an f-string, a t-string, a `+` or a name.
+8. A comprehension's own target at module scope rebinds no module class
+   (the old walk read it so), but counts for a decorator root.
+9. A walrus in a lambda's default binds the module's name, unlike its body's.
+10. Annotations are module-scope code even under `from __future__ import
+    annotations` (`TotalTest: int` rebinds); type parameters are not read.
+11. Writes are read by target (`Methods._writes`, `:353-384`, from
+    `_call`, `:336`), catching the named residual
+    `setattr(pytest.mark, "slow", wrap)` and its kind: a call whose last
+    name is in `_SETTERS` (`:96-97`: the set and delete names and their
+    dunders, as `b.setattr` under `import builtins as b`), any call with a
+    `patch` component, and a `_DICT_SETTERS` method (`:98`) on `x.__dict__`
+    or `vars(x)` (`:160-163`) or with such a first argument. The target is
+    the first positional argument, or `target=` or `in_dict=`, all
+    arguments when one is starred, and the owner of a bound
+    `x.__dunder__(...)` or dict method; never the value, so
+    `patch.object(Other, "rate", unittest.mock.Mock())` reaches nothing. A
+    str-literal target adds its package (`mock.patch("pytest.mark.slow",
+    wrap)`). Sub-Q3's bookkeeping (`_SETATTR`, `:93-94`; `:337-351`) stays.
+
+Residuals, by kind: a write the reading does not name (a setter or patcher
+under a name it does not list; a write through a value the file computes,
+such as a same-file alias `m = pytest.mark`, a function parameter or a
+call's return value, since following aliases would let `m = mock.Mock()`
+then `m.x = 1` take every unittest form; or into a module named by a
+string key, such as `globals()["pytest"]`, `sys.modules`, `__import__` or
+`importlib`) and a store in a conftest or plugin leave an admitted form
+transparent; a star import that binds a module class's name is not read
+as binding it again, as the old walk did not read it; and a class body
+run under a metaclass whose `__prepare__`
+returns the module's namespace is read as binding local names, so its
+`TotalTest = None`, which the old walk caught, rebinds nothing. The owner
+kept this a residual (below); the code alternative, not adopted, was to
+read as module scope the body of any class statement, at any depth, that
+has any keyword or whose same-file base chain reaches any keyword or a
+base the file does not define.
+
+Conservative side effects, each leaving unresolved a call that could
+resolve, so an admitted form added there reads as the helper's assertions
+removed: a write whose target names `unittest` or anything imported from
+it makes every unittest form in the file opaque (`mock.x = 1` under
+`from unittest import mock`; `unittest.TestCase.maxDiff = None`, as #220's
+note at `setup_skip_controls.py:466-468` says for `mutated=True`); a
+disabling form on a base stays unresolved for a test the running class
+inherits from it, although that unit carries it (`frontend.py:4387`); and
+`dependency`, skip-named marks and class-level `parametrize` stay
+unresolved even on the running class.
+
+**Effect, by reading.** This clears the 213 findings of six scrapy commits
+in #421's sweep (#487 body; D-145 Cost): 179 from pytest marks
+(`c8aa429c9b` 168, `e058a05763` 8, `14737e91ed` 3) and 34 from `skipIf`
+and `skipUnless` (`36c3c9713e` 4, `c5b1ee8101` 24, `c76190d491` 6).
+`c8aa429c9b` goes back to pass with its 4 warn findings and `e058a05763`
+with its 6 TEST_DISABLED warn (COMPAT_GATE); the other four stay block on
+their existing findings, without the 37 added ASSERT_REMOVED. By a
+read-only check of their changed test files in the sweep's scrapy cache
+(`git show`, `grep`, no engine), every added class decorator is a label
+mark (`requires_reactor`, `requires_http_handler`, `requires_mitmproxy`)
+or a skip in a spelling `_canonical_marker` reads (`pytest.mark.skipif`,
+`skipIf`, `unittest.skipUnless`) on a running class with no same-file
+subclass, or on `Https2TestCase` (`c5b1ee8101`), whose only methods are
+tests and a `setUpClass` over an imported base, so no subclass's helper
+call resolves through it; none is `parametrize`, `dependency`,
+`usefixtures` or a skip-named mark; each root has one top-level import,
+with no `global` or star import; and no write's target names a name
+imported from `unittest` or `pytest` (patch targets are scrapy classes or
+dotted strings under `scrapy` or `google.cloud`). So no reading or
+departure keeps any of the 213. In `02ed71d887` the commit side now
+resolves and its leftover `via` assertion pairs with its rewritten twin,
+not `test_simple`'s: its 1 ASSERT_SUBSTITUTED high goes, it stays block on
+its 71 TEST_DISABLED high, and #306's separate ASSERT_WEAKENED high there
+is unaffected. The frontend still follows `TestItem(new="New")` into the
+module test class although a local class shadows the name, outside #487.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. On main `54294b47` the only
+`.gwcase` fixtures with a class decorator are
+`abstract_base_subclass_skipped_pos` and `class_skip_pos`, and none binds
+a module class's name in a body or declares `global`. The inline sources
+with a class decorator the ruling's (a) admits (under `tests/`,
+`test_frontend.py:242`, `test_setup_phase_skips.py:281,289`, whose
+`parametrize` this entry leaves unresolved,
+`test_issue223_conftest_request_side.py:135,151`,
+`test_issue358_own_mark_guards.py:206,224,259` and
+`test_issue254_class_attribute_guards.py:305`) reach no helper method
+through `self`; the others (`@decorate`, the alias `@later`) and
+the `@decorate` cases in `tests/test_issue306_self_methods.py` stay
+unresolved. Nothing under `tests/gates` changed; if CI shows an existing
+expectation moving, the round stops.
+
+**Fingerprints and IR.** No fingerprint scheme, IR field or key changes.
+More calls resolve, so `--emit-ir` gains `via` assertions and
+class-qualified `helper_calls` keys for helper methods of classes with an
+admitted decorator, or whose name only a body binds again (not measured).
+
+**Release.** #476 is in no tag (v0.8.0 is from 2026-10-15), so this
+changes no released behaviour. The ruling makes (a) with the stdlib forms
+block the next release; (c) goes in the same PR but does not. If the owner
+releases before this merges, `docs/KNOWN-ISSUES-next.md` gets a #487 row.
+Any release still needs the owner's one-time named authorization.
+
+**Measurement.** Not measured yet. After the fix merges, the standard set
+and D-088's sets are rerun before and after where the owner approves, as a
+checkwash-lab-declared run: on LAPTOP-01AGNPJU only under EC POLICY
+`checkwash-pju-sweep` (T-546), with the frozen manifest and engine commits
+approved first, otherwise on the pool; the whole sets, not only these
+seven commits, since new `via` assertions can add findings in classes
+decorated on both sides, or whose name only a body binds again. The effect
+above is expected; the measured cost goes here once the rerun has run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test or IR emission was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: five `.gwcase` fixtures
+(`self_method_class_mark_added_neg`, `self_method_base_class_mark_added_neg`,
+`self_method_class_decorator_added_pos`, `self_method_class_skipif_added_pos`,
+`self_method_local_class_same_name_pos`), labels reviewed before merge,
+and 94 collected items in `tests/test_issue306_self_methods.py`, counted
+from its parametrize lists, which pin the ruling's stay-unresolved forms;
+no existing test changed. By reading, the documented test count becomes
+19450 (19351 + 94 + 5); CI's collection checks it.
+
+The agent wrote this entry in #487's fix PR #503. The maintainer approved
+it on 2026-10-18: 「核可 #503：SPEC 26512274、第 91 列 63650ccc、D-149
+377c133d 的措辭照草稿；兩個偏離採你的建議（停用類形式只在執行測試的類別上、
+且只在 units 帶得到時才透明）；11 個讀法照 D-149；metaclass 留作殘留；5 個
+gwcase 標籤照寫。CI 全綠就代合。」, in reply to the agent's list asking for
+approval of this PR's SPEC (26512274), THREATMODEL (63650ccc) and D-149
+(377c133d) text, the two departures, the eleven readings, the metaclass
+residual and the five fixtures' labels.

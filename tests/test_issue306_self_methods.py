@@ -167,6 +167,262 @@ def test_a_class_name_bound_again_under_a_compound_statement_leaves_the_call_unr
     assert via(source) == []
 
 
+# -- #487 (a): a class decorator that returns the class ----------------------------
+
+# The running class undecorated, a header that imports pytest too, and the class marked.
+CLASS = "class TotalTest(unittest.TestCase):\n" + CHECK + TEST
+PYTEST = HEAD.replace("import unittest\n", "import unittest\nimport pytest\n")
+MARKED = "@pytest.mark.slow\n" + CLASS
+
+
+@pytest.mark.parametrize("imports, decorators", [
+    # a mark, bare or called with no arguments
+    ("import pytest\n", "@pytest.mark.slow\n"),
+    ("import pytest\n", "@pytest.mark.slow()\n"),
+    # one positional argument that is a constant
+    ("import pytest\n", "@pytest.mark.timeout(60)\n"),
+    # a named keyword, alone or beside one positional argument
+    ("import pytest\n", "@pytest.mark.flaky(reruns=3)\n"),
+    ("import pytest\n", "@pytest.mark.slow(helper, reason='r')\n"),
+    # two positional arguments
+    ("import pytest\n", "@pytest.mark.slow(helper, other)\n"),
+    # pytest bound under another name, and `mark` imported from it
+    ("import pytest as pt\n", "@pt.mark.slow\n"),
+    ("from pytest import mark\n", "@mark.slow\n"),
+    ("from pytest import mark as m\n", "@m.slow\n"),
+    # a mark that runs a fixture, on the running class, whose units read it
+    ("import pytest\n", "@pytest.mark.usefixtures('db')\n"),
+    # every decorator on the class transparent
+    ("import pytest\n", "@pytest.mark.slow\n@unittest.skipIf(FLAG, 'r')\n"),
+])
+def test_a_pytest_mark_on_the_running_class_leaves_the_call_resolved(imports, decorators):
+    source = HEAD.replace("import unittest\n", "import unittest\n" + imports) + decorators + CLASS
+    assert via(source) == [("self.assertEqual(value, 78.75)", "TotalTest._check")]
+
+
+@pytest.mark.parametrize("imports, decorators", [
+    # each returns the class it decorates
+    ("", "@unittest.skip('r')\n"),
+    ("", "@unittest.skipIf(FLAG, 'r')\n"),
+    ("", "@unittest.skipUnless(FLAG, 'r')\n"),
+    ("", "@unittest.expectedFailure\n"),
+    # the reason passed by keyword
+    ("", "@unittest.skipIf(FLAG, reason='r')\n"),
+    # read through `unittest.case`, and imported by name
+    ("from unittest import case\n", "@case.skipIf(FLAG, 'r')\n"),
+    ("from unittest.case import skipIf\n", "@skipIf(FLAG, 'r')\n"),
+    ("from unittest import skipUnless\n", "@skipUnless(FLAG, 'r')\n"),
+    # a patch whose value, not its target, names unittest writes nothing into it
+    ("unittest.mock.patch.object(Other, 'rate', unittest.mock.Mock()).start()\n", "@unittest.skipIf(FLAG, 'r')\n"),
+])
+def test_a_stdlib_skip_that_returns_the_class_leaves_the_call_resolved(imports, decorators):
+    source = HEAD.replace("import unittest\n", "import unittest\n" + imports) + decorators + CLASS
+    assert via(source) == [("self.assertEqual(value, 78.75)", "TotalTest._check")]
+
+
+@pytest.mark.parametrize("source", [
+    # on the base that binds the name
+    PYTEST + "@pytest.mark.slow\nclass Base(unittest.TestCase):\n" + CHECK + "class TotalTest(Base):\n" + TEST,
+    # on the running class and on the base
+    PYTEST + "@pytest.mark.slow\nclass Base(unittest.TestCase):\n" + CHECK
+    + "@pytest.mark.timeout(60)\nclass TotalTest(Base):\n" + TEST,
+])
+def test_a_transparent_decorator_up_to_the_binder_leaves_the_call_resolved(source):
+    assert via(source) == [("self.assertEqual(value, 78.75)", "Base._check")]
+
+
+@pytest.mark.parametrize("source", [
+    # one positional argument that is no constant: pytest returns it, and it decorates the class
+    PYTEST + "@pytest.mark.slow(helper)\n" + CLASS,
+    PYTEST + "@pytest.mark.slow(a or b)\n" + CLASS,
+    # a `**` or `*` argument, which can leave one positional argument and no keyword at run time
+    PYTEST + "@pytest.mark.slow(helper, **{})\n" + CLASS,
+    PYTEST + "@pytest.mark.slow(*[helper], *[])\n" + CLASS,
+    # a mark beside a decorator outside the admitted list
+    PYTEST + "@pytest.mark.slow\n@decorate\n" + CLASS,
+    # a store or `del` under the root: a stored attribute wins over the mark `__getattr__` makes
+    PYTEST + "pytest.mark.slow = wrap\n\n\n" + MARKED,
+    PYTEST + MARKED + "\n\ndel pytest.mark.slow\n",
+    # the root bound more than once, the other binding before the import too, or declared `global`
+    PYTEST + MARKED + "\n\nimport pytest\n",
+    HEAD.replace("import unittest\n", "import unittest\npytest = None\nimport pytest\n") + MARKED,
+    PYTEST + MARKED + "\n\ndef rebind():\n    global pytest\n    pytest = None\n",
+    # a same-file value that holds the mark, which this round leaves opaque
+    PYTEST + "slow = pytest.mark.slow\n\n\n@slow\n" + CLASS,
+    PYTEST + "mark = pytest.mark\n\n\n@mark.slow\n" + CLASS,
+])
+def test_a_mark_that_may_not_return_the_class_leaves_the_call_unresolved(source):
+    assert via(source) == []
+
+
+@pytest.mark.parametrize("source", [
+    # a store through another name for the same module: `mark` is `pytest.mark`
+    HEAD.replace("import unittest\n", "import unittest\nimport pytest\nfrom pytest import mark\n")
+    + "pytest.mark.slow = wrap\n\n\n@mark.slow\n" + CLASS,
+    HEAD.replace("import unittest\n", "import unittest\nimport pytest\nimport pytest as pt\n")
+    + "pt.mark.slow = wrap\n\n\n" + MARKED,
+    # a store before the import, and one under `unittest.case`, whose `_id` a false `skipIf` returns
+    HEAD.replace("import unittest\n", "import unittest\nunittest.skipIf = wrap\nfrom unittest import skipIf\n")
+    + "@skipIf(FLAG, 'r')\n" + CLASS,
+    HEAD.replace("import unittest\n", "import unittest\nfrom unittest import skipIf\n")
+    + "unittest.case._id = wrap\n\n\n@skipIf(False, 'r')\n" + CLASS,
+    # a store whose receiver is no imported name, and a `setattr`
+    PYTEST + "getattr(pytest, 'mark').slow = wrap\n\n\n" + MARKED,
+    PYTEST + "setattr(pytest.mark, 'slow', wrap)\n\n\n" + MARKED,
+    PYTEST + "setattr(*(pytest.mark, 'slow', wrap))\n\n\n" + MARKED,
+    # a store into pytest through a submodule's name, a patch, `__setattr__` and `vars()`
+    PYTEST.replace("import pytest\n", "import pytest\nfrom _pytest.mark.structures import MarkDecorator\n")
+    + "MarkDecorator.__call__ = wrap\n\n\n" + MARKED,
+    PYTEST + "unittest.mock.patch.object(pytest.mark, 'slow', wrap).start()\n\n\n" + MARKED,
+    PYTEST + "pytest.mark.__setattr__('slow', wrap)\n\n\n" + MARKED,
+    PYTEST + "vars(pytest.mark).update(slow=wrap)\n\n\n" + MARKED,
+    # a setter by another name, an unbound `__setattr__`, and patches of other shapes
+    PYTEST.replace("import pytest\n", "import pytest\nimport builtins as b\n")
+    + "b.setattr(pytest.mark, 'slow', wrap)\n\n\n" + MARKED,
+    PYTEST.replace("import pytest\n", "import pytest\nfrom _pytest.mark.structures import MarkDecorator\n")
+    + "type.__setattr__(MarkDecorator, '__call__', wrap)\n\n\n" + MARKED,
+    PYTEST + "unittest.mock.patch.multiple(pytest.mark, slow=wrap).start()\n\n\n" + MARKED,
+    PYTEST + "unittest.mock.patch.dict(vars(pytest.mark), {'slow': wrap}).start()\n\n\n" + MARKED,
+    PYTEST + "unittest.mock.patch('pytest.mark.slow', wrap).start()\n\n\n" + MARKED,
+])
+def test_a_store_that_reaches_the_decorators_module_leaves_the_call_unresolved(source):
+    assert via(source) == []
+
+
+@pytest.mark.parametrize("decorator", [
+    "@unittest.skip('r')\n",
+    "@unittest.skipIf(FLAG, 'r')\n",
+    "@unittest.skipUnless(FLAG, 'r')\n",
+    "@unittest.expectedFailure\n",
+    "@pytest.mark.skip(reason='r')\n",
+    "@pytest.mark.skipif(FLAG, reason='r')\n",
+    "@pytest.mark.xfail\n",
+    # marks that can disable a test without saying skip, and one named for a skip (#209 Q2)
+    "@pytest.mark.usefixtures('offline')\n",
+    "@pytest.mark.dependency()\n",
+    "@pytest.mark.skip_on_ci\n",
+    "@pytest.mark.parametrize('x', [1, 2])\n",
+])
+def test_a_skip_on_a_base_up_to_the_binder_leaves_the_call_unresolved(decorator):
+    # The running class's units do not carry a base's decorators (THREATMODEL
+    # row 117), so a skip there is read only through the unresolved call.
+    source = PYTEST + decorator + "class Base(unittest.TestCase):\n" + CHECK + "class TotalTest(Base):\n" + TEST
+    assert via(source) == []
+
+
+@pytest.mark.parametrize("imports, decorator", [
+    ("from unittest import skipIf as when\n", "@when(FLAG, 'r')\n"),
+    ("from pytest import mark as m\n", "@m.xfail\n"),
+    ("from unittest.case import expectedFailure as xf\n", "@xf\n"),
+])
+def test_a_skip_spelled_as_the_frontend_does_not_read_it_leaves_the_call_unresolved(imports, decorator):
+    # The frontend reads a class's skip by its trailing name, so under another
+    # name the running class's units would not carry it.
+    source = HEAD.replace("import unittest\n", "import unittest\n" + imports) + decorator + CLASS
+    assert via(source) == []
+
+
+@pytest.mark.parametrize("decorator", [
+    # nothing reads `dependency`, a mark only named for a skip, or a class's parametrize rows
+    "@pytest.mark.dependency(depends=['TestSetup::test_never'])\n",
+    "@pytest.mark.skip_on_ci\n",
+    "@pytest.mark.parametrize('x', [])\n",
+    # the frontend reads only literal fixture names
+    "@pytest.mark.usefixtures('db', OFFLINE)\n",
+])
+def test_a_disabling_mark_the_running_classs_units_do_not_carry_leaves_the_call_unresolved(decorator):
+    assert via(PYTEST + decorator + CLASS) == []
+
+
+@pytest.mark.parametrize("source", [
+    # bare `skip` takes the class as its reason and returns its inner function
+    HEAD + "@unittest.skip\n" + CLASS,
+    # a reason that is no string literal: a function passed there comes back wrapped
+    HEAD + "@unittest.skipIf(FLAG, REASON)\n" + CLASS,
+    HEAD + "@unittest.skipIf(FLAG, f'r {FLAG}')\n" + CLASS,
+    # a `**` argument
+    HEAD + "@unittest.skipIf(FLAG, **{'reason': 'r'})\n" + CLASS,
+    # `expectedFailure` called
+    HEAD + "@unittest.expectedFailure()\n" + CLASS,
+    # a name that resolves to `twisted.trial`
+    HEAD.replace("import unittest\n", "from twisted.trial import unittest\n")
+    + "@unittest.skipIf(FLAG, 'r')\n" + CLASS,
+])
+def test_a_stdlib_decorator_outside_the_admitted_forms_leaves_the_call_unresolved(source):
+    assert via(source) == []
+
+
+def test_a_pytest_mark_added_to_the_class_keeps_the_helper_methods_assertion():
+    assert run(PYTEST + CLASS, PYTEST + MARKED) == ("pass", [])
+
+
+def test_a_stdlib_skip_added_to_the_class_reads_as_disabled_not_as_removed_assertions():
+    verdict, findings = run(SOURCE, HEAD + "@unittest.skipIf(FLAG, 'r')\n" + CLASS)
+    assert verdict == "block"
+    assert ("TEST_DISABLED", "high") in findings
+    assert "ASSERT_REMOVED" not in [rule for rule, _ in findings]
+
+
+def test_a_skip_added_to_a_base_keeps_reading_as_the_helpers_assertions_removed():
+    before = HEAD + "class Base(unittest.TestCase):\n" + CHECK + "class TotalTest(Base):\n" + TEST
+    after = before.replace("class Base(", "@unittest.skip('later')\nclass Base(")
+    assert run(before, after) == ("block", [("ASSERT_REMOVED", "high")])
+
+
+# -- #487 (b), not adopted: the stated cost ----------------------------------------
+
+
+def test_stated_cost_an_arbitrary_class_decorator_added_reads_as_the_helpers_assertions_removed():
+    # A decorator outside the admitted list may replace the class: the call
+    # resolves at the parent only, and its assertion reads as removed.
+    after = HEAD + "@decorate\n" + CLASS
+    assert run(SOURCE, after) == ("block", [("ASSERT_REMOVED", "high")])
+
+
+def test_an_arbitrary_class_decorator_removed_reads_nothing_as_removed():
+    _verdict, findings = run(HEAD + "@decorate\n" + CLASS, SOURCE)
+    assert "ASSERT_REMOVED" not in [rule for rule, _ in findings]
+
+
+# -- #487 (c): only the module's own name rebinds a module class -------------------
+
+
+@pytest.mark.parametrize("source", [
+    # a class local to the test, named as the test class is (scrapy 02ed71d887)
+    HEAD + "class TotalTest(unittest.TestCase):\n" + CHECK + "    def test_total(self):\n"
+    "        class TotalTest:\n            pass\n\n        self._check(total([50.0, 28.75]))\n",
+    # a def, an assignment and a `del`, or an import of the name in another method
+    SOURCE + "\n    def test_other(self):\n        def TotalTest():\n            pass\n",
+    SOURCE + "\n    def test_other(self):\n        TotalTest = None\n        del TotalTest\n",
+    SOURCE + "\n    def test_other(self):\n        from app import TotalTest\n",
+    # a module function's body, a lambda's, and another module class's
+    SOURCE + "\n\ndef make():\n    TotalTest = None\n    return TotalTest\n",
+    SOURCE + "\n\nmake = lambda: (TotalTest := None)\n",
+    SOURCE + "\n\nclass Other:\n    TotalTest = None\n",
+])
+def test_a_name_a_function_or_class_body_binds_is_its_own(source):
+    assert via(source) == [("self.assertEqual(value, 78.75)", "TotalTest._check")]
+
+
+@pytest.mark.parametrize("source", [
+    # a function body, a class body and a method that declare the name `global` and rebind it
+    SOURCE + "\n\ndef rebind():\n    global TotalTest\n    TotalTest = None\n",
+    SOURCE + "\n\nclass Other:\n    global TotalTest\n    TotalTest = None\n",
+    SOURCE.replace("    def test_total(self):\n", "    def setUp(self):\n        global TotalTest\n"
+                   "        TotalTest = None\n\n    def test_total(self):\n"),
+    # an assignment expression in a module-level comprehension binds in the module (PEP 572)
+    SOURCE + "\n\n[(TotalTest := x) for x in range(3)]\n",
+    # one in a module-level class's bases or a def's default, which run in the module
+    HEAD + "class Other((TotalTest := object)):\n    pass\n\n\n" + CLASS,
+    HEAD + "def make(value=(TotalTest := None)):\n    return value\n\n\n" + CLASS,
+    # a module-level `except ... as` and `match` capture
+    SOURCE + "\n\ntry:\n    import numpy\nexcept ImportError as TotalTest:\n    pass\n",
+    SOURCE + "\n\nmatch FLAG:\n    case [TotalTest]:\n        pass\n",
+])
+def test_a_binding_of_the_modules_name_leaves_the_call_unresolved(source):
+    assert via(source) == []
+
+
 # -- Sub-Q3: what rebinds the name --------------------------------------------------
 
 
