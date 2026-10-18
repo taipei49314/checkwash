@@ -1,0 +1,21 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a `return;` after the assertion cuts nothing it checks
+origin: #429 (Q1)
+=== before: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  expect(total(3)).toBe(6);
+});
+=== after: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  expect(total(3)).toBe(6);
+  return;
+});
+=== expect ===
+[]

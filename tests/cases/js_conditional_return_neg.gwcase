@@ -1,0 +1,21 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `if (process.env.CI) return;` before an assertion keeps today's reading
+origin: #429 (Q1) — a condition the folder cannot decide proves no boundary
+=== before: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  expect(total(3)).toBe(6);
+});
+=== after: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  if (process.env.CI) return;
+  expect(total(3)).toBe(6);
+});
+=== expect ===
+[]
