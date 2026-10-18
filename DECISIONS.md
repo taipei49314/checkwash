@@ -11374,7 +11374,7 @@ PJU, NOT EC pool. Its plain before/after compares #424's engine
     still covers it, which checkwash does not model. Two commits fall
     under two of these.
   - The decorator reading and the local-class reading are filed as
-    #NNN, the helper-skip liveness as #MMM.
+    #487, the helper-skip liveness as #488.
 - **Not measured:** resolution toggled in both directions, and what
   Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
   variant that is not a commit on main. Sub-Q7 asks for its cost to be
