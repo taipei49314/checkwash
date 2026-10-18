@@ -508,16 +508,74 @@ local C3 order over the file's top-level classes, where a base the file does
 not define is an opaque entry and the name resolves only before the first
 one. It is followed as a module helper is, once per entry site and at most
 four calls deep, and its assertions carry `via`, the method's
-class-qualified name. A call stays unresolved, and keeps the reading it has
-always had, when the name is one `unittest.TestCase` defines, when the
-binding is not exactly one undecorated plain def in its class body, when a
-class of the order is decorated (up to the binder), has a keyword or
-defines `__init_subclass__`, `__getattribute__` or `__setattr__`, when the
-order is not a C3 order or a class name is bound again, and when the module
+class-qualified name. A call stays unresolved when the name is one
+`unittest.TestCase` defines, when the binding is not exactly one
+undecorated plain def in its class body, when a class of the order up to
+the binder carries a decorator that is not transparent (below), when a
+class of the order has a keyword or defines `__init_subclass__`,
+`__getattribute__` or `__setattr__`, when the order is not a C3 order or
+the module binds the name of a class in it again, and when the module
 stores or deletes `.<name>`, stores into a `.__dict__`, names it in
 `setattr`/`delattr`/`object.__setattr__`, `patch.object` or
 `monkeypatch.setattr`, or calls `setattr` with a computed name on the
-receiver or a class of the order (D-145). A `via` assertion is a
+receiver or a class of the order (D-145, D-149). An unresolved call adds
+no assertion to the unit, as before #306, but across a diff it does not
+keep the reading it had before #306: a call resolved at the parent and not
+at the commit reads as the helper's assertions removed, and one resolved
+at the commit only reads nothing as removed. A class decorator is
+transparent only in a fixed list of forms, read through the module's
+imports (`import pytest as pt`, `from pytest import mark` and `from
+unittest import skipIf` included) and called with no `*` or `**` argument
+(D-149): `pytest.mark.<name>`, bare or called, but not called with one
+positional argument, and no keyword, that is not a constant, which pytest
+returns to decorate the class itself; and, from `unittest` or
+`unittest.case`, `skip(<str>)`, `skipIf(<condition>, <str>)` and
+`skipUnless(<condition>, <str>)`, with the reason a string literal given
+by position or as `reason=`, and bare `expectedFailure`. A form that can
+disable a test (the unittest ones, the marks `skip`, `skipif`, `xfail`,
+`usefixtures`, `dependency` and `parametrize`, and any mark whose name
+contains `skip` or `xfail`) is transparent only on the class running the
+test, since the tests that class defines do not carry a base's decorators
+(THREATMODEL 117), and only where that class's units carry it. A skip
+form, unittest's or a mark `skip`, `skipif` or `xfail`, must be spelled as
+the frontend reads a skip, by the trailing parts of the name as written: a
+last part `skip`, `skipIf`, `skipUnless` or `expectedFailure`, or last two
+parts `mark.skip`, `mark.skipif` or `mark.xfail`; so `@when(...)` under
+`from unittest import skipIf as when` and `@m.xfail` under
+`from pytest import mark as m` are not transparent. A `usefixtures` mark
+must be bare or take only string-literal positional arguments and no
+keyword, as the frontend reads it. A `dependency` mark, any other mark
+whose name contains `skip` or `xfail`, and `parametrize`, whose
+class-level rows the frontend does not read, are never transparent. No
+form is transparent under a root the module binds more than once,
+declares `global`, stores or deletes an attribute or item under, or that a
+star import may bind; nor through a same-file value such as
+`slow = pytest.mark.slow`; nor when a write anywhere in the module reaches
+its package through the write's target, by any name an import binds into
+the package or by a dotted string. A write is a store or `del` of an
+attribute or item, a call whose last name is `setattr`, `delattr`,
+`setitem`, `delitem` or one of their dunders, any call with a `patch`
+component, or a dict method on, or with a first argument of, `x.__dict__`
+or `vars(x)`, and only its target is read, never its value
+(`setattr(pytest.mark, "slow", wrap)`,
+`mock.patch("pytest.mark.slow", wrap)`, or `MarkDecorator.__call__ = wrap`
+under `from _pytest.mark.structures import MarkDecorator`). So a write
+whose target names anything imported from `unittest` takes every unittest
+form in the file. Only the module's own name is bound again: by a
+statement at module scope, under a module-level compound statement too,
+by the header of a def, class or lambda there (decorators, bases, class
+keywords, defaults and annotations), by an assignment expression there,
+in a comprehension too, or by a body that declares the name `global`. A
+class, def, assignment, `del` or import of the name inside any other
+function, lambda or class body is read as binding a local name. These are
+not read, a residual (D-149): a write the reading does not name (a setter
+or patcher under a name it does not list, a write through a value the
+file computes such as a same-file alias, a function parameter or a call's
+return value, or into a module named by a string key such as
+`globals()["pytest"]`, `sys.modules`, `__import__` or `importlib`); a
+store in a conftest or plugin; a star import that binds a class's name;
+and a class body whose metaclass's `__prepare__` returns the module's
+namespace. A `via` assertion is a
 detection-only overlay: the unit's own assertions pair as before, and the
 `via` ones then pair among themselves and with the after side's own
 assertions left unpaired; they earn no credit and add no requirement for
