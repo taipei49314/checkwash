@@ -9,6 +9,7 @@ from checkwash.ir.model import DiffGlobals, IR
 # a word boundary the scanner minted a test unit whose name was the string
 # literal that followed, and any diff of the file reported `"\n"` as a
 # removed test at high severity. The file below touches no assertion.
+# credit: @arsen-ask-lx (#156)
 _ISSUE_156 = (
     b'import test from "node:test";\n'
     b'test("only", (t) => {\n'
