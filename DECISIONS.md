@@ -11706,53 +11706,52 @@ Readings left to the implementation, accepted with this entry:
     seventeenth review rounds; a reserved word such as `default` ends no
     operand, the file's first token is checked too, a `<` first on its line
     before a name or `>` is JSX, and an HTML-like comment inside a template
-    substitution leaves the template unread): a template nested
-    in another's substitution (the mask ends a
-    template at its first backtick; each template is read again as
-    `literals` reads it, a quoted `}` or a `//` comment in a substitution
-    included, and one it leaves unread refuses the callback too), JSX or a
-    TypeScript `<T>x` assertion (a `<` where no operand ends, or right after
-    a block's `}`), a token outside a string that is not ASCII (the binder
-    reads names as ASCII and U+FEFF as a token, where JavaScript reads a
-    name and a space), a `\` outside a string anywhere in the file (an
-    identifier escape: `return\u0041` is one name), a dead region holding a
-    `function` (a call before it may run the hoisted body, which the binder
-    does not always scope: `function f<T>()`), a `/` the mask reads as a division where JavaScript
-    starts a regular expression (after a `}`, a statement head's `)`, an
-    update or an operator, or first on its line), a regular expression the
-    mask reads where JavaScript may divide (it is trusted only after an
-    operator, a punctuator such as `(` or `,`, or a keyword such as `return`
-    that is no property name), or an Annex B `<!--` or `-->` comment.
+    substitution leaves the template unread): a template nested in another's
+    substitution (the mask ends a template at its first backtick; each
+    template is read again as `literals` reads it, a quoted `}` or a `//`
+    comment in a substitution included, and one it leaves unread refuses the
+    callback too), JSX or a TypeScript `<T>x` assertion (a `<` where no
+    operand ends, or right after a block's `}`), a token outside a string that
+    is not ASCII (the binder reads names as ASCII and U+FEFF as a token, where
+    JavaScript reads a name and a space), a `\` outside a string anywhere in
+    the file (an identifier escape: `return\u0041` is one name), a dead region
+    holding a `function` (a call before it may run the hoisted body, which the
+    binder does not always scope: `function f<T>()`), a `/` the mask reads as
+    a division where JavaScript starts a regular expression (after a `}`, a
+    statement head's `)`, an update or an operator, or first on its line), a
+    regular expression the mask reads where JavaScript may divide (it is
+    trusted only after an operator, a punctuator such as `(` or `,`, or a
+    keyword such as `return` that is no property name), or an Annex B `<!--`
+    or `-->` comment.
 11. `_end` reads on past a line break wherever the binder's ASI reading
     continues the statement, and JavaScript or TypeScript may end it there
     (`x!`, `as Config`, an arrow's `}` or `() => void` at a line's end, `{`,
-    `(`, `[` or `.5` at the next line's start). Reading on only shortens a
-    cut after a `return`, but
-    it could lengthen a kill, so a dead body that is no block is killed,
-    and a literal-decided `&&`/`||` statement (Q3) decided, only when every
-    line break inside it follows a token that leaves the expression
-    unfinished: an operator such as `&&`, `+`, `,`, `=` or `=>`, or a
-    reserved word such as `typeof` or `delete` where no `.`, `?.` or `#`
-    makes it a property name (`cache.delete` is a whole operand), and not
-    `.`, which may end a number (`1.`);
-    otherwise the walk of that list stops, or the statement stays
-    undecided. A statement keyword met inside a statement (`do` after a
-    `{ }` the binder read on into) stops the walk (twelfth review round). A
-    statement with a template or regular expression right before it (one
-    that is the whole body of `if (false)`) stops it too, and Q3 decides a
-    statement only after a `;` or a statement's own `}`, never at a boundary
-    ASI gives, which TypeScript may read past (`v is` then `false`), as the
-    ruling's "narrowly" asks (fourteenth review round). A prefix `++` or `--` at a line's end takes the next line as its
-    operand, so a `return ++` there does not end the statement, and neither
-    does a line starting with `extends` or `implements` after a class
-    expression. A class whose heritage holds a class, a function or an arrow
-    stops the walk: its first `{` is not the class body. After a token that
-    completes no operand, a line starting with a statement keyword (`do`,
-    `if`, `while`, `return`) stops it too: TypeScript ends `x!` there. And
-    a `return` or `throw` whose operand ends at a line break by that reading
-    stops the walk instead of cutting: TypeScript types (`readonly`), class
-    heritage (`implements`) and decorators (`@dec` then `class`) continue
-    such a statement where the binder ends it. (Eleventh review round.)
+    `(`, `[` or `.5` at the next line's start). Reading on only shortens a cut
+    after a `return`, but it could lengthen a kill, so a dead body that is no
+    block is killed, and a literal-decided `&&`/`||` statement (Q3) decided,
+    only when every line break inside it follows a token that leaves the
+    expression unfinished: an operator such as `&&`, `+`, `,`, `=` or `=>`, or
+    a reserved word such as `typeof` or `delete` where no `.`, `?.` or `#`
+    makes it a property name (`cache.delete` is a whole operand), and not `.`,
+    which may end a number (`1.`); otherwise the walk of that list stops, or
+    the statement stays undecided. A statement keyword met inside a statement
+    (`do` after a `{ }` the binder read on into) stops the walk (twelfth
+    review round). A statement with a template or regular expression right
+    before it (one that is the whole body of `if (false)`) stops it too, and
+    Q3 decides a statement only after a `;` or a statement's own `}`, never at
+    a boundary ASI gives, which TypeScript may read past (`v is` then
+    `false`), as the ruling's "narrowly" asks (fourteenth review round). A
+    prefix `++` or `--` at a line's end takes the next line as its operand, so
+    a `return ++` there does not end the statement, and neither does a line
+    starting with `extends` or `implements` after a class expression. A class
+    whose heritage holds a class, a function or an arrow stops the walk: its
+    first `{` is not the class body. After a token that completes no operand,
+    a line starting with a statement keyword (`do`, `if`, `while`, `return`)
+    stops it too: TypeScript ends `x!` there. And a `return` or `throw` whose
+    operand ends at a line break by that reading stops the walk instead of
+    cutting: TypeScript types (`readonly`), class heritage (`implements`) and
+    decorators (`@dec` then `class`) continue such a statement where the
+    binder ends it. (Eleventh review round.)
 12. The folder reads tokens from `literals.operand_tokens`, so a nested
     template is one token, and a `/` that may divide or start a regular
     expression (after `++`, `--`, `!`, `>`, `of`, `await`, `yield` or a
