@@ -317,9 +317,14 @@ of a changed path in the diff that decides the verdict (HEAD against the
 working tree for the Stop hook) whose head or working-tree side is over the
 1,000,000-byte limit gives `{"decision": "block", "reason": ...}`, exit 0,
 with the reason naming path, side, size and limit. A path whose base side
-alone is over the limit, a base manifest, config or `--task` file, a file the
-diff does not hold, and every other engine error keep the non-blocking
-message.
+alone is over the limit, a base manifest, config, exemption list or `--task`
+file, a file the diff does not hold, and every other engine error keep the
+non-blocking message. The run refuses only the first must-read change it
+meets, so a padded file listed after a path whose base side alone is over
+the limit keeps it too. With `--hook-input stdin`, a size refusal in the
+session-commits analysis keeps that analysis's non-blocking note (#418), so
+a padded file the agent commits before stopping is left to the required
+check.
 
 Only an explicitly complete, structurally valid search result may narrow the
 runtime-shadow test inventory. An ordinary sequence, capped/unknown result,
