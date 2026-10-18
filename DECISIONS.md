@@ -11173,6 +11173,12 @@ on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THRE
 row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
 #306。」
 
+The sweep bullet under Evidence status and the Evidence status sentence
+were rewritten from the 2026-10-17 sweep and its source review in PR #489.
+The maintainer approved that text on 2026-10-18: 「照你建議」, in reply to
+the agent's list asking for approval of the D-146 (977f8bd3), D-145
+(a4fa4550) and D-144 (dfde00e1) drafts.
+
 ## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
 
 Rulings 306 (owner, 2026-10-08, "裁決依照你建議": Q1 (a), Q2 (a); and
@@ -11409,6 +11415,13 @@ on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's lis
 for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
 (93c25a6) text and of the diffalign and gating commit ea98b62.
 
+The Cost paragraph and the Evidence status sentence were rewritten from
+the 2026-10-17 sweep and its source review in PR #489. The maintainer
+approved that text on 2026-10-18: 「照你建議」, in reply to the agent's list
+asking for approval of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144
+(dfde00e1) drafts. The follow-up issue numbers (#487, #488) were filled in
+once the issues were filed, as that list said.
+
 ## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
 
 Ruling 421 (owner, 2026-10-14, 「P1 全部照建議」) answered its six questions
@@ -11610,6 +11623,11 @@ for approval of this PR's SPEC (a332ad42), THREATMODEL (87e932ca), D-146
 (285f5d4f) and user-doc (f6f9c3db) text and of the two pinned tests outside
 the ruled list. The second half of that reply chose this host for the
 ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
+
+Cost's "Measured" bullet and the Evidence status sentence were rewritten
+from the 2026-10-17 sweep in PR #489. The maintainer approved that text on
+2026-10-18: 「照你建議」, in reply to the agent's list asking for approval
+of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144 (dfde00e1) drafts.
 
 ## D-147 (2026-10-17): a JS/TS assertion that can never fail reads as TAUTOLOGY (#429, first change)
 
