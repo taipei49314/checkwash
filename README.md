@@ -163,7 +163,12 @@ aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension. A root
 `poetry.lock` or `uv.lock` that large at the base is skipped with a note; a
 root `pyproject.toml` or `requirements*.txt` that large at the base stops
-every run with exit 2, naming it.
+every run with exit 2, naming it. The Claude Code Stop hook (`--format
+hook-json`) reports an engine error as a non-blocking "not analysed" message;
+from the next minor (unreleased), it blocks the stop instead when such a file
+is one the hook's diff changes and its working-tree side is over the limit,
+naming the file and asking to shrink, split or revert it
+([#456](https://github.com/taipei49314/checkwash/issues/456)).
 
 Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)

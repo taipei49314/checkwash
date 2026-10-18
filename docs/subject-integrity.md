@@ -311,7 +311,15 @@ naming the path where the walk stopped, instead of claimed clean.
 With `--format hook-json` (the Claude Code Stop hook), an engine error exits 0
 with a JSON payload whose `systemMessage` says the change was not analysed and
 why, and which carries no `decision`, so the agent may stop; the required CI
-check remains the gate. Every other format keeps exit 2.
+check remains the gate. Every other format keeps exit 2. From the next minor
+(unreleased), one engine error blocks the stop instead (#456): a size refusal
+of a changed path in the diff that decides the verdict (HEAD against the
+working tree for the Stop hook) whose head or working-tree side is over the
+1,000,000-byte limit gives `{"decision": "block", "reason": ...}`, exit 0,
+with the reason naming path, side, size and limit. A path whose base side
+alone is over the limit, a base manifest, config or `--task` file, a file the
+diff does not hold, and every other engine error keep the non-blocking
+message.
 
 Only an explicitly complete, structurally valid search result may narrow the
 runtime-shadow test inventory. An ordinary sequence, capped/unknown result,
