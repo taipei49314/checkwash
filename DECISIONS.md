@@ -12185,10 +12185,11 @@ transparent; a star import that binds a module class's name is not read
 as binding it again, as the old walk did not read it; and a class body
 run under a metaclass whose `__prepare__`
 returns the module's namespace is read as binding local names, so its
-`TotalTest = None`, which the old walk caught, rebinds nothing. The code
-alternative is a question for the owner: read as module scope the body of
-any class statement, at any depth, that has any keyword or whose same-file
-base chain reaches any keyword or a base the file does not define.
+`TotalTest = None`, which the old walk caught, rebinds nothing. The owner
+kept this a residual (below); the code alternative, not adopted, was to
+read as module scope the body of any class statement, at any depth, that
+has any keyword or whose same-file base chain reaches any keyword or a
+base the file does not define.
 
 Conservative side effects, each leaving unresolved a call that could
 resolve, so an admitted form added there reads as the helper's assertions
@@ -12274,5 +12275,11 @@ from its parametrize lists, which pin the ruling's stay-unresolved forms;
 no existing test changed. By reading, the documented test count becomes
 19450 (19351 + 94 + 5); CI's collection checks it.
 
-The agent wrote this entry in #487's fix PR, for the maintainer's approval
-of its wording, as the ruling asks.
+The agent wrote this entry in #487's fix PR #503. The maintainer approved
+it on 2026-10-18: 「核可 #503：SPEC 26512274、第 91 列 63650ccc、D-149
+377c133d 的措辭照草稿；兩個偏離採你的建議（停用類形式只在執行測試的類別上、
+且只在 units 帶得到時才透明）；11 個讀法照 D-149；metaclass 留作殘留；5 個
+gwcase 標籤照寫。CI 全綠就代合。」, in reply to the agent's list asking for
+approval of this PR's SPEC (26512274), THREATMODEL (63650ccc) and D-149
+(377c133d) text, the two departures, the eleven readings, the metaclass
+residual and the five fixtures' labels.
