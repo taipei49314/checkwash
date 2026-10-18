@@ -30,7 +30,7 @@ import pytest
 
 from checkwash.cli import build_parser, main
 from checkwash.doctor import run as run_doctor
-from checkwash.findings import make_fingerprint
+from checkwash.findings import make_assertion_fingerprint
 from checkwash.gitio import git as gitio
 from checkwash.quality.cli import run as run_quality
 
@@ -48,7 +48,10 @@ WEAK = TEST.replace(b"assert add(2, 3) == 5", b"assert add(2, 3) > 0")
 CJK_TEST = "from pkg.calc import add\n\n\ndef test_總額():\n    assert add(1, 2) == 3\n".encode("utf-8")
 FREEZE = b"---\ncheckwash:\n  oracle_freeze: true\n---\n# Task\n"
 LOOSE = b"---\ncheckwash:\n  oracle_freeze: false\n---\n# Notes\n"
-FINGERPRINT = make_fingerprint("ASSERT_WEAKENED", "tests/test_calc.py", "test_add", "assert add(2, 3) == 5")
+FINGERPRINT = make_assertion_fingerprint(
+    "ASSERT_WEAKENED", "tests/test_calc.py", "test_add", "assert add(2, 3) == 5",
+    before="assert add(2, 3) == 5", after="assert add(2, 3) > 0", kind="strength",
+)
 NOTE = "checkwash: using the repository root "
 
 # (subdirectory, how it is named): the shell's cwd, as the README and the

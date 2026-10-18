@@ -43,6 +43,9 @@ E2E_PINNED = {
     # Issue #418: a session record and real commits, which only the CLI with
     # its hook input can exercise.
     "133": "test_an_exemption_committed_during_the_session_governs_only_the_next_one",
+    # Issue #421: the golden runner passes no ledger, so a .gwcase cannot hold
+    # the exemption whose reuse this row is about.
+    "136": "test_the_reviewed_rewrite_is_exempt_and_another_still_blocks",
 }
 
 

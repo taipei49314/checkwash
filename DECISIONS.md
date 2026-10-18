@@ -11104,20 +11104,693 @@ names and `exec`, metaclasses and class decorators, wrappers that drop the
 test, a function-level `__test__ = False` (Q8), an unresolvable subclass
 (Q9), and a capture under a condition.
 
-Evidence status: the change was prepared on a work machine where no
-pytest, checkwash or Python ran. CI ran the tests.
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 29 `.gwcase` fixtures, 79 collected items in
   `tests/test_issue424_rebinding.py` and one new test in
   `tests/test_frontend.py`. None is under `tests/gates`. Five of the new
   fixtures carry `bypass: 135`.
 - The documented test count is 18675 (18566 + 109).
-- The sweep measures the change (ruling): the standard set, the D-088
-  set, and a target set of commits with duplicate names, rebinding, the
-  Q9 shapes and try-wrapped defs; the refactor gate (60, expected no
-  change), tamper, decoy and recorded (no regression) and the perf gate.
+- The sweep the ruling asks for ran in part on 2026-10-17, on
+  LAPTOP-01AGNPJU under POLICY `checkwash-pju-sweep` (T-546), as a
+  checkwash-lab-declared run whose manifest (`54706f99…c88c`) and engine
+  commits the owner approved first. It is labelled human-authorized
+  local PJU, NOT EC pool. It compares main before this change
+  (`2422b3ce`) with it (`f541f748`):
+  - **Standard set** (1,800 commits): no change.
+  - **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088
+    batch, and the 45 that are also in the standard set ran in the
+    standard batch, where none changes): 10 commits differ, all beyond
+    fingerprints. One verdict goes from block to pass and one from pass
+    to block. 19 of the 1,218 end in the same engine error on both
+    engines and are not judged.
+  - **Source review** (read-only, after the run; agents read the
+    upstream commits, the engine source and the harness's result files,
+    and a second agent tried to refute each verdict change and the
+    survey of the other eight. Nothing was rerun, so the mechanisms
+    below are read from source, not observed:
+    `NOT_RUN：工作機規則（POLICY work-machine-local），no engine run or IR emission`):
+    both verdict changes are right.
+    pytest `242fb7852b` deletes the copy of a duplicated test that
+    pytest collected; the copy that keeps the name has the same
+    decorator and assertion, so the old TEST_DISABLED high was false.
+    rich `a13b2a9d75` appends a Windows-only `test_render` that shadows
+    the original, so the original expectation is checked nowhere. It
+    blocks on EXPECTATION_DEFINITION_CHANGED high (the collected test
+    compares against a different value), and the skip on Linux and
+    macOS reports only at warn under D6. Five of the other eight only
+    drop the finding on a copy pytest never collected, as Q1 (b)
+    intends (the harness lists it under `name#2`, because the collected
+    copy now takes the bare name). In the last three the pairing
+    changes: rich `a2b4a959dc` now reports the real skips on Python 3.8
+    and 3.9 (two warns, COMPAT_GATE) in place of a skip on a def pytest
+    never collects; rich `8105943b89` still blocks, but on an
+    expectation change between two defs that run on disjoint platforms,
+    while the real loss, Windows' only `test_render`, reports at warn;
+    and pytest `15ec5a898c` trades one false warn for another: the live
+    def is renamed away and a dead def of the same name takes the name,
+    so the old live body is compared with the revived dead one. This
+    entry names R1 and the deletion of one of two identical copies, but
+    not this case.
+  - Not run: the target set of commits with duplicate names, rebinding,
+    the Q9 shapes and try-wrapped defs, which has not been derived.
+  - Not run by the sweep: the refactor gate (60, expected no change),
+    tamper, decoy and recorded (no regression) and the perf gate. They
+    are pytest suites, which T-546 does not cover:
+    `NOT_RUN：工作機規則（POLICY work-machine-local），the gates are test suites`.
+    CI runs them in every test leg (the perf gate's two budget checks
+    skip on macOS). All nine legs passed on `2422b3ce` and on
+    `f541f748`, and neither `tests/gates` nor the gates' `expected.json`
+    tables changed between them.
+  - The counts are read from the harness output. The summaries and the
+    source review's records are in checkwash-lab
+    `prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+    `runs/acceptance-sweep-421/20261017-pju/`.
 
 The agent wrote this entry in #424's fix PR #474. The maintainer approved it
 on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
 row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
 #306。」
+
+The sweep bullet under Evidence status and the Evidence status sentence
+were rewritten from the 2026-10-17 sweep and its source review in PR #489.
+The maintainer approved that text on 2026-10-18: 「照你建議」, in reply to
+the agent's list asking for approval of the D-146 (977f8bd3), D-145
+(a4fa4550) and D-144 (dfde00e1) drafts.
+
+## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
+
+Rulings 306 (owner, 2026-10-08, "裁決依照你建議": Q1 (a), Q2 (a); and
+2026-10-14, 「P1 全部照建議」: Sub-Q1 to Sub-Q11, each as recommended).
+D-144 is #424's, so this entry is D-145.
+
+#306 reports that in a `unittest.TestCase` (or a pytest class) whose test
+calls a helper method, `self._check(total(...))`, the frontend named the
+call by its root, `self`, and never walked the method. A helper method's
+assertion weakened (A1) or deleted (A2), and a skip in a helper method the
+test calls (H2) or its `setUp` calls (S1), passed with zero findings. The
+same helper as a module function blocked (THREATMODEL row 91).
+
+How each ruling answer is implemented:
+
+- Q1 (a), assertions and skips. In a method unit, a call
+  `<receiver>.<name>(...)` whose receiver is the method's first positional
+  parameter (and is never rebound) runs the helper method resolved below.
+  That method is followed as a module helper is, once per entry site with
+  that site's reaching keys (#55), at most four calls deep. The walk goes
+  through further calls on the method's own instance and through the
+  module helpers it calls. Its assertions are the unit's, with
+  `inherited: true` and the new optional IR field `via`, the method's
+  class-qualified name (`TotalTest._check`). Its skips are read as #272
+  reads a helper's (`HelperOutcomes.of_method`): as a setup callback, with
+  its receiver, so `self.skipTest` is an outcome. The marker is
+  `helper.<method>.<effect>`. A class's setup callbacks and fixtures read
+  the methods they call the same way (`SetupScope(methods=)`), which gives
+  S1.
+- Q2 (a). The method is the one the class running the test resolves: the
+  method's own class, or for an inherited test the collecting subclass.
+- Sub-Q1 (a), rule 2. The H2 and S1 pins flip and are renamed (below).
+- Sub-Q2 (a), the order. A local C3 over the module's top-level classes,
+  each base the file does not define kept as an opaque entry. The name
+  resolves only in a same-file class reached before the first opaque
+  entry. It stays unresolved on a C3 failure, a class name the module binds
+  more than once, a decorator on the running class or on any class up to
+  the one that binds the name, or a class keyword (a metaclass),
+  `__init_subclass__` or `__getattribute__` on any same-file class in the
+  order.
+- Sub-Q3 (a), name-specific. In the first class of the order that binds
+  the name, its one binding is a plain def in the class body, not under
+  `if` or `try`. The call stays unresolved on any of these anywhere in the
+  module: a store or del of `.<name>`, a `.__dict__[...]` store or del,
+  `setattr`/`delattr`/`object.__setattr__` with the literal name (or a
+  computed name on the receiver or on a class of the order),
+  `patch.object` or `monkeypatch.setattr` naming it, or `__setattr__` on a
+  class of the order.
+- Sub-Q4 (a). Only an undecorated `def` or `async def` resolves.
+- Sub-Q5 (a). A helper method's guard is read under the running class's
+  attributes, through `setup_outcome(..., receiver=True, attrs=env(...))`,
+  as `setUp`'s is. `credit_base` admits `helper.` markers and reads them
+  again under each crediting subclass.
+- Sub-Q6 (a). A name `unittest.TestCase` defines is never followed, in any
+  class. `self_methods.TESTCASE_NAMES` is a fixed literal list: the union
+  over Python 3.11-3.14 (3.11's `Lib/unittest/case.py`, the aliases 3.12
+  removed, the assertions 3.14 added), never read from the running
+  interpreter. Shadowing stays row 91a.
+- Sub-Q7 (a). A helper method moved to a base in another module is behind
+  an opaque entry, so the move reads as ASSERT_REMOVED. It is pinned as a
+  stated cost (`self_method_moved_to_imported_base_pos`) and counted by the
+  sweep. A follow-up for a one-hop read of a `from M import Base` base is
+  filed only if the cost proves real.
+- Sub-Q8 (c), evidence per finding. Each followed method's callees go into
+  `helper_calls` under its class-qualified name. They count as repair
+  evidence only for a finding about an assertion reached through that
+  method, identified by its `via` (`gating._finding_via`, by the cited
+  span). `invoked` does not change.
+- Sub-Q9 (a). The maintainer text covers THREATMODEL rows 91, 92, 104, 118
+  and 125, SPEC §3 "What counts as a unit's assertions", the SPEC §4
+  TEST_DISABLED helper-skip clause, and SPEC §5's compensation text and
+  repair-evidence item 2.
+- Sub-Q10 (b). A disappeared unit keeps today's identity: its `via`
+  assertions stay out of the finding's text and fingerprint.
+- Sub-Q11 (b), a detection-only overlay. Own assertions are paired, judged
+  and credited exactly as on main (`diffalign._match_assertions`). `via`
+  assertions then pair among themselves and with the after side's own
+  assertions left unpaired, by the same stages. A `via` assertion earns no
+  credit and adds no requirement: it counts in no D2 move credit, no D5
+  oracle mass, no D4 newly written assertion and no split/rename budget,
+  and a disappeared unit needs none of its `via` assertions moved. A finding
+  about a `via` assertion takes the credits a module helper's inherited
+  assertion takes. #272 reading 7's moved-skip pairing reads `helper.`
+  markers in both directions, so it covers helper methods unchanged.
+
+This entry supersedes D-111 reading 2's sentence "A method reached through
+`self` is no scope `_executed_scopes` resolves, for assertions either": since
+#306, such a method is followed by this entry's resolution, for assertions
+and skips.
+
+Why Sub-Q3 departs from D-095 reading 2. D-095 reads a class *value* for a
+guard, and makes it unknown on any reflective call in the module and for
+any private name, because unittest sets private attributes on the
+instance. A helper method is a *def* that a call names, and the ruling made
+its rebinding test name-specific. A `setattr` on an unrelated object
+elsewhere in the module therefore leaves the helper resolved. A private
+name (`_check`, the usual spelling of a helper method) resolves unless it
+is one `unittest.TestCase` defines (Sub-Q6). A computed-name `setattr` on
+the receiver or on a class of the order still leaves every name of that
+class unresolved.
+
+Effects beyond the ruling's text, accepted with this entry:
+
+- The running class must be a top-level class of the module. A method of a
+  nested class, or of a class defined under `if`, keeps today's reading.
+- A call through another name for the instance (`other = self;
+  other._check()`) is not followed.
+- `cls.<name>()` in a classmethod unit is read as `self.<name>()` is, its
+  receiver being its first parameter.
+
+Rule 2. Sub-Q1 approved these expectation changes, made exactly as
+described: in `tests/test_issue272_helper_skips.py`, H2
+`test_a_method_reached_through_self_is_not_followed` flips from `[]` to
+`helper._later.skip`, and S1
+`test_a_method_the_setup_reaches_through_self_is_not_followed` to
+`helper._offline.skip`. Both are renamed `..._is_followed`, to pin the
+closure, as D-088 did for #208's pins. No other existing fixture or test
+expectation changed, and none under `tests/gates`.
+
+**Fingerprints and IR.** No fingerprint moves (Sub-Q10): the `via`
+assertions are new records, and a finding on one is a new finding. In
+`--emit-ir`, every assertion gains `"via": null`, which is an optional field
+(docs/stability.md: IR_VERSION stays 2, as for D-067's keys and D-111's
+`markers_moved`). A file whose test follows a helper method also gains its
+`via` assertions and a class-qualified `helper_calls` key. The count of
+records this changes in `tools/emit_corpus.py`'s output comes from CI's
+artifacts (NOT_RUN on the work machine), and the next release guide names
+the field.
+
+**Cost.** The sweep the ruling asks for ran in part on 2026-10-17, on
+LAPTOP-01AGNPJU under POLICY `checkwash-pju-sweep` (T-546), as a
+checkwash-lab-declared run whose manifest (`54706f99…c88c`) and engine
+commits the owner approved first. It is labelled human-authorized local
+PJU, NOT EC pool. Its plain before/after compares #424's engine
+(`f541f748`) with this entry's (`81c69d28`):
+- **Standard set** (1,800 commits): no change.
+- **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088 batch,
+  and the 45 that are also in the standard set ran in the standard
+  batch, where none changes): 15 commits differ, all scrapy and all
+  beyond fingerprints. In 14 of them findings are only added:
+  ASSERT_REMOVED (high 286, warn 1), EXPECTED_VALUE_CHANGED (warn 28),
+  ASSERT_SUBSTITUTED (high 6), ASSERT_WEAKENED (high 2) and
+  EXPECTATION_DEFINITION_CHANGED (high 2, warn 1). In the fifteenth,
+  scrapy `fada8be1db`, no finding is added or removed: six TEST_DISABLED
+  findings keep their fingerprints and go from info (4) or warn (2) to
+  high. No finding is removed or lowered. Three verdicts go from pass to
+  block, and none from block to pass. 19 of the 1,218 end in the same
+  engine error on both engines and are not judged.
+- **Stated costs:** Sub-Q4's conversion to `staticmethod` shows in 3
+  commits (68 findings, all high; see below). In the standard set and
+  D-088's sets, no commit shows Sub-Q7's, a helper method moved to a base
+  in another module. Sub-Q4's other cost, a skip added in a helper method
+  together with a decorator on that method, leaves the skip unread on
+  both engines, so a before/after comparison cannot count it; any of the
+  method's assertions that were reached at the parent read as removed,
+  as for `staticmethod`.
+- **Source review** (read-only, after the run). Agents read the upstream
+  commits, the engine source and the harness's result files, and a
+  second agent tried to refute each verdict change and each survey of
+  the other commits. Nothing was rerun, so the mechanisms below are read
+  from source, not observed:
+  `NOT_RUN：工作機規則（POLICY work-machine-local），no engine run or IR emission`.
+  None of the added findings is a weakening, and the three blocks are
+  false:
+  - scrapy `c8aa429c9b` (168 ASSERT_REMOVED high) adds class-level
+    pytest marks (`requires_reactor`, `requires_http_handler`) to 23
+    test classes, and all 168 findings fall in six of them, whose tests
+    reach assertion-holding helper methods through `self`. `e058a05763`
+    (8) adds `pytest.mark.skipif(sys.version_info >= (3, 12), ...)` to
+    two TestCase classes, with all 8 findings in one of them; both
+    engines already report that version skip as TEST_DISABLED warn
+    (COMPAT_GATE), so the block comes from the 8 findings alone. Sub-Q2
+    leaves a call unresolved under a decorator on the running class, so
+    each helper method resolves on the parent side only, and its
+    assertions read as removed. A pytest mark returns the class it
+    marks.
+  - scrapy `fada8be1db` merges six proxy tests into parametrized ones
+    that each call `self._maybe_skip(...)`. That helper's skip is now
+    followed (Q1 (a)). Its guard is no D6 compat gate, so each new unit
+    is not live (SPEC §5 D2), and the six disappeared units lose the
+    credit they had under #424's engine, move credit (D2) for four of
+    them and restructure credit (D5) for the other two, and go to high.
+    D-087 and D-111 read setup skips and same-file helper skips the same
+    way.
+  - The other 12 commits add 150 findings and change no verdict:
+    Sub-Q4's staticmethod cost in 3 (68, all high); a decorator added to
+    the running class in 4 (37), where the class does run in fewer
+    places (in `14737e91ed` because its tox.ini moves mitmproxy out of
+    the default environments, not because of the mark) and #424's engine
+    already reports TEST_DISABLED, so the ASSERT_REMOVED findings repeat
+    it under a false reason; detector readings that already applied to
+    own assertions, now applied to each helper-method copy, in 4 (37); a
+    class local to a test method, named like the test class, read as
+    rebinding it, in 1 (1), which goes beyond Sub-Q2's "a class name the
+    module binds more than once"; and a removed helper call site in 2
+    (7): in `e853d9e910` the call moves to a new test and its helper
+    assertions earn no move credit there (Sub-Q11), and in `3a36955261`
+    a repeated check is dropped while a later call of the same helper
+    still covers it, which checkwash does not model. Two commits fall
+    under two of these.
+  - The decorator reading and the local-class reading are filed as
+    #487, the helper-skip liveness as #488.
+- **Not measured:** resolution toggled in both directions, and what
+  Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
+  variant that is not a commit on main. Sub-Q7 asks for its cost to be
+  counted in the targeted sweep: of the 1,372 commits in the sweep's
+  `targeted` phase, only the 119 that are also in D-088's sets ran.
+
+The counts are read from the harness output. The summaries and the
+source review's records are in checkwash-lab
+`prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+`runs/acceptance-sweep-421/20261017-pju/`. Two of the ruling's three
+stated costs are pinned: a helper method moved to a base in another
+module (Sub-Q7, `self_method_moved_to_imported_base_pos`), and a
+conversion to `staticmethod` (Sub-Q4,
+`self_method_staticmethod_conversion_pos`). Sub-Q4's other stated cost
+is not pinned: a skip added in a helper method together with a decorator
+on that method is not read, so it passes with zero findings, as before
+this entry, unless the method's assertions were reached at the parent;
+those then read as removed, as for `staticmethod`. A decorator on the
+running class falls under Sub-Q2 instead (`c8aa429c9b` and `e058a05763`
+above).
+
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
+
+- Tests were added: 10 `.gwcase` fixtures and 51 collected items in
+  `tests/test_issue306_self_methods.py`. The two pins above changed.
+- The diffalign and `gating.py` changes for Sub-Q8 and Sub-Q11 are in their
+  own commit, for the owner's approval as the ruling asks.
+
+The agent wrote this entry in #306's fix PR #476. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
+(93c25a6) text and of the diffalign and gating commit ea98b62.
+
+The Cost paragraph and the Evidence status sentence were rewritten from
+the 2026-10-17 sweep and its source review in PR #489. The maintainer
+approved that text on 2026-10-18: 「照你建議」, in reply to the agent's list
+asking for approval of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144
+(dfde00e1) drafts. The follow-up issue numbers (#487, #488) were filled in
+once the issues were filed, as that list said.
+
+## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
+
+Ruling 421 (owner, 2026-10-14, 「P1 全部照建議」) answered its six questions
+as recommended, and the order decision puts round 1 before #429 and #428.
+D-145 is #306's entry in PR #476, so this entry is D-146.
+
+#421 reports that an assertion-level exemption was keyed on rule, path, unit
+and the normalized before text. While the base still held the original line,
+one `checkwash allow` for a reviewed rewrite also passed any other rewrite of
+that line the same rule reported, until the entry expired. The key was broader
+in four more ways. The event kind was not in it, so an approved strength drop
+also covered an inversion. A Jest or Vitest assertion was keyed by its text
+through the matcher's `(`, so `toBe(1)` and `toBe(2)` on one subject shared a
+key. TOLERANCE_LOOSENED was keyed by `kind:old value`, so one approval covered
+any widening of a tolerance with that kind and old value in the unit. And
+identical before lines collided.
+
+How each answer is implemented:
+
+- Q1 (b) and Q2 (b), the scope. ASSERT_WEAKENED (its five branches),
+  ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
+  EXPECTED_VALUE_CHANGED at assertion level, EXPECTED_VALUE_DERIVED,
+  EXPECTATION_DEFINITION_CHANGED (the aligned emitter and the helper/loop
+  provenance channel), SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (both
+  forms of each) now emit `make_assertion_fingerprint`. TEST_DISABLED waits
+  for round 2 under its own issue and ruling. EXPECTED_VALUE_HARDCODED,
+  CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT and the rules that are not
+  oracle rules keep `make_fingerprint`.
+- Q3 (b), the identity. `assertion_identity` builds it and `assertion_key`
+  hashes it: `rule/path/unit/v2:<64hex>`, the full SHA256 of ASCII canonical
+  JSON under the scheme name `checkwash/assertion-fingerprint/v2`. It holds
+  the legacy pre-image exactly as `make_fingerprint` builds it, the complete
+  before and after texts, the event kind, the before side's ordinal and
+  count of the text (`assertion_position`), and the rule's context. The
+  texts are in `identity_text`'s form, a v2-only scanner: `normalize_text`'s
+  form, except that a JS template literal is kept as written and the code
+  of each `${...}` in it is normalized as code. `normalize_text` is
+  unchanged, so pairing, move detection and the legacy keys are as they
+  were. A span
+  only finds the assertion among its copies. Spans, line numbers, messages,
+  strengths, severities, file digests and revision labels stay out. Nothing
+  raises: an unreadable text is null, and a context JSON cannot encode is
+  recorded as null.
+- Q4 (a), legacy keys. `fingerprint_state` retires a legacy key of these
+  nine rules. It is still parsed and counted, never eligible, and `allow`
+  refuses it (exit 2) with a message that names #421. `doctor` and `check`
+  report it as they report the five D-055 namespaces. Nothing is migrated.
+  The legacy entries in checkwash's own ledger cover merged PRs, so no
+  current verdict changes; they stay as ignored records until they expire
+  or are removed through the GUARDRAIL_TOUCHED route.
+- Q5 (a), versioning. The next minor (or 1.0), never a patch.
+  FINDINGS_VERSION and IR_VERSION stay at 2: no IR field is added. The
+  release needs the one-time authorization in AGENTS.md rule 5.
+- Q6 (b), the report listing, is filed separately at P3.
+
+Readings the ruling leaves to the implementation:
+
+1. **The context per rule.** TOLERANCE_LOOSENED: the tolerance kind and both
+   recorded values. EXPECTATION_DEFINITION_CHANGED (aligned): for each name
+   whose definition moved, its reaching definition, local binding,
+   parametrize column, parametrize rows, module constant and same-file
+   fixture, before and after. EXPECTED_VALUE_DERIVED: the names the new
+   expectation shares with the subject. SUBJECT_INPUT_CHANGED: the changed
+   inputs. SUBJECT_NORMALIZED (aligned): both resolved subjects.
+   ASSERT_WEAKENED: whether the subject changed in the polarity branch, and
+   the tolerance an unreadable one lost; its other branches need nothing
+   beyond the kind and the texts. The provenance channel and both table
+   forms already put their whole event in the legacy text.
+2. **Which assertion a tolerance change came from.** `tolerance_changes`
+   records values only. The detector takes, in alignment order, the next
+   pair whose tolerances are those values; when there is none, the texts
+   and the position are null and the key still differs by its context.
+3. **Literal-table SUBJECT_NORMALIZED events carry no position.** The record
+   alone is the identity, so it survives the JSON round trip of the events
+   without the units. Duplicate suppression, between the two forms and
+   between equal records, stays on the legacy keys, so no finding count
+   changes.
+4. **The stored expectation.** `EXPECTED_VALUE_CHANGED/path/-/v2:<64hex>`
+   stays the D-055 file form. The same rule with a unit is now an
+   assertion-level v2 key, so the key that was `invalid` at
+   `test_snapshot_expectations.py:125` is `supported`.
+5. **Sets.** `ast.literal_eval` makes sets of literal arguments and table
+   cells, and a set's iteration order, so its `str()`, follows the hash seed.
+   `canonical` encodes a set as a list sorted by its members' encodings, and
+   another value JSON has no form for as its `repr`, so a key is the same in
+   every process. SUBJECT_INPUT_CHANGED's table-row legacy text goes through
+   it too. A row without a set encodes as it always has, and so does a dict
+   with int, float or None keys; a tuple key, on which json.dumps raised,
+   is now written as its JSON encoding. Raised by a GLM review of #477 and
+   verified by the agent.
+6. **Which copy.** The ordinal counts in the side's own order, not by span:
+   spans of assertions from other files share no coordinates with the
+   unit's, and the copies of one helper line share a span. Own and
+   same-file assertions come in source order, a helper line's copies by
+   call site, then those from other files; an assertion is found by itself,
+   never by its span.
+7. **A unit named with `/`.** A JS unit is the raw test title, so
+   `fingerprint_state` reads only the last segment as the digest, after a
+   non-empty path and unit: `it("GET /")` keeps an exemptible key.
+8. **TOLERANCE_LOOSENED's pair.** Alignment and the detector share
+   `tolerance_change`, so each recorded change is matched to the pair that
+   records exactly it, not to another pair whose values merely fit.
+9. **SUBJECT_NORMALIZED's subjects** are in the texts' normal form, so
+   reformatting outside string literals keeps the key.
+
+Readings 6 to 9 were raised by a read-only Claude review workflow of #477 and
+verified against the source by the agent.
+
+This supersedes, for these nine namespaces, D-055's "Keep unaffected
+identities ... unchanged" and D-077's list of the keys that stay (six rules
+keying a JS assertion by its legacy matcher identity; TOLERANCE_LOOSENED,
+EXPECTED_VALUE_CHANGED and EXPECTED_VALUE_DERIVED keeping every other key).
+The D-084 practice, a changed assertion riding on an existing exemption whose
+key binds only the before text, ends.
+
+**Fingerprints.** Every finding of the nine rules has a new key, so every
+recorded exemption for them stops matching and the reviewed change must be
+re-run and approved again. Other rules keep their keys. Findings of one rule
+in one unit sort by key, so their order in a report can change.
+
+**Pinned tests (rule 2).** Changed as approved:
+`test_js_assertion_identity.py`'s four named tests, which now pin the
+legacy pre-image inside the v2 identity (`_refines`);
+`test_tolerance_absolute_bound.py`'s
+`test_a_finding_reported_before_keeps_its_fingerprint`, likewise;
+`test_snapshot_expectations.py:125,127` (its name, which says assertion
+keys are not retired, is left as approved);
+`test_doctor.py:537-546`, whose over-cap entry becomes a v2 key;
+`test_human_encoding.py:120-121`; and `test_fingerprint_scope.py:189-233`,
+moved to BROAD_EXCEPT_ADDED. Beyond that list, two, for the owner's approval:
+`test_issue416_subdirectory_root.py`'s `FINGERPRINT`, a legacy ASSERT_WEAKENED
+key its three tests pass to `checkwash allow`, becomes a v2 key (an input; no
+expectation changes); and `tests/e2e/test_cli.py::test_sarif_format_is_github_code_scanning_subset`
+reads the ASSERT_WEAKENED result's `partialFingerprints` under `checkwash/v2`,
+as SPEC §6 says. No `.gwcase` expectation changes.
+`allowlist_future_created_pos` is unaffected: the golden runner passes it no
+ledger either, so its `bypass: 39` claim holds no exemption, a gap that
+predates #421. `test_a_future_created_content_bound_key_is_still_capped` pins
+the cap on a v2 key with a real entry.
+
+**Cost.**
+- **New blocks:** a rewrite of an assertion under an exemption recorded for
+  another rewrite of the same line, for another identical copy, or for
+  another context.
+- **Re-review:** every recorded exemption for the nine rules.
+- **Measured:** the sweep (ruling: the standard set and D-088's sets)
+  ran on 2026-10-17, 14:37Z to 16:22Z, on LAPTOP-01AGNPJU, under POLICY
+  `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared run whose
+  manifest (`54706f99…c88c`) and engine commits the owner approved
+  first. It is labelled human-authorized local PJU, NOT EC pool. It
+  compares #306's engine (`81c69d28`) with this entry's (`a6426671`):
+  - **Standard set** (1,800 commits): 96 commits differ, and none still
+    differs once fingerprints are left out.
+  - **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088
+    batch, and the 45 that are also in the standard set ran in the
+    standard batch and are counted above): 194 of the 1,218 differ, and
+    none differs beyond fingerprints. 19 of the 1,218 end in the same
+    engine error (exit 2) on both engines, so neither judges them: 12 at
+    an engine limit, 4 at a nonregular source and 3 at flask's
+    `docs/_themes` submodule.
+  - No outcome or verdict changes, and every commit keeps its findings'
+    rules, severities, paths and units. Besides the outcome, the verdict
+    and any error, the harness compares only those four fields and each
+    finding's key, as a sorted list; it reads no message or assertion
+    text. In the 106 shard results the harness wrote, which are kept on
+    the host and not archived, every other field of every finding is
+    unchanged as well. Only keys move, and with them, as **Fingerprints**
+    above says, the order of findings of one rule in one unit.
+  - No finding in the sweep is exempted on either engine: the replayed
+    repositories hold no checkwash ledger. So the sweep does not measure
+    the new blocks or the re-review above.
+  - The counts are read from the harness output. The summaries and a
+    record of the owner's approval of the manifest and engine commits
+    (「核可」, 2026-10-17 14:36Z) are in checkwash-lab
+    `prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+    `runs/acceptance-sweep-421/20261017-pju/`.
+
+Row 136 is Closed. Its residuals: TEST_DISABLED (its own round),
+EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
+before-only keys; an approval still covers the identical reviewed rewrite on a
+later diff, as D-055 intends; and the identity holds what the frontends
+record. Rows 100 and 101 now point to it.
+
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
+
+- Tests were added: 38 collected items in
+  `tests/test_issue421_assertion_keys.py`. None is under `tests/gates`.
+  Row 136 is pinned through `E2E_PINNED` by
+  `test_the_reviewed_rewrite_is_exempt_and_another_still_blocks`: the
+  golden runner passes no ledger, so the `.gwcase` first written for it held
+  no exemption at all (raised by a GLM review of #477 and verified by the
+  agent), and it was removed.
+- The documented test count is 18774 (18736 after #306, + 38).
+
+The agent wrote this entry in #421's fix PR #477. The maintainer approved it
+on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
+for approval of this PR's SPEC (a332ad42), THREATMODEL (87e932ca), D-146
+(285f5d4f) and user-doc (f6f9c3db) text and of the two pinned tests outside
+the ruled list. The second half of that reply chose this host for the
+ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
+
+Cost's "Measured" bullet and the Evidence status sentence were rewritten
+from the 2026-10-17 sweep in PR #489. The maintainer approved that text on
+2026-10-18: 「照你建議」, in reply to the agent's list asking for approval
+of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144 (dfde00e1) drafts.
+
+## D-147 (2026-10-17): a JS/TS assertion that can never fail reads as TAUTOLOGY (#429, first change)
+
+Ruling 429 (owner, 2026-10-14, 「P1 全部照建議」) answered its ten
+questions as recommended. Q8 (b) splits the round into two changes, each
+with its own qualification and sweep; this entry is the first (Q2, Q6,
+Q7). D-145 (#306) and D-146 (#421) are on main, so this entry is D-147.
+
+#429 reports three one-line JS/TS edits that the Python frontend blocks and
+the JS/TS frontend passed with zero findings. This change closes the first:
+`expect(total).toBe(total)`. The frontend rated every equality EXACT_VALUE
+without comparing its operands, so nothing under
+`frontends/javascript/` produced TAUTOLOGY, and `toBe`, `strictEqual`,
+chai `equal` and `t.is` state `eq_strict` on both sides of such a pair,
+which the predicate relation read as the same predicate. An assertion on
+literals alone (`expect(3).toBe(3)` in place of `expect(total()).toBe(3)`)
+passed the same way.
+
+How each ruling answer is implemented:
+
+- Q2 (a), literal assertions. `literal_operand` in
+  `frontends/javascript/literals.py` reads an exact literal from the tokens
+  of `operand_tokens`, a lexer that reads strings, templates (substitutions
+  nested) and regular expressions whole and leaves comments out: a number,
+  BigInt, string, template without a substitution, regular expression,
+  `true`, `false` or `null`, or an array or plain object of them, through
+  parentheses, `x!` and a cast to one named type (`as number`, `as const`;
+  `x as any || y` is more than a cast). A name
+  never is one, `undefined`, `NaN` and `Infinity` included. `_rate_tautology`
+  in `frontend.py` rates TAUTOLOGY an assertion whose subject as written and
+  every operand its predicate reads are literals, in each scan: the Jest
+  matchers, chai `expect` and `should` chains, the chai and node:assert
+  calls, and AVA and tap. A message argument is no operand.
+- Q7 (b), self-comparison. `same_operand` compares the token sequences of
+  two operands, quoted strings read in double quotes and templates and
+  regular expressions as written, once comments, parentheses, `x!` and a
+  cast to one named type are taken out of each, together with
+  Python's outer no-op arithmetic (`x + 0`, `0 + x`, `x - 0`, `x * 1`,
+  `1 * x`, `x / 1`, repeatedly, only as the outermost operation). An
+  equality (`toBe`, `toEqual`, `toStrictEqual`, chai `equal`, `eql`,
+  `deep.equal` and the assert equalities, node:assert's four, AVA `is` and
+  `deepEqual`, tap `equal`, `same`, `strictSame`, and their negations) or an
+  inclusive bound (`toBeGreaterThanOrEqual`, `toBeLessThanOrEqual`, chai
+  `least`, `most`, `isAtLeast`, `isAtMost`) whose two sides compare so is
+  TAUTOLOGY. Truthy spellings (`assert.ok(x === x)`) are a residual.
+- Q6 (a), recording. A tautology keeps `left`, text, span and operand
+  evidence as read, so `fingerprint_text` and every finding key stay as they
+  were, and records form `tautology`, strength TAUTOLOGY, no predicate key and
+  `positive=True`. A self-comparison in an oracle's place is a strength drop
+  (`ASSERT_WEAKENED`), and on a local bound to one call it reports that
+  instead of `EXPECTATION_DEFINITION_CHANGED`, whose JS channel reads only
+  unweakened `compare_eq` pairs.
+- Q10 (a). #431's fix landed first (#449, v0.8.0), so this change carries
+  its fixtures, which stay in the suite unchanged, and restates #431's "IR
+  form or strength" line in THREATMODEL row 129 and
+  `docs/js-catch-swallowing.md`.
+- Q4 (a). Row 10 gets its JS/TS clause, pointing to the new
+  `docs/js-reachability.md`. Rows 8, 29 and 48 get theirs with the second
+  change, which reads reachability (Q1, Q3, Q5).
+- Q9 (b). Dead test registration is outside both changes.
+
+Readings left to the implementation, accepted with this entry:
+
+1. The ruling's premise for Q10 does not hold as written: #431's
+   `HandlerReader.passing_literal` reads the assertion's `left`, `predicate`
+   and `positive`, not only source tokens. Q6's "no predicate key" would turn
+   every literal-only catch from `catch always-passing assertion` back into
+   no evidence. So the frontend sets form and strength when it reads an
+   assertion, after its operand evidence, and drops the key and polarity of
+   a tautology only after `swallowing_handlers` has read the file. #431's
+   outputs do not change; the catch proof never reads the rating.
+2. "Expected operand (if any)" is read as every operand the predicate
+   reads: the expected value, a bound, a tolerance (`toBeCloseTo`'s
+   precision, chai `closeTo`'s delta, both `within` bounds) and a property
+   name. One that is not a literal leaves the assertion a real one.
+3. Arrays, plain objects and regular expressions of literals are exact
+   literals, as a container of literals is in Python. This moves two of the
+   three existing expected outputs below. The owner ruled so on 2026-10-17
+   (rule 2, below).
+4. A negated self-comparison is TAUTOLOGY too, as Python reads `x != x`;
+   it can never pass and states no oracle. With `positive=True` (Q6), paired
+   with a negated check of a value it reads as a change of form and
+   polarity, as in Python. Exclusive bounds (`x < x`), which Python does not
+   read either, keep their rung, and so do `toBeCloseTo(x)`, `toContain(x)`,
+   `include`, `toMatch` and `within`. So does a property's value compared
+   with that property (`.property("total", order.total)`,
+   `assert.propertyVal`), which still asserts that the property is there.
+   The row-10 stripping is Python's reading, not an evaluation: `x + 0`
+   reads as `x` although `-0 + 0` is positive zero under `Object.is`.
+5. An assertion whose predicate is not read (strength None: `raises`,
+   `unknown`) keeps strength None.
+6. What the lexer cannot read gives no literal and no operand to compare,
+   so the assertion keeps its rung: a `/` right after a `}` or a statement
+   head's `)` (`if (ok) /a/.test(s)` in a callback inside the operand),
+   which may start a regular expression or divide; a `/` inside a template
+   substitution, which may hold a `}`; and an Annex B HTML-like comment. A
+   `//` comment ends at any line terminator, U+2028 and U+2029 included.
+   Regular expressions and templates reach the quote and bracket scanners
+   as placeholders spelled from their text, every one of them, so a quote,
+   bracket or nested template inside one hides no operator
+   (`f(/'/) || g(/'/) + 0` keeps its `+ 0`) and no template as written
+   spells another's placeholder. These came from a read-only review workflow and were
+   checked by Claude.
+7. A cast to one named type inside an operand binds as TypeScript binds
+   it: looser than the arithmetic before it, which is the cast's own
+   operand, while what follows applies to the cast. `total as number + 0`
+   is `(total as number) + 0` and reads as `total`, as the parenthesized
+   spelling did; `0 + s as any * 2` is `((0 + s) as any) * 2` and keeps its
+   `0 +`. A cast to anything more, or a type followed by `|`, `&` or `<`,
+   still leaves the operand whole. Raised by GLM, verified by Claude; the
+   precedence before the cast came from a review workflow.
+
+Rule 2. By reading, the ruling expected no existing output to move. Three
+do, in
+`tests/test_issue215_chai_grammar.py::test_a_should_chain_reads_as_its_expect_chain`
+(commit 1800f5c9): `(5).should.equal(5)` (compare_eq/90),
+`[1, 2].should.have.lengthOf(2)` (type_shape/50) and
+`'abc'.should.match(/b/)` (pattern/60) become tautology/10, with subject,
+polarity and value unchanged. The first moves under any reading of Q2; the
+other two under reading 3. The owner approved exactly these three on
+2026-10-17: 「a」, in reply to the relayed question, where (a) read
+「包含（跟 Python 把容器字面值當字面值一致）：三列都改成 tautology/10，left、極性、值都不變」
+and (b) was scalars only. Anything else that moves still stops the round.
+The three confirmations the ruling asks for are pinned in
+`tests/test_issue429_js_tautology.py`:
+
+- `test_js_handrolled_tolerance.py:78`,
+  `expect(0.01).toBeGreaterThan(Math.abs(...))`, stays BOUND: Q2 reads the
+  source operands, and the bound is not a literal
+  (`test_a_literal_bound_is_not_a_literal_assertion`).
+- The #363 and #431 catch cases hold: the full assertion list, keys
+  included, reaches `swallowing_handlers` before any key is dropped
+  (`test_the_catch_proof_reads_the_predicate_before_it_is_dropped`; both
+  test files are unchanged).
+- A removed `expect(1).toBe(1)` keeps its identity: the content-bound key
+  (#421) is computed from the legacy pre-image `expect(1).toBe(`
+  (`test_a_removed_literal_assertion_keeps_its_fingerprint`).
+
+No `.gwcase` expectation and nothing under `tests/gates` changed.
+
+**Fingerprints.** No fingerprint scheme changes, and a finding on a
+tautology's own evidence keeps its key (the pin above). The message of a
+removed literal assertion says `strength TAUTOLOGY` instead of the rung it
+read before, and pairs that were silent now report `ASSERT_WEAKENED` under
+new keys. A pair whose after side is now a tautology is judged as a strength
+drop: where main read it as a keyed relation (`toBe(27)` ->
+`.not.toBe(total)`, polarity inverted), the finding's kind, message and v2
+key change. #421's content-bound keys (#477) landed
+first, so the pin above checks the legacy pre-image each key is computed
+from, as `tests/test_js_assertion_identity.py` does.
+
+Evidence status: the change was prepared on a work machine where no pytest,
+checkwash or Python ran. CI ran the tests.
+
+- Tests were added: 252 collected items in
+  `tests/test_issue429_js_tautology.py` and four `.gwcase` fixtures
+  (`js_self_compare_pos` and `js_self_compare_node_pos`, which carry
+  `bypass: 10`, `js_literal_replaces_oracle_pos` and
+  `js_tautology_reformatted_neg`).
+- The documented test count is 19030 (18774 + 256).
+- The sweep measures the change (ruling): the standard set, the D-088 sets
+  and the JS batch, with the refactor, tamper, decoy and recorded gates.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
+
+The agent wrote this entry in #429's first fix PR #482. It waits for the
+maintainer's approval.

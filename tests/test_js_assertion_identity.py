@@ -1,13 +1,19 @@
-"""Complete JS assertion evidence must preserve established finding keys."""
+"""Complete JS assertion evidence must preserve established finding keys.
+
+The rules with content-bound keys (#421) keep the established key as the
+legacy pre-image their identity holds, so that is what is pinned for them.
+"""
 
 import datetime
 import hashlib
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import FileChange, analyze
+from checkwash.findings import assertion_key
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.model import Assertion
 
@@ -33,6 +39,27 @@ def _key(rule, identity):
     return f"{rule}/{_PATH}/sample/{digest}"
 
 
+def _identities(monkeypatch):
+    """Every assertion-level identity computed while the test runs (#421)."""
+    seen = []
+    real = findings_module.assertion_identity
+
+    def record(*args, **kwargs):
+        seen.append(real(*args, **kwargs))
+        return seen[-1]
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
+
+
+def _refines(finding, identities, rule, identity):
+    # The content-bound key is computed from an identity whose legacy
+    # pre-image is the old normalized evidence, spelled as `_key` spells it.
+    assert finding.fingerprint.startswith(f"{rule}/{_PATH}/sample/v2:")
+    legacy = f"{rule}/{_PATH}/sample/{identity}"
+    assert finding.fingerprint in {assertion_key(i) for i in identities if i["legacy"] == legacy}
+
+
 @pytest.mark.parametrize("rule,before,after,legacy_identity", [
     ("ASSERT_REMOVED", "expect(subject()).toBe(42)", "observe()", "expect(subject()).toBe("),
     ("ASSERT_WEAKENED", "expect(subject()).toBe(42)", "expect(subject()).toBeTruthy()",
@@ -46,10 +73,12 @@ def _key(rule, identity):
     ("SUBJECT_INPUT_CHANGED", "expect(subject(1)).toBe(42)", "expect(subject(2)).toBe(42)",
      "expect(subject(1)).toBe("),
 ])
-def test_legacy_rules_keep_their_key_and_gain_complete_evidence(rule, before, after, legacy_identity):
+def test_legacy_rules_keep_their_key_and_gain_complete_evidence(rule, before, after, legacy_identity,
+                                                               monkeypatch):
+    identities = _identities(monkeypatch)
     _ir, findings, _verdict = _analyze(_source(before + ";"), _source(after + ";"))
     finding, = [finding for finding in findings if finding.rule == rule]
-    assert finding.fingerprint == _key(rule, legacy_identity)
+    _refines(finding, identities, rule, legacy_identity)
     assert finding.before.text == before
     if finding.after is not None:
         assert finding.after.text == after
@@ -66,21 +95,23 @@ def test_removed_unit_joins_legacy_keys_but_reports_complete_assertions():
     assert finding.before.text == "expect(first()).toBe(1)\nexpect(second()).toEqual(2)"
 
 
-def test_new_expected_value_rule_uses_the_complete_before_assertion():
+def test_new_expected_value_rule_uses_the_complete_before_assertion(monkeypatch):
+    identities = _identities(monkeypatch)
     _ir, findings, _verdict = _analyze(
         _source("expect(subject()).toBe(42);"), _source("expect(subject()).toBe(0);"),
     )
     finding, = [finding for finding in findings if finding.rule == "EXPECTED_VALUE_CHANGED"]
-    assert finding.fingerprint == _key("EXPECTED_VALUE_CHANGED", "expect(subject()).toBe(42)")
+    _refines(finding, identities, "EXPECTED_VALUE_CHANGED", "expect(subject()).toBe(42)")
     assert finding.before.text == "expect(subject()).toBe(42)"
 
 
-def test_node_finding_identity_remains_the_complete_assertion():
+def test_node_finding_identity_remains_the_complete_assertion(monkeypatch):
+    identities = _identities(monkeypatch)
     _ir, findings, _verdict = _analyze(
         _source("assert.strictEqual(subject(), 42);"), _source("assert.ok(subject());"),
     )
     finding, = [finding for finding in findings if finding.rule == "ASSERT_WEAKENED"]
-    assert finding.fingerprint == _key("ASSERT_WEAKENED", "assert.strictEqual(subject(),42)")
+    _refines(finding, identities, "ASSERT_WEAKENED", "assert.strictEqual(subject(),42)")
     assert finding.before.text == "assert.strictEqual(subject(), 42)"
 
 
@@ -119,7 +150,8 @@ def test_identity_comparison_ignores_formatting_outside_strings():
     assert fingerprint_text(_PATH, assertion) == "check( subject( 1 ) ).toBe("
 
 
-def test_vitest_diagnostic_message_keeps_its_established_fingerprint():
+def test_vitest_diagnostic_message_keeps_its_established_fingerprint(monkeypatch):
+    identities = _identities(monkeypatch)
     imports = 'import { expect } from "vitest";\n'
     before = 'expect(subject(), "explain failure").toBe(42)'
     _ir, findings, _verdict = _analyze(
@@ -127,7 +159,7 @@ def test_vitest_diagnostic_message_keeps_its_established_fingerprint():
         imports + _source('expect(subject(), "explain failure").toBeTruthy();'),
     )
     finding, = [finding for finding in findings if finding.rule == "ASSERT_WEAKENED"]
-    assert finding.fingerprint == _key("ASSERT_WEAKENED", 'expect(subject(),"explain failure").toBe(')
+    _refines(finding, identities, "ASSERT_WEAKENED", 'expect(subject(),"explain failure").toBe(')
     assert finding.before.text == before
 
 

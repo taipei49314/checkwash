@@ -11,10 +11,11 @@ conjoined with it.
 In the test's own file, the scopes `_executed_scopes` resolves for
 assertions are followed (ruling 272.Q1): a function the module defines, or
 one nested in the calling scope, or a lambda bound to a name, called by
-that plain name, at most four calls deep. A method reached through `self`,
-a class, a generator and a helper passed as an argument are not. The
-marker is `helper.<function>.<effect>`, named for the helper that holds the
-outcome (272.Q3).
+that plain name, at most four calls deep. A class, a generator and a helper
+passed as an argument are not. A method reached through `self` is read by
+`of_method` since #306, in the class running the test, with that class's
+attributes. The marker is `helper.<function>.<effect>`, named for the
+helper that holds the outcome (272.Q3).
 
 A function a test or conftest module defines, bound by a top-level
 `from M import f` and called by that plain name, is followed into the
@@ -357,6 +358,82 @@ class HelperOutcomes:
         """`reached` for every call in `scope` that runs: what a setup provider's helpers end in."""
         _own, calls, local_scopes = self._calls(scope, bindings, method)
         return self.reached(scope, bindings, calls, method=method, local_scopes=local_scopes)
+
+    def method_calls(self, scope, bindings, key, *, attrs=None, follow, calls=None):
+        """(helper, effect, evidence, guard) for each outcome a method reached through
+        `scope`'s instance ends in (#306).
+
+        `follow(scope, call)` gives the method a call through the instance runs
+        in the class running the test, or None; `key` names that class, and
+        `attrs` resolves its attributes, so a guard is read under them
+        (306 Sub-Q5). `calls` are the calls in `scope` that run, when the
+        caller knows them; otherwise they are worked out here. The marker is
+        named for the method that holds the outcome, as a helper's is.
+        """
+        if calls is None:
+            _own, calls, _local = self._calls(scope, bindings, method=True)
+        found = []
+        conditions = None
+        for node in calls:
+            target = follow(scope, node)
+            if target is None or target is scope:
+                continue
+            inner = self.of_method(target, bindings, key, attrs=attrs, follow=follow, chain=frozenset({id(scope)}))
+            if not inner:
+                continue
+            if conditions is None:
+                conditions = call_conditions(scope, self.condition)
+            path = conditions.get(id(node), ())
+            for helper, effect, evidence, conds in inner:
+                found.append((helper, effect, evidence, _conjunction((*path, *conds))))
+        return found
+
+    def of_method(self, target, bindings, key, *, attrs=None, follow, depth=MAX_DEPTH - 1, chain=frozenset()):
+        """(helper, effect, evidence, conditions) for what calling the method `target`
+        through its instance ends in (#306).
+
+        Read as a setup callback is, with its receiver: `self.skipTest` is an
+        outcome, and a guard reads the running class's attributes (`attrs`).
+        The helpers it calls by plain name, and the methods it calls through
+        its own instance, add theirs under the conditions their calls run
+        under, at most four calls from the test.
+        """
+        memo = ("method", id(target), id(bindings), key, depth)
+        if memo in self._of:
+            return self._of[memo]
+        found = []
+        outcome = setup_outcome(target, bindings, receiver=True, condition=self.condition, attrs=attrs)
+        if outcome is not None:
+            effect, evidence, guard = outcome
+            found.append((target.name, effect, evidence, (guard,) if guard else ()))
+        if depth > 0 and (outcome is None or outcome[2] is not None):
+            own, calls, local_scopes = self._calls(target, bindings, method=True)
+            shadowed = _shadowed(target)
+            conditions = None
+            for node in calls:
+                inner = ()
+                sub = self.candidate(node, local_scopes, shadowed)
+                if isinstance(sub, Imported):
+                    inner = self.imported.outcomes(sub.name)
+                elif sub is not None:
+                    if id(sub) not in chain:
+                        nested = self.module_scopes.get(node.func.id) is not sub
+                        inner = self._read(node.func.id, sub, own if nested else bindings, depth - 1,
+                                           chain | {id(sub)})
+                else:
+                    method = follow(target, node)
+                    if method is not None and method is not target and id(method) not in chain:
+                        inner = self.of_method(method, bindings, key, attrs=attrs, follow=follow, depth=depth - 1,
+                                               chain=chain | {id(target)})
+                if not inner:
+                    continue
+                if conditions is None:
+                    conditions = call_conditions(target, self.condition)
+                path = conditions.get(id(node), ())
+                for helper, effect, evidence, conds in inner:
+                    found.append((helper, effect, evidence, (*path, *conds)))
+        self._of[memo] = tuple(found)
+        return self._of[memo]
 
     def of(self, name, target, bindings, chain=frozenset()):
         """(helper, effect, evidence, conditions) for what calling `target` ends in.

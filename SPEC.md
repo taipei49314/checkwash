@@ -479,6 +479,29 @@ boundary in either direction is an extraction or an inlining — the slot moved,
 not the assertion — so it is never reported as a substitution (THREATMODEL 91,
 D-044). Cross-file helpers are out of scope and stated as such (91a).
 
+Since #306, a method unit's call through its instance,
+`<receiver>.<name>(...)` with the receiver its first positional parameter,
+also runs a helper method: the one the class running the test resolves (the
+method's own class, or the collecting subclass of an inherited test) in a
+local C3 order over the file's top-level classes, where a base the file does
+not define is an opaque entry and the name resolves only before the first
+one. It is followed as a module helper is, once per entry site and at most
+four calls deep, and its assertions carry `via`, the method's
+class-qualified name. A call stays unresolved, and keeps the reading it has
+always had, when the name is one `unittest.TestCase` defines, when the
+binding is not exactly one undecorated plain def in its class body, when a
+class of the order is decorated (up to the binder), has a keyword or
+defines `__init_subclass__`, `__getattribute__` or `__setattr__`, when the
+order is not a C3 order or a class name is bound again, and when the module
+stores or deletes `.<name>`, stores into a `.__dict__`, names it in
+`setattr`/`delattr`/`object.__setattr__`, `patch.object` or
+`monkeypatch.setattr`, or calls `setattr` with a computed name on the
+receiver or a class of the order (D-145). A `via` assertion is a
+detection-only overlay: the unit's own assertions pair as before, and the
+`via` ones then pair among themselves and with the after side's own
+assertions left unpaired; they earn no credit and add no requirement for
+another finding (§5).
+
 Strength is a totally ordered integer. Weakening = the aligned assertion's
 strength decreases. Defined once, in `src/greenwash/ir/strength.py`.
 
@@ -501,6 +524,30 @@ helpers) get strength `null` and are **excluded** from weakening comparisons
 `ASSERT_REMOVED`. The JavaScript frontend records a call to a resolved
 assertion API whose predicate it does not read the same way: `raises` for a
 throw check, `unknown` otherwise (#196 190.5).
+
+**JS/TS tautologies (#429).** The JavaScript frontend reads the TAUTOLOGY
+rung in every assertion library it reads, unary matchers and `assert.ok(true)`
+included. An assertion is TAUTOLOGY, whatever it evaluates to, when its
+subject as written and every operand its predicate reads (an expected value,
+a bound, a tolerance, a property name; never a message) are exact literals: a
+number, BigInt, string, template without a substitution, regular expression,
+`true`, `false` or `null`, or an array or plain object of them, read as
+JavaScript tokenizes them (a `//` inside a template is no comment), through
+comments, parentheses, `x!` and a cast to one named type. A name is never a
+literal, `undefined`, `NaN` and `Infinity` included. An equality or an
+inclusive bound is TAUTOLOGY, negated or not, when its two sides are one
+operand: the same tokens once comments, parentheses, `x!`, a cast to one
+named type, formatting and the outer no-op arithmetic Python strips (`+ 0`,
+`0 +`, `- 0`, `* 1`, `1 *`, `/ 1`) are taken out of each; a spread and a
+property value compared with its property are none. Such an assertion keeps
+its subject, text, span and operand evidence, so a finding on its own
+evidence keeps its identity, and records form `tautology` with no predicate
+key and `positive=True`, so the predicate relation below never reads it as
+the predicate it replaced. A pair whose new side is a tautology is a strength
+drop, so where the relation had read it (`toBe(27)` -> `.not.toBe(total)`,
+polarity inverted), the finding now reports the drop, under another key. A truthy spelling
+(`assert.ok(x === x)`), the `trivial` reading of §5 and the other residuals
+`docs/js-reachability.md` names are not read.
 
 **Operands bound by name (#462).** The Python frontend reads each operand
 of a unittest assertion method by position or, failing that, by the
@@ -552,7 +599,7 @@ detectors can only be disabled whole.
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
 | `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped with the subject unchanged (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`, `assertIs`→`assertIsNot`) — same form and strength, opposite meaning. Polarity is whether the assertion asserts its predicate or that predicate's negation, not whether it is spelled negated: `toBeDefined()` asserts `!== undefined`, the negation of `toBeUndefined()`. When the subject changed too it is reported as a rewrite, not as an inversion: greenwash cannot verify the replacement is equivalent, and saying "proves the opposite" would be a claim it has not established. When both assertions carry a predicate key (§3), the predicates decide instead of the lattice: a same or stronger predicate is not reported; the same key with its polarity flipped is the inversion above; a predicate change that no old value survives **contradicts** the old assertion, and a bound whose direction reversed (`<`→`>`) is reported as **bound direction reversed**; an old predicate that implies the new one is a **predicate widened**, graded by its lattice drop; any other predicate change is an **unverifiable replacement** (greenwash cannot verify the replacement is equivalent), and so is a known tolerance replaced, on the same subject, by one the frontend cannot read (a JS `closeTo` delta, `toBeCloseTo` precision or hand-rolled bound that the frontend cannot read, or that a write may have changed, is unknown, not unchanged; so is a Python tolerance call's pair that is torch's dtype default or comes through `*args` or `**kwargs`, #222). Only the inversion says the test proves the opposite. An operand change within one key belongs to `EXPECTED_VALUE_CHANGED` or `TOLERANCE_LOOSENED` |
-| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, a `pytestmark` its class or module binds in any spelling, under the name a decorator would mint (#260), a native skip or xfail the test body calls or raises (`pytest.skip`, `pytest.xfail`, `pytest.importorskip`, `self.skipTest`, `raise unittest.SkipTest`, `raise pytest.skip.Exception`), read through the module's imports, each object under one name (trial's `SkipTest` is unittest's, and the py library's `py.test` is pytest, #310), so `pt.skip()` and a bare `skip()` imported from pytest count, a raised one is a skip rather than removed assertions, and a skip respelled through another name of its object is not a new one (#220), or a conftest suite control, or a skip/xfail in the setup a unit runs (a requested or autouse fixture, in the test module or in a `conftest.py` above it, resolved as pytest resolves it for the test (#223); xunit setup): unconditional, or under the guard that setup reaches it under, judged as a body skip's guard is (#196 183.2); a conftest fixture's value names are closed over that conftest first, with the namespace and closure limits in D-127), or a skip/xfail that a helper the test or its setup calls ends in, either a same-file one (a function the module defines, one nested in the caller, or a name bound to a lambda or to `partial` of one, called by its plain name, at most four calls deep, as assertions are followed) or, since #272's second stage, one a top-level `from M import f` binds, followed into M when M is the test or conftest module an imported assertion helper resolves to, where only an outcome every call of it reaches is kept: read as a setup callback is, under the conditions its call and every call on the way run under, judged as a body skip's guard is, and reported as added to a helper this test calls (`helper.<function>.<effect>`, #272), a later binding of the test's name that may replace it, under the condition that binding runs under and judged as a body skip's guard is (`collection.rebound`, §2b, #424), a whole test unit disappeared (including out of collection, per §2b; a later binding of its name that certainly replaces it is one, #424), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too when its expected value survives. Replacing disappeared live rows with new input/answer pairs has a separate EXPECTATION_DEFINITION_CHANGED owner below (THREATMODEL 102, 102a). Row marks include statically true skipif conditions; false and unknown conditions do not disable a row. In a JS/TS test file, a unit that focus (`.only`, `fit`, `fdescribe`, `{ only: true }`) stops is reported as no longer running, with the runner condition stated (node:test honours focus only under `--test-only` or `--test-isolation=none`; #196 187.1). Which units a focus stops follows the runner (187.2): Jest's rule, under which a focused block keeps the units inside it unless a unit placed directly beside them is focused, unless the file's imports or the base root `package.json` name only Vitest, Mocha, Jasmine or node:test, whose innermost rule applies: a focused block that holds a focused declaration keeps only that declaration. Focus that the diff adds to a file that had none, while no unit of the file is reported as no longer running, is reported once for the file: Mocha and Jasmine apply focus to the whole suite, so every test outside the file stops. It is not reported when the runner is proven to keep focus in the file, by a `vitest`, `@jest/globals` or `ava` import or a base-side root `package.json` naming Jest, Vitest or AVA and no other runner (AVA runs each file in a worker of its own, #233); a node:test import is no such proof (#196 187.4) |
+| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, a `pytestmark` its class or module binds in any spelling, under the name a decorator would mint (#260), a native skip or xfail the test body calls or raises (`pytest.skip`, `pytest.xfail`, `pytest.importorskip`, `self.skipTest`, `raise unittest.SkipTest`, `raise pytest.skip.Exception`), read through the module's imports, each object under one name (trial's `SkipTest` is unittest's, and the py library's `py.test` is pytest, #310), so `pt.skip()` and a bare `skip()` imported from pytest count, a raised one is a skip rather than removed assertions, and a skip respelled through another name of its object is not a new one (#220), or a conftest suite control, or a skip/xfail in the setup a unit runs (a requested or autouse fixture, in the test module or in a `conftest.py` above it, resolved as pytest resolves it for the test (#223); xunit setup): unconditional, or under the guard that setup reaches it under, judged as a body skip's guard is (#196 183.2); a conftest fixture's value names are closed over that conftest first, with the namespace and closure limits in D-127), or a skip/xfail that a helper the test or its setup calls ends in, either a same-file one (a function the module defines, one nested in the caller, or a name bound to a lambda or to `partial` of one, called by its plain name, at most four calls deep, as assertions are followed) or, since #272's second stage, one a top-level `from M import f` binds, followed into M when M is the test or conftest module an imported assertion helper resolves to, where only an outcome every call of it reaches is kept: read as a setup callback is, under the conditions its call and every call on the way run under, judged as a body skip's guard is, and reported as added to a helper this test calls (`helper.<function>.<effect>`, #272), or that a helper method the test or its setup calls through its instance ends in, resolved as §3 resolves it and read under the running class's attributes, reported the same way (`helper.<method>.<effect>`, #306), a later binding of the test's name that may replace it, under the condition that binding runs under and judged as a body skip's guard is (`collection.rebound`, §2b, #424), a whole test unit disappeared (including out of collection, per §2b; a later binding of its name that certainly replaces it is one, #424), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too when its expected value survives. Replacing disappeared live rows with new input/answer pairs has a separate EXPECTATION_DEFINITION_CHANGED owner below (THREATMODEL 102, 102a). Row marks include statically true skipif conditions; false and unknown conditions do not disable a row. In a JS/TS test file, a unit that focus (`.only`, `fit`, `fdescribe`, `{ only: true }`) stops is reported as no longer running, with the runner condition stated (node:test honours focus only under `--test-only` or `--test-isolation=none`; #196 187.1). Which units a focus stops follows the runner (187.2): Jest's rule, under which a focused block keeps the units inside it unless a unit placed directly beside them is focused, unless the file's imports or the base root `package.json` name only Vitest, Mocha, Jasmine or node:test, whose innermost rule applies: a focused block that holds a focused declaration keeps only that declaration. Focus that the diff adds to a file that had none, while no unit of the file is reported as no longer running, is reported once for the file: Mocha and Jasmine apply focus to the whole suite, so every test outside the file stops. It is not reported when the runner is proven to keep focus in the file, by a `vitest`, `@jest/globals` or `ava` import or a base-side root `package.json` naming Jest, Vitest or AVA and no other runner (AVA runs each file in a worker of its own, #233); a node:test import is no such proof (#196 187.4) |
 | `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider. Tolerances are compared as absolute bounds where a conversion is defined (places p -> 10^-p/2; numpy's decimal d -> 1.5x10^-d, #222), otherwise per kind, via Decimal: `abs`, unittest's `delta`, decimal places (`assertAlmostEqual`'s `places`, `toBeCloseTo`'s precision) and numpy's `decimal` each state an absolute bound, and `rel` or several tolerances at once are compared kind by kind (#196 190.3); two assertions aligned by span order alone are not compared when both halves moved, the subject and the expected literal alike, a substitution that `EXPECTED_VALUE_CHANGED` reports (#196 189.2). A negated approximate comparison (`assertNotAlmostEqual`, `!=` or `not` around `pytest.approx`, a negated tolerance call or JavaScript matcher) passes when the values are far apart, so its tolerance orders the other way: it records no tolerance and is not compared (#284) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `ASSERT_SUBSTITUTED` | an aligned pair produced by the **order fallback** — position, not text or subject — where both halves moved: the subject differs structurally and so does the expectation. The old assertion is gone and a different one holds its slot, while `strength_change` reads 0 and `assertions_removed` is empty. Requires a subject on both sides, so folding an excinfo assert into `pytest.raises(match=)` is untouched; a *wrapped* subject is `SUBJECT_NORMALIZED`'s, and a rename that keeps the expectation is neither |
@@ -783,6 +830,12 @@ load-bearing:
   as split-or-renamed only when a related name arrived *and* the file's added
   oracle mass covers what it lost. Name similarity alone let one weak survivor
   excuse every deleted test in the file.
+- **An assertion reached through a helper method earns nothing for another
+  finding** (#306). A `via` assertion (§3) counts in no D2 move credit, no
+  D5 oracle mass, no D4 newly written assertion and no split/rename budget,
+  and a disappeared unit needs none of its `via` assertions moved. A finding
+  about a `via` assertion takes the credits a module helper's inherited
+  assertion takes.
 
 None of D4–D10 suppress a finding. They only decline to *escalate* it: the
 finding stays in the report (D10, like D2, at `info`; the rest at `warn`),
@@ -801,7 +854,9 @@ and that no other de-escalator holds. Evidence exists when:
    single-use temporary or a dead branch included (THREATMODEL 93, #419), or
 2. a symbol the test calls itself calls a changed symbol (one hop — a test
    going through `format_invoice` is legitimately updated when the
-   `compute_total` it calls changes), or
+   `compute_total` it calls changes); for a finding about an assertion the
+   test reaches through a helper method (§3), a symbol that method calls
+   counts too, and for no other finding (#306), or
 3. the diff **modifies** an existing production file checkwash cannot
    analyse: code in another language, a template, a data file, or Python that
    did not parse at base — conservative, see THREATMODEL #4. The inert files
@@ -849,7 +904,7 @@ to an unrelated function disarm the gate for the whole run.
 
 ```toml
 [[allow]]
-fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/5d41c9e2a7f0"
+fingerprint = "ASSERT_WEAKENED/tests/test_billing.py/test_total/v2:37f08a9259e7ed09de22a72c46a0f36042da9710d7db47f91c5c1ad72bc93d67"
 rule = "ASSERT_WEAKENED"
 reason = "behaviour change #482: totals now tax-inclusive; replaced by range+property tests"
 author = "alice"
@@ -871,11 +926,56 @@ expires = "2026-10-01"
   pin it — else the current date. This is the only clock read that can affect
   a verdict, and it is overridable precisely so runs can be reproduced.
 
-Except for the content-bound forms and literal-table SUBJECT_NORMALIZED events described below, fingerprint remains
+Except for the content-bound forms described below, fingerprint remains
 `sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
 prefixed `rule/path/qualname/` for readability. That legacy normalization
 strips whitespace outside string literals and preserves whitespace within
-them; line numbers are excluded.
+them; line numbers are excluded. Since #421 this legacy form is the key of
+TEST_DISABLED, EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD,
+TEST_PATCHES_SUBJECT and the rules that are not oracle rules; for those,
+one approval still covers any after state of the same before text.
+
+ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
+EXPECTED_VALUE_CHANGED (assertion level), EXPECTED_VALUE_DERIVED,
+EXPECTATION_DEFINITION_CHANGED (both emitters), SUBJECT_NORMALIZED and
+SUBJECT_INPUT_CHANGED (both forms) use assertion-level content-bound v2
+fingerprints (#421), emitted as `rule/path/qualname/v2:<64hex>`. A JS
+qualname is the raw test title and may hold `/`, even last; only the last
+segment is read as the digest. The digest is the complete SHA256 of ASCII canonical JSON (sorted keys, compact
+separators) of an identity under the scheme name
+`checkwash/assertion-fingerprint/v2`. The identity holds:
+
+- the rule, path and qualname;
+- the exact legacy pre-image, `rule/path/qualname/normalize(text)` with the
+  text the legacy key hashed, so every v2 key refines its legacy key;
+- the complete before and after assertion texts, null for an absent side;
+- the event kind (for ASSERT_WEAKENED: unbindable operands, an unreadable
+  tolerance, a predicate relation, a polarity change, or a strength drop);
+- the ordinal and the count of the before side's assertions with the same
+  text, in the unit's own order (its own and same-file assertions in source
+  order, the copies of one helper assertion in the order of their call
+  sites, then those from other files), so identical copies are separate
+  approvals;
+- the rule's context: the tolerance kind with both recorded values; for
+  each name whose definition moved under an unchanged expectation, its
+  recorded definitions (reaching definition, local binding, parametrize
+  column and rows, module constant, same-file fixture), before and after;
+  the changed subject inputs; the resolved subjects of a normalization, in
+  the same normal form as the texts; the names a derived expectation shares
+  with the subject.
+
+Texts use the legacy normalization, except that a JavaScript template
+literal is kept as written, since it is the literal's value, and the code of
+each `${...}` in it is normalized as code; pairing and move detection keep
+the legacy form. Spans, line numbers,
+messages, strengths, severities, file digests and revision labels are
+excluded, so reformatting outside string literals and moving the line keep
+the key. A set (a literal argument or table cell) is encoded as a list in
+sorted order, so the key does not depend on the hash seed. Computing the
+identity never raises: an input that cannot be read is null, and so is a
+context that cannot be encoded. A different after on
+the same before, another copy of the same assertion, or a different relevant
+context requires a different approval.
 
 GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED, TEST_FILE_UNPARSEABLE, SCOPE_DRIFT,
 and SNAPSHOT_CODE_COCHANGE use content-bound v2 fingerprints. Their identity
@@ -895,10 +995,10 @@ surrounding source. Inherited assertions and unknown spans cannot provide
 this proof; it does not affect fingerprint identity.
 
 The stored-expectation form of EXPECTED_VALUE_CHANGED uses the same v2
-file identity and `stored_expectation_rewritten` event. Its assertion-level
-fingerprints retain their existing scheme and are not retired. SARIF labels
-the stored form `checkwash/v2`; a malformed v2 key cannot fall back to a legacy
-assertion key.
+file identity and `stored_expectation_rewritten` event, keyed
+`EXPECTED_VALUE_CHANGED/path/-/v2:<64hex>`; the `-` unit tells it apart
+from the rule's assertion-level v2 keys above. SARIF labels both forms
+`checkwash/v2`; a malformed v2 key cannot fall back to a legacy assertion key.
 
 FileIR.normalization_equivalent_pairs is an optional sequence, default empty,
 of (unit qualname, before assertion id, after assertion id) proof records.
@@ -916,16 +1016,17 @@ remove an ordinary finding or grant equivalence/restructure credit. Records
 survive JSON arrays, and malformed records raise an engine error. Source
 locations are report evidence and do not enter fingerprint identity.
 
-For these literal-table SUBJECT_NORMALIZED events, the digest uses the same
-rule/path/unit prefix and normalization function, with canonical JSON of
-(unit, before text, after text, concrete before subject, concrete after
-subject, operator, concrete expected expression) as the fingerprint input.
-JSON uses ASCII escapes and compact separators. Operator is `Eq` or `Is`;
-the concrete expectation is canonical expression text from `ast.unparse`.
-Before/after spans
-are excluded. This retains distinct concrete row identities, including a
-fixed expectation declared inside an old helper rather than at its call.
-Ordinary aligned-assertion SUBJECT_NORMALIZED fingerprints are unchanged.
+For these literal-table SUBJECT_NORMALIZED events, the legacy text of the
+assertion-level v2 identity is canonical JSON of (unit, before text, after
+text, concrete before subject, concrete after subject, operator, concrete
+expected expression). JSON uses ASCII escapes and compact separators.
+Operator is `Eq` or `Is`; the concrete expectation is canonical expression
+text from `ast.unparse`. Before/after spans are excluded, and so are the
+ordinal and count: the record alone is the identity, so it survives a JSON
+round trip of the events without the units. This retains distinct concrete
+row identities, including a fixed expectation declared inside an old helper
+rather than at its call. Two records with the same legacy key are one
+finding, as before #421.
 
 Context includes guardrail creation/loosening, all detected CI weakening
 lines, the previous parser state, effective scope globs/role, or the complete
@@ -934,10 +1035,12 @@ after on the same before, or a different relevant event context, requires a
 different approval. An identical reviewed content pair can survive rebasing
 when its paths and relevant context are unchanged.
 
-Legacy keys in these five namespaces are retired even if their expiry has
+Legacy keys in these five namespaces, and since #421 in the nine
+assertion-level namespaces above, are retired even if their expiry has
 not passed. They remain parsed records so ledger deletions/rewrites remain
 detectable, but are excluded from eligibility; the writer rejects new legacy
-keys. An entry's rule label cannot disguise a retired fingerprint namespace.
+keys, and `doctor` and `check` report them. An entry's rule label cannot
+disguise a retired fingerprint namespace.
 Other namespaces keep their existing matching compatibility. Old reasons do
 not contain enough evidence for automatic migration; re-review the intended
 diff and record its complete v2 identity. Expiry and base-side loading policy

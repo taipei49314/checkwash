@@ -1656,17 +1656,22 @@ def build_ir(
                         removed_texts[normalize_text(b_by_id[aid].text)] += 1
                 if live_after:
                     for aid in unit.delta.assertions_added:
-                        if aid in a_by_id:
+                        # An assertion reached through a helper method earns
+                        # no credit for another finding (306 Sub-Q11).
+                        if aid in a_by_id and a_by_id[aid].via is None:
                             added_texts[normalize_text(a_by_id[aid].text)] += 1
             elif unit.before is not None and unit.after is None:
                 for a in unit.before.assertions:
-                    removed_texts[normalize_text(a.text)] += 1
+                    # ... nor adds a requirement to a disappeared unit's.
+                    if a.via is None:
+                        removed_texts[normalize_text(a.text)] += 1
                 if unit.before.body_hash:
                     removed_units[unit.before.body_hash] += 1
             elif unit.after is not None and unit.before is None:
                 if live_after:
                     for a in unit.after.assertions:
-                        added_texts[normalize_text(a.text)] += 1
+                        if a.via is None:
+                            added_texts[normalize_text(a.text)] += 1
                     if unit.after.body_hash:
                         added_units[unit.after.body_hash] += 1
 
