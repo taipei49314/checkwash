@@ -12283,3 +12283,136 @@ gwcase 標籤照寫。CI 全綠就代合。」, in reply to the agent's list ask
 approval of this PR's SPEC (26512274), THREATMODEL (63650ccc) and D-149
 (377c133d) text, the two departures, the eleven readings, the metaclass
 residual and the five fixtures' labels.
+
+## D-150 (2026-10-18): a size refusal of the change itself blocks the Claude Code Stop hook (#456)
+
+Ruling 456 (owner, 2026-10-18) came in two comments. The first
+(issuecomment-6248011888, 「照建議」, "as recommended") adopted the issue's
+Recommendation: Q1 (b) as scoped, with (d) once #454 is ruled; Q3, only a
+path in the diff with a head or worktree side over the limit; Q4, block on
+every stop; Q5, no config knob. The second (issuecomment-6248628843,
+「19 項全部照建議做（價值判斷的題也照你的傾向）」, "all as recommended, value
+judgements included") settled Q2, Q6, Q7 and the priority, stating each
+decision in full. D-149 is the last entry on main, so this entry is D-150.
+
+#456 reports that a must-read changed file over 1,000,000 bytes stops the
+run (D-135) and hook-json reports every engine error as a non-blocking
+`systemMessage` (D-134 item 2), so an agent whose test edit would block can
+pad the test, or add an untracked `.py` or extensionless file over the
+limit, and stop. v0.8.0 ships this escape.
+
+Implementation, in `src/checkwash/cli.py` (lines at this PR):
+
+- Q1 (b) and Q3. Only the `_analyse` call on the verdict diff catches
+  `SourceOverLimit` (`_cmd_check`, `:392-403`). In hook-json (`_hook_json`,
+  `:899-901`, false with `--emit-ir`), `_verdict_side_over_limit`
+  (`:927-942`) finds the change whose `FileChange.unread`
+  (`change.py:49-50`) holds the refused `UnreadSide` (`change.py:57-62`),
+  equal in path, side, size and limit, and returns its head or worktree
+  side. A refusal names the change's first unread side, the base side when
+  both are over the limit (`engine.py:300-303`, `:311-314`), so the change
+  is judged on all its unread sides. With such a side, the engine-error
+  line still goes to stderr (`_advise`), and `_hook_size_block`
+  (`:945-967`) prints `{"decision": "block", "reason": ...}`, exit 0. The
+  reason names path, side, size and limit, says to shrink or split the file
+  or revert the change to it, and not to delete or truncate a file the
+  agent did not create or change in this task but to tell the user. It
+  offers no `checkwash allow` and says nothing about CI. Otherwise the
+  exception is re-raised into `main()`'s handlers (`:884-890`), which are
+  not widened.
+- Q4 and Q5. Nothing reads `stop_hook_active` or a new `[gate]` key, and
+  the refusal aborts the analysis before any finding exists for an
+  exemption, `detectors.disable` or `fail_on` to act on.
+- Q2. The frozen exit-code row is touched (below). The session-commits
+  analysis is not the verdict diff: `_session_note` (`:300-329`) runs
+  outside the new `try` and keeps its note (`:318-319`), so a padded file
+  the agent commits before stopping stays open (D-142 item 4).
+- Q6, not widened: the directory-symlink refusals keep the note (D-134
+  item 2); the subject-replacement and stand-in limits and `RecursionError`
+  go to a follow-up issue.
+- Q7. SPEC §9 gains hook-json's verdict mapping and the (b) sentence, and
+  §4b's "The run exits 2" points to §9. §9's session sentence now belongs
+  to a block on findings: the size block's reason does not add it, since no
+  exemption or config covers a refusal. Priority: P1, as for #418.
+- The issue's Acceptance asks that the README and
+  `docs/subject-integrity.md` describe what the Stop hook does; both now
+  say that this refusal blocks the stop and what keeps the message.
+
+These keep the note by construction: a change whose base side alone is
+over the limit (shrunk, replaced or deleted), which has no head or worktree
+side; a base manifest, config or task file, whose `GitSourceOverLimit` is a
+`GitError` (`gitio/git.py:145-151`) and never reaches the new `except`; a
+context read of a file the diff does not hold (`WorkingTreeSnapshot.read`,
+`gitio/snapshot.py:579-582`), which matches no change; and, with a range
+only, a pytest configuration's symlink target over the limit at head. No
+detector must read a target with another name, so `_set_aside_unread` sets
+it aside (`engine.py:656`); `PairedPytestConfigs.prepare` (`engine.py:680`)
+then reads it through the link and refuses with a plain `EngineError`
+(`gitio/snapshot.py:307-308`), not a `SourceOverLimit`, even when the diff
+changes the target. The managed Stop hook never reaches this: worktree mode
+passes no `pytest_configs` (`cli.py:334`).
+
+Effects beyond the ruling's text, for the owner's approval with this entry:
+
+- With a range, hook-json blocks on a head side over the limit there, when
+  the refusal is that change's `SourceOverLimit`.
+- A change set aside because no detector must read it (D-135) blocks too
+  when a guarded read refuses it (`engine.py:318-341`) and it has a head or
+  worktree side over the limit.
+- The match is exact, so a file that grew after the listing keeps the note.
+- `_set_aside_unread` refuses the first must-read change it meets. If that
+  change has only its base side over the limit, a later change's worktree
+  side over it gets the note too. That is no wider than the base-side
+  residual itself; reordering the loop would change which file term and
+  json name. Not pinned.
+- An untracked, non-ignored file over the limit that the user left in the
+  tree blocks every stop until the user ignores or removes it: the issue's
+  loop risk, accepted with Q4.
+
+**The exit-code contract.** `docs/stability.md` freezes the exit codes.
+- Before: in hook-json every engine error exited 0 with a `systemMessage`
+  and no `decision` (D-134).
+- Now: a size refusal of a change in the verdict diff whose head or
+  worktree side is over the limit exits 0 with `decision: block`. The code
+  stays 0; the row's text changes.
+- Why: that side is usually the session's own edit, which one edit removes,
+  so D-134's reason, an error the agent cannot fix, does not hold.
+- What still holds: "a crash is never reported as a block" stays the
+  general rule (`DECISIONS.md:9826-9828`); every other engine error carries
+  no `decision`. Term, json and sarif keep exit 2 for every engine error,
+  this one included, and so does the required CI check.
+
+This amends D-134 item 2 (`DECISIONS.md:9790-9793`) for that one class; the
+exit-code row, SPEC §4b and §9 and THREATMODEL row 128 change with it. It
+takes an entry and a minor, as D-134 and D-140 did, though there the code
+itself changed, from 2 to 0. The next release is a minor anyway because of
+#421 (`docs/stability.md:17-22`), so this costs no extra version number. No
+release is authorized (AGENTS.md rule 5). Row 128 reads Open by design,
+narrowed, and lists what stays open; `benchmarks/make_failures.py` buckets
+it by "open by design" first and its shape cell is unchanged, so
+`benchmarks/FAILURES.md` does not change.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. The hook-json engine-error tests
+keep their note (`tests/test_hook_runtime.py:59-68`,
+`tests/test_issue414_worktree_directory_symlinks.py:151-186`,
+`tests/test_issue416_subdirectory_root.py:296-308`, `:507-527`), and
+`tests/test_issue415_oversized_sources.py:584-599` and `:625-638` keep their
+verdict and exit 2. Nothing under `tests/gates` mentions hook-json, an
+engine error or `SourceOverLimit`. If CI shows one moving, the round stops.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: 25 collected items in
+`tests/test_issue456_hook_size_refusal.py`, none under `tests/gates`: the
+block (a padded test, an untracked `scratch.py` or `NOTES`, both sides over
+the limit, a head side in a range under `--fail-on critical`); the note (a
+base side alone, a context read, a base manifest, the session-commits
+analysis, other engine errors); exit 2 in the other modes; and seven unit
+cases of the match. The 1,000,000-byte boundary stays pinned by #415's
+reader tests. By reading, the documented test count becomes 19475 (19450 +
+25); CI's collection checks it. The sweep calls `analyze` directly
+(`sweep.py:131-142`), so it is not expected to move.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run`.
+
+The agent wrote this entry in #456's fix PR, for the maintainer's approval
+of its wording, as the ruling asks.
