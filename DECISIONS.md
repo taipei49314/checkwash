@@ -10893,6 +10893,10 @@ The agent wrote this entry in #418's fix PR #467. The maintainer approved it
 on 2026-10-16: 「#467 的維護者文字照草稿核准（SPEC c014dfa、THREATMODEL
 a4ee3a1、D-142 7cff4c7，含 fc4e41d 的更新）。CI 綠了就代合。」
 
+The receipt bullet and the paragraph above were updated in PR #491. The
+maintainer approved that text on 2026-10-18, choosing 「照草稿開 PR（推薦）」
+in the agent's question (the option text is the agent's).
+
 ## D-143 (2026-10-17): unittest and approx operands are read by name as well as by position (#462)
 
 Ruling 462 (owner, 2026-10-16, 「全部照建議」) answered its three questions
