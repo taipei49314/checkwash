@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 10
+rule: ASSERT_WEAKENED
+title: expect(total).toBe(total) can never fail, as `assert total == total` cannot in Python
+origin: #429 (Q7) — the issue's first repro edit
+=== before: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+import { checkout } from "./cart";
+
+it("totals the cart", async () => {
+  const total = await checkout([10, 20]);
+  expect(total).toBe(27);
+});
+=== after: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+import { checkout } from "./cart";
+
+it("totals the cart", async () => {
+  const total = await checkout([10, 20]);
+  expect(total).toBe(total);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

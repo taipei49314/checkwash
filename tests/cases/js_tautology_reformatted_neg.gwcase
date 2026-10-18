@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a tautology that stays one, reformatted beside an unchanged oracle, reports nothing
+origin: #429 (Q6) — the subject, text and operand evidence are kept, so the pair still matches
+=== before: tests/total.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/total";
+
+test("totals", () => {
+  expect(1).toBe(1);
+  expect(total([1, 2])).toBe(total([1, 2]));
+  expect(total([1, 2])).toBe(3);
+});
+=== after: tests/total.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/total";
+
+test("totals", () => {
+  expect( 1 ).toBe( 1 );
+  expect(total([1, 2])).toBe(total([1,2]));
+  expect(total([1, 2])).toBe(3);
+});
+=== expect ===
+[]

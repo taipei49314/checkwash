@@ -525,6 +525,30 @@ helpers) get strength `null` and are **excluded** from weakening comparisons
 assertion API whose predicate it does not read the same way: `raises` for a
 throw check, `unknown` otherwise (#196 190.5).
 
+**JS/TS tautologies (#429).** The JavaScript frontend reads the TAUTOLOGY
+rung in every assertion library it reads, unary matchers and `assert.ok(true)`
+included. An assertion is TAUTOLOGY, whatever it evaluates to, when its
+subject as written and every operand its predicate reads (an expected value,
+a bound, a tolerance, a property name; never a message) are exact literals: a
+number, BigInt, string, template without a substitution, regular expression,
+`true`, `false` or `null`, or an array or plain object of them, read as
+JavaScript tokenizes them (a `//` inside a template is no comment), through
+comments, parentheses, `x!` and a cast to one named type. A name is never a
+literal, `undefined`, `NaN` and `Infinity` included. An equality or an
+inclusive bound is TAUTOLOGY, negated or not, when its two sides are one
+operand: the same tokens once comments, parentheses, `x!`, a cast to one
+named type, formatting and the outer no-op arithmetic Python strips (`+ 0`,
+`0 +`, `- 0`, `* 1`, `1 *`, `/ 1`) are taken out of each; a spread and a
+property value compared with its property are none. Such an assertion keeps
+its subject, text, span and operand evidence, so a finding on its own
+evidence keeps its identity, and records form `tautology` with no predicate
+key and `positive=True`, so the predicate relation below never reads it as
+the predicate it replaced. A pair whose new side is a tautology is a strength
+drop, so where the relation had read it (`toBe(27)` -> `.not.toBe(total)`,
+polarity inverted), the finding now reports the drop, under another key. A truthy spelling
+(`assert.ok(x === x)`), the `trivial` reading of §5 and the other residuals
+`docs/js-reachability.md` names are not read.
+
 **Operands bound by name (#462).** The Python frontend reads each operand
 of a unittest assertion method by position or, failing that, by the
 method's own parameter name: `first`/`second`, `list1`/`list2`,

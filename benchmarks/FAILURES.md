@@ -100,7 +100,7 @@ behind it* unshippable.
 | 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
 | 8 | Early `return`, deleted parametrize rows | `early_return_pos.gwcase`, `parametrize_rows_pos.gwcase` |
 | 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `sacrificial_skip_pos.gwcase` |
-| 10 | `assert f(x) == f(x)` self-comparison | `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
+| 10 | `assert f(x) == f(x)` self-comparison | `js_self_compare_node_pos.gwcase`, `js_self_compare_pos.gwcase`, `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | — |
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
 | 13 | Replace an exact comparison with a wide `pytest.approx(...)` | `row13_exact_to_approx_pos.gwcase` |
