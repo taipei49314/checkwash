@@ -11610,8 +11610,9 @@ checkwash or Python ran. CI ran the tests.
   and the JS batch, with the refactor, tamper, decoy and recorded gates.
   `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
 
-The agent wrote this entry in #429's first fix PR #482. It waits for the
-maintainer's approval.
+The agent wrote this entry in #429's first fix PR #482. The maintainer
+approved it on 2026-10-18: 「確認」, after 「裁決都使用建議」, as the merge
+commit `49ab38bc` records.
 
 ## D-148 (2026-10-17): an assertion a JS/TS test callback never reaches is not its assertion (#429, second change)
 
@@ -11807,5 +11808,11 @@ checkwash or Python ran. CI ran the tests.
   and the JS batch, with the refactor, tamper, decoy and recorded gates, and
   the perf gate. `NOT_RUN：工作機規則（POLICY work-machine-local），it runs where the owner approves it`.
 
-The agent wrote this entry in #429's second fix PR. It waits for the
-maintainer's approval.
+The agent wrote this entry in #429's second fix PR #483. The maintainer
+approved its text as of `abe23890` on 2026-10-18 (「1.核可」), and the
+seven later commits that change it (`3ee503f7`, `16601f48`, `80842f81`,
+`4a373b5c`, `c2429bab`, `ff46583e`, `1915a1e3`) on 2026-10-18, choosing
+「核可（推薦）」 in the agent's question (the option text is the agent's).
+In the same reply the owner chose 「開 follow-up，先選 (c)」: the class of
+misreadings no refusal notices is a documented residual for now, filed
+as #490.
