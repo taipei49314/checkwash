@@ -1,0 +1,23 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: a `return;` inside an iterator callback ends that callback, not the test
+origin: #429 (Q1) — the walker never enters a function or arrow body
+=== before: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  expect(total(3)).toBe(6);
+});
+=== after: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  [1, 2].forEach((n) => {
+    if (n > 1) return;
+  });
+  expect(total(3)).toBe(6);
+});
+=== expect ===
+[]

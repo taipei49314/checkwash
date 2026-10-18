@@ -5,14 +5,13 @@ test with zero findings: a self-comparison (`expect(total).toBe(total)`), an
 assertion parked under a constant-false branch, and a `return` before the
 assertion. Each assertion stayed in the unit at its original strength, so no
 rule fired. This page states what the JS/TS frontend now reads in their
-place, and what it still does not. THREATMODEL row 10 points here for its
-JS/TS clause.
+place, and what it still does not. THREATMODEL rows 8, 10, 29 and 48 point
+here for their JS/TS clauses.
 
 The ruling (issue #429, 2026-10-14) splits the work into two changes. The
-first, described below, rates an assertion that can never fail at SPEC §3's
-TAUTOLOGY rung. The second, which reads which statements of a test callback
-run, is a separate change; until it lands, an assertion after a `return` or
-under `if (false)` still counts as one the test runs.
+first rates an assertion that can never fail at SPEC §3's TAUTOLOGY rung. The
+second reads which statements of a test callback run (SPEC §2b), so an
+assertion it never reaches is not the test's.
 
 ## Assertions that can never fail
 
@@ -140,10 +139,154 @@ does not change.
 - The catch residuals of #431 are unchanged: the TAUTOLOGY rating adds no
   always-pass proof to a catch (`docs/js-catch-swallowing.md`).
 
+## Statements a test callback never reaches
+
+One bounded walk reads the statements of each test callback's block body,
+as the Python frontend reads a test function's body. An assertion it proves
+the callback never reaches is not the test's assertion. Parking one there is
+`ASSERT_REMOVED`, with the key a deleted assertion has.
+
+### What is cut
+
+- Everything after an unconditional `return` or `throw` in the same
+  statement list: `return;`, `return` alone on its line (JavaScript ends the
+  statement there), `throw new Error("skip")`. A `return` whose operand
+  holds the assertion (`return expect(x).toBe(1)`) runs it first.
+- A branch the folder below decides: the body of `if (false)`,
+  `while (false)` and `for (init; false; update)`, and the `else` of
+  `if (true)`.
+- A block and the selected branch of a decided `if` pass their termination
+  on: `{ return; }` and `if (true) { return; }` end the statements after
+  them, as `if True: return` does in Python.
+- Inside loop, `do`, `try`, `catch`, `finally` and labeled bodies the same
+  rules apply, but their termination never flows out: a `return` in a loop
+  body cuts the rest of that body and nothing after the loop. An `if` whose
+  condition is unknown passes nothing on either, even when both branches
+  return, as in Python.
+- The walk never enters a function, arrow or class body, so the `return` of
+  a helper or of an iterator callback (`rows.forEach(() => { return; })`)
+  ends nothing in the test. An assertion in such a callback keeps its
+  lexical reading (D-106).
+- An expression statement of `&&` or `||` that its literal operand decides
+  skips the assertion that is its last operand: `false && expect(x).toBe(1)`
+  and `true || assert.ok(x)`. The statement must start where the walk proved
+  the previous one ended, so its first token cannot continue the line
+  before, and the assertion must run to the statement's end.
+
+### What the folder decides
+
+The folder is exact and reads literals only: numbers, BigInts, strings,
+templates without a substitution, `true`, `false` and `null`; `!` and
+parentheses; `&&` and `||` as Python's fold reads `and` and `or` (one false
+operand decides an `&&` and one true operand an `||`, whatever the others
+are, so `if (false && ready())` is dead); `===` and `!==` between literals;
+`==` and `!=` between literals of one primitive type; `<`, `<=`, `>` and
+`>=` between two numbers, two BigInts, two strings (by UTF-16 code units,
+as JavaScript compares them) or two booleans; and
+`undefined` and `NaN` only where they name the unshadowed global: where
+the binder sees no declaration of them, and every spelling of the name in
+the file is a plain read (no parameter, enum, namespace or hoisted block
+function, no `with` or `eval`, no `\u` escape, none hidden in text the mask
+misreads).
+Anything
+else is unknown and the branch keeps its reading: a name, a `const` binding
+(`const off = false; if (off)`), a call, arithmetic, `typeof`, `void`,
+`Infinity`, a comparison that coerces (`1 == "1"`, `null == undefined`), a
+chained comparison, `?:`, `??` and the comma operator. The liveness options
+of a test declaration (`test.skipIf(...)`, `{ skip: ... }`) keep their own
+reading.
+
+### Where the walk stops
+
+The walk reads statements from tokens, and the token stream leaves out
+templates and regular expressions. Wherever it cannot prove where a
+statement ends, it stops reading that statement list, and every assertion
+after the stop keeps its reading:
+
+- a line break next to a template or regular expression
+  (`return /x/\n.test(...)`, a template spanning lines);
+- a `return` or `throw` with an operand that ends at a line break without a
+  `;`: TypeScript types, class heritage and decorators may go on past it
+  (`return x as readonly` then `string[]`, `implements` then `Base`, `@dec`
+  then `class`), so nothing after it is cut;
+- an unpaired bracket or a call the frontend could only recover anywhere
+  in the callback, and U+2028 or U+2029 or text the token stream misreads
+  as code anywhere from the file's start to the callback's end, since a
+  misreading shifts what the mask reads from there on (JSX or a regular
+  expression at the file's very start, after `export default` or first on
+  its line included, and an HTML-like comment inside a template
+  substitution):
+  a template nested in
+  another's substitution (each
+  template is read again as the operand reader reads it, so a quoted `}` or
+  a `//` comment in a substitution hides none, and one it leaves unread, such
+  as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a
+  block too, or a TypeScript `<T>x` assertion), a token outside a string that
+  is not ASCII (a non-ASCII name, U+FEFF, which JavaScript reads as a space),
+  a dead region holding a `function`, whose hoisted body a call before it
+  may run, a `/` the mask reads as a
+  division where JavaScript starts a regular expression (after a block, a
+  statement head, an update or an operator, or at a line's start), a
+  regular expression it reads where JavaScript may divide (after anything
+  but an operator, a punctuator such as `(` or `,`, or a keyword such as
+  `return` that is no property name), or an Annex B HTML-like comment
+  (`<!--`, `-->`); such a callback is not walked at all;
+- a dead body that is no block, or a literal-decided `&&`/`||` statement,
+  when a line break inside it does not follow an operator that leaves the
+  expression unfinished (`&&`, `+`, `,`, `=`, `=>`, or `typeof` and the like
+  where no `.` makes them a property name; not `.`, which may end `1.`)
+  (`if (false) skip()` with a `{` block on the next
+  line, which JavaScript runs; `x!`, `as Config` or an arrow's `}` at a
+  line's end; `.5` or `[1]` at the next line's start): JavaScript or
+  TypeScript may end the statement at that line break, so the body is not
+  killed and the statement not decided (`false &&` then `expect(...)` on
+  the next line is still decided);
+- a statement keyword (`do`, `while`) inside a statement read on past a
+  line break: the binder read past the statement's end;
+- a statement with a template or regular expression right before it, such
+  as one that is the whole body of `if (false)`: the tokens omit it, so
+  they cannot say which statement is the body;
+- a literal-decided `&&`/`||` statement after a statement that ended at a
+  line break rather than on a `;` or its own `}`: TypeScript may read past
+  that line break (`v is` then `false`), so it is not decided;
+- a `with` statement, `import` and `export`, and a TypeScript-typed or
+  generic function declaration (`function f(): T {}`);
+- an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
+  statements;
+- every callback in a file with a `\` outside a string: an identifier escape
+  (`return\u0041` is one name), which the binder splits;
+- a statement whose line ends in a token that completes no operand (`x!`)
+  when the next line starts with a statement keyword (`do`, `if`, `while`):
+  TypeScript ends the statement there, the binder reads on.
+
+### Not read
+
+- `break` and `continue` cut nothing after them.
+- A `switch` body is not read: a `return` in a case cuts nothing, and the
+  walk steps over the `switch` and goes on after it.
+- A `switch` on a literal that no case meets, and `for (... of [])`, are not
+  folded, though Python folds an unmatchable `match` and `for _ in []`.
+- `while (true)` and `for (;;)` without a `break` never end, but the
+  statements after them are kept.
+- Of `false && expect(a) && expect(b)` only the last assertion is dropped;
+  a declaration or assignment (`const ok = false && expect(x)`), an
+  assertion in parentheses (`false && (expect(x))`), and the ternary, `??`
+  and comma forms keep their assertions.
+- A test registered in dead code (`if (false) { it(...) }`) is outside this
+  change (#429 Q9), and so is an imperative skip (`t.skip()`) in dead code,
+  which still marks the test.
+
+What the cut leaves alone:
+
+- The catch evidence of #363 reads every assertion a callback spells, run or
+  not, so its findings do not change (`docs/js-catch-swallowing.md`).
+- The coverage inventory reads a cut assertion as represented, not missed;
+  one recorded with no strength keeps its reason.
+
 ## Evidence
 
 Prepared on a work machine, where no test or checkwash ran; CI runs the
-tests. The acceptance sweep the ruling asks for has not run:
+tests. The acceptance sweeps the ruling asks for have not run:
 `NOT_RUN：工作機規則（POLICY work-machine-local），the sweep runs where the owner approves it`.
 Its false-positive cost is unmeasured.
 

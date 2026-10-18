@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 48
+rule: ASSERT_REMOVED
+title: `if (1 === 2)` is decided by its literals and never runs its body
+origin: #429 (Q5) — the JS/TS twin of dead_branch_compare_pos
+=== before: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  expect(total(3)).toBe(6);
+});
+=== after: tests/calc.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/calc";
+
+test("total", () => {
+  if (1 === 2) {
+    expect(total(3)).toBe(6);
+  }
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

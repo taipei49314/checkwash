@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 8
+rule: ASSERT_REMOVED
+title: `if (true) { return; }` returns as surely as a bare `return;`
+origin: #429 (Q1, Q5) — a statically selected branch passes its termination on
+=== before: tests/billing.test.js ===
+const assert = require("node:assert");
+const { test } = require("node:test");
+const { total } = require("../src/billing");
+
+test("total", () => {
+  assert.strictEqual(total([1, 2, 3]), 6);
+});
+=== after: tests/billing.test.js ===
+const assert = require("node:assert");
+const { test } = require("node:test");
+const { total } = require("../src/billing");
+
+test("total", () => {
+  if (true) {
+    return;
+  }
+  assert.strictEqual(total([1, 2, 3]), 6);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

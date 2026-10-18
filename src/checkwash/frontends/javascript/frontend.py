@@ -22,6 +22,7 @@ from dataclasses import dataclass
 
 from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.exception_handlers import swallowing_handlers
+from checkwash.frontends.javascript.reachability import Reachability
 from checkwash.frontends.javascript.literals import (
     keyword_operand,
     literal_operand,
@@ -2255,6 +2256,12 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     function_starts = [first for first, _last in functions]
     arrow_starts = [first for first, _last in arrows]
     units: list[ParsedUnit] = []
+    reachability = Reachability(bindings, code)
+    # The catch evidence reads every assertion a callback spells, run or not
+    # (#363); a unit keeps only those its statements reach (#429 Q1).
+    spelled: list[Assertion] = []
+    unreachable: list[tuple[int, int]] = []
+    unreachable_unjudged: list[tuple[int, int]] = []
     for declaration in scanned:
         name = declaration.name
         callback = declaration.callback
@@ -2386,6 +2393,17 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         covered = [assertion.span for assertion in assertions]
         assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)
+        spelled.extend(assertions)
+        # A recovered body has no trustworthy end, so nothing in it is cut.
+        dead = (reachability.unreachable(start, end, [assertion.span for assertion in assertions])
+                if assertions and callback is not None and declaration.call is not None else [])
+        if dead:
+            # Spans nest (a dead branch inside a dead branch), so each is asked.
+            cut = [any(first <= assertion.span[0] < last for first, last in dead) for assertion in assertions]
+            for assertion, gone in zip(assertions, cut):
+                if gone:
+                    (unreachable if assertion.strength is not None else unreachable_unjudged).append(assertion.span)
+            assertions = [assertion for assertion, gone in zip(assertions, cut) if not gone]
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"
         imperative = _imperative_skips(text, code, bindings, callback, start, end, owned)
@@ -2402,7 +2420,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     # as a test or a suite; a bare `.test(value)` call is a method.
     declares_tests = bool(units) or any(
         (d.callback or _test_body(text, code, bindings, d)) is not None for d in declarations)
-    handlers = swallowing_handlers(bindings, [a for unit in units for a in unit.side.assertions])
+    handlers = swallowing_handlers(bindings, spelled)
     # A tautology states no predicate (#429 Q6): two keyed spellings on one
     # subject would read as the same predicate, and `toBe(27)` -> `toBe(total)`
     # as no change at all. The catch evidence above reads the key and the
@@ -2413,4 +2431,6 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             if assertion.form == "tautology":
                 assertion.predicate, assertion.positive = None, True
     return ParsedFile(parse_ok=True, units=units, focus=focus, declares_tests=declares_tests,
-                      swallowing_handlers=handlers)
+                      swallowing_handlers=handlers,
+                      unreachable_assertion_spans=tuple(sorted(unreachable)),
+                      unreachable_unjudged_assertion_spans=tuple(sorted(unreachable_unjudged)))

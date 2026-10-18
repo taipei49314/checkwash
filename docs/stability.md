@@ -170,12 +170,12 @@ data or a manual mock is not production repair evidence
 ([#217](https://github.com/taipei49314/checkwash/issues/217)). The out-of-scope
 escalation still judges such a file as production.
 Build artifacts and dependencies remain excluded.
-The v0.4.1 repair for #164 also recognizes `assert.equal`,
-`assert.strictEqual`, `assert.deepEqual`, and `assert.deepStrictEqual`
-changing to `assert.ok` or `assert(value)`, plus the corresponding
-`t.assert` methods. This addition is not in the published v0.4.0 package.
-The candidate resolves bounded static Node and Jest/Vitest imports, simple
-aliases, and lexical shadows. Unknown lookalikes do not acquire assertion
+Since v0.4.1 ([#164](https://github.com/taipei49314/checkwash/issues/164)),
+checkwash also recognizes `assert.equal`, `assert.strictEqual`,
+`assert.deepEqual`, and `assert.deepStrictEqual` changing to `assert.ok` or
+`assert(value)`, plus the corresponding `t.assert` methods; v0.4.0 does not.
+It resolves bounded static Node and Jest/Vitest imports, simple aliases, and
+lexical shadows. Unknown lookalikes do not acquire assertion
 strength. A name that any write may have reached, from any function, is
 unknown rather than its first value, and a declaration ends where JavaScript
 ends it, with or without a semicolon
