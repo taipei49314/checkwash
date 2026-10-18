@@ -933,8 +933,11 @@ def _verdict_side_over_limit(changes: list, refused: UnreadSide) -> UnreadSide |
     does not hold, such as a context read of an unchanged file, matches no
     change, and a change with only its base side over the limit has no such
     side: the session's edit did not make it, and reverting would restore
-    the oversized original. Both are None. (A base manifest's refusal is a
-    `GitSourceOverLimit`, which never reaches here.)
+    the oversized original. Both are None. (A root manifest, config,
+    exemption list or task file that `_analyse` reads first refuses with a
+    `GitSourceOverLimit`, a `GitError`, which never reaches here; a base side
+    the engine reads for a change in the diff does, and is judged as that
+    change is.)
     """
     for change in changes:
         if refused in change.unread:
