@@ -11104,23 +11104,80 @@ names and `exec`, metaclasses and class decorators, wrappers that drop the
 test, a function-level `__test__ = False` (Q8), an unresolvable subclass
 (Q9), and a capture under a condition.
 
-Evidence status: the change was prepared on a work machine where no
-pytest, checkwash or Python ran. CI ran the tests.
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 29 `.gwcase` fixtures, 79 collected items in
   `tests/test_issue424_rebinding.py` and one new test in
   `tests/test_frontend.py`. None is under `tests/gates`. Five of the new
   fixtures carry `bypass: 135`.
 - The documented test count is 18675 (18566 + 109).
-- The sweep measures the change (ruling): the standard set, the D-088
-  set, and a target set of commits with duplicate names, rebinding, the
-  Q9 shapes and try-wrapped defs; the refactor gate (60, expected no
-  change), tamper, decoy and recorded (no regression) and the perf gate.
+- The sweep the ruling asks for ran in part on 2026-10-17, on
+  LAPTOP-01AGNPJU under POLICY `checkwash-pju-sweep` (T-546), as a
+  checkwash-lab-declared run whose manifest (`54706f99…c88c`) and engine
+  commits the owner approved first. It is labelled human-authorized
+  local PJU, NOT EC pool. It compares main before this change
+  (`2422b3ce`) with it (`f541f748`):
+  - **Standard set** (1,800 commits): no change.
+  - **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088
+    batch, and the 45 that are also in the standard set ran in the
+    standard batch, where none changes): 10 commits differ, all beyond
+    fingerprints. One verdict goes from block to pass and one from pass
+    to block. 19 of the 1,218 end in the same engine error on both
+    engines and are not judged.
+  - **Source review** (read-only, after the run; agents read the
+    upstream commits, the engine source and the harness's result files,
+    and a second agent tried to refute each verdict change and the
+    survey of the other eight. Nothing was rerun, so the mechanisms
+    below are read from source, not observed:
+    `NOT_RUN：工作機規則（POLICY work-machine-local），no engine run or IR emission`):
+    both verdict changes are right.
+    pytest `242fb7852b` deletes the copy of a duplicated test that
+    pytest collected; the copy that keeps the name has the same
+    decorator and assertion, so the old TEST_DISABLED high was false.
+    rich `a13b2a9d75` appends a Windows-only `test_render` that shadows
+    the original, so the original expectation is checked nowhere. It
+    blocks on EXPECTATION_DEFINITION_CHANGED high (the collected test
+    compares against a different value), and the skip on Linux and
+    macOS reports only at warn under D6. Five of the other eight only
+    drop the finding on a copy pytest never collected, as Q1 (b)
+    intends (the harness lists it under `name#2`, because the collected
+    copy now takes the bare name). In the last three the pairing
+    changes: rich `a2b4a959dc` now reports the real skips on Python 3.8
+    and 3.9 (two warns, COMPAT_GATE) in place of a skip on a def pytest
+    never collects; rich `8105943b89` still blocks, but on an
+    expectation change between two defs that run on disjoint platforms,
+    while the real loss, Windows' only `test_render`, reports at warn;
+    and pytest `15ec5a898c` trades one false warn for another: the live
+    def is renamed away and a dead def of the same name takes the name,
+    so the old live body is compared with the revived dead one. This
+    entry names R1 and the deletion of one of two identical copies, but
+    not this case.
+  - Not run: the target set of commits with duplicate names, rebinding,
+    the Q9 shapes and try-wrapped defs, which has not been derived.
+  - Not run by the sweep: the refactor gate (60, expected no change),
+    tamper, decoy and recorded (no regression) and the perf gate. They
+    are pytest suites, which T-546 does not cover:
+    `NOT_RUN：工作機規則（POLICY work-machine-local），the gates are test suites`.
+    CI runs them in every test leg (the perf gate's two budget checks
+    skip on macOS). All nine legs passed on `2422b3ce` and on
+    `f541f748`, and neither `tests/gates` nor the gates' `expected.json`
+    tables changed between them.
+  - The counts are read from the harness output. The summaries and the
+    source review's records are in checkwash-lab
+    `prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+    `runs/acceptance-sweep-421/20261017-pju/`.
 
 The agent wrote this entry in #424's fix PR #474. The maintainer approved it
 on 2026-10-17: 「#474 的維護者文字照 commit 核准（SPEC 6b31f7a、THREATMODEL
 row 135 與 bypass: 135 的 7b0c49a、D-144 be9a859）。CI 全綠就代合，然後接著做
 #306。」
+
+The sweep bullet under Evidence status and the Evidence status sentence
+were rewritten from the 2026-10-17 sweep and its source review in PR #489.
+The maintainer approved that text on 2026-10-18: 「照你建議」, in reply to
+the agent's list asking for approval of the D-146 (977f8bd3), D-145
+(a4fa4550) and D-144 (dfde00e1) drafts.
 
 ## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
 
@@ -11251,16 +11308,102 @@ records this changes in `tools/emit_corpus.py`'s output comes from CI's
 artifacts (NOT_RUN on the work machine), and the next release guide names
 the field.
 
-**Cost.** NOT_RUN: work-machine rule (POLICY work-machine-local); the sweep
-was not run on the work machine. The ruling asks the sweep to measure it,
-with resolution toggled in both directions and with what Sub-Q8 (a) and
-Sub-Q11 (a) would have changed. The two stated costs are pinned: a helper
-method moved to a base in another module (Sub-Q7), and a conversion to
-`staticmethod` (Sub-Q4). A skip added together with a decorator still
-passes with zero findings, as on main.
+**Cost.** The sweep the ruling asks for ran in part on 2026-10-17, on
+LAPTOP-01AGNPJU under POLICY `checkwash-pju-sweep` (T-546), as a
+checkwash-lab-declared run whose manifest (`54706f99…c88c`) and engine
+commits the owner approved first. It is labelled human-authorized local
+PJU, NOT EC pool. Its plain before/after compares #424's engine
+(`f541f748`) with this entry's (`81c69d28`):
+- **Standard set** (1,800 commits): no change.
+- **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088 batch,
+  and the 45 that are also in the standard set ran in the standard
+  batch, where none changes): 15 commits differ, all scrapy and all
+  beyond fingerprints. In 14 of them findings are only added:
+  ASSERT_REMOVED (high 286, warn 1), EXPECTED_VALUE_CHANGED (warn 28),
+  ASSERT_SUBSTITUTED (high 6), ASSERT_WEAKENED (high 2) and
+  EXPECTATION_DEFINITION_CHANGED (high 2, warn 1). In the fifteenth,
+  scrapy `fada8be1db`, no finding is added or removed: six TEST_DISABLED
+  findings keep their fingerprints and go from info (4) or warn (2) to
+  high. No finding is removed or lowered. Three verdicts go from pass to
+  block, and none from block to pass. 19 of the 1,218 end in the same
+  engine error on both engines and are not judged.
+- **Stated costs:** Sub-Q4's conversion to `staticmethod` shows in 3
+  commits (68 findings, all high; see below). In the standard set and
+  D-088's sets, no commit shows Sub-Q7's, a helper method moved to a base
+  in another module. Sub-Q4's other cost, a skip added in a helper method
+  together with a decorator on that method, leaves the skip unread on
+  both engines, so a before/after comparison cannot count it; any of the
+  method's assertions that were reached at the parent read as removed,
+  as for `staticmethod`.
+- **Source review** (read-only, after the run). Agents read the upstream
+  commits, the engine source and the harness's result files, and a
+  second agent tried to refute each verdict change and each survey of
+  the other commits. Nothing was rerun, so the mechanisms below are read
+  from source, not observed:
+  `NOT_RUN：工作機規則（POLICY work-machine-local），no engine run or IR emission`.
+  None of the added findings is a weakening, and the three blocks are
+  false:
+  - scrapy `c8aa429c9b` (168 ASSERT_REMOVED high) adds class-level
+    pytest marks (`requires_reactor`, `requires_http_handler`) to 23
+    test classes, and all 168 findings fall in six of them, whose tests
+    reach assertion-holding helper methods through `self`. `e058a05763`
+    (8) adds `pytest.mark.skipif(sys.version_info >= (3, 12), ...)` to
+    two TestCase classes, with all 8 findings in one of them; both
+    engines already report that version skip as TEST_DISABLED warn
+    (COMPAT_GATE), so the block comes from the 8 findings alone. Sub-Q2
+    leaves a call unresolved under a decorator on the running class, so
+    each helper method resolves on the parent side only, and its
+    assertions read as removed. A pytest mark returns the class it
+    marks.
+  - scrapy `fada8be1db` merges six proxy tests into parametrized ones
+    that each call `self._maybe_skip(...)`. That helper's skip is now
+    followed (Q1 (a)). Its guard is no D6 compat gate, so each new unit
+    is not live (SPEC §5 D2), and the six disappeared units lose the
+    credit they had under #424's engine, move credit (D2) for four of
+    them and restructure credit (D5) for the other two, and go to high.
+    D-087 and D-111 read setup skips and same-file helper skips the same
+    way.
+  - The other 12 commits add 150 findings and change no verdict:
+    Sub-Q4's staticmethod cost in 3 (68, all high); a decorator added to
+    the running class in 4 (37), where the class does run in fewer
+    places (in `14737e91ed` because its tox.ini moves mitmproxy out of
+    the default environments, not because of the mark) and #424's engine
+    already reports TEST_DISABLED, so the ASSERT_REMOVED findings repeat
+    it under a false reason; detector readings that already applied to
+    own assertions, now applied to each helper-method copy, in 4 (37); a
+    class local to a test method, named like the test class, read as
+    rebinding it, in 1 (1), which goes beyond Sub-Q2's "a class name the
+    module binds more than once"; and a removed helper call site in 2
+    (7): in `e853d9e910` the call moves to a new test and its helper
+    assertions earn no move credit there (Sub-Q11), and in `3a36955261`
+    a repeated check is dropped while a later call of the same helper
+    still covers it, which checkwash does not model. Two commits fall
+    under two of these.
+  - The decorator reading and the local-class reading are filed as
+    #487, the helper-skip liveness as #488.
+- **Not measured:** resolution toggled in both directions, and what
+  Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
+  variant that is not a commit on main. Sub-Q7 asks for its cost to be
+  counted in the targeted sweep: of the 1,372 commits in the sweep's
+  `targeted` phase, only the 119 that are also in D-088's sets ran.
 
-Evidence status: the change was prepared on a work machine where no
-pytest, checkwash or Python ran. CI ran the tests.
+The counts are read from the harness output. The summaries and the
+source review's records are in checkwash-lab
+`prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+`runs/acceptance-sweep-421/20261017-pju/`. Two of the ruling's three
+stated costs are pinned: a helper method moved to a base in another
+module (Sub-Q7, `self_method_moved_to_imported_base_pos`), and a
+conversion to `staticmethod` (Sub-Q4,
+`self_method_staticmethod_conversion_pos`). Sub-Q4's other stated cost
+is not pinned: a skip added in a helper method together with a decorator
+on that method is not read, so it passes with zero findings, as before
+this entry, unless the method's assertions were reached at the parent;
+those then read as removed, as for `staticmethod`. A decorator on the
+running class falls under Sub-Q2 instead (`c8aa429c9b` and `e058a05763`
+above).
+
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 10 `.gwcase` fixtures and 51 collected items in
   `tests/test_issue306_self_methods.py`. The two pins above changed.
@@ -11271,6 +11414,13 @@ The agent wrote this entry in #306's fix PR #476. The maintainer approved it
 on 2026-10-17: 「核准 這次sweep用本機跑」, in reply to the agent's list asking
 for approval of this PR's SPEC (6dba5aa), THREATMODEL (e3e4b79) and D-145
 (93c25a6) text and of the diffalign and gating commit ea98b62.
+
+The Cost paragraph and the Evidence status sentence were rewritten from
+the 2026-10-17 sweep and its source review in PR #489. The maintainer
+approved that text on 2026-10-18: 「照你建議」, in reply to the agent's list
+asking for approval of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144
+(dfde00e1) drafts. The follow-up issue numbers (#487, #488) were filled in
+once the issues were filed, as that list said.
 
 ## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
 
@@ -11417,10 +11567,37 @@ the cap on a v2 key with a real entry.
   another rewrite of the same line, for another identical copy, or for
   another context.
 - **Re-review:** every recorded exemption for the nine rules.
-- **Not measured yet:** the sweep (ruling: the standard set and D-088's
-  sets). The owner chose to run it on LAPTOP-01AGNPJU, under POLICY
+- **Measured:** the sweep (ruling: the standard set and D-088's sets)
+  ran on 2026-10-17, 14:37Z to 16:22Z, on LAPTOP-01AGNPJU, under POLICY
   `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared run whose
-  manifest and engine commits he approves first.
+  manifest (`54706f99…c88c`) and engine commits the owner approved
+  first. It is labelled human-authorized local PJU, NOT EC pool. It
+  compares #306's engine (`81c69d28`) with this entry's (`a6426671`):
+  - **Standard set** (1,800 commits): 96 commits differ, and none still
+    differs once fingerprints are left out.
+  - **D-088's sets** (1,263 commits: 1,218 ran in the sweep's d088
+    batch, and the 45 that are also in the standard set ran in the
+    standard batch and are counted above): 194 of the 1,218 differ, and
+    none differs beyond fingerprints. 19 of the 1,218 end in the same
+    engine error (exit 2) on both engines, so neither judges them: 12 at
+    an engine limit, 4 at a nonregular source and 3 at flask's
+    `docs/_themes` submodule.
+  - No outcome or verdict changes, and every commit keeps its findings'
+    rules, severities, paths and units. Besides the outcome, the verdict
+    and any error, the harness compares only those four fields and each
+    finding's key, as a sorted list; it reads no message or assertion
+    text. In the 106 shard results the harness wrote, which are kept on
+    the host and not archived, every other field of every finding is
+    unchanged as well. Only keys move, and with them, as **Fingerprints**
+    above says, the order of findings of one rule in one unit.
+  - No finding in the sweep is exempted on either engine: the replayed
+    repositories hold no checkwash ledger. So the sweep does not measure
+    the new blocks or the re-review above.
+  - The counts are read from the harness output. The summaries and a
+    record of the owner's approval of the manifest and engine commits
+    (「核可」, 2026-10-17 14:36Z) are in checkwash-lab
+    `prep/acceptance-sweep-421-20261017` at `1a3d99a`, under
+    `runs/acceptance-sweep-421/20261017-pju/`.
 
 Row 136 is Closed. Its residuals: TEST_DISABLED (its own round),
 EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
@@ -11428,8 +11605,8 @@ before-only keys; an approval still covers the identical reviewed rewrite on a
 later diff, as D-055 intends; and the identity holds what the frontends
 record. Rows 100 and 101 now point to it.
 
-Evidence status: the change was prepared on a work machine where no pytest,
-checkwash or Python ran. CI ran the tests.
+Evidence status: when the change was prepared, no pytest, checkwash
+or Python ran on the work machine. CI ran the tests.
 
 - Tests were added: 38 collected items in
   `tests/test_issue421_assertion_keys.py`. None is under `tests/gates`.
@@ -11446,6 +11623,11 @@ for approval of this PR's SPEC (a332ad42), THREATMODEL (87e932ca), D-146
 (285f5d4f) and user-doc (f6f9c3db) text and of the two pinned tests outside
 the ruled list. The second half of that reply chose this host for the
 ruling's sweep, under POLICY `checkwash-pju-sweep` (T-546).
+
+Cost's "Measured" bullet and the Evidence status sentence were rewritten
+from the 2026-10-17 sweep in PR #489. The maintainer approved that text on
+2026-10-18: 「照你建議」, in reply to the agent's list asking for approval
+of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144 (dfde00e1) drafts.
 
 ## D-147 (2026-10-17): a JS/TS assertion that can never fail reads as TAUTOLOGY (#429, first change)
 
