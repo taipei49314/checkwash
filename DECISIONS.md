@@ -10882,11 +10882,20 @@ pytest, checkwash or Python ran.
 - Whether `/clear`, `--resume` and compaction keep `session_id` is not in
   Claude Code's documentation. The design assumes `/clear` starts a new
   `session_id` and resume and compaction keep it. A lifecycle receipt from a
-  real Claude Code run must confirm that before the release.
+  real Claude Code run (2026-10-16, attempt 2, all eight checks pass;
+  checkwash-lab `prep/lifecycle-receipt-418-20261017` at `7541c912`, #467
+  comment 6223236053) confirms that `--resume` and compaction keep it. It
+  did not exercise `/clear`, so whether `/clear` starts a new `session_id`
+  must still be confirmed before the release.
 - The sweep measures the change (ruling).
 
-The agent wrote this entry in #418's fix PR. The maintainer approves it
-there.
+The agent wrote this entry in #418's fix PR #467. The maintainer approved it
+on 2026-10-16: 「#467 的維護者文字照草稿核准（SPEC c014dfa、THREATMODEL
+a4ee3a1、D-142 7cff4c7，含 fc4e41d 的更新）。CI 綠了就代合。」
+
+The receipt bullet and the paragraph above were updated in PR #491. The
+maintainer approved that text on 2026-10-18, choosing 「照草稿開 PR（推薦）」
+in the agent's question (the option text is the agent's).
 
 ## D-143 (2026-10-17): unittest and approx operands are read by name as well as by position (#462)
 
