@@ -1,0 +1,44 @@
+=== meta ===
+bypass: 8,10,29
+rule: ASSERT_REMOVED
+title: the three one-line edits of #429 block, as their Python twins do
+origin: #429 — a self-comparison (Q7), an assertion under `if (false)` (Q5) and a `return;` before one (Q1)
+=== before: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+import { checkout, discount, shipping } from "./cart";
+
+it("totals the cart", async () => {
+  const total = await checkout([10, 20]);
+  expect(total).toBe(27);
+});
+
+it("applies the discount", () => {
+  expect(discount(100)).toBe(90);
+});
+
+it("charges shipping", () => {
+  expect(shipping(3)).toBe(12);
+});
+=== after: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+import { checkout, discount, shipping } from "./cart";
+
+it("totals the cart", async () => {
+  const total = await checkout([10, 20]);
+  expect(total).toBe(total);
+});
+
+it("applies the discount", () => {
+  if (false) {
+    expect(discount(100)).toBe(90);
+  }
+});
+
+it("charges shipping", () => {
+  return;
+  expect(shipping(3)).toBe(12);
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "unit": "totals the cart", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "ASSERT_REMOVED", "severity": "high", "unit": "applies the discount", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "ASSERT_REMOVED", "severity": "high", "unit": "charges shipping", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -360,6 +360,36 @@ def number_operand(expression: str) -> float | None:
     return _number(_peel(source))
 
 
+_BIGINT = re.compile(r"(?:0[xX](?P<hex>[0-9a-fA-F](?:_?[0-9a-fA-F])*)|0[bB](?P<bin>[01](?:_?[01])*)"
+                     r"|0[oO](?P<oct>[0-7](?:_?[0-7])*)|(?P<dec>0|[1-9](?:_?[0-9])*))n")
+
+
+def scalar_literal(source: str) -> tuple[str, object] | None:
+    """(type, value) of one exact scalar literal token, else None (#429 Q5).
+
+    A Number is the finite value `_number` reads, a BigInt its exact integer,
+    a quoted string its UTF-16 value as `_string` decodes it, and a template
+    with no substitution and no escape its text. `true`, `false` and `null`
+    are their keywords. Names, `undefined` and `NaN` included, are the
+    caller's question.
+    """
+    if source in {"true", "false"}:
+        return ("boolean", source == "true")
+    if source == "null":
+        return ("null", None)
+    if source[:1] in "\"'":
+        value = _string(source)
+        return None if value is _UNKNOWN else ("string", value)
+    if source[:1] == "`":
+        return ("string", source[1:-1]) if re.fullmatch(r"`[^`\\$]*`", source) else None
+    bigint = _BIGINT.fullmatch(source)
+    if bigint is not None:
+        radix = {"hex": 16, "bin": 2, "oct": 8, "dec": 10}[bigint.lastgroup]
+        return ("bigint", int(bigint.group(bigint.lastgroup).replace("_", ""), radix))
+    number = _number(source) if source[:1] not in "+-" else None
+    return None if number is None else ("number", number)
+
+
 def keyword_operand(expression: str) -> str | None:
     """`null`, `undefined`, `true` or `false` when the operand is exactly that word.
 
@@ -711,6 +741,10 @@ _OPERAND_PREFIX_WORDS = frozenset({"typeof", "void", "delete", "await", "new", "
 _SIMPLE_TYPE = re.compile(r"\s*[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\[\s*\])*\s*\Z")
 # JavaScript's line terminators: a `//` comment ends at the first of them.
 _LINE_TERMINATOR = re.compile("[\n\r\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
+# Tokens after which a `/` may divide or start a regular expression: `++` and
+# `--` prefix or postfix, `!` TypeScript's `x!` or a negation, `>` a type's or a
+# comparison's, and words that may be names.
+_EITHER_WAY = frozenset({"++", "--", "!", ">", "of", "await", "yield"})
 # Statement heads whose `)` a regular expression may follow: `if (ok) /a/.test(s)`.
 _STATEMENT_HEADS = frozenset({"if", "while", "for", "with"})
 # The one named type a cast inside an operand names: `as number`, `as Foo.Bar[]`.
@@ -767,8 +801,8 @@ def _substitution_end(source: str, start: int, depth: int) -> int | None:
         elif source.startswith("//", i):
             terminator = _LINE_TERMINATOR.search(source, i + 2)
             end = None if terminator is None else terminator.end()
-        elif char == "/":
-            return None  # a division or a regular expression, which may hold a `}`: unread
+        elif char == "/" or source.startswith(("<!--", "-->"), i):
+            return None  # a division or a regular expression, which may hold a `}`, or an HTML-like comment
         elif char in "{}":
             braces += 1 if char == "{" else -1
             if not braces:
@@ -833,6 +867,9 @@ def operand_tokens(source: str) -> list[str] | None:
             continue
         if char == "/" and tokens and (tokens[-1] == "}" or len(tokens) - 1 in heads):
             return None  # after a block or a statement head it starts a regular expression, else it divides
+        if char == "/" and tokens and (tokens[-1] in _EITHER_WAY or (
+                tokens[-1] in _OPERAND_PREFIX_WORDS and tokens[-2:-1] in (["."], ["?."], ["#"]))):
+            return None  # a prefix or postfix update, `x!` or `!x`, a type's `>`, a name or a property
         if char in "'\"":
             end = _string_end(source, i)
         elif char == "`":

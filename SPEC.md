@@ -351,6 +351,27 @@ defaults. A move to a path that runner does not collect is a disappearance.
 When the runner does not collect the old path by default either, the project
 configures its own globs, which are not read, and the union decides.
 
+A JS/TS test callback's assertions are those its statements reach (#429).
+One bounded walk reads the statements of a callback's block body. The
+statements after an unconditional `return` or `throw` never run, and
+neither does a branch a literal-only folder decides: the body of an `if`, a
+`while` or a three-part `for` whose condition folds false, and the `else`
+of an `if` whose condition folds true. The folder reads literals, `!`,
+parentheses, `&&` and `||` as the Python fold reads `and` and `or`, `===`
+and `!==` between literals, the other comparisons between literals of one
+primitive type, and `undefined` and `NaN` only where they name the
+unshadowed global; anything else is unknown, a `const` binding included. A
+block and the selected branch of a decided `if` pass their termination on.
+Loop, `do`, `try`, `catch`, `finally` and labeled bodies are read inside,
+but a `return` there ends nothing after them, and function, arrow and class
+bodies are not read, iterator callbacks included. An expression statement
+of `&&` or `||` whose literal operand decides it skips the assertion that
+is its last operand and runs to its end, when the statement starts on a
+boundary the walk proved. Where the walk cannot prove a statement's end,
+it stops reading that statement list, and the assertions after keep their
+reading. The catch evidence of `BROAD_EXCEPT_ADDED` (#363) still reads every
+assertion a callback spells. `docs/js-reachability.md` names the residuals.
+
 ### Bounded Python carriers and table projection
 
 A direct conditional failure, `if comparison: raise AssertionError`, can
