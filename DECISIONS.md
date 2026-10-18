@@ -12330,7 +12330,7 @@ Implementation, in `src/checkwash/cli.py` (lines at this PR):
   the agent commits before stopping stays open (D-142 item 4).
 - Q6, not widened: the directory-symlink refusals keep the note (D-134
   item 2); the subject-replacement and stand-in limits and `RecursionError`
-  go to a follow-up issue.
+  go to their own follow-up issue, #506.
 - Q7. SPEC §9 gains hook-json's verdict mapping and the (b) sentence, and
   §4b's "The run exits 2" points to §9; §4b's context sentence now says the
   run "refuses in the same way", so the pointer covers it too. Priority: P1,
@@ -12338,7 +12338,8 @@ Implementation, in `src/checkwash/cli.py` (lines at this PR):
 - (d) is not in this PR. #454 is ruled, and its ruling
   (issuecomment-6248628332, item 6) leaves any reuse of its entry for an
   exit-2 run, and the test changes that needs, to #456. #454's entry is not
-  implemented yet, so #456 stays open for (d). (d) will need its own rule-2
+  implemented yet, so #456 stays open for (d); the owner confirmed the
+  deferral (below). (d) will need its own rule-2
   approval: `tests/test_issue415_oversized_sources.py:637` and this PR's
   `tests/test_issue456_hook_size_refusal.py:209` and `:255` assert an empty
   stdout on exit 2.
@@ -12380,7 +12381,7 @@ verdict, and that path's head or worktree side is over the limit"):
   Other untracked files that large are set aside, and the run gives its
   verdict.
 
-Not settled by the ruling, for the owner's approval with this entry:
+Not settled by the ruling; the owner approved each as written (below):
 
 - The match is exact, so a file that grew after the listing keeps the note.
 - `_set_aside_unread` refuses the first must-read change it meets. If that
@@ -12444,5 +12445,13 @@ range-mode symlink-target case. By reading, the documented test count becomes 19
 (`sweep.py:131-142`), so it is not expected to move.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run`.
 
-The agent wrote this entry in #456's fix PR, for the maintainer's approval
-of its wording, as the ruling asks.
+The agent wrote this entry in #456's fix PR #505. The maintainer approved
+it on 2026-10-19: 「#505 全部照建議：措辭照 commit 核可；3 個沒裁到的點照現在的寫法；
+Q6 照 (A) 開 follow-up；(d) 延後到 #454 實作後；這個 PR 不補測試。CI 全綠就代合」,
+in reply to the agent's list asking for approval of this PR's stability
+row (e2bda38b, 8e25462f), SPEC (240735ce, f8ac8634), THREATMODEL
+(a31dba51, 576dc6fa) and D-150 (65848b57, f1f5d971) text, the three
+points the ruling did not settle, filing the Q6 follow-up (filed as #506),
+the (d) deferral and whether to add the unpinned tests (not added). The
+reply is the text of the answer the agent suggested, which the owner
+chose.
