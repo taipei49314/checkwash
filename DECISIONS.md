@@ -12455,3 +12455,163 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
+
+Ruling 463 (owner, 2026-10-18, issuecomment-6248011246, 「照建議」, "as
+recommended") adopted the issue's recommendations: Q1 (a); Q2 (a) for now;
+Q3 (a); Q4 (a) for now, with the escape through a test unit added in an
+unrelated file named as a residual; and Q5's measurement. The maintainer
+text goes in the fix PR as drafts. D-150 is the last entry on main and
+D-151 to D-156 are assigned to other open pull requests, so this entry is
+D-157, placed after D-150; its place may need adjusting at merge time.
+
+#463 reports that the file-scoped `EXPECTED_VALUE_CHANGED` (#129) is not
+raised when any Python production symbol changed, or any opaque production
+change exists, anywhere in the diff
+(`detectors/snapshot_expectation.py:10-11@0e60832a`), and that an added
+Python production file put every symbol it defines into
+`prod_symbols_changed` (`engine.py:1416-1423@0e60832a`). So a new module
+holding `X = 1` silenced a rewritten golden file: what remained was
+`SNAPSHOT_CODE_COCHANGE` at warn, which passes at the default `fail_on`,
+and nothing at all once any test logic changed. #419 Q7 (a) named it a
+residual (row 132, D-141).
+
+Implementation, in `ir/model.py`, `engine.py` and
+`detectors/snapshot_expectation.py` (lines at this PR):
+
+- Q1 (a). `DiffGlobals.prod_symbols_in_added_files`
+  (`ir/model.py:436-445`) holds the entries of `prod_symbols_changed` that
+  `build_ir`'s added-file branch contributes, one per entry
+  (`engine.py:1416-1427`). The file-scoped form subtracts them as a
+  multiset before asking whether a production symbol changed
+  (`_existing_prod_symbol_changed`, `detectors/snapshot_expectation.py:8-18`):
+  an added `pkg.py` and a modified `pkg/__init__.py` both give `pkg::X`,
+  and the modified one still counts. A deleted Python production file keeps
+  counting (`engine.py:1428-1442`), as (a) rules and (b) would not. The
+  reason is the one the added-file branch's own comment gives
+  (`engine.py:1417-1418`, quoted by the issue), which clause 3 of repair
+  evidence (SPEC §5, row 73) and `PACKAGE_REPAIR` (D-010) already act on:
+  nothing in a brand-new file explains rewriting an existing expectation.
+- Every other reader of `prod_symbols_changed` is unchanged: symbol repair
+  evidence and the one-hop callers (`gating._repair_evidence`,
+  `evidence._record_callers`) still read an added file's symbols. Nothing
+  in `gating.py`, the severity table or `ORACLE_RULES` changes.
+- Q2 (a). The form stays diff-global: a changed symbol in any existing or
+  deleted Python production file counts, whether or not a test reaches it.
+- Q3 (a). `prod_opaque_change` still silences the form, consistent with
+  #419 Q1 (D-141), until a sweep prices (b). A file the diff adds never set
+  it (row 73), and an added data file or unparseable `.py` gave no symbol,
+  so neither ever counted.
+- Q4 (a). `SNAPSHOT_CODE_COCHANGE` (`detectors/globals_rules.py:22-47`) is
+  unchanged: every production-role file the diff changes counts, a new one
+  included, and test logic in any test or conftest file removes it. Beside
+  a new module, a rewritten golden file now reports both findings; beside a
+  new module and a new unrelated test, `EXPECTED_VALUE_CHANGED` alone.
+
+The newly raised finding goes through E1 as the snapshot-only form does.
+It has no unit, so only the opaque-change credit could hold it
+(`gating._file_repair_evidence`), and this diff has none. `PACKAGE_REPAIR`
+needs a modified existing symbol and a test file's imports, and a snapshot
+path has neither. So the finding is high with `NO_PROD_CHANGE_IN_DIFF`, or
+warn under D9 `DEPENDENCY_DRIFT` when a dependency manifest's dependencies
+changed too, as for a golden file rewritten alone.
+
+Readings within the ruling's text:
+
+- "A production file the diff adds" is a change with status `added`. A
+  Python file renamed out of a test, conftest, CI, guardrail or snapshot
+  path arrives as a synthetic addition that contributes nothing at all
+  (`_expand_renames`, `engine.py:370-415`); a rename within production is
+  the existing file it was. A rename onto a `.py` production path from a
+  docs or lockfile path whose base side parses as Python still counts its
+  changed symbols. That costs no less than residual (1) below, so it is
+  left as it is.
+- A symbol is counted per entry, not per name: the multiset difference
+  above.
+
+Not settled by the ruling, for the owner's decision:
+
+- The E1 label. The newly raised finding is labelled
+  `NO_PROD_CHANGE_IN_DIFF` over a diff that adds a production file. SPEC
+  §5 gives that label to every E1 finding outside its two named cases, and
+  an oracle finding beside an unrelated production change already reads
+  the same way; but as a sentence it is untrue of this diff, the class
+  `docs/integrations.md` §6 describes. The label is escalation policy in
+  `gating.py`, which this PR does not touch; renaming it would need its own
+  ruling.
+
+**Residuals**, open by ruling and pinned as current behaviour, not as
+honest edits (row 132): (1) a changed symbol in any existing or deleted
+Python production file, `snapshot_unrelated_symbol_edit_neg` (Q2 (a));
+(2) an edit to an existing production file checkwash cannot read,
+`snapshot_template_comment_edit_neg` (Q3 (a)); (3) any test logic change
+in the diff removes `SNAPSHOT_CODE_COCHANGE`, and with (1) or (2) nothing
+is reported, `snapshot_unrelated_symbol_edit_new_test_neg` (Q4 (a)). The
+cheapest full escape is now (3) with (1): a no-op `+ 0` in any existing
+production function and a new test anywhere.
+
+**Fingerprints and IR.** No fingerprint scheme changes: the newly raised
+finding has the file-scoped content-bound v2 key the form always had
+(`event: stored_expectation_rewritten`). `--emit-ir` gains
+`globals.prod_symbols_in_added_files`, a new optional field, so
+`IR_VERSION` stays 2 (`docs/stability.md`: no bump for a new optional
+field); an IR without it counts every changed symbol, as before.
+
+**Release.** The change newly blocks, so the release that ships it names
+the newly blocking shape in its notes: a stored snapshot, golden or
+expected file rewritten beside one or more new Python production modules
+and no other production change that counts. The next release is a minor
+anyway because of #421 (`docs/stability.md:17-22`). No release is
+authorized (AGENTS.md rule 5). `docs/KNOWN-ISSUES-next.md` gains a #463
+row.
+
+**Rule 2 (stop).** The ruling names no change to an existing expectation,
+and the change moves one:
+`tests/test_snapshot_expectations.py::test_unrelated_production_change_retains_existing_snapshot_cochange_policy`
+(PR #133's pin of the policy #129 kept) rewrites `tests/golden/invoice.txt`
+beside an added `unused.py` holding `def unrelated(): return 3` and asserts
+verdict pass and no `EXPECTED_VALUE_CHANGED`. Under Q1 (a) it blocks, with
+`EXPECTED_VALUE_CHANGED` at high and `SNAPSHOT_CODE_COCHANGE` at warn. That
+test is not changed in this PR, so CI shows it failing until the owner
+decides. Recommendation: keep its inputs, assert the block, and rename it
+`test_an_unrelated_new_production_function_does_not_explain_rewriting_the_stored_expectation`;
+what its old name says about an existing module is pinned by
+`snapshot_unrelated_symbol_edit_neg` and
+`test_a_changed_symbol_in_an_existing_module_still_counts_beside_an_added_one`.
+By reading, no other existing expectation moves: no `.gwcase` fixture,
+demo case, verdict-gate case or corpus case rewrites a snapshot-role file
+beside an added Python production file and nothing else that counts, and
+nothing under `tests/gates` changes. If CI shows anything else moving, the
+round stops.
+
+**Measurement (Q5).** Not measured. The standard set and D-088's sets, any
+verdict move stopping the round, pre-registered on a checkwash-lab branch
+before any engine runs (D-048's method), and run on the pool; on
+LAPTOP-01AGNPJU only under EC POLICY `checkwash-pju-sweep` (T-546), with
+the frozen manifest and engine commit approved first. By reading, a commit
+can move only if it modifies a snapshot-role file, adds a Python production
+file defining at least one symbol, and changes no symbol of an existing or
+deleted Python production file and no production file checkwash cannot
+read. Each such commit gains one `EXPECTED_VALUE_CHANGED` per modified
+snapshot-role file. How many there are is unknown.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run or sweep was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: seven `.gwcase` fixtures, labels
+reviewed before merge (`snapshot_new_prod_module_pos` and
+`snapshot_new_prod_module_new_test_pos`, which carry `bypass: 132`;
+`snapshot_new_prod_module_with_caller_neg`,
+`snapshot_deleted_prod_module_neg`, `snapshot_unrelated_symbol_edit_neg`,
+`snapshot_template_comment_edit_neg` and
+`snapshot_unrelated_symbol_edit_new_test_neg`), and 22 collected items in
+`tests/test_issue463_snapshot_added_production.py`. Not pinned: the E1
+label of the new finding, the rename reading, and `DEPENDENCY_DRIFT`
+beside an added module. By reading, the documented test count becomes
+19504 (19475 + 22 + 7); CI's collection checks it, and other open pull
+requests move it too. `benchmarks/FAILURES.md` was edited by hand to what
+`benchmarks/make_failures.py` produces, by reading the generator.
+
+The agent wrote this entry in #463's fix PR. It is a draft for the owner's
+approval of its wording, of the rule-2 recommendation and of the open point
+above.
