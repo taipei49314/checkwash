@@ -520,9 +520,10 @@ stores or deletes `.<name>`, names it in
 `monkeypatch.setattr`, or calls `setattr` with a computed name on the
 receiver or a class of the order (D-145, D-149). Since #502 (D-159) the
 module also names it in a call whose last name is `__setattr__` or
-`__delattr__`, by the first string literal among its first two positional
-arguments (`self.__setattr__("_check", f)`,
-`type.__setattr__(C, "_check", f)`); as a keyword or a literal dict key of
+`__delattr__`, by its name argument: the first of a bound call
+(`self.__setattr__("_check", f)`) and the second of an unbound one
+(`type.__setattr__(C, "_check", f)`), told apart by how many positional
+arguments the call has; as a keyword or a literal dict key of
 `update()`, or the literal key of `setdefault()`, on `x.__dict__` or
 `vars(x)`; and, in a class body, as a literal key of `vars()` or
 `locals()` that is stored or deleted, or that those calls, `__setitem__`
