@@ -187,7 +187,17 @@ def test_original_local_and_shared_limits_keep_exact_charge_and_failure(
         trace, module = _trace(trace_type=trace_type, budget=[shared])
         trace.steps = local
         if refused:
-            with pytest.raises(EngineError, match="^stand-in execution proof exceeds the source step limit$"):
+            # #469 (rule-2 change approved in its ruling): the old text stays
+            # the prefix, and the message names the counter that fired.
+            fields = (
+                "counter=proof, path='<unknown>', requested_side='after', unit='<unknown>', "
+                f"steps={end_local}, limit=20000$"
+                if end_local > 20_000 else
+                "counter=analysis, path='<unknown>', requested_side='after', unit='<unknown>', "
+                f"steps={end_shared}, limit=1000000; the unit is where the shared analysis budget "
+                "ran out, not necessarily its cause$"
+            )
+            with pytest.raises(EngineError, match="^stand-in execution proof exceeds the source step limit: " + fields):
                 trace.expression(node, module, {}, "")
         else:
             assert trace.expression(node, module, {}, "") == subject._Value()
