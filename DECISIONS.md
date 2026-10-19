@@ -15351,11 +15351,13 @@ full): Q1 A, in the binder, with a narrowed step-back; Q2, the simple set
 only; Q3, yes; Q4, the file's runner, for visibility only; Q5, a docs-only
 PR first, which #521 was. The consolidated ruling of 2026-10-19
 (「裁決總表全部照建議」, #480 issuecomment-6261651041) set #480 to P2 (R95)
-and amended the released known-issues page (R34, R85). R1 (#419) lists
+and amended the released known-issues page (R34, R85); the reply was a
+button whose text the assistant wrote. R1 (#419) lists
 #480 among the ruled fixes that merge before the combined sweep's freeze,
 while R95's option scheduled the fix after v0.9.0; E8 of the PR approval
-list of 2026-10-19 (「PR 核可清單全部照建議」) settled that in R1's favour,
-so this fix merges before the freeze and R95 keeps the priority and the
+list of 2026-10-19 (「PR 核可清單全部照建議」; this reply too was a button
+whose text the assistant wrote) settled that in R1's favour, so this fix
+merges before the freeze and R95 keeps the priority and the
 docs' form. D-164 to D-169 were assigned to the pull requests of the
 fourth wave; this entry is D-167.
 
@@ -15426,7 +15428,12 @@ approval:
    (`c0 ? c1 ? y : (a): T => a : z`) keeps the old reading.
 2. **Generic arrows stay a residual.** `<T>(ctx: T): void =>` puts `>`
    before the `(`, which is no accepted position, so it keeps the old
-   reading; the PR does not read the type parameter list.
+   reading; the PR does not read the type parameter list. Q3 does not
+   name such a test callback's first parameter either, since
+   `_callback_receivers`, whose reading Q3 follows, does not: its context
+   calls are no coverage candidates, and the report can still say
+   `no_known_gaps`, unless the parameter is `t`, which follows the reading
+   of a `t` that nothing declares (Q4).
 3. **Whose parameter Q3 reads.** A callback passed directly to a call,
    first after `(` or `,`. Wrapping parentheses and `async` are stepped
    over; then `function` with its name, a parameter list followed by `=>`
@@ -15509,14 +15516,14 @@ owner's approval: `js_node_context_annotated_arrow_weakened_pos` (N1),
 `js_node_context_annotated_arrow_expected_rewrite_pos` (N2 with N14's
 edit), `js_ava_annotated_arrow_weakened_pos` (N16) and
 `js_tap_annotated_arrow_weakened_pos` (N19).
-`tests/test_issue480_js_annotated_arrows.py` adds 76 collected items,
+`tests/test_issue480_js_annotated_arrows.py` adds 79 collected items,
 counted from its parametrize lists: the issue's rows N1-N21 and A1 and
-eight of its controls (30), the accepted positions (12) and the named
+eleven of its controls (33), the accepted positions (12) and the named
 misses (5), the ruling's two conditional controls with the three guards of
 reading 1 (5), whose parameter is a context (5), Q3's candidates (6), the
 nested shadow (1), N22 and N23 through the engine (2), Q4's runners (8) and
-Q4's cost (2). By reading, the documented test count becomes 20164 (20083
-+ 5 + 76); CI's collection checks it.
+Q4's cost (2). By reading, the documented test count becomes 20167 (20083
++ 5 + 79); CI's collection checks it.
 
 **Measurement.** Per R1 and R2 this fix merges before the combined
 sweep's manifest is frozen, and its merge gets its own before/after pair in
