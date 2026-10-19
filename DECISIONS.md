@@ -12496,8 +12496,9 @@ Implementation (lines at this PR):
   `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
   `:3227-3262`, used at `:3361` and `:3431`). Only a unit that takes a
   parameter reads any. `ir/model.py:130-137`, `:259-268`.
-- `gating.py`, in its own commit (da116dd1) for the owner's approval, as the
-  analysis's §4.5 has it and as D-048 and D-141 approved policy code:
+- `gating.py`, in its own commit (da116dd1), as the analysis's §4.5 has
+  it; the owner approved it on 2026-10-19, as D-048 and D-141 approved
+  policy code:
   `_finding_assertion` (`:331-358`) finds the before half of the assertion a
   finding cites, by span and text, through the pair when the finding cites
   only its after side (EXPECTED_VALUE_HARDCODED); `_fixture_producer_evidence`
@@ -12550,7 +12551,8 @@ What the ruling's four answers become:
   every finding an assertion that reads the changed producer, and pins the
   guard itself.
 
-Readings where the ruling is silent, each erring toward no evidence:
+Readings where the ruling is silent, each erring toward no evidence; the
+owner approved all four on 2026-10-19:
 
 1. Stricter than `_setup_reach` (`setup_skip_controls.py:1037-1093`) in two
    places: at the test's own levels, a name bound another way or a star
@@ -12577,15 +12579,17 @@ Readings where the ruling is silent, each erring toward no evidence:
 4. The finding's assertion is matched by span and text. A finding whose
    evidence is not one of its unit's assertions takes nothing.
 
-**Two departures from the ruling, for the owner's decision.**
+**Two departures from the ruling, which the owner kept on 2026-10-19.**
 
 1. TOLERANCE_LOOSENED takes symbol evidence, but its finding cites its
    unit's span (`detectors/tolerance_loosened.py:213-214`), not an
    assertion, so it never has a before-side assertion and takes no
    producer: Q4 (a) as implemented covers it in name only. The alternatives
-   are to recover the pair in gating from the unit's tolerance changes (the
-   detector's `_sources`, duplicated), or to cite the pair's spans in the
-   finding, which changes its reported evidence.
+   were to recover the pair in gating from the unit's tolerance changes
+   (the detector's `_sources`, duplicated), or to cite the pair's spans in
+   the finding, which changes its reported evidence. The owner took
+   neither: he accepted the limit as disclosed in row 137 and
+   KNOWN-ISSUES-next, with no issue opened.
 2. Neither the one-hop callers route (SPEC §5 clause 2) nor a helper hop is
    followed from a producer. A factory producer that is unchanged and calls
    a changed symbol gives nothing, while the same factory called inline
@@ -12600,17 +12604,19 @@ Readings where the ruling is silent, each erring toward no evidence:
    top-level callee would then stay out, through #420's leaf defect
    (`evidence.py:239`; #420 is deferred in #504). The code is narrower:
    every factory gives nothing, one that calls a changed method included.
-   The alternative is to check the producer's leaf in `prod_symbol_callers`
-   for the reading assertion, as `_repair_evidence` checks a unit's calls
-   (`gating.py:422`). That route matches leaf names with no module check,
-   so a producer would carry that looseness, as an inline call does today.
-   Row 137, SPEC §5 and the docs would then keep only the top-level case,
-   and the pin above would flip to warn with REPAIR_EVIDENCE.
+   The alternative was to check the producer's leaf in
+   `prod_symbol_callers` for the reading assertion, as `_repair_evidence`
+   checks a unit's calls (`gating.py:422`). That route matches leaf names
+   with no module check, so a producer would carry that looseness, as an
+   inline call does today. Row 137, SPEC §5 and the docs would then have
+   kept only the top-level case, and the pin above would have flipped to
+   warn with REPAIR_EVIDENCE. The owner kept the narrower reading,
+   recorded as this departure, so the pin stays as it is.
 
 Residuals, kept documented as the ruling says (THREATMODEL row 137, new,
 false positive): a setup call in the fixture, an `autouse` fixture or
 `usefixtures` mark the test does not request by parameter, fixtures of
-fixtures, the readings above, both departures while they stand, a test
+fixtures, the readings above, both departures (kept by the owner), a test
 class with a base or a keyword (for a fixture outside its own body), and
 xunit `setUp` on `self` (#306's `self` resolution). What the fix newly
 allows is one more spelling of row 93's Route A, on the class or factory
@@ -12618,7 +12624,11 @@ that builds the value the assertion reads, which the inline spelling had
 already (`route_a_fixture_producer_neg`); row 93 says so. Row 86j notes that
 the chain carries a producer and still no value (#425, deferred in #504).
 SPEC §5 states the producer, the T1.9 hop, and PACKAGE_REPAIR's scope
-(EXPECTED_VALUE_CHANGED and EXPECTATION_DEFINITION_CHANGED).
+(EXPECTED_VALUE_CHANGED and EXPECTATION_DEFINITION_CHANGED). Its D9 row
+said DEPENDENCY_DRIFT holds "those two only, exactly like PACKAGE_REPAIR";
+`gating.py` has also given that credit to EXPECTATION_DEFINITION_CHANGED
+since T1.9 (58fe2e9f), and the owner chose on 2026-10-19 to correct the
+row here, within the SPEC §5 wording, so it names all three rules.
 
 **Effect, by reading.** The reduced case holds its six findings at warn
 with REPAIR_EVIDENCE and passes at the default `fail_on`; its three
@@ -12679,9 +12689,9 @@ with no parameter reads nothing new, and the gate's modules have none.
 
 Evidence status: prepared on a work machine where no pytest, checkwash,
 engine or product code ran; CI runs the tests. Added: 19 `.gwcase`
-fixtures, labels reviewed before merge, and 79 collected items in
-`tests/test_issue471_fixture_producers.py`, counted from its parametrize
-lists; no existing test changed. By reading, the documented test count
+fixtures, whose labels the owner approved on 2026-10-19, and 79 collected
+items in `tests/test_issue471_fixture_producers.py`, counted from its
+parametrize lists; no existing test changed. By reading, the documented test count
 becomes 19573 (19475 + 79 + 19); CI's collection checks it.
 
 The agent wrote this entry in #471's fix PR, as a draft for the
