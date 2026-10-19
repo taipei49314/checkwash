@@ -10101,7 +10101,10 @@ status in a place other than `pytest_cmdline_main`.
 **Residuals.** 422.Q4's spellings, 422.Q5's recipe combined with a run that
 collects nothing, and interpreter start-up files. The Q4 and Q5 follow-up
 issues had not been filed by 2026-10-15; they were filed on 2026-10-18 as
-#494 and #495.
+#494 and #495. Owner ruling 2026-10-19, R68, narrows #494 to the
+`pytest_cmdline_main`, `pytest_runtestloop` and `pytest_collection`
+short-circuits and clearing `session.items`; the other Q4 spellings stay
+residuals named in THREATMODEL row 127.
 
 **Merge order.** #432's ruling put #432 first. This round was built first,
 and on 2026-10-14 the maintainer accepted it landing first.
