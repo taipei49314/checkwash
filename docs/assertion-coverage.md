@@ -895,13 +895,14 @@ These still get no evidence from the fixture, as known limits:
 - a producer that is a factory calling the changed symbol: neither the
   one-hop callers route nor a helper hop is followed from a producer. The
   analysis the ruling adopted has the producer take the callers route, so
-  this is a departure, pending the owner's decision (D-155);
+  this is a departure, which the owner kept on 2026-10-19 (D-155);
 - a test class with a base class or a keyword: no fixture outside that
   class's own body is followed, not even the module's or a `conftest.py`'s;
 - xunit `setUp` that builds the subject on `self`;
 - a `TOLERANCE_LOOSENED` finding, which cites its test rather than an
   assertion, so it has no assertion that reads the fixture. This is also a
-  departure, pending the owner's decision (D-155).
+  departure, which the owner accepted on 2026-10-19 as a disclosed limit
+  (D-155).
 
 A kept no-op edit in the class a fixture builds now holds a weakened
 assertion on the fixture's value at warn, as the same test written inline
