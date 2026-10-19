@@ -15374,17 +15374,17 @@ Implementation, lines at this PR:
   statements (`Reachability.module_unreachable`, `reachability.py:428`),
   the block callback of every `describe`, `suite` and `context`
   declaration, their `x`/`f` forms, modifiers and tables included, and the
-  callback of a test that registers a test of its own, even one with no
-  assertions. `parse_javascript` (`:2827`) parks every declaration that
-  starts in a span those walks prove dead. A parked declaration is no
-  unit, and neither is any declaration inside it, since a dead span covers
-  whole statements. The file's focus, the ancestors a unit inherits skips
-  from and `_focus_stops` read only the live declarations, so a dead
-  `.only` stops no other test. A parked test is still scanned (`:3057`):
-  its assertions reach `swallowing_handlers`, so the catch evidence does
-  not change, and they are recorded as never reached. Its callback stays
-  among the test bodies, so the test around a parked subtest does not gain
-  the subtest's assertions.
+  callback of a test that registers a named test or a block of its own, even
+  one with no assertions. `parse_javascript` (`:2827`) parks every
+  declaration that starts in a span those walks prove dead. A parked
+  declaration is no unit, and neither is any declaration inside it, since a
+  dead span covers whole statements. The file's focus, the ancestors a unit
+  inherits skips from and `_focus_stops` read only the live declarations, so
+  a dead `.only` stops no other test. A parked test is still scanned
+  (`:3057`): its assertions reach `swallowing_handlers`, so the catch
+  evidence does not change, and they are recorded as never reached. Its
+  callback stays among the test bodies, so the test around a parked subtest
+  does not gain the subtest's assertions.
 - Q1 (a), `&&` and `||`. #429 Q3's reading drops a declaration as it drops
   an assertion: the walks of this round pass the declarations' call spans
   as the operands it may drop (`unreachable` and `module_unreachable` now
@@ -15488,25 +15488,30 @@ Readings the ruling leaves to the implementation, for the owner's approval:
    5), so a live table that shares the `const` keeps its rows counted.
 6. **Statement position** for the amended reading 10 is read
    conservatively, from the token before the `function`: a `function` with
-   no name after it never declares; one after `.`, `?.` or `#`, an opening
-   bracket, a comma, a spread or an operator that waits for its operand
-   begins an expression, and so does one after `return`, `throw`, `yield`,
-   `await`, `void` or a prefix `!` on the same line; anything else, `)`,
-   `]`, `}`, an operand at a line break and `:` included, reads as a
-   declaration. The token stream omits templates and regular expressions,
-   so where one stands before the `function` (or its `async`), the token
-   before it is not the one JavaScript reads, and the `function` reads as
-   a declaration (`` const note = `x` `` then `function f() {}` on the
-   next line, which a line break makes one); so does one after a `.` that
-   ends a number (`x = 1.` then a declaration on the next line), the word
-   right before the `.` starting with a digit. So a named function
-   expression after a `:`, such as an object property's value, in a dead
-   region still refuses the walk (row 159, residual 6). Every `function`
-   in the dead region is read, at any depth, so a function declaration
-   inside a dead test's own callback refuses the walk too, though that
-   body never runs.
+   no name after it never declares; one after `.`, `?.` or `#` (a spread
+   included, whose `...` the tokens hold as three `.`), `(` or `[`, a
+   comma or an operator that waits for its operand begins an expression,
+   and so does one after `return`, `throw`, `yield`, `await`, `void` or a
+   prefix `!` on the same line; anything else, `{`, `)`, `]`, `}`, `>`, an
+   operand at a line break and `:` included, reads as a declaration. `>`
+   may close a TypeScript type, after which a statement may start, and the
+   tokens hold `>>` and `>>>` as `>` tokens, so a `function` after either
+   reads as a declaration too. The token stream omits templates and
+   regular expressions, so where one stands before the `function` (or its
+   `async`), the token before it is not the one JavaScript reads, and the
+   `function` reads as a declaration (`` const note = `x` `` then
+   `function f() {}` on the next line, which a line break makes one); so
+   does one after a `.` that ends a number (`x = 1.` then a declaration on
+   the next line), the word right before the `.` starting with a digit. So
+   a named function expression in a dead region still refuses the walk
+   after a `:`, such as an object property's value, after `>`, `>>` or
+   `>>>` (`a > function f() {}`), and after `void`, a prefix `!` or
+   `await` at a line break (row 159, residual 6). Every `function` in the
+   dead region is read, at any depth, so a function declaration inside a
+   dead test's own callback refuses the walk too, though that body never
+   runs.
 7. **The import step-over** reads `import "m"`, and `import` followed by
-   names, `*`, `as`, commas and one braced list of names, strings and
+   names, `*`, `as`, commas and braced lists of names, strings and
    commas, then `from` and a string; TypeScript's `import type` is such a
    form. It ends at a `;`, at a line break before any token but `with` or
    `assert`, or at the file's end, and only where the text between its
