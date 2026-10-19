@@ -12617,7 +12617,11 @@ found no test function with an assertion gone and two new, where the
 fallback has a choice, and one bare raises gone beside a new `match=`
 call: `raises_match_fold_neg`, whose pinned fields (`cases.py`) do not
 include the message. A scan of the inline sources in `tests/*.py` found
-such a choice only between sources no test diffs against each other.
+one before/after pair a test diffs where the subject preference has a
+choice: `tests/test_exact_unique_predicates.py`, #434 A1's own shape,
+whose assertions (a pass; a rewritten answer that blocks with
+EXPECTED_VALUE_CHANGED; whether a projection is made) hold under either
+pairing.
 Nothing under `tests/gates` changed, and `benchmarks/decoy/expected.json`
 cites none of rows 84b, 85 and 119. If CI shows an existing expectation
 moving, the round stops.
