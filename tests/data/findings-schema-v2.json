@@ -1,0 +1,247 @@
+{
+  "$comment": "What checkwash_findings_version 2 promised: docs/findings.schema.json without its annotations. tests/test_findings_schema.py fails when the schema takes any of it back, and pins this file's sha256. Only add to it: a change that declares an optional key may add the key here, with the new digest in the test. Nothing may be taken out.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "checkwash_findings_version",
+    "run",
+    "findings",
+    "summary",
+    "skipped_files",
+    "config_errors",
+    "verdict"
+  ],
+  "properties": {
+    "checkwash_findings_version": {
+      "type": "integer",
+      "const": 2
+    },
+    "run": {
+      "$ref": "#/$defs/run"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "skipped_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "config_errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "block"
+      ]
+    }
+  },
+  "$defs": {
+    "run": {
+      "type": "object",
+      "required": [
+        "base",
+        "head",
+        "checkwash_version"
+      ],
+      "properties": {
+        "base": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkwash_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "rule",
+        "severity",
+        "message",
+        "path",
+        "unit",
+        "before",
+        "after",
+        "escalators",
+        "deescalators",
+        "fingerprint",
+        "allowlisted",
+        "strength_drop",
+        "strength_after",
+        "subject_changed",
+        "shape"
+      ],
+      "properties": {
+        "rule": {
+          "$ref": "#/$defs/label"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warn",
+            "high",
+            "critical"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "before": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/evidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "after": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/evidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "escalators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        },
+        "deescalators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*/"
+        },
+        "allowlisted": {
+          "type": "boolean"
+        },
+        "strength_drop": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "strength_after": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "subject_changed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "shape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "text",
+        "span"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "span": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "critical",
+        "high",
+        "warn",
+        "info"
+      ],
+      "properties": {
+        "critical": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "high": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warn": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "label": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    }
+  }
+}
