@@ -15358,8 +15358,9 @@ The owner's second ruling that day (「19 項全部照建議做（價值判斷�
 settled the two questions the first left open: an unchanged dot-less file
 over the limit that the provider pass reads is first confirmed by a test and
 then filed as its own issue, not fixed here (question 4), and HIDDEN_UNICODE
-is widened to JS/TS in its own issue, #498 (question 5). On 2026-10-19
-(「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+is to be widened to JS/TS in its own issue, #498, adopted only if a
+false-positive sweep stays inside a line fixed in advance (question 5).
+On 2026-10-19 (「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
 the reply was a button whose text the assistant wrote;
 issuecomment-6261648853) R96 fixed #498's false-positive line and R98
 scheduled #498 after v0.9.0, with (c) behind it; neither changes this PR.
@@ -15435,7 +15436,14 @@ reading 2.
    changes, earlier in path order, use it up before a later one, which
    would reopen the base-side gap in a repository that already holds many
    large files. Per side, the extra read grows with the oversized bytes the
-   diff changes, and the deadline grows with the number of objects.
+   diff changes, and the deadline grows with the number of objects. So
+   neither has a total bound: a commit that changes N oversized Git sides
+   of up to 64,000,000 bytes each streams and hashes them all, where
+   before #455 they cost no read, and a tree's deadline is 60 x (N + 1)
+   seconds. An alternative not taken here is a total per tree past which
+   the run refuses, naming the side: it bounds the time without reopening
+   the gap, but a suffixed side past it would refuse where (b1) says a
+   side above the ceiling keeps today's answer.
 2. A refusal names the first unread side whose prefix holds a shell
    shebang that gives one of the change's paths runner shape, also when
    another must-read rule applies to the path; otherwise the first unread
@@ -15453,17 +15461,20 @@ reading 2.
 
 **Costs,** by reading, not measured. For honest repositories, an oversized
 changed `README`, `LICENSE`, `ChangeLog`, `.envrc` or other file with no
-extension and no shell shebang gets a verdict instead of exit 2 (or the
-Stop hook's "not analysed" message), and a suffixed file whose shell shebang
-is only on an oversized side newly exits 2. For attackers, the second
-closes the base-side gap: an existing `ci/run.txt` that `sh ci/run.txt`
+extension and no shell shebang gets a verdict instead of exit 2 (under
+`--format hook-json`, instead of #456's size block when its head or
+working-tree side is over the limit, or the "not analysed" message when
+only its base side is), and a suffixed file whose shell shebang is only on
+an oversized side newly exits 2. For attackers, the second closes the
+base-side gap: an existing `ci/run.txt` that `sh ci/run.txt`
 runs, over the limit, whose head drops the shebang and the test command.
 The first gives an attacker the answer a small file without a shebang gets,
 with less evidence, since a set-aside change earns none. Each streamed Git
 side is read once in full: in range mode one more `git cat-file --batch`
 for each tree that holds such a side, whatever their number; in worktree
-mode none more, since a base side's stream takes the place of the full
-read an under-limit side gets. The gitio gate (`tests/test_perf_git.py`)
+mode one more for each oversized base side, the same `cat-file --batch`
+an under-limit base side already costs, where before #455 such a side
+cost none. The gitio gate (`tests/test_perf_git.py`)
 has no oversized side, so its budget does not move.
 
 **Residuals.**
@@ -15493,7 +15504,7 @@ aside, and the weakened test beside it blocks the stop as a finding, where
 the row asserts #456's size block. It is not changed in this PR; it waits
 for the owner's ruling. Nothing under `tests/gates` changes.
 
-**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 76 collected
+**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 81 collected
 items, counted from its parametrize lists: the prefix against the whole
 side (8) and equality (1); the engine's rows (10 set aside, 9 refusing and
 naming the shebang side, 6 other rules, 1 without a prefix); no repair
@@ -15501,9 +15512,14 @@ evidence with prefixes, test_issue415's unread rows and a README (5), and
 beside several set-aside documents (1); the provider pass (3); the
 snapshots, the working-tree read bound, the ceiling and the stream's
 protocol (2, 1, 2, 1, 4); the git processes (3); and the CLI in range,
-worktree and hook mode (19). No `.gwcase` fixture is added: the case
-format has no unread side. By reading, the documented test count becomes
-20159 (20083 + 76); CI's collection checks it.
+worktree and hook mode (24), where a shell shebang on an unread side
+refuses for every status the issue's acceptance names. By reading, 30 of
+the 81 pin behaviour the base already has, such as the shebang check
+itself, the other must-read rules and refusals the base names the same
+way; on the base they fail only because the module imports names it
+lacks. No `.gwcase` fixture is added: the case format has no unread
+side. By reading, the documented test count becomes 20164 (20083 + 81);
+CI's collection checks it.
 
 **Versions.** No rule id, severity or machine-output field changes, so
 `FINDINGS_VERSION` and `IR_VERSION` stay 2, and no fingerprint moves: a
