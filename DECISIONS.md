@@ -12614,13 +12614,15 @@ docs-only PR first: a sentence in README "Know the limits", a row in
 `docs/KNOWN-ISSUES-v0.7.0.md` that the owner approves in that PR, and a
 rewording of `docs/stability.md:236-238`. No such PR was opened. v0.8.0,
 released since, carries the row in `docs/KNOWN-ISSUES-v0.8.0.md` (from its
-release preparation, `8a17a80e`). `docs/KNOWN-ISSUES-v0.7.0.md` has no
-#428 row, and this PR does not add one: that page describes the published
-v0.7.0, and the gap it would state is the same one v0.8.0's row states.
+release preparation, `8a17a80e`). This PR adds the v0.7.0 row, at the end
+of the table in `docs/KNOWN-ISSUES-v0.7.0.md`. It copies v0.8.0's row and
+adds two sentences: the report came on 2026-10-14, after the release, so
+the acceptance at the foot of that page does not cover it; and v0.8.0 has
+the same gap.
 The README sentence and the `docs/stability.md` rewording were not made
 either; this PR makes both, worded for main after the fix and naming the
-v0.8.0 gap. The owner decides whether they stay here or move, with a
-v0.7.0 row if he wants one, into the separate docs-only PR.
+v0.8.0 gap. The owner decides whether they and the row stay here or move
+into the separate docs-only PR.
 
 **Costs, by reading; the sweep counts them.** New blocks in a test-only
 change: an expected cell corrected (as in Python); an input cell changed
