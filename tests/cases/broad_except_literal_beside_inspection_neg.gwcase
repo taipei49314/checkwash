@@ -1,0 +1,23 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: an `assert True` beside an assertion on the caught error that can fail leaves the handler inspection
+origin: #496, a negative for R49's third condition: a handler swallows only when every oracle in it is proved to always pass
+note: the issue's pair with `assert True` and `assert str(error) == "value"` in the handler; the second can fail, so the handler inspects the error, as in broad_except_inspects_neg; app.py is unchanged and outside the diff
+=== before: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 1
+=== after: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    try:
+        assert value() == 1
+    except AssertionError as error:
+        assert True
+        assert str(error) == "value"
+=== expect ===
+[]

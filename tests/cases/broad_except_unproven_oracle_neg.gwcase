@@ -1,0 +1,22 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: `assert value() or True` in the handler is not proved to pass, because `value()` runs first, so the handler stays inspection
+origin: #496, a negative for R51: the proof evaluates every operand of `or` on its own and does not take `_static_truth`'s rule that one True operand decides it
+note: the issue's pair with `except Exception: assert value() or True`; a call is no literal, so the proof answers unknown and the handler keeps main's reading; app.py is unchanged and outside the diff
+=== before: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 1
+=== after: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    try:
+        assert value() == 1
+    except Exception:
+        assert value() or True
+=== expect ===
+[]
