@@ -12472,8 +12472,9 @@ requests, so this entry is D-159; the number may change at merge time.
 #502: since #306's fix (D-145, #476, `81c69d28`), Sub-Q3 leaves a helper
 call unresolved when the module rebinds the helper's name, but the module
 scan read only a `.<name>` store or del, a `.__dict__[...]` store or del,
-an exact set of dotted setattr names (`_SETATTR`), `patch.object` and
-`monkeypatch.setattr`. So a `setUp` that runs
+an exact set of dotted setattr names (`_SETATTR`) with a literal name, or
+with a computed one on the receiver or a class of the order by name,
+`patch.object` and `monkeypatch.setattr`. So a `setUp` that runs
 `self.__dict__.update({"_check": lambda value: None})`, or
 `vars(self)["_check"] = fake`, a class body's `vars()["_check"] = fake`,
 `self.__setattr__("_check", fake)`, or
@@ -12535,11 +12536,10 @@ PR):
   the module (`:477-489`). So a module-level or function-local `x = C`
   counts as `C`, and `x = type(self)` or `x = self.__class__` as the
   receiver, as the direct `setattr(type(self), NAME, f)` is read (D-145;
-  reading 7).
-  A target reached through a subscript or another call (`globals()["C"]`,
-  `sys.modules[__name__].C`, `make()`) counts as every class in the order
-  (`any_class`, `:481`, read at `:682`). The reading in `_call`
-  (`:428-445`) stays.
+  reading 7). A target reached through a subscript or another call
+  (`globals()["C"]`, `sys.modules[__name__].C`, `make()`) counts as every
+  class in the order (`any_class`, `:481`, read at `:682`). The reading in
+  `_call` (`:428-445`) stays.
 
 Readings where the ruling is silent, for the owner's approval (1 to 4 err
 toward unresolved, 5 and 6 toward resolved, 7 both ways):
@@ -12559,10 +12559,11 @@ toward unresolved, 5 and 6 toward resolved, 7 both ways):
    function-local". A comprehension is read as part of its scope, so a
    `vars()` or `locals()` in a class-body comprehension is read as the
    class's namespace.
-5. `vars()` at module scope and `locals()` in a function rebind no method:
-   the module's namespace and the function's locals do not hold the class's
-   methods, so neither a literal nor a computed key there is read
-   (`:466-468` reads only a class body).
+5. `vars()` and `locals()` outside a class body rebind no method: at
+   module scope they are the module's namespace and in a function its
+   locals, neither of which holds the class's methods, so neither a literal
+   nor a computed key there is read (`:466-468` and `:506` read only a
+   class body).
 6. An alias whose value is no name as `_target` reads it (`obj = Fake()`,
    `x = globals()["C"]`) is not followed. The ruling names `x = C`,
    `x = type(self)` and `x = self.__class__`; reading such a value as
