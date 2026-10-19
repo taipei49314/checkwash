@@ -610,8 +610,11 @@ annotation is read when it is a simple type: names, type arguments
 (`(t): { ok: boolean } =>`), a parenthesized one (`(t): (void) =>`), a
 function, conditional or literal type, the callback's body is not read and
 none of its assertions is the test's; each call on its first parameter
-that names one of the runner's assertions is an `unresolved` coverage
-candidate (see
+that names one of the runner's assertions is a coverage candidate, so the
+report says `incomplete`. The candidate is `unresolved`, except for a
+parameter named `t` that resolves through node:test's fallback for a `t`
+that nothing declares, or to tap's root `t` where the file names it so:
+those calls are Node's or tap's candidates (see
 [Make unrepresented assertion candidates visible](#make-unrepresented-assertion-candidates-visible)).
 An arrow callback with type parameters (`<T>(t: T): void =>`) keeps the
 old reading: its first parameter is not read, and its calls on it are no
@@ -1062,7 +1065,9 @@ runner's assertions: `assert` for node:test, AVA's assertion names, tap's
 names ([#480](https://github.com/taipei49314/checkwash/issues/480)). So a
 context the binder does not read under a return type it does not step over
 ([above](#ava-and-tap-assertions)) is reported as an `unresolved`
-candidate, and the report says `incomplete`, not `no_known_gaps`. A
+candidate, or as Node's or tap's where a parameter named `t` resolves
+through node:test's fallback or to tap's root `t`, and the report says
+`incomplete`, not `no_known_gaps`. A
 callback with type parameters (`<T>(ctx: T): void =>`) is not read this
 way: its first parameter is not named, so its calls on it are no
 candidates and the report can still say `no_known_gaps`, unless the
