@@ -244,6 +244,9 @@ def test_a_computed_setattr_on_a_target_that_is_no_name_leaves_every_class_unres
     # an alias of a call's value is not followed, and one of a class outside the order is not it
     module("obj = Fake()", "setattr(obj, NAME, 1)"),
     module("class Other:", "    pass", "", "", "Alias = Other", "setattr(Alias, NAME, 1)"),
+    # an alias is followed only from a name, `type(x)` or `x.__class__`, the
+    # values the ruling names: an attribute of the receiver is another object
+    set_up("cfg = self.settings", "setattr(cfg, NAME, 1)"),
 ])
 def test_a_setattr_on_an_unrelated_object_leaves_the_call_resolved(source):
     assert via(source) == RESOLVED
