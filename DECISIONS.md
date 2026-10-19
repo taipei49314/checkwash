@@ -10407,6 +10407,19 @@ The agent wrote this entry in the v0.8.0 release PR from the outline in
 the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
 after publication, in the D-131 to D-140 record PR.
 
+The "On main through #508" paragraph, the count in Tests and the past
+tense in the Real pytest bullet were written in the fixture PR #508, after
+#523 merged. On 2026-10-19 the maintainer replied 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended") to the agent's second
+list of approvals the open PRs needed. For this PR: B11 approved changing
+THREATMODEL row 7a's "four real-pytest red-to-green runs" to "five", a
+fact correction once R38's test was added; B12 authorized this PR, once
+#523 merged, to update those three places in this entry to the facts with
+no further approval of their wording. This replaced the plan under R33, by
+which the paragraph's draft would have gone to the owner for approval. So
+their wording is the agent's. The reply is the text of an answer button the
+agent wrote, which the owner chose.
+
 ## D-138 (2026-10-15): in JS/TS, a catch assertion proved to always pass is not inspection, refining D-015 (#431)
 
 The bounded #363 reader in v0.7.0 blocks a new `try`/`catch` that swallows a
