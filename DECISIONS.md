@@ -15341,3 +15341,182 @@ readings' heading and the negatives' sentence, which had said they
 awaited it, added the sentence after the fallback saying the owner
 accepted it, retitled the paragraph on the first approvals, and wrote
 this paragraph.
+
+## D-164 (2026-10-19): a verified 200-byte read of an oversized side answers the shell-shebang check (#455)
+
+Ruling 455 (owner, 2026-10-18, 「照建議」, "as recommended",
+issuecomment-6248011708) adopted the issue's Recommendation: option (b),
+variant (b1), applied to extensionless and suffixed paths alike and
+including the runtime-provider pass skip (questions 1 and 2); (c) only if
+HIDDEN_UNICODE is widened beyond `.py` (question 5); (e) rejected, so no
+partial parse, and a partial read gives no evidence and clears no finding
+(question 6); and the limit on any bounded read as the Recommendation
+states it, under which a bounded read may remove the extensionless refusal,
+because that refusal stood for exactly the shebang question (question 3).
+The owner's second ruling that day (「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included", issuecomment-6248628575)
+settled the two questions the first left open: an unchanged dot-less file
+over the limit that the provider pass reads is first confirmed by a test and
+then filed as its own issue, not fixed here (question 4), and HIDDEN_UNICODE
+is widened to JS/TS in its own issue, #498 (question 5). On 2026-10-19
+(「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+the reply was a button whose text the assistant wrote;
+issuecomment-6261648853) R96 fixed #498's false-positive line and R98
+scheduled #498 after v0.9.0, with (c) behind it; neither changes this PR.
+R1 (A), recorded on #419, put #455 in v0.9.0's scope.
+
+**The limit on a bounded read** (question 3). It may answer only a question
+that the bytes read fully decide. It never feeds a parser, never grants
+evidence and never clears a finding. It may add a refusal. It may remove a
+refusal only when that refusal stood for exactly the question the read
+answers.
+
+**The decision.** An unread side keeps its first 200 bytes, the bytes
+`_shell_shebang` reads, and they answer whether the side starts with a shell
+shebang, as the whole side would. A shell shebang there gives the path
+runner shape whatever its suffix, as at any size, so the run refuses and
+names that side. A file with no extension no longer refuses for the shebang
+it may hold once every unread side has its bytes: without one it is judged
+like any other unread path. This supersedes D-135's sentence "Python
+modules, pytest configuration and extensionless files refuse, because the
+runtime-provider pass and the runner shape read them" for extensionless
+files, and closes two of its residuals, "A suffixed file with a shell
+shebang only on an unread side stays set aside (for example `ci/run.txt`)"
+and "Fail-closed side effect: an extensionless file over the limit now exits
+2 even when it is a document, such as `README`, `LICENSE` or `.envrc`",
+except past the stream ceiling (reading 1). Its residual "A refusal for a
+change with two unread sides names the first unread side" is narrowed by
+reading 2.
+
+**As implemented** (lines at this PR):
+- `change.py:9`, `:33`. `UnreadSide.prefix` holds the first
+  `SHEBANG_PREFIX_BYTES` (200) bytes, or None when they were not read. It is
+  `field(compare=False, repr=False)`, so it takes no part in equality,
+  hashing or the repr, and a side without a prefix keeps today's answer.
+  #454's writers project the note's four keys explicitly
+  (`report/unread.py`, `report/sarif.py`), so it reaches no output.
+  `roles.py:318` reads `data[:SHEBANG_PREFIX_BYTES]`, the same 200 bytes as
+  before.
+- (b1), `gitio/snapshot.py:134-223`. An oversized Git blob of at most
+  `MAX_PREFIX_STREAM_BYTES` (`:25`, equal to `MAX_BATCH_BYTES`, 64,000,000)
+  is streamed through `cat-file --batch`. The header is checked as
+  `_read_objects` checks one; the first 200 bytes are kept; the rest is
+  read in pieces of at most 65,536 bytes, hashed and dropped, so no
+  oversized blob is held whole; and the whole is checked against the object
+  id with the full read's message (`_blob_digest`, `:115`, which
+  `_verify_blob` now uses too). The objects are asked one at a time, and
+  each adds the 60 seconds `_run` gives one process to the deadline.
+  `GitSnapshot.read_many` (`:289`) streams every such side of its tree
+  through one more process; `GitSnapshot.read` (`:526`) streams its side in
+  place of the full read an under-limit side costs. The working-tree side
+  keeps the first 200 of the 1,000,001 bytes it already reads (`:760`), so
+  no read is added there. The session presence check
+  (`gitio/git.py:366`) asks only whether HEAD holds a path and streams
+  nothing.
+- `engine.py:225-301`. `_shebang_side` finds the first unread side whose
+  prefix is a shell shebang, with `_runner_shape`'s exclusions (a `.py`
+  path; a JS/TS test file, judged on the readable sides), and
+  `_detector_must_read` takes it as runner shape. The extensionless rule
+  (`:287`) refuses only when some unread side has no prefix.
+  `_refused_side` (`:341`) names the side.
+- The skip, `engine.py:356` and `shadow.py:2457`. `_shebang_free` lists the
+  paths of set-aside changes whose every side is known, readable sides
+  whole and unread sides by prefix, and holds no shell shebang. The
+  provider pass's phase one does not request such a path where it requests
+  a dot-less path for a shebang; with no CI role, runner suffix or
+  `Makefile` name, it adds no runner invocation, as the read would not. The
+  read-time guard (`_guard_unread_reads`, `engine.py:377`) is unchanged, so
+  any other reader that reaches a set-aside path still refuses.
+
+**Readings where the ruling is silent,** for the owner's approval:
+1. The ceiling is per side: a Git side over 64,000,000 bytes, the
+   candidate (b1) names, keeps no prefix and today's answer. It is not a
+   total per tree. A total would let other oversized sides the same commit
+   changes, earlier in path order, use it up before a later one, which
+   would reopen the base-side gap in a repository that already holds many
+   large files. Per side, the extra read grows with the oversized bytes the
+   diff changes, and the deadline grows with the number of objects.
+2. A refusal names the first unread side whose prefix holds a shell
+   shebang that gives one of the change's paths runner shape, also when
+   another must-read rule applies to the path; otherwise the first unread
+   side, as before. #456's Stop-hook match is by change
+   (`_verdict_side_over_limit`), so no hook outcome moves with the name.
+3. The exclusions are `_runner_shape`'s, so a prefix gives a `.py` path or
+   a JS/TS test file no runner shape. Each refuses by its own rule anyway.
+4. The skip is computed from the sides, not from the fact that the change
+   was set aside, and only the dot-less clause of the pass's runner paths
+   takes it. A CI-role or runner-named path is read as before; such a path
+   refuses at set-aside anyway.
+5. A working-tree side has no ceiling, since its bytes come from the read
+   already made. Its prefix is not checked against an object id; no
+   working-tree read is, since none has one.
+
+**Costs,** by reading, not measured. For honest repositories, an oversized
+changed `README`, `LICENSE`, `ChangeLog`, `.envrc` or other file with no
+extension and no shell shebang gets a verdict instead of exit 2 (or the
+Stop hook's "not analysed" message), and a suffixed file whose shell shebang
+is only on an oversized side newly exits 2. For attackers, the second
+closes the base-side gap: an existing `ci/run.txt` that `sh ci/run.txt`
+runs, over the limit, whose head drops the shebang and the test command.
+The first gives an attacker the answer a small file without a shebang gets,
+with less evidence, since a set-aside change earns none. Each streamed Git
+side is read once in full: in range mode one more `git cat-file --batch`
+for each tree that holds such a side, whatever their number; in worktree
+mode none more, since a base side's stream takes the place of the full
+read an under-limit side gets. The gitio gate (`tests/test_perf_git.py`)
+has no oversized side, so its budget does not move.
+
+**Residuals.**
+- A file with no extension whose Git side is over 64,000,000 bytes still
+  refuses, and a suffixed one with a shebang only on such a side is still
+  set aside (reading 1).
+- An unchanged file with no dot in its name over the limit still refuses
+  on a run that reaches the provider pass's first read phase, which reads
+  it as an unchanged file through the strict reader; so do a symlink and a
+  batch over the byte budget there. So a changed oversized document gets a
+  verdict while the same file unchanged can still refuse. Question 4 orders
+  a reproduction test first, in range and worktree mode, and then its own
+  issue; neither is in this PR.
+- HIDDEN_UNICODE, BROAD_EXCEPT_ADDED and SUPPRESSION_ADDED still read no
+  set-aside path (#498, then (c)).
+- An oversized file with a shell shebang on its head or working-tree side
+  still refuses, and #456 blocks the Stop hook on it.
+
+**Rule 2.** The ruling approves no change to an existing fixture's expected
+output. Every comparison of a snapshot's `UnreadSide` with one built without
+a prefix holds, because the prefix takes no part in equality, and every
+case built without a prefix keeps today's answer. By reading, one existing
+expectation no longer holds: the `untracked_extensionless` row of
+`tests/test_issue456_hook_size_refusal.py` (`:133-135`). Its untracked
+`NOTES` is 1,000,001 bytes of hex text with no shebang, so it is now set
+aside, and the weakened test beside it blocks the stop as a finding, where
+the row asserts #456's size block. It is not changed in this PR; it waits
+for the owner's ruling. Nothing under `tests/gates` changes.
+
+**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 70 collected
+items, counted from its parametrize lists: the prefix against the whole
+side (8) and equality (1); the engine's rows (10 set aside, 9 refusing and
+naming the shebang side, 6 other rules, 1 without a prefix, 1 verdict); the
+provider pass (3); the snapshots, the ceiling and the stream's protocol
+(2, 2, 1, 4); the git processes (3); and the CLI in range, worktree and
+hook mode (19). No `.gwcase` fixture is added: the case format has no
+unread side. By reading, the documented test count becomes 20153
+(20083 + 70); CI's collection checks it.
+
+**Versions.** No rule id, severity or machine-output field changes, so
+`FINDINGS_VERSION` and `IR_VERSION` stay 2, and no fingerprint moves: a
+set-aside change gives no finding.
+
+**Sweep.** The issue asks the sweep to measure the change on the standard
+set. Under R1 and R2 this fix joins the combined sweep, where its merge gets
+its own before/after pair, and its report lists every commit whose outcome
+moves between exit 2 and a verdict. `NOT_RUN：工作機規則（POLICY work-machine-local），the standard-set measurement waits for the combined sweep; nothing ran on the work machine`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code, and
+this PR's CI is the first run.
+
+D-164 to D-169 were assigned to the pull requests of the fourth wave,
+prepared in parallel; this entry is D-164, placed after D-163. The agent
+wrote it in #455's fix PR; its wording, readings 1 to 5 and the Rule 2 item
+await the owner's approval.
