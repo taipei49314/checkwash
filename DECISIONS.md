@@ -10306,14 +10306,81 @@ matrix cells, honest controls, named residuals and runs of real pytest) and
 additions to `tests/test_issue84_runtime_hooks.py`. The documented count goes
 from 17988 to 18258. No existing expectation or `.gwcase` output changes.
 
-**Sweep.** Not run (D-140): the standard and D-088 sets, conftest-touching
+**Sweep.** The plan was the standard and D-088 sets, conftest-touching
 commits, a conftest census and real-pytest proof of every reporting cell,
-with the gates unchanged (refactor false blocks stay 22/60). Its result, and
-whether the fallback applies, will be recorded after the release.
+with the gates unchanged (refactor false blocks stay 22/60). The v0.8.0
+acceptance sweep (D-140) ran after publication. It compares v0.7.0 with
+v0.8.0, so it measures the release, not #452 alone. What covers each part
+(owner rulings 2026-10-18 on #432, and 2026-10-19, R9, R10, R35 and R38):
+- **Standard and D-088 sets: run.** For the 6,168 commits both versions
+  analysed, verdicts and findings are identical.
+- **Conftest-touching commits: run, as D-088's sets** (R9). D-088's sets
+  are 1,263 commits: the 895 commits of ten full histories (attrs, click,
+  flask, httpx, rich, starlette, uvicorn, werkzeug, scrapy and requests)
+  that change a `conftest.py` or a `skip`/`xfail` line in a test file, as
+  frozen on 2026-10-04, and 368 of pytest's. The sweep ran 1,218 of them
+  in its d088 batch and the 45 that are also in the standard set in its
+  standard batch. Both versions give identical verdicts and findings. In
+  the 219 shard results, which cover all four batches and both arms, no
+  finding carries the runtime-control message
+  (`suite-level execution/report suppression added`): neither this reader
+  nor #84's fired. 19 commits of the d088 batch end in exit 2 on both
+  versions and are not measured. The plan above lists this set apart from
+  D-088's sets; for the ten histories it is part of them.
+- **What that zero shows.** No conftest in those sets triggered the
+  reader. It does not show that the reading, or the fallback below, holds
+  on real conftests that make these writes: a reader that never fires on a
+  set may only mean the set holds no such write. It is in-sample (D-053),
+  so the false-positive cost on real conftest files that the issue asks for
+  is the census's to measure.
+- **Conftest census: queued** (R10). It runs in the combined lab-declared
+  sweep, and #432 does not wait for it. It replays history rather than
+  scanning the latest conftests: every write in a latest conftest came in
+  through some commit, except one added in a root commit or a merge.
+  Members are the non-merge commits of seven plugin- and unittest-heavy
+  repositories that #432's 2026-10-14 sweep plan names (pytest-asyncio,
+  pytest-django, pytest-timeout, hypothesis, numpy, pandas and twisted),
+  aiohttp, pytest and D-088's ten that change a `conftest.py` whose new
+  content contains `runtest`, `pytest_pyfunc_call`, `TestCase`, or `obj` or
+  `_obj` as a word, less those the v0.8.0 sweep ran. So it covers what the
+  v0.8.0 sweep did not: aiohttp's conftest history, pytest's beyond the
+  368, and the ten histories' commits after D-088's freeze. The
+  list is chosen with Git only and frozen before approval, so its size is
+  known then; D-136's targeted set shares it (`exit`, `quit`,
+  `testsfailed`). The harness records each member's matching conftest
+  lines, so delegating spellings that never report are seen too. One
+  engine arm that contains #452 is enough. It runs on LAPTOP-01AGNPJU under
+  EC POLICY `checkwash-pju-sweep` (T-546), declared by checkwash-lab, or on
+  the pool when that host is off, with its manifest and engine commit
+  approved by the owner first. A person judges each new runtime-control
+  finding honest or a cheat, and classes the recorded lines by the
+  delegation spellings they show. Until it runs, the combined sweep's
+  declaration and #497 track it.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
+- **Real pytest** (R38). CI's nine test legs run four reporting shapes
+  (`item.runtest`, class-level `runtest`, `assertEqual` and
+  `_callTestMethod`) and two delegating controls under real pytest
+  (`tests/test_issue432_noop_replacement.py:465-484`). 432.Q7's fixture PR
+  (#508) is to add a fifth: a hollow `item.obj` followed by a delegating
+  `item.runtest`, the case per-attribute keys exist for, so far pinned at
+  the detector by `test_each_attribute_is_its_own_effect`. The other
+  reporting cells of the spelling matrix are pinned by detector tests only;
+  the owner ruled not to prove each under real pytest.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），the other reporting cells under real pytest, waived by the owner (R38)`.
+- **Gates.** The refactor and tamper gates passed in all nine test legs on
+  #452's merge `5b571aa9` (ci run 38709970776), and #452 changed nothing
+  under `tests/gates/`, so their results are unchanged.
+- **The pre-registered fallback** was not triggered in the sets that ran,
+  because no block came from this reader there. Whether it applies is the
+  census's to show. If the census finds an honest block from a callback
+  replacement that calls something, #432 reopens (R35) and the callback
+  proof narrows as registered, through an issue filed then. Any other
+  honest block goes to the owner with the case.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #452's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
+after publication, in the D-131 to D-140 record PR.
 
 ## D-138 (2026-10-15): in JS/TS, a catch assertion proved to always pass is not inspection, refining D-015 (#431)
 
