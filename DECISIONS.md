@@ -12551,10 +12551,27 @@ merge.
 
 Evidence status. The three runs above are read from their logs
 (`gh run view --log`). Their receipt artifacts, each named
-`verdict-gate-receipt-1` (artifacts 11991306312, 12165673670 and
-12169571379, whose upload steps log ZIP SHA256s `e5683c9c…`, `0f7b1e92…`
-and `d8e44ab6…`), were not downloaded, and they are kept for seven days.
-Nothing ran on the work machine
+`verdict-gate-receipt-1`, were downloaded on 2026-10-19 before they
+expired, as the owner approved (below), and each ZIP's SHA256 equals the
+one its upload step logs. Artifact 11991306312 (run 38768985301) is a
+20815-byte ZIP with SHA256
+`e5683c9cd7962de4e459c0bb719b43cc863e8d945b4b8eea58fabda12098bd84`
+holding `verdict-gate.json` (SHA256
+`dd5170b15eec7d4a7f15e3bea4a444ae94f2ea9956c4b249988c50c99f37b90b`) and
+`verdict-gate.md` (SHA256
+`ef35af3b9e1a4beabf999ea3fa6dfe20e05f029a40f85f3b65684a2b5a01e206`);
+artifact 12165673670 (run 39206619788) is a 20781-byte ZIP with SHA256
+`0f7b1e929d583fb3c56d892b0ae3ec8edfb42d1d949286aec6c689a506ac87e7`
+holding them with SHA256s
+`fa25501ef1a46392e36e84b03d86795de6358791c123fba1d4c11a9f23315739` and
+`a7b5aaed66bcdb0f75ba092fb2d2fbcded440c06dabd448fe92a4160b016289d`; and
+artifact 12169571379 (run 39214083418) is a 21003-byte ZIP with SHA256
+`d8e44ab6defeaef452b130c34a21910ac46d87d5f50a8aa1cc766fce979a2139`
+holding them with SHA256s
+`df9fdf1e92a4d4c3c4b777e7b40d09b63baa977953af24d56c142f510450fc53` and
+`69c5564e992452e68b51c08f154dd8f6af13b2e827bb61a8e343e1b4f2cadb9f`.
+The work machine only downloaded and hashed them; no verdict run or test
+ran there
 (`NOT_RUN：工作機規則（POLICY work-machine-local），the verdict runs above are hosted CI runs`).
 
 The agent drafted this entry in the rotation PR; the owner approves its
