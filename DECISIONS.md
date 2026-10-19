@@ -12648,15 +12648,22 @@ Closed, pinned by the two `bypass: 85` fixtures, and rows 84b and 119;
 `benchmarks/FAILURES.md` changes with row 85. The §7 parameters and the
 rule table are unchanged, and `gating.py` is not touched.
 
-**Release.** None is authorized (AGENTS.md rule 5). The owner put #434 and
-#457 in the next release on 2026-10-16; `docs/KNOWN-ISSUES-next.md` gains a
-#434 row with the limits above.
+**Release.** None is authorized (AGENTS.md rule 5). Under R1 of the
+owner's consolidated ruling of 2026-10-19 (「裁決總表全部照建議」; #434
+issuecomment-6261648129 and #457 issuecomment-6261649543, recorded across
+issues on #419, issuecomment-6261642679), v0.9.0 includes #434 and #457,
+and this fix merges before the combined sweep freezes. For #457 that is
+the known-limit pin only: its reported commit still blocks (A.5 (a),
+above). `docs/KNOWN-ISSUES-next.md` gains a #434 row with the limits
+above.
 
-**Measurement.** Not measured yet. As the ruling says, the sweep measures
+**Measurement.** Not measured yet. As ruling 434 says, the sweep measures
 the change on the pool, or on LAPTOP-01AGNPJU under EC POLICY
-`checkwash-pju-sweep` with an approved manifest, with its own base and
-head. The effect above is expected; the measured cost goes here once it
-has run.
+`checkwash-pju-sweep` with an approved manifest. Under R1 and R2 that
+sweep is the combined sweep: its manifest is frozen only after the R1
+scope has merged, it runs once, and this fix's merge gets its own
+before/after pair in its chain, which measures A and B. The effect above
+is expected; the measured cost goes here once it has run.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, test, generator or sweep was run`.
 
 Evidence status: prepared on a work machine where no pytest, checkwash or
