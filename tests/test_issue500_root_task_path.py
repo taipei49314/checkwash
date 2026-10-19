@@ -226,9 +226,11 @@ def test_repo_reached_through_a_symlink_to_the_root(repo, tmp_path, repo_as, tas
     if repo_as == task_as:
         assert _frozen(result)
         return
+    # Git's own wording of the refusal varies by version and platform; the
+    # strict snapshot reports any non-zero exit of the read as this error.
     assert (result.returncode, result.stdout) == (2, b""), err
     assert "checkwash engine error: strict snapshot git read failed" in err, err
-    assert f"../{places[task_as].name}/TASK.md" in err, err
+    assert "maps to" not in err, err
 
 
 # --- doctor's root lookup ------------------------------------------------------------------------
