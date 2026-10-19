@@ -10121,7 +10121,7 @@ the tamper positives under real pytest, the refactor and tamper gates, and
 dogfood. The v0.8.0 acceptance sweep (D-140) ran after publication. It
 compares v0.7.0 with v0.8.0, so it measures the release, not #450 alone.
 What covers each part (owner rulings 2026-10-18 on #422, and 2026-10-19,
-R8 and R35):
+R3, R5, R8 and R35):
 - **Standard and D-088 sets: run,** in the sweep's standard, d088, targeted
   and JS batches. For the 6,168 commits both versions analysed, verdicts
   and findings are identical, and no result carries a
@@ -10151,9 +10151,11 @@ R8 and R35):
   commits beyond the 368 that D-088 took of its 1,559 conftest or
   `skip`/`xfail` commits, aiohttp's history, which D-088 did not take, and
   the ten histories' commits after D-088's freeze. They run in the
-  combined lab-declared sweep, on the pool or on LAPTOP-01AGNPJU under EC
-  POLICY `checkwash-pju-sweep` (T-546), with its manifest and engine
-  commits, which the owner approves first. Members are chosen with Git
+  combined lab-declared sweep as an issue-acceptance batch, on
+  LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546) (R3). The
+  owner approves in two steps (R5): the selection program with this list
+  rule first, then the frozen manifest, with the list's size, and the
+  engine commits. Members are chosen with Git
   only: the non-merge commits of the twelve histories (the ten, pytest and
   aiohttp) that add or modify a `conftest.py` whose new content contains
   `exit`, `quit` or `testsfailed` in any case, less those the v0.8.0 sweep
@@ -10314,7 +10316,8 @@ commits, a conftest census and real-pytest proof of every reporting cell,
 with the gates unchanged (refactor false blocks stay 22/60). The v0.8.0
 acceptance sweep (D-140) ran after publication. It compares v0.7.0 with
 v0.8.0, so it measures the release, not #452 alone. What covers each part
-(owner rulings 2026-10-18 on #432, and 2026-10-19, R9, R10, R35 and R38):
+(owner rulings 2026-10-18 on #432, and 2026-10-19, R3, R5, R9, R10, R35
+and R38):
 - **Standard and D-088 sets: run.** For the 6,168 commits both versions
   analysed, verdicts and findings are identical.
 - **Conftest-touching commits: run, as D-088's sets** (R9). D-088's sets
@@ -10352,10 +10355,12 @@ v0.8.0, so it measures the release, not #452 alone. What covers each part
   then. D-136's targeted set joins it, with `exit`, `quit` and
   `testsfailed` added to the same rule. The harness records each member's
   matching conftest lines, so delegating spellings that never report are
-  seen too. One engine arm that contains #452 is enough. It runs on
-  LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546), declared
-  by checkwash-lab, or on the pool when that host is off, with its
-  manifest and engine commit approved by the owner first. A person judges
+  seen too. One engine arm that contains #452 is enough. It runs as an
+  issue-acceptance batch on LAPTOP-01AGNPJU under EC POLICY
+  `checkwash-pju-sweep` (T-546), declared by checkwash-lab (R3). The owner
+  approves in two steps (R5): the selection program with the census rule
+  first, then the frozen manifest, with the list's size, and the engine
+  commit. A person judges
   each new runtime-control finding honest or a cheat, and classes the
   recorded lines by the delegation spellings they show. Until it runs, the
   combined sweep's declaration and #497 track it.
