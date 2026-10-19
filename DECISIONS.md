@@ -10302,17 +10302,29 @@ recorded its answer: if the sweep finds an honest block from a callback
 replacement that calls something, the callback proof narrows to call-free
 bodies and that spelling is listed as a residual.
 
-**Not yet on main.** 432.Q7's fixtures and the regenerated
-`benchmarks/FAILURES.md` come after row 7a, which must land before any
-fixture that claims `bypass: 7a`; #432 stays open for them and for the Q2
-follow-up issues. 432.Q7 put this round before #422; on 2026-10-14 the
-maintainer accepted #450 landing first. #432's ruling also asks the next
-release guide to name #432's new blocks.
+**On main through #508.** 432.Q7's fixtures came after row 7a, which landed
+before any fixture that claims `bypass: 7a`. They are on main through PR
+#508: four positives that claim `bypass: 7a`, one for each of the four
+reporting shapes named under Real pytest below
+(`conftest_item_runtest_noop_pos`,
+`conftest_item_class_runtest_noop_pos`,
+`conftest_testcase_assert_equal_noop_pos` and
+`conftest_testcase_call_test_method_noop_pos`), and three delegating
+negatives that claim no row (`conftest_item_runtest_delegating_neg`,
+`conftest_item_class_runtest_delegating_neg` and
+`conftest_testcase_assert_equal_forwarding_neg`). `benchmarks/FAILURES.md`
+row 7a lists the four positives beside #84's
+`conftest_gate_lends_to_report_hook_pos`. The Q2 follow-up issues were filed
+on 2026-10-18 as #497. Under R35, #432 is closed once #508 merges; the
+D-131 to D-140 record PR #523 merged before it. 432.Q7 put this round
+before #422; on 2026-10-14 the maintainer accepted #450 landing first.
+#432's ruling also asks the next release guide to name #432's new blocks.
 
-**Tests.** `tests/test_issue432_noop_replacement.py` (265 collected items:
-matrix cells, honest controls, named residuals and runs of real pytest) and
-additions to `tests/test_issue84_runtime_hooks.py`. The documented count goes
-from 17988 to 18258. No existing expectation or `.gwcase` output changes.
+**Tests.** `tests/test_issue432_noop_replacement.py` (266 collected items:
+matrix cells, honest controls, named residuals and runs of real pytest;
+#452 added 265 and #508 the fifth real-pytest run) and additions to
+`tests/test_issue84_runtime_hooks.py`. #452 took the documented count from
+17988 to 18258. No existing expectation or `.gwcase` output changes.
 
 **Sweep.** The plan was the standard and D-088 sets, conftest-touching
 commits, a conftest census and real-pytest proof of every reporting cell,
@@ -10372,11 +10384,13 @@ and R38):
   (`item.runtest`, class-level `runtest`, `assertEqual` and
   `_callTestMethod`) and two delegating controls under real pytest
   (`tests/test_issue432_noop_replacement.py:465-484`). 432.Q7's fixture PR
-  (#508) is to add a fifth: a hollow `item.obj` followed by a delegating
-  `item.runtest`, the case per-attribute keys exist for, so far pinned at
-  the detector by `test_each_attribute_is_its_own_effect`. The other
-  reporting cells of the spelling matrix are pinned by detector tests only;
-  the owner ruled not to prove each under real pytest.
+  (#508) added a fifth,
+  `test_real_pytest_empty_obj_behind_a_delegating_runtest_turns_green_and_detector_blocks`
+  (`:490-499`): a hollow `item.obj` followed by a delegating
+  `item.runtest`, the case per-attribute keys exist for, which until then
+  only `test_each_attribute_is_its_own_effect` pinned, at the detector.
+  The other reporting cells of the spelling matrix are pinned by detector
+  tests only; the owner ruled not to prove each under real pytest.
   `NOT_RUN：工作機規則（POLICY work-machine-local），the other reporting cells under real pytest, waived by the owner (R38)`.
 - **Gates.** The refactor and tamper gates passed in all nine test legs on
   #452's merge `5b571aa9` (ci run 38709970776), and #452 changed nothing
