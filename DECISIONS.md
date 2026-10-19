@@ -12521,6 +12521,18 @@ Implementation (lines at this PR):
   `_syntax` does. `_trees` (`:66-71`) parses both sides of a changed test
   for the pass, the base side first, and names a rename's base side by its
   old path, as `engine.py:1173` reads it.
+- The module-read cache (the owner's choice, A83, below). `_ModuleReads`
+  (`subject_replacements.py:168-215`) holds one tree's four module-level
+  reads: the first function or class of each name in a body, which `_scope`
+  (`:218-229`) looks up there instead of scanning the body; the star-import
+  check; and `_binding_sites(tree.body)` and `_bindings(tree.body)`. Each is
+  made at most once, when first asked. The pass makes one per side when it
+  first needs a file's trees (`:578`) and passes it to `_subject_call`
+  (`:583-584`), which asks it for all four (`:277-282`, `:311`, `:313`); a
+  direct call without one reads the tree afresh. Every answer is the one
+  the uncached read gives, and `_subject_call` only reads the kept sites and
+  values, so no result changes. The other reads of the pass are not cached
+  (below).
 - `standin_installations.py:38` names the per-proof limit
   `_MAX_PROOF_STEPS`, the 20,000 `_step` compared inline. `_step`
   (`:434-438`) keeps its two comparisons; only a refusal calls
@@ -12566,33 +12578,57 @@ Effects by reading:
   kilobyte, so neither pass's node limit stops them now. Whether they give a
   verdict is unknown. The 17 step-limit commits still exit 2, now naming the
   counter.
-- **Time, not measured.** For each eligible assertion pair, a positive `==`
-  with the same literal on both sides, changed or not, `_subject_call`
-  (`subject_replacements.py:209`) runs on both sides. For a name asserted
-  at the top level of a straight-line test (`value = f(1)`, then
-  `assert value == 2`) it scans the module's top-level statements: `_scope`
-  (`:221`) and the star-import check (`:224-225`) iterate them,
-  `_binding_sites(tree.body)` (`:254`) visits them without entering
-  function or class bodies, and `_bindings(tree.body)` (`:256`) iterates
-  them. The pass's time therefore grows with the number of such pairs times
-  the number of the module's top-level statements, about one per test in a
-  file of small tests: faster than linearly for a file made of many small
-  tests of that shape. At about 15 nodes per test, a 200,000-node file of
-  them holds about 13,000 tests, and the scanning is about
-  (200,000 / 30,000)², some 44 times, the most a file under the old limit
-  could cause. The whole-tree walks the ruling cites (`:412`, `:465`) are
-  reached only for an inherited helper assertion that passes the caller
-  checks, and for a pair whose callee changed. The measurement the ruling
-  asks for has not run, so ruling item 1's condition is not met yet: no
-  step, test or script in this pull request takes the time, and how it is
-  taken (a CI step or an owner-approved pool run, which can also take D-131
-  item 2's stand-in time) is for the owner. This reading is to be reported
-  on #469; a budget that fails closed, or reading each tree's module
-  bindings once instead of per pair, is for the owner.
+- **Time, before the cache** (lines at 26209d9d). For each eligible
+  assertion pair, a positive `==` with the same literal on both sides,
+  changed or not, `_subject_call` (`subject_replacements.py:209`) ran on
+  both sides. For a name asserted at the top level of a straight-line test
+  (`value = f(1)`, then `assert value == 2`) it scanned the module's
+  top-level statements: `_scope` (`:221`) and the star-import check
+  (`:224-225`) iterated them, `_binding_sites(tree.body)` (`:254`) visited
+  them without entering function or class bodies, and `_bindings(tree.body)`
+  (`:256`) iterated them. The pass's time therefore grew with the number of
+  such pairs times the number of the module's top-level statements, about
+  one per test in a file of small tests: faster than linearly for a file
+  made of many small tests of that shape. At about 15 nodes per test, a
+  200,000-node file of them holds about 13,000 tests, and the scanning is
+  about (200,000 / 30,000)², some 44 times, the most a file under the old
+  limit could cause. The whole-tree walks the ruling cites (`:412`, `:465`)
+  are reached only for an inherited helper assertion that passes the caller
+  checks, and for a pair whose callee changed. The owner chose to remove
+  this factor now with the cache above and to time the cached pass in CI
+  (A82, A83, below).
+- **Time with the cache, by reading.** The work left per pair in
+  `_subject_call` is bounded by the test's own body: its statements, their
+  binding sites and the assignments before the assertion. For the
+  straight-line shape the pass's time therefore grows linearly with the
+  pairs. The cache adds, per file with an eligible pair, two small objects,
+  and one name index for each body `_scope` looks up, built over the whole
+  body where the scan stopped at the first match. On the files of about 20
+  nodes in `tests/test_perf_git.py` that is a few dictionary entries per
+  file, so the performance gates below still cannot move.
+- **Still read once per pair, by reading.** The cache covers the four
+  reads `_subject_call` made, the code the owner's choice points to
+  (`subject_replacements.py:168-256` at 26209d9d). For an inherited
+  assertion, `_assertion_scope`
+  (`subject_replacements.py:439`) still reads the module on both sides for
+  every such pair: `_helper_module_inert(tree)` (`:450`) iterates its
+  top-level statements, and for a caller that passes its checks a walk of
+  the whole tree (`:469`) and `_binding_sites(tree.body)` (`:471`) follow.
+  So a file of many small tests that each begin by calling one module
+  helper holding a literal assertion (`def check(): assert f(1) == 2`, then
+  `def test_1(): check()`, six nodes per test) costs about the pairs times
+  the module's nodes: at 200,000 nodes, some 33,000 tests, each walking all
+  200,000 nodes on both sides. That is faster than linearly, and more than
+  the straight-line shape cost before the cache. For a pair whose callee
+  changed, `_scoped_bindings` (`:373`) reads the module's bindings again,
+  since it extends them, and `_literal_helper_replacement` walks the tree
+  (`:522`), as before. Whether to keep these reads too, or to rule a budget
+  that fails closed, is for the owner; the timing job below also times the
+  helper shape, and this reading goes on #469 with the numbers (A84).
 - The performance gate cannot move. `tests/gates/test_perf.py` calls
   `analyze` without a `root_reader`, and both passes return no events
   without one (`standin_installations.py:1038`,
-  `subject_replacements.py:480`), so the gate reaches neither changed path;
+  `subject_replacements.py:537`), so the gate reaches neither changed path;
   its pathological file is a production file (`app/generated.py`) that
   neither pass reads. `tests/test_perf_git.py` runs both passes through the
   CLI on 150 test files of about 20 nodes each, far under both limits and no
@@ -12603,6 +12639,24 @@ Effects by reading:
   `_Trace`, two keyword arguments and two attribute stores; and per step,
   one module-global lookup in `_step`, where the per-proof limit was a
   literal (up to 1,000,000 steps per analysis).
+
+**Timing (to be filled from CI run ...).** Ruling item 1's condition is
+not met until this paragraph holds the numbers. The temporary `timing-469`
+job in `.github/workflows/ci.yml` (A82) runs only for this pull request's
+branch, on ubuntu-latest with Python 3.12, and is removed once they are
+written here. It builds synthetic test files of exactly 30,000, 100,000 and
+200,000 syntax nodes per side, the sides differing only in their module
+docstring, in three shapes: the straight-line tests above (15 nodes each,
+three runs per size); one such test among module-level assignments; and
+the helper-call tests above (six nodes each, also at 10,000 nodes). For
+each run it times `analyze` up to `subject_replacement_events` and the pass
+itself, and counts its events and its `_subject_call` and `_assertion_scope`
+calls. Each run has its own process and a 300-second budget within a
+35-minute deadline, and a shape's larger sizes are skipped after an
+overrun. To be recorded here: the run id, the commit, each shape's times,
+and their growth against linear (3.3 times from 30,000 to 100,000 nodes,
+2 times from 100,000 to 200,000), with this pull request's CI and dogfood
+results. D-131 item 2's stand-in time is not taken by this job.
 
 **The Stop hook.** These refusals are engine errors. Under D-134 item 2 a
 hook-json engine error exits 0 with the "not analysed" `systemMessage` and
@@ -12624,9 +12678,10 @@ Residuals. Two more stand-in limit refusals name nothing:
 `stand-in strict inventory is invalid or exceeds the path limit`
 (`standin_installations.py:1084`) and `stand-in context exceeds the source
 read limit` (`:1123`). They are not in this round. The time at 200,000
-nodes and D-131 item 2's stand-in time are not measured. Which step counter
-fires on the 17 commits is unknown; finding out needs the approved run of
-ruling item 2. #345 stays open and is judged again when this lands and the
+nodes and D-131 item 2's stand-in time are not measured. By reading, an
+inherited helper assertion still has the module read once per pair (above).
+Which step counter fires on the 17 commits is unknown; finding out needs
+the approved run of ruling item 2. #345 stays open and is judged again when this lands and the
 sweep re-runs its commits (the owner's decision of 2026-10-16); for that
 re-sweep's manifest, which the owner approves before it runs, the agent
 proposes the 60 commits plus `5a8ebdfcae`.
@@ -12645,16 +12700,20 @@ in `.greenwash/allow.toml` like #451's goes in the PR for the owner's
 approval. If CI moves any other expectation, the round stops and asks.
 
 Evidence status: prepared on a work machine where no pytest, checkwash or
-Python ran; CI runs the tests. Added: 20 collected items in
+code of this repository ran; CI runs the tests. Added: 24 collected items in
 `tests/test_issue469_limit_messages.py`, none under `tests/gates`: the
 shared constant; trees of 30,001 and 200,000 nodes; a test file of about
 35,000 nodes giving its `TEST_PATCHES_SUBJECT` verdict; the node and byte
 refusals and their defaults; the refused side of a changed test and a
 rename's old path through `analyze`; each step counter, both at once, the
 defaults and an escaped path; each proof named where it stops through
-`installation_events`; and the path, side and unit each trace carries. No
+`installation_events`; the path, side and unit each trace carries; and,
+for the cache, that its scope index finds what the scan finds, that kept
+reads project what fresh reads do across one file's assertions, that
+through `analyze` each side's module is read once for a file of 30 tests,
+and that the findings equal those of reads made afresh. No
 `.gwcase` fixture is added: the golden runner cannot expect an engine
-error. By reading, the documented test count becomes 19495 (19475 + 20);
+error. By reading, the documented test count becomes 19499 (19475 + 24);
 CI's collection checks it.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source; no test, timing, checkwash run or sweep was run`.
 
