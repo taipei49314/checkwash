@@ -11389,7 +11389,21 @@ PJU, NOT EC pool. Its plain before/after compares #424's engine
     still covers it, which checkwash does not model. Two commits fall
     under two of these.
   - The decorator reading and the local-class reading are filed as
-    #487, the helper-skip liveness as #488.
+    #487. The helper-skip liveness is filed as #488, whose ruling
+    (2026-10-18, option (a)) records the block on `fada8be1db` as a
+    known false block, not correct behaviour: by reading the scrapy
+    source, the commit only adds coverage on the test side. D-087's
+    maintainer decision kept this liveness cost for guarded setup skips,
+    but in D-087's and D-111's sweeps it never turned a pass into a block
+    by itself; here it does. The block stays until a later change
+    removes it, such as #488's per-row liveness (option (b)), which needs
+    its own ruling. Meanwhile an author can exempt the six findings by
+    fingerprint only through an `allow.toml` entry already on the base
+    side (SPEC §5 D3, §6); one added in the blocked change itself shows
+    as `EXEMPTION_ADDED` and does not lift the block. How often this
+    happens is not known: it is the only verdict this reading moves in
+    the standard set and D-088's sets, and most of the targeted phase
+    did not run (below). Further cases are recorded on #488.
 - **Not measured:** resolution toggled in both directions, and what
   Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
   variant that is not a commit on main. Sub-Q7 asks for its cost to be
