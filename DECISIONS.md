@@ -12548,8 +12548,9 @@ PR):
   class in the order (`any_class`, `:496`, read at `:697`). The reading in
   `_call` (`:443-460`) stays.
 
-Readings where the ruling is silent, for the owner's approval (1 to 4 err
-toward unresolved, 5 and 6 toward resolved, 7 both ways):
+Readings where the ruling is silent; the owner approved each as written
+(below). 1 to 4 err toward unresolved, 5 and 6 toward resolved, 7 both
+ways:
 
 1. `__setitem__` and `__delitem__` called on `x.__dict__` or `vars(x)` are
    read as the item store and del they spell, so every name, as item 1
@@ -12582,7 +12583,8 @@ toward unresolved, 5 and 6 toward resolved, 7 both ways):
    `obj = Fake(); setattr(obj, key, value)`; both are pinned resolved. The
    direct target keeps D-145's reading, so `setattr(self.settings, key,
    value)` still counts as one on `self` while its aliased spelling does
-   not. So `x = globals()["C"]` stays a residual.
+   not. The owner kept this asymmetry and left `x = globals()["C"]` a
+   residual (below).
 7. The ruling says `x = type(self)` and `x = self.__class__` count as `C`.
    They are read under the name inside them, the receiver's, as the direct
    `setattr(type(self), NAME, f)` is: a call through a receiver of that
@@ -12681,8 +12683,27 @@ Evidence status: prepared on a work machine where no pytest, checkwash,
 product or test code ran; CI runs the tests. Added: three `.gwcase` fixtures
 (`self_method_dict_update_rebinding_pos`,
 `self_method_namespace_update_added_pos`,
-`self_method_other_name_update_neg`), labels reviewed before merge, and 75
-collected items in `tests/test_issue502_helper_rebinding_spellings.py`,
-counted from its parametrize lists; no existing test changed. By reading,
-the documented test count becomes 19553 (19475 + 75 + 3); CI's collection
-checks it, and other open pull requests may change the base.
+`self_method_other_name_update_neg`), whose labels the owner approved
+(below), and 75 collected items in
+`tests/test_issue502_helper_rebinding_spellings.py`, counted from its
+parametrize lists; no existing test changed. By reading, the documented
+test count becomes 19553 (19475 + 75 + 3); CI's collection checks it, and
+other open pull requests may change the base.
+
+The agent wrote this entry in #502's fix PR #520. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"), in reply to the agent's list asking, for this PR, for
+approval of: the wording of SPEC §3 (75f35ca7, 2e822f1e, c583ab02),
+THREATMODEL row 91 (4cf15200, bd8d3ab8) and this entry (39aad0bc,
+625e5640, f55f6093), with the Release paragraph brought in line with R1
+and the residual lists completed (A44); the three fixtures' labels
+(A45, 09ccc6ba); readings 1 to 5 (A46); reading 7 (A47); reading 6, with
+the asymmetry between a direct and an aliased target kept and
+`x = globals()["C"]` left a residual (A48); and reading a dunder setter's
+name argument by its argument count, with this entry's reading changed to
+match (A49). The reply was a button whose text the assistant wrote. The
+changes A44 and A49 ask for were made after the reply: the code and its
+pins (27c42fd2, f6974b13), SPEC §3 (9c8c794b, fa236589), row 91
+(a2e968a0) and this entry (a2a6727f, efa57c35). The residual of an alias a
+def assigns under `global` (9b0d8661) was added after the reply, and its
+wording is not yet approved.
