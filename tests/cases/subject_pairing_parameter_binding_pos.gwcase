@@ -1,0 +1,21 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a test parameter bound again under a condition is no plain local, so `result == 20.0` is not read as checking `area(4, 5)` and the precondition still takes the old `==`'s place
+origin: #434 A, ruling 434 A (2026-10-16) - a unit parameter is excluded: when `exact` is false, `result` is the fixture's value, and `result == 20.0` no longer checks the code
+=== before: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    assert area(4, 5) == 20.0
+=== after: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area(result, exact):
+    if exact:
+        result = area(4, 5)
+    assert result is not None
+    assert result == 20.0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

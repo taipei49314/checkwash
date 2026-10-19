@@ -1,0 +1,21 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: the same weakening with the decoy written above it blocks too
+origin: #434 analysis A.4 - span order paired the decoy `subtotal(items) == 105.3`, which ASSERT_SUBSTITUTED reads as a rename, and passed (THREATMODEL 84b's residual); the leftover that checks the old subject now takes its place
+=== before: tests/test_billing.py ===
+from app.billing import subtotal, total
+
+
+def test_total():
+    items = [10.5, 94.8]
+    assert total(items) == 105.3
+=== after: tests/test_billing.py ===
+from app.billing import subtotal, total
+
+
+def test_total():
+    items = [10.5, 94.8]
+    assert subtotal(items) == 105.3
+    assert total(items) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

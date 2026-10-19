@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 85
+rule: ASSERT_WEAKENED
+title: an `is not None` precondition above a rewritten `==` on the same subject: both check the old subject, and the one of the same form takes the old `==`'s place
+origin: #434 A, ruling 434 A (2026-10-16) - among the leftovers that check the old subject, the same form comes first, then at least the old strength, then span order; span order alone paired the precondition and blocked as "subject and polarity both changed"
+=== before: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    assert area(4, 5) == 20.0
+=== after: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    result = area(4, 5)
+    assert result is not None
+    assert result == 20.0
+=== expect ===
+[]

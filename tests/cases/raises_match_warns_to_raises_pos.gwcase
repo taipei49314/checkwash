@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `pytest.warns(DeprecationWarning)` rewritten as `pytest.raises(DeprecationWarning, match=...)` is another callee: the warns call still reads as removed, held at warn
+origin: #434 B control - only the same callee pairs
+=== before: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_deprecated():
+    with pytest.warns(DeprecationWarning):
+        create("relative/path")
+=== after: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_deprecated():
+    with pytest.raises(DeprecationWarning, match="relative paths are deprecated"):
+        create("relative/path")
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]}]

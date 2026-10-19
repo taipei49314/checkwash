@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `match=` added while the expected type widens to `Exception` is not the same raise: the bare call still reads as removed, held at warn
+origin: #434 B control - the expected types differ, so the two calls do not pair; the widening itself is #423
+=== before: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError):
+        create("relative/path")
+=== after: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(Exception, match="must be absolute"):
+        create("relative/path")
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["SAME_UNIT_REWRITE"]}]
