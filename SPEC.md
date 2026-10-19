@@ -540,8 +540,8 @@ or of a class of the order counts as one on it, one hop: `x = C`,
 `x = type(self)` or `x = self.__class__`, bound in the call's own scope, a
 def or lambda around it, or the module. One whose target is reached
 through a subscript or another call, such as `globals()["C"]`, counts as
-one on every class. `vars()` at module scope and `locals()` in a function
-rebind no method. An unresolved call adds
+one on every class. `vars()` and `locals()` outside a class body rebind no
+method. An unresolved call adds
 no assertion to the unit, as before #306, but across a diff it does not
 keep the reading it had before #306: a call resolved at the parent and not
 at the commit reads as the helper's assertions removed, and one resolved
