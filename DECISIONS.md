@@ -13957,8 +13957,8 @@ fixtures, 19 whose labels the owner approved on 2026-10-19 (A77) and one
 he approved adding the same day (B24), and 97 collected items in
 `tests/test_issue471_fixture_producers.py`, counted from its parametrize
 lists, one of them the C2 pin; no existing test changed. By reading, the
-documented test count becomes 19938 (19822 + 97 + 20, less #528's pin 1,
-which A52 drops at merge); CI's collection checks it.
+documented test count becomes 19939 (19822 + 97 + 20); CI's collection
+checks it.
 
 The agent wrote this entry in #471's fix PR #522. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
@@ -15280,8 +15280,8 @@ collected items, counted from its parametrize lists: the `assert` family
 (29), the unittest methods (17), what stays inspection (30), condition
 one (13), condition two (11 proved, 21 unknown), verdicts for the pair,
 the offsets and the cost, the unchanged branch folder, the R66 residual
-and `except*`. By reading, the documented test count becomes 20082
-(19938 + 8 + 136); CI's collection checks it. Nothing under `tests/gates`
+and `except*`. By reading, the documented test count becomes 20083
+(19939 + 8 + 136); CI's collection checks it. Nothing under `tests/gates`
 changes.
 
 **Sweep** (R32). The pair's before side ran on #518 (run 39215282880,
