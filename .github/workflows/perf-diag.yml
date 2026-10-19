@@ -1,0 +1,41 @@
+name: perf-diag (temporary, not for merge)
+
+# A diagnostic for the perf gate red on main since integration batch 2.
+# It runs only on the diagnostic branch's pull request and is removed with it.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  perf-diag:
+    if: github.head_ref == 'diag/perf-gate-20261020'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python: "3.12"
+          - os: windows-latest
+            python: "3.13"
+          - os: ubuntu-latest
+            python: "3.12"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pytest
+      - run: python .github/perf-diag/perf_diag.py perf-diag.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: perf-diag-${{ matrix.os }}-py${{ matrix.python }}-attempt-${{ github.run_attempt }}
+          path: perf-diag.json
+          if-no-files-found: error
