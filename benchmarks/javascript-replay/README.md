@@ -62,9 +62,11 @@ the release criterion. The owner ruled them, and what #212 delivers, on 2026-10-
   [release procedure](../../docs/RELEASING.md). Every commit whose outcome
   moves, except an error that becomes a pass, goes to the owner before the
   tag. There is no rate threshold.
-- **Row 131** (R30). THREATMODEL row 131 stays with #212. The report-only
-  `cf-js131` arm of the combined lab sweep prices it, under a line
-  registered before it runs (D-141, arm 7). #212 stays open for that.
+- **Row 131** (R30). THREATMODEL row 131 stays with #212. `cf-js131`, a
+  report-only arm-7 variant that #419's combined lab sweep adds, prices it,
+  under a line registered before it runs
+  ([#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6261643029)).
+  #212 stays open for that.
 
 Both runs checked each commit with `check`, one CLI run per commit and
 engine, not with `checkwash sweep` as the shape above says

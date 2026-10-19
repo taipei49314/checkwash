@@ -22,7 +22,9 @@ names ([selection record](README.md)). So neither records
 `commits_with_opaque_prod_change`, which only `checkwash sweep` writes
 (`src/checkwash/sweep.py:71`): how many of these commits carry an opaque
 production change is not known. How many passes rest on opaque-change
-evidence is left to the report-only `cf-js131` arm instead (D-141, arm 7).
+evidence is left instead to `cf-js131`, a report-only arm of #419's
+combined lab sweep (owner ruling 2026-10-19, R30;
+[#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6261643029)).
 
 `pass` and `block` are the verdicts of an analysed commit. `error` is an
 exit 2, an input or engine error with no verdict.
