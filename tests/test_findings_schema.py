@@ -37,7 +37,7 @@ from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
 from checkwash.findings import Evidence, Finding
-from checkwash.gitio.snapshot import search_source_mapping
+from checkwash.gitio.snapshot import MAX_SOURCE_BYTES, search_source_mapping
 from checkwash.ir.model import IR
 from checkwash.pyenv import known_baseline
 from checkwash.report.jsonout import findings_to_json
@@ -502,3 +502,59 @@ def test_cli_config_errors_document_matches_schema(tmp_path):
     assert result.returncode == 0, result.stderr
     payload = _document(result.stdout.decode("utf-8"), _schema(), "config errors")
     assert payload["config_errors"], payload
+
+
+def _blob(size: int, seed: str) -> bytes:
+    """`size` bytes of hex text, distinct per seed (as in test_issue454_unread_output)."""
+    body = hashlib.shake_256(seed.encode()).hexdigest((size + 1) // 2).encode()
+    return body[:size - 1] + b"\n"
+
+
+def test_cli_documents_with_unread_sides_match_schema(tmp_path):
+    # A changed side over the source byte limit that no detector must read is
+    # listed under the optional `unread` key (#454). Real output, so the
+    # schema is checked against what the CLI writes, not only against
+    # `unread_entry` by reading. A range gives a base and a head side on a
+    # block, the worktree a base and a worktree side on a pass: every `side`
+    # the schema allows, under both verdicts.
+    schema = _schema()
+    limit = MAX_SOURCE_BYTES
+    repo = _repo(tmp_path / "repo")
+    big = repo / "data" / "big.csv"
+    big.parent.mkdir()
+    big.write_bytes(_blob(limit + 1, "base"))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "data")
+    big.write_bytes(_blob(limit + 2, "head"))
+    _weaken(repo)
+    _git(repo, "commit", "-am", "weaken")
+    result = _cli(repo, "check", "HEAD~1..HEAD", "--format", "json")
+    assert result.returncode == 1, result.stderr
+    payload = _document(result.stdout.decode("utf-8"), schema, "range unread")
+    assert payload["verdict"] == "block"
+    assert payload["unread"] == [
+        {"path": "data/big.csv", "side": "base", "size": limit + 1, "limit": limit},
+        {"path": "data/big.csv", "side": "head", "size": limit + 2, "limit": limit},
+    ]
+
+    big.write_bytes(_blob(limit + 3, "worktree"))
+    result = _cli(repo, "check", "--format", "json")
+    assert result.returncode == 0, result.stderr
+    payload = _document(result.stdout.decode("utf-8"), schema, "worktree unread")
+    assert (payload["verdict"], payload["findings"]) == ("pass", [])
+    assert payload["unread"] == [
+        {"path": "data/big.csv", "side": "base", "size": limit + 2, "limit": limit},
+        {"path": "data/big.csv", "side": "worktree", "size": limit + 3, "limit": limit},
+    ]
+
+    # The checks above validated `unread`: what the schema refuses there fails.
+    def broken(edit) -> list[str]:
+        document = copy.deepcopy(payload)
+        edit(document)
+        return _errors(document, schema, schema)
+
+    assert broken(lambda d: d.update(unread=[]))
+    assert broken(lambda d: d["unread"][0].pop("limit"))
+    assert broken(lambda d: d["unread"][0].update(side="after"))
+    assert broken(lambda d: d["unread"][0].update(size=-1))
+    assert broken(lambda d: d["unread"][0].update(prefix="#!/bin/sh\n"))
