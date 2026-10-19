@@ -11460,6 +11460,23 @@ sub-bullet's last sentence and add the ruling's D-116 contrast (the
 sentence kept, the contrast added in 570a81fd; A15). The reply is the
 text of an answer button the agent wrote, which the owner chose.
 
+A14 decided that the row is added; the row's text (6abaf2a9, ee4facf4)
+and the paragraph above were written after that approval. The maintainer
+approved them on 2026-10-19: 「第二輪核可全部照建議」, which takes every
+item of the agent's round-2 approval list as the agent recommended. For
+#510 that list asked whether to approve together the text written to
+apply options already approved, the paragraph above and the #488 row
+among it (item B3), and whether the page's first header sentence, which
+said every residual below was found by reading, should also yield to a
+row, with #510 and #521 using one wording (B4). Under B4, 7dc0cd20 ends
+that sentence with "unless a row names another source", the wording
+#521 (775aa3dd, accepted under A22) uses. A read-only claims review of
+#510 found that the row said lost credit always sends the findings to
+high; 8678ed8b says they go to high unless repair evidence or another
+de-escalator holds them at warn (SPEC §5 E1, D1). That correction was
+written after the approval. The reply is the text of an answer button
+the agent wrote, which the owner chose.
+
 ## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
 
 Ruling 421 (owner, 2026-10-14, 「P1 全部照建議」) answered its six questions
