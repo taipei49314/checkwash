@@ -52,9 +52,9 @@ the release criterion. The owner ruled them, and what #212 delivers, on 2026-10-
   can never be held out. They join axios, express and commander
   ([correction](correction-2026-10-09.md)) on the exclusion list of every
   future held-out draw. Recording them in `checkwash-corpus`
-  (`records/holdout/spent-elsewhere.json`) is a write to that repository.
-  It is pending its own authorization, together with #419's polyglot
-  repositories.
+  (`records/holdout/spent-elsewhere.json`) is approved (owner ruling
+  2026-10-19, R19). It is written together with #419's polyglot
+  repositories once that sweep has run.
 - **What #212 delivers** (R27): each release compares the previous release
   with its candidate on these 1,800 commits. The two runs made so far count
   ([results](results.md)). A new held-out draw is not planned now.
