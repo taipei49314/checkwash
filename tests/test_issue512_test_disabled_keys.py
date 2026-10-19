@@ -15,6 +15,7 @@ D-019).
 """
 
 import datetime
+from collections import Counter
 
 import pytest
 
@@ -30,6 +31,7 @@ from checkwash.change import FileChange
 from checkwash.cli import main
 from checkwash.config import Config
 from checkwash.contract import Contract
+from checkwash.detectors.test_disabled import finding_marker
 from checkwash.engine import analyze
 from checkwash.findings import fingerprint_issue, fingerprint_state, identity_text, make_fingerprint
 from checkwash.report.sarif import _result
@@ -55,6 +57,26 @@ GUARDED = BASE.replace(
 )
 GUARD_REMOVED = BASE.replace("def test_total():\n", 'def test_total():\n    pytest.skip("needs 3.9")\n')
 GUARD_ALWAYS = GUARDED.replace("if sys.version_info < (3, 9):", "if True:")
+
+# Several markers of one name. Alignment pairs a skip on its name alone, so a
+# skip inserted above another pairs with it and leaves that one unpaired; the
+# key binds the inserted one.
+VERSION_GUARD, ENV_GUARD = "sys.version_info < (3, 9)", 'not os.environ.get("BILLING_DB")'
+ENV_BLOCK = f'    if {ENV_GUARD}:\n        pytest.skip("needs a database")\n'
+VERSION_BLOCK = f'    if {VERSION_GUARD}:\n        pytest.skip("needs 3.9")\n'
+ENV_ABOVE = GUARDED.replace("def test_total():\n", "def test_total():\n" + ENV_BLOCK)
+BARE_ABOVE = GUARDED.replace("def test_total():\n", 'def test_total():\n    pytest.skip("needs a database")\n')
+# An unguarded skip added above the guarded block ENV_SKIP adds.
+BOTH_SKIPS = ENV_SKIP.replace("def test_total():\n", 'def test_total():\n    pytest.skip("whatever")\n')
+# Two guarded skips of one name, and each guard removed in turn.
+TWO_GUARDS = BASE.replace("def test_total():\n", "def test_total():\n" + VERSION_BLOCK + ENV_BLOCK)
+FIRST_GUARD_REMOVED = TWO_GUARDS.replace(VERSION_BLOCK, '    pytest.skip("needs 3.9")\n')
+SECOND_GUARD_REMOVED = TWO_GUARDS.replace(ENV_BLOCK, '    pytest.skip("needs a database")\n')
+# A skip edited and another of its name added: by content the head holds two
+# skips the base lacks for the one marker added.
+EDITED = GUARDED.replace('pytest.skip("needs 3.9")', 'pytest.skip("needs Python 3.9")')
+EDITED_AND_BARE = EDITED.replace("def test_total():\n", 'def test_total():\n    pytest.skip("needs a database")\n')
+EDITED_AND_GUARDED = EDITED.replace("def test_total():\n", "def test_total():\n" + ENV_BLOCK)
 
 
 def rows(*cells):
@@ -102,6 +124,9 @@ MOCHA = ('const assert = require("node:assert");\nconst { total, tax } = require
 CASES = [
     pytest.param(PY_PATH, (BASE, ENV_SKIP), (BASE, BARE_SKIP), id="guarded-then-unguarded-skip"),
     pytest.param(PY_PATH, (GUARDED, GUARD_REMOVED), (GUARDED, GUARD_ALWAYS), id="guard-removed-then-always-true"),
+    pytest.param(PY_PATH, (GUARDED, ENV_ABOVE), (GUARDED, BARE_ABOVE), id="guarded-then-unguarded-skip-above-another"),
+    pytest.param(PY_PATH, (TWO_GUARDS, FIRST_GUARD_REMOVED), (TWO_GUARDS, SECOND_GUARD_REMOVED),
+                 id="one-guard-removed-then-the-other"),
     pytest.param(PY_PATH, (THREE, rows(R2, R3)), (THREE, rows(R1, R3)), id="another-row-deleted"),
     pytest.param(PY_PATH, (THREE, rows(R2, R3)), (THREE, rows(R3)), id="more-rows-deleted"),
     pytest.param(PY_PATH, (THREE, rows(R2, R3)), (THREE, rows(R1_SKIPPED, R2, R3)), id="row-marked-not-deleted"),
@@ -205,6 +230,79 @@ def test_a_guard_event_binds_the_guard_before_and_after(monkeypatch):
     assert one["kind"] == two["kind"] == "guard_weakened"
     assert (one["before"], one["after"]) == (identity_text("sys.version_info < (3, 9)"), None)
     assert (two["before"], two["after"]) == (identity_text("sys.version_info < (3, 9)"), "True")
+
+
+def test_a_guard_event_binds_what_every_marker_of_its_name_ran_under(monkeypatch):
+    # The message, and the guard before and after, name the first base
+    # condition whichever guard was removed; the conditions tell the two apart.
+    identities = _identities(monkeypatch)
+    (first,), _verdict = _run(PY_PATH, TWO_GUARDS, FIRST_GUARD_REMOVED)
+    (second,), _verdict = _run(PY_PATH, TWO_GUARDS, SECOND_GUARD_REMOVED)
+    one, two = identities[first.fingerprint], identities[second.fingerprint]
+    assert (one["before"], one["after"]) == (two["before"], two["after"]) == (identity_text(VERSION_GUARD), None)
+    both = Counter([identity_text(VERSION_GUARD), identity_text(ENV_GUARD)])
+    assert Counter(one["context"]["conditions"]["before"]) == Counter(two["context"]["conditions"]["before"]) == both
+    assert Counter(one["context"]["conditions"]["after"]) == Counter([None, identity_text(ENV_GUARD)])
+    assert Counter(two["context"]["conditions"]["after"]) == Counter([identity_text(VERSION_GUARD), None])
+
+
+def _unit_and_findings(path, before, after, allow=()):
+    """The unit `test_total` of the analysed change, its TEST_DISABLED findings and the verdict."""
+    ir, findings, verdict = analyze(
+        [FileChange(path, "modified", before.encode(), after.encode())], Config(), Contract(), list(allow), TODAY,
+        head_reader={"app/billing.py": BILLING, "app/__init__.py": b""}.get,
+    )
+    (unit,) = [u for file in ir.files for u in file.units if u.qualname == "test_total"]
+    return unit, [f for f in findings if f.rule == "TEST_DISABLED"], verdict
+
+
+def test_an_unguarded_skip_added_beside_a_reviewed_guarded_one_still_blocks(monkeypatch):
+    # Both skips are added. Each finding binds its own skip, so the approval
+    # of the guarded one covers that finding alone.
+    identities = _identities(monkeypatch)
+    (reviewed,), _verdict = _run(PY_PATH, BASE, ENV_SKIP)
+    unit, both, _verdict = _unit_and_findings(PY_PATH, BASE, BOTH_SKIPS)
+    assert len(both) == 2 and len({f.fingerprint for f in both}) == 2
+    assert [f.fingerprint for f in both].count(reviewed.fingerprint) == 1
+    (unguarded,) = [f for f in both if f.fingerprint != reviewed.fingerprint]
+    assert identities[unguarded.fingerprint]["after"] == identity_text('pytest.skip("whatever")')
+    assert identities[unguarded.fingerprint]["context"] == {"guard": None}
+    assert [finding_marker(f, unit) for f in both] == ["pytest.skip", "pytest.skip"]
+    _unit, exempt, verdict = _unit_and_findings(PY_PATH, BASE, BOTH_SKIPS, allow=[_entry(reviewed.fingerprint)])
+    (still,) = [f for f in exempt if not f.allowlisted]
+    assert len(exempt) == 2 and still.fingerprint == unguarded.fingerprint and still.severity == "high"
+    assert verdict == "block"
+
+
+def test_a_skip_inserted_above_another_binds_its_own_text_and_guard(monkeypatch):
+    identities = _identities(monkeypatch)
+    (alone,), _verdict = _run(PY_PATH, BASE, ENV_SKIP)
+    (guarded,), _verdict = _run(PY_PATH, GUARDED, ENV_ABOVE)
+    (bare,), _verdict = _run(PY_PATH, GUARDED, BARE_ABOVE)
+    one, two = identities[guarded.fingerprint], identities[bare.fingerprint]
+    assert one["after"] == two["after"] == identity_text('pytest.skip("needs a database")')
+    assert one["context"] == {"guard": identity_text(ENV_GUARD)}
+    assert two["context"] == {"guard": None}
+    # The key of that skip, wherever it is added.
+    assert guarded.fingerprint == alone.fingerprint
+
+
+def test_markers_that_cannot_be_told_apart_bind_every_marker_of_the_unit(monkeypatch):
+    identities = _identities(monkeypatch)
+    unit, (bare,), _verdict = _unit_and_findings(PY_PATH, GUARDED, EDITED_AND_BARE)
+    (guarded,), _verdict = _run(PY_PATH, GUARDED, EDITED_AND_GUARDED)
+    assert bare.fingerprint != guarded.fingerprint
+    identity = identities[bare.fingerprint]
+    assert identity["legacy"] == f"TEST_DISABLED/{PY_PATH}/test_total/pytest.skip"
+    assert (identity["kind"], identity["after"]) == ("marker_added", None)
+    markers = identity["context"]["unit_markers"]
+    version = identity_text(VERSION_GUARD)
+    assert markers["before"] == [["pytest.skip", identity_text('pytest.skip("needs 3.9")'), version]]
+    assert Counter(map(tuple, markers["after"])) == Counter([
+        ("pytest.skip", identity_text('pytest.skip("needs a database")'), None),
+        ("pytest.skip", identity_text('pytest.skip("needs Python 3.9")'), version),
+    ])
+    assert finding_marker(bare, unit) == "pytest.skip"
 
 
 def test_rows_removed_bind_which_rows_went_and_the_live_counts(monkeypatch):
