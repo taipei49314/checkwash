@@ -12556,12 +12556,14 @@ Not settled by the ruling, for the owner's decision:
   judgement of the edit, by
   `test_a_test_added_for_a_new_module_to_a_pytest_file_under_golden`
   (`tests/test_issue463_snapshot_added_production.py`), with a control
-  beside a changed existing symbol. Accept the cost under Q1 (a), or give
-  it its own treatment, for example leaving the added-file exclusion out
-  for a snapshot-role file with test obligations; either is the owner's
-  call. By reading and not pinned, a module that an existing loader
+  beside a changed existing symbol. The owner accepted the cost under
+  Q1 (a) (below), to be named in the release notes and in
+  `docs/KNOWN-ISSUES-next.md` and counted by the Q5 sweep; the
+  alternative, not adopted, was to give it its own treatment, for example
+  leaving the added-file exclusion out for a snapshot-role file with test
+  obligations. By reading and not pinned, a module that an existing loader
   discovers with no existing file changed (a plugin directory scan) can
-  honestly change a stored output too. The Q5 sweep would count both.
+  honestly change a stored output too. The Q5 sweep is to count both.
 
 **Residuals**, open by ruling and pinned as current behaviour, not as
 honest edits (row 132): (1) a changed symbol in any existing or deleted
@@ -12585,20 +12587,23 @@ the newly blocking shape in its notes: a stored snapshot, golden or
 expected file rewritten beside one or more new Python production modules
 and no other production change that counts, including the honest edit
 named above (a test added for a new module to a pytest file kept under a
-snapshot directory) unless the owner rules otherwise. The next release is
+snapshot directory), whose cost the owner accepted. The next release is
 a minor anyway because of #421 (`docs/stability.md:17-22`). No release is
 authorized (AGENTS.md rule 5). `docs/KNOWN-ISSUES-next.md` gains a #463
-row.
+row, which names the same honest edit as an accepted cost.
 
-**Rule 2 (stop).** The ruling names no change to an existing expectation,
-and the change moves one:
+**Rule 2.** The ruling names no change to an existing expectation, and the
+change moves one:
 `tests/test_snapshot_expectations.py::test_unrelated_production_change_retains_existing_snapshot_cochange_policy`
 (PR #133's pin of the policy #129 kept) rewrites `tests/golden/invoice.txt`
-beside an added `unused.py` holding `def unrelated(): return 3` and asserts
-verdict pass and no `EXPECTED_VALUE_CHANGED`. Under Q1 (a) it blocks, with
-`EXPECTED_VALUE_CHANGED` at high and `SNAPSHOT_CODE_COCHANGE` at warn. That
-test is not changed in this PR, so CI shows it failing until the owner
-decides. Recommendation: keep its inputs, assert the block, and rename it
+beside an added `unused.py` holding `def unrelated(): return 3` and
+asserted verdict pass and no `EXPECTED_VALUE_CHANGED`. Under Q1 (a) it
+blocks, with `EXPECTED_VALUE_CHANGED` at high and `SNAPSHOT_CODE_COCHANGE`
+at warn. The round stopped there: the test was left unchanged, and CI
+showed it failing, and no other test, on every leg (runs 39215965313 and
+39215965326). The owner approved the move as recommended (below), and
+commit 6f6ad594 makes it: the test keeps its inputs, asserts the block and
+both findings, and is renamed
 `test_an_unrelated_new_production_function_does_not_explain_rewriting_the_stored_expectation`;
 what its old name says about an existing module is pinned by
 `snapshot_unrelated_symbol_edit_neg` and
