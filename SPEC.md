@@ -1212,14 +1212,15 @@ changed:
   and an unguarded one of the same name are two approvals; a JS/TS
   imperative skip (`ctx.skip()`, `t.skip()`, `this.skip()`) records none, so
   for it they are one. Alignment records only the names of the markers it
-  leaves unpaired, so the markers a name added are read by content: the
-  head markers of that name whose text and guard no base marker of that
-  name has. When there are as many of them as the name has findings, each
-  finding binds one of them, in the head side's order. Otherwise (a marker
-  of that name also edited, one moved in from a helper, or one paired with a
-  marker of another name) each finding of the name binds, as the context,
-  every marker of the unit on both sides, each a name, text and guard, each
-  side sorted;
+  leaves unpaired, so the markers a name added are read by content: each
+  base marker of that name cancels one head marker of that name with the
+  same text and guard, and the head markers left over, in the head side's
+  order, are the ones added. When there are as many of them as the name has
+  findings, each finding binds one of them, in that order. Otherwise (a
+  marker of that name also edited, one moved in from a helper, or one paired
+  with a marker of another name) each finding of the name binds, as the
+  context, every marker of the unit on both sides, each a name, text and
+  guard, each side sorted;
 - a guard made always true or removed (`guard_weakened`, or `inert_mark` in a
   conftest): the guard before and the guard after as the before and after
   texts, the after null when the guard was removed, so the two events are
