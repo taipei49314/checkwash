@@ -12468,9 +12468,9 @@ and a pool sweep; "This issue stays open for (b)." On 2026-10-19
 (「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
 the reply was a button whose text the agent wrote), R57, R58 and R64
 completed (c), replaced that last sentence and narrowed that ruling's
-item 2 (item 3 below). D-150 is the last entry on
-main, and D-151 to D-159 are assigned to open pull requests prepared from
-the same base, so this entry is D-160.
+item 2 (item 3 below). D-151 is the last entry on
+main, D-153 is unused, and D-152 and D-154 to D-159 are assigned to open
+pull requests, so this entry is D-160.
 
 #468 reports that undici's `test/web-platform-tests/expectation.json`,
 the record its Web Platform Tests runner reads, can mark a regressed
