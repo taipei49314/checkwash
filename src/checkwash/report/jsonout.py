@@ -40,5 +40,20 @@ def findings_to_json(
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
 
 
+def size_refusal_to_json(refused: UnreadSide) -> str:
+    """`--format json` for a run a size refusal stopped: exit 2, and this (#454 (d)).
+
+    The refusal comes before any finding or verdict, so this is not a
+    findings document. Its one key is the findings document's `unread`, with
+    one entry, the side the refusal and its stderr line name: that side was
+    not read, and the run gave no verdict, so the change under review was
+    not analysed. It carries no `checkwash_findings_version`, `findings` or
+    `verdict`, so a consumer that requires the version, as docs/embedding.md
+    says to, reads it as the error it is, and none can read a pass from it.
+    """
+    payload = {"unread": unread_entries([refused])}
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
+
+
 def ir_to_json(ir: IR) -> str:
     return json.dumps(to_jsonable(ir), sort_keys=True, ensure_ascii=False, indent=2) + "\n"
