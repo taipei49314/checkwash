@@ -75,8 +75,11 @@ schema_version = 1
 # cases as v0.7.0: [baseline_blocked] stays. The chai file is the same blob
 # at f02b5d8 as at d647a65, so [t3.cases] stays. [canary] is not rotated.
 # The cases, labels, acceptance file and gate code are the same at main
-# 0e60832a as at f02b5d8. This PR's own verdict run, with this [baseline],
-# checks both pins and proposes any drift.
+# 0e60832a as at f02b5d8. The rotation run on PR #516 (verdict run
+# 39214083418, attempt 1; pin head 5490b4e86572dffe347d13ac890e70d69f398316)
+# ran all 185 cases with v0.8.0 as the baseline: 159 block -> block, 26 pass
+# -> pass and zero reported. Its only failure was the acceptance-baseline
+# mismatch; it saw no blocked-pin or T3 drift, so it proposed no pin.
 [baseline]
 tag = "v0.8.0"
 version = "0.8.0"

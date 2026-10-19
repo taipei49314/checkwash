@@ -43,7 +43,9 @@ and the canary set to 71, since v0.4.2 blocks F7 and v0.5.0 passes it.
 The rotation to v0.7.0 on 2026-10-12 (D-129) re-pins `baseline_blocked` to
 159: v0.7.0 also blocks `i198/T6`. The rotation to v0.8.0 on 2026-10-19
 (D-162) keeps 159: the tag-push run of v0.8.0 (38768985301) saw it block
-exactly the cases v0.7.0 blocks. The canary pair stays v0.4.2 -> v0.5.0.
+exactly the cases v0.7.0 blocks, and the rotation run on PR #516
+(39214083418), with v0.8.0 as the baseline, saw no drift. The canary pair
+stays v0.4.2 -> v0.5.0.
 `options` sets `today` (every case: `2026-10-02`) and, for the #196 S rows,
 `task = "TASK.md"`.
 
