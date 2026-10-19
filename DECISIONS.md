@@ -14151,6 +14151,27 @@ After these approvals the Timing paragraph was filled from the log of run
 Residuals and evidence-status sentences changed with it, are under B15's
 review.
 
+The maintainer approved that text on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its items
+for this entry: D3 approves the numbering sentence above as c7efced8
+rewrote it to the facts at merge, which extends C1 to this entry. D7
+approves, under B15, the paragraphs this entry gained after A85: the
+cache paragraphs, the Timing paragraph filled from run 39253512334
+(b4b15328; the list quoted it in full as at c7efced8), the Residuals and
+evidence-status sentences changed with it, and the approval records;
+with them, the KNOWN-ISSUES-next #469 row's measured range (3a86ef11)
+and the timing job's removal (b77240d5). Approving the Timing paragraph
+accepts its reading of ruling item 1: with the caches the pass grows
+close to linearly, so no work budget is set. D9 records the
+faster-than-linear growth of the time before the pass as a residual,
+with no new issue: one sentence in the KNOWN-ISSUES-next #469 row
+(fe319152, in integration batch 3), beside the timing comment on #469
+(issuecomment-6269941656) that reports it; a measurement that splits
+that time, for example of the stand-in pass (D-131 item 2), goes to the
+pool after the release. This paragraph was written after the reply.
+
 ## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
 
 Ruling 471 (owner, 2026-10-16, issuecomment-6230178131, 「#468、#471
@@ -14503,6 +14524,27 @@ fa0086dd and 4e2b6d16 have the docstrings cite reading 3, not the list's
 label. Reading 3's sentence on these shapes was also written after the
 approval.
 
+The maintainer approved a further change on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its item
+D1 approves by name fourteen moves of this PR's expectations, made in
+integration batch 2 (#533) at this PR's merge (65282aa8), after #528
+(D-161) had merged before it and changed E1's label: ten expectations in
+nine new `.gwcase` fixtures (`fixture_autouse_pos`,
+`fixture_of_fixture_pos`, `fixture_overridden_in_module_pos`,
+`fixture_producer_added_in_diff_pos`, `fixture_producer_other_module_pos`
+with two, `fixture_producer_test_disabled_pos`,
+`fixture_producer_unread_pos`, `fixture_requested_after_only_pos` and
+`fixture_setup_call_pos`) and four in three items of
+`tests/test_issue471_fixture_producers.py`. Each moves from
+`NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE`, with rule,
+severity and unit unchanged, because the diff also changes a
+production-role Python file that is not inert and neither earlier label
+applies. A77 had approved those fixtures' labels with the old one. The
+same item approves the one such move in #527's #457 pin (D-156). This
+paragraph was written after the reply.
+
 ## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
 
 Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
@@ -14763,6 +14805,24 @@ paragraph that cites R3, as D-155 does; it was written after that reply
 (efd130f5). This paragraph, and the rewording of the one above to say
 only what items A67 to A71 say, were also written after that reply. That
 reply, too, was a button whose text the assistant wrote.
+
+The maintainer approved a further change on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its item
+D1 approves by name one move of this PR's expectations, made in
+integration batch 2 (#533) at this PR's merge (3e37a701), after #528
+(D-161) had merged before it and changed E1's label: in #457's pin,
+`subject_pairing_other_subject_known_limit_pos`, the `ASSERT_WEAKENED`
+high finding on `test_get_locks_from_targets_with_device_id` is expected
+with `PROD_CHANGE_NOT_EVIDENCE` instead of `NO_PROD_CHANGE_IN_DIFF`,
+because the diff also changes
+`custom_components/lock_code_manager/__init__.py`, a production-role
+Python file that is not inert, and neither earlier label applies. Its
+rule, severity and unit, and the two `TEST_DISABLED` warns, are
+unchanged. Items A67 to A71 had approved the fixture's label with the
+old one. The same item approves fourteen such moves in #522's fixtures
+and tests (D-155). This paragraph was written after the reply.
 
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
@@ -15537,6 +15597,30 @@ this paragraph record it. Their sentences in this entry (the CI result,
 the harness-artifact sentence, the order clauses for #522, the "Settled
 by Q2" paragraph, the pin 3 and test-count sentences and this paragraph)
 were written after the reply and were not on the list.
+
+The maintainer approved further text and changes on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its items
+for this entry: D1 approves by name the fifteen moves this PR's label
+caused in integration batch 2 (#533), after this PR merged, in the new
+fixtures and tests of later pull requests, beyond the moves A50 named:
+eleven expectations in ten `.gwcase` fixtures (#527's
+`subject_pairing_other_subject_known_limit_pos` and nine of #522's) and
+four in three items of `tests/test_issue471_fixture_producers.py`, each
+from `NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE` with rule,
+severity and unit unchanged (D-155, D-156). D2 approves the count
+sentences above as 9c19c344 rewrote them, once the merge-order
+renumbering had made the old clause false, with the NOT_RUN reason's
+"the count collected on this PR's own base"; the sentence after them was
+rewritten under D3 in integration batch 3 (cecba56e). D4 keeps pin 1,
+`prod_change_not_evidence_hardcoded_pos`, beside
+`hardcoded_package_only_pos`, the same shape: this PR merged before
+#522, and A52 drops pin 1 only if #522 merges first, so pin 1's bullet
+above stands as written. D5 adds one sentence to the `gating.py` E1
+comment approved under A54, naming #522's fixture-producer evidence; it
+changes the comment only (4a87d143, in integration batch 3). This
+paragraph was written after the reply.
 
 ## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
 
