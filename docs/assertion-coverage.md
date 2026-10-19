@@ -380,9 +380,10 @@ order did to a precondition written above a rewritten oracle:
 `assert area(4, 5) == 20.0` rewritten as `result = area(4, 5)`,
 `assert isinstance(result, float)`, `assert result == 20.0` paired the old
 `==` with the `isinstance` and blocked as EXACT_VALUE(90) -> TYPE_SHAPE(50),
-while the same two lines in the other order passed
-([#457](https://github.com/taipei49314/checkwash/issues/457) is a real
-commit of that shape).
+while the same two lines in the other order passed.
+[#457](https://github.com/taipei49314/checkwash/issues/457) is a real
+commit of a related shape, a precondition in front of a rewritten oracle on
+another subject, and it still blocks (below).
 
 In Python, among a test's own assertions, an old assertion left for the span
 order now first takes a new one that checks the same subject: the same
@@ -427,6 +428,11 @@ Not read this way:
   A credit that passed it would also pass an exact check rewritten as a wide
   approx beside one unrelated strong assertion. A reviewed rewrite takes a
   reviewed exemption.
+- A membership assert whose needle is not a literal: `"7/7 tampering cases
+  blocked" in out` checks `out`, but `f"{n}/{n} tampering cases blocked" in
+  out` records the needle as its subject. So the dogfooded commit that opened
+  THREATMODEL row 85, a count guard written above such a derived membership
+  assert, still pairs the old assert with the guard by span order and blocks.
 - An expectation moved into a local in the same edit (`expected = 20.0`,
   `assert result == expected`): the pair is the rename's, and
   ASSERT_SUBSTITUTED reads the literal against the name as both halves moved,
