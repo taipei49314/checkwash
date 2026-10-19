@@ -37,7 +37,10 @@ one this reading decides dead, the arm a later binding in it would bind
 nothing from (Q6 (a)): the `if` or `else` arm a folded condition rules out,
 the body of a `while` whose condition folds to false and of a `for` over a
 constant-empty iterable, the cases of a `match` no case can meet, and the
-handlers of a `try` whose body cannot raise. A condition the folder cannot
+handlers of a `try` whose body cannot raise, as `_Walk.quiet` reads it. There
+a class whose body binds a dunder name may raise when it is created, and an
+annotated name, which stores into `__annotations__`, may raise in a module
+that binds, deletes or spells that name. A condition the folder cannot
 decide (`if os.environ.get("X"):`) leaves the def a live unit with no marker,
 a named residual, as #484's ruling leaves its JS/TS form. Two readings still
 take a dead class statement as its name's binding, as on main, both named
@@ -57,6 +60,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass, field, replace
+from functools import cached_property
 
 from checkwash.frontends.python.setup_skip_controls import _conjunction
 from checkwash.ir.astutil import dotted_name
@@ -81,6 +85,7 @@ _LOOPS = (ast.For, ast.AsyncFor, ast.While)
 # The compound statements with an arm `_Judge.entry` can read as dead (#499).
 _ARMED = (ast.If, *_LOOPS, *_TRY, ast.Match)
 _TYPE_ALIAS = getattr(ast, "TypeAlias", ())
+_ANNOTATIONS = "__annotations__"
 
 
 @dataclass
@@ -169,6 +174,34 @@ def _binds_dunder(stmt: ast.stmt) -> bool:
     else:
         return False
     return any(len(name) > 4 and name.startswith("__") and name.endswith("__") for name in names)
+
+
+def _rebinds_annotations(tree: ast.Module) -> bool:
+    """May this module bind or delete an `__annotations__` (#499)?
+
+    Up to Python 3.13, and under `from __future__ import annotations`, an
+    annotated name at module or class level stores its annotation into
+    `__annotations__` once it has bound the name, so it raises when that is
+    None, deleted or another object: `__annotations__ = None`, then
+    `flag: "bool" = True`, raises TypeError. Read wide: a binding or deletion
+    of the name in any scope, an attribute store or deletion of it, and any
+    string that spells it (`globals()["__annotations__"]`, `setattr`).
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Name, ast.Attribute)):
+            name = node.id if isinstance(node, ast.Name) else node.attr
+            if name == _ANNOTATIONS and not isinstance(node.ctx, ast.Load):
+                return True
+        elif isinstance(node, ast.Constant):
+            if _literal(node) == _ANNOTATIONS:
+                return True
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            if _ANNOTATIONS in node.names:
+                return True
+        elif _ANNOTATIONS in (getattr(node, attr, None) for attr in ("name", "asname", "rest", "arg")):
+            # A def, class, import, `except ... as`, match capture, keyword or parameter.
+            return True
+    return False
 
 
 def _chain(value: ast.AST) -> tuple[tuple[ast.AST, ...], ast.AST]:
@@ -272,6 +305,7 @@ class _Walk:
     def __init__(self, tree: ast.Module, reader: Reader, expressions: bool) -> None:
         self.reader = reader
         self.expressions = expressions
+        self.tree = tree
         self.module = _Scope(tree)
         self.classes: dict[int, _Scope] = {}
         self.attributes: list[tuple[list[str], str, _Event]] = []
@@ -284,9 +318,16 @@ class _Walk:
 
     # -- what may raise -----------------------------------------------------
 
+    @cached_property
+    def annotations_rebound(self) -> bool:
+        """May an annotated name here store into a rebound `__annotations__`?
+        Read once, and only when `quiet` meets an annotated name."""
+        return _rebinds_annotations(self.tree)
+
     def quiet(self, stmt: ast.stmt) -> bool:
         """Can this statement never raise? Strict: a handler's def is exclusive with a
-        try-body def only when nothing after the latter can raise (Q6)."""
+        try-body def only when nothing after the latter can raise (Q6), and a
+        try's handlers are dead only when nothing in its body can (#499)."""
         if isinstance(stmt, ast.Pass):
             return True
         if isinstance(stmt, ast.Expr):
@@ -312,10 +353,13 @@ class _Walk:
         if isinstance(stmt, ast.Assign):
             return isinstance(stmt.value, ast.Constant) and all(isinstance(t, ast.Name) for t in stmt.targets)
         if isinstance(stmt, ast.AnnAssign):
+            # The annotation is stored into `__annotations__`, which raises
+            # in a module that may rebind or delete it (#499).
             return (
                 isinstance(stmt.target, ast.Name)
                 and (stmt.value is None or isinstance(stmt.value, ast.Constant))
                 and (self.lazy or isinstance(stmt.annotation, ast.Constant))
+                and not self.annotations_rebound
             )
         return False
 
