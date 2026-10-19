@@ -24,6 +24,7 @@ from checkwash.frontends.python.fixture_producers import (
     _binders as _fixture_binders,
     assertion_names,
     import_modules,
+    nested_bound_names,
     unit_producers,
 )
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
@@ -1530,6 +1531,37 @@ def _resolve_through(names: tuple[str, ...], bindings: dict[str, tuple[str, ...]
         seen.add(name)
         queue.extend(bindings.get(name, ()))
     return tuple(sorted(seen))
+
+
+def _fixture_read_bindings(func) -> dict[str, tuple[str, ...]]:
+    """`_binding_maps`' reference half, less what each value binds in a lambda or comprehension of its own (#471, C2).
+
+    `fixture_reads` follows the unit's own assignments through this map. In
+    `result = (lambda ledger: ledger.fee)(make())`, the lambda's `ledger` is
+    not the fixture parameter, so `result` leads to `make` only. Each
+    assigned value's `fixture_producers.nested_bound_names` are dropped from
+    its references, even where such a name also occurs outside the lambda
+    or comprehension that binds it, erring toward no evidence. It reads the
+    same assignments and walruses as `_binding_maps`, so the two maps have
+    the same keys.
+    """
+    references: dict[str, set[str]] = {}
+    for node in _walk(func):
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets, value = [node.target], node.value
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if value is None:
+            continue
+        kept = set(_referenced_names(value)) - nested_bound_names(value)
+        for target in targets:
+            for name in _assignment_name_targets(target):
+                references.setdefault(name, set()).update(kept)
+    return {name: tuple(sorted(refs)) for name, refs in references.items()}
 
 
 def _referenced_names(node) -> tuple[str, ...]:
@@ -3225,29 +3257,33 @@ def _collect_unit(
     )
     vacuous = _vacuous_bound_asserts(func)
 
-    # The parameters naming a fixture whose producer was read (#471), and the
+    # The parameters naming a fixture whose producer was read (#471), the
     # nodes inside the unit's nested scopes, whose names may be another
-    # scope's: worked out only for a unit that has such a parameter.
+    # scope's, and the unit's assignments as `fixture_reads` follows them:
+    # worked out only for a unit that has such a parameter.
     fixture_params = frozenset(param for param, _callee, _modules in producers)
     nested_nodes: set[int] | None = None
     rebound: frozenset[str] = frozenset()
+    followed: dict[str, tuple[str, ...]] = {}
 
     def fixture_reads(node: ast.AST, expression: ast.AST) -> tuple[str, ...]:
         """The fixture parameters assertion `node` of the unit's own body reads in `expression` (471 Q3).
 
-        Directly, or through the unit's own assignments (`_resolve_through`).
-        A parameter the body binds again holds another value there, and is
-        not counted: one the binding map records (`=`, augmented, annotated
-        or walrus), and one bound any other way in the unit's own scope
-        (`_fixture_binders`: a `for` or comprehension target, `with ... as`,
-        `except ... as`, `del`, an import, `global` or `nonlocal`, a match
-        capture, a nested def or class of that name). A name inside a lambda
-        or a comprehension of the assertion that binds it is not read, nor
-        followed (`assertion_names`); a parameter all of whose occurrences
-        there are such names is not counted, even when a name the assertion
-        reads leads to it, which errs toward no evidence.
+        Directly, or through the unit's own assignments (`_resolve_through`),
+        less the names an assigned value binds in a lambda or comprehension
+        of its own (`_fixture_read_bindings`, C2). A parameter the body binds
+        again holds another value there, and is not counted: one the binding
+        map records (`=`, augmented, annotated or walrus), and one bound any
+        other way in the unit's own scope (`_fixture_binders`: a `for` or
+        comprehension target, `with ... as`, `except ... as`, `del`, an
+        import, `global` or `nonlocal`, a match capture, a nested def or class
+        of that name). A name inside a lambda or a comprehension of the
+        assertion that binds it is not read, nor followed (`assertion_names`);
+        a parameter all of whose occurrences there are such names is not
+        counted, even when a name the assertion reads leads to it, which errs
+        toward no evidence.
         """
-        nonlocal nested_nodes, rebound
+        nonlocal nested_nodes, rebound, followed
         if not fixture_params:
             return ()
         if nested_nodes is None:
@@ -3259,11 +3295,12 @@ def _collect_unit(
                 for inner in ast.walk(scope)
             }
             rebound = frozenset(param for param in fixture_params if _fixture_binders(func, param))
+            followed = _fixture_read_bindings(func)
         if id(node) in nested_nodes:
             return ()
         read, shadowed = assertion_names(expression)
         return tuple(sorted(
-            name for name in _resolve_through(tuple(sorted(read)), bindings)
+            name for name in _resolve_through(tuple(sorted(read)), followed)
             if name in fixture_params and name not in bindings and name not in rebound and name not in shadowed
         ))
 

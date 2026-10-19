@@ -166,6 +166,33 @@ def assertion_names(node: ast.AST) -> tuple[frozenset[str], frozenset[str]]:
     return frozenset(read), frozenset(seen - read)
 
 
+def nested_bound_names(node: ast.AST) -> frozenset[str]:
+    """The names a lambda's parameters or a comprehension's targets bind anywhere in `node` (#471, C2).
+
+    `node` is a value the unit assigns. When the frontend's `fixture_reads`
+    follows the unit's own assignments, these names are dropped from what
+    the assignment leads to: in `result = (lambda ledger: ledger.fee)(make())`,
+    `ledger` is the lambda's own variable, not the fixture, so `result` leads
+    to `make` only. A name that also occurs outside the lambda or
+    comprehension that binds it is dropped too, as is a name a target only
+    reads, erring toward no evidence.
+    """
+    found: set[str] = set()
+    for inner in ast.walk(node):
+        if isinstance(inner, ast.Lambda):
+            args = inner.args
+            found.update(
+                arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                if arg is not None
+            )
+        elif isinstance(inner, _COMPREHENSIONS):
+            found.update(
+                target.id for generator in inner.generators for target in ast.walk(generator.target)
+                if isinstance(target, ast.Name)
+            )
+    return frozenset(found)
+
+
 def _unconditional(body: list[ast.stmt]) -> list[ast.stmt]:
     """The statements of `body`, and of each `with` or `try` body reached from it through such bodies only.
 

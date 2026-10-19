@@ -272,6 +272,8 @@ def test_an_autouse_fixture_the_test_also_requests_by_parameter_has_a_producer()
                  id="comprehension-target-shadows-a-local"),
     pytest.param("    fee = ledger.fee\n    assert (lambda ledger: ledger.fee + fee)(make()) == 5.0\n", [()],
                  id="lambda-of-that-name-beside-a-read-through-a-local"),
+    pytest.param("    result = (lambda ledger: ledger.fee)(make())\n    assert result == 5\n", [()],
+                 id="lambda-parameter-of-that-name-in-an-assignment"),
 ])
 def test_an_assertion_records_the_fixture_parameters_it_reads(body, reads):
     side = _side("def test_fee(ledger):\n" + body)
