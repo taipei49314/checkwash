@@ -62,10 +62,10 @@ answer it (ruling 306, 2026-10-14):
   `setattr` or `delattr` whose target or name is a starred argument
   (`setattr(*(C, "_check", f))`). A computed-name `setattr`
   on a plain alias of the receiver or of a class of the order counts as one
-  on it, one hop (`x = C`, `x = type(self)`, `x = self.__class__`, bound in
-  the call's own scope, a def or lambda around it, or the module), and one
-  whose target is reached through a subscript or another call
-  (`globals()["C"]`) counts as one on every class.
+  on it, one hop and only from `x = C`, `x = type(self)` or
+  `x = self.__class__` bound in the call's own scope, a def or lambda around
+  it, or the module; one whose target is reached through a subscript or
+  another call (`globals()["C"]`) counts as one on every class.
 - Sub-Q4: only an undecorated `def` or `async def` resolves, so a
   `staticmethod` or `classmethod` called through the instance does not.
 - Sub-Q6: a name `unittest.TestCase` defines is never followed, in any
@@ -242,6 +242,21 @@ def _target(node) -> str | None:
             node = node.value
         else:
             return node.id if isinstance(node, ast.Name) else None
+
+
+def _alias(node) -> str | None:
+    """The name a plain alias stands for (#502, item 4).
+
+    `x` for `x`, `type(x)` or `x.__class__`: the values ruling 502 names
+    (`x = C`, `x = type(self)`, `x = self.__class__`). Any other value
+    (`self.settings`, `C.attr`, `make()`, `globals()["C"]`) is not followed.
+    """
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type"
+            and len(node.args) == 1 and not node.keywords):
+        node = node.args[0]
+    elif isinstance(node, ast.Attribute) and node.attr == "__class__":
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
 
 
 def _module(target: str) -> str:
@@ -450,10 +465,10 @@ class Methods:
         A class body's `vars()` or `locals()` is its namespace, so a literal
         key written there rebinds that name. A computed-name `setattr` or
         `delattr` is followed one hop through a plain assignment of its
-        target's name, `x = <value>` (or an annotated or walrus one), as
-        Python looks the name up: in the call's own scope, the defs and
-        lambdas around it, and the module. A value that is no name, as
-        `_target` reads it (`x = make()`), is not followed.
+        target's name (or an annotated or walrus one), as Python looks the
+        name up: in the call's own scope, the defs and lambdas around it, and
+        the module. Only the values `_alias` reads are followed
+        (`x = self.settings` and `x = make()` are not).
         """
         aliases: dict[tuple[int, str], list] = {}
         targets: list[tuple[ast.expr, tuple]] = []
@@ -484,7 +499,7 @@ class Methods:
             around = [scope for scope in reversed(scopes[:-1]) if not isinstance(scope, ast.ClassDef)]
             for scope in (scopes[-1], *around):
                 for value in aliases.get((id(scope), root), ()):
-                    alias = _target(value)
+                    alias = _alias(value)
                     if alias is not None:
                         self.computed.add(alias)
 
