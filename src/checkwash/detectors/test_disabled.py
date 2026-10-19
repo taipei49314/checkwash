@@ -84,6 +84,16 @@ def _key(path: str, qualname: str, legacy_text: str, shape: str, *, before=None,
     )
 
 
+def _encoded_order(items: list) -> list:
+    """`items` sorted by their JSON encoding, so a null sorts beside text."""
+    return sorted(items, key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=True))
+
+
+def _content(marker) -> tuple[str | None, str | None]:
+    """A marker's text and recorded guard, in `identity_text`'s form."""
+    return identity_text(marker.text), identity_text(marker.guard)
+
+
 def _marker_added_key(path: str, qualname: str, name: str, marker, shape: str) -> str:
     """A marker added: its complete text and the guard it was recorded with, null when none.
 
@@ -99,14 +109,84 @@ def _marker_added_key(path: str, qualname: str, name: str, marker, shape: str) -
     return _key(path, qualname, name, shape, after=text, context={"guard": identity_text(guard)})
 
 
+def _unit_markers_key(path: str, unit, name: str, shape: str) -> str:
+    """A marker added that cannot be told from the others: every marker of the unit on both sides.
+
+    Each is its name, text and recorded guard, and each side's list is
+    sorted, so the key covers no other set of markers before or after.
+    """
+    def side_markers(side) -> list:
+        markers = side.markers if side is not None else ()
+        return _encoded_order([[m.name, *_content(m)] for m in markers])
+
+    return _key(
+        path, unit.qualname, name, shape,
+        context={"unit_markers": {"before": side_markers(unit.before), "after": side_markers(unit.after)}},
+    )
+
+
+def _marker_added_keys(path: str, unit, shapes: dict[str, str]) -> list[str]:
+    """The key of each name in `unit.delta.markers_added`, in that order (#512 Q2).
+
+    Alignment pairs markers on an identity that leaves the guard out (D-019)
+    and records only the names it left unpaired. So the marker it leaves
+    unpaired is not always the one the diff added: a skip inserted above
+    another of the same name pairs with it and leaves that one unpaired. The
+    markers a name added are read by content instead: the head markers of
+    that name whose text and guard no base marker of that name has, in the
+    head side's order. When there are as many of them as the name has
+    findings, each finding binds its own (`_marker_added_key`), in that
+    order. When there are not (a marker of that name was also edited, one
+    moved in from a helper, or alignment paired one with a marker of another
+    name, a decorator whose condition is spelled another way), no finding
+    can be given its own, and each finding of the name binds every marker
+    of the unit on both sides (`_unit_markers_key`). `shapes` maps each
+    name to its findings' shape.
+    """
+    names = unit.delta.markers_added
+    wanted = set(names)
+    held = Counter(
+        (m.name, _content(m)) for m in (unit.before.markers if unit.before is not None else ()) if m.name in wanted
+    )
+    added: dict[str, list] = {name: [] for name in wanted}
+    for m in unit.after.markers:
+        if m.name not in wanted:
+            continue
+        content = (m.name, _content(m))
+        if held[content]:
+            held[content] -= 1
+        else:
+            added[m.name].append(m)
+    findings_of = Counter(names)
+    taken: Counter = Counter()
+    keys = []
+    for name in names:
+        own = added[name]
+        if len(own) == findings_of[name]:
+            keys.append(_marker_added_key(path, unit.qualname, name, own[taken[name]], shapes[name]))
+            taken[name] += 1
+        else:
+            keys.append(_unit_markers_key(path, unit, name, shapes[name]))
+    return keys
+
+
+def _conditions(name: str, side) -> list:
+    """What every marker of that name ran under on one side (`skip_condition`), sorted; null for none."""
+    if side is None:
+        return []
+    return _encoded_order([identity_text(skip_condition(m, side)) for m in side.markers if m.name == name])
+
+
 def _guards(name: str, unit, was: str | None, marker) -> tuple[str | None, str | None]:
     """(guard before, guard after) of a guard made always true, or removed.
 
     Removed: the base condition the message names, and none after. Made
     always true: the guard of the base marker `evidence._mark_weakened_guards`
     compared, under its old name for a skip moved into or out of a helper
-    (#272), and the head marker's. A path gained by an unguarded
-    `collect_ignore` (row 81) has no guard on either side.
+    (#272), and that of the first head marker of the name, which the message
+    names. A path gained by an unguarded `collect_ignore` (row 81) has no
+    guard on either side. The key binds every marker's condition as well
+    (`_conditions`).
     """
     if was is not None:
         return was, None
@@ -114,6 +194,15 @@ def _guards(name: str, unit, was: str | None, marker) -> tuple[str | None, str |
     moved_from = {after: before for before, after in unit.delta.markers_moved}
     old = before_by_name.get(name) or before_by_name.get(moved_from.get(name, ""))
     return (old.guard if old is not None else None), (marker.guard if marker is not None else None)
+
+
+def _described(name: str, role: str) -> tuple[str, str]:
+    """(what the message says, the finding's shape) of a marker of that name added to a file of that role."""
+    kind = marker_kind(name)
+    if role == "conftest" and kind == SKIP_MARK:
+        return _INERT, SHAPE_INERT_MARK
+    what = _UNFOCUSED if name == "test.unfocused" else _WHAT.get(kind, "disabling marker added")
+    return what, SHAPE_COLLECTION_CONTROL if kind in SUITE_KINDS else SHAPE_MARKER_ADDED
 
 
 def _row_texts(rows: Counter) -> list[dict]:
@@ -151,20 +240,19 @@ def _rows_gone(before, after) -> tuple[list[dict], list[dict]]:
 def finding_marker(finding: Finding, unit) -> str | None:
     """The disabling marker a TEST_DISABLED finding reports, or None for one that reports none.
 
-    A marker-added finding is keyed by its marker (`_marker_added_key`). The
-    others report no marker of their own: a unit gone, rows removed, a guard
+    A marker-added finding is keyed by the marker it added. The others
+    report no marker of their own: a unit gone, rows removed, a guard
     weakened or removed. D6 judges the marker a finding reports, not the unit
     it sits on (#208), so this is the one place that reads the name back: it
-    rebuilds the key of each marker the unit added and returns the name whose
-    key is the finding's.
+    rebuilds the key of each marker the unit added, as `detect` builds it
+    (`_marker_added_keys`), and returns the name whose key is the finding's.
     """
     if finding.rule != "TEST_DISABLED" or finding.shape not in (SHAPE_MARKER_ADDED, SHAPE_COLLECTION_CONTROL):
         return None
     if unit is None or unit.delta is None or unit.after is None:
         return None
-    marker_by_name = {m.name: m for m in unit.after.markers}
-    for name in unit.delta.markers_added:
-        key = _marker_added_key(finding.path, unit.qualname, name, marker_by_name.get(name), finding.shape)
+    keys = _marker_added_keys(finding.path, unit, {name: finding.shape for name in unit.delta.markers_added})
+    for name, key in zip(unit.delta.markers_added, keys):
         if key == finding.fingerprint:
             return name
     return None
@@ -206,14 +294,14 @@ def detect(ir: IR) -> list[Finding]:
                 continue
             if unit.delta.markers_added:
                 marker_by_name = {m.name: m for m in unit.after.markers}
-                for name in unit.delta.markers_added:
+                described = {name: _described(name, file.role) for name in unit.delta.markers_added}
+                shapes = {name: shape for name, (_what, shape) in described.items()}
+                keys = _marker_added_keys(file.path, unit, shapes)
+                for name, key in zip(unit.delta.markers_added, keys):
+                    # The evidence is the last head marker of the name, as
+                    # it has always been; the key binds the marker added.
                     m = marker_by_name.get(name)
-                    kind = marker_kind(name)
-                    if file.role == "conftest" and kind == SKIP_MARK:
-                        what, shape = _INERT, SHAPE_INERT_MARK
-                    else:
-                        what = _UNFOCUSED if name == "test.unfocused" else _WHAT.get(kind, "disabling marker added")
-                        shape = SHAPE_COLLECTION_CONTROL if kind in SUITE_KINDS else SHAPE_MARKER_ADDED
+                    what, shape = described[name]
                     findings.append(
                         Finding(
                             rule="TEST_DISABLED",
@@ -223,7 +311,7 @@ def detect(ir: IR) -> list[Finding]:
                             unit=unit.qualname,
                             before=None,
                             after=Evidence(text=m.text, span=m.span) if m else None,
-                            fingerprint=_marker_added_key(file.path, unit.qualname, name, m, shape),
+                            fingerprint=key,
                             shape=shape,
                         )
                     )
@@ -273,7 +361,13 @@ def detect(ir: IR) -> list[Finding]:
                 shape = SHAPE_INERT_MARK if inert else SHAPE_GUARD_WEAKENED
                 # The guard before and after, null when removed: with them in
                 # the key, a guard removed and one made always true are two
-                # keys (#512 Q2; THREATMODEL 54).
+                # keys (#512 Q2; THREATMODEL 54). A removed guard is the first
+                # base condition, the one the message names, and a guard made
+                # always true is read from the last base marker of the name
+                # and the first head one. Several markers can share a name, so
+                # the key also binds what every marker of the name ran under on
+                # each side: removing one of two guards of a name and removing
+                # the other are two keys.
                 guard_before, guard_after = _guards(name, unit, was, m)
                 findings.append(
                     Finding(
@@ -287,6 +381,10 @@ def detect(ir: IR) -> list[Finding]:
                         fingerprint=_key(
                             file.path, unit.qualname, f"guard:{name}", shape,
                             before=guard_before, after=guard_after,
+                            context={"conditions": {
+                                "before": _conditions(name, unit.before),
+                                "after": _conditions(name, unit.after),
+                            }},
                         ),
                         shape=shape,
                     )
