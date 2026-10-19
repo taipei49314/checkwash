@@ -33,9 +33,11 @@ IR instead. Treat standard output that does not parse, or that does not carry
   reject non-ASCII paths and evidence; pass `encoding="utf-8"` instead.
 - Keep standard error. Some facts appear only there: an exemption whose key
   checkwash no longer accepts
-  (`checkwash: <ledger>: ignored exemption: <key>: <reason>`), and a side over
-  the source size limit that no detector read. Assertion-coverage gaps are
-  there too, and in `--coverage-report FILE` and SARIF. An expired exemption is
+  (`checkwash: <ledger>: ignored exemption: <key>: <reason>`), and, up to
+  v0.8.0, a side over the source size limit that no detector read; the next
+  release also lists most of those under `unread`
+  ([unreleased changes](#unreleased-changes-on-main)). Assertion-coverage gaps
+  are there too, and in `--coverage-report FILE` and SARIF. An expired exemption is
   dropped without a message; `checkwash doctor` counts it.
 - Configuration and exemptions are read from the base side of the range, so a
   pull request cannot exempt itself.
