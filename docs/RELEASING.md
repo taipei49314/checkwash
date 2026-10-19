@@ -137,8 +137,12 @@ once the candidate commit is fixed, before step 5.
   its first parent with `check --format json`, once per engine, as the two
   JS/TS runs so far did
   ([results](../benchmarks/javascript-replay/results.md)).
-- **Candidate.** The commit to be tagged, or a commit with the same `src/`
-  tree. If `src/` changes after the comparison, the comparison runs again.
+- **Candidate.** The commit to be tagged, or a commit whose `src/` tree
+  differs from it only in the version string in `src/checkwash/__init__.py`
+  (step 1), which `check --format json` prints only as
+  `run.checkwash_version`. So a candidate frozen before the version bump
+  still counts. If anything else in `src/` changes after the comparison,
+  the comparison runs again.
 - **Where.** This is release verification, so it runs on the EC pool, never
   on LAPTOP-01AGNPJU or LAPTOP-16NUA5I8: EC POLICY `checkwash-pju-sweep`
   (T-546) does not cover release verification.
