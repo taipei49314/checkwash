@@ -15373,7 +15373,7 @@ Implementation (lines at this PR):
 - `_cmd_check` (`cli.py:425-437`) catches `SourceOverLimit` from `_analyse`
   on the verdict diff. The hook-json block comes first, unchanged. Then,
   under `--format json` without `--emit-ir`, `_json_size_refusal`
-  (`cli.py:991-1009`) writes the stderr line `main()` writes for the
+  (`cli.py:991-1010`) writes the stderr line `main()` writes for the
   refusal in every other format (`cli.py:929-933`, `:936-939`), then
   `size_refusal_to_json` (`report/jsonout.py:43-57`), and returns 2.
   Otherwise the exception reaches `main()` as before.
