@@ -10656,8 +10656,12 @@ their own, and no allowlist entry recorded on v0.7.0 needs re-recording:
 - D-138: BROAD_EXCEPT_ADDED with the evidence text
   `catch always-passing assertion`.
 
-Without the sweep, that no existing fingerprint moved rests on the fixtures
-and each round's tests, not on real history.
+When the release was prepared, that no existing fingerprint moved rested on
+the fixtures and each round's tests. The v0.8.0 acceptance sweep (below)
+now bears it out on real history as well: on the 6,168 commits both
+versions analysed, every finding, fingerprint included, is identical. That
+history is in-sample; elsewhere the claim still rests on the fixtures and
+the tests.
 
 **Other changes a user can see,** none of them a frozen contract:
 - Runs that exited 2 now give a verdict: a stand-in source between 30,000 and
@@ -10686,12 +10690,64 @@ and each round's tests, not on real history.
 - PRs #372 and #375 run the composite Action and the quality Action from a
   private, verified runtime (`action/README.md`).
 
-**Sweeps.** None of this release's sweeps has run:
+**Sweeps.** When the release was prepared, none of its sweeps had run:
 `NOT_RUN：工作機規則（POLICY work-machine-local），the owner chose to release first and run the sweeps on the pool after publication (2026-10-15)`.
-That covers the fixed 1,800-commit sweep against v0.7.0 and each round's
-acceptance sweep (D-131 to D-139). So this entry gives no cost figure against
-v0.7.0. The results, including whether D-137's pre-registered fallback
-applies, will be recorded after publication.
+That covered the fixed 1,800-commit sweep against v0.7.0 and each round's
+acceptance sweep (D-131 to D-139). The v0.8.0 acceptance sweep then ran
+after publication, on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546), on 2026-10-15 from 16:34Z to 18:14Z,
+labelled human-authorized local PJU, NOT EC pool. The owner approved its
+manifest (`c5bdcf0b…9ab4`) first. It replays v0.7.0 `d647a65` and v0.8.0
+`f02b5d8` in range mode on 6,354 in-sample commits, in four batches:
+standard (the fixed 1,800-commit set), d088 (1,218 of D-088's 1,263
+commits; the other 45 are in the standard set), targeted (1,536 commits,
+with a 320-commit aiohttp superset) and JS (v0.7.0's 1,800-commit JS/TS
+replay). Its summaries are in checkwash-lab
+`prep/acceptance-sweep-v080-20261016` at `954d802b`, under
+`runs/acceptance-sweep-v080/20261016-pju/`, and the owner ruled on its
+results on 2026-10-16 (「全部照建議」). It compares the release, not any one
+round. D-131 to D-135 and D-139 say their sweeps had not run and point
+here; this paragraph is their record.
+- **Cost against v0.7.0.** On the 6,168 commits both versions analysed,
+  both give 598 block and 5,570 pass, and their findings are identical.
+  The harness compares each finding's rule, severity, path, unit and
+  fingerprint; in the 219 shard results, which are kept on the host, every
+  other field of every finding is identical as well. On the fixed
+  1,800-commit set both block the same 48 commits. Of the 186 commits
+  v0.7.0 refused with exit 2, v0.8.0 analyses 30 and passes them: 27
+  byte-limit refusals now carry the oversized side unread (D-135), and 3
+  aiohttp commits read their symlinked pytest config (D-133). The other
+  156 still exit 2, and v0.8.0 refuses no commit that v0.7.0 analysed. The
+  median time per commit is about 0.2 s slower in each batch (standard
+  3.000 to 3.218 s, d088 4.750 to 4.968 s, targeted 5.563 to 5.781 s, JS
+  2.938 to 3.125 s, with twelve shards in parallel). These are release
+  figures, so they are recorded here and not in any one round's entry.
+- **By round.** D-136, D-137 and D-138 never fired. #345's five aiohttp
+  commits still exit 2, and none of the 53 commits v0.7.0 refused at the
+  stand-in node limit is analysed: 39 stop at the subject-replacement
+  pass's own 30,000-node limit and 14 at the step limit (D-131; #345 stays
+  open). #346 and #415 were accepted and closed on these results; #346's
+  own commit, aiohttp `ce32557b72`, still exits 2, now naming
+  `CHANGES/12621.contrib.rst`, a symlink that is not a pytest config. #414
+  and #416 need worktree or subdirectory runs, which this range-mode replay
+  does not make.
+- **Not run.** No round's change was measured alone. D-131's ruling item 2
+  timings stay as D-131 records them. D-134's real-world rows (Linux
+  `python3 -m venv`, a pnpm workspace, an npm tree over 200,000 files) did
+  not run. For D-136, the targeted set beyond the ten histories of D-088's
+  sets is queued for the combined lab-declared sweep. For D-137, the
+  conftest census is queued there, and real pytest proves only some
+  reporting shapes. For D-138, the issue's pair before the change and the
+  mined literal-in-catch set are waived (the set moves to #513), and the
+  cost of the change alone is derived as 0. For D-139, the subdirectory
+  comparison and the wrong-blob reproduction are queued for the combined
+  sweep (owner ruling 2026-10-19, R14, R15), and #453's own Windows
+  junction and case-checkout legs are not run separately (R39): the
+  case-renamed subdirectory test runs in CI on all three platforms, and a
+  junction, which cannot be committed, ends in the same engine-error
+  branch. D-139's Measurement paragraph, which #416's docs PR writes after
+  the combined sweep (R40), is to record #416's runs and these reasons.
+  Each of D-136 to D-138 gives its own NOT_RUN line.
 
 THREATMODEL: no existing status said "unreleased" for a change since
 v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
@@ -10700,7 +10756,10 @@ v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
 
 The agent wrote this entry in the release PR, beside D-131 to D-139. All of
 those but D-134 come from drafts the maintainer approved on 2026-10-15
-(「照草稿全部核准」); the maintainer approves D-134 and this entry there.
+(「照草稿全部核准」); the maintainer approves D-134 and this entry there. The
+Fingerprints sentence and the Sweeps paragraph were rewritten after
+publication, in the D-131 to D-140 record PR (owner ruling 2026-10-19,
+R33).
 
 ## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
 
