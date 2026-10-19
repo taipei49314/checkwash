@@ -10100,7 +10100,11 @@ status in a place other than `pytest_cmdline_main`.
 
 **Residuals.** 422.Q4's spellings, 422.Q5's recipe combined with a run that
 collects nothing, and interpreter start-up files. The Q4 and Q5 follow-up
-issues had not been filed by 2026-10-15.
+issues had not been filed by 2026-10-15; they were filed on 2026-10-18 as
+#494 and #495. Owner ruling 2026-10-19, R68, narrows #494 to the
+`pytest_cmdline_main`, `pytest_runtestloop` and `pytest_collection`
+short-circuits and clearing `session.items`; the other Q4 spellings stay
+residuals named in THREATMODEL row 127.
 
 **Merge order.** #432's ruling put #432 first. This round was built first,
 and on 2026-10-14 the maintainer accepted it landing first.
@@ -10114,14 +10118,63 @@ real pytest from red to green) and seven fixtures, four positives
 17866 to 17988. `tests/test_conftest_controls.py` gains rows only, under
 422.Q6. Dogfood may warn EXPECTATION_DEFINITION_CHANGED on those rows.
 
-**Sweep.** Not run (D-140): the standard and D-088 sets, a targeted
+**Sweep.** The plan was the standard and D-088 sets, a targeted
 false-positive set (conftests containing `exit`, `quit` or `testsfailed`),
 the tamper positives under real pytest, the refactor and tamper gates, and
-dogfood. Its cost will be recorded after the release.
+dogfood. The v0.8.0 acceptance sweep (D-140) ran after publication. It
+compares v0.7.0 with v0.8.0, so it measures the release, not #450 alone.
+What covers each part (owner rulings 2026-10-18 on #422, and 2026-10-19,
+R3, R5, R8 and R35):
+- **Standard and D-088 sets: run,** in the sweep's standard and d088
+  batches; on the 6,168 commits both versions analysed across all four
+  batches, verdicts and findings are identical, and no result carries a
+  `conftest.runtime.exit.` marker: the new detection never fired. This is
+  the cost the entry was to record after the release: no verdict or
+  finding changed. It is in-sample (D-053), not a false-positive rate.
+- **Refactor and tamper gates:** the pytest suites under `tests/gates/`,
+  which CI's nine test legs run. All nine passed on #450's merge
+  `08b2cfad` (ci run 38695753045), and #450 changed nothing under
+  `tests/gates/`. D-144 cites CI for its gates the same way.
+- **Dogfood:** CI's `dogfood` job passed in the same run.
+- **The tamper positives under real pytest:** five forcing spellings run
+  under real pytest, red to green, with the detector blocking each
+  (`tests/test_issue422_exit_status.py:193-205`), in the same legs. These
+  five are what ran under real pytest; the other forcing spellings are
+  pinned by detector tests only.
+- **The targeted false-positive set, ten histories: run.** D-088's sets
+  hold every commit of the full histories of attrs, click, flask, httpx,
+  rich, starlette, uvicorn, werkzeug, scrapy and requests, as frozen on
+  2026-10-04, that changes a `conftest.py` or a `skip`/`xfail` line in a
+  test file: 895 commits. So every commit of the targeted set in those
+  histories up to that date is among them. The sweep ran the 895, 850 in
+  its d088 batch and 45 in its standard batch; 15 end in exit 2 on both
+  versions and are not measured. The reader never fired on the other 880.
+  How many of them name `exit`, `quit` or `testsfailed` was not counted.
+- **The targeted false-positive set, the rest: queued.** pytest's conftest
+  commits beyond the 368 that D-088 took of its 1,559 conftest or
+  `skip`/`xfail` commits, aiohttp's history, which D-088 did not take, and
+  the ten histories' commits after D-088's freeze. They run in the
+  combined lab-declared sweep as an issue-acceptance batch, on
+  LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546) (R3). The
+  owner approves in two steps (R5): the selection program with this list
+  rule first, then the frozen manifest, with the list's size, and the
+  engine commits. Members are chosen with Git
+  only: the non-merge commits of the twelve histories (the ten, pytest and
+  aiohttp) that add or modify a `conftest.py` whose new content contains
+  `exit`, `quit` or `testsfailed` in any case, less those the v0.8.0 sweep
+  ran. They share one Git-selected list with #432's conftest census
+  (D-137), marked there as this set.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
+  Each block this reader gives there is read from source. A false block
+  reopens #422 (R35) and is fixed through an issue that carries the fix, or
+  recorded here as a known false block with a line in
+  `docs/KNOWN-ISSUES-next.md`. If none fires, this entry says so. The
+  result is added here as #489 added the #421 sweep to D-144 to D-146.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #450's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
+after publication, in the D-131 to D-140 record PR.
 
 ## D-137 (2026-10-15): a conftest that swaps a no-op in for what pytest runs is a runtime control (#432)
 
@@ -10241,7 +10294,8 @@ bodies, async hooks, hooks bound by assignment, class plugins, autouse
 fixtures, call-built or attribute-sourced replacements, computed names,
 `__dict__` writes, subclasses, `sys.modules` lookups, `addTypeEqualityFunc`,
 the 64-path-state cap, and others. The fixture, loop and cross-file follow-up
-issues (432.Q2) had not been filed by 2026-10-15.
+issues (432.Q2) had not been filed by 2026-10-15; they were filed together on
+2026-10-18 as #497.
 
 **Pre-registered fallback** (432.Q4), recorded before the sweep as D-060
 recorded its answer: if the sweep finds an honest block from a callback
@@ -10260,14 +10314,84 @@ matrix cells, honest controls, named residuals and runs of real pytest) and
 additions to `tests/test_issue84_runtime_hooks.py`. The documented count goes
 from 17988 to 18258. No existing expectation or `.gwcase` output changes.
 
-**Sweep.** Not run (D-140): the standard and D-088 sets, conftest-touching
+**Sweep.** The plan was the standard and D-088 sets, conftest-touching
 commits, a conftest census and real-pytest proof of every reporting cell,
-with the gates unchanged (refactor false blocks stay 22/60). Its result, and
-whether the fallback applies, will be recorded after the release.
+with the gates unchanged (refactor false blocks stay 22/60). The v0.8.0
+acceptance sweep (D-140) ran after publication. It compares v0.7.0 with
+v0.8.0, so it measures the release, not #452 alone. What covers each part
+(owner rulings 2026-10-18 on #432, and 2026-10-19, R3, R5, R9, R10, R35
+and R38):
+- **Standard and D-088 sets: run.** For the 6,168 commits both versions
+  analysed, verdicts and findings are identical.
+- **Conftest-touching commits: run, as D-088's sets** (R9). D-088's sets
+  are 1,263 commits: the 895 commits of ten full histories (attrs, click,
+  flask, httpx, rich, starlette, uvicorn, werkzeug, scrapy and requests)
+  that change a `conftest.py` or a `skip`/`xfail` line in a test file, as
+  frozen on 2026-10-04, and 368 of pytest's. The sweep ran 1,218 of them
+  in its d088 batch and the 45 that are also in the standard set in its
+  standard batch. Both versions give identical verdicts and findings. In
+  the 219 shard results, which cover all four batches and both arms, no
+  finding carries the runtime-control message
+  (`suite-level execution/report suppression added`): neither this reader
+  nor #84's fired. 19 commits of the d088 batch end in exit 2 on both
+  versions and are not measured. The plan above lists this set apart from
+  D-088's sets; for the ten histories it is part of them.
+- **What that zero shows.** No conftest in those sets triggered the
+  reader. It does not show that the reading, or the fallback below, holds
+  on real conftests that make these writes: a reader that never fires on a
+  set may only mean the set holds no such write. It is in-sample (D-053),
+  so the false-positive cost on real conftest files that the issue asks for
+  is the census's to measure.
+- **Conftest census: queued** (R10). It runs in the combined lab-declared
+  sweep, and #432 does not wait for it. It replays history rather than
+  scanning the latest conftests: every write in a latest conftest came in
+  through some commit, except one added in a root commit or a merge.
+  Members are the non-merge commits of seven plugin- and unittest-heavy
+  repositories that #432's 2026-10-14 sweep plan names (pytest-asyncio,
+  pytest-django, pytest-timeout, hypothesis, numpy, pandas and twisted),
+  aiohttp, pytest and D-088's ten that change a `conftest.py` whose new
+  content contains `runtest`, `pytest_pyfunc_call`, `TestCase`, or `obj` or
+  `_obj` as a word, less those the v0.8.0 sweep ran. So it covers what the
+  v0.8.0 sweep did not: aiohttp's conftest history, pytest's beyond the
+  368, and the ten histories' commits after D-088's freeze. The list is
+  chosen with Git only and frozen before approval, so its size is known
+  then. D-136's targeted set joins it, with `exit`, `quit` and
+  `testsfailed` added to the same rule. The harness records each member's
+  matching conftest lines, so delegating spellings that never report are
+  seen too. One engine arm that contains #452 is enough. It runs as an
+  issue-acceptance batch on LAPTOP-01AGNPJU under EC POLICY
+  `checkwash-pju-sweep` (T-546), declared by checkwash-lab (R3). The owner
+  approves in two steps (R5): the selection program with the census rule
+  first, then the frozen manifest, with the list's size, and the engine
+  commit. A person judges
+  each new runtime-control finding honest or a cheat, and classes the
+  recorded lines by the delegation spellings they show. Until it runs, the
+  combined sweep's declaration and #497 track it.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
+- **Real pytest** (R38). CI's nine test legs run four reporting shapes
+  (`item.runtest`, class-level `runtest`, `assertEqual` and
+  `_callTestMethod`) and two delegating controls under real pytest
+  (`tests/test_issue432_noop_replacement.py:465-484`). 432.Q7's fixture PR
+  (#508) is to add a fifth: a hollow `item.obj` followed by a delegating
+  `item.runtest`, the case per-attribute keys exist for, so far pinned at
+  the detector by `test_each_attribute_is_its_own_effect`. The other
+  reporting cells of the spelling matrix are pinned by detector tests only;
+  the owner ruled not to prove each under real pytest.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），the other reporting cells under real pytest, waived by the owner (R38)`.
+- **Gates.** The refactor and tamper gates passed in all nine test legs on
+  #452's merge `5b571aa9` (ci run 38709970776), and #452 changed nothing
+  under `tests/gates/`, so their results are unchanged.
+- **The pre-registered fallback** was not triggered in the sets that ran,
+  because no block came from this reader there. Whether it applies is the
+  census's to show. If the census finds an honest block from a callback
+  replacement that calls something, #432 reopens (R35) and the callback
+  proof narrows as registered, through an issue filed then. Any other
+  honest block goes to the owner with the case.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #452's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
+after publication, in the D-131 to D-140 record PR.
 
 ## D-138 (2026-10-15): in JS/TS, a catch assertion proved to always pass is not inspection, refining D-015 (#431)
 
@@ -10339,8 +10463,13 @@ residuals):
   swallowing catch in the same test file, and an old empty catch cannot
   offset a new literal-only one. The cost: adding an always-passing assertion
   to a catch that already swallows reports the new text.
-- **Literal spellings follow #429's always-pass helper,** keyed on the
-  evaluated outcome, never on the TAUTOLOGY strength rating.
+- **The literal, message-argument and self-comparison spellings are
+  #513's** (P2; owner ruling 2026-10-19, R37). 431.Q5 (a') expected them
+  to close through a shared constant-truth helper added by #429. #429 rates
+  the literal ones TAUTOLOGY (D-147) but added no such helper, and no
+  ruling connects its literal-only folder (D-148) to this proof. #513 is
+  to prove them on the evaluated outcome, never on the TAUTOLOGY strength
+  rating; until it lands they keep the exemption.
 
 **Fingerprints.** A BROAD_EXCEPT_ADDED fingerprint is its rule, path and
 evidence text. `catch assertion` is exactly v0.7.0's set, so a finding with
@@ -10356,7 +10485,7 @@ truthiness (`expect(1).toBeTruthy()`); chai BDD, AVA `t.true(true)` and tap
 guarded assertion fails (`expect(e).toBeDefined()`), and assertions on
 unrelated always-true state; equal-count exchange of two sites with the same
 text; and the Python counterpart. The Python issue (431.Q2) had not been
-filed by 2026-10-15.
+filed by 2026-10-15; it was filed on 2026-10-18 as #496.
 
 **Tests.** `tests/test_issue431_js_catch_literal.py` (70 collected items:
 #401's labels without the catalog-bound test, the IR check made relative,
@@ -10367,16 +10496,69 @@ regenerated. The documented count goes from 18258 to 18330. The #363
 controls and the four v0.7.0 `js_catch_*.gwcase` fixtures keep their
 results; no existing expectation changes.
 
-**Sweep.** Not run (D-140): the issue's pair before this change (expected to
+**Sweep.** The plan was the issue's pair before this change (expected to
 pass) and with it (expected to block); the standard and D-088 sets, byte for
 byte; #212's JS/TS replay transitions; a targeted mined set of
 literal-in-catch commits, including the exchange population and the cost of
 literals added to swallowing catches; the refactor benchmark, unchanged; and
-the JS/TS cost delta.
+the JS/TS cost delta. The v0.8.0 acceptance sweep (D-140) ran after
+publication. It compares v0.7.0 with v0.8.0, so it measures the release,
+not #449 alone. Each part is now run, derived as 0 or waived (owner rulings
+2026-10-19, R11, R12 and R36):
+- **Run.** In the sweep: the standard and D-088 sets, and the JS batch,
+  v0.7.0's 1,800-commit JS/TS replay (300 commits from each of six
+  repositories), the nearest run to "#212's JS/TS replay transitions".
+  Findings and verdicts are identical on the commits both versions
+  analysed: 6,168 in all, 1,773 of them in the JS batch, where 25 more went
+  from a v0.7.0 engine error to a v0.8.0 pass and 2 exit 2 on both. The new
+  text appears in no result. The record says identical findings and
+  verdicts, not "byte for byte" as planned: the JSON output names the
+  engine version, so no row's output bytes match across the two versions.
+  In CI on #449's merge `03ebcc1b`: the issue's pair with this change
+  (`js_catch_always_passing_literal_pos.gwcase`, which blocks) and the
+  refactor benchmark (`tests/gates/test_refactor_corpus.py`) passed in all
+  nine test legs (ci run 38714509787), and #449 changed nothing under
+  `tests/gates/`; the verdict gate passed (run 38714509780).
+- **Derived as 0: the JS/TS cost of this change alone** (R12). In the JS
+  batch v0.8.0 analysed 1,798 commits, and neither version reports any
+  BROAD_EXCEPT_ADDED on them. #449 only adds findings with the new text, so
+  its cost on those commits is 0 findings and 0 verdict changes. Against
+  v0.8.0 without #449 this follows exactly; against v0.7.0 with #449 it
+  rests on reading. The other 2 commits are refused on both versions
+  before analysis (a symlink the snapshot refuses), where #449 cannot act.
+  It holds for these 1,798 in-sample commits only (D-053, D-128); a
+  held-out false-positive rate stays #212's. It was derived by reading the
+  code and the harness's result files (POLICY `work-machine-local` item
+  (4)); nothing was run for it. The shard results it rests on are kept on
+  LAPTOP-01AGNPJU; checkwash-lab archives only the batch aggregates, which
+  hold no per-rule counts.
+- **Waived by the owner** (R36, R11; 「裁決總表全部照建議」, "the ruling
+  list, all as recommended"; the reply was a button whose text the
+  assistant wrote):
+  - the issue's pair before this change, expected to pass. That it passed
+    before rests on reading: v0.7.0 exempts a catch that reaches any
+    resolved assertion. The pair with the change is pinned in CI:
+    `test_issue_pair_reports_the_always_passing_text` asks for
+    `catch always-passing assertion`, a text v0.7.0 cannot produce. Main's
+    CI runs the same exemption path on every push for the spellings still
+    exempt (`tests/test_issue431_js_catch_literal.py:110-131`), though not
+    on the issue's pair itself, so row 129's statement that the literal
+    turned #363's block into a pass rests on reading for that pair.
+  - the targeted mined set of literal-in-catch commits, with the exchange
+    population and the cost of literals added to swallowing catches. #449
+    leaves the `catch assertion` set as it was, and the JS batch holds no
+    BROAD_EXCEPT_ADDED on either version, so that sample could not show
+    either spelling. The mined set moves to #513's sweep plan; until then
+    how often the two spellings occur in real history is unknown.
+
+  `NOT_RUN：工作機規則（POLICY work-machine-local），waived by the owner (R36, R11)`.
+  Neither is recorded as passed.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #449's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record and the
+pointer to #513 were added after publication, in the D-131 to D-140 record
+PR.
 
 ## D-139 (2026-10-15): commands read the repository from its root (#416)
 
@@ -10485,8 +10667,12 @@ their own, and no allowlist entry recorded on v0.7.0 needs re-recording:
 - D-138: BROAD_EXCEPT_ADDED with the evidence text
   `catch always-passing assertion`.
 
-Without the sweep, that no existing fingerprint moved rests on the fixtures
-and each round's tests, not on real history.
+When the release was prepared, that no existing fingerprint moved rested on
+the fixtures and each round's tests. The v0.8.0 acceptance sweep (below)
+now bears it out on real history as well: on the 6,168 commits both
+versions analysed, every finding, fingerprint included, is identical. That
+history is in-sample; elsewhere the claim still rests on the fixtures and
+the tests.
 
 **Other changes a user can see,** none of them a frozen contract:
 - Runs that exited 2 now give a verdict: a stand-in source between 30,000 and
@@ -10515,12 +10701,64 @@ and each round's tests, not on real history.
 - PRs #372 and #375 run the composite Action and the quality Action from a
   private, verified runtime (`action/README.md`).
 
-**Sweeps.** None of this release's sweeps has run:
+**Sweeps.** When the release was prepared, none of its sweeps had run:
 `NOT_RUN：工作機規則（POLICY work-machine-local），the owner chose to release first and run the sweeps on the pool after publication (2026-10-15)`.
-That covers the fixed 1,800-commit sweep against v0.7.0 and each round's
-acceptance sweep (D-131 to D-139). So this entry gives no cost figure against
-v0.7.0. The results, including whether D-137's pre-registered fallback
-applies, will be recorded after publication.
+That covered the fixed 1,800-commit sweep against v0.7.0 and each round's
+acceptance sweep (D-131 to D-139). The v0.8.0 acceptance sweep then ran
+after publication, on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546), on 2026-10-15 from 16:34Z to 18:14Z,
+labelled human-authorized local PJU, NOT EC pool. The owner approved its
+manifest (`c5bdcf0b…9ab4`) first. It replays v0.7.0 `d647a65` and v0.8.0
+`f02b5d8` in range mode on 6,354 in-sample commits, in four batches:
+standard (the fixed 1,800-commit set), d088 (1,218 of D-088's 1,263
+commits; the other 45 are in the standard set), targeted (1,536 commits,
+with a 320-commit aiohttp superset) and JS (v0.7.0's 1,800-commit JS/TS
+replay). Its summaries are in checkwash-lab
+`prep/acceptance-sweep-v080-20261016` at `954d802b`, under
+`runs/acceptance-sweep-v080/20261016-pju/`, and the owner ruled on its
+results on 2026-10-16 (「全部照建議」). It compares the release, not any one
+round. D-131 to D-135 and D-139 say their sweeps had not run and point
+here; this paragraph is their record.
+- **Cost against v0.7.0.** On the 6,168 commits both versions analysed,
+  both give 598 block and 5,570 pass, and their findings are identical.
+  The harness compares each finding's rule, severity, path, unit and
+  fingerprint; in the 219 shard results, which are kept on the host, every
+  other field of every finding is identical as well. On the fixed
+  1,800-commit set both block the same 48 commits. Of the 186 commits
+  v0.7.0 refused with exit 2, v0.8.0 analyses 30 and passes them: 27
+  byte-limit refusals now carry the oversized side unread (D-135), and 3
+  aiohttp commits read their symlinked pytest config (D-133). The other
+  156 still exit 2, and v0.8.0 refuses no commit that v0.7.0 analysed. The
+  median time per commit is about 0.2 s slower in each batch (standard
+  3.000 to 3.218 s, d088 4.750 to 4.968 s, targeted 5.563 to 5.781 s, JS
+  2.938 to 3.125 s, with twelve shards in parallel). These are release
+  figures, so they are recorded here and not in any one round's entry.
+- **By round.** The new detections of D-136, D-137 and D-138 never fired.
+  #345's five aiohttp commits still exit 2, and none of the 53 commits
+  v0.7.0 refused at the stand-in node limit is analysed: 39 stop at the
+  subject-replacement pass's own 30,000-node limit and 14 at the step limit
+  (D-131; #345 stays open). #346 and #415 were accepted and closed on these
+  results; #346's own commit, aiohttp `ce32557b72`, still exits 2, now
+  naming `CHANGES/12621.contrib.rst`, a symlink that is not a pytest
+  config. #414 and #416 need worktree or subdirectory runs, which this
+  range-mode replay does not make.
+- **Not run.** No round's change was measured alone. D-131's ruling item 2
+  timings stay as D-131 records them. D-134's real-world rows (Linux
+  `python3 -m venv`, a pnpm workspace, an npm tree over 200,000 files) did
+  not run. For D-136, the targeted set beyond the ten histories of D-088's
+  sets is queued for the combined lab-declared sweep. For D-137, the
+  conftest census is queued there, and real pytest proves only some
+  reporting shapes. For D-138, the issue's pair before the change and the
+  mined literal-in-catch set are waived (the set moves to #513), and the
+  cost of the change alone is derived as 0. For D-139, the subdirectory
+  comparison and the wrong-blob reproduction are queued for the combined
+  sweep (owner ruling 2026-10-19, R14, R15), and #453's own Windows
+  junction and case-checkout legs are not run separately (R39): the
+  case-renamed subdirectory test runs in CI on all three platforms, and a
+  junction, which cannot be committed, ends in the same engine-error
+  branch. D-139's Measurement paragraph, which #416's docs PR writes after
+  the combined sweep (R40), is to record #416's runs and these reasons.
+  Each of D-136 to D-138 gives its own NOT_RUN line.
 
 THREATMODEL: no existing status said "unreleased" for a change since
 v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
@@ -10529,7 +10767,42 @@ v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
 
 The agent wrote this entry in the release PR, beside D-131 to D-139. All of
 those but D-134 come from drafts the maintainer approved on 2026-10-15
-(「照草稿全部核准」); the maintainer approves D-134 and this entry there.
+(「照草稿全部核准」); the maintainer approves D-134 and this entry there. The
+Fingerprints sentence and the Sweeps paragraph were rewritten after
+publication, in the D-131 to D-140 record PR (owner ruling 2026-10-19,
+R33).
+
+That record PR is #523. The maintainer approved its maintainer text
+(A4–A7) on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval
+list as recommended"), in reply to the agent's list of the approvals the
+open PRs needed before merging. For this PR: A4 approved, as committed,
+the wording of the seven commits it named: 166e3362 (D-136), 55d0ac80
+(D-137), 22a14c5c (D-138), 07c3409f (this entry), 0f86f0c3 (D-136, D-137
+and this entry), cff623a9 (D-136 and D-137) and faea08da (THREATMODEL row
+129); A5 kept the two commits beyond R33's list, the follow-up issues
+named in the Residuals of D-136 to D-138 (281f7d0d) and R68's narrower
+scope for #494 in D-136 (a34141d4); A6 kept the not-run lines of D-131 to
+D-135 and D-139 as they are, with this entry's Sweeps paragraph as their
+record; A7 accepted the readings: R39 as one sentence here,
+KNOWN-ISSUES-v0.8.0 row 29 also pointing to #496, and the reopen triggers
+combining R35 with R8 and R10.
+
+The agent wrote the paragraph above in 17e33402, after that reply. The
+maintainer approved it later on 2026-10-19 with 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended"), in reply to the agent's
+second list of approvals the open PRs needed. For this PR: B3 approved
+that paragraph with the two corrections it named, made in the commit that
+adds this one: "approved it" became "approved its maintainer text
+(A4–A7)", and A6 names the not-run lines of D-131 to D-135 and D-139,
+since D-139 has no "Not run (D-140)" line. The same commit gives A4's
+scope as the commits A4 named; the paragraph had listed text in them that
+A4's question did not name, the D-138 #513 pointer and this entry's
+Fingerprints sentence among it. B22 approved correcting D-136's
+standard and D-088 bullet to say that those sets ran in the sweep's
+standard and d088 batches, and that only the 6,168 commits both versions
+analysed span all four batches (74153a3b). This paragraph was written
+after that reply. Each reply was a button whose text the agent wrote,
+which the owner chose.
 
 ## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
 
