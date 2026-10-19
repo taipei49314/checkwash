@@ -837,14 +837,25 @@ passes with zero findings.
 The known case is undici's Web Platform Tests record,
 `test/web-platform-tests/expectation.json`. Its runner:
 
-- compares each subtest with its recorded `success`;
+- is written to compare each subtest with its recorded `success`, and to
+  fail the run when they differ;
 - does not compare a case marked `flaky`, and does not run a file marked
   `skip`;
 - writes the file back from the results it observed.
 
-So marking a newly failing subtest `success: false` or `flaky: true`, or its
-file `skip`, makes a failing run pass. Breaking a subtest, running the suite
-and committing the rewritten file is enough.
+By reading, that comparison fails no run today. The runner diffs the record
+with jsondiffpatch and keeps only properties named `success`
+(`test/web-platform-tests/wpt-runner.mjs:818-825` at undici `5550222761`,
+unchanged at `e8f34234d1`). jsondiffpatch applies that filter at every
+depth, so the top-level directory keys are dropped too, the diff is always
+empty, and a changed result never fails the step.
+`NOT_RUN：工作機規則（POLICY work-machine-local），read from undici's and jsondiffpatch's source; nothing was run`.
+
+So marking a newly failing subtest `success: false` or `flaky: true` hides
+the regression in the record, and marking its file `skip` stops that file
+from running at all. If undici fixes the comparison, the same edit would
+also turn a failing run into a passing one. Breaking a subtest, running the
+suite and committing the rewritten file is all it takes.
 
 How checkwash treats the file depends on its size:
 
@@ -856,10 +867,17 @@ How checkwash treats the file depends on its size:
 
 Either way the change passes. Review the diff of such a file by hand.
 
-A detector for this one format, recognised by its path and shape, is
-planned. It would report a subtest recorded as passing that no longer is,
-and a file newly marked `skip` or `flaky`. It waits for a ruling on reading
-the format past the size limit, and for a pool sweep of its cost (#468).
+No detector for this format is scheduled (D-160). One, recognised by the
+file's path and shape, would report a subtest recorded as passing that no
+longer is, and a file newly marked `skip` or `flaky`. Building it would
+first take a ruling that lets checkwash read this format past 1,000,000
+bytes, including the limit to use, then a new rule ID and a pool sweep of
+its cost. #468 closes with this documentation and is reopened if someone
+reports a cheat in this file, if undici fixes its runner's comparison so
+that the file gates CI, or if the size limit is ruled on for another
+reason. Another runner's format does not reopen #468: a planned fix for it
+gets its own issue, and one with no fix scheduled is added to this limit's
+THREATMODEL row.
 
 ## Make unrepresented assertion candidates visible
 
