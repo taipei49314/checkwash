@@ -65,6 +65,13 @@ The missed cheats [#423](https://github.com/taipei49314/checkwash/issues/423),
 [#426](https://github.com/taipei49314/checkwash/issues/426) and
 [#433](https://github.com/taipei49314/checkwash/issues/433) are deferred
 until after 1.0 ([#504](https://github.com/taipei49314/checkwash/issues/504)).
+So is [#278](https://github.com/taipei49314/checkwash/issues/278), which
+this page did not list at release: checkwash does not read pytest 9's
+native `[tool.pytest]` table in `pyproject.toml`, so a new `pyproject.toml`
+whose native table narrows collection, or a `-m` selector added to an
+existing native table, passes with only `CI_WORKFLOW_TOUCHED` at warn
+(#278's runs at `6e4f5ef`, before v0.8.0). Review changes to that table by
+hand.
 
 ## Status of the v0.7.0 known issues
 
