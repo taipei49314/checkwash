@@ -12780,8 +12780,8 @@ loop, a `match` or a `try`'s handler, `else` or `finally` gives no
 producer, to SPEC §5, THREATMODEL row 137 and `docs/assertion-coverage.md`,
 one sentence each (C3); and accept the credit row's three values as the
 agent chose them, its date becoming the merge date (C4). e4397e07,
-220e244a, d2439e2b, 61c3916f, ee19dbd9 and 96fd4c80 make those changes;
-the date changes when the PR merges. The list quoted the row's
+220e244a, d2439e2b, 61c3916f, ee19dbd9, 96fd4c80 and f1e1d181 make those
+changes; the date changes when the PR merges. The list quoted the row's
 `threatmodel_row` as "93"; the file has "93, 137", unchanged here, with
 137 following the row's number at merge. The reply was a button whose
 text the agent wrote, which the owner chose. The round-3 list did not show
