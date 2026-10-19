@@ -221,7 +221,18 @@ digits, as in JavaScript (#196 190.3). unittest passes `places=p` when
 `abs(x - c) < 0.01` -> `delta=0.01` the same bound, so neither is reported. A
 relative tolerance (`rel=`, `pytest.approx`'s default) states no absolute
 bound, so a bound rewritten into one is still compared as new slack, and so
-is a pair with several tolerances at once. A negated comparison
+is a pair with several tolerances at once. One instance
+([#434](https://github.com/taipei49314/checkwash/issues/434) C): a bare
+`pytest.approx(20.0)` records its default `rel=1e-06`, so `approx(20.0)` ->
+`approx(20.0, abs=1e-9)` reads as an `abs=` tolerance that was not there
+before, and reports a loosening. By pytest's documentation an `abs=` without
+`rel=` replaces the default relative tolerance, so for 20.0 the bound shrinks
+from 2e-5 to 1e-9; for `approx(0.0)` the same rewrite is a real loosening,
+from 1e-12 to 1e-9. A `pytest.approx` comparison records no subject either,
+so two of them in one test pair in span order: tighten one and insert another
+above it, and the old check is paired with the inserted one, which reads as
+new slack against another kind or, against a wider value of the same kind,
+as a loosening of the wrong pair. A negated comparison
 (`assertNotAlmostEqual`, `!=` or `not` around `approx`) passes when the
 values are far apart, so its tolerance orders the other way: it records no
 tolerance, as in JavaScript, and a change of it is unknown rather than read
@@ -359,6 +370,74 @@ never mild), and one such call replaced by another is not reported. A call
 through an alias of `self.assertEqual` is not read as an assertion at all.
 The source tests are in
 [`tests/test_issue462_keyword_operands.py`](../tests/test_issue462_keyword_operands.py).
+
+### Python assertions paired by subject
+
+Alignment pairs a test's old assertions with its new ones by identical text,
+then by form and subject, and pairs what is left in span order. Issue
+[#434](https://github.com/taipei49314/checkwash/issues/434) showed what span
+order did to a precondition written above a rewritten oracle:
+`assert area(4, 5) == 20.0` rewritten as `result = area(4, 5)`,
+`assert isinstance(result, float)`, `assert result == 20.0` paired the old
+`==` with the `isinstance` and blocked as EXACT_VALUE(90) -> TYPE_SHAPE(50),
+while the same two lines in the other order passed
+([#457](https://github.com/taipei49314/checkwash/issues/457) is a real
+commit of that shape).
+
+In Python, among a test's own assertions, an old assertion left for the span
+order now first takes a new one that checks the same subject: the same
+expression read in the same context, written out, or through a local name
+bound by one plain `name = <expr>` statement. Among those, the same form
+comes first, then at least the old strength, then span order; with none, span
+order decides as before. So a precondition (`isinstance(result, float)`,
+`result is not None`) above the rewritten `assert result == 20.0` is only
+added, and the rewrite is read as the rename it is. A weakening that still
+checks the old subject takes the old assertion's place before a decoy of the
+old expectation on another subject, in either order: `assert total(items) ==
+105.3` -> `assert subtotal(items) == 105.3` and `assert total(items) > 0`
+blocks as EXACT_VALUE(90) -> BOUND(40), where the decoy written first used to
+pass.
+
+A local name stands for its expression only when every binding of it in the
+test is the single target of an `=`, exactly one of them reaches the
+assertion, no conditional one follows it, and the assertion is in the test's
+own body, not in a function nested in it. A test parameter, a `global` or
+`nonlocal` name, and a name also bound by an augmented, annotated, tuple or
+chained assignment, a walrus, a `for`, `with` or `except` target, an import,
+a `def`, a `class`, a match capture or `del` are read as written. The names
+the expression reads must have the same bindings on both sides, so
+`items = [1, 2]` -> `items = [1, 3]` makes `total(items)` another subject.
+
+A bare `pytest.raises(E)`, `pytest.warns(W)` or `raises(E)` removed beside a
+newly written call that only adds `match=` (the same callee, the same
+expected types, a name or a tuple of names, and the same other keywords) is
+paired with it, since a `match=` checks the same raise more strictly. Another
+expected type (`ValueError` -> `Exception`, #423's widening), another callee
+(`pytest.warns` -> `pytest.raises`) or a dropped `match=` is no pair, and
+the old call reads as removed. Where an excinfo assert folded into `match=`
+takes the new call first (`raises_match_fold_neg`), the bare call still reads
+as removed, at warn, and the finding says the raise is still checked by the
+new call.
+
+Not read this way:
+
+- A new oracle that checks another subject against another expectation:
+  #457's `assert mock_lock in locks` -> `assert lock.lock.entity_id ==
+  LOCK_1_ENTITY_ID` still pairs with the precondition before it and blocks.
+  A credit that passed it would also pass an exact check rewritten as a wide
+  approx beside one unrelated strong assertion. A reviewed rewrite takes a
+  reviewed exemption.
+- An expectation moved into a local in the same edit (`expected = 20.0`,
+  `assert result == expected`): the pair is the rename's, and
+  ASSERT_SUBSTITUTED reads the literal against the name as both halves moved,
+  in either order.
+- A restatement that never runs (under a runtime `if`, or after the raising
+  call inside `with pytest.raises`) is read like any other assertion, as an
+  unchanged assertion in that place always was.
+
+The end-to-end shapes are the `subject_pairing_*` and `raises_match_*`
+fixtures, and the source tests are in
+[`tests/test_issue434_subject_pairing.py`](../tests/test_issue434_subject_pairing.py).
 
 ### chai expect chains and the assert interface
 
