@@ -12731,3 +12731,18 @@ corrected in this PR, within the SPEC §5 wording (A78). a8810511,
 bad234b4, a489a067, fff04c1d, 22dc8f64, 16b6832b and f853630b make those
 changes. The reply was a button whose text the agent wrote, which the
 owner chose.
+
+The maintainer approved further text and changes on 2026-10-19:
+「第二輪核可全部照建議」, "the round-2 approval list, all as recommended",
+in reply to the agent's round-2 list, whose recommended answers for this
+PR were: the Measurement paragraph's reading of the analysis's §4.4
+report-only arms as never-merged counterfactual engine commits on
+checkwash-lab, under R4 (16b6832b; B10); and a fixture written the
+reporter's way, `fixture_producer_annotated_class_methods_neg`, with
+`credit: @talhayme (#471)` in its header, the same credit on the cases
+built from his report, his row in `benchmarks/external-credits.json`, the
+test count raised for it, and GLM's two findings (F-1, a lambda's
+parameter; F-2, a single conditional `return`) fixed by the readings
+already approved, with pins for each (B24). 9755fb4a, 420795e7, ad1c02aa,
+fab761b1 and 034e517e make those changes. The reply was a button whose
+text the agent wrote, which the owner chose.
