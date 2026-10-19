@@ -12623,15 +12623,27 @@ reading, the documented test count becomes 19497 (19475 + 22); CI's
 collection checks it.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and from Git's; no test, checkwash run or sweep was run`.
 
-The agent wrote this entry in #500's fix PR #517. The maintainer approved
-it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
-recommended", in reply to the agent's approval list, whose recommended
-answers for this PR were: the SPEC §4c (bd2043cf) and D-158 (02b47bf5,
-ecebc2b1) wording as committed (A35); readings 1, 2 and 4 to 6 accepted
-(A36); reading 3, a task path that names a base submodule exactly, kept a
+The agent wrote this entry in #500's fix PR #517. On 2026-10-19 the
+maintainer replied 「PR 核可清單全部照建議」, "the whole PR approval list
+as recommended", to the agent's approval list, whose recommended answers
+for this PR were: the SPEC §4c (bd2043cf) and D-158 (02b47bf5, ecebc2b1)
+wording as committed (A35); readings 1, 2 and 4 to 6 accepted (A36);
+reading 3, a task path that names a base submodule exactly, kept a
 residual in KNOWN-ISSUES-next rather than refused (A37); THREATMODEL row
 18 unchanged, with the residual left in KNOWN-ISSUES-next and this entry
 (A38); and both departures accepted, the KNOWN-ISSUES-next #500 row
 (c3ecd099, c85a55f6) and the CLI symlink test's base `ci` entry written
-as a mode-120000 blob through `update-index` (A39). The reply was a
-button whose text the agent wrote, which the owner chose.
+as a mode-120000 blob through `update-index` (A39). None of them covers
+what the agent wrote afterwards, in 0d8b4e5d: this closing paragraph,
+and the two sentences above that had left a point to the owner, the
+readings heading and the THREATMODEL row 18 sentence, which now say what
+the owner decided. The maintainer approved that text later on 2026-10-19
+with 「第二輪核可全部照建議」, "the round-2 approval list, all as
+recommended", whose item B3 approves together the sentences that write
+an already approved option into the documents or turn a point left to
+the owner into a decided one, this entry's approval record and those two
+sentences among them. Each reply was a button whose text the agent
+wrote, which the owner chose. Neither list covers 2a0de639, which
+corrects the KNOWN-ISSUES-next #500 row's `doctor` sentence to "5
+seconds per query (about 10 seconds from a subdirectory)", as this entry
+says "per query".
