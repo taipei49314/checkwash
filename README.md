@@ -163,7 +163,15 @@ aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension. A root
 `poetry.lock` or `uv.lock` that large at the base is skipped with a note; a
 root `pyproject.toml` or `requirements*.txt` that large at the base stops
-every run with exit 2, naming it.
+every run with exit 2, naming it. The Claude Code Stop hook (`--format
+hook-json`) reports an engine error as a non-blocking "not analysed" message.
+From the next minor (unreleased), when the run stops on a file the hook's diff
+changes and that file's working-tree side is over the limit, the hook blocks
+the stop instead, naming the file and asking to shrink, split or revert it
+([#456](https://github.com/taipei49314/checkwash/issues/456)). A file whose
+base side alone is over the limit, a root manifest over it at the base, and a
+padded file committed before the stop keep the message; the full list is in
+[subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/subject-integrity.md).
 
 Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
@@ -302,5 +310,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 19450 tests in the current source tree.
+Alpha pre-release. 22 detectors, 19475 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

@@ -12,7 +12,9 @@ is not `--repo` itself (#416). `hook install` writes under `--repo` as given.
 
 Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error. `check --format
 hook-json` exits 0 on a verdict and on an engine error: its JSON carries a
-block, or the engine error as a non-blocking `systemMessage` (#414). With
+block, or the engine error as a non-blocking `systemMessage` (#414). One
+engine error blocks there instead: a size refusal of a path in the verdict
+diff whose head or worktree side is over the limit (#456). With
 `--hook-input stdin` (the managed Stop hook) it also reads the session's start
 from what `hook session-start` (the managed SessionStart hook) recorded, which
 prints nothing and always exits 0 (#418).
@@ -30,6 +32,7 @@ from dataclasses import dataclass
 
 from checkwash import __version__
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
+from checkwash.change import SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
@@ -386,7 +389,18 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
     readers = {"head_reader": head_reader, "head_searcher": head_searcher,
                "root_snapshot": root_snapshot, "pytest_configs": pytest_configs}
-    run = _analyse(args, changes, config_side, base_label=base_label, head_label=head_label, **readers)
+    try:
+        run = _analyse(args, changes, config_side, base_label=base_label, head_label=head_label, **readers)
+    except SourceOverLimit as exc:
+        # Only a head or worktree side of the verdict diff blocks the stop
+        # (#456); the session-commits analysis keeps its note. Any other size
+        # refusal reaches main()'s #414 path, as every other engine error does.
+        side = _verdict_side_over_limit(changes, exc.unread) if _hook_json(args) else None
+        if side is None:
+            raise
+        # The stderr line every format writes; never on stdout ahead of the JSON.
+        _advise(f"checkwash engine error: {type(exc).__name__}: {exc}\n")
+        return _hook_size_block(side)
     if isinstance(run, int):
         return run
     ir, findings, verdict, config = run.ir, run.findings, run.verdict, run.config
@@ -896,6 +910,8 @@ def _hook_not_analysed(detail: str) -> int:
     `check --format hook-json` exits 0 with a JSON payload whose
     `systemMessage` tells the user the change was not analysed and why, and
     carries no `decision`, so the agent may stop. Every other mode keeps 2.
+    The one engine error that blocks the stop instead is `_hook_size_block`'s
+    (#456).
     """
     import json as _json
 
@@ -903,6 +919,52 @@ def _hook_not_analysed(detail: str) -> int:
                f"Engine error: {detail}")
     try:
         _write_machine(_json.dumps({"systemMessage": message}, ensure_ascii=False, sort_keys=True) + "\n")
+    except (OSError, ValueError):
+        return 2
+    return 0
+
+
+def _verdict_side_over_limit(changes: list, refused: UnreadSide) -> UnreadSide | None:
+    """The head or worktree side over the limit of the change `refused` is from (#456).
+
+    `changes` is the diff that decides the verdict. A refusal names one side
+    of a change in it, its first unread side and so the base side when both
+    are, so the change is judged on all its unread sides. A side the diff
+    does not hold, such as a context read of an unchanged file, matches no
+    change, and a change with only its base side over the limit has no such
+    side: the session's edit did not make it, and reverting would restore
+    the oversized original. Both are None. (A root manifest, config,
+    exemption list or task file that `_analyse` reads first refuses with a
+    `GitSourceOverLimit`, a `GitError`, which never reaches here; a base side
+    the engine reads for a change in the diff does, and is judged as that
+    change is.)
+    """
+    for change in changes:
+        if refused in change.unread:
+            return next((side for side in change.unread if side.side in ("head", "worktree")), None)
+    return None
+
+
+def _hook_size_block(side: UnreadSide) -> int:
+    """The hook-json block for a size refusal of the change itself (#456).
+
+    A path in the verdict diff that the analysis must read has its head or
+    worktree side over the source byte limit, so the change was not
+    analysed. That side is usually the session's own edit, and one edit
+    removes it, so unlike the other engine errors (#414) it blocks the stop,
+    on every stop, as a finding does. No exemption covers a refusal, so the
+    reason does not offer `checkwash allow`. It does not say what CI makes of
+    the change: that depends on the CI's version, and an untracked file never
+    reaches CI. Every other mode keeps exit 2.
+    """
+    import json as _json
+
+    reason = ("checkwash: this change was not analysed, so the stop is blocked. A file checkwash must "
+              f"read is over the source byte limit: {side.described()}. Shrink or split the file, or "
+              "revert your change to it. Do not delete or truncate a file you did not create or change "
+              "in this task; tell the user instead.")
+    try:
+        _write_machine(_json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False, sort_keys=True) + "\n")
     except (OSError, ValueError):
         return 2
     return 0
