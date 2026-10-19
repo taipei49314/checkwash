@@ -39,7 +39,12 @@ the body of a `while` whose condition folds to false and of a `for` over a
 constant-empty iterable, the cases of a `match` no case can meet, and the
 handlers of a `try` whose body cannot raise. A condition the folder cannot
 decide (`if os.environ.get("X"):`) leaves the def a live unit with no marker,
-a named residual, as #484's ruling leaves its JS/TS form.
+a named residual, as #484's ruling leaves its JS/TS form. Two readings still
+take a dead class statement as its name's binding, as on main, both named
+residuals: `_Walk.resolve` gives a module-level `Cls.attr = ...`,
+`del Cls.attr`, `setattr` or `delattr` to the latest class statement of that
+name before it, dead or not, and Q9's `_Judge.current` resolves a subclass's
+base the same way.
 
 Not read, and named as residuals by THREATMODEL row 135: computed names,
 `exec`, star imports, `sys.modules` replacement, `global` in a function that
