@@ -11449,6 +11449,17 @@ asking for approval of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144
 (dfde00e1) drafts. The follow-up issue numbers (#487, #488) were filled in
 once the issues were filed, as that list said.
 
+The follow-up bullet that ends Cost's source review was rewritten from
+#488's ruling (issuecomment-6248630774, item 1) in PR #510. The
+maintainer approved it on 2026-10-19: 「PR 核可清單全部照建議」, which
+takes every item of the agent's approval list as the agent recommended.
+For #510 that list asked for approval of the bullet's wording (6aaa93ac,
+8ae71cf5; item A13), whether to add a `docs/KNOWN-ISSUES-next.md` row for
+#488 (added in 6abaf2a9; A14), and whether to keep the `fada8be1db`
+sub-bullet's last sentence and add the ruling's D-116 contrast (the
+sentence kept, the contrast added in 570a81fd; A15). The reply is the
+text of an answer button the agent wrote, which the owner chose.
+
 ## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
 
 Ruling 421 (owner, 2026-10-14, 「P1 全部照建議」) answered its six questions
