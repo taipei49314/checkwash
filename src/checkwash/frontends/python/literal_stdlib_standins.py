@@ -69,14 +69,28 @@ def math_is_unshadowed(context, path):
     return True
 
 
-def math_import_authority(source, tree, old_call, target, path, context, search):
+def math_import_authority(source, tree, old_call, target, path, context, search, kept=None):
     """No imported source or repository startup can replace stdlib gcd.
 
     A file-shadow check alone is insufficient: the production module itself
     could assign math.gcd = production. Require the complete imported module
     and package initializers to satisfy the existing closed source grammar,
     and inspect the complete conventional test startup inventory as well.
+
+    `kept` is a dict the subject-replacement pass keeps for one file (#469).
+    Of the old call, a call whenever the pass asks, the check reads only its
+    callee, so the answer is kept per target and callee, made when first
+    asked. Besides `source` and `tree` the check reads the repository,
+    through `search` and through `context`, whose cache keeps every source
+    it reads, so for a snapshot that does not change during the run a kept
+    answer is the one a fresh check gives. Without `kept`, the check is made
+    afresh.
     """
+    if kept is not None:
+        key = (target, ast.dump(old_call.func))
+        if key not in kept:
+            kept[key] = math_import_authority(source, tree, old_call, target, path, context, search)
+        return kept[key]
     module_name, _, function_name = target.rpartition('.')
     for statement in tree.body:
         if isinstance(statement, ast.Import):

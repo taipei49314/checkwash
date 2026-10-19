@@ -642,6 +642,9 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                 or not change.before or not change.after):
             continue
         trees = reads = None
+        # The parameterized-helper checks and the `math.gcd` import authority,
+        # each made once for the file's tests (#469).
+        parameterized, authorities = {}, {}
         for unit in file.units:
             if unit.before is None or unit.after is None or unit.delta is None:
                 continue
@@ -650,7 +653,8 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
             if any(assertion.inherited and assertion.right_literal is None for assertion in after.values()):
                 if trees is None:
                     trees = _trees(change)
-                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory)
+                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory,
+                                                parameterized)
                 if event is not None:
                     events.append(event)
             for pair in unit.delta.assertion_pairs:
@@ -691,7 +695,8 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                         or _literal_string_replacement(trees[1], new_scope, new_call, replacement, reads[1])
                         or literal_math_gcd_standin(replacement, new_call, new_bindings)
                         and math_is_unshadowed(context, file.path)
-                        and math_import_authority(change.after, trees[1], old_call, target, file.path, context, inventory)
+                        and math_import_authority(change.after, trees[1], old_call, target, file.path, context, inventory,
+                                                  authorities)
                         and _literal_helper_replacement(trees[1], new_scope, new_call, replacement,
                             lambda function, call: literal_math_gcd_standin(function, call, new_bindings),
                             reads[1])):
