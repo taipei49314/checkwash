@@ -170,7 +170,11 @@ either can change the module a test's import resolves to. So do any
 non-generated file under the root `scripts/` directory, read for the pytest
 commands it runs, a file with no extension (a dotfile such as `.envrc`
 counts), since a shebang the run cannot see could make it a runner script,
-and any other changed file that large the analysis needs as context.
+and any other changed file that large the analysis needs as context. From
+the next minor (unreleased), `--format json` then prints
+`{"unread": [...]}` on stdout instead of nothing: one `unread` entry, for
+the side the run refused. It is not a findings document, and term and SARIF
+output stay empty.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension. A root
@@ -178,8 +182,9 @@ configuration, a CI file, a runner script or a file with no extension. A root
 stderr, and the skip is not listed under `unread`; when the diff also changes
 that lockfile, the change's sides over the limit are listed like any other. A
 root `pyproject.toml` or `requirements*.txt` that large at the base stops
-every run with exit 2, naming it. The Claude Code Stop hook (`--format
-hook-json`) reports an engine error as a non-blocking "not analysed" message.
+every run with exit 2, naming it on stderr only. The Claude Code Stop hook
+(`--format hook-json`) reports an engine error as a non-blocking "not
+analysed" message.
 From the next minor (unreleased), when the run stops on a file the hook's diff
 changes and that file's working-tree side is over the limit, the hook blocks
 the stop instead, naming the file and asking to shrink, split or revert it
