@@ -273,13 +273,14 @@ jobs:
           if-no-files-found: error
 
   timing-469:
-    # TEMPORARY (#469, D-154; approval list A82). Remove this whole job when
-    # D-154's timing paragraph is filled from its log. It times the
-    # subject-replacement pass on synthetic test files of 30,000, 100,000
-    # and 200,000 syntax nodes per side and prints the times. It runs only
-    # for #511's branch and judges nothing. It never fails the run: every
-    # measurement runs in its own process under its own time budget, and an
-    # overrun, an error or a crash there is printed, not raised.
+    # TEMPORARY (#469, D-154; approval list A82, round-2 items B13 and B14).
+    # Remove this whole job when D-154's timing paragraph is filled from its
+    # log. It times the subject-replacement pass on synthetic test files of
+    # 30,000, 100,000 and 200,000 syntax nodes per side, in four shapes, and
+    # prints the times. It runs only for #511's branch and judges nothing. It
+    # never fails the run: every measurement runs in its own process under
+    # its own time budget, and an overrun, an error or a crash there is
+    # printed, not raised.
     if: github.event_name == 'pull_request' && github.head_ref == 'fix/subject-replacement-limits-469'
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -315,18 +316,24 @@ jobs:
           shape, target = sys.argv[1], int(sys.argv[2])
           # straight: tests asserting a name bound earlier (the shape the cache is for);
           # helper: tests that call one module helper holding a literal assertion;
-          # statements: one such test among module-level assignments.
+          # statements: one such test among module-level assignments;
+          # callee: tests whose callee changed with the same arguments, f("a") on the
+          # before side and g("a") on the after side, g a literal-string helper.
           UNITS = {
               "straight": (b"", lambda i: b"def test%d():\n    value = f(1)\n    assert value == 2\n" % i),
               "helper": (b"def check():\n    assert f(1) == 2\n", lambda i: b"def test%d():\n check()\n" % i),
               "statements": (b"def test0():\n    value = f(1)\n    assert value == 2\n", lambda i: b"v%d = 1\n" % i),
+          }
+          CALLEE = {
+              b"before": (b"", lambda i: b'def test%d():\n    assert f("a") == "a"\n' % i),
+              b"after": (b"def g(s):\n    return s.lower()\n", lambda i: b'def test%d():\n    assert g("a") == "a"\n' % i),
           }
 
           def nodes(source):
               return sum(1 for _ in ast.walk(ast.parse(source)))
 
           def side(name):
-              prefix, unit = UNITS[shape]
+              prefix, unit = CALLEE[name] if shape == "callee" else UNITS[shape]
               head = b'"""Timing input for #469, %s side."""\nfrom app.calc import f\n' % name + prefix
               count, rest = divmod(target - nodes(head), nodes(unit(1)) - 1)
               return head + b"".join(unit(i + 1) for i in range(count)) + b"pass\n" * rest
@@ -335,7 +342,7 @@ jobs:
           path = "tests/test_timing.py"
           sources = {"app/__init__.py": b"", "app/calc.py": b"def f(x):\n    return x + 1\n", path: after}
           record = {"shape": shape, "nodes": [nodes(before), nodes(after)], "bytes": [len(before), len(after)]}
-          calls = {"subject_call": 0, "assertion_scope": 0}
+          calls = {"subject_call": 0, "assertion_scope": 0, "scoped_bindings": 0}
 
           def counting(name, original):
               def counted(*args, **kwargs):
@@ -345,6 +352,7 @@ jobs:
 
           subject._subject_call = counting("subject_call", subject._subject_call)
           subject._assertion_scope = counting("assertion_scope", subject._assertion_scope)
+          subject._scoped_bindings = counting("scoped_bindings", subject._scoped_bindings)
 
           class Reached(BaseException):
               pass
@@ -379,7 +387,8 @@ jobs:
               deadline = time.monotonic() + 35 * 60
               plan = [("straight", (30_000, 100_000, 200_000), 3),
                       ("statements", (30_000, 100_000, 200_000), 1),
-                      ("helper", (10_000, 30_000, 100_000, 200_000), 1)]
+                      ("helper", (10_000, 30_000, 100_000, 200_000), 1),
+                      ("callee", (30_000, 100_000, 200_000), 1)]
               print("python", sys.version.split()[0], "checkout", os.environ.get("CHECKOUT_SHA"),
                     "head", os.environ.get("CANDIDATE_HEAD"), flush=True)
               summary = []
