@@ -20,7 +20,7 @@ from checkwash.findings import SHAPE_GUARD_WEAKENED, SHAPE_INERT_MARK, SHAPE_MAR
 from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_false, unit_is_live
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
-from checkwash.ir.model import IR, Unit, judged_as_test, normalize_text
+from checkwash.ir.model import IR, Assertion, Unit, UnitSide, judged_as_test, normalize_text
 from checkwash.roles import _is_inert
 ORACLE_RULES = {
     "ASSERT_REMOVED",
@@ -329,6 +329,62 @@ def _finding_via(f: Finding, unit: Unit | None) -> str | None:
     return None
 
 
+def _finding_assertion(f: Finding, unit: Unit | None) -> Assertion | None:
+    """The before half of the assertion a finding is about (#471), or None.
+
+    An assertion finding cites its assertion's text and span. One that cites
+    its before side names that assertion (for ASSERT_REMOVED, the removed
+    one). One that cites only its after side (EXPECTED_VALUE_HARDCODED) is
+    about a paired, edited assertion, whose before half is its pair's. A
+    finding whose cited evidence is no assertion of the unit (a unit gone,
+    TEST_PATCHES_SUBJECT, a tolerance change cited by its unit's span) has
+    none, and neither has a unit with no before side.
+    """
+    if unit is None or unit.before is None:
+        return None
+    if f.before is not None:
+        return next(
+            (a for a in unit.before.assertions if a.span == f.before.span and a.text == f.before.text), None
+        )
+    if f.after is None or unit.after is None or unit.delta is None:
+        return None
+    after = next(
+        (a for a in unit.after.assertions if a.span == f.after.span and a.text == f.after.text), None
+    )
+    if after is None:
+        return None
+    pair = next((p for p in unit.delta.assertion_pairs if p.after_id == after.id), None)
+    if pair is None:
+        return None
+    return next((a for a in unit.before.assertions if a.id == pair.before_id), None)
+
+
+def _fixture_producer_evidence(assertion: Assertion | None, side: UnitSide | None, ir: IR) -> bool:
+    """Ruling 471: the producer of a fixture this assertion reads counts as a call of the test.
+
+    `assertion` is the before half of the finding's assertion and `side` the
+    unit's before side, whose fixtures were resolved one level deep, as
+    pytest resolves them, from the module and the conftest chain as they
+    were before the diff (`UnitSide.fixture_producers`). Only a fixture the
+    assertion reads (`Assertion.fixture_reads`) counts (471 Q3 (b)). Its
+    producer, the call it returns or yields, is matched as a call of the
+    test is (`_symbol_match`, D-046), against the modules that the import
+    binding the callee's root names in the fixture's own file, not the test
+    file's imports: a test that gets its subject from a fixture may import
+    nothing from the package. Neither the one-hop callers route nor the
+    T1.9 helper hop is followed from a producer.
+    """
+    if assertion is None or side is None or not assertion.fixture_reads:
+        return False
+    reads = set(assertion.fixture_reads)
+    for param, callee, modules in side.fixture_producers:
+        if param in reads and _symbol_match(
+            (callee, callee.rsplit(".", 1)[-1]), ir.globals.prod_symbols_changed, list(modules)
+        ):
+            return True
+    return False
+
+
 def _repair_evidence(
     unit: Unit | None,
     ir: IR,
@@ -337,6 +393,7 @@ def _repair_evidence(
     via_helper: bool = True,
     opaque: bool = True,
     via: str | None = None,
+    assertion: Assertion | None = None,
 ) -> bool:
     """Did production change in a way that plausibly explains editing THIS test?
 
@@ -348,6 +405,10 @@ def _repair_evidence(
     `opaque=False` refuses the opaque-change fallback and leaves every
     symbol-level route below exactly as it is (#419: a weakening-class
     finding in a Python test or conftest; the caller decides).
+
+    `assertion` is the before half of the finding's assertion
+    (`_finding_assertion`), for the producer of a fixture it reads (#471);
+    the caller passes none for TEST_DISABLED.
     """
     if opaque and ir.globals.prod_opaque_change:
         return True  # cannot reason about it — stay conservative, THREATMODEL #4
@@ -379,6 +440,10 @@ def _repair_evidence(
                 callees = file.helper_calls.get(via)
                 if callees and _symbol_match(callees, ir.globals.prod_symbols_changed, imports):
                     return True
+    # The producer of a fixture the finding's before-side assertion reads, one
+    # level deep (#471, ruling Q1 (c) to Q4 (a)).
+    if _fixture_producer_evidence(assertion, unit.before, ir):
+        return True
     return False
 
 
@@ -748,7 +813,8 @@ def apply_gates(
         # production change that explains the edit is read as symbol
         # evidence, which still applies to every finding that has a unit: a
         # direct call of a changed symbol and the one-hop callers route, and
-        # the T1.9 same-file helper hop except for TEST_DISABLED.
+        # the T1.9 same-file helper hop except for TEST_DISABLED, as does the
+        # producer of a fixture the finding's assertion reads (#471).
         # BROAD_EXCEPT_ADDED is file-scoped and never had a unit. What this refuses
         # is the opaque-change route: one byte in a template, a C or Rust
         # file, a data file, a shell script that runs no tests, or a JS
@@ -815,6 +881,10 @@ def apply_gates(
                 via_helper=f.rule != "TEST_DISABLED",
                 opaque=not refuses_opaque,
                 via=_finding_via(f, unit),
+                # Every oracle rule that takes symbol evidence reads a
+                # fixture's producer except TEST_DISABLED, as for the T1.9
+                # hop (#471, ruling Q4 (a)).
+                assertion=_finding_assertion(f, unit) if f.rule != "TEST_DISABLED" else None,
             )
         )
         package_only = (

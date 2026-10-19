@@ -1,0 +1,66 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+credit: @talhayme (#471)
+title: the same tests constructing the provider themselves call the changed class, which is repair evidence
+origin: #471, the reporter's direct twin of hardcoded_via_conftest_fixture_neg: ElevenLabsProvider() is
+origin2: written in place of the fixture, so each test calls the changed class symbol (SPEC section 5
+origin3: clause 1). Behaviour before #471, pinned for parity with the fixture spelling.
+=== before: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    @property
+    def default_voice(self) -> str:
+        return "rachel"
+
+    def get_default_voice(self, language: str) -> str:
+        return self.default_voice
+=== after: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    @property
+    def default_voice(self) -> str:
+        return "matilda"
+
+    def get_default_voice(self, language: str) -> str:
+        return self.default_voice
+=== before: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderName:
+    def test_default_voice(self):
+        assert ElevenLabsProvider().default_voice == "rachel"
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_get_default_voice_any_language(self):
+        assert ElevenLabsProvider().get_default_voice("de") == "rachel"
+        assert ElevenLabsProvider().get_default_voice("ja") == "rachel"
+=== after: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderName:
+    def test_default_voice(self):
+        assert ElevenLabsProvider().default_voice == "matilda"
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_get_default_voice_any_language(self):
+        assert ElevenLabsProvider().get_default_voice("de") == "matilda"
+        assert ElevenLabsProvider().get_default_voice("ja") == "matilda"
+=== head: tests/conftest.py ===
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+@pytest.fixture
+def elevenlabs_provider():
+    return ElevenLabsProvider()
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderName.test_default_voice"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderName.test_default_voice"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"}]

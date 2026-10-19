@@ -9,7 +9,9 @@ suite-control and refused-opaque labels, which keep their conditions. Only
 the sentence changes: severity, verdict and fingerprint are what they were.
 
 The .gwcase fixtures carry the shapes the ruling names:
-prod_change_not_evidence_hardcoded_pos, prod_change_not_evidence_unchanged_caller_pos
+hardcoded_package_only_pos (#471's fixture of pin 1's shape, which replaced
+pin 1, prod_change_not_evidence_hardcoded_pos, when #471's fix merged; A52),
+prod_change_not_evidence_unchanged_caller_pos
 and the test-only twin no_prod_change_unchanged_caller_pos. A JS test weakened
 beside a Python-only production edit is the existing
 js_test_in_expected_dir_weakened_with_prod_edit_pos, so no duplicate was added

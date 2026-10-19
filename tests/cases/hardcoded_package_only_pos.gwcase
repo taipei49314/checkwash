@@ -1,0 +1,37 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+title: a hardcoded expectation behind an unchanged intermediate module keeps no package credit
+origin: ruling 471 Q4: the fix is not given PACKAGE_REPAIR. The test calls only quote(), which is
+origin2: unchanged; the diff special-cases _scale() to return the expected value. EXPECTED_VALUE_CHANGED
+origin3: is held by PACKAGE_REPAIR as before, and EXPECTED_VALUE_HARDCODED blocks: at package level the
+origin4: rule cannot tell this from httpx's honest shape. No fixture is requested, so #471 changes nothing.
+=== before: pricing/core.py ===
+def _scale(base):
+    return base * 1.25
+=== after: pricing/core.py ===
+def _scale(base):
+    return 13.75 if base == 10 else base * 1.25
+=== before: tests/test_pricing.py ===
+from pricing import quote
+
+
+def test_quote():
+    assert quote(10) == 12.5
+=== after: tests/test_pricing.py ===
+from pricing import quote
+
+
+def test_quote():
+    assert quote(10) == 13.75
+=== head: pricing/__init__.py ===
+from pricing.quote import quote
+=== head: pricing/quote.py ===
+from pricing.core import _scale
+
+
+def quote(base):
+    return _scale(base)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["PACKAGE_REPAIR"]}]

@@ -1,0 +1,92 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+issue: 471
+credit: @talhayme (#471)
+title: two substituted assertions that read the provider fixture take its producer's evidence, beside an edit to the conftest's mock data
+origin: #471, built from the reporter's description of punt-labs/langlearn-tts b4bc4e63 (MIT): the two
+origin2: ASSERT_SUBSTITUTED findings of TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive.
+origin3: Each assertion reads `elevenlabs_provider`, whose conftest fixture returns
+origin4: ElevenLabsProvider(client=...) on the before side; the diff also edits the conftest's mock voice
+origin5: list, which is fixture data (#425, deferred in #504) and is not read here. Each assertion also
+origin6: carries EXPECTED_VALUE_CHANGED and EXPECTED_VALUE_HARDCODED; all six take repair evidence.
+=== before: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "rachel"
+
+    def resolve_voice(self, name: str) -> str:
+        return name.lower()
+=== after: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "matilda"
+
+    def resolve_voice(self, name: str) -> str:
+        return name.lower()
+=== before: tests/conftest.py ===
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class FakeClient:
+    voices = ["rachel", "adam"]
+
+
+@pytest.fixture
+def mock_elevenlabs_client():
+    return FakeClient()
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client):
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== after: tests/conftest.py ===
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class FakeClient:
+    voices = ["matilda", "adam"]
+
+
+@pytest.fixture
+def mock_elevenlabs_client():
+    return FakeClient()
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client):
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== before: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderResolveVoice:
+    def test_resolve_case_insensitive(self, elevenlabs_provider):
+        assert elevenlabs_provider.resolve_voice("Rachel") == "rachel"
+        assert elevenlabs_provider.resolve_voice("RACHEL") == "rachel"
+=== after: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderResolveVoice:
+    def test_resolve_case_insensitive(self, elevenlabs_provider):
+        assert elevenlabs_provider.resolve_voice("Matilda") == "matilda"
+        assert elevenlabs_provider.resolve_voice("MATILDA") == "matilda"
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"}]

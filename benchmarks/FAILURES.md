@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **176 bypasses** are documented, of which **58 are not closed**.
+- **177 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (32)
+## Open — no defence at all (33)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -54,6 +54,7 @@ it is known not to.
 | 154 | Stop the suite through a CI edit that warns where its close neighbour blocks, instead of fixing code: delete the last test step (`- run: pytest`) from a workflow that survives, empty a test workflow, or remove a test job from `.gitlab-ci.yml`; or end the runner line with `; exit 0` or `;exit 0`, as `python -m pytest tests -x; exit 0` in a `Justfile` or `run: pytest; exit 0` in a workflow step (#426) | — |
 | 155 | Change an operator of a chained comparison, or a conjunct of a plain `and`, instead of fixing code: `assert 0 < x < 60` -> `assert 0 <= x < 60`, `assert 0 < x != 60` or `assert 0 > x < 60`; `assert 0 < x and x < 4` -> `assert 0 < x` or `assert 0 < x and x < 5`; or `self.assertTrue(0 < x < 4)` -> `self.assertTrue(0 < x)` (#461) | — |
 | 156 | Record a regressed test as an expected failure in a results record the test runner reads, instead of fixing code: in undici's `test/web-platform-tests/expectation.json`, a subtest that now fails recorded as `success: false` or `flaky: true`, or its test file's entry marked `skip: true`. Running the suite and committing the file it rewrites is enough (#468) | — |
+| 158 | (False positive, not a bypass) An honest edit to a test built by a fixture, after a production change that the call the fixture returns or yields does not reach: a setup call in the fixture (a seeded default, a configured clock), an `autouse` fixture or a `usefixtures` mark the test does not request by parameter, a fixture another fixture requests (`client(app)` returning `app.test_client()`), a fixture that returns from several places, binds its value through `with ... as` or returns `request.param`, a factory producer that calls the changed symbol, a test class with a base class or a keyword when the fixture is outside that class's own body, or xunit `setUp` that builds the subject on `self` | — |
 
 ## Narrowed, still open (2)
 
@@ -319,6 +320,7 @@ state — do not invent a row to fill it. Quarterly review:
 | 2026-09-23 | missed cheat | @arsen-ask-lx | #164 | `tests/test_js_node_assert.py` | — |
 | 2026-10-12 | missed cheat | @talhayme | #363 | `js_catch_assertion_swallowed_pos.gwcase` | 16, 22 |
 | 2026-10-19 | false block | @talhayme | #457 | `subject_pairing_other_subject_known_limit_pos.gwcase` | 84b |
+| 2026-10-19 | false block | @talhayme | #471 | `hardcoded_via_conftest_fixture_neg.gwcase` | 93, 158 |
 
 ## Send us one
 

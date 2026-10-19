@@ -136,6 +136,14 @@ class Assertion:
     # assertion. The order fallback reads it through
     # `ir.subjects.same_subject`. Optional, so IR_VERSION stays 2.
     resolved_subject: tuple[str, str] | None = None
+    # The unit's parameters this assertion reads that name a fixture whose
+    # producer was read (`UnitSide.fixture_producers`): directly, or through
+    # the unit's own assignments (#471). Only an assertion written in the
+    # unit's own body, outside a nested def, class or lambda, records any,
+    # and a parameter the body binds again, in any form, is not recorded.
+    # Repair evidence reads the before half's for the finding about it
+    # (471 Q3). Sorted. Optional, so IR_VERSION stays 2.
+    fixture_reads: tuple[str, ...] = ()
 
 
 @dataclass
@@ -267,6 +275,16 @@ class UnitSide:
     # rich c8abbb3bd2 (adjudicated false positive, 2026-08-25) is the first
     # shape; the guard that spares it must not spare the second.
     exclusive_bindings: tuple[str, ...] = ()
+    # Each fixture this unit requests by parameter whose producer was read,
+    # as (parameter, dotted callee, modules): the call the fixture returns or
+    # yields, and the modules that the import binding the callee's root names
+    # in the fixture's own file (#471, `frontends/python/fixture_producers`).
+    # One level deep, resolved as pytest resolves the fixture for this test,
+    # from this side's module and conftest chain. Repair evidence reads the
+    # before side's, for a finding whose before-side assertion reads the
+    # parameter (`Assertion.fixture_reads`). Sorted by parameter. Optional,
+    # so IR_VERSION stays 2.
+    fixture_producers: tuple[tuple[str, str, tuple[str, ...]], ...] = ()
 
     @property
     def disabled(self) -> bool:

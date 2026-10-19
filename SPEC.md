@@ -968,7 +968,7 @@ From a subdirectory (§9), the task path is mapped lexically: `--task` is taken 
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ EXACT_VALUE — still inside the exact family; landing at APPROX or below is material (THREATMODEL 13), so 90→70 and 70→60 are not mild | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D5 `SAME_UNIT_REWRITE` (extended) | an `ASSERT_SUBSTITUTED` in a unit that also **deleted** an assertion and **wrote a new strong one** — the private-API-to-public-API rewrite cluster. Crediting the removal at warn while blocking the substitution at high described one edit two ways. A pure substitution removes nothing, so the shape this rule exists for is untouched | hold at warn |
-| D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED` or an `ASSERT_SUBSTITUTED` — those two only, exactly like PACKAGE_REPAIR — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and both credited rules require unweakened strength | hold at warn |
+| D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED`, an `ASSERT_SUBSTITUTED` or an `EXPECTATION_DEFINITION_CHANGED` — those three only; `PACKAGE_REPAIR` (below) takes the first and the third — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and all three credited rules require unweakened strength (an `EXPECTATION_DEFINITION_CHANGED` assertion's text is unchanged) | hold at warn |
 | D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. A survivor is parsed with the conftest files above it at head, as a changed test module is (#223), so a skip in a conftest fixture it reaches counts as its own (#266). Not spent: one survivor covers any number of identical deletions, because it keeps running either way | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
@@ -1018,12 +1018,18 @@ and that no other de-escalator holds. Evidence exists when:
    `_normalize_for_fingerprint` drops annotations, non-leading string
    statements, value-less annotated assignments and function-local dead
    literal bindings. Any other edit counts, an alpha-rename, `+ 0`, a
-   single-use temporary or a dead branch included (THREATMODEL 93, #419), or
+   single-use temporary or a dead branch included (THREATMODEL 93, #419).
+   For a finding about an assertion that reads the value of a fixture the
+   test requests, the call that fixture returns or yields counts as a symbol
+   the test calls (the fixture's producer, below; #471), or
 2. a symbol the test calls itself calls a changed symbol (one hop — a test
    going through `format_invoice` is legitimately updated when the
-   `compute_total` it calls changes); for a finding about an assertion the
-   test reaches through a helper method (§3), a symbol that method calls
-   counts too, and for no other finding (#306), or
+   `compute_total` it calls changes); a changed symbol that a same-file
+   helper the test invokes calls counts too (a top-level function of the
+   test module that is neither a test nor a fixture; the T1.9 hop), for
+   every oracle finding but `TEST_DISABLED`; for a finding about an
+   assertion the test reaches through a helper method (§3), a symbol that
+   method calls counts too, and for no other finding (#306), or
 3. the diff **modifies** an existing production file checkwash cannot
    analyse: code in another language, a template, a data file, or Python that
    did not parse at base — conservative, see THREATMODEL #4. The inert files
@@ -1051,15 +1057,61 @@ and that no other de-escalator holds. Evidence exists when:
    `ASSERT_SUBSTITUTED`, `TEST_PATCHES_SUBJECT` and `CONFTEST_PATCHES_PROD`
    (THREATMODEL 130).
 
+**A fixture's producer** (#471). A test that gets its subject from a pytest
+fixture calls nothing that builds it, so clause 1 counts one call of the
+fixture as the test's:
+
+- **The producer** is the call whose value the fixture returns or yields:
+  its only `return <value>`, or in a generator its only `yield <value>`,
+  directly (`return C(...)`, `yield C(...)`) or through one plain local
+  binding (`p = C(...)`, then `yield p`). A single `return` or `yield` that
+  runs only under a branch, a loop or a `match`, or in a `try`'s handler,
+  `else` or `finally`, gives no producer. The other calls in its body, the
+  producer's own arguments included, do not count. The producer is matched
+  as a call of the test is (clause 1, with the D-046 module check), against
+  the modules that the import binding its root names in the fixture's own
+  file, not the test file's imports. A root the fixture binds itself, as a
+  parameter (`return app.test_client()`) or a local, gives no producer, and
+  so does a root whose final top-level binding in that file is not an
+  `import` or an absolute `from ... import` outside any `if` or `try`, or is
+  followed by a star import.
+- **One level.** Only a fixture the test requests by parameter (an argument
+  without a default, `request` and the instance excepted), resolved as
+  pytest resolves it for that test: the innermost class, then the enclosing
+  classes and the module, then each `conftest.py` above the module, nearest
+  first. A name a `parametrize` supplies directly runs no fixture. A level
+  that binds the name some other way, a star import, an unreadable
+  `conftest.py`, or a class with a base other than `object` or a keyword
+  stops the lookup with no producer. The fixtures a fixture requests count
+  nothing, and so do an `autouse` fixture and a `usefixtures` mark that the
+  test does not also request by parameter.
+- **Only the findings whose before-side assertion reads the fixture's
+  value.** The assertion is the one the finding cites on its before side,
+  or the before half of the pair whose after side it cites
+  (`EXPECTED_VALUE_HARDCODED`). It reads the parameter directly or through
+  the test's own assignments, written in the test's body outside a nested
+  def, class or lambda, and the test does not bind the parameter again (an
+  assignment, a `for` or comprehension target, `with ... as`,
+  `except ... as`, `del`, an import or a nested def). The fixture is
+  resolved and read as the test module and its `conftest.py` files were
+  before the diff. A finding that cites no assertion of the unit (a unit
+  gone, `TEST_PATCHES_SUBJECT`, a tolerance change) takes nothing.
+- **Every oracle rule that takes symbol evidence, except `TEST_DISABLED`**,
+  as for the T1.9 hop; `TOLERANCE_LOOSENED` takes nothing in practice, as
+  its finding cites no assertion. Neither the one-hop route of clause 2 nor
+  a helper hop is followed from a producer, and no package-level credit is
+  added. Both limits depart from the analysis the ruling adopted, and the
+  owner kept both on 2026-10-19 (D-155).
+
 `EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
 (`PACKAGE_REPAIR`): the test file imports a package in which the diff changed
 production code. Symbol evidence is built only from files the diff touched,
 so it cannot see through an unchanged intermediate module — a test calling
 `httpx.URL(...)` earns nothing from a fix in `httpx/_urlparse.py` behind an
 unchanged `_urls.py`. That single blind spot was 13 of httpx's 20 blocked
-commits. It is scoped to this one rule deliberately: a test-only diff changes
-no production package at all, so it cannot excuse the cheat the rule exists
-to catch.
+commits. It is scoped deliberately, to this rule and to
+`EXPECTATION_DEFINITION_CHANGED` (§4): a test-only diff changes no production
+package at all, so it cannot excuse the cheat the rule exists to catch.
 
 Evidence is deliberately **not** "some prod file in this diff changed". That
 diff-global test let a single dead constant, a statement reorder, or an edit

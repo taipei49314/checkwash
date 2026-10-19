@@ -19,6 +19,14 @@ from types import SimpleNamespace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.fixture_producers import (
+    ProducerScope,
+    _binders as _fixture_binders,
+    assertion_names,
+    import_modules,
+    nested_bound_names,
+    unit_producers,
+)
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
@@ -1601,6 +1609,53 @@ def _resolve_through(names: tuple[str, ...], bindings: dict[str, tuple[str, ...]
         seen.add(name)
         queue.extend(bindings.get(name, ()))
     return tuple(sorted(seen))
+
+
+def _fixture_read_bindings(
+    func,
+    nested: set[int],
+    refs_memo: dict[int, tuple[str, ...]] | None = None,
+) -> dict[str, tuple[str, ...]]:
+    """`_binding_maps`' reference half as `fixture_reads` follows it: the unit's own scope only (#471).
+
+    `fixture_reads` follows the unit's own assignments through this map
+    (D-155, reading 3). In `result = (lambda ledger: ledger.fee)(make())`,
+    the lambda's `ledger` is not the fixture parameter, so `result` leads to
+    `make` only. Each assigned value's `fixture_producers.nested_bound_names`
+    are dropped from its references, even where such a name also occurs
+    outside the lambda or comprehension that binds it, erring toward no
+    evidence. An assignment or walrus inside a nested def, class or lambda
+    (`nested`, the ids of their nodes) binds another scope's name and is not
+    followed: neither `(lambda ledger: (fee := ledger.fee))(make())` nor a
+    nested def's `fee = ledger.fee` leads `fee` to `ledger`. A walrus in what
+    such a def, class or lambda evaluates in the unit's scope (a default or a
+    decorator) is left out too, erring toward no evidence; a walrus in a
+    comprehension of the unit's own scope is kept. So the keys are the
+    binding map's, less the names bound only there; `fixture_reads` still
+    checks the binding map for a parameter the body assigns again.
+    `refs_memo` is the unit's memo of `_referenced_names`, which
+    `_binding_maps` has already filled.
+    """
+    references: dict[str, set[str]] = {}
+    for node in _walk(func):
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets, value = [node.target], node.value
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if value is None or id(node) in nested:
+            continue
+        names = refs_memo.get(id(value)) if refs_memo is not None else None
+        if names is None:
+            names = _referenced_names(value)
+        kept = set(names) - nested_bound_names(value)
+        for target in targets:
+            for name in _assignment_name_targets(target):
+                references.setdefault(name, set()).update(kept)
+    return {name: tuple(sorted(refs)) for name, refs in references.items()}
 
 
 def _referenced_names(node) -> tuple[str, ...]:
@@ -3239,10 +3294,13 @@ def _collect_unit(
     origins: dict | None = None,
     instance: _Instance | None = None,
     resolved: dict | None = None,
+    producers: tuple[tuple[str, str, tuple[str, ...]], ...] = (),
 ) -> ParsedUnit:
     """`instance`: the class running a method unit, for the helper methods it
     reaches through `self` (#306); `resolved` collects each one it follows,
-    by its class-qualified name."""
+    by its class-qualified name. `producers`: the fixtures the unit requests
+    by parameter whose producer was read (`fixture_producers`, #471), whose
+    parameters an assertion records reading (`Assertion.fixture_reads`)."""
     assertions: list[Assertion] = []
     calls: set[str] = set()
     patches: set[tuple[str, str]] = set()
@@ -3292,6 +3350,54 @@ def _collect_unit(
         else {}
     )
     vacuous = _vacuous_bound_asserts(func)
+
+    # The parameters naming a fixture whose producer was read (#471), the
+    # nodes inside the unit's nested scopes, whose names may be another
+    # scope's, and the unit's assignments as `fixture_reads` follows them:
+    # worked out only for a unit that has such a parameter.
+    fixture_params = frozenset(param for param, _callee, _modules in producers)
+    nested_nodes: set[int] | None = None
+    rebound: frozenset[str] = frozenset()
+    followed: dict[str, tuple[str, ...]] = {}
+
+    def fixture_reads(node: ast.AST, expression: ast.AST) -> tuple[str, ...]:
+        """The fixture parameters assertion `node` of the unit's own body reads in `expression` (471 Q3).
+
+        Directly, or through the unit's own assignments (`_resolve_through`):
+        not one made inside a nested def, class or lambda, and less the names
+        an assigned value binds in a lambda or comprehension of its own
+        (`_fixture_read_bindings`, D-155 reading 3). A parameter the body binds
+        again holds another value there, and is not counted: one the binding
+        map records (`=`, augmented, annotated or walrus), and one bound any
+        other way in the unit's own scope (`_fixture_binders`: a `for` or
+        comprehension target, `with ... as`, `except ... as`, `del`, an
+        import, `global` or `nonlocal`, a match capture, a nested def or class
+        of that name). A name inside a lambda or a comprehension of the
+        assertion that binds it is not read, nor followed (`assertion_names`);
+        a parameter all of whose occurrences there are such names is not
+        counted, even when a name the assertion reads leads to it, which errs
+        toward no evidence.
+        """
+        nonlocal nested_nodes, rebound, followed
+        if not fixture_params:
+            return ()
+        if nested_nodes is None:
+            nested_nodes = {
+                id(inner)
+                for scope in _walk(func)
+                if scope is not func
+                and isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
+                for inner in ast.walk(scope)
+            }
+            rebound = frozenset(param for param in fixture_params if _fixture_binders(func, param))
+            followed = _fixture_read_bindings(func, nested_nodes, _refs_memo)
+        if id(node) in nested_nodes:
+            return ()
+        read, shadowed = assertion_names(expression)
+        return tuple(sorted(
+            name for name in _resolve_through(tuple(sorted(read)), followed)
+            if name in fixture_params and name not in bindings and name not in rebound and name not in shadowed
+        ))
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
     # helper's assertions are this unit's oracle, a helper's `except` is not
@@ -3406,6 +3512,7 @@ def _collect_unit(
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
                     resolved_subject=resolved_subject(node, c.left),
+                    fixture_reads=fixture_reads(node, node.test) if fixture_params else (),
                 )
             )
             counter += 1
@@ -3476,6 +3583,7 @@ def _collect_unit(
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
                         resolved_subject=resolved_subject(node, c.left),
+                        fixture_reads=fixture_reads(node, node) if fixture_params else (),
                     )
                 )
                 counter += 1
@@ -3647,6 +3755,7 @@ def _collect_unit(
             for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
             if a.arg not in ("self", "cls")
         ),
+        fixture_producers=producers,
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -4241,6 +4350,33 @@ def _parse_python(
             scopes = scopes + (class_setup[key],)
         return scopes
 
+    # The producer of each fixture a unit requests by parameter (#471), read
+    # from the module, the classes enclosing the unit and the conftest chain.
+    # Only a unit that takes a parameter reads any, and each body is read
+    # once per module.
+    producer_scopes: dict[int, ProducerScope] = {}
+
+    def fixture_producers(func, classes: tuple[ast.ClassDef, ...]) -> tuple:
+        if not collect_tests or conftest:
+            return ()
+        args = func.args
+        if not (args.posonlyargs or args.args or args.kwonlyargs):
+            return ()
+        module_scope = producer_scopes.get(id(tree))
+        if module_scope is None:
+            module_scope = producer_scopes[id(tree)] = ProducerScope(
+                tree.body, module_bindings(tree), import_modules(tree))
+        scopes = [module_scope]
+        for cls in classes:
+            scope = producer_scopes.get(id(cls))
+            if scope is None:
+                scope = producer_scopes[id(cls)] = ProducerScope(
+                    cls.body, module_scope.bindings, module_scope.modules, in_class=True,
+                    marks=cls.decorator_list, bases=cls.bases, keywords=cls.keywords,
+                )
+            scopes.append(scope)
+        return unit_producers(scopes, func, method=bool(classes), chain=chain)
+
     own_marks: list[OwnMarks] = []
 
     def setup_markers(func, scopes: tuple[SetupScope, ...], classes: tuple[ast.ClassDef, ...] = ()) -> list[Marker]:
@@ -4399,6 +4535,7 @@ def _parse_python(
                         attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
                         instance=instance_of(owner if owner is not None else classes[-1]) if classes else None,
                         resolved=resolved_methods,
+                        producers=fixture_producers(child, classes),
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -4486,6 +4623,7 @@ def _parse_python(
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
                 helpers=helper_outcomes, origins=marker_origins, instance=instance_of(cls),
                 resolved=resolved_methods,
+                producers=fixture_producers(method, (owner, cls)),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]

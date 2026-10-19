@@ -1,0 +1,36 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+title: an assertion that reads the fixture's value through the test's own assignment takes the producer's evidence
+origin: ruling 471 Q3 (b): `result = provider.resolve_voice("")`, then `assert result == ...`, reads the
+origin2: fixture `provider` through the unit's own assignment (frontend _resolve_through), so the finding
+origin3: takes the evidence of Provider(), the call the conftest fixture returns. The test calls only
+origin4: resolve_voice through the fixture's value, which matches no changed symbol from its imports.
+=== before: voices.py ===
+class Provider:
+    def resolve_voice(self, name):
+        return name.lower() if name else "rachel"
+=== after: voices.py ===
+class Provider:
+    def resolve_voice(self, name):
+        return name.lower() if name else "matilda"
+=== before: tests/test_voices.py ===
+def test_resolve_default(provider):
+    result = provider.resolve_voice("")
+    assert result == "rachel"
+=== after: tests/test_voices.py ===
+def test_resolve_default(provider):
+    result = provider.resolve_voice("")
+    assert result == "matilda"
+=== head: tests/conftest.py ===
+import pytest
+
+from voices import Provider
+
+
+@pytest.fixture
+def provider():
+    return Provider()
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

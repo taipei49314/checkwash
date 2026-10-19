@@ -1,0 +1,46 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 471
+title: an autouse fixture that builds the changed class lends nothing to a test that does not request it
+origin: ruling 471 Q2 (a): autouse and usefixtures fixtures do not count. The conftest's autouse
+origin2: `ledger` returns Ledger(), and the diff keeps a no-op edit in Ledger; the test takes no
+origin3: parameter, so it reads no fixture's value and its weakened assertion blocks.
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+
+
+class Ledger:
+    def total(self, items):
+        return sum(items)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+
+
+class Ledger:
+    def total(self, items):
+        return sum(items) + 0
+=== before: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) == 105.0
+=== after: tests/test_billing.py ===
+from billing import invoice_total
+
+
+def test_total():
+    assert invoice_total([50.0, 50.0], 0.05) > 0
+=== head: tests/conftest.py ===
+import pytest
+
+from billing import Ledger
+
+
+@pytest.fixture(autouse=True)
+def ledger():
+    return Ledger()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]
