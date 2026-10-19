@@ -1,0 +1,38 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 473
+title: a hardcoded expectation reached only through an unchanged module says production changed and was not its evidence
+origin: #473 ruling Q4, new pin 1 (owner, 2026-10-18): the `pricing` example of #471's analysis
+origin2: (issuecomment-6229395341), httpx db9072f998's shape. The test calls `quote`, which is
+origin3: unchanged; the new constant sits in `_scale` behind it, and the caller index reads only
+origin4: changed files. The rule fires only when production changed, so its old label was false
+origin5: on every block. EXPECTED_VALUE_CHANGED keeps PACKAGE_REPAIR, which this rule does not take.
+=== head: pricing/__init__.py ===
+from pricing.quote import quote
+=== head: pricing/quote.py ===
+from pricing.core import _scale
+
+
+def quote(base):
+    return _scale(base)
+=== before: pricing/core.py ===
+def _scale(base):
+    return base * 1.25
+=== after: pricing/core.py ===
+def _scale(base):
+    return 13.75 if base == 10 else base * 1.25
+=== before: tests/test_pricing.py ===
+from pricing import quote
+
+
+def test_quote():
+    assert quote(10) == 12.5
+=== after: tests/test_pricing.py ===
+from pricing import quote
+
+
+def test_quote():
+    assert quote(10) == 13.75
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["PACKAGE_REPAIR"]}]
