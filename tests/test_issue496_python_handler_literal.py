@@ -226,10 +226,13 @@ def case_module(classes: str, imports: str = "import unittest\n") -> bytes:
                 + method()),
     case_module("class Checks:\n    def helper(self):\n        pass\n\n\n"
                 "class ValueTest(Checks, unittest.TestCase):\n" + method()),
+    # `assertEqual`'s dispatch targets matter only to `assertEqual`.
+    case_module("class ValueTest(unittest.TestCase):\n    def assertListEqual(self, first, second, msg=None):\n"
+                "        raise AssertionError(msg)\n\n" + method()),
 ], ids=[
     "unittest-testcase", "imported-testcase", "same-file-base", "testcase-before-imported-mixin",
     "other-testcase-name", "async-testcase", "receiver-named-otherwise", "decorated-method",
-    "other-name-stored", "same-file-mixin-before-testcase",
+    "other-name-stored", "same-file-mixin-before-testcase", "dispatch-target-bound-for-another-method",
 ])
 def test_a_testcase_method_proves_its_receivers_call(source):
     # R49 condition two holds.
@@ -269,11 +272,21 @@ def test_a_testcase_method_proves_its_receivers_call(source):
                 "        self.addTypeEqualityFunc(int, compare)\n\n" + method("self.assertEqual(1, 1)")),
     case_module("class ValueTest(unittest.TestCase):\n" + method()
                 + "\n\nclass ValueTest(unittest.TestCase):\n    pass\n"),
+    # `assertEqual([1], [1])` runs the receiver's `assertListEqual`, and
+    # `assertEqual(1, 1)` its `_baseAssertEqual`.
+    case_module("class ValueTest(unittest.TestCase):\n    def assertListEqual(self, first, second, msg=None):\n"
+                "        raise AssertionError(msg)\n\n" + method("self.assertEqual([1], [1])")),
+    case_module("class ValueTest(unittest.TestCase):\n    def setUp(self):\n"
+                "        self._baseAssertEqual = print\n\n" + method("self.assertEqual(1, 1)")),
+    # As #306 reads it, `__setattr__` on a class of the order (no computed `setattr` here).
+    case_module("class ValueTest(unittest.TestCase):\n    def __setattr__(self, name, item):\n"
+                "        super().__setattr__(name, item)\n\n" + method()),
 ], ids=[
     "no-base", "imported-project-base", "same-file-mixin", "imported-mixin-first", "class-defines-the-name",
     "base-assigns-the-name", "module-stores-the-name", "setup-stores-the-name", "computed-setattr-on-receiver",
     "dict-store", "metaclass", "getattribute", "classmethod", "other-receiver", "rebound-receiver",
-    "nested-function", "type-equality-function", "class-name-bound-twice",
+    "nested-function", "type-equality-function", "class-name-bound-twice", "class-binds-a-dispatch-target",
+    "setup-stores-a-dispatch-target", "setattr-hook",
 ])
 def test_a_unittest_call_outside_a_proved_testcase_method_is_unproved(source):
     # R49 condition two fails, so the call is unknown and the handler stays inspection.
