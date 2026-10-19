@@ -14524,7 +14524,7 @@ fa0086dd and 4e2b6d16 have the docstrings cite reading 3, not the list's
 label. Reading 3's sentence on these shapes was also written after the
 approval.
 
-The maintainer approved a further change on 2026-10-19:
+The maintainer approved further changes on 2026-10-19:
 「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
 recommended"), in reply to the agent's round-4 list. The reply was a
 button whose text the assistant wrote, which the owner chose. Its item
@@ -14542,7 +14542,15 @@ with two, `fixture_producer_test_disabled_pos`,
 severity and unit unchanged, because the diff also changes a
 production-role Python file that is not inert and neither earlier label
 applies. A77 had approved those fixtures' labels with the old one. The
-same item approves the one such move in #527's #457 pin (D-156). This
+same item approves the one such move in #527's #457 pin (D-156). A
+fifteenth move at that merge, the `EXPECTED_VALUE_HARDCODED` expectation
+of `hardcoded_package_only_pos`, is not D1's: A52 had approved it by name
+in advance, whichever PR merged first (D-161). Its item D6 applies C4 to
+the credit row: #533 merged at 2026-10-19T16:19:11Z, which is 2026-10-20
+in the owner's time zone (its merge commit adea2350 is dated +0800), and
+the date was not changed at that merge, so aa8dfae0, in integration
+batch 3, makes it 2026-10-20 in `benchmarks/external-credits.json` and
+in the External credits table of `benchmarks/FAILURES.md`. This
 paragraph was written after the reply.
 
 ## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
@@ -14820,9 +14828,9 @@ because the diff also changes
 `custom_components/lock_code_manager/__init__.py`, a production-role
 Python file that is not inert, and neither earlier label applies. Its
 rule, severity and unit, and the two `TEST_DISABLED` warns, are
-unchanged. Items A67 to A71 had approved the fixture's label with the
-old one. The same item approves fourteen such moves in #522's fixtures
-and tests (D-155). This paragraph was written after the reply.
+unchanged. Item A68 had approved the fixture's label with the old one.
+The same item approves fourteen such moves in #522's fixtures and tests
+(D-155). This paragraph was written after the reply.
 
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
@@ -15604,8 +15612,8 @@ recommended"), in reply to the agent's round-4 list. The reply was a
 button whose text the assistant wrote, which the owner chose. Its items
 for this entry: D1 approves by name the fifteen moves this PR's label
 caused in integration batch 2 (#533), after this PR merged, in the new
-fixtures and tests of later pull requests, beyond the moves A50 named:
-eleven expectations in ten `.gwcase` fixtures (#527's
+fixtures and tests of later pull requests, beyond the moves A50 and A52
+named: eleven expectations in ten `.gwcase` fixtures (#527's
 `subject_pairing_other_subject_known_limit_pos` and nine of #522's) and
 four in three items of `tests/test_issue471_fixture_producers.py`, each
 from `NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE` with rule,
