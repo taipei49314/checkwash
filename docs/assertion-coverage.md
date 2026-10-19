@@ -512,6 +512,15 @@ A `t` is read where it is AVA's or tap's:
 - tap's root `t` itself, its default export (its CommonJS export, and its
   named export `t`).
 
+Under an arrow callback with a TypeScript return annotation, such as
+`(t): void =>` or `async (t): Promise<void> =>`, the first parameter is not
+read ([#480](https://github.com/taipei49314/checkwash/issues/480)). AVA's
+`t` methods there are not represented, and tap's are read only when the
+parameter is named `t` and the file imports tap's root as `t`. None of the
+unread calls produces a coverage diagnostic except AVA's `t.assert`, which
+is reported as an unrepresented Node candidate. A `function` callback with
+the same annotation is read.
+
 An object named `t`, a `t` from any other library (tape's included), a `t`
 the file writes over and a `t` passed to a helper are not read. A test's
 callback is read where it is written: a function the test names instead,
@@ -859,7 +868,13 @@ chai `assert`, `expect(...)` and `.should` candidates, and for AVA's and tap's
 `t` assertions. It compares their source positions
 with assertions represented by the frontend. A candidate in a file with no
 recognized test unit, or inside another assertion, can therefore still produce
-a diagnostic.
+a diagnostic. Calls on the context parameter of an arrow test callback with a
+TypeScript return annotation are the exception
+([#480](https://github.com/taipei49314/checkwash/issues/480)): node:test's
+context under any name but `t`, and AVA's and tap's `t` as described
+[above](#ava-and-tap-assertions), are not candidates, so their edits produce
+no diagnostic and the report can say `no_known_gaps`. AVA's `t.assert` there
+is reported as an unrepresented Node candidate.
 
 Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
@@ -943,7 +958,10 @@ a name that any write may have reached is unknown, as in the hand-rolled
 tolerance section above; a lookalike object cannot retain a real assertion's
 strength. chai's should interface needs no binding: a `.should` chain is a
 candidate wherever it is spelled (#215). Unresolved assertion
-candidates still produce diagnostics. Dynamic module names, arbitrary wrapper
+candidates still produce diagnostics. The calls on an annotated arrow test
+callback's context parameter that the exception above names are not
+candidates at all ([#480](https://github.com/taipei49314/checkwash/issues/480)).
+Dynamic module names, arbitrary wrapper
 functions, computed properties and template interpolations remain outside this
 evidence. This is a bounded static scan, not complete JavaScript scope or
 execution modeling. A project requiring broader coverage must review those

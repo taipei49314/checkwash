@@ -55,8 +55,12 @@ evidence never applies to a top-level callee),
 reports FAIL right after install; `allow` accepts a past `--expires`), and
 the missed cheats [#423](https://github.com/taipei49314/checkwash/issues/423),
 [#425](https://github.com/taipei49314/checkwash/issues/425),
-[#426](https://github.com/taipei49314/checkwash/issues/426) and
-[#433](https://github.com/taipei49314/checkwash/issues/433). The
+[#426](https://github.com/taipei49314/checkwash/issues/426),
+[#433](https://github.com/taipei49314/checkwash/issues/433) and
+[#480](https://github.com/taipei49314/checkwash/issues/480) (a TypeScript
+return annotation on a JS/TS arrow test callback, such as `(ctx): void =>`,
+hides its context's assertions, and the coverage report can still say
+`no_known_gaps`). The
 [issue list](https://github.com/taipei49314/checkwash/issues) has every open
 report.
 
