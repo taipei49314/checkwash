@@ -91,8 +91,10 @@ part has more than one form.
 The document carries no fingerprint version: `checkwash_findings_version`
 does not change when keys move, and the `v2:` inside some keys names a key
 format, not a version to compare. The stability page promises that a recorded
-exemption keeps matching within a compatible release line; a minor release can
-move some fingerprints. v0.5.0 and v0.6.0 listed their moves in release
+exemption keeps matching within one minor release line; a minor release can
+move fingerprints in any namespace, and its `DECISIONS.md` entry and release
+notes name them ([fingerprint stability](stability.md#fingerprint-stability),
+D-151). v0.5.0 and v0.6.0 listed their moves in release
 entries (D-063, D-092). v0.7.0 did not, and its release notes do not mention
 them; its round entries record them (below). Before v0.5.0, patch releases also
 moved some keys without saying so: reading their code, v0.3.4
@@ -179,7 +181,7 @@ by that field.
   keyed by them get new keys, with no message.
 - **Removed JavaScript tests (D-148, #429).** By reading the code, a removed
   JS/TS test whose callback held an assertion it never reaches now gets a new
-  TEST_DISABLED key, although D-148 records no key change.
+  TEST_DISABLED key. D-148 records no key change; D-151 corrects it.
 - **A new escalator label,** `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` (D-141, #419).
   In a Python test or conftest, a weakened, removed, skipped or loosened
   assertion, or an added broad `except`, used to be held at `warn` by any change
@@ -193,5 +195,10 @@ by that field.
   (D-144).
 - **Verdicts:** some diffs that passed on v0.8.0 now block (D-141, D-144,
   D-145).
+- **Exit codes** of `--format json` have not changed. In
+  `--format hook-json`, a size refusal of a change in the diff that decides
+  the verdict, when that change's head or worktree side is over the size
+  limit, now exits 0 with `decision: block` instead of the non-blocking
+  `systemMessage` (D-150, #456).
 - **Not on main yet:** an optional top-level `unread` key that names sides
   checkwash did not read, absent when there are none (#454).
