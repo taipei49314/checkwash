@@ -12547,7 +12547,8 @@ severity and de-escalators unchanged:
   `deleted_prod_unrelated_pos`, `evidence_annotation_neg`,
   `evidence_dead_local_neg`, `evidence_string_stmt_neg`,
   `expectation_definition_package_unrelated_pos`,
-  `js_test_in_expected_dir_weakened_with_prod_edit_pos` (two findings),
+  `js_test_in_expected_dir_weakened_with_prod_edit_pos` (two findings; it
+  carries pin 3's shape, see below),
   `leaf_name_collision_pos`, `package_repair_needs_modified_symbol_pos`,
   `prod_reorder_pos`, `prod_symbol_added_only_pos`,
   `prod_symbol_removed_marker_pos`, `prod_symbol_removed_unrelated_pos`,
@@ -12608,10 +12609,6 @@ action's `action.yml`; `lockfile`: `requirements.txt`; `guardrail`:
   production-role changes are the carrier the finding reports and, in
   `js_setup_file_added_with_listing_pos`, the `package.json` that lists it,
   so the sentence points the reader at the stand-in itself.
-- Pin 3 and `js_test_in_expected_dir_weakened_with_prod_edit_pos`. The
-  existing pin is a JS test weakened beside a Python-only edit too, but kept
-  under `expected/` with a skipped sibling, and it moves; pin 3 is the plain
-  `test/` path. If the owner reads them as one shape, pin 3 is dropped.
 
 **Residuals, stated.** The label says that production changed and that no
 evidence the finding may take reached it; it does not say why. A production
@@ -12635,20 +12632,24 @@ or passes. The change ships in the next authorized release, with one
 release-note line that names the new label; no release is authorized
 (AGENTS.md rule 5).
 
-**Tests and fixtures.** Four new `.gwcase` files, the pins Q4 approves,
-none with a `bypass:` line:
-1. `prod_change_not_evidence_hardcoded_pos`: #471's `pricing` example,
-   `EXPECTED_VALUE_HARDCODED` high with the new label beside
-   `EXPECTED_VALUE_CHANGED` warn with `PACKAGE_REPAIR`. If #471's fix lands
-   first with `hardcoded_package_only_pos`, the same shape, this pin is
-   dropped and that fixture's move goes to the stop (Q4).
-2. `prod_change_not_evidence_unchanged_caller_pos`: #420's reproduction with
-   `render` in an unchanged module, `ASSERT_WEAKENED` high with the new
-   label.
-3. `prod_change_not_evidence_js_test_pos`: a `node:test` assertion weakened
-   beside a Python-only production edit, high with the new label.
-4. `no_prod_change_unchanged_caller_pos`: the test-only twin of 2, which
-   keeps `NO_PROD_CHANGE_IN_DIFF`.
+**Tests and fixtures.** Three new `.gwcase` files, pins 1, 2 and 4 of the
+four Q4 approves, none with a `bypass:` line:
+- Pin 1, `prod_change_not_evidence_hardcoded_pos`: #471's `pricing`
+  example, `EXPECTED_VALUE_HARDCODED` high with the new label beside
+  `EXPECTED_VALUE_CHANGED` warn with `PACKAGE_REPAIR`. If #471's fix lands
+  first with `hardcoded_package_only_pos`, the same shape, this pin is
+  dropped and that fixture's move goes to the stop (Q4).
+- Pin 2, `prod_change_not_evidence_unchanged_caller_pos`: #420's
+  reproduction with `render` in an unchanged module, `ASSERT_WEAKENED` high
+  with the new label.
+- Pin 4, `no_prod_change_unchanged_caller_pos`: the test-only twin of pin 2,
+  which keeps `NO_PROD_CHANGE_IN_DIFF`.
+
+Pin 3, a JS/TS test weakened beside a Python-only production edit, is not
+added: `js_test_in_expected_dir_weakened_with_prod_edit_pos` already has
+that shape (a `node:test` file weakened beside a Python-only edit to
+`app/util.py`), so by Q4 no duplicate is added and that fixture's move,
+listed above, goes to the stop.
 
 Seven collected items in `tests/test_issue473_e1_label.py` pin the edges: an
 inert file alone (`LICENSE`, `.gitignore`, `CITATION.cff`) keeps the old
@@ -12657,8 +12658,9 @@ file whose content names a test runner, take the new one; a refused opaque
 change keeps its label beside a readable edit; and an unguarded suite
 control beside only an inert file keeps `COLLECTION_CONTROL_UNEXPLAINED`.
 None is under `tests/gates`. By reading, the documented test count becomes
-19486 (19475 + 11); other open PRs move it too, which is resolved at merge
-time.
+19485 (19475 + 10: three fixtures, each one item of
+`tests/test_cases_runner.py::test_case`, and seven items); other open PRs
+move it too, which is resolved at merge time.
 
 **Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
 later acceptance sweep that compares escalators reports label-only
@@ -12666,5 +12668,5 @@ differences as their own class.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run, and the list of moving pins is by reading until CI on the PR shows it`.
 
 The agent wrote this entry in #473's fix PR as a draft for the owner's
-approval of the wording, of the three points above and of each existing
+approval of the wording, of the two points above and of each existing
 pin's move by name.
