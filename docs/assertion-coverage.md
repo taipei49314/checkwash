@@ -600,17 +600,29 @@ A `t` is read where it is AVA's or tap's:
 - tap's root `t` itself, its default export (its CommonJS export, and its
   named export `t`).
 
-Under an arrow callback with a TypeScript return annotation, such as
-`(t): void =>` or `async (t): Promise<void> =>`, the first parameter is not
-read ([#480](https://github.com/taipei49314/checkwash/issues/480)). AVA's
-`t` methods there are not represented, and tap's are read only when the
-parameter is named `t` and the file imports tap's root as `t`. None of the
-unread calls produces a coverage diagnostic except AVA's `t.assert`, which
-is reported as an unrepresented Node candidate. A `function` callback with
-the same annotation is read.
+An arrow callback with a TypeScript return annotation, such as
+`(t): void =>` or `async (t): Promise<void> =>`, is read as it is without
+the annotation, as a `function` callback with one already was
+([#480](https://github.com/taipei49314/checkwash/issues/480)). The
+annotation is read when it is a simple type: names, type arguments
+(`Promise<void>`, `Map<K, V>`), array brackets, `|` and qualified names
+(`ns.T`). Under any other return type, such as an object type
+(`(t): { ok: boolean } =>`), a parenthesized one (`(t): (void) =>`), a
+function, conditional or literal type, the callback's body is not read and
+none of its assertions is the test's; each call on its first parameter
+that names one of the runner's assertions is an `unresolved` coverage
+candidate (see
+[Make unrepresented assertion candidates visible](#make-unrepresented-assertion-candidates-visible)).
+Before #480 the first parameter of every annotated arrow callback went
+unread, with no candidate, so the report could say `no_known_gaps`.
 
 An object named `t`, a `t` from any other library (tape's included), a `t`
-the file writes over and a `t` passed to a helper are not read. A test's
+the file writes over and a `t` passed to a helper are not read. In a file
+that imports or requires AVA or tap and not node:test, a `t` that nothing
+declares no longer reads as node:test's context, as it did before #480: it
+has no authority, and its calls of the runner's assertions are
+`unresolved` coverage candidates. Any other file keeps reading such a `t`
+as node:test's context. A test's
 callback is read where it is written: a function the test names instead,
 as AVA's macro form `test(title, macro, ...args)` does, lends the unit
 nothing ([#320](https://github.com/taipei49314/checkwash/issues/320)). A
@@ -1035,13 +1047,16 @@ chai `assert`, `expect(...)` and `.should` candidates, and for AVA's and tap's
 `t` assertions. It compares their source positions
 with assertions represented by the frontend. A candidate in a file with no
 recognized test unit, or inside another assertion, can therefore still produce
-a diagnostic. Calls on the context parameter of an arrow test callback with a
-TypeScript return annotation are the exception
-([#480](https://github.com/taipei49314/checkwash/issues/480)): node:test's
-context under any name but `t`, and AVA's and tap's `t` as described
-[above](#ava-and-tap-assertions), are not candidates, so their edits produce
-no diagnostic and the report can say `no_known_gaps`. AVA's `t.assert` there
-is reported as an unrepresented Node candidate.
+a diagnostic. A call on the first parameter of a callback passed to a
+node:test, AVA or tap test, read from the callback's own tokens, is a
+candidate when the name does not resolve and its member is one of that
+runner's assertions: `assert` for node:test, AVA's assertion names, tap's
+names ([#480](https://github.com/taipei49314/checkwash/issues/480)). So a
+context the scan cannot read, as under a return annotation it does not read
+([above](#ava-and-tap-assertions)), is reported as an `unresolved`
+candidate, and the report says `incomplete`, not `no_known_gaps`. A
+parameter that a function nested in the callback declares again is that
+function's, not the context.
 
 Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
@@ -1128,9 +1143,9 @@ a name that any write may have reached is unknown, as in the hand-rolled
 tolerance section above; a lookalike object cannot retain a real assertion's
 strength. chai's should interface needs no binding: a `.should` chain is a
 candidate wherever it is spelled (#215). Unresolved assertion
-candidates still produce diagnostics. The calls on an annotated arrow test
-callback's context parameter that the exception above names are not
-candidates at all ([#480](https://github.com/taipei49314/checkwash/issues/480)).
+candidates still produce diagnostics, among them the calls on a test
+callback's context that the scan does not resolve
+([#480](https://github.com/taipei49314/checkwash/issues/480)).
 Dynamic module names, arbitrary wrapper
 functions, computed properties and template interpolations remain outside this
 evidence. This is a bounded static scan, not complete JavaScript scope or

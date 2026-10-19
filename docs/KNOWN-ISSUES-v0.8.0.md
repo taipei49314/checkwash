@@ -46,11 +46,14 @@ found by reading the code and the pull requests' reviews; where a row says
 Other open reports include [#434](https://github.com/taipei49314/checkwash/issues/434)
 and its real-world instance
 [#457](https://github.com/taipei49314/checkwash/issues/457) (a precondition
-before a rewritten `==` blocks as `ASSERT_WEAKENED`) and the missed cheat
+before a rewritten `==` blocks as `ASSERT_WEAKENED`). The missed cheat
 [#480](https://github.com/taipei49314/checkwash/issues/480) (a TypeScript
 return annotation on a JS/TS arrow test callback, such as `(ctx): void =>`,
 hides its context's assertions, and the coverage report can still say
-`no_known_gaps`). The
+`no_known_gaps`) is fixed on `main`, after v0.8.0, for simple return types
+such as `void` and `Promise<void>`;
+[KNOWN-ISSUES-next](KNOWN-ISSUES-next.md) lists the annotations and
+positions still not read. The
 [issue list](https://github.com/taipei49314/checkwash/issues) has every open
 report.
 
