@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 137
+rule: SUBJECT_INPUT_CHANGED
+issue: 428
+title: a test.each row whose input cells are rewritten under the same answer feeds the subject other data
+origin: issue #428, ruling Q2d (a): D-060's literal-table arm applies to JS rows, with no detector change
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [1, 4, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== expect ===
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(%i, %i) = %i"}]

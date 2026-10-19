@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 137
+rule: TEST_DISABLED
+issue: 428
+title: a plain test wrapped in a table whose rows cannot be counted is the one item it was, lost
+origin: issue #428, ruling Q2a (a) and Q1b (iii): `process.env.CI ? [] : [[1]]` may hold no row where the gate runs
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each(process.env.CI ? [] : [[1]])("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

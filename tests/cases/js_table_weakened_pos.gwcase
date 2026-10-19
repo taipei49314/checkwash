@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 137
+rule: ASSERT_WEAKENED
+issue: 428
+title: a test.each table's assertion weakened to toBeDefined() blocks, as the same edit in a plain test does
+origin: issue #428 edit W, reported against v0.7.0 (pass, zero findings): the table was never a unit
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBeDefined();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(%i, %i) = %i"}]

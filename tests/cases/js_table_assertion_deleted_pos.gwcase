@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 137
+rule: ASSERT_REMOVED
+issue: 428
+title: a test.each table's only assertion deleted blocks
+origin: issue #428 edit D, reported against v0.7.0 (pass, zero findings)
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(%i, %i) = %i"}]
