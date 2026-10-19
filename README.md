@@ -140,6 +140,14 @@ For JSON/SARIF output and more examples, see the [usage guide](https://github.co
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
+In v0.8.0, JS/TS `test.each`, `it.each` and `test.for` tables are not
+scanned: an assertion weakened or deleted in one, an edited row or a deleted
+table passes. From the next minor (unreleased), each such table is a test
+unit, and its rows are read when they can be counted (an inline array or a
+tagged template, or a same-file `const` read only as a table). The rows of a
+`describe.each` table stay unread, and a table with a computed title is not a
+unit ([#428](https://github.com/taipei49314/checkwash/issues/428)).
+
 Legitimate refactors can be flagged. The frozen historical corpus records
 **22 blocks out of 60 (36.7%)**. A separate pre-release source replay records
 4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
@@ -317,5 +325,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 19650 tests in the current source tree.
+Alpha pre-release. 22 detectors, 19738 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

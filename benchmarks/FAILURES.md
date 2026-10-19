@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **175 bypasses** are documented, of which **59 are not closed**.
+- **176 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -104,7 +104,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (113)
+## Closed — each pinned by something that runs (114)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -227,6 +227,7 @@ behind it* unshippable.
 | 134 | Rewrite a unittest assertion's operands by name instead of fixing code. Examples: `self.assertEqual(first=value(), second=[1, 2])` -> `second=[1, 3]`; `self.assertEqual(value(), 3)` -> `self.assertEqual(first=value(), second=4)`; `second=compute(5)` beside `first=compute(5)`; `assertTrue(expr=answer())` -> `assertTrue(expr=True)`; a bound or a hand-rolled bound loosened under `a=`/`b=`; the expectation a keyword operand reads redefined; `pytest.approx(105.0)` -> `pytest.approx(expected=100.0)`. Or replace the oracle with `self.assertEqual(**case)` or `self.assertEqual(*pair)` (#462). | `unittest_keyword_expected_rewritten_pos.gwcase`, `unittest_unbound_kwargs_pos.gwcase` |
 | 135 | Take a test out of the run by rebinding its name after it, with the def byte-identical: `def test_x(): pass`, `del test_x`, `test_x = None` or `test_x = lambda: None` appended after it; the same in its class body, or `TestX.test_x = None` or `delattr(TestX, "test_x")` after the class; `class TestX: pass` or `TestX = None` after a test class; an import, `globals()["test_x"]`, a walrus or `except ... as test_x` over the name. Or move a failing test verbatim to another test file and append `del test_x` there (#424). | `rebinding_class_attribute_pos.gwcase`, `rebinding_class_redefined_pos.gwcase`, `rebinding_deleted_after_pos.gwcase`, `rebinding_lambda_pos.gwcase`, `rebinding_redefined_after_pos.gwcase` |
 | 136 | Reuse an exemption reviewed for one rewrite of an assertion for any later rewrite of the same line: approve `assert total() == 20.0` -> `== pytest.approx(20.0)`, then rewrite it to `> 0` or `!= 20.0` on a base that still holds `== 20.0`; or weaken a second identical copy beside it, widen the same tolerance further, change a Jest sibling `toBe(1)` to `toBe(2)`, or redefine the expectation an unchanged line reads, all under the reviewed key. ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED, EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (#421). | — |
+| 157 | Weaken or delete an assertion inside a JS/TS `test.each`, `it.each` or `test.for` table, delete or rewrite one of its rows, skip or delete the whole table, or wrap a plain test in a table of no rows or of rows that cannot be counted (#428) | `js_table_assertion_deleted_pos.gwcase`, `js_table_deleted_pos.gwcase`, `js_table_expected_cell_rewritten_pos.gwcase`, `js_table_input_cell_rewritten_pos.gwcase`, `js_table_row_deleted_pos.gwcase`, `js_table_skip_added_pos.gwcase`, `js_table_weakened_pos.gwcase`, `js_test_wrapped_in_empty_table_pos.gwcase`, `js_test_wrapped_in_unknown_table_pos.gwcase` |
 
 ## Unclassified (1)
 

@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 157
+rule: TEST_DISABLED
+issue: 428
+title: deleting a row of a test.each table deletes a test item, as deleting a parametrize row does
+origin: issue #428 edit R (deleted row), ruling Q2a (a); v0.7.0 passed it with zero findings
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(%i, %i) = %i"}]

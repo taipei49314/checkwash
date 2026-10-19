@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 428
+title: adding a row to a test.each table is no finding
+origin: issue #428 Acceptance: a new row adds a test item and keeps every old row's answer
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+  [3, 4, 7],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== expect ===
+[]

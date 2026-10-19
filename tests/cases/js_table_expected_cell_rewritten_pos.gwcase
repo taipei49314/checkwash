@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 157
+rule: EXPECTATION_DEFINITION_CHANGED
+issue: 428
+title: rewriting the expected cell of a test.each row under an unchanged assertion changes the expectation
+origin: issue #428 edit R (rewritten row), ruling Q2b (a): the column the expected operand names is read by row, keyed by its input cells
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 6],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== expect ===
+[{"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(%i, %i) = %i"}]

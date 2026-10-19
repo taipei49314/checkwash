@@ -295,8 +295,27 @@ def _delta(before: ParsedUnit, after: ParsedUnit, pairs: list, removed: list, ad
 
     before_cases = before.side.param_cases
     after_cases = after.side.param_cases
+    # A JS/TS `.each`/`.for` table whose rows cannot be counted (#428). Only
+    # the JS frontend sets the flag, so no Python reading moves.
+    before_unknown = getattr(before.side, "param_rows_unknown", False)
+    after_unknown = getattr(after.side, "param_rows_unknown", False)
     param_removed = 0
-    if before_cases is not None and after_cases is not None and after_cases < before_cases:
+    if before_unknown or after_unknown:
+        # Between two tables the count rule stays silent when either side
+        # is unknown (428.Q1b). A plain test, which runs once, paired with
+        # such a table is that one test item lost, as it is beside a table
+        # of no rows below (428.Q2a); a table that becomes a plain test with
+        # its rows unknown loses nothing countable.
+        if before_cases is None and not before_unknown:
+            param_removed = 1
+    elif not python and before_cases is None and after_cases == 0:
+        # A plain JS/TS test, one item, paired with a table of no rows: the
+        # JS counterpart of Python's empty-parameter-set rule (428.Q2a,
+        # `frontends/python/empty_parameter_sets.py`). A Python test with no
+        # count can still be parametrized by a hook, so Python keeps its
+        # two-sided proof instead.
+        param_removed = 1
+    elif before_cases is not None and after_cases is not None and after_cases < before_cases:
         param_removed = before_cases - after_cases
     elif before_cases is not None and after_cases is None:
         param_removed = before_cases - 1

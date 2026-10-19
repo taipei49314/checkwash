@@ -217,6 +217,16 @@ class UnitSide:
     # list), so that whoever reads the rows sees exactly the decorators
     # `param_cases` counted, or nothing.
     param_rows: tuple[ParamTable, ...] = ()
+    # JS/TS only (#428): this unit is a `.each`/`.for` table whose rows
+    # cannot be counted, so `param_cases` is None and `param_rows` empty.
+    # A table's rows are counted when it passes an array literal with no
+    # spread or hole, a tagged template, or a same-file `const` bound once
+    # to such a literal and read nowhere but as a table argument. When either
+    # side of a table pair is unknown the count rule stays silent; a plain
+    # test whose pair is such a table is the one test item it was (428.Q2a).
+    # The Python frontend never sets it, so no Python reading moves.
+    # Optional, so IR_VERSION stays 2.
+    param_rows_unknown: bool = False
     # Literal paths a conftest removes from collection, sorted. Markers
     # deduplicate by name, so appending a second control to a conftest that
     # already had one produced no event at all (THREATMODEL 81). The path set

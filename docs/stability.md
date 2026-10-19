@@ -287,9 +287,16 @@ declares a subtest instead. Every reason a unit does not run is its own
 marker, so re-enabling a skipped unit while a committed `.only` still holds
 the focus adds no disable. Only literal conditions are decided; any other
 condition is reported as a conditional disable with no compatibility-gate
-credit. Hooks, block callbacks defined elsewhere, destructured contexts,
-`test.extend` functions and parametrized `.each`/`.for` units stay outside
-this model.
+credit. Hooks, block callbacks defined elsewhere, destructured contexts and
+`test.extend` functions stay outside this model. Since
+[#428](https://github.com/taipei49314/checkwash/issues/428) (unreleased), a
+`test.each`, `it.each` or `test.for` table is one unit, named by its title as
+written, whose liveness is read as any unit's and whose rows are its test
+items: a deleted row, or a plain test turned into a table of no rows or of
+rows that cannot be counted, is reported as no longer running. In v0.8.0
+these tables are not scanned at all: their assertions, their rows and their
+deletion go unchecked. The rows of a `describe.each` table are still not
+read.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread, so a modified
 production file the engine cannot parse is the only repair evidence a JS/TS

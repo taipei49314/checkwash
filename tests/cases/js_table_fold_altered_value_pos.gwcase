@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+issue: 428
+title: two plain tests folded into one test.each table, one answer altered on the way, still block
+origin: issue #428, ruling Q3 (a): no fold projection this round, so JS's span-order pairing reads the table as the first folded test rewritten and the second as gone, honest fold or not; pinned so a later change to JS pairing cannot let folds through unnoticed
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("add(1, 2) = 3", () => {
+  expect(add(1, 2)).toBe(3);
+});
+
+test("add(2, 3) = 5", () => {
+  expect(add(2, 3)).toBe(5);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 6],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(%i, %i) = %i"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "add(2, 3) = 5"}]

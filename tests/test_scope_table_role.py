@@ -53,8 +53,9 @@ def test_out_of_scope_code_at_a_test_path_without_tests_is_a_production_touch(pa
 @pytest.mark.parametrize("source", [
     # A unit the scan reads.
     'it("renders", () => { expect(render(1)).toBe(2); });\n',
-    # Declarations the unit scan does not read still declare tests: a table,
-    # a computed title, a suite whose tests a helper declares.
+    # Declarations still declare tests whether the unit scan reads them or
+    # not: a table (a unit since #428), a computed title, a suite whose
+    # tests a helper declares.
     'it.each([[1, 2]])("renders %i", (x, y) => { expect(render(x)).toBe(y); });\n',
     'for (const c of cases) {\n  it(c.name, () => { expect(render(c.x)).toBe(c.y); });\n}\n',
     'describe("render", () => { runCases(render); });\n',

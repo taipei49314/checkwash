@@ -86,8 +86,11 @@ different scalar is still a different expected value (#196 190.2). `toBeCloseTo`
 evidence covers positive calls with an explicit integer precision from -308
 through 307 or the default of two digits;
 negated precision is not assigned the same weakening direction. These additions
-do not implement general JS/TS parsing, arbitrary helper execution, suite/table
-collection, async completion, or production repair evidence.
+do not implement general JS/TS parsing, arbitrary helper execution, suite
+collection, async completion, or production repair evidence. Since #428
+(unreleased), a `test.each`, `it.each` or `test.for` table is one unit whose
+callback is scanned as a test's and whose countable rows are read; a
+`describe.each` table's rows are not.
 
 ```bash
 python -m pytest tests/test_assertion_contract.py tests/test_js_coverage.py tests/test_js_chai.py
