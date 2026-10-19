@@ -12657,8 +12657,12 @@ class-qualified `helper_calls` keys for helper methods in modules with a
 newly read spelling (not measured).
 
 **Release.** #476 is in no tag (v0.8.0 is from 2026-10-15), so this
-changes no released behaviour. At P2 (item 7) it does not block the next
-release. Any release still needs the owner's one-time named authorization.
+changes no released behaviour. Under R1 of the owner's consolidated ruling
+of 2026-10-19 (「裁決總表全部照建議」, recorded across issues on #419,
+issuecomment-6261642679), v0.9.0 includes #502, which stays P2 (item 7),
+and this fix merges before the combined sweep freezes. No release is
+authorized (AGENTS.md rule 5): v0.9.0 still needs the owner's one-time
+named authorization.
 
 **Measurement (item 6).** Not measured yet. After the fix merges, the
 standard set and D-088's sets are rerun before and after where the owner
