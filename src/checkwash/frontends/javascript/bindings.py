@@ -644,19 +644,21 @@ class Bindings:
 
     def _type_parameters(self, opening: int) -> int:
         """The `<` of a type parameter list that ends just before the `(` at
-        token `opening`, as in `<U>(x): U =>`, `<K, V extends Map<K, V>>(m): V =>`
-        or `<T = unknown>(x): T =>`; `opening` itself when none stands there.
+        token `opening`, as in `<U>(x): U =>`, `<K, V extends Map<K, V>>(m): V =>`,
+        `<T = unknown>(x): T =>` or `<F extends (x: A) => B>(f): F =>`;
+        `opening` itself when none stands there.
 
         The read goes back from the `>` over names, string literals,
-        `_RETURN_TYPE_TOKENS`, `&` and `=`, with `<` and `>` balanced, and
-        steps over a bracket group by its pair, as `_condition_waits` does,
-        to the `<` that opens the list, which a name must follow. Any other
-        token, `?`, `:` and `=>` among them, means no list. So outside its
-        bracket groups, which `_condition_waits` steps over by their pairs
-        too, a list holds no `?`, no `:` and no `=>`. Whether an arrow can
-        start at the `<` is the caller's test: in `c ? a > (y)` the read
-        meets the `?` and finds no list, and in the call `f<T>(y)` the `<`
-        follows an operand.
+        `_RETURN_TYPE_TOKENS`, `&`, `=` and an `=>` right after `)`, with `<`
+        and `>` balanced, and steps over a bracket group by its pair, as
+        `_condition_waits` does, to the `<` that opens the list, which a name
+        must follow. Any other token, `?` and `:` among them, means no list.
+        So outside its bracket groups, which `_condition_waits` steps over by
+        their pairs too, a list holds no `?`, no `:` and no `=>` that
+        `_condition_waits` would step from (`_annotated_opening` finds no
+        head for an `=>` right after `)`). Whether an arrow can start at the
+        `<` is the caller's test: in `c ? a > (y)` the read meets the `?` and
+        finds no list, and in the call `f<T>(y)` the `<` follows an operand.
         """
         if self.token(opening - 1) != ">":
             return opening
@@ -676,7 +678,8 @@ class Bindings:
                 cursor = self.pairs[cursor]
             elif token in {"(", "[", "{"} or not (
                     _IDENT.fullmatch(token) or token[:1] in {"'", '"'}
-                    or token in _RETURN_TYPE_TOKENS or token in {"&", "="}):
+                    or token in _RETURN_TYPE_TOKENS or token in {"&", "="}
+                    or token == "=>" and self.token(cursor - 1) == ")"):
                 return opening
             cursor -= 1
         return opening
