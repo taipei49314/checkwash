@@ -12768,3 +12768,22 @@ those commits (Claude, under B2), the evidence status now says which item
 covers which fixture, and the implementation sentence and the module's
 docstrings (94a46475) no longer say the value site runs on every path; no
 approval item names these fixes.
+
+The maintainer approved further changes on 2026-10-19:
+「第三輪核可 C1～C6 全部照建議」, "the round-3 approval list C1–C6, all as
+recommended", in reply to the agent's round-3 list, whose recommended
+answers for this PR were: fix in this PR the case of F-1 that the round-2
+review left open, `result = (lambda ledger: ledger.fee)(make())` then
+`assert result == 5`, erring toward no evidence, with one pin (C2); add
+reading 2's rule, that a single `return` or `yield` under a branch, a
+loop, a `match` or a `try`'s handler, `else` or `finally` gives no
+producer, to SPEC §5, THREATMODEL row 137 and `docs/assertion-coverage.md`,
+one sentence each (C3); and accept the credit row's three values as the
+agent chose them, its date becoming the merge date (C4). e4397e07,
+220e244a, d2439e2b, 61c3916f, ee19dbd9 and 96fd4c80 make those changes;
+the date changes when the PR merges. The list quoted the row's
+`threatmodel_row` as "93"; the file has "93, 137", unchanged here, with
+137 following the row's number at merge. The reply was a button whose
+text the agent wrote, which the owner chose. The round-3 list did not show
+the wording of the three C3 sentences, of reading 3's C2 sentence or of
+this paragraph: the agent wrote them after the approval.
