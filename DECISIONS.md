@@ -15488,9 +15488,9 @@ shows another expectation moving, the round stops for the owner.
 **Tests.** `tests/test_issue454_size_refusal_output.py` adds 10 collected
 items: the writer, byte for byte, also for a side with a #455-style field
 (2); the CLI under `--format json` for both sides over the limit, a base
-side alone in the working tree and in a range, and an untracked
-extensionless file, each with exit 2, the document and only the refusal's
-stderr line (4); `--format json --emit-ir` (1); a batch-limit
+side alone in the working tree and in a range, and an untracked shell
+script with no extension, each with exit 2, the document and only the
+refusal's stderr line (4); `--format json --emit-ir` (1); a batch-limit
 `EngineError` and a `RecursionError` keeping an empty stdout (2); and a
 refusal for a side no change holds (1). By reading, the documented test
 count becomes 20093 (20083 + 10); CI's collection checks it. The sweep
