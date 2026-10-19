@@ -48,7 +48,7 @@ from checkwash.ir.model import (
     normalize_text,
     param_tables,
 )
-from checkwash.ir.subjects import same_subject
+from checkwash.ir.subjects import subject_key
 
 JACCARD_THRESHOLD = 0.8  # frozen, SPEC §7
 MAX_UNPAIRED = 64  # frozen, SPEC §7
@@ -148,19 +148,23 @@ def _compatible(b, a) -> bool:
     return (b.strength is not None and a.strength is not None) or b.form == a.form
 
 
-def _subject_partner(b, leftovers: list, used: list[bool]) -> int | None:
+def _subject_partner(b, leftovers: list, used: list[bool], keys: list) -> int | None:
     """The leftover an old assertion takes first in the order fallback (#434 A), or None.
 
     A compatible, unused leftover that checks the old assertion's subject
-    (`ir.subjects.same_subject`): written out, or through one plain local
-    binding, read in the same context. Among those, the same form comes
-    first, then at least the old strength, then span order. None when no
-    leftover checks that subject, and the fallback keeps today's rule.
+    (`ir.subjects.same_subject`, through each leftover's `subject_key` in
+    `keys`): written out, or through one plain local binding, read in the
+    same context. Among those, the same form comes first, then at least the
+    old strength, then span order. None when no leftover checks that
+    subject, and the fallback keeps today's rule.
     """
+    key = subject_key(b)
+    if key is None:
+        return None
     best = None
     best_rank = None
     for j, a in enumerate(leftovers):
-        if used[j] or not _compatible(b, a) or not same_subject(b, a):
+        if used[j] or keys[j] != key or not _compatible(b, a):
             continue
         weaker = b.strength is not None and (a.strength is None or a.strength < b.strength)
         rank = (a.form != b.form, weaker)
@@ -283,12 +287,14 @@ def _match_assertions(
     # weakening, while the two lines swapped passed. The pair stays a fallback
     # pair, so every rule reads it as it reads the swapped order's. Old
     # assertions are still taken in span order; one with no such leftover
-    # left keeps today's rule.
+    # left keeps today's rule. With one leftover the two rules agree, so the
+    # subjects are read only when there are two or more.
     subject_first = python and own
+    keys = [subject_key(a) for a in a_rest2] if subject_first and b_rest2 and len(a_rest2) > 1 else None
     used = [False] * len(a_rest2)
     removed = []
     for b in b_rest2:
-        idx = _subject_partner(b, a_rest2, used) if subject_first else None
+        idx = _subject_partner(b, a_rest2, used, keys) if keys is not None else None
         if idx is None:
             for j, a in enumerate(a_rest2):
                 if used[j]:

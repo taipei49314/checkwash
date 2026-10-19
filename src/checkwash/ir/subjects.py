@@ -25,10 +25,11 @@ question without a second definition of "the same subject".
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Iterable, Mapping
 
-from checkwash.ir.astutil import same_expr
-from checkwash.ir.model import Assertion
+from checkwash.ir.markers import parse_expr
+from checkwash.ir.model import Assertion, normalize_text
 
 
 def reaching_signature(reaching: Mapping[str, str], names: Iterable[str]) -> str:
@@ -59,13 +60,30 @@ def subject_of(assertion: Assertion) -> tuple[str, str] | None:
     return assertion.left, reaching_signature(assertion.reaching or {}, assertion.left_names)
 
 
+def subject_key(assertion: Assertion) -> tuple[str, str] | None:
+    """A key for `same_subject`: equal keys are the same subject, read in the same context.
+
+    (reading context, the expression as parsed), so spelling and spacing do
+    not matter, as for `astutil.same_expr`. An expression that does not
+    parse is kept as its normalized text, which equals no parsed one. None
+    for an assertion with no subject (`subject_of`), and for a subject too
+    deep to compare, which is not known to be the same as any other. The
+    order fallback computes each leftover's key once.
+    """
+    subject = subject_of(assertion)
+    if subject is None:
+        return None
+    expression, context = subject
+    node = parse_expr(expression)
+    if node is None:
+        return context, "\x00" + normalize_text(expression)
+    try:
+        return context, ast.dump(node)
+    except (RecursionError, ValueError):
+        return None
+
+
 def same_subject(before: Assertion, after: Assertion) -> bool:
     """Do these two assertions check the same subject, read in the same context?"""
-    old, new = subject_of(before), subject_of(after)
-    if old is None or new is None or old[1] != new[1]:
-        return False
-    try:
-        return same_expr(old[0], new[0])
-    except RecursionError:
-        # A subject too deep to compare is not known to be the same one.
-        return False
+    old = subject_key(before)
+    return old is not None and old == subject_key(after)
