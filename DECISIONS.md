@@ -12461,8 +12461,8 @@ chose.
 Ruling 469 (owner, 2026-10-18, issuecomment-6248629427, 「19 項全部照建議做
 （價值判斷的題也照你的傾向）」, "all as recommended, value judgements included")
 answered item 4 of the agent's recommendation list and states each decision
-with its reason in the issue. D-151 to D-153 are reserved for other open
-pull requests (#507, #428, #454), so this entry is D-154.
+with its reason in the issue. D-151 to D-153 are reserved for #507 and for
+the fix pull requests of #428 and #454, so this entry is D-154.
 
 #469 reports that after D-131 the v0.8.0 acceptance sweep still stopped 53
 aiohttp commits with exit 2, at the subject-replacement pass's 30,000-node
@@ -12570,18 +12570,25 @@ Effects by reading:
   with the same literal on both sides, changed or not, `_subject_call`
   (`subject_replacements.py:209`) runs on both sides. For a name asserted
   at the top level of a straight-line test (`value = f(1)`, then
-  `assert value == 2`) it reaches `_binding_sites(tree.body)` (`:254`), a
-  walk of the whole module, and `_bindings(tree.body)` (`:256`). The pass's
-  time therefore grows with the number of such pairs times the module's
-  nodes: faster than linearly for a file made of many small tests of that
-  shape. At about 15 nodes per test, a 200,000-node file of them holds about
-  13,000 tests, and the walking is about (200,000 / 30,000)², some 44 times,
-  the most a file under the old limit could cause. The whole-tree walks the
-  ruling cites (`:412`, `:465`) are reached only for an inherited helper
-  assertion that passes the caller checks, and for a pair whose callee
-  changed. The measurement the ruling asks for has not run, and this
-  reading is to be reported on #469; a budget that fails closed, or reading
-  each tree's module bindings once instead of per pair, is for the owner.
+  `assert value == 2`) it scans the module's top-level statements: `_scope`
+  (`:221`) and the star-import check (`:224-225`) iterate them,
+  `_binding_sites(tree.body)` (`:254`) visits them without entering
+  function or class bodies, and `_bindings(tree.body)` (`:256`) iterates
+  them. The pass's time therefore grows with the number of such pairs times
+  the number of the module's top-level statements, about one per test in a
+  file of small tests: faster than linearly for a file made of many small
+  tests of that shape. At about 15 nodes per test, a 200,000-node file of
+  them holds about 13,000 tests, and the scanning is about
+  (200,000 / 30,000)², some 44 times, the most a file under the old limit
+  could cause. The whole-tree walks the ruling cites (`:412`, `:465`) are
+  reached only for an inherited helper assertion that passes the caller
+  checks, and for a pair whose callee changed. The measurement the ruling
+  asks for has not run, so ruling item 1's condition is not met yet: no
+  step, test or script in this pull request takes the time, and how it is
+  taken (a CI step or an owner-approved pool run, which can also take D-131
+  item 2's stand-in time) is for the owner. This reading is to be reported
+  on #469; a budget that fails closed, or reading each tree's module
+  bindings once instead of per pair, is for the owner.
 - The performance gate cannot move. `tests/gates/test_perf.py` calls
   `analyze` without a `root_reader`, and both passes return no events
   without one (`standin_installations.py:1038`,
@@ -12590,8 +12597,12 @@ Effects by reading:
   neither pass reads. `tests/test_perf_git.py` runs both passes through the
   CLI on 150 test files of about 20 nodes each, far under both limits and no
   stand-in candidates, so their work is unchanged. A run that refuses
-  nothing gains two keyword arguments per `_parse` call and two attribute
-  stores per `_Trace`.
+  nothing gains only constant work per call: per `_parse` call, two keyword
+  arguments and two module-global lookups where the limits were literals;
+  per parsed change, one `_trees` call with two path normalisations; per
+  `_Trace`, two keyword arguments and two attribute stores; and per step,
+  one module-global lookup in `_step`, where the per-proof limit was a
+  literal (up to 1,000,000 steps per analysis).
 
 **The Stop hook.** These refusals are engine errors. Under D-134 item 2 a
 hook-json engine error exits 0 with the "not analysed" `systemMessage` and
