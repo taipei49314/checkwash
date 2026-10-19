@@ -7,11 +7,12 @@ name: acceptance 414 (hosted)
 # docs/acceptance/414-hosted.md; the owner approves it before the pull request
 # that runs this is opened.
 #
-# It runs only for a draft pull request from a branch named
-# `ci/acceptance-414-*` in this repository, which is never merged, so the file
-# is never on main and no ordinary pull request runs it. The `paths` filter and
-# the job condition both hold that if it ever lands elsewhere. Results are
-# hosted CI, not the EC pool; nothing runs on a work machine.
+# It runs only for a pull request from a branch named `ci/acceptance-414-*`
+# in this repository. Draft status is not checked: the pull request is opened
+# as a draft and never marked ready or merged, so the file is never on main
+# and no ordinary pull request runs it. The `paths` filter and the job
+# condition both hold that if it ever lands elsewhere. Results are hosted CI,
+# not the EC pool; nothing runs on a work machine.
 
 on:
   pull_request:
