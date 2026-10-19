@@ -319,7 +319,7 @@ walk above now also reads, for the declarations they hold:
   under the key its deletion has. There is no new marker, and the message
   does not say the code is still in the diff.
 - Its skip, focus and options apply to nothing, so a dead `it.only` stops no
-  other test, and a dead `describe.skip` skips nothing.
+  other test.
 - It earns no credit. A test pasted under `if (false)`, in the same file or
   another, gives a deleted one no move credit (`ASSERTION_MOVED`), and an
   assertion moved into it is removed. It adds no oracle mass for
