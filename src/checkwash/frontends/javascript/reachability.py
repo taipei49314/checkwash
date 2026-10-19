@@ -524,9 +524,12 @@ class Reachability:
         after `return`, `throw`, `yield`, `await`, `void` or a prefix `!` on
         the same line. Anything else reads as a declaration: first in a
         statement, after a label's or a `case`'s `:` (`l: function f() {}`),
-        after `)` (`if (x) function f() {}`), `]` or `}`, and after an
-        operand at a line break. An `async` right before it on its line is
-        read past.
+        after `)` (`if (x) function f() {}`), `]` or `}`, after an operand at
+        a line break, after a template or regular expression, which the
+        tokens omit, so the token before it is not the one JavaScript reads
+        (`` const s = `x` `` then a declaration on the next line), and after a
+        `.` that ends a number (`x = 1.` then one on the next line). An
+        `async` right before it on its line is read past.
         """
         following = index + 1
         if self.token(following) == "*":
@@ -536,7 +539,11 @@ class Reachability:
         before = index - 1
         if self.token(before) == "async" and not self.bindings._line_break(index):
             before -= 1
+        if before < 0 or not all(_trivia(self._gap(gap, gap + 1)) for gap in range(before, index)):
+            return True  # an operand the tokens omit stands before it, after which a statement may start
         previous = self.token(before)
+        if previous == "." and self._ends_number(before):
+            return True  # the `.` ends a number (`1.`), after which a statement may start
         if previous in {".", "?.", "#"}:
             return False
         if _NAME.fullmatch(previous) and self.token(before - 1) in {".", "?.", "#"}:
@@ -544,6 +551,18 @@ class Reachability:
         if previous in _EXPRESSION_BEFORE:
             return False
         return not (previous in _EXPRESSION_BEFORE_ON_LINE and not self.bindings._line_break(before + 1))
+
+    def _ends_number(self, dot: int) -> bool:
+        """Does the `.` at token `dot` end a number (`1.`, `1_000.`)?
+
+        It does when the word right before it, with nothing between, starts
+        with a digit. `1 .x` and `a1.x` read a property.
+        """
+        text, end = self.bindings.text, self.tokens[dot][1]
+        start = end
+        while start > 0 and (text[start - 1].isalnum() or text[start - 1] in "_$"):
+            start -= 1
+        return start < end and text[start].isdigit()
 
     def _gap(self, before: int, index: int) -> str:
         """The text between token `before` and token `index`, or the file's end after the last token."""

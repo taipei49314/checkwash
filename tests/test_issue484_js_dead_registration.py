@@ -191,9 +191,14 @@ def test_a_parked_test_is_reported_as_its_deletion_is_with_the_same_key(after):
     "if (flag) function helper() {}",
     "return\nfunction helper() {}",
     "const pick = { run: function run() {} };",
+    "const note = `x`\nfunction helper() {}",
+    "const step = 1.\nfunction helper() {}",
 ])
 def test_a_dead_region_holding_a_function_declaration_still_refuses_the_walk(helper):
-    """A call before the region may run a hoisted body. A named function after `:` reads as a label's."""
+    """A call before the region may run a hoisted body. A named function after `:` reads as a label's.
+
+    A template the tokens omit, or the `.` that ends `1.`, may end the statement before it.
+    """
     assert "parked" in names(describe(LIVE + "return;\n" + PARKED + helper + "\n"))
 
 
