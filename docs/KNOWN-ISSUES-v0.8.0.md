@@ -25,7 +25,7 @@ found by reading the code and the pull requests' reviews; where a row says
 | #346 pytest configs | Working-tree mode does not read symlinked configs; they are still refused there, and when a root config is touched the collection-inventory pass can still refuse a nested config symlink. In a range check every symlinked config name is resolved up front, so an unsafe link fails closed even when dormant. Other symlinks, including a custom `-c` file name, are not covered. The psf/requests directory-symlink row may still exit 2. |
 | #345 large and deep sources | The subject-replacement pass keeps its own 30,000-node limit. #389 reported that five aiohttp commits still exit 2 (two at the stand-in step guard, two at that node limit, one at a nonregular snapshot). A 1 MB file of ordinary statements took 4.263 s before and 9.788 s after the limit change, whole run to refusal (#389, run 38292837314). Deep string chains are rebuilt only for complete top-level `NAME = STRING (+ STRING)+` lines; any other deep shape still raises `RecursionError` and exits 2. A very deep binary expression used directly as an asserted subject keeps a null semantic result, so its meaning is not compared (#374, #384). |
 | #422 exit-status reader | Read directly and in same-file callees only. Missed spellings include hook parameters with defaults or keyword-only ones, hooks bound by assignment or called through an instance, nested functions published with `global` or `nonlocal`, decorator, context-manager and annotation call routes, aliases of `sys.exit`, `pytest.exit`, `SystemExit` and `pytest.fixture`, `from os import *`, a negative `testsfailed` literal, several namespace-write spellings, and a rebound `os.fork`. A changed value on an existing exit marker adds no finding. Out of scope: `pytest_cmdline_main`, `pytest_runtestloop` and `pytest_collection` short-circuits, other callback registrations, plugin modules, exits in test or production code, `os.exec*`, computed names, `ctypes` and start-up files; the exit-5 recipe combined with a run that collects nothing. |
-| #432 no-op replacement reader | Pinned silent: loops, `with` and `except` bodies, async hooks, hooks bound by assignment, class plugins, autouse fixtures, call-built or attribute-sourced replacements, computed names, `__dict__` writes, subclasses, `sys.modules` lookups and `addTypeEqualityFunc`. Also missed: a hookwrapper that restores `item.runtest` after its `yield`, a builtin callable as the replacement, a write inside a same-file helper, and a no-op `addFailure`. A no-op proof accepts a call, raise or assert that never runs. An unrelated edit to a top-level `if` can re-report an unchanged replacement. |
+| #432 no-op replacement reader | Pinned silent: loops, `with` and `except` bodies, async hooks, hooks bound by assignment, class plugins, autouse fixtures, call-built or attribute-sourced replacements, computed names, `__dict__` writes, subclasses, `sys.modules` lookups and `addTypeEqualityFunc`. Also missed: a hookwrapper that restores `item.runtest` after its `yield`, a builtin callable as the replacement, a write inside a same-file helper, and a no-op `addFailure`. Inferred, and not read as a runtime control: a hook or replacement from another file (a hook the conftest imports, a module it names in `pytest_plugins`, a replacement it imports and assigns), a write followed by a `raise` that a handler catches (`try: raise X` / `except X: pass`), and the same swap written in a test module instead of a conftest. A no-op proof accepts a call, raise or assert that never runs. An unrelated edit to a top-level `if` can re-report an unchanged replacement. |
 | #431 always-passing catch assertions | JS/TS only, and only `true`, `false` and `null` literal operands. Number and string literal equality, `toEqual(true)`, message arguments and self-comparison still keep a swallowing catch's exemption; their fix is #513, not #429, which added no shared always-pass helper. The Python counterpart (`except Exception: assert True`) is open as #496. The always-failing direction is pinned by a test only for Vitest `expect`. |
 | Action boundary | The v0.8.0 Action closes the trust-boundary issue for a clean, dedicated hosted job. The interpreter, shell startup, runner image, PyPI build tooling and setup-python remain trusted, and an earlier step that ran pull-request code can compromise the job. The v0.6.0 and v0.7.0 Actions remain affected; re-pin them. A composite Action cannot stop a caller from choosing weaker inputs; protect the workflow file by review. |
 | Sweeps and cost | The acceptance sweep ran after publication, on 2026-10-15 on LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546), labelled human-authorized local PJU, NOT EC pool (DECISIONS D-140). It replays v0.7.0 and v0.8.0 on 6,354 in-sample commits, so it measures the release, not each change, and it gives no false-positive rate. On the 6,168 commits both versions analyse, verdicts and findings are identical, and the new blocks of #422, #432 and #431 never fired. Of the 186 commits v0.7.0 refused with exit 2, v0.8.0 analyses and passes 30, and it refuses none that v0.7.0 analysed. The median engine time per commit is about 0.2 s slower. What each record adds: #422's targeted set ran for the ten repository histories of D-088's sets, and the rest is queued for a later sweep (D-136); #432's conftest-touching commits ran, its conftest census is queued, and only some of its reporting shapes are proved under real pytest (D-137); for #431, the JS/TS cost of the change alone is derived as 0 from this run, and the issue's pair before the change and a mined literal-in-catch set are waived (D-138). The Action's cost is unmeasured. #422 and #431 close when their records merge, and #432 when its fixture pull request has merged as well; a queued run that finds a false block reopens #422 or #432. |
@@ -43,22 +43,38 @@ found by reading the code and the pull requests' reviews; where a row says
 | [#429](https://github.com/taipei49314/checkwash/issues/429) | JS/TS `expect(x).toBe(x)`, an assertion under `if (false)`, or a `return;` before it passes with zero findings; Python blocks all three. Ruled, not implemented. |
 | [#212](https://github.com/taipei49314/checkwash/issues/212) | No independently selected JS/TS history replay measures the false-positive cost of the JS/TS rounds. |
 
-Other open reports include [#417](https://github.com/taipei49314/checkwash/issues/417)
-(under Python 3.10 the pyz exits 1, the block code, with a traceback),
-[#434](https://github.com/taipei49314/checkwash/issues/434) and its real-world
-instance [#457](https://github.com/taipei49314/checkwash/issues/457) (a
-precondition before a rewritten `==` blocks as `ASSERT_WEAKENED`),
-[#420](https://github.com/taipei49314/checkwash/issues/420) (one-hop repair
-evidence never applies to a top-level callee),
-[#436](https://github.com/taipei49314/checkwash/issues/436) and
-[#437](https://github.com/taipei49314/checkwash/issues/437) (`doctor`
-reports FAIL right after install; `allow` accepts a past `--expires`), and
-the missed cheats [#423](https://github.com/taipei49314/checkwash/issues/423),
-[#425](https://github.com/taipei49314/checkwash/issues/425),
-[#426](https://github.com/taipei49314/checkwash/issues/426) and
-[#433](https://github.com/taipei49314/checkwash/issues/433). The
+Other open reports include [#434](https://github.com/taipei49314/checkwash/issues/434)
+and its real-world instance
+[#457](https://github.com/taipei49314/checkwash/issues/457) (a precondition
+before a rewritten `==` blocks as `ASSERT_WEAKENED`) and the missed cheat
+[#480](https://github.com/taipei49314/checkwash/issues/480) (a TypeScript
+return annotation on a JS/TS arrow test callback, such as `(ctx): void =>`,
+hides its context's assertions, and the coverage report can still say
+`no_known_gaps`). The
 [issue list](https://github.com/taipei49314/checkwash/issues) has every open
 report.
+
+[#436](https://github.com/taipei49314/checkwash/issues/436) (`doctor`
+reports FAIL right after install) was closed as completed on 2026-10-16;
+#466 fixed that on `main`, after v0.8.0. The missed cheats
+[#423](https://github.com/taipei49314/checkwash/issues/423),
+[#425](https://github.com/taipei49314/checkwash/issues/425),
+[#426](https://github.com/taipei49314/checkwash/issues/426) and
+[#433](https://github.com/taipei49314/checkwash/issues/433) are deferred
+until after 1.0 ([#504](https://github.com/taipei49314/checkwash/issues/504)),
+as are [#417](https://github.com/taipei49314/checkwash/issues/417) (under
+Python 3.10 the pyz exits 1, the block code, with a traceback),
+[#420](https://github.com/taipei49314/checkwash/issues/420) (one-hop repair
+evidence never applies to a top-level callee) and
+[#437](https://github.com/taipei49314/checkwash/issues/437) (`allow` accepts
+a past `--expires`).
+So is [#278](https://github.com/taipei49314/checkwash/issues/278), which
+this page did not list at release: checkwash does not read pytest 9's
+native `[tool.pytest]` table in `pyproject.toml`, so a new `pyproject.toml`
+whose native table narrows collection, or a `-m` selector added to an
+existing native table, passes with only `CI_WORKFLOW_TOUCHED` at warn
+(#278's runs at `6e4f5ef`, before v0.8.0). Review changes to that table by
+hand.
 
 ## Status of the v0.7.0 known issues
 

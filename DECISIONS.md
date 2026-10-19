@@ -12831,3 +12831,147 @@ and the "Fingerprint stability" subsection); R61 kept the schema, with
 D-148; R63 left shipping the schema as package data, a jsonschema
 cross-check and moving the frozen copy undecided. The reply is the text of
 an answer the agent wrote, which the owner chose.
+
+## D-160 (2026-10-19): a test runner's expected-failure record is a documented limit, and its detector is not scheduled (#468)
+
+*A recorded limit and a refusal; no code, rule, fixture or frozen text changes.*
+
+Ruling 468 came in two steps. On 2026-10-16 (issuecomment-6230171551,
+「#468、#471 都照建議」, "both as recommended") the owner adopted the
+analysis in issuecomment-6229288226: (c) now, then (b), not (a); undici's
+format only; (c) in the next release, (b) after a ruling on the size limit
+and a pool sweep; "This issue stays open for (b)." On 2026-10-19
+(「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+the reply was a button whose text the agent wrote), R57, R58 and R64
+completed (c), replaced that last sentence and narrowed that ruling's
+item 2 (item 3 below). D-151 is the last entry on
+main, D-153 is unused, and D-152 and D-154 to D-159 are assigned to open
+pull requests, so this entry is D-160.
+
+#468 reports that undici's `test/web-platform-tests/expectation.json`,
+the record its Web Platform Tests runner reads, can mark a regressed
+subtest `success: false` or `flaky: true`, or its test file `skip: true`,
+and no rule reads it. The v0.8.0 acceptance sweep's JavaScript batch set
+the file aside unread in 10 undici commits (on LAPTOP-01AGNPJU, under
+POLICY `checkwash-pju-sweep`, T-546). It is not a v0.8.0 regression.
+
+Decided:
+
+1. (c), a known limit (468.Q1). No rule reads a test runner's
+   expected-failure record. Under 1,000,000 bytes undici's file has the
+   `test` role (#217, SPEC §2), not an opaque production change, and earns
+   no repair evidence; over that size it is set aside unread (#415).
+   Either way the change passes with zero findings. The limit is written
+   in THREATMODEL row 156 (Open, by ruling), in `docs/assertion-coverage.md`
+   ("Expected-failure records a test runner reads", since #475) and in
+   `docs/KNOWN-ISSUES-next.md`, marked Existing, from where it moves to the
+   next release's known-issues page.
+2. Not (a), a default role. The `snapshot` role, or a new must-read role,
+   would turn the 10 sweep passes back into v0.7.0's exit 2 (D-135 ruling
+   1), report about 9 of the 10 commits at warn without telling them
+   apart, and inherit row 132: any JS production edit silences the
+   file-backed rule.
+3. Scope: undici's format only, recognised by path and shape (468.Q2).
+   The 2026-10-16 ruling gave each other expected-failure format its own
+   issue when the corpus shows one. The analysis adopted through R58 and
+   R64 narrowed that: another runner's format gets its own issue when a
+   fix for it is planned; with no fix scheduled, it is added to row 156
+   instead.
+4. (b) is not scheduled (R64). (b) is a detector that compares entries
+   by identity and reports a subtest recorded as passing that no longer
+   is, or a file newly marked `skip` or `flaky`. Building it would need,
+   first, a ruling that lets this format be read past 1,000,000 bytes,
+   with the limit to use (D-135 ruling 1 refuses a file a detector must
+   parse), then a new rule ID in the frozen §4 list, its fingerprint (§6),
+   and a pool sweep of its cost, including parse time on 2 MB sides.
+   #468 is reopened when any of these happens: a cheat in this file is
+   reported; undici fixes its runner's comparison, so that the file gates
+   CI; or the size limit is ruled on for another reason. Another format
+   does not reopen #468 (item 3).
+
+Why (b) is not scheduled, by reading:
+
+- undici's runner fails no run on a changed result. It diffs the record
+  against the observed results with jsondiffpatch and
+  `propertyFilter: (name) => name === 'success'`, and sets
+  `process.exitCode` to 1 only for a non-empty diff
+  (`test/web-platform-tests/wpt-runner.mjs:818-825` at `5550222761`, the
+  same at undici's main `e8f34234d1`). jsondiffpatch's `objectsDiffFilter`
+  (`src/filters/nested.ts`; undici pins `^0.7.3`) applies the filter to
+  every key at every depth, so the top-level directory keys are dropped
+  too and the diff is always empty. The edit hides a regression from the
+  record instead of turning a red run green; `skip` still stops a file
+  from running. The analysis had listed this as undetermined.
+- (b) would report at warn, and in the cheat shape a JS production edit
+  is present, so warn is its ceiling (rows 2 and 131). At the default
+  `fail_on = "high"` it changes no verdict.
+- No commit is known to be a cheat. By reading, 8 of the 10 are honest,
+  `8453a773ae` is not decidable and `5550222761` is undetermined.
+- The size ruling (b) waited for is not being asked: #415 is closed.
+
+The 2026-10-16 ruling's item 3 named only `docs/assertion-coverage.md`
+and the known-issues page for (c). The adopted analysis also named the
+THREATMODEL row and this entry, so they are not a new decision (R58). As
+D-050 shows, an entry may record a refusal that changes no behaviour.
+
+Corrected in `docs/assertion-coverage.md`: it said the runner "compares
+each subtest with its recorded `success`" and that the edit "makes a
+failing run pass". By the reading above that overstated it. The section
+now says the runner is written to compare, that it fails no run today,
+and that a fixed comparison would let the edit turn a failing run into a
+passing one. Its detector paragraph said the detector "is planned"; it
+now says it is not scheduled.
+
+Cost: the gap stays. If undici fixes its runner, the cheat costs nothing:
+undici's `CONTRIBUTING.md:110` asks contributors to mark new failures in
+the file, and the runner rewrites it from a local run. Only the
+documentation points reviewers at the file, and a reopen depends on
+someone noticing one of the conditions. How many other expected-failure
+records the corpus holds is unknown, because the sweep sees such a file
+only when it is over 1 MB.
+
+Rule 2: no existing expectation changes, and no code, fixture or test
+changes. `tests/test_threatmodel_pinned.py` checks only Closed rows, and
+`tests/gates/test_tamper_corpus.py` and `tests/gates/test_recorded_arms.py`
+read only the rows they name. `benchmarks/FAILURES.md` gains row 156 (175
+bypasses, 59 not closed), updated by hand to its generator's output.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. The undici and jsondiffpatch readings come
+from source read for the 2026-10-18 analysis.
+`NOT_RUN：工作機規則（POLICY work-machine-local），read-only inference; nothing was run`.
+
+The agent wrote this entry in #468's docs PR #521. The maintainer approved
+its text as it stood at 97f6816a on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR
+approval list, all as recommended"), in reply to the agent's list asking
+for approval of this PR's SPEC §4 `SUPPRESSION_ADDED` row (b5aac2c6,
+c1a68fa9), THREATMODEL row 156 (f9c6dace, 629baffe) and D-160 (276c44ec,
+97f6816a) text, with the hand edit of `benchmarks/FAILURES.md` (A21), and
+of its departures from the rulings (A22): this entry's record that R58 and
+R64 narrowed the 2026-10-16 ruling's item 2, the quote case in the #421
+row, the #497 spellings in their own sentence, the #480 wording that
+differs from the 2026-10-18 draft, and the introduction of
+`docs/KNOWN-ISSUES-next.md` defining *Existing* rows. The same reply chose
+to correct the v0.8.0 known-issues page's sentence that listed #423, #425,
+#426 and #433 as open (A23), to name #278's gap on that page (A24), and to
+shorten the #468 row's source in `docs/KNOWN-ISSUES-next.md` to "the
+v0.8.0 acceptance sweep (D-140)" while this entry keeps the host and
+policy (A25). Those three edits (ab989698, 38613ccc, eb3d9dcf) and the
+first version of this paragraph (216c4dfe) were written after the reply,
+so their wording is the agent's. Later the same day the maintainer
+approved them as written: 「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"), in reply to the agent's round-2 list, which asked whether
+to approve together the text written to apply options already approved,
+this paragraph and those three edits among it (B3); whether the first
+header sentence of `docs/KNOWN-ISSUES-next.md`, which said every residual
+below was found by reading, should also yield to a row, with #510 and #521
+using one wording (B4); and whether to correct, as under A23, the v0.8.0
+page's sentence that still listed #417, #420, #436 and #437 as open (B5).
+Under B4 this branch keeps the wording it already had, "unless a row names
+another source" (775aa3dd, A22), which #510 now uses too (7dc0cd20). Under
+B5, 42410c38 says that #417, #420 and #437 are deferred until after 1.0
+(#504) and that #436 was closed as completed. f3dd7110 brings this entry's
+numbering sentence up to date with main, which the pull request's claims
+review found stale. Those two edits and this paragraph as it now reads
+were written after the second reply. Both replies were buttons whose text
+the agent wrote, which the owner chose.
