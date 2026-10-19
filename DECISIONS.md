@@ -12455,3 +12455,197 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-154 (2026-10-19): subject replacement shares the 200,000-node limit, and the stand-in limit refusals name what fired (#469)
+
+Ruling 469 (owner, 2026-10-18, issuecomment-6248629427, 「19 項全部照建議做
+（價值判斷的題也照你的傾向）」, "all as recommended, value judgements included")
+answered item 4 of the agent's recommendation list and states each decision
+with its reason in the issue. D-151 to D-153 are reserved for other open
+pull requests (#507, #428, #454), so this entry is D-154.
+
+#469 reports that after D-131 the v0.8.0 acceptance sweep still stopped 53
+aiohttp commits with exit 2, at the subject-replacement pass's 30,000-node
+limit or at the stand-in step limits, and that neither message named a
+file. The ruling comment's corrections, counted from the recorded sweep
+values, put 43 commits at the node limit and 17 at the step limit (14 of
+#469's, aiohttp `0258e4de7d` and `129ef25e0f`, and scrapy `c44b8df6c7`);
+#345's watch commit `5a8ebdfcae` stops at a nonregular source instead.
+
+**Ruling.**
+1. Q1 (a). `subject_replacements._parse` raises its node limit from 30,000
+   to 200,000 by reading the stand-in pass's `_MAX_SOURCE_NODES`, so the two
+   passes share one constant. Above it the run still exits 2, naming the
+   file. Not (b): the pass feeds `TEST_PATCHES_SUBJECT`, an oracle rule, and
+   D-135 ruling 1 keeps a file a detector must parse failing closed
+   (`DECISIONS.md:9884-9888`). Not (c): the 43 commits would stay at exit 2.
+   Condition: the pass has no step budget, so its time at 200,000 nodes is
+   measured on the fix in CI or the pool and recorded here (one run can also
+   meet D-131 item 2); if it grows faster than linearly the agent reports it
+   on the issue, and a work budget that fails closed needs its own ruling.
+2. Q2 (c). Both step limits stay, 20,000 steps per proof and 1,000,000 for
+   the analysis, and still exit 2. The refusal names which counter fired,
+   the file, the side, the unit and the step count. Raising either limit or
+   restructuring the conftest fan-out is a separate ruling, after an
+   approved run (a checkwash-lab run with its frozen manifest and engine
+   commit approved beforehand, or a pool run) records which counter fires,
+   and at what count, on the 17 commits. This ruling approves no run.
+3. Q3. The three refusals take D-131's `key=value` form, with the current
+   text as the prefix, and a test pins each:
+   - `subject replacement source exceeds the syntax node limit: path=...,
+     requested_side=..., bytes=..., nodes=..., limit=...`;
+   - `subject replacement source exceeds the byte limit: path=...,
+     requested_side=..., bytes=..., limit=...`, which by reading `check`
+     cannot reach (a changed `.py` side over 1,000,000 bytes refuses
+     earlier), so its test calls `_parse` directly;
+   - `stand-in execution proof exceeds the source step limit:
+     counter=proof|analysis, path=..., requested_side=..., unit=...,
+     steps=..., limit=...`, with the fired counter's steps and limit. A
+     proof that belongs to no test (the module-body seed traces, the
+     restructured-patch proof) names its kind as the unit. When the shared
+     budget fires, the message says the unit is where it ran out, not
+     necessarily its cause.
+   The subject-replacement refusals fall under D-135 ruling 3 ("Every
+   remaining size refusal names path, side, size and limit"); the step
+   guard is not a size refusal, so naming it is new and is ruled here. The
+   lab aggregator keys errors by the text before the first `:` or `(`, so
+   old and new rows still match.
+
+Implementation (lines at this PR):
+
+- `subject_replacements.py:21` imports `_MAX_SOURCE_NODES` from
+  `standin_installations.py:35`. `_parse` (`:34-63`) refuses over it with
+  the node message and over `_MAX_BYTES` (`:31`, 1,000,000, this pass's own
+  byte limit as before) with the byte message. Its `path` and `side`
+  default to `'<unknown>'` for direct calls, as the stand-in pass's
+  `_syntax` does. `_trees` (`:66-71`) parses both sides of a changed test
+  for the pass, the base side first, and names a rename's base side by its
+  old path, as `engine.py:1173` reads it.
+- `standin_installations.py:38` names the per-proof limit
+  `_MAX_PROOF_STEPS`, the 20,000 `_step` compared inline. `_step`
+  (`:434-438`) keeps its two comparisons; only a refusal calls
+  `_step_refusal` (`:440-458`) to build the message. `_Trace` takes `path`
+  and `unit` as keyword arguments (`:408-409`), `'<unknown>'` by default,
+  and `requested_side` is `before` or `after` from the trace's side index. A
+  test's proof passes its test path and qualname (`:939`); a module-body
+  seed passes the module it traces, a conftest or the test file, and
+  `'<module body>'` (`:1187`); the restructured-patch proof passes the test
+  path and `'<restructured patch>'` (`mock_testcase_replacements.py:146`).
+- `docs/subject-integrity.md` now gives the stand-in pass 200,000 nodes, says
+  the subject-replacement pass shares the limit, and says what each refusal
+  names. `docs/KNOWN-ISSUES-next.md` gains a #469 row. The #345 row of
+  `docs/KNOWN-ISSUES-v0.8.0.md` stays as the v0.8.0 record.
+
+Readings within the ruling's text, for the owner's approval:
+
+- When both counters fire on the same step, the message names
+  `counter=proof`, the counter `_step` compares first, with its steps and
+  limit.
+- The kinds of proof are spelled `'<module body>'` and
+  `'<restructured patch>'`; angle brackets keep them apart from any
+  qualname. A seed's `path` is the module whose body it traces.
+- The shared-budget sentence follows the fields: `; the unit is where the
+  shared analysis budget ran out, not necessarily its cause`.
+- A rename's base side is named by its old path.
+- Only the node limit is shared. The byte limit stays this pass's own
+  1,000,000, the same value as the stand-in pass's `_MAX_SOURCE_BYTES`.
+
+Effects by reading:
+
+- In a run with a source reader, as `check` gives, the stand-in pass
+  (`engine.py:1735`) runs before
+  this pass (`:1743`) and parses both sides of every changed test-role `.py`
+  file (`standin_installations.py:1060-1063`) against the same 200,000
+  nodes. For such a file the stand-in node refusal therefore comes first,
+  naming the file, and this pass's node refusal is reached only for a file
+  judged as a test that the stand-in pass does not read (a collectable
+  Python file holding another role, or one under a test-support directory,
+  `engine.py:1149`, `:1158-1159`), or through a direct call.
+- The 43 commits' `tests/test_client_functional.py` sides are 176,658 to
+  211,924 bytes, about 30,000 to 36,000 nodes at D-131's 170 nodes per
+  kilobyte, so neither pass's node limit stops them now. Whether they give a
+  verdict is unknown. The 17 step-limit commits still exit 2, now naming the
+  counter.
+- **Time, not measured.** For each eligible assertion pair, a positive `==`
+  with the same literal on both sides, changed or not, `_subject_call`
+  (`subject_replacements.py:209`) runs on both sides. For a name asserted
+  at the top level of a straight-line test (`value = f(1)`, then
+  `assert value == 2`) it reaches `_binding_sites(tree.body)` (`:254`), a
+  walk of the whole module, and `_bindings(tree.body)` (`:256`). The pass's
+  time therefore grows with the number of such pairs times the module's
+  nodes: faster than linearly for a file made of many small tests of that
+  shape. At about 15 nodes per test, a 200,000-node file of them holds about
+  13,000 tests, and the walking is about (200,000 / 30,000)², some 44 times,
+  the most a file under the old limit could cause. The whole-tree walks the
+  ruling cites (`:412`, `:465`) are reached only for an inherited helper
+  assertion that passes the caller checks, and for a pair whose callee
+  changed. The measurement the ruling asks for has not run, and this
+  reading is to be reported on #469; a budget that fails closed, or reading
+  each tree's module bindings once instead of per pair, is for the owner.
+- The performance gate cannot move. `tests/gates/test_perf.py` calls
+  `analyze` without a `root_reader`, and both passes return no events
+  without one (`standin_installations.py:1038`,
+  `subject_replacements.py:480`), so the gate reaches neither changed path;
+  its pathological file is a production file (`app/generated.py`) that
+  neither pass reads. `tests/test_perf_git.py` runs both passes through the
+  CLI on 150 test files of about 20 nodes each, far under both limits and no
+  stand-in candidates, so their work is unchanged. A run that refuses
+  nothing gains two keyword arguments per `_parse` call and two attribute
+  stores per `_Trace`.
+
+**The Stop hook.** These refusals are engine errors. Under D-134 item 2 a
+hook-json engine error exits 0 with the "not analysed" `systemMessage` and
+no `decision` (`DECISIONS.md:9790-9793`), so in the Stop hook they do not
+block the stop: the class of #456 (D-134 residuals,
+`DECISIONS.md:9849-9855`). By reading an agent could provoke one on purpose,
+for example with a test-module body that runs past 20,000 steps. The
+required CI check runs in range mode and still exits 2. D-150 blocks in
+hook-json only on a size refusal of the verdict diff; its Q6 sent the other
+limit refusals to #506, which these join now that they name path and side.
+They stay non-blocking until #506 is ruled. THREATMODEL row 128 already
+lists them as still open, so it does not change.
+
+D-131 recorded that "`subject_replacements._parse` keeps its own
+30,000-node limit" (`DECISIONS.md:9588-9589`) and repeated it under Open
+(`:9605-9606`). That no longer holds.
+
+Residuals. Two more stand-in limit refusals name nothing:
+`stand-in strict inventory is invalid or exceeds the path limit`
+(`standin_installations.py:1084`) and `stand-in context exceeds the source
+read limit` (`:1123`). They are not in this round. The time at 200,000
+nodes and D-131 item 2's stand-in time are not measured. Which step counter
+fires on the 17 commits is unknown; finding out needs the approved run of
+ruling item 2. #345 stays open and is judged again when this lands and the
+sweep re-runs its commits (the owner's decision of 2026-10-16); for that
+re-sweep's manifest, which the owner approves before it runs, the agent
+proposes the 60 commits plus `5a8ebdfcae`.
+
+Rule 2. The ruling approves one change to an existing expectation, as
+D-134 did (`DECISIONS.md:9834-9841`), and it is the only one made:
+`tests/test_standin_expression_iteration.py:190` pinned
+`^stand-in execution proof exceeds the source step limit$`. Its pattern now
+keeps that text as the prefix and also matches the new fields, with
+`counter=proof` for the row at `:177` and `counter=analysis` for the row at
+`:179`. The four rows at `:176-179`, which of them refuse, and the charge
+counts asserted after them do not change. By `git grep` at this PR's base,
+no other test or fixture pins any of the three messages or the 30,000
+value. If this PR's own checkwash run flags the test change, an exemption
+in `.greenwash/allow.toml` like #451's goes in the PR for the owner's
+approval. If CI moves any other expectation, the round stops and asks.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: 20 collected items in
+`tests/test_issue469_limit_messages.py`, none under `tests/gates`: the
+shared constant; trees of 30,001 and 200,000 nodes; a test file of about
+35,000 nodes giving its `TEST_PATCHES_SUBJECT` verdict; the node and byte
+refusals and their defaults; the refused side of a changed test and a
+rename's old path through `analyze`; each step counter, both at once, the
+defaults and an escaped path; each proof named where it stops through
+`installation_events`; and the path, side and unit each trace carries. No
+`.gwcase` fixture is added: the golden runner cannot expect an engine
+error. By reading, the documented test count becomes 19495 (19475 + 20);
+CI's collection checks it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source; no test, timing, checkwash run or sweep was run`.
+
+The agent wrote this entry in #469's fix PR, for the maintainer's approval
+of its wording, as the ruling asks.
