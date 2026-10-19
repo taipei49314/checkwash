@@ -15398,10 +15398,11 @@ How each answer is implemented (lines at this PR):
   removed (`_rows_gone`, `:126-148`): the rows deleted and the rows newly
   disabled, each a sorted list of argnames and cells, and the live counts
   before and after. A unit removed: the complete texts of its own
-  assertions. A focus added to a file: the focus call's text, under the
-  qualname `<file>`. The texts are in `identity_text`'s form, so
-  reformatting outside string literals keeps a key; spans, lines, messages,
-  severities, file digests and revision labels stay out.
+  assertions. A focus added to a file: the focus as the JS frontend
+  records it, under the qualname `<file>` (reading 5). The texts are in
+  `identity_text`'s form, so reformatting outside string literals keeps a
+  key; spans, lines, messages, severities, file digests and revision labels
+  stay out.
 - `finding_marker` (`:151-170`) finds the marker D6 judges by rebuilding the
   key of each marker the unit added, since the key no longer is its name's.
 - Q3 (a). `findings.py` adds `TEST_DISABLED_FINGERPRINT_RULES` (`:26-31`), a
@@ -15438,7 +15439,9 @@ How each answer is implemented (lines at this PR):
    the base marker `evidence._mark_weakened_guards` compared, under its old
    name for a skip moved into or out of a helper (#272); for one removed, it
    is the base condition the message names, an `except` block's first line
-   included.
+   included. A third event has the same shape: a path gained by an
+   unguarded `collect_ignore` (row 81). It has no guard on either side, so
+   both texts are null and no path is bound (a residual below).
 3. **Which rows.** A row is its table's argnames and its cell texts, read
    through `param_tables` as `diffalign._rows_lost` reads them, so a JS/TS
    `.each`/`.for` table's rows (#428) are read the same way. "Deleted" holds
@@ -15453,7 +15456,17 @@ How each answer is implemented (lines at this PR):
    those reached through a helper method stay out, as they do of the legacy
    pre-image (306 Sub-Q10). A unit with no assertion binds an empty list.
 5. **The focus key** keeps the legacy key's qualname `<file>`; the
-   finding's `unit` stays null.
+   finding's `unit` stays null. Q2 says "the focus call's complete text".
+   The key binds the text the JS frontend records for the focus, which is
+   also the finding's evidence and message: the callee as written
+   (`describe.only`, `fdescribe`), or the property text of an `only`
+   option. The frontend does not record the title or the other arguments,
+   so they are not bound, and binding them would need the engine to record
+   more of the call. So an approval covers another focus of the same
+   spelling added to the file (a residual below). A file-level focus is
+   reported only when no unit of its own file reports being stopped by it,
+   so wherever it sits the finding reports the same effect: under a runner
+   that applies focus suite-wide, every test outside the file stops.
 6. **No position.** The nine rules' ordinal and count tell identical copies
    of one assertion apart; each TEST_DISABLED shape binds its own texts
    instead. Two markers of one name added to one unit are read, as before,
@@ -15469,8 +15482,10 @@ as deleted, a stricter key); a path added to an unguarded `collect_ignore`
 (row 81) binds no path, so an approval covers another path added to the
 same control; a constant edited behind an unchanged guard (row 59) is bound
 by the guard's text, so an approval covers another edit that makes the same
-guard always true; and an approval still covers the identical reviewed
-change on a later diff, as D-055 intends.
+guard always true; a focus added to a file is bound by its spelling
+(reading 5), so an approval covers another focus of that spelling in the
+file; and an approval still covers the identical reviewed change on a later
+diff, as D-055 intends.
 
 **Fingerprints.** Every TEST_DISABLED finding has a new key, so every
 recorded TEST_DISABLED exemption stops matching, and the reviewed change
@@ -15489,9 +15504,11 @@ becomes one legacy key and two keys);
 and `::test_a_setup_guard_that_now_always_holds_is_reported`;
 `test_issue209_effects_pytestmark.py::test_the_fingerprint_is_the_marker_name_s`
 and `::test_a_conftest_pytestmark_is_reported_at_info`;
-`test_issue223_conftest_request_side.py::test_the_fingerprint_is_the_setup_markers`,
-whose same-file fixture now skips with the conftest's reason, "network
-tests are disabled" instead of "x", since the key binds the skip's text;
+`test_issue223_conftest_request_side.py::test_the_fingerprint_is_the_setup_markers`
+(the module's skip fixture with the reason "x" and the conftest's, which
+shared one key, now give two keys that refine one legacy key, since the key
+binds the skip's text; the test also checks that the same skip in either
+place is still one key);
 `test_issue260_pytestmark_spellings.py::test_a_guard_made_always_true_or_removed_is_reported`,
 `::test_a11_is_reported_under_its_mark_s_name` and
 `::test_a_conftest_pytestmark_s_guard_guards_nothing_either`;
@@ -15528,6 +15545,10 @@ run. `NOT_RUN：工作機規則（POLICY work-machine-local），the tests and t
   apart, and each second change left at high under an exemption recorded
   for the first), and one in `tests/test_js_assertion_identity.py`, #421's
   JS sibling `toBe(1)` and `toBe(2)` (R46). None is under `tests/gates`.
+  By reading, 29 of the 31 fail on this PR's base. Two pass there too: the
+  R46 test, because #477 already binds the after text, so it pins a case
+  #421 closed without a test; and the control that reformatting and moving
+  keep a key.
 - The documented test count is 20114 (20083 on this PR's base, + 31).
 
 The agent wrote this entry in #512's fix PR. It is a draft for the
