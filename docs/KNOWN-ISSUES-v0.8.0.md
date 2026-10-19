@@ -43,28 +43,31 @@ found by reading the code and the pull requests' reviews; where a row says
 | [#429](https://github.com/taipei49314/checkwash/issues/429) | JS/TS `expect(x).toBe(x)`, an assertion under `if (false)`, or a `return;` before it passes with zero findings; Python blocks all three. Ruled, not implemented. |
 | [#212](https://github.com/taipei49314/checkwash/issues/212) | No independently selected JS/TS history replay measures the false-positive cost of the JS/TS rounds. |
 
-Other open reports include [#417](https://github.com/taipei49314/checkwash/issues/417)
-(under Python 3.10 the pyz exits 1, the block code, with a traceback),
-[#434](https://github.com/taipei49314/checkwash/issues/434) and its real-world
-instance [#457](https://github.com/taipei49314/checkwash/issues/457) (a
-precondition before a rewritten `==` blocks as `ASSERT_WEAKENED`),
-[#420](https://github.com/taipei49314/checkwash/issues/420) (one-hop repair
-evidence never applies to a top-level callee),
-[#436](https://github.com/taipei49314/checkwash/issues/436) and
-[#437](https://github.com/taipei49314/checkwash/issues/437) (`doctor`
-reports FAIL right after install; `allow` accepts a past `--expires`), and
-the missed cheat [#480](https://github.com/taipei49314/checkwash/issues/480)
-(a TypeScript return annotation on a JS/TS arrow test callback, such as
-`(ctx): void =>`, hides its context's assertions, and the coverage report
-can still say `no_known_gaps`). The
+Other open reports include [#434](https://github.com/taipei49314/checkwash/issues/434)
+and its real-world instance
+[#457](https://github.com/taipei49314/checkwash/issues/457) (a precondition
+before a rewritten `==` blocks as `ASSERT_WEAKENED`) and the missed cheat
+[#480](https://github.com/taipei49314/checkwash/issues/480) (a TypeScript
+return annotation on a JS/TS arrow test callback, such as `(ctx): void =>`,
+hides its context's assertions, and the coverage report can still say
+`no_known_gaps`). The
 [issue list](https://github.com/taipei49314/checkwash/issues) has every open
 report.
 
-The missed cheats [#423](https://github.com/taipei49314/checkwash/issues/423),
+[#436](https://github.com/taipei49314/checkwash/issues/436) (`doctor`
+reports FAIL right after install) was closed as completed on 2026-10-16;
+#466 fixed that on `main`, after v0.8.0. The missed cheats
+[#423](https://github.com/taipei49314/checkwash/issues/423),
 [#425](https://github.com/taipei49314/checkwash/issues/425),
 [#426](https://github.com/taipei49314/checkwash/issues/426) and
 [#433](https://github.com/taipei49314/checkwash/issues/433) are deferred
-until after 1.0 ([#504](https://github.com/taipei49314/checkwash/issues/504)).
+until after 1.0 ([#504](https://github.com/taipei49314/checkwash/issues/504)),
+as are [#417](https://github.com/taipei49314/checkwash/issues/417) (under
+Python 3.10 the pyz exits 1, the block code, with a traceback),
+[#420](https://github.com/taipei49314/checkwash/issues/420) (one-hop repair
+evidence never applies to a top-level callee) and
+[#437](https://github.com/taipei49314/checkwash/issues/437) (`allow` accepts
+a past `--expires`).
 So is [#278](https://github.com/taipei49314/checkwash/issues/278), which
 this page did not list at release: checkwash does not read pytest 9's
 native `[tool.pytest]` table in `pyproject.toml`, so a new `pyproject.toml`
