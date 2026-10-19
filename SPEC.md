@@ -976,7 +976,9 @@ fixture as the test's:
 - **The producer** is the call whose value the fixture returns or yields:
   its only `return <value>`, or in a generator its only `yield <value>`,
   directly (`return C(...)`, `yield C(...)`) or through one plain local
-  binding (`p = C(...)`, then `yield p`). The other calls in its body, the
+  binding (`p = C(...)`, then `yield p`). A single `return` or `yield` that
+  runs only under a branch, a loop or a `match`, or in a `try`'s handler,
+  `else` or `finally`, gives no producer. The other calls in its body, the
   producer's own arguments included, do not count. The producer is matched
   as a call of the test is (clause 1, with the D-046 module check), against
   the modules that the import binding its root names in the fixture's own
