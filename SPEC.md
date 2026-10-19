@@ -935,7 +935,7 @@ Matching is **path-segment anchored**, never substring. Bare substrings made
 `build/` match `mybuild/` and `dist/` match `redist/`, which silently deleted
 real source trees from the analysis and made a directory rename a bypass.
 
-A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration, and any file with no extension. The run also refuses in the same way when the analysis reads the path as context. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
+A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `--format json` prints then, and what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration, and any file with no extension. The run also refuses in the same way when the analysis reads the path as context. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
 
 ## 4c. The task contract is base-side too
 
@@ -1346,6 +1346,16 @@ optional `unread` key in the JSON payload (omitted when empty), a SARIF tool
 execution notification and a `!` line of the term report, whose head then
 reads "analysis incomplete" when there is no finding, allowlisted or not;
 `check --format hook-json` and `--emit-ir` do not name it (#454).
+
+A size refusal (§4b) names its side on stdout too, though the run still
+exits 2: under `--format json`, without `--emit-ir`, stdout is
+`{"unread": [<entry>]}`, one such entry for the side the refusal and its
+stderr line name, which is the base side when both sides of a change are
+over the limit. It is not a findings document: it carries no
+`checkwash_findings_version`, `findings` or `verdict`. Term, sarif and
+`--emit-ir` keep an empty stdout, and so do a root manifest, config,
+exemption list or `--task` file over the limit at the base, which is
+refused before the analysis, and every other engine error (#454).
 
 **Which directory a command reads (#416).** `check`, `sweep`, `allow`, `doctor` and the `quality` forms that read a repository (a range, the worktree review, `init`, `doctor`) first ask Git about `--repo` (default `.`) with `git -C <--repo> rev-parse --is-inside-work-tree --show-prefix`. If Git answers `true` with a non-empty prefix, a second query, `git -C <--repo> rev-parse --show-toplevel`, names the root. Its answer must decode as UTF-8, be a single line, be absolute and name an existing directory. The command then uses that root in place of `--repo` for every later Git call and working-tree read. A run from a subdirectory therefore analyses the whole repository. For `check`, `sweep`, `doctor` and the `quality` forms its stdout and exit code are those of the same run at the root; `allow` writes the root ledger and names it under Git's spelling of the root. This is not the behaviour of `git -C <subdirectory>`, under which `ls-tree` and `git grep` stay scoped to the subdirectory. The root is never `--repo` joined with `--show-cdup`.
 
