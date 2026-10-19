@@ -12468,13 +12468,15 @@ one-time authorization (`docs/RELEASING.md`, 2026-10-15) listed "the
 verdict-baseline rotation PR (step 9), whose protected changes keep the
 maintainer's disposition" among what it covers, but its publication record
 says the grant "was consumed by publication" and that the rotation remains
-separate, so this entry does not rely on it. The PR is part of the v0.9.0
-release preparation and has no issue: a tag-push run requires `[baseline]`
-to be the highest other `v*` tag merged into the tagged commit
-(`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which for a v0.9.0
-tag is v0.8.0.
-D-151 to D-161 are assigned to pull requests prepared in parallel, so this
-entry is D-162.
+separate, so this entry does not rely on it. R56's recommendation also
+cited that grant as a reason; since the grant is consumed, the PR rests on
+the option R56 adopted and on approval items A31 to A34 (below). The PR is
+part of the v0.9.0 release preparation and has no issue: a tag-push run
+requires `[baseline]` to be the highest other `v*` tag merged into the
+tagged commit (`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which
+for a v0.9.0 tag is v0.8.0.
+D-151 to D-161 (D-153 is unused) are assigned to pull requests prepared in
+parallel, so this entry is D-162.
 
 After the rotation, pull requests, `main` and the next tag are compared
 with v0.8.0 instead of v0.7.0.
@@ -12587,10 +12589,36 @@ PR body proposed, and nothing else (f9bf2a2c); A32, this entry's wording
 as committed in 308dc412, 5490b4e8 (it rests on R56) and bf655e2d (it
 records the observed rotation run); A33, fetching the three receipt
 artifacts before they expire and recording their SHA256s here in one
-sentence, with no further approval (0faaea28); and A34, keeping
+sentence, with no further approval (the sentence that gives each
+artifact's size and SHA256s, 0faaea28); and A34, keeping
 `[baseline_blocked]` at 159 and `[t3.cases]` as carried over, since the
 tag-push run had no failure and its proposal is empty and the rotation run
 observed no drift, while the final head still needs a successful verdict
 run before merge. The reply is the text of a button the agent wrote, which
 the owner chose; the agent also wrote the list and each item's options,
 including A31's.
+
+Some of this entry was written after that approval, and none of A31 to
+A34 names it: in 0faaea28, besides the SHA256 sentence, the
+evidence-status sentence saying the receipts were downloaded on
+2026-10-19 and that each ZIP's SHA256 equals the one its upload step logs
+(it replaced "were not downloaded, and they are kept for seven days") and
+the sentence that the work machine only downloaded and hashed them (it
+replaced "Nothing ran on the work machine"); in 36919754, the
+acceptance-file bullet's "becomes" (it was "must become") and its sentence
+that the owner authorized the agent to change exactly that line, which
+replaced "the agent's commits do not touch it" and "The owner's
+disposition of this line is asked in the PR", and the approval paragraph
+above. The maintainer approved these on 2026-10-19 with 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended"), item B3, option A,
+「一併核可」 ("approve them together"): the sentences that write an
+already approved option into the documents, or turn a pending owner
+decision into a decided one, are approved together rather than one by
+one, and for this PR the approval record names the sentences D-162 gained
+after the approval. That reply, too, is the text of a button the agent
+wrote, which the owner chose; the agent also wrote the round-2 list and
+B3's options. The commit that adds this paragraph also adds, from a
+read-only claims review, the note that D-153 is unused and the sentence
+on R56's cited reason in the first paragraph, and narrows A33's commit
+reference above to its sentence; these correct facts and change no
+decision, and no approval item names them.
