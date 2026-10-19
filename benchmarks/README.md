@@ -76,10 +76,10 @@ regenerating Markdown is not a new measurement.
 JS/TS repositories, 300 non-merge commits each, were drawn and pinned on
 2026-10-07 before any engine ran on them
 ([`javascript-replay/`](javascript-replay/README.md)). Like the Python set
-above, they are in-sample (D-128; owner ruling 2026-10-19). Before each tag,
-the previous release and the candidate are compared on them, and every
+above, they are in-sample (D-128; owner ruling 2026-10-19, R28). Before each
+tag, the previous release and the candidate are compared on them, and every
 commit whose outcome moves, except an error that becomes a pass, goes to the
-owner ([release procedure](../docs/RELEASING.md)). The two runs so far are in
+owner (R29; [release procedure](../docs/RELEASING.md)). The two runs so far are in
 [`javascript-replay/results.md`](javascript-replay/results.md). They show
 which commits change verdict between two versions. No held-out or
 adjudicated JS/TS false-positive rate exists.
