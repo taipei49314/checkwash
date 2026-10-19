@@ -2817,8 +2817,10 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     # function too, even though they precede its body scope.
     parameter_positions = {bindings.tokens[index][1] for index in bindings.parameter_tokens}
     # A TypeScript return annotation can keep the binding scanner from
-    # recognizing an arrow's parameter scope. Its body is still a nested
-    # function, and cannot donate assertions to the surrounding test.
+    # recognizing an arrow's parameter scope: since #480 it reads a simple
+    # one only where an arrow can start, and this reader asks no position
+    # (D-167). Its body is still a nested function, and cannot donate
+    # assertions to the surrounding test.
     arrows: list[tuple[int, int]] = []
     for index, (token, _, _) in enumerate(bindings.tokens):
         if token != "=>" or index + 1 >= len(bindings.tokens):
