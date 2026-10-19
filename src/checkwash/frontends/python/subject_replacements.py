@@ -18,6 +18,7 @@ from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_
 from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
 from checkwash.frontends.python.literal_extrema_replacements import literal_extrema_events
 from checkwash.frontends.python.generator_fixture_subjects import generator_fixture_subject_events
+from checkwash.frontends.python.standin_installations import _MAX_SOURCE_NODES
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.model import judged_as_test
 from checkwash.ir.markers import parse_expr, parse_text
@@ -27,13 +28,25 @@ _BUILTINS = frozenset({"abs", "all", "any", "bool", "dict", "enumerate", "float"
                       "len", "list", "max", "min", "range", "reversed", "round", "set",
                       "sorted", "str", "sum", "tuple", "zip"})
 _MOCKS = {"unittest.mock.Mock", "unittest.mock.MagicMock", "mock.Mock", "mock.MagicMock"}
+_MAX_BYTES = 1_000_000
 
 
-def _parse(data):
+def _parse(data, *, path="<unknown>", side="<unknown>"):
+    """The source's tree, or None when it is not UTF-8 Python.
+
+    Over the byte limit, or over the stand-in pass's node limit, which this
+    pass shares (#469), it refuses, naming the path, the requested side and
+    the counts as the stand-in pass's refusals do (#345). By reading, `check`
+    refuses a changed `.py` side over 1,000,000 bytes before this pass runs,
+    so only a direct call reaches the byte refusal.
+    """
     if not isinstance(data, bytes):
         return None
-    if len(data) > 1_000_000:
-        raise EngineError("subject replacement source exceeds the byte limit")
+    if len(data) > _MAX_BYTES:
+        raise EngineError(
+            f"subject replacement source exceeds the byte limit: path={path!r}, requested_side={side!r}, "
+            f"bytes={len(data)}, limit={_MAX_BYTES}"
+        )
     try:
         text = data.decode("utf-8-sig")
     except UnicodeError:
@@ -41,9 +54,21 @@ def _parse(data):
     tree = parse_text(text)
     if tree is None:
         return None
-    if sum(1 for _ in ast.walk(tree)) > 30_000:
-        raise EngineError("subject replacement source exceeds the syntax node limit")
+    nodes = sum(1 for _ in ast.walk(tree))
+    if nodes > _MAX_SOURCE_NODES:
+        raise EngineError(
+            f"subject replacement source exceeds the syntax node limit: path={path!r}, requested_side={side!r}, "
+            f"bytes={len(data)}, nodes={nodes}, limit={_MAX_SOURCE_NODES}"
+        )
     return tree
+
+
+def _trees(change):
+    """Both sides' trees, the base side first; a rename's base side is named
+    by its old path, as the engine reads it."""
+    before_path = (change.old_path or change.path).replace("\\", "/")
+    return (_parse(change.before, path=before_path, side="before"),
+            _parse(change.after, path=change.path.replace("\\", "/"), side="after"))
 
 
 def _bindings(statements):
@@ -477,7 +502,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
             after = {a.id: a for a in unit.after.assertions}
             if any(assertion.inherited and assertion.right_literal is None for assertion in after.values()):
                 if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
+                    trees = _trees(change)
                 event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory)
                 if event is not None:
                     events.append(event)
@@ -488,7 +513,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                         or a.right_literal != b.right_literal):
                     continue
                 if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
+                    trees = _trees(change)
                 if any(tree is None for tree in trees):
                     continue
                 old_scope = _assertion_scope(trees[0], unit.qualname, b)
