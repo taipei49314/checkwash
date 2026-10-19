@@ -10114,14 +10114,60 @@ real pytest from red to green) and seven fixtures, four positives
 17866 to 17988. `tests/test_conftest_controls.py` gains rows only, under
 422.Q6. Dogfood may warn EXPECTATION_DEFINITION_CHANGED on those rows.
 
-**Sweep.** Not run (D-140): the standard and D-088 sets, a targeted
+**Sweep.** The plan was the standard and D-088 sets, a targeted
 false-positive set (conftests containing `exit`, `quit` or `testsfailed`),
 the tamper positives under real pytest, the refactor and tamper gates, and
-dogfood. Its cost will be recorded after the release.
+dogfood. The v0.8.0 acceptance sweep (D-140) ran after publication. It
+compares v0.7.0 with v0.8.0, so it measures the release, not #450 alone.
+What covers each part (owner rulings 2026-10-18 on #422, and 2026-10-19,
+R8 and R35):
+- **Standard and D-088 sets: run,** in the sweep's standard, d088, targeted
+  and JS batches. For the 6,168 commits both versions analysed, verdicts
+  and findings are identical, and no result carries a
+  `conftest.runtime.exit.` marker: the new detection never fired. This is
+  the cost the entry was to record after the release: no verdict or
+  finding changed. It is in-sample (D-053), not a false-positive rate.
+- **Refactor and tamper gates:** the pytest suites under `tests/gates/`,
+  which CI's nine test legs run. All nine passed on #450's merge
+  `08b2cfad` (ci run 38695753045), and #450 changed nothing under
+  `tests/gates/`. D-144 cites CI for its gates the same way.
+- **Dogfood:** CI's `dogfood` job passed in the same run.
+- **The tamper positives under real pytest:** five forcing spellings run
+  under real pytest, red to green, with the detector blocking each
+  (`tests/test_issue422_exit_status.py:193-205`), in the same legs. These
+  five are what ran under real pytest; the other forcing spellings are
+  pinned by detector tests only.
+- **The targeted false-positive set, ten histories: run.** D-088's sets
+  hold every commit of the full histories of attrs, click, flask, httpx,
+  rich, starlette, uvicorn, werkzeug, scrapy and requests, as frozen on
+  2026-10-04, that changes a `conftest.py` or a `skip`/`xfail` line in a
+  test file: 895 commits. So this set's commits in those histories up to
+  that date are among them. The sweep ran the 895, 850 in its d088 batch
+  and 45 in its standard batch; 15 end in exit 2 on both versions and are
+  not measured. The reader never fired on the other 880. How many of them
+  name `exit`, `quit` or `testsfailed` was not counted.
+- **The targeted false-positive set, the rest: queued.** pytest's history
+  beyond the 368 of its 1,559 such commits that D-088 took, aiohttp's
+  history, which D-088 did not take, and the ten histories' commits after
+  D-088's freeze. They run in the combined lab-declared sweep, on the pool
+  or on LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546), with
+  its manifest and engine commits, which the owner approves first. Members
+  are chosen with Git only: the non-merge commits of the twelve histories
+  (the ten, pytest and aiohttp) that add or modify a `conftest.py` whose
+  new content contains `exit`, `quit` or `testsfailed` in any case, less
+  those the v0.8.0 sweep ran. They share one Git-selected list with #432's
+  conftest census (D-137), marked there as this set.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
+  Each block this reader gives there is read from source. A false block
+  reopens #422 (R35) and is fixed through an issue that carries the fix, or
+  recorded here as a known false block with a line in
+  `docs/KNOWN-ISSUES-next.md`, as D-145 records #488's. If none fires, this
+  entry says so. The result is added here as #489 added D-144 to D-146's.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #450's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
+after publication, in the D-131 to D-140 record PR.
 
 ## D-137 (2026-10-15): a conftest that swaps a no-op in for what pytest runs is a runtime control (#432)
 
