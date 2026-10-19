@@ -534,7 +534,8 @@ and is read the same way), a `__setitem__` or `__delitem__` call on
 either, a store or deletion of `x.__dict__` itself (`=`, `|=`, `del`, or a
 literal-name setattr of `__dict__`), or one of these writes whose name is
 not a literal: a `**` argument or another mapping in `update()`, a
-computed key, a `__setattr__` or `__delattr__` with no literal name, or a
+computed key, a `__setattr__` or `__delattr__` with no literal name, with
+a starred argument or with an argument count neither form takes, or a
 `setattr` or `delattr` whose target or name is a starred argument. A
 computed-name `setattr` or `delattr` through a plain alias of the receiver
 or of a class of the order counts as one on it, one hop, and only from
