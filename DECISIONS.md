@@ -12486,11 +12486,16 @@ earlier commits of at least five other upstream repositories printed it too.
   `.gitignore`, `LICENSE*`, `.pyi` stubs, `mkdocs.yml`, `CODEOWNERS` and the
   rest of that list). `engine.py:1384` records each production-role path
   before the branches that decide symbol or opaque evidence, so a production
-  file that stops parsing, an added, deleted or renamed non-Python file, and
-  a non-Python production file whose content runs the test suite all take
-  the new label. Inert files change no runtime behaviour by the engine's own
-  list, so a diff that changes only those keeps the old label. Changes set
-  aside unread (#415) and generated artifacts never reach
+  file that stops parsing, an added or deleted non-Python file, one renamed
+  without a byte change, and a non-Python production file whose content runs
+  the test suite take the new label when no earlier label applies. A
+  non-Python file renamed with a byte change from a production path outside
+  the test-support directories is an opaque change, as a modified one is
+  (`engine.py:1498-1513`), so a finding gets repair evidence from it or
+  `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`, not the new label. Inert files change
+  no runtime behaviour by the engine's own list, so a diff that changes only
+  those keeps the old label. Changes set aside unread (#415) and generated
+  artifacts never reach
   `prod_files_changed`; "unread" stays #448's word.
 - **Q3, the name: `PROD_CHANGE_NOT_EVIDENCE`.** It is true over every diff
   Q2 covers and parallels `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`.
@@ -12585,9 +12590,13 @@ These keep the old label by reading, as the ruling says: the unread rows of
 and `artifact_cannot_disarm_pos` (a `.pyc`) hold the inert and artifact
 edges. Every other pin of `NO_PROD_CHANGE_IN_DIFF` that names a non-test
 path changes no production-role file by reading: the path is a JS/TS test,
-a file beneath a test-support directory, a runner script or test command
-promoted to `ci`, or a test relocated out of collection
-(`renamed_from_test`).
+a file beneath a test-support directory, a file the role table gives
+another role directly (`ci`: `pyproject.toml`, a `Justfile`, a composite
+action's `action.yml`; `lockfile`: `requirements.txt`; `guardrail`:
+`.greenwash/allow.toml`), a runner script or test command promoted to
+`ci`, or, in the pytest and e2e rows, a test relocated out of collection
+(`renamed_from_test`; a `.gwcase` cannot express a rename, since
+`cases.case_to_changes` sets no `old_path`).
 
 **Not settled by the ruling; for the owner's decision:**
 - The four byte-identical fixtures. Options: approve their moves as above;
