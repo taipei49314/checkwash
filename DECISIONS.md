@@ -15390,19 +15390,19 @@ Implementation, lines at this PR:
 - Q2. Names and `_RETURN_TYPE_TOKENS` (`:43`): the set `_callback_body`
   steps over (`frontend.py:1064-1068`, `:1077-1081`) and so does the
   nested-arrow reader in `parse_javascript` (`frontend.py:2841`).
-- Q3. `_test_callbacks` (`:1364`) lists, by name, the first parameter of
+- Q3. `_test_callbacks` (`:1423`) lists, by name, the first parameter of
   each callback passed to a call that `_test_context` gives a context,
-  read from the callback's own tokens by `_callback_parameter` (`:1332`),
+  read from the callback's own tokens by `_callback_parameter` (`:1391`),
   with the argument's span and the runner's kind. The last branch of
-  `candidate` (`:1458`) makes a call whose root resolves to unknown, inside
+  `candidate` (`:1517`) makes a call whose root resolves to unknown, inside
   such a callback and named by its parameter (`_callback_context`,
-  `:1393`), an `unresolved` candidate when its member passes the filter
-  the unresolved families already apply (`:1444-1453`), for that runner:
+  `:1452`), an `unresolved` candidate when its member passes the filter
+  the unresolved families already apply (`:1503-1512`), for that runner:
   `assert` for node:test, `AVA_ASSERTIONS` for AVA, tap's names for tap.
 - Q4. `_t_fallback` (`:368`) reads which of `node:test`, `ava` and `tap`
   the file names. When it names AVA or tap and not node:test, `resolve`'s
-  table gives an undeclared `t` unknown (`:1124`), and
-  `_candidate_families` gives it that runner's family (`:1284`). Every
+  table gives an undeclared `t` unknown (`:1183`), and
+  `_candidate_families` gives it that runner's family (`:1343`). Every
   other file keeps node:test's context, as before.
 - The three readers keep their workarounds (Q2): the nested-arrow reader,
   the catch reader (`exception_handlers.py:50-57`) and module mocks
@@ -15423,21 +15423,35 @@ approval:
    the expression, or to a line break where JavaScript ends the statement,
    counting each `:` against a `?`; a `?` left waiting keeps the old
    reading, and `??` is no conditional. The `:` of an annotated arrow's
-   own return type answers no `?`: where the read meets `(...): T =>` at
-   a place an arrow can start or right after a `?`, it steps over that
-   head, as TypeScript reads it, since an annotated arrow in a
-   consequent needs a `:` after it. So `c ? (x): T => (a) : b => b`
+   own return type answers no `?`: where the read meets `(...): T =>`, or
+   `<U>(...): T =>` with a type parameter list, at a place an arrow can
+   start, after any assignment operator (`_ASSIGNMENTS`, `:27`) or right
+   after a `?`, it steps over that head, as TypeScript reads it, since an
+   annotated arrow in a consequent, on the right of an assignment there
+   included, needs a `:` after it. `_type_parameters` (`:645`) reads the
+   list back over names, string and number literals, the simple set, `&`,
+   `=`, an `=>` right after `)`, a conditional type's balanced `:` and
+   `?`, and bracket groups by their pairs. So `c ? (x): T => (a) : b => b`
    declares `b`, as main does, where counting that `:` had declared `a`
-   (found in #539's review). It only accepts fewer positions. Its cost
-   is two named misses, each an annotated arrow in a consequent that
-   TypeScript reads as annotated because a `:` follows it: the alternate
-   of a conditional nested in another's consequent
+   (found in #539's review), and so do `c ? x ||= (y): T => (a) : b => b`
+   and `c ? <U>(y): U => (a) : b => b` (found in its third review). A
+   type parameter list holding any other token, such as a template
+   literal type or a negative number, is not stepped over; there the
+   head's `:` still answers the `?`, and the alternate arrow's parameter
+   is left undeclared where main declares it. The guard, steps
+   included, only accepts fewer positions than the step-back alone. Its
+   cost is two named misses, each an annotated arrow in a
+   consequent that TypeScript reads as annotated because a `:` follows
+   it: the alternate of a conditional nested in another's consequent
    (`c0 ? c1 ? y : (a): T => a : z`) and, since the step over a head, the
    body of an annotated arrow in a consequent
-   (`c ? (p): T => (y): R => y : z`) keep the old reading.
+   (`c ? (p): T => (y): R => y : z`, and the same after an assignment
+   operator or a type parameter list, as in
+   `c ? x ||= (p): T => (y): R => y : z`) keep the old reading.
 2. **Generic arrows stay a residual.** `<T>(ctx: T): void =>` puts `>`
    before the `(`, which is no accepted position, so it keeps the old
-   reading; the PR does not read the type parameter list. Q3 does not
+   reading; the binder does not take a generic arrow's parameters, and
+   only reading 1's guard steps over the type parameter list. Q3 does not
    name such a test callback's first parameter either, since
    `_callback_receivers`, whose reading Q3 follows, does not: its context
    calls are no coverage candidates, and the report can still say
@@ -15499,7 +15513,11 @@ Residuals, named in THREATMODEL row 159 and `docs/KNOWN-ISSUES-next.md`:
 an object (N22), parenthesized (N23), function, conditional or literal
 return type, whose body is not read and whose context calls are coverage
 candidates only, `unresolved`, or Node's or tap's where a parameter named
-`t` resolves through node:test's fallback or to tap's root `t` (Q2); the
+`t` resolves through node:test's fallback or to tap's root `t` (Q2), and
+a `t` that the fallback makes node:test's context gives only its calls
+through `t.assert`, so in a file that names node:test beside AVA or tap,
+AVA's or tap's assertions on it are no candidates and the report can say
+`no_known_gaps` (found in #539's third review); the
 positions the rule does not accept (for example after `?`, `yield`,
 `export default` or a compound assignment) and those reading 1 guards;
 generic arrows (reading 2); and the disagreement the ruling names: the
@@ -15530,14 +15548,14 @@ owner's approval: `js_node_context_annotated_arrow_weakened_pos` (N1),
 `js_node_context_annotated_arrow_expected_rewrite_pos` (N2 with N14's
 edit), `js_ava_annotated_arrow_weakened_pos` (N16) and
 `js_tap_annotated_arrow_weakened_pos` (N19).
-`tests/test_issue480_js_annotated_arrows.py` adds 83 collected items,
+`tests/test_issue480_js_annotated_arrows.py` adds 85 collected items,
 counted from its parametrize lists: the issue's rows N1-N21 and A1 and
 eleven of its controls (33), the accepted positions (13) and the named
 misses (5), the ruling's two conditional controls with the three guards of
-reading 1 and two annotated consequents (7), whose parameter is a context
+reading 1 and four annotated consequents (9), whose parameter is a context
 (5), Q3's candidates (6), the nested shadow (1), N22 and N23 through the
 engine (2), Q4's runners (9) and Q4's cost (2). By reading, the documented
-test count becomes 20171 (20083 + 5 + 83); CI's collection checks it.
+test count becomes 20173 (20083 + 5 + 85); CI's collection checks it.
 
 **Measurement.** Per R1 and R2 this fix merges before the combined
 sweep's manifest is frozen, and its merge gets its own before/after pair in
