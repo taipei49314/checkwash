@@ -15390,12 +15390,17 @@ How each answer is implemented (lines at this PR):
   `TEST_DISABLED/path/unit/v2:<64hex>`. The identity holds the legacy
   pre-image exactly as `make_fingerprint` built the key, the finding's
   `shape` as its kind, and no position. A marker added (`_marker_added_key`,
-  `:87-99`; the shapes `marker_added`, `collection_control` and, for a
+  `:97-109`; the shapes `marker_added`, `collection_control` and, for a
   conftest's `pytestmark`, `inert_mark`): the marker's text as the after
-  text and its recorded guard as the context, null when none. A guard made
-  always true or removed (`_guards`, `:102-116`): the guards before and
-  after as the two texts, the after null when removed. Parametrized cases
-  removed (`_rows_gone`, `:126-148`): the rows deleted and the rows newly
+  text and its recorded guard as the context, null when none.
+  `_marker_added_keys` (`:128-170`) finds which marker each finding added
+  (reading 6), and when the added markers of a name cannot be told apart,
+  `_unit_markers_key` (`:112-125`) binds every marker of the unit on both
+  sides instead. A guard made always true or removed (`_guards`,
+  `:180-196`): the guards before and after as the two texts, the after null
+  when removed, and as the context what every marker of the name ran under
+  on each side (`_conditions`, `:173-177`; reading 2). Parametrized cases
+  removed (`_rows_gone`, `:215-237`): the rows deleted and the rows newly
   disabled, each a sorted list of argnames and cells, and the live counts
   before and after. A unit removed: the complete texts of its own
   assertions. A focus added to a file: the focus as the JS frontend
@@ -15403,8 +15408,9 @@ How each answer is implemented (lines at this PR):
   `identity_text`'s form, so reformatting outside string literals keeps a
   key; spans, lines, messages, severities, file digests and revision labels
   stay out.
-- `finding_marker` (`:151-170`) finds the marker D6 judges by rebuilding the
-  key of each marker the unit added, since the key no longer is its name's.
+- `finding_marker` (`:240-258`) finds the marker D6 judges by rebuilding the
+  key of each marker the unit added through `_marker_added_keys`, as
+  `detect` builds them, since the key no longer is its name's.
 - Q3 (a). `findings.py` adds `TEST_DISABLED_FINGERPRINT_RULES` (`:26-31`), a
   set of its own, so `ASSERTION_FINGERPRINT_RULES` stays the nine rules
   #421 ruled on. `fingerprint_state` reads a TEST_DISABLED key as it reads
@@ -15427,9 +15433,14 @@ How each answer is implemented (lines at this PR):
    imperative skip, its recorded guard". The key binds `Marker.guard` for
    every marker that records one: an imperative skip's enclosing `if`, and
    the condition a setup skip, a helper's skip, a later binding of the
-   test's name or a `pytestmark` binding runs under, which the frontends
-   record the same way. A decorator records none; its condition is in its
-   name, which the legacy pre-image already holds.
+   test's name or a `pytestmark` binding runs under, which the Python
+   frontend records the same way. A decorator records none; its condition is
+   in its name, which the legacy pre-image already holds. A JS/TS imperative
+   skip (`ctx.skip()`, `t.skip()`, Mocha's `this.skip()`) records none
+   either: the JS frontend does not record the condition it runs under, so
+   a guarded one and an unguarded one of the same name get one key (a
+   residual below). That is within the ruling's "its recorded guard";
+   binding the condition would need the engine to record it.
 2. **The two guard events.** Both have the shape `guard_weakened`
    (`inert_mark` in a conftest), so the event kind alone does not tell them
    apart, as the recommendation's sentence "with the event kind in the
@@ -15439,9 +15450,20 @@ How each answer is implemented (lines at this PR):
    the base marker `evidence._mark_weakened_guards` compared, under its old
    name for a skip moved into or out of a helper (#272); for one removed, it
    is the base condition the message names, an `except` block's first line
-   included. A third event has the same shape: a path gained by an
-   unguarded `collect_ignore` (row 81). It has no guard on either side, so
-   both texts are null and no path is bound (a residual below).
+   included. The guard after of a guard made always true is that of the
+   first head marker of the name, the one the message names. Several
+   markers can share a name, and these two texts come from one marker on
+   each side: with base `if A: pytest.skip("1")` and `if B:
+   pytest.skip("2")`, removing either `if` names `A` as the removed guard.
+   So the key also binds, as its context, what every marker of the name ran
+   under on each side, read as the removed-guard check reads it
+   (`skip_condition`: its guard, or the first line of the `except` block it
+   sits in, null when neither), each side sorted. Removing one of two
+   guards of a name and removing the other are then two keys, and a guard
+   made always true binds its own guards before and after among them. A
+   third event has the same shape: a path gained by an unguarded
+   `collect_ignore` (row 81). It has no guard on either side, so both texts
+   are null and no path is bound (a residual below).
 3. **Which rows.** A row is its table's argnames and its cell texts, read
    through `param_tables` as `diffalign._rows_lost` reads them, so a JS/TS
    `.each`/`.for` table's rows (#428) are read the same way. "Deleted" holds
@@ -15467,18 +15489,43 @@ How each answer is implemented (lines at this PR):
    reported only when no unit of its own file reports being stopped by it,
    so wherever it sits the finding reports the same effect: under a runner
    that applies focus suite-wide, every test outside the file stops.
-6. **No position.** The nine rules' ordinal and count tell identical copies
-   of one assertion apart; each TEST_DISABLED shape binds its own texts
-   instead. Two markers of one name added to one unit are read, as before,
-   from the last such marker on the head side, and share a key.
+6. **No position, and several markers of one name.** The nine rules'
+   ordinal and count tell identical copies of one assertion apart; each
+   TEST_DISABLED shape binds its own texts instead. A unit can hold several
+   markers of one name, one per imperative skip call, and alignment pairs a
+   skip on its name alone and records only the names it leaves unpaired. So
+   the marker it leaves unpaired is not always the one the diff added: a
+   skip inserted above another of its name pairs with that one and leaves
+   it unpaired. An earlier draft read the last head marker of the name, as
+   the base read the marker's evidence. Then two skips added together
+   shared the later one's key, so an approval of a guarded skip covered a
+   diff that also added an unguarded one above it, and an inserted skip was
+   keyed on the one already there. The markers a name added are read by content
+   instead: the head markers of that name whose text and guard no base
+   marker of that name has, in the head side's order. When there are as
+   many as the name has findings, each finding binds one of them, in that
+   order. Two different skips added together are then two keys, and an
+   inserted skip gets the key it would have if it were added alone. When
+   there are not (a marker of that name was also edited, one moved in from
+   a helper, or alignment paired one with a marker of another name, as it
+   pairs a decorator whose condition is spelled another way), no finding
+   can be given its own, and each finding of that name binds every marker
+   of the unit on both sides, each its name, text and guard, each side
+   sorted: a stricter key, since any other marker change in the unit moves
+   it. A finding's evidence is still the last head marker of its name, as
+   on the base; only its key moves. UnitDelta gains no field for this:
+   `--emit-ir` serializes it and tests rebuild it from that JSON, so the
+   detector reads both sides' markers instead.
 7. **Order.** Findings of one rule in one unit sort by key
    (`Finding.sort_key`), so the order of TEST_DISABLED findings in one unit
    can change. Gating spends no credit across them, so no severity depends
    on that order.
 
-**Residuals** (row 136): the rows of a table checkwash cannot read are bound
-only by their counts (and when it is the head side's, every base row reads
-as deleted, a stricter key); a path added to an unguarded `collect_ignore`
+**Residuals** (row 136): a JS/TS imperative skip records no guard (reading
+1), so an approval of a guarded one covers an unguarded one of the same
+name; the rows of a table checkwash cannot read are bound only by their
+counts (and when it is the head side's, every base row reads as deleted, a
+stricter key); a path added to an unguarded `collect_ignore`
 (row 81) binds no path, so an approval covers another path added to the
 same control; a constant edited behind an unchanged guard (row 59) is bound
 by the guard's text, so an approval covers another edit that makes the same
@@ -15525,7 +15572,10 @@ findings in one unit (209's two-mark case, and 261's "add-marker" and
 decides. Test names that speak of one shared identity are left as they
 are, as D-146 left `test_snapshot_expectations.py`'s. No `.gwcase`
 expectation changes, and nothing under `tests/gates` changes. Another pin
-that CI shows moving is listed for the owner before it is changed.
+that CI shows moving is listed for the owner before it is changed. By
+reading, what readings 2 and 6 bind for several markers of one name moves
+none of these pins again and no other: these pins compare legacy keys and
+key inequality, not v2 digests.
 
 **Cost.**
 - **New blocks:** a TEST_DISABLED change under an exemption recorded for
@@ -15539,17 +15589,25 @@ Evidence status: when the change was prepared, no pytest, checkwash or
 Python product code ran on the work machine; this PR's CI is the first
 run. `NOT_RUN：工作機規則（POLICY work-machine-local），the tests and the sweep pair run in CI and in the combined sweep; nothing ran on the work machine`.
 
-- Tests were added: 30 collected items in
+- Tests were added: 38 collected items in
   `tests/test_issue512_test_disabled_keys.py`, the issue's reproduction
-  among them (eight pairs of changes that shared a legacy key, each keyed
+  among them (ten pairs of changes that shared a legacy key, each keyed
   apart, and each second change left at high under an exemption recorded
-  for the first), and one in `tests/test_js_assertion_identity.py`, #421's
-  JS sibling `toBe(1)` and `toBe(2)` (R46). None is under `tests/gates`.
-  By reading, 29 of the 31 fail on this PR's base. Two pass there too: the
+  for the first; two of the pairs are a skip inserted above another of its
+  name and one of two guards of a name removed, then the other), the
+  several-markers cases of reading 6 and reading 2 (a guarded and an
+  unguarded skip added together, an inserted skip's own identity, every
+  condition of a guard event's name, and markers that cannot be told
+  apart), and one in `tests/test_js_assertion_identity.py`, #421's JS
+  sibling `toBe(1)` and `toBe(2)` (R46). None is under `tests/gates`. By
+  reading, 37 of the 39 fail on this PR's base. Two pass there too: the
   R46 test, because #477 already binds the after text, so it pins a case
   #421 closed without a test; and the control that reformatting and moving
   keep a key.
-- The documented test count is 20114 (20083 on this PR's base, + 31).
+- The documented test count is 20122 (20083 on this PR's base, + 39).
 
 The agent wrote this entry in #512's fix PR. It is a draft for the
-owner's approval of its wording.
+owner's approval of its wording. Readings 1, 2 and 6, the residuals and the
+tests were revised after a second review of the PR found that several
+markers of one name were keyed on one of them and that a JS/TS imperative
+skip records no guard.
