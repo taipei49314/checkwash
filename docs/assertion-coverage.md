@@ -865,8 +865,10 @@ On `main`, the call a fixture returns or yields counts as the test's, within
 four limits (ruling 471):
 
 - Only that call, the fixture's producer: `return Provider()`,
-  `yield Provider()`, or `p = Provider()` then `yield p`. Other calls in the
-  fixture do not count. The call's name is resolved through the imports of
+  `yield Provider()`, or `p = Provider()` then `yield p`. A single `return`
+  or `yield` that runs only under a branch, a loop or a `match`, or in a
+  `try`'s `except`, `else` or `finally`, gives no producer. Other calls in
+  the fixture do not count. The call's name is resolved through the imports of
   the fixture's own file, so a test file that imports nothing from the
   package still takes it.
 - One level: a fixture the test requests by parameter, found as pytest finds
