@@ -12865,8 +12865,10 @@ whenever the fallback is used, the case-mismatched path handled too,
 `doctor` on its own 5-second timeout, a test to confirm whether
 KNOWN-ISSUES row 21 overstates, and P3. The details under the issue's
 "Direction" are the agent's recommendation within that direction, for
-review in this PR. D-151 to D-157 are reserved for other open pull
-requests, so this entry is D-158; the number may change at merge.
+review in this PR. D-151 to D-163 were assigned to pull requests
+prepared in parallel. When integration batch 2 merged, all of them were
+on main except D-153, which is unused, and D-154, which is pending in
+#511. This entry is D-158.
 
 #500 reports, from reading the code at `6d78d8dd`, that at the root
 `check --task` reads the contract from the base tree at
@@ -13059,9 +13061,10 @@ and a pool sweep; "This issue stays open for (b)." On 2026-10-19
 (「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
 the reply was a button whose text the agent wrote), R57, R58 and R64
 completed (c), replaced that last sentence and narrowed that ruling's
-item 2 (item 3 below). D-151 is the last entry on
-main, D-153 is unused, and D-152 and D-154 to D-159 are assigned to open
-pull requests, so this entry is D-160.
+item 2 (item 3 below). D-151 to D-163 were assigned to
+pull requests prepared in parallel. When integration batch 2 merged, all
+of them were on main except D-153, which is unused, and D-154, which is
+pending in #511. This entry is D-160.
 
 #468 reports that undici's `test/web-platform-tests/expectation.json`,
 the record its Web Platform Tests runner reads, can mark a regressed
@@ -13210,8 +13213,9 @@ part of the v0.9.0 release preparation and has no issue: a tag-push run
 requires `[baseline]` to be the highest other `v*` tag merged into the
 tagged commit (`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which
 for a v0.9.0 tag is v0.8.0.
-D-151 to D-161 (D-153 is unused) are assigned to pull requests prepared in
-parallel, so this entry is D-162.
+D-151 to D-163 were assigned to pull requests prepared in parallel. When
+integration batch 2 merged, all of them were on main except D-153, which
+is unused, and D-154, which is pending in #511. This entry is D-162.
 
 After the rotation, pull requests, `main` and the next tag are compared
 with v0.8.0 instead of v0.7.0.
@@ -13363,7 +13367,10 @@ decision, and no approval item names them.
 Ruling 428 (owner, 2026-10-14, 「P1 全部照建議」, "all P1 as recommended";
 #428 issuecomment-6170355202, stating each decision in full): Q1 (a),
 Q1b (iii), Q1c (i), Q2a (a), Q2b (a) in this round, Q2c (b), Q2d (a),
-Q3 (a), Q4 (a). D-151 is reserved for PR #507, so this entry is D-152.
+Q3 (a), Q4 (a). D-151 to D-163 were assigned to pull requests prepared in
+parallel. When integration batch 2 merged, all of them were on main
+except D-153, which is unused, and D-154, which is pending in #511. This
+entry is D-152.
 
 #428 reports that the JS/TS frontend marked every `test.each`, `it.each`
 and `test.for` declaration as a table and kept it out of the unit scan
@@ -13682,8 +13689,9 @@ separate issue (#473, no label change here). The fix follows the analysis's
 §4. The three cases built from the reporter's unit names were approved on
 2026-10-18 (「19 項全部照建議做（價值判斷的題也照你的傾向）」, "all as
 recommended, value judgements included", quoted in issuecomment-6248629600).
-D-151 to D-154 are reserved for other open pull requests, so this entry is
-D-155.
+D-151 to D-163 were assigned to pull requests prepared in parallel. When
+integration batch 2 merged, all of them were on main except D-153, which
+is unused, and D-154, which is pending in #511. This entry is D-155.
 
 #471 (talhayme, punt-labs/langlearn-tts `b4bc4e63`): a production default
 changed from `"rachel"` to `"matilda"`, and the tests that get the provider
@@ -14030,9 +14038,10 @@ Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
 #434 issuecomment-6223293429) adopted every recommendation of the analysis
 (issuecomment-6218034432): A as the variant in its A.4, B as B1 with B2's
 message for the fold shape, C closed into THREATMODEL row 119, and #457 as
-A.5 (a). D-151 is reserved for #507 and D-152 to D-155 for four other pull
-requests prepared from the same base, so this entry is D-156; the number
-may move at merge.
+A.5 (a). D-151 to D-163 were assigned to pull requests prepared in
+parallel. When integration batch 2 merged, all of them were on main
+except D-153, which is unused, and D-154, which is pending in #511. This
+entry is D-156.
 
 #434 reports two false findings, both read from the code. A: the order
 fallback gave an old assertion the first leftover of known strength in span
@@ -14290,9 +14299,10 @@ Ruling 463 (owner, 2026-10-18, issuecomment-6248011246, 「照建議」, "as
 recommended") adopted the issue's recommendations: Q1 (a); Q2 (a) for now;
 Q3 (a); Q4 (a) for now, with the escape through a test unit added in an
 unrelated file named as a residual; and Q5's measurement. The maintainer
-text goes in the fix PR as drafts. D-150 is the last entry on main and
-D-151 to D-156 are assigned to other open pull requests, so this entry is
-D-157, placed after D-150; its place may need adjusting at merge time.
+text goes in the fix PR as drafts. D-151 to D-163 were assigned to pull
+requests prepared in parallel. When integration batch 2 merged, all of
+them were on main except D-153, which is unused, and D-154, which is
+pending in #511. This entry is D-157.
 
 #463 reports that the file-scoped `EXPECTED_VALUE_CHANGED` (#129) is not
 raised when any Python production symbol changed, or any opaque production
@@ -14528,8 +14538,10 @@ the literal-key spellings, read `vars(C)[...]` as `C.__dict__[...]` is
 read, rule #487 first, and P2. The issue's Direction items 1 to 7 are the
 agent's recommendation within that direction, for review in this PR.
 #487's ruling (issuecomment-6248630528, item 2) settled what item 5 depends
-on: (b) is not adopted. D-151 to D-158 are assigned to other open pull
-requests, so this entry is D-159; the number may change at merge time.
+on: (b) is not adopted. D-151 to D-163 were assigned to pull requests
+prepared in parallel. When integration batch 2 merged, all of them were
+on main except D-153, which is unused, and D-154, which is pending in
+#511. This entry is D-159.
 
 #502: since #306's fix (D-145, #476, `81c69d28`), Sub-Q3 leaves a helper
 call unresolved when the module rebinds the helper's name, but the module
@@ -14805,10 +14817,10 @@ Ruling 473 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題�
 issuecomment-6248629776, which states each decision in full, as the list it
 answers went to the owner off GitHub). Its direction, Q1 (b), was ruled in
 #471 (Q5 (b), issuecomment-6230178131, item 5). The owner put #473 in
-v0.9.0's scope on 2026-10-19 (owner ruling 2026-10-19, R1). D-150 is the
-last entry on main, and D-151 to D-160 are assigned to open PRs prepared
-from the same base, so this entry is D-161; the number may move at merge
-time.
+v0.9.0's scope on 2026-10-19 (owner ruling 2026-10-19, R1). D-151 to
+D-163 were assigned to pull requests prepared in parallel. When
+integration batch 2 merged, all of them were on main except D-153, which
+is unused, and D-154, which is pending in #511. This entry is D-161.
 
 #473: E1 escalates an oracle finding that has no repair evidence and that no
 de-escalator holds. Its label `NO_PROD_CHANGE_IN_DIFF` is true when the diff
