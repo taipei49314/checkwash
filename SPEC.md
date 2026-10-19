@@ -606,8 +606,9 @@ plain assignment, or to another value (`x = globals()["C"]`); a
 computed-name `setattr` whose target is a parameter that holds the class,
 such as a `setUpClass`'s `cls`; `pop()`, `popitem()` or `clear()` on a
 class body's namespace; and a namespace written through `monkeypatch.setitem`,
-`operator.setitem`, `patch.dict` or an unbound dict method
-(`dict.update(self.__dict__, ...)`). A `via` assertion is a
+`operator.setitem`, `patch.dict`, an unbound dict method
+(`dict.update(self.__dict__, ...)`), or `vars` or `locals` under another
+name. A `via` assertion is a
 detection-only overlay: the unit's own assertions pair as before, and the
 `via` ones then pair among themselves and with the after side's own
 assertions left unpaired; they earn no credit and add no requirement for
