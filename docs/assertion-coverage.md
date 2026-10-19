@@ -852,6 +852,52 @@ planned. It would report a subtest recorded as passing that no longer is,
 and a file newly marked `skip` or `flaky`. It waits for a ruling on reading
 the format past the size limit, and for a pool sweep of its cost (#468).
 
+### Repair evidence through a fixture
+
+[#471](https://github.com/taipei49314/checkwash/issues/471). Repair evidence
+credits a production symbol the test calls (SPEC §5). A test that gets its
+subject from a pytest fixture calls nothing that builds it. Before #471, an
+honest commit that changed a default and updated its tests blocked when the
+tests reached the class through a `conftest.py` fixture. The same tests
+constructing the class themselves passed.
+
+On `main`, the call a fixture returns or yields counts as the test's, within
+four limits (ruling 471):
+
+- Only that call, the fixture's producer: `return Provider()`,
+  `yield Provider()`, or `p = Provider()` then `yield p`. Other calls in the
+  fixture do not count. The call's name is resolved through the imports of
+  the fixture's own file, so a test file that imports nothing from the
+  package still takes it.
+- One level: a fixture the test requests by parameter, found as pytest finds
+  it (the test's class, its module, then each `conftest.py` above it,
+  nearest first). A fixture that another fixture requests, an `autouse`
+  fixture and a `usefixtures` mark count nothing.
+- Only for a finding whose assertion, before the diff, reads that fixture's
+  value: directly (`provider.default_voice == "matilda"`) or through a name
+  the test binds from it (`result = provider.resolve_voice("")`). The
+  fixture is read as it was before the diff.
+- Every oracle rule that takes repair evidence, except `TEST_DISABLED`. No
+  package-level credit is added.
+
+These still get no evidence from the fixture, as known limits:
+
+- a setup call in the fixture, such as a seeded default or a configured
+  clock;
+- a fixture requested by another fixture (`client(app)` returning
+  `app.test_client()`);
+- a fixture that returns from several places, binds its value through
+  `with ... as`, or returns `request.param`;
+- a producer that is a factory calling the changed symbol: neither the
+  one-hop callers route nor a helper hop is followed from a producer;
+- a test class with a base class, whose inherited fixtures are not followed;
+- xunit `setUp` that builds the subject on `self`.
+
+A kept no-op edit in the class a fixture builds now holds a weakened
+assertion on the fixture's value at warn, as the same test written inline
+already does (THREATMODEL row 93, Route A). `fail_on = "warn"` or
+`oracle_freeze` blocks such findings.
+
 ## Make unrepresented assertion candidates visible
 
 `checkwash check` scans both sides of changed JS/TS test files for bounded Node,
