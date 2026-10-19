@@ -15454,10 +15454,15 @@ Consumers read in this repository: the Action's check step runs term
 code is not 0 or 1 (`:274-276`), so neither changes.
 `tools/verdict_gate.py`'s `observe` already records exit 2 as an error; it
 now names the missing keys instead of an invalid report. Two benchmark
-scripts read `verdict` without checking the exit code
-(`benchmarks/compare/run.py:34`, `benchmarks/decoy/harvest.py:130`): on a
-size refusal they now raise `KeyError` where they recorded an engine
-error. Neither runs in CI, and they are not changed here. Outside it, by
+scripts read `verdict` without checking the exit code (at the base,
+`benchmarks/compare/run.py:34` and `benchmarks/decoy/harvest.py:130`), so
+on a size refusal they would raise `KeyError` where they recorded an
+engine error. Each now records exit 2, or a parsed document without
+`verdict`, as an engine error, as it did unparsable stdout
+(`benchmarks/compare/run.py:36`, `benchmarks/decoy/harvest.py:123`; round-6
+item F11, prepared before the owner's answer). CI never reaches either
+read: `tests/test_compare_harness.py` stops `run.py` at its argument
+checks. Outside this repository, by
 reading checkwash-lab's combined-sweep harness at `6c8adef5`: exit 2 is
 `PRODUCT_ERROR_EXIT` whatever stdout holds
 (`workloads/acceptance_sweep/common.py:560`), but a pair counts rows whose
