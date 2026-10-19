@@ -15341,3 +15341,150 @@ readings' heading and the negatives' sentence, which had said they
 awaited it, added the sentence after the fallback saying the owner
 accepted it, retitled the paragraph on the first approvals, and wrote
 this paragraph.
+
+## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
+
+#456's first ruling (issuecomment-6248011888, 2026-10-18, 「照建議」, "as
+recommended") adopted Q1 (b) "with (d) added once the UNKNOWN follow-up is
+ruled": keep exit 2 and add the explicit UNKNOWN entry #454 proposed.
+#454's ruling of the same day (issuecomment-6248628332, item 6) left any
+reuse of its question 3 entry, the `unread` entry of the findings JSON,
+for an exit-2 run, and the test changes that needs, to #456. On
+2026-10-19 R48 (issuecomment-6261648480 on #454 and 6261649184 on #456,
+「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+the reply was a button whose text the assistant wrote) moved (d) to #454,
+closed #456 as completed and said (d) still needs its own rule-2 approval.
+The owner gave it the same day, typing 「q1 a ／ 核可」 in answer to the
+round-5 approval list: item E3, option A (issuecomment-6270049974): "an
+exit-2 run reuses this issue's `unread` entry to say explicitly that the
+change was not analysed (UNKNOWN)", the three pins below may change to the
+new output, and any other expectation that moves stops the round. D-164 to
+D-169 were assigned to the pull requests of this round, prepared in
+parallel; this entry is D-168.
+
+A changed path a detector must read, or a file the analysis reads as
+context, refuses the run when a side is over the 1,000,000-byte source limit
+(D-135): exit 2 and one stderr line naming path, side, size and limit, and
+until now nothing on stdout. In hook-json, D-150 blocks the stop for the
+change's own head or worktree side and keeps the #414 note otherwise.
+
+Implementation (lines at this PR):
+
+- `_cmd_check` (`cli.py:425-437`) catches `SourceOverLimit` from `_analyse`
+  on the verdict diff. The hook-json block comes first, unchanged. Then,
+  under `--format json` without `--emit-ir`, `_json_size_refusal`
+  (`cli.py:991-1009`) writes the stderr line `main()` writes for the
+  refusal in every other format (`cli.py:929-933`, `:936-939`), then
+  `size_refusal_to_json` (`report/jsonout.py:43-55`), and returns 2.
+  Otherwise the exception reaches `main()` as before.
+- The document is `{"unread": [<entry>]}`. Its one entry is
+  `unread_entry` (`report/unread.py:30-40`) of the side the refusal names,
+  the four-key projection #454 writes for an unread side, so a field the
+  side may carry (#455's prefix) stays out of it. It is written as the
+  findings JSON is: sorted keys, two-space indent, UTF-8, one final LF.
+- It is not a findings document: it carries no
+  `checkwash_findings_version`, `run`, `findings`, `summary` or `verdict`.
+  A consumer that requires the version, as `docs/embedding.md` says to,
+  reads it as the error it is, and none can read a pass from it.
+
+**Readings where the ruling is silent**, for the owner's approval:
+
+1. **Formats.** Only `--format json`. The ruling reuses "the question 3
+   entry", which is the findings JSON's `unread` entry. Term and sarif keep
+   an empty stdout on exit 2. A SARIF log with no result, uploaded to code
+   scanning, may close open alerts, where an empty file fails the upload
+   (GitHub behaviour, not checked from this repository); a term line would
+   repeat the stderr line, which already names the four facts.
+2. **Keys.** Only `unread`. A `run` object, the version, an `error` text or
+   a `verdict` such as `null` or `"unknown"` would each be a new contract,
+   and a `verdict` key would let a consumer that compares it with
+   `"block"` read a pass. Without one, the capture classifier of
+   `tools/r1_cost_capture.py` keeps such a run as `PRODUCT_ERROR_EXIT`
+   (`:240-241`), as it did for an empty stdout.
+3. **Which side.** Exactly the side the refusal names, one entry, so entry
+   and stderr line match one to one. When both sides of a change are over
+   the limit that is the base side (`engine.py:303`, `:314`; a #448
+   residual); the hook block names the head or worktree side instead
+   (D-150). Other unread sides of the same change, and other changes in
+   the diff that were set aside, are not listed: the run stopped before
+   their stderr notes.
+4. **Which refusals.** Every `SourceOverLimit` that reaches `_cmd_check`:
+   a must-read change (`engine.py:303`, `:314`), a guarded read of a
+   set-aside path (`engine.py:341`) and a context read of a file the diff
+   does not hold (`gitio/snapshot.py:629`), whose side no change holds. Not
+   a root manifest, config, exemption list or `--task` file over the limit
+   at the base, which `_analyse` reads before the analysis and which
+   refuses as a `GitSourceOverLimit`, a `GitError` (`gitio/git.py:152-163`):
+   `tests/test_issue415_oversized_sources.py:620` asserts an empty stdout
+   for it and is not among the approved pins. Not the range-mode pytest
+   configuration symlink target that D-150 lists, which refuses as a plain
+   `EngineError`, nor any other engine error.
+5. **`--emit-ir`** keeps an empty stdout: #454 item 6 keeps the IR free of
+   unread sides, and a refused run has no IR.
+
+**Contract.** The exit codes do not change, and neither does the frozen
+exit-code row's text: term, json and sarif keep exit 2 for every engine
+error. The findings document does not change, so `FINDINGS_VERSION` stays
+2 and `docs/findings.schema.json` and `docs/stability.md` are unchanged:
+the rules for moving the number (`docs/stability.md`, "When the number
+moves") are about that document, and the new output is not one. It is a
+new output on exit 2, where there was none. A consumer that ignores the
+exit status and reads `verdict` with a default now parses a document where
+it used to fail to parse; `docs/embedding.md` asks for the version check
+that refuses it, and now describes the output. The next release is a minor
+anyway (R54). No release is authorized (AGENTS.md rule 5).
+
+Consumers read in this repository: the Action's check step runs term
+(`action/secure.py:240-243`), and its comment step skips a run whose exit
+code is not 0 or 1 (`:274-276`), so neither changes.
+`tools/verdict_gate.py`'s `observe` already records exit 2 as an error; it
+now names the missing keys instead of an invalid report. Two benchmark
+scripts read `verdict` without checking the exit code
+(`benchmarks/compare/run.py:34`, `benchmarks/decoy/harvest.py:130`): on a
+size refusal they now raise `KeyError` where they recorded an engine
+error. Neither runs in CI, and they are not changed here. Outside it, by
+reading checkwash-lab's combined-sweep harness at `6c8adef5`: exit 2 is
+`PRODUCT_ERROR_EXIT` whatever stdout holds
+(`workloads/acceptance_sweep/common.py:560`), but a pair counts rows whose
+stdout bytes differ (`aggregate.py:245`), so a size-refusal row compared
+between v0.8.0 and this code counts there.
+
+D-150 says "#456 stays open for (d)". That no longer holds: R48 moved (d)
+to #454, #456 is closed as completed, and this entry records (d). D-150
+stays as written, as R48 says.
+
+**Rule 2.** Three existing expectations change, as E3 approved, each from
+an empty stdout to `{"unread": [entry]}` with exit 2 (test lines at this
+PR's base, `9c19c344`):
+`tests/test_issue415_oversized_sources.py:637` (a must-read test file, in a
+range and in the working tree), `tests/test_issue456_hook_size_refusal.py:209`
+(its json case, a context read) and `:255` (its json case only; term, sarif
+and hook-json with `--emit-ir` keep `(2, "")`, and its single-stderr-line
+assertion is unchanged). By reading no other moves: the base manifest pin
+(`tests/test_issue415_oversized_sources.py:620`), the hook-json tests
+(`tests/test_issue456_hook_size_refusal.py`, `tests/test_hook_runtime.py`,
+`tests/test_issue414_worktree_directory_symlinks.py`) and the exit-2 tests
+for other engine errors (`tests/test_standin_source_limits.py:170-171`,
+`tests/test_config_snapshot.py:523`, `:534`,
+`tests/test_issue500_root_task_path.py`, `tests/test_issue416_subdirectory_root.py`)
+do not reach the new branch. Nothing under `tests/gates` changes. If CI
+shows another expectation moving, the round stops for the owner.
+
+**Tests.** `tests/test_issue454_size_refusal_output.py` adds 10 collected
+items: the writer, byte for byte, also for a side with a #455-style field
+(2); the CLI under `--format json` for both sides over the limit, a base
+side alone in the working tree and in a range, and an untracked
+extensionless file, each with exit 2, the document and only the refusal's
+stderr line (4); `--format json --emit-ir` (1); a batch-limit
+`EngineError` and a `RecursionError` keeping an empty stdout (2); and a
+refusal for a side no change holds (1). By reading, the documented test
+count becomes 20093 (20083 + 10); CI's collection checks it. The sweep
+command calls `analyze` directly (`sweep.py:131-142`), so it does not move.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code, and
+this PR's CI is the first run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run`.
+
+The agent wrote this entry in #454's pull request for (d). Its wording, and
+readings 1 to 5, await the owner's approval.
