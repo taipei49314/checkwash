@@ -352,7 +352,9 @@ walk above now also reads, for the declarations they hold:
   case, or in a `for ... of []` loop.
 - A named function expression after a `:` (an object's property value, the
   `else` of `?:`) reads as a labelled declaration, so a dead region holding
-  one is still refused.
+  one is still refused. So is a dead region holding a function declaration
+  at any depth, one inside the dead test's own callback included, though
+  that body never runs.
 - Wherever the walk stops (above), what follows keeps today's reading; the
   file's own statements are not walked at all when the file holds, anywhere,
   text the token stream misreads.

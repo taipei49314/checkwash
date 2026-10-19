@@ -15492,7 +15492,9 @@ Readings the ruling leaves to the implementation, for the owner's approval:
    `]`, `}`, an operand at a line break and `:` included, reads as a
    declaration. So a named function expression after a `:`, such as an
    object property's value, in a dead region still refuses the walk (row
-   159, residual 6).
+   159, residual 6). Every `function` in the dead region is read, at any
+   depth, so a function declaration inside a dead test's own callback
+   refuses the walk too, though that body never runs.
 7. **The import step-over** reads `import "m"`, and `import` followed by
    names, `*`, `as`, commas and one braced list of names, strings and
    commas, then `from` and a string; TypeScript's `import type` is such a
