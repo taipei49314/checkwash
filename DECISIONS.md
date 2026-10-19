@@ -12455,3 +12455,227 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-152 (2026-10-19): a JS/TS `.each`/`.for` table is one test unit whose rows are read (#428)
+
+Ruling 428 (owner, 2026-10-14, 「P1 全部照建議」, "all P1 as recommended";
+#428 issuecomment-6170355202, stating each decision in full): Q1 (a),
+Q1b (iii), Q1c (i), Q2a (a), Q2b (a) in this round, Q2c (b), Q2d (a),
+Q3 (a), Q4 (a). D-151 is reserved for PR #507, so this entry is D-152.
+
+#428 reports that the JS/TS frontend marked every `test.each`, `it.each`
+and `test.for` declaration as a table and kept it out of the unit scan
+(`frontend.py:1321` and `:2131` at 30cfb8bd, `not d.table`). No unit-based
+detector compared a table on either side, so a weakened or deleted
+assertion in one, an edited or deleted row, `.skip.each` and a deleted
+table all passed with zero findings, in v0.7.0 and v0.8.0 alike; the
+unread `expect` calls were only coverage notices.
+
+Implementation, lines at this PR:
+
+- Q1 (a), `frontends/javascript/frontend.py`. A `test`/`it` table, in the
+  call and the tagged-template form, with chained modifiers, is one unit
+  (`parse_javascript`, `:2700`), named by its title as written (the
+  literal's text, `add(%i, %i) = %i`), its callback scanned as a test's.
+  `_declaration` keeps what the table passes (`_Declaration.rows` and
+  `.passes_row`, `:1103`), and `_read_table` (`:2651`) turns its rows into
+  `param_cases` and one `ParamTable` (`ir/model.py`) whose cells are
+  canonical (`_table_cell`, `:2310`).
+- Q1b (iii). `_table_rows` (`:2536`) counts the rows of an inline array
+  literal with no spread or hole, of a tagged template whose cells divide
+  by its headings (`_template_rows`, `:2432`), and of a same-file `const`
+  one hop away (`_const_rows`, `:2491`). Any other table sets the new
+  optional `UnitSide.param_rows_unknown` (`ir/model.py:229`), which only
+  this frontend sets; `param_cases` is then None and `param_rows` empty.
+- Q2a (a), `ir/diffalign.py:303-317`, the count rule. Between two tables
+  it stays silent when either side is unknown. A plain test (no count, not
+  unknown) paired with an unknown table, or with a table of no rows, is
+  one item lost. The second arm is gated on the file not being Python: a
+  Python test with no count can still be parametrized by a hook, which is
+  why Python's own rule needs its two-sided proof
+  (`frontends/python/empty_parameter_sets.py`). A table of N rows paired
+  with a plain test is N - 1 lost, as in Python, and row identity
+  (`_param_rows_lost`) reads JS tables unchanged.
+- Q2b (a). Each table assertion records in `right_depends_on` the column
+  ids its expected operand (`operand_source`) names directly, and in
+  `left_names` those its subject names (`_columns_read`, `:2627`), so the
+  language-neutral rules read the cells as they read a `parametrize`
+  table's, with no detector change: EXPECTATION_DEFINITION_CHANGED's
+  row-keyed comparison, SUBJECT_INPUT_CHANGED's literal-table arm (Q2d),
+  EXPECTED_VALUE_DERIVED, ASSERT_SUBSTITUTED's reorientation check and
+  TEST_PATCHES' name set. A plain JS assertion still records neither.
+- `detectors/test_disabled.py:193-200`: the finding for a plain test
+  wrapped in a table says `(1 -> 0)` or `(1 -> unknown)`, and its evidence
+  `parametrize cases: unknown`, instead of printing None. Only that
+  pairing reaches these lines with no count on the before side; the rule,
+  its key and its other messages are unchanged.
+- Q1c (i), Q3 (a): alignment, D5 and `gating.py` are unchanged. Q2c (b):
+  `describe.each` is a block, as before; its rows are not read.
+
+Readings the ruling leaves to the implementation, for the owner's
+approval:
+
+1. **Column ids.** `#0`, `#1`, ... by an array row's position; `#key` by
+   an object row's key or a template's heading. A key or heading must be a
+   name (quoted or not); otherwise the rows are counted and no columns are
+   read. A name never starts with a digit, so the two spellings cannot
+   meet, and no identifier holds a `#`.
+2. **Which rows a runner spreads** (`_row_table`, `:2394`), as the Jest,
+   Vitest and Bun documentation states it (not measured). When every row
+   is an array literal, `.each` spreads it into the parameters: positional
+   columns. Once some row is certainly no array (a number, string,
+   Boolean, null, template or object literal), every row is passed whole:
+   keyed columns when every row is an object literal with the same name
+   keys, else one column `#0` holding each row. When every row may be an
+   array (names, calls), or array rows differ in width, the rows are
+   counted and no columns are read. So `[1, 2]` and `[[1], [2]]` are one
+   table.
+3. **Canonical cells.** A Number or a quoted string is its value as
+   `right_value` records it (`5`, `5.0` and `0x5` are one cell, and so are
+   `'a'` and `"a"`); anything else, `true`, `false` and `null` included,
+   is its text with comments, wrapping parentheses and formatting taken
+   out (`operand_text`, `comparable_operand`). D-060's arm therefore skips
+   a row that holds `true`, `null`, a template or an object, as the
+   recommendation intends.
+4. **The template heading** is Jest's reading: the static text before the
+   first substitution, with its whitespace taken out, split at `|`. Vitest
+   reads the template's first line, which is the same for a heading on its
+   own line.
+5. **The one-hop `const`** (`_const_rows`). "Bound once" is one `const`
+   declaration of the name in the scope the table argument reads, whose
+   initializer is the array literal (TypeScript's `as const` after it read
+   through), in a statement that ends there, and not `export`ed. "Never
+   reassigned or mutated, and used only as a table argument" is read as
+   one rule: every other token that reads that binding must be the whole
+   argument of a table call (`test`, `it` or `describe`). So a member
+   (`CASES.push`, `CASES.length = 0`), a call argument, a spread, an
+   object key and a TypeScript `typeof` all make the rows unknown, and so
+   does any mention of the name inside a template literal, whose
+   substitutions the token stream does not see. Destructured and
+   multi-declarator `const`s are not followed.
+6. **Plain to unknown.** Q2a's "a plain test that pairs with a table of
+   ... unknown rows" is read through the count rule, so Q1b's "stays
+   silent when either side is unknown" is read for a pair of tables, as
+   the recommendation's text has it. An unknown table that becomes a plain
+   test, and a table of no rows that becomes one, lose nothing countable
+   and stay silent.
+7. **Q2b's "names directly".** A name in the expected operand or the
+   subject counts only where it reads the callback's own parameter at the
+   assertion: not a property, not a name that a nested block, a `var` or a
+   function in the callback binds again, and not a parameter a write may
+   have reached (`Bindings._written`). `.each` maps parameter i to array
+   column i; `.for` passes the row whole, so its first parameter's array
+   pattern takes the columns by position; an object pattern takes object
+   and template columns by key (`({ expected: want })` reads `#expected`);
+   a one-column table gives its cell to the first plain parameter. A
+   member, an index and a local computed from a cell are not followed, and
+   a table whose columns are unknown records none.
+8. **The test context.** A table callback's first parameter is its row,
+   so `t.skip()` on it is no imperative skip. `.for` passes the context
+   second, and `.each` none (`_callback_receivers`, `:1400`).
+
+**Sequencing with #293 (Q2b).** The ruling allows either order: land
+#428 after #293, or record on #293 that #428 is its tables round. #293 is
+open and not implemented, so this round takes the second, and asks for a
+note on #293 saying so (not posted from this branch). Whichever of the two
+lands second extends the other's fields: #293's JS reading of a binding or
+a module constant has to leave a column id to this reading.
+
+**Q4.** The ruling orders a docs-only PR first.
+`docs/KNOWN-ISSUES-v0.8.0.md` already has the row; the README "Know the
+limits" sentence and the `docs/stability.md` rewording were not made. This
+PR makes both, worded for main after the fix and naming the v0.8.0 gap. If
+the owner wants the separate docs-only PR first, those two hunks move
+there.
+
+**Costs, by reading; the sweep counts them.** New blocks in a test-only
+change: an expected cell corrected (as in Python); an input cell changed
+under the same answer (SUBJECT_INPUT_CHANGED, Q2d); a row deleted or
+deduplicated; an assertion weakened or deleted in a table; a whole table
+deleted, unless D2 or D10 credits it; and what other rules now report on
+table units (stand-ins, #363's catches, focus and skips,
+EXPECTED_VALUE_DERIVED). JS pairs by span order (Q1c (i)), so these
+transitions, which pass on main, read as tests rewritten or lost: a table
+expanded into plain tests; `test.each` into `describe.each` around one
+test (N rows read as N - 1 deleted, since the nested unit carries no
+rows); a table rewritten as a loop in one test; a table moved to another
+file while the file gains a plain test; a plain test renamed beside a new
+table. Renaming only the parameter an expected value reads (`sum` to
+`want`) is EXPECTED_VALUE_CHANGED, as renaming such a local is in a plain
+JS test (#198); renaming every parameter, and the assertion with them, is
+no finding (`js_table_parameters_renamed_neg`). A plain test honestly
+wrapped in an imported or computed table blocks, as it already does on
+main by reading the old unit as gone. Folding plain tests into a table
+still blocks (`js_table_fold_altered_value_pos`, row 92). The one block
+this round can turn into a pass is a plain test wrapped, its assertion
+text unchanged, in a table whose rows are counted and not zero.
+
+**Residuals** are listed in THREATMODEL row 137 and
+`docs/KNOWN-ISSUES-next.md`. The two P2 follow-ups the recommendation
+names are not filed from this branch: a JS fold projection with
+kind-aware pairing (Q3 (b) with Q1c (ii)), and `describe.each` rows
+(Q2c).
+
+**D-073.** This supersedes, in D-073 reading 1, the clause that the unit
+scan does not read a `.each` table: a `test`/`it` table is now a scanned
+unit. D-073 itself, and what declares a test for E7, are unchanged.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. The one fixture with a table,
+`js_describe_restructure_neg`, uses `describe.each`, which stays a block,
+and stays `[]`. The inline sources with a table hold as written:
+`tests/test_js_focus_rules.py:176` (`plain` stays stopped; the focused
+table is a unit now, and runs), `tests/test_js_liveness.py:47` and `:55`
+(block tables, one unit), `:134` (`computes` is still stopped; the table
+unit is another key), `tests/test_scope_table_role.py:58` (both sides are
+one unit) and `:118` (`declares_tests` stays true); only the comment at
+`tests/test_scope_table_role.py:55-57` changed. Python's `param_*` and
+`expectation_parametrize_*` fixtures are untouched: the flag is never set
+there and the zero-row arm is not Python's. `tests/test_duplicate_units.py`
+pins the span-order pairing this round keeps. Nothing under `tests/gates`
+holds a table. If CI shows an existing expectation moving, the round stops
+and asks.
+
+**Fingerprints and IR.** No fingerprint scheme changes. A table unit's
+findings are keyed by its title template, so two tables with one title
+share keys (row 137, residual 8). `--emit-ir` gains `param_rows_unknown`
+on every unit side, false outside JS tables; IR_VERSION stays 2. JS table
+units now carry `param_cases`, `param_rows`, and column ids in their
+assertions' `right_depends_on` and `left_names`.
+
+**Measurement.** Not measured yet. After merge, where the owner approves,
+on the pool, or on LAPTOP-01AGNPJU only under EC POLICY
+`checkwash-pju-sweep` (T-546) with the frozen manifest and engine commits
+approved first: the standard set (1,800 commits) and D-088's sets (895
+and 368) must be identical, since `ir/diffalign.py`, `ir/model.py` and
+`detectors/test_disabled.py` are language-neutral code; and a JS target
+set, built as D-118 builds one, of the non-merge commits in the 13
+in-sample JS histories whose test diff touches `.each`, `.for(` or a
+tagged-template table, outside #212's selection. Acceptance: zero verdict
+moves on format-only or rename-only table edits; every block-to-pass
+listed (only the countable wrap above is allowed); every new block with
+its diff, labelled cheat or false positive and counted by class; and the
+number of degraded JS files. Also the verdict gate (T1 and T3), the perf
+gate, and Jest, Vitest and Bun run on an empty table, recorded here. If
+transitions and mispairings dominate the false positives, the round stops
+to ask whether to take Q1c (ii). The JS replay (#212) measures the cost
+before a release ships it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run, sweep or runner was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; CI runs the tests. Added: fourteen `.gwcase` fixtures
+(nine pinning row 137: `js_table_weakened_pos`,
+`js_table_assertion_deleted_pos`, `js_table_deleted_pos`,
+`js_table_row_deleted_pos`, `js_table_expected_cell_rewritten_pos`,
+`js_table_input_cell_rewritten_pos`, `js_table_skip_added_pos`,
+`js_test_wrapped_in_empty_table_pos` and
+`js_test_wrapped_in_unknown_table_pos`; the fold cost
+`js_table_fold_altered_value_pos`; the controls `js_table_row_added_neg`,
+`js_table_reformatted_neg`, `js_table_keyed_rows_reordered_neg` and
+`js_table_parameters_renamed_neg`), labels reviewed before merge, and 73
+collected items in `tests/test_issue428_js_tables.py`, counted from its
+parametrize lists. By reading, the documented test count becomes 19562
+(19475 + 73 + 14); CI's collection checks it.
+
+The agent wrote this entry in #428's fix PR, for the owner's approval of
+its wording, the eight readings, the #293 note and the Q4 placement.
