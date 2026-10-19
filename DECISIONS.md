@@ -12555,7 +12555,7 @@ unchanged.
 Implementation, in `src/checkwash/frontends/python/frontend.py` only (lines
 at this PR):
 
-- R51. The proof is its own set of helpers (`:2482-2717`), and
+- R51. The proof is its own set of helpers (`:2482-2742`), and
   `_static_truth` (`:2385-2444`), which folds `if` guards, is unchanged.
   That folder answers True where a pass proof must not: `_truthy_literal`
   returns True when `literal_eval` fails (`:2475-2479`), so `assert -"a"`,
@@ -12564,33 +12564,34 @@ at this PR):
   first, would too. The proof shares `_is_literal` (`:373`) and `_CMP_OPS`
   (`:2370`) and answers only "proved to pass" or nothing (`_UNPROVED`); an
   unknown keeps the exemption.
-- R49, `assert`. `_proved_value` (`:2556-2578`) evaluates a literal
+- R49, `assert`. `_proved_value` (`:2577-2599`) evaluates a literal
   (`_is_literal`, read by `literal_eval`; `_proved_literal`,
-  `:2513-2520`), `not` before a literal, a comparison between literals by
+  `:2534-2541`), `not` before a literal, a comparison between literals by
   `_CMP_OPS`, or by `is` and `is not` only when one side is None
-  (`_proved_comparison`, `:2528-2553`), and `and` or `or` over these. Every
+  (`_proved_comparison`, `:2549-2574`), and `and` or `or` over these. Every
   operand of `and` and `or`, and every link of a chained comparison, is
   evaluated on its own, so no short circuit decides; Python's own result is
   then taken. A `literal_eval` failure (`-"a"`, `{[1]: 2}`) or a comparison
   that raises (`1 < "a"`) is unknown. The assertion passes when the value
   is truthy. Its message is not read, since Python evaluates it only on
   failure.
-- R49, unittest. `_proved_unittest_call` (`:2581-2624`) reads
+- R49, unittest. `_proved_unittest_call` (`:2602-2645`) reads
   `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`,
   `assertEqual` and `assertNotEqual` (`_PROVED_UNITTEST`, `:2503-2510`,
   each with the predicate `Lib/unittest/case.py` applies; `assertEqual` on
-  two values of one type dispatches to a type-specific method, and each
-  passes when `==` holds). Condition one: the call passes the method's
-  operands and at most one `msg`, by position or by keyword, and nothing
-  else, with no `*` or `**`; the operands are bound by
-  `_unittest_operands` (`:1616`), must be literals that `literal_eval`
-  reads, and must pass. Condition two is `_testcase_method`
-  (`:2680-2717`), reached through `testcase_of` (`:4644-4652`) and
-  `_handler_methods` (`:2661-2677`), which maps each handler that a method
-  of a top-level class runs itself to that class and method, once per file
-  and only when a call gets this far. `self_methods.Methods` (#306) is
-  built at most once, by the existing `methods_of`.
-- R49, condition three. `_proved_to_pass` (`:2634-2658`) walks the
+  two values of one type dispatches to a type-specific method, and each of
+  unittest's own passes when `==` holds, which reading 7 relies on).
+  Condition one: the call passes the method's operands and at most one
+  `msg`, by position or by keyword, and nothing else, with no `*` or `**`;
+  the operands are bound by `_unittest_operands` (`:1616`), must be
+  literals that `literal_eval` reads, and must pass. Condition two is
+  `_testcase_method` (`:2702-2742`), reached through `testcase_of`
+  (`:4669-4677`) and `_handler_methods` (`:2683-2699`), which maps each
+  handler that a method of a top-level class runs itself to that class
+  and method, once per file and only when a call gets this far.
+  `self_methods.Methods` (#306) is built at most once, by the existing
+  `methods_of`.
+- R49, condition three. `_proved_to_pass` (`:2655-2680`) walks the
   handler as `_contains_oracle` (`:2187-2204`) does, except that it does
   not enter an assertion's message, and every oracle it meets must be
   proved. One `assert False`, `assert str(e) == "y"`,
@@ -12598,12 +12599,12 @@ at this PR):
   any other call `_is_oracle_call` (`:2177-2184`) names keeps the handler
   inspection, so the shapes 431.Q2 keeps as inspection fall outside the
   proof by construction. A handler with a `raise` anywhere stays
-  inspection (`_raises_in`, `:2630-2631`, which `_swallows`,
+  inspection (`_raises_in`, `:2651-2652`, which `_swallows`,
   `:2266-2272`, now also uses, with the same reading).
 - R50. A handler that holds an oracle, all of them proved, joins
   `swallowing_handlers` as its normalized first line followed by a space
   and `[always-passing assertion]` (`_ALWAYS_PASSING`, `:2495`; the walk,
-  `:4676-4690`). `_norm` removes every space from a handler's text, so the
+  `:4701-4715`). `_norm` removes every space from a handler's text, so the
   new text never equals another Python text, and the per-file multisets
   (`engine.py:1581-1591`) compare it apart from main's texts: every diff
   main blocks still blocks, a pre-existing literal-only handler cannot
@@ -12623,7 +12624,7 @@ errs toward unknown, which keeps main's reading:
    `and` and `or` take any of the forms, nested.
 2. A comparison, `assertEqual` or `assertNotEqual` whose operands hold a
    bytes literal is unknown: comparing bytes with str or int warns under
-   `python -b` and raises under `-bb` (`_holds_bytes`, `:2523-2525`).
+   `python -b` and raises under `-bb` (`_holds_bytes`, `:2544-2546`).
 3. A unittest call's `msg` must be a literal that `literal_eval` reads,
    since it is evaluated before the call: `self.assertTrue(True, -"a")`
    raises TypeError.
@@ -12656,13 +12657,25 @@ errs toward unknown, which keeps main's reading:
    `self.assertTrue = f` in `setUp`, a literal-name `setattr`,
    `patch.object`), stores an item into any `__dict__`, or sets a computed
    name on the receiver or on a class of the order, or when a same-file
-   class of the order binds `__getattribute__` or `__init_subclass__`. A class
-   keyword (a metaclass) or a class name the module binds twice makes the
-   order unreadable, so the call is unknown.
+   class of the order binds `__getattribute__`, `__init_subclass__` or
+   `__setattr__` (`_RECEIVER_HOOKS`, `:2531`), as #306's
+   `Methods._resolve` (`self_methods.py:496`) does. A class keyword (a
+   metaclass) or a class name the module binds twice makes the order
+   unreadable, so the call is unknown.
 7. `assertEqual` is unknown when the module's text contains
    `addTypeEqualityFunc` or `_type_equality_funcs`: a registered
    type-equality function decides the comparison for its type instead of
-   `==`.
+   `==`. It is also unknown when reading 6 finds any name it looks up on
+   the receiver on the way to a pass stored or bound, not only its own
+   (`_REACHED`, `:2521-2526`): `_getAssertEqualityFunc`,
+   `_baseAssertEqual`, the methods unittest registers by name for `dict`,
+   `list`, `tuple`, `set` and `str` (`assertDictEqual`, `assertListEqual`,
+   `assertTupleEqual`, `assertSetEqual`, `assertMultiLineEqual`), and
+   `assertSequenceEqual` and `assertIsInstance`, which those call. A
+   same-file `assertListEqual` that raises makes
+   `self.assertEqual([1], [1])` fail, so reading it as proved would report
+   a swallow the handler does not do. The other five methods look up
+   nothing else on the receiver when they pass.
 8. An `except*` handler is read as an `except` handler is.
 
 **R66.** `_contains_oracle` does not read reachability, and neither does
@@ -12712,13 +12725,13 @@ labels for the owner's review: `broad_except_literal_beside_inspection_neg`
 one), `broad_except_unittest_not_testcase_neg` (condition two) and
 `broad_except_unproven_oracle_neg` (`assert value() or True`, R51).
 `benchmarks/FAILURES.md` was edited by hand: row 129's pins gain the four
-positives. `tests/test_issue496_python_handler_literal.py` adds 132
+positives. `tests/test_issue496_python_handler_literal.py` adds 136
 collected items, counted from its parametrize lists: the `assert` family
 (29), the unittest methods (17), what stays inspection (30), condition
-one (13), condition two (10 proved, 18 unknown), verdicts for the pair,
+one (13), condition two (11 proved, 21 unknown), verdicts for the pair,
 the offsets and the cost, the unchanged branch folder, the R66 residual
-and `except*`. By reading, the documented test count becomes 19622
-(19482 + 8 + 132); CI's collection checks it. Nothing under `tests/gates`
+and `except*`. By reading, the documented test count becomes 19626
+(19482 + 8 + 136); CI's collection checks it. Nothing under `tests/gates`
 changes.
 
 **Sweep** (R32). The pair's before side ran on #518 (run 39215282880,
