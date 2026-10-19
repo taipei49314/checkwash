@@ -6,13 +6,16 @@ of findings, not a second verdict. Exit codes stay SPEC §9.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 from urllib.parse import quote
 
 from checkwash import __version__
+from checkwash.change import UnreadSide
 from checkwash.findings import Finding, is_content_bound_fingerprint
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
+from checkwash.report.unread import sorted_unread
 
 _SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 _INFORMATION_URI = "https://github.com/taipei49314/checkwash"
@@ -26,7 +29,8 @@ _LEVEL = {
 
 
 def findings_to_sarif(
-    ir: IR, findings: list[Finding], context: ReportContext | None = None
+    ir: IR, findings: list[Finding], context: ReportContext | None = None,
+    unread: Iterable[UnreadSide] = (),
 ) -> str:
     visible = [f for f in findings if not f.allowlisted]
     rule_ids = sorted({f.rule for f in visible})
@@ -60,8 +64,8 @@ def findings_to_sarif(
             }
         ],
     }
-    if context is not None and context.coverage_gaps:
-        notifications = []
+    notifications = []
+    if context is not None:
         for gap in context.coverage_gaps:
             notification = {
                 "level": "warning",
@@ -81,11 +85,42 @@ def findings_to_sarif(
                     "region": {"startLine": gap.line},
                 }}]
             notifications.append(notification)
+    # Unread sides follow the coverage gaps in the same invocation (#454).
+    notifications.extend(_unread_notification(side) for side in sorted_unread(unread))
+    if notifications:
+        # The run gave a verdict, so the execution succeeded; what it did
+        # not read is a notification, never a result.
         payload["runs"][0]["invocations"] = [{
             "executionSuccessful": True,
             "toolExecutionNotifications": notifications,
         }]
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
+
+
+def _unread_notification(side: UnreadSide) -> dict:
+    """A side carried unread (#454): the stderr note and its four facts.
+
+    The properties are the findings JSON entry's keys, prefixed as the
+    coverage gaps' are, and nothing else the side may carry (#455).
+    """
+    notification = {
+        "level": "warning",
+        "message": {"text": side.note()},
+        "properties": {
+            "checkwash.path": side.path,
+            "checkwash.side": side.side,
+            "checkwash.size": side.size,
+            "checkwash.limit": side.limit,
+        },
+    }
+    # A base side is not a file in the checked-out head or working tree, as
+    # a base-side coverage gap is not; its path stays in the properties. No
+    # side was read, so no line is named.
+    if side.side != "base":
+        notification["locations"] = [{"physicalLocation": {
+            "artifactLocation": {"uri": quote(side.path.replace("\\", "/"), safe="/")},
+        }}]
+    return notification
 
 
 def _result(finding: Finding, context: ReportContext | None) -> dict:

@@ -30,6 +30,12 @@
     "verdict": {
       "description": "`block` when a finding no exemption covers reaches the effective `fail_on` severity (`--fail-on`, else the base side's `gate.fail_on`, else `high`), otherwise `pass`. The threshold is not recorded in this document. Exit status 1 goes with `block` and 0 with `pass`.",
       "enum": ["pass", "block"]
+    },
+    "unread": {
+      "description": "From the next minor (unreleased, #454): changed sides over the source size limit that no detector had to read, the sides the standard-error notes name, one entry per side, sorted by path, then side. The change holding a listed side was set aside whole, its readable side included, so a `pass` says nothing about that change. Not every set-aside path is listed; docs/stability.md says which are not. The key is omitted when there is none, and releases before the one that adds it never write it, so its absence alone does not show that every changed file was read.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/unread_side"},
+      "minItems": 1
     }
   },
   "$defs": {
@@ -166,6 +172,32 @@
     "label": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9_]*$"
+    },
+    "unread_side": {
+      "description": "One side checkwash did not read, with exactly the four facts of its standard-error note.",
+      "type": "object",
+      "required": ["path", "side", "size", "limit"],
+      "properties": {
+        "path": {
+          "description": "The repository-relative path of that side, with forward slashes.",
+          "type": "string",
+          "minLength": 1
+        },
+        "side": {
+          "description": "`base` for the base revision, `head` for the head revision of a range, or `worktree` for the working tree when no range is given.",
+          "enum": ["base", "head", "worktree"]
+        },
+        "size": {
+          "description": "The side's size in bytes, over `limit`. A worktree side's size is its size on disk.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit": {
+          "description": "The source size limit in bytes, 1,000,000 today.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     }
   }
 }
