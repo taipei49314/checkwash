@@ -82,6 +82,10 @@ def test_an_async_def_under_a_dead_arm_is_no_unit():
     pytest.param("with open(__file__):\n", 1, "", id="with"),
     pytest.param("try:\n", 1, "except Exception:\n    pass\n", id="try-body"),
     pytest.param("try:\n    import numpy\nexcept ImportError:\n", 1, "", id="handler-of-a-try-that-may-raise"),
+    # An annotated name stores into `__annotations__`, so it may raise once
+    # the module has rebound that name, even before the try.
+    pytest.param("__annotations__ = None\ntry:\n    flag: 'bool' = True\nexcept TypeError:\n", 1, "",
+                 id="handler-of-a-try-whose-annotation-may-raise"),
     pytest.param("match value:\n    case 1:\n", 2, "", id="match-on-a-name"),
     pytest.param("if TYPE_CHECKING:\n", 1, "", id="if-type-checking"),
     # The named residual: a condition the folder cannot decide (Q4).
