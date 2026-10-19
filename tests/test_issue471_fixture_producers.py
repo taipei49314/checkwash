@@ -26,6 +26,7 @@ import datetime
 
 import pytest
 
+from checkwash import gating
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
@@ -231,6 +232,15 @@ def test_a_fixture_requested_by_the_requested_fixture_is_not_followed():
     )
 
 
+def test_an_autouse_fixture_the_test_also_requests_by_parameter_has_a_producer():
+    """Q2 (a) counts a fixture the test requests by parameter; `autouse` alone requests nothing."""
+    level = _fixture("return Ledger()", decorator="@pytest.fixture(autouse=True)")
+    assert level.producers == {"ledger": PRODUCER}
+    side = _side("def test_fee(ledger):\n    assert ledger.fee == 5.0\n", chain=(level,))
+    assert side.fixture_producers == (("ledger", "Ledger", ("shop.ledger",)),)
+    assert _side("def test_fee():\n    assert True\n", chain=(level,)).fixture_producers == ()
+
+
 # --- which assertions read the fixture's value (Q3 (b)) ----------------------------------------
 
 
@@ -243,6 +253,18 @@ def test_a_fixture_requested_by_the_requested_fixture_is_not_followed():
 def test_an_assertion_records_the_fixture_parameters_it_reads(body, reads):
     side = _side("def test_fee(ledger):\n" + body)
     assert [a.fixture_reads for a in side.assertions] == reads
+
+
+@pytest.mark.parametrize("body", [
+    pytest.param("    for ledger in [make()]:\n        assert ledger.fee == 5.0\n", id="for-target"),
+    pytest.param("    with make() as ledger:\n        assert ledger.fee == 5.0\n", id="with-as"),
+    pytest.param("    assert all(ledger.fee == 5.0 for ledger in rows)\n", id="comprehension-target"),
+])
+def test_a_parameter_the_body_binds_again_in_another_form_records_no_fixture_read(body):
+    side = _side("def test_fee(ledger):\n" + body)
+    assert side.fixture_producers == (("ledger", "Ledger", ("shop.ledger",)),)
+    assert side.assertions
+    assert all(a.fixture_reads == () for a in side.assertions)
 
 
 def test_an_assertion_in_a_nested_scope_records_no_fixture_read():
@@ -356,12 +378,15 @@ FACTORY_CONFTEST = (
 
 
 def test_the_one_hop_callers_route_is_not_followed_from_a_producer():
-    """The producer counts as the test's call for a direct match only (D-155, the conservative reading).
+    """The producer counts as the test's call for a direct match only (D-155, a departure for the owner).
 
     `make_ledger` is unchanged and calls the changed `Ledger.reset`. Written
     inline, `make_ledger()` takes the one-hop callers route (SPEC section 5
     clause 2); returned by the fixture, it does not, as the T1.9 helper hop
-    and 306 Sub-Q8 match their callees directly only.
+    and 306 Sub-Q8 match their callees directly only. The analysis the
+    ruling adopted has the producer take that route (its sections 2.2 and
+    4.5), so D-155 records this as a departure: if the owner rules for the
+    route, this pin flips to warn with REPAIR_EVIDENCE.
     """
     test_before = "def test_total(ledger):\n    assert ledger.total([1.0]) == 1.0\n"
     _ir_, through_fixture, verdict = _judge(
@@ -400,5 +425,53 @@ def test_a_conftest_the_diff_edits_is_read_from_each_side_and_the_before_side_go
     assert findings == [
         ("EXPECTED_VALUE_CHANGED", "high", (), ("NO_PROD_CHANGE_IN_DIFF",)),
         ("EXPECTED_VALUE_HARDCODED", "high", (), ("NO_PROD_CHANGE_IN_DIFF",)),
+    ]
+    assert verdict == "block"
+
+
+DISABLED_PROD = (
+    "class Ledger:\n    def total(self, items):\n        return sum(items)\n\n"
+    "    def count(self):\n        return 0\n"
+)
+DISABLED_TESTS = (
+    "def test_total(ledger):\n    assert ledger.total([50.0, 50.0]) == 100.0\n\n\n"
+    "def test_count(ledger):\n    assert ledger.count() == 0\n"
+)
+DISABLED_CONFTEST = (
+    "import pytest\n\nfrom billing import Ledger\n\n\n"
+    "@pytest.fixture\ndef ledger():\n    return Ledger()\n"
+)
+
+
+def test_the_test_disabled_guard_is_what_withholds_a_changed_producer(monkeypatch):
+    """apply_gates passes TEST_DISABLED no assertion (471 Q4 (a)); this pin tells the guard from its absence.
+
+    No TEST_DISABLED finding cites an assertion today: a unit gone cites the
+    unit's span, and the other shapes cite a marker or the unit's span on
+    the after side. So `_finding_assertion` finds none, and
+    `fixture_producer_test_disabled_pos` blocks with or without the guard.
+    Here every finding is handed its unit's first before-side assertion that
+    reads a fixture, which would be evidence, so only the guard keeps the
+    changed producer of `ledger` out. The scenario is that fixture's.
+    """
+    def reading(_finding, unit):
+        if unit is None or unit.before is None:
+            return None
+        return next((a for a in unit.before.assertions if a.fixture_reads), None)
+
+    monkeypatch.setattr(gating, "_finding_assertion", reading)
+    ir, findings, verdict = _judge(
+        {"billing.py": DISABLED_PROD, "tests/test_billing.py": DISABLED_TESTS},
+        {"billing.py": DISABLED_PROD.replace("return sum(items)", "return round(sum(items), 2)"),
+         "tests/test_billing.py": DISABLED_TESTS.split("\n\n\n")[1]},
+        {"tests/conftest.py": DISABLED_CONFTEST},
+    )
+    [gone] = [u for u in next(f for f in ir.files if f.path == "tests/test_billing.py").units
+              if u.qualname == "test_total"]
+    assert gone.after is None
+    assert gone.before.fixture_producers == (("ledger", "Ledger", ("billing",)),)
+    assert _fixture_producer_evidence(reading(None, gone), gone.before, ir) is True
+    assert [(rule, severity, escalators) for rule, severity, _de, escalators in findings] == [
+        ("TEST_DISABLED", "high", ("NO_PROD_CHANGE_IN_DIFF",)),
     ]
     assert verdict == "block"
