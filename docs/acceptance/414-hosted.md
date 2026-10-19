@@ -1,6 +1,6 @@
 # #414 hosted acceptance run: declaration
 
-**Draft for the owner's approval. Nothing has run.** Owner ruling 2026-10-19,
+**Approved by the owner on 2026-10-19** (「PR 核可清單全部照建議」, "the PR approval list, all as recommended"; the reply was a button whose text the assistant wrote), items A92–A97: the run as declared, with all six additions below kept. The run starts when the draft pull request opens. Owner ruling 2026-10-19,
 R26 (option A): this declaration holds only #414's legs, the owner approves it
 on its own, and it runs first, before the combined sweep. Owner ruling
 2026-10-19, R25 (option A): #414's range-mode part is read from the v0.8.0 run
