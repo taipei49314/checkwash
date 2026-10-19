@@ -171,6 +171,13 @@ def test_deleting_a_def_that_never_ran_is_quiet():
     assert (findings, verdict) == ([], "pass")
 
 
+def test_an_edit_made_while_taking_a_def_out_of_a_dead_arm_reads_as_a_new_test():
+    # The dead def was no unit, so the live one is an added test, and its
+    # weaker assertion has nothing to be compared with.
+    _, findings, verdict = run(PARKED, BEFORE.replace("== 3", ">= 0"))
+    assert (findings, verdict) == ([], "pass")
+
+
 def test_an_assertion_moved_into_a_dead_def_earns_no_move_credit():
     before = HEAD + "def test_x():\n    assert total([1, 2]) == 3\n    assert total([]) == 0\n"
     after = (
