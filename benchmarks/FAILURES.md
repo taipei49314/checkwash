@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **177 bypasses** are documented, of which **59 are not closed**.
+- **178 bypasses** are documented, of which **60 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -63,7 +63,7 @@ it is known not to.
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 
-## Closed in part (13)
+## Closed in part (14)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -80,6 +80,7 @@ it is known not to.
 | 129 | Always-passing assertion in the catch: keep the broad catch that swallows the guarded assertion and give it an assertion that cannot fail, so the catch reads as inspection — `try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }` | `broad_except_always_passing_assert_true_pos.gwcase`, `broad_except_always_passing_bare_except_pos.gwcase`, `broad_except_always_passing_literal_compare_pos.gwcase`, `broad_except_always_passing_unittest_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase` |
 | 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | `snapshot_new_prod_module_new_test_pos.gwcase`, `snapshot_new_prod_module_pos.gwcase` |
 | 133 | Commit the cheat during the Claude Code session, so the Stop hook, which diffed HEAD against the working tree, sees a clean tree and prints `{}`; or commit an exemption, a `[detectors] disable` or a relaxed `fail_on`, so it governs the agent's next Stop | — |
+| 159 | Take a JS/TS test out of the run by registering it where no code runs, its body unchanged: `if (false) { it(...) }` in a `describe` callback, `return;` before `it(...)` there, a module-level `if (false) { test(...) }` after the imports, `false && it(...);`, a node:test or tap `t.test(...)` after `return;` in its parent test, or a whole `describe` under `if (false)`; focus the parked test (`if (false) { it.only(...) }`) so that the test beside it reads as stopped instead; or paste a deleted test under `if (false)`, or move an assertion into a test there, to buy the move or restructure credit (#484). The same in Python: a `def test_x` under `if False:` (#499) | `js_dead_registration_after_return_pos.gwcase`, `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_describe_pos.gwcase`, `js_dead_registration_equal_mass_pos.gwcase`, `js_dead_registration_focus_pos.gwcase`, `js_dead_registration_if_false_pos.gwcase`, `js_dead_registration_literal_and_pos.gwcase`, `js_dead_registration_mocha_function_pos.gwcase`, `js_dead_registration_module_if_false_pos.gwcase`, `js_dead_registration_node_subtest_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase` |
 
 ## Open by design — the cost of a deliberate trade (10)
 
@@ -119,7 +120,7 @@ behind it* unshippable.
 | 6 | Rename the test class out of pytest's `Test*` rule | `class_rename_out_of_collection_pos.gwcase` |
 | 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
 | 8 | Early `return`, deleted parametrize rows | `early_return_pos.gwcase`, `js_early_return_pos.gwcase`, `js_if_true_return_pos.gwcase`, `js_issue429_repro_pos.gwcase`, `parametrize_rows_pos.gwcase` |
-| 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `sacrificial_skip_pos.gwcase` |
+| 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase`, `sacrificial_skip_pos.gwcase` |
 | 10 | `assert f(x) == f(x)` self-comparison | `js_issue429_repro_pos.gwcase`, `js_self_compare_node_pos.gwcase`, `js_self_compare_pos.gwcase`, `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | — |
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
