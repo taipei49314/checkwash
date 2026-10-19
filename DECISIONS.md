@@ -10125,9 +10125,9 @@ dogfood. The v0.8.0 acceptance sweep (D-140) ran after publication. It
 compares v0.7.0 with v0.8.0, so it measures the release, not #450 alone.
 What covers each part (owner rulings 2026-10-18 on #422, and 2026-10-19,
 R3, R5, R8 and R35):
-- **Standard and D-088 sets: run,** in the sweep's standard, d088, targeted
-  and JS batches. For the 6,168 commits both versions analysed, verdicts
-  and findings are identical, and no result carries a
+- **Standard and D-088 sets: run,** in the sweep's standard and d088
+  batches; on the 6,168 commits both versions analysed across all four
+  batches, verdicts and findings are identical, and no result carries a
   `conftest.runtime.exit.` marker: the new detection never fired. This is
   the cost the entry was to record after the release: no verdict or
   finding changed. It is in-sample (D-053), not a false-positive rate.
