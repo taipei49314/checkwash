@@ -12486,7 +12486,7 @@ from a subdirectory, while its own queries use 5 seconds.
 
 Implementation (lines at this PR):
 
-- A, the root fallback. `GitSnapshot.alias` (`gitio/snapshot.py:447-474`)
+- A, the root fallback. `GitSnapshot.alias` (`gitio/snapshot.py:447-478`)
   returns a `TreeAlias` (`:39-50`): the first entry of the base tree, by
   the shortest prefix, that equals a proper prefix of the mapped path when
   case is ignored and is a file, a symlink or a submodule; or else an
@@ -12527,12 +12527,23 @@ Readings within the ruling's text, for the owner's approval:
    already refused (`opaque_error`, `gitio/snapshot.py:417-419`), and in
    another case a case-insensitive checkout would open the submodule's
    working tree.
-2. "Case ignored" is `str.casefold`, which folds more than file systems
-   do (`ß` and `ss`, for example), so it refuses more, never less.
+2. "Case ignored" is `str.casefold`, Unicode's full case folding. It is
+   no file system's own case table, so it can differ either way: it joins
+   some names file systems keep apart (`ß` and `ss`, for example), and it
+   can miss names a file system joins. U+0131 `ı` has no case folding,
+   while its uppercase is `I`; NTFS compares names through an uppercase
+   table, inferred, not verified, to map `ı` to `I`. If so, `--task
+   cı/TASK.md` for a committed `ci/TASK.md` gives no alias there, and the
+   fallback reads the head's copy.
 3. An entry equal to the mapped path byte for byte is no alias: that is
    what the base read answers. The only such entry the read misses is a
-   submodule named exactly, whose fallback opens a directory and was
-   already an engine error (`OSError`).
+   submodule named exactly. Its fallback opens whatever the working tree
+   holds at that path: an engine error (`OSError`) when a directory is
+   checked out there, the submodule's own or the empty one Git leaves for
+   it, but the head's contract when the head replaced the submodule with
+   a regular file. No working configuration names a submodule as
+   `--task`, so this is left as a residual; refusing it would be stricter
+   than the ruling's text.
 4. The stderr line is written after the working-tree copy is read, so an
    `OSError` from the open gives only the engine error. The session's
    second leg (#418) stays quiet, as for its other diagnostics; it reads
@@ -12544,9 +12555,12 @@ Readings within the ruling's text, for the owner's approval:
 
 Not settled by the ruling, and left as residuals (KNOWN-ISSUES-next):
 other spellings a file system treats as the same file are not compared,
-by reading: Unicode normalization (NFC against NFD on macOS) and, on
-Windows, trailing dots or spaces, 8.3 short names and alternate data
-streams. A task file the base does not hold at all is still read from the
+by reading: Unicode normalization (NFC against NFD on macOS), names a
+file system's own case table joins and `str.casefold` keeps apart (`ı`
+against `I`, inferred, reading 2) and, on Windows, trailing dots or
+spaces, 8.3 short names and alternate data streams. A task path that
+names a base submodule exactly still reaches the fallback (reading 3).
+A task file the base does not hold at all is still read from the
 working tree, with the new stderr line, so a CI step that names a task
 file the base never had still lets each change supply its own contract.
 Dropping the root fallback altogether was not proposed: it would revisit
