@@ -12480,7 +12480,8 @@ Implementation (lines at this PR):
 
 - `frontends/python/fixture_producers.py` (new). `producer` (`:195-248`):
   the fixture's only `return <value>`, or in a generator its only
-  `yield <value>`, outside nested defs, classes and lambdas, on every path
+  `yield <value>`, outside nested defs, classes and lambdas, and under no
+  branch, loop, `match`, or `try` handler, `else` or `finally`
   (`_unconditional`, `:169-182`); the value is a call with a dotted callee,
   or a name, not a parameter, bound exactly once in the fixture's scope by
   a plain `=` or annotated `=` of such a call (`_binders`, `:89-124`;
@@ -12709,10 +12710,11 @@ with no parameter reads nothing new, and the gate's modules have none.
 
 Evidence status: prepared on a work machine where no pytest, checkwash,
 engine or product code ran; CI runs the tests. Added: 20 `.gwcase`
-fixtures, whose labels the owner approved on 2026-10-19, and 96 collected
-items in `tests/test_issue471_fixture_producers.py`, counted from its
-parametrize lists; no existing test changed. By reading, the documented
-test count becomes 19591 (19475 + 96 + 20); CI's collection checks it.
+fixtures, 19 whose labels the owner approved on 2026-10-19 (A77) and one
+he approved adding the same day (B24), and 96 collected items in
+`tests/test_issue471_fixture_producers.py`, counted from its parametrize
+lists; no existing test changed. By reading, the documented test count
+becomes 19591 (19475 + 96 + 20); CI's collection checks it.
 
 The agent wrote this entry in #471's fix PR #522. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
@@ -12745,4 +12747,14 @@ test count raised for it, and GLM's two findings (F-1, a lambda's
 parameter; F-2, a single conditional `return`) fixed by the readings
 already approved, with pins for each (B24). 9755fb4a, 420795e7, ad1c02aa,
 fab761b1 and 034e517e make those changes. The reply was a button whose
-text the agent wrote, which the owner chose.
+text the agent wrote, which the owner chose. The same list approved the
+closing paragraph above (B3). The round-2 list did not show the wording
+of this paragraph or of the sentences 034e517e adds to the
+implementation, readings 2 and 3, the Effect paragraph and the evidence
+status, nor the date, fixture and row fields of the credit row
+(2026-10-19, `hardcoded_via_conftest_fixture_neg.gwcase`, rows 93 and
+137): the agent wrote them after the approval. From a read-only review of
+those commits (Claude, under B2), the evidence status now says which item
+covers which fixture, and the implementation sentence and the module's
+docstrings (94a46475) no longer say the value site runs on every path; no
+approval item names these fixes.
