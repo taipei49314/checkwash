@@ -12694,11 +12694,18 @@ THREATMODEL row 91 (4cf15200, bd8d3ab8) and this entry (39aad0bc,
 and the residual lists completed (A44); the three fixtures' labels
 (A45, 09ccc6ba); readings 1 to 5 (A46); reading 7 (A47); reading 6, with
 the asymmetry between a direct and an aliased target kept and
-`x = globals()["C"]` left a residual (A48); and reading a dunder setter's
-name argument by its argument count, with this entry's reading changed to
-match (A49). The reply was a button whose text the assistant wrote. The
-changes A44 and A49 ask for were made after the reply: the code and its
-pins (27c42fd2, f6974b13), SPEC §3 (9c8c794b, fa236589), row 91
-(a2e968a0) and this entry (a2a6727f, efa57c35). The residual of an alias a
-def assigns under `global` (9b0d8661) was added after the reply, and its
-wording is not yet approved.
+`x = globals()["C"]` left a residual (A48); and, for `__setattr__`,
+reading the name argument at index 0 of a call with two positional
+arguments and at index 1 of one with three, with this entry's reading
+changed to match (A49). The reply was a button whose text the assistant
+wrote. The changes A44 and A49 ask for were made after the reply: the code
+and its pins (27c42fd2, f6974b13), SPEC §3's residual sentence
+(fa236589), row 91 (a2e968a0) and this entry (a2a6727f, efa57c35). Made
+with them and not yet approved: the same rule for `__delattr__`, with one
+and two arguments; leaving every name unresolved for a dunder setter with
+a starred argument in any position, where the draft looked only at the
+first two, or with a count neither form takes (items 2 and 3; 27c42fd2,
+a2a6727f); and SPEC §3's sentence that reads the name argument by the
+count (9c8c794b). A residual raised after the reply, an alias a def
+assigns under `global` (9b0d8661), is taken out again (b2f0f052) until its
+wording is approved.
