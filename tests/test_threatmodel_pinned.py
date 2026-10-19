@@ -30,6 +30,14 @@ CASES = ROOT / "tests" / "cases"
 E2E_PINNED = {
     "5": "test_rename_test_file_out_of_tests_blocks",
     "11": "test_three_dot_range_uses_merge_base",
+    # Issue #501: the golden runner passes no ledger, so the two .gwcase
+    # fixtures that claimed this row held no exemption for the cap to refuse.
+    # This test, in tests/test_issue421_assertion_keys.py, passes analyze a
+    # real future-created entry, the case where anchoring the cap at
+    # `created` alone changes the result;
+    # test_a_hand_edited_expiry_past_the_cap_is_not_honoured, in the same
+    # file, passes the row's own hand-edited expiry.
+    "39": "test_a_future_created_content_bound_key_is_still_capped",
     # A .gwcase pair has no rename status, so only a real `git mv` can
     # exercise the base-side-role check that closes this row.
     "79": "test_rename_into_prod_earns_no_opaque_exemption",

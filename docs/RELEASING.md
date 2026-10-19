@@ -76,7 +76,9 @@ do not authorize local execution.
    the previous release required by the tag-push gate: the highest other
    stable version tag merged into the commit, with its exact peeled commit.
    Do not rotate the baseline to obtain a green release verdict.
-5. Only under the explicit publication grant, make the final annotated tag on
+5. Only under the explicit publication grant, and once the fixed-corpus
+   comparison (below) has run and the owner has reviewed every commit it
+   lists, or the grant waives it, make the final annotated tag on
    the qualified merge commit and push only that tag. No ruleset is unlocked
    or restored any more (2026-10-14, below); the grant is what permits the
    push. Never move or delete an existing public tag to fix a failed check.
@@ -119,6 +121,57 @@ Preparation for 1.0 stops before steps 5–9. The readiness report distinguishes
 implemented publication checks from future execution against public objects
 that do not yet exist. No preparation receipt claims a v1.0.0 public download
 or visitor result.
+
+## Before the tag: the fixed-corpus comparison
+
+A standing step since 2026-10-19 (owner ruling 2026-10-19, R29, with R27 and
+R3; [#212](https://github.com/taipei49314/checkwash/issues/212)). It runs
+once the candidate commit is fixed, before step 5.
+
+- **Sets.** The previous published release (for the next release, v0.8.0
+  `f02b5d8`) and the candidate each check two fixed in-sample sets: the
+  Python `standard` set, 300 commits from each of attrs, click, flask, httpx,
+  rich and starlette (D-141, arm 1), and the JS/TS set of
+  [`benchmarks/javascript-replay/`](../benchmarks/javascript-replay/README.md),
+  300 commits from each of six repositories. Each commit is checked against
+  its first parent with `check --format json`, once per engine, as the two
+  JS/TS runs so far did
+  ([results](../benchmarks/javascript-replay/results.md)).
+- **Candidate.** The commit to be tagged, or a commit whose `src/` tree
+  differs from it only in the version string in `src/checkwash/__init__.py`
+  (step 1), which `check --format json` prints only as
+  `run.checkwash_version`. So a candidate frozen before the version bump
+  still counts. If anything else in `src/` changes after the comparison,
+  the comparison runs again.
+- **Where.** This is release verification, so it runs on the EC pool, never
+  on LAPTOP-01AGNPJU or LAPTOP-16NUA5I8: EC POLICY `checkwash-pju-sweep`
+  (T-546) does not cover release verification.
+- **What goes to the owner.** Every commit whose outcome moves from pass to
+  block, from block to pass, or from an analysed verdict to an engine error,
+  and every commit the candidate blocks that the previous release could not
+  analyse. Each comes with a reading of its change. The tag waits until the
+  owner has reviewed the list. There is no rate threshold, so no new block
+  reaches a release without the owner seeing it, as in the v0.5.0 tag gate
+  (under "The release slot").
+- **Recorded only.** An engine error that becomes a pass, an error that
+  stays an error, and a verdict that holds. These do not hold the tag.
+- **Waiver.** Only a release's own one-time authorization can waive or
+  defer this step, and it says so, as v0.8.0's did when the owner chose to
+  release first and run the sweeps after publication. No standing waiver
+  exists.
+- **Record.** The run identities, the list and the owner's review are
+  recorded with the release's authorization in this file. The release guide
+  states the JS/TS result beside the Python result, labelled in-sample, with
+  both engine commits, as counts of commits and never as a false-positive
+  rate (SPEC §10.2 rule 1). The JS/TS result is also added to the
+  [results record](../benchmarks/javascript-replay/results.md).
+- **What it is not.** Both sets are in-sample. The comparison shows what
+  changed between two versions on commits the project knows. It is not a
+  held-out or adjudicated false-positive rate
+  ([known issues](KNOWN-ISSUES-next.md)).
+
+A JS/TS round's pull request states that this step checks its JS/TS
+false-positive cost at the next release, instead of citing #212.
 
 ## 2026-10-14: the PyPI deployment reviewer replaces the tag ruleset
 
