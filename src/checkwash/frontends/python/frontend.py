@@ -1533,17 +1533,30 @@ def _resolve_through(names: tuple[str, ...], bindings: dict[str, tuple[str, ...]
     return tuple(sorted(seen))
 
 
-def _fixture_read_bindings(func) -> dict[str, tuple[str, ...]]:
-    """`_binding_maps`' reference half, less what each value binds in a lambda or comprehension of its own (#471, C2).
+def _fixture_read_bindings(
+    func,
+    nested: set[int],
+    refs_memo: dict[int, tuple[str, ...]] | None = None,
+) -> dict[str, tuple[str, ...]]:
+    """`_binding_maps`' reference half as `fixture_reads` follows it: the unit's own scope only (#471).
 
-    `fixture_reads` follows the unit's own assignments through this map. In
-    `result = (lambda ledger: ledger.fee)(make())`, the lambda's `ledger` is
-    not the fixture parameter, so `result` leads to `make` only. Each
-    assigned value's `fixture_producers.nested_bound_names` are dropped from
-    its references, even where such a name also occurs outside the lambda
-    or comprehension that binds it, erring toward no evidence. It reads the
-    same assignments and walruses as `_binding_maps`, so the two maps have
-    the same keys.
+    `fixture_reads` follows the unit's own assignments through this map
+    (D-155, reading 3). In `result = (lambda ledger: ledger.fee)(make())`,
+    the lambda's `ledger` is not the fixture parameter, so `result` leads to
+    `make` only. Each assigned value's `fixture_producers.nested_bound_names`
+    are dropped from its references, even where such a name also occurs
+    outside the lambda or comprehension that binds it, erring toward no
+    evidence. An assignment or walrus inside a nested def, class or lambda
+    (`nested`, the ids of their nodes) binds another scope's name and is not
+    followed: neither `(lambda ledger: (fee := ledger.fee))(make())` nor a
+    nested def's `fee = ledger.fee` leads `fee` to `ledger`. A walrus in what
+    such a def, class or lambda evaluates in the unit's scope (a default or a
+    decorator) is left out too, erring toward no evidence; a walrus in a
+    comprehension of the unit's own scope is kept. So the keys are the
+    binding map's, less the names bound only there; `fixture_reads` still
+    checks the binding map for a parameter the body assigns again.
+    `refs_memo` is the unit's memo of `_referenced_names`, which
+    `_binding_maps` has already filled.
     """
     references: dict[str, set[str]] = {}
     for node in _walk(func):
@@ -1555,9 +1568,12 @@ def _fixture_read_bindings(func) -> dict[str, tuple[str, ...]]:
             targets, value = [node.target], node.value
         else:
             continue
-        if value is None:
+        if value is None or id(node) in nested:
             continue
-        kept = set(_referenced_names(value)) - nested_bound_names(value)
+        names = refs_memo.get(id(value)) if refs_memo is not None else None
+        if names is None:
+            names = _referenced_names(value)
+        kept = set(names) - nested_bound_names(value)
         for target in targets:
             for name in _assignment_name_targets(target):
                 references.setdefault(name, set()).update(kept)
@@ -3269,9 +3285,10 @@ def _collect_unit(
     def fixture_reads(node: ast.AST, expression: ast.AST) -> tuple[str, ...]:
         """The fixture parameters assertion `node` of the unit's own body reads in `expression` (471 Q3).
 
-        Directly, or through the unit's own assignments (`_resolve_through`),
-        less the names an assigned value binds in a lambda or comprehension
-        of its own (`_fixture_read_bindings`, C2). A parameter the body binds
+        Directly, or through the unit's own assignments (`_resolve_through`):
+        not one made inside a nested def, class or lambda, and less the names
+        an assigned value binds in a lambda or comprehension of its own
+        (`_fixture_read_bindings`, D-155 reading 3). A parameter the body binds
         again holds another value there, and is not counted: one the binding
         map records (`=`, augmented, annotated or walrus), and one bound any
         other way in the unit's own scope (`_fixture_binders`: a `for` or
@@ -3295,7 +3312,7 @@ def _collect_unit(
                 for inner in ast.walk(scope)
             }
             rebound = frozenset(param for param in fixture_params if _fixture_binders(func, param))
-            followed = _fixture_read_bindings(func)
+            followed = _fixture_read_bindings(func, nested_nodes, _refs_memo)
         if id(node) in nested_nodes:
             return ()
         read, shadowed = assertion_names(expression)
