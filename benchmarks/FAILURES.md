@@ -11,18 +11,17 @@ it is known not to.
 
 ## The short version
 
-- **155 bypasses** are documented, of which **39 are not closed**.
+- **155 bypasses** are documented, of which **38 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (14)
+## Open — no defence at all (13)
 
 | # | shape | pinned by |
 |---|---|---|
-| 85 | Replace one assertion with two — a weak precondition and the real oracle — so the order fallback pairs the old strong assertion with the new weak one and reports `ASSERT_WEAKENED` | — |
 | 86b | Write the same cheats in unittest style: `self.assertEqual(subject, expected)` | — |
 | 86d | Wrap the subject **and** move the expected literal into a named constant, in one edit | — |
 | 86e | Replace a **subject-less** assertion — the truthy form `assert f(x)`, `approx`, `isinstance`, `raises` — with an unrelated one | — |
@@ -84,7 +83,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (113)
+## Closed — each pinned by something that runs (114)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -170,6 +169,7 @@ behind it* unshippable.
 | 81 | Append an unguarded `collect_ignore.append(...)` to a conftest that **already** has a collection control | `collect_ignore_appended_pos.gwcase` |
 | 82 | Put the collection control in a **new** `conftest.py` | `conftest_added_file_kills_suite_pos.gwcase` |
 | 83 | Reach `collect_ignore` from an `except ImportError:` handler, or assign through a slice (`collect_ignore[:] = [...]`) | `collect_ignore_slice_pos.gwcase` |
+| 85 | Replace one assertion with two — a weak precondition and the real oracle — so the order fallback pairs the old strong assertion with the new weak one and reports `ASSERT_WEAKENED` | `subject_pairing_not_none_precondition_neg.gwcase`, `subject_pairing_precondition_before_neg.gwcase` |
 | 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |
 | 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | `assert_substituted_both_nonliteral_pos.gwcase` |
 | 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | `unittest_len_modernize_neg.gwcase` |
@@ -297,6 +297,7 @@ state — do not invent a row to fill it. Quarterly review:
 | 2026-09-21 | false block | @arsen-ask-lx | #156 | `tests/test_js_frontend.py` | — |
 | 2026-09-23 | missed cheat | @arsen-ask-lx | #164 | `tests/test_js_node_assert.py` | — |
 | 2026-10-12 | missed cheat | @talhayme | #363 | `js_catch_assertion_swallowed_pos.gwcase` | 16, 22 |
+| 2026-10-19 | false block | @talhayme | #457 | `subject_pairing_other_subject_known_limit_pos.gwcase` | 84b |
 
 ## Send us one
 
