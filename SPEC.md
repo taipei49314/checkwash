@@ -536,9 +536,10 @@ not a literal: a `**` argument or another mapping in `update()`, a
 computed key, a `__setattr__` or `__delattr__` with no literal name, or a
 `setattr` or `delattr` whose target or name is a starred argument. A
 computed-name `setattr` or `delattr` through a plain alias of the receiver
-or of a class of the order counts as one on it, one hop: `x = C`,
-`x = type(self)` or `x = self.__class__`, bound in the call's own scope, a
-def or lambda around it, or the module. One whose target is reached
+or of a class of the order counts as one on it, one hop, and only from
+`x = C`, `x = type(self)` or `x = self.__class__` bound in the call's own
+scope, a def or lambda around it, or the module; another value, such as
+`cfg = self.settings`, is not followed. One whose target is reached
 through a subscript or another call, such as `globals()["C"]`, counts as
 one on every class. `vars()` and `locals()` outside a class body rebind no
 method. An unresolved call adds
@@ -600,7 +601,7 @@ store in a conftest or plugin; a star import that binds a class's name;
 and a class body whose metaclass's `__prepare__` returns the module's
 namespace. Nor are these, a residual (D-159): an aliased `setattr`
 (`s = setattr`); an alias more than one hop away, bound other than by a
-plain assignment, or to a value that is no name (`x = globals()["C"]`); a
+plain assignment, or to another value (`x = globals()["C"]`); a
 computed-name `setattr` whose target is a parameter that holds the class,
 such as a `setUpClass`'s `cls`; `pop()`, `popitem()` or `clear()` on a
 class body's namespace; and a namespace written through `monkeypatch.setitem`,
