@@ -12666,8 +12666,11 @@ the change on the pool, or on LAPTOP-01AGNPJU under EC POLICY
 `checkwash-pju-sweep` with an approved manifest. Under R1 and R2 that
 sweep is the combined sweep: its manifest is frozen only after the R1
 scope has merged, it runs once, and this fix's merge gets its own
-before/after pair in its chain, which measures A and B. The effect above
-is expected; the measured cost goes here once it has run.
+before/after pair in its chain, which measures A and B. Under R3, the
+sweep's issue-acceptance batches run on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546), and the v0.8.0-to-RC comparisons that gate
+the tag run on the EC pool. The effect above is expected; the measured
+cost goes here once it has run.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, test, generator or sweep was run`.
 
 Evidence status: prepared on a work machine where no pytest, checkwash or
