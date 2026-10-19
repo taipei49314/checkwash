@@ -11401,8 +11401,9 @@ PJU, NOT EC pool. Its plain before/after compares #424's engine
     fingerprint only through an `allow.toml` entry already on the base
     side (SPEC §5 D3, §6); one added in the blocked change itself shows
     as `EXEMPTION_ADDED` and does not lift the block. How often this
-    happens is not known: it is the only verdict this reading moves in
-    the standard set and D-088's sets, and most of the targeted phase
+    happens is not known. So far it is the only verdict this reading
+    moves in the standard set and D-088's sets, but 19 commits of the
+    d088 batch are not judged (above), and most of the targeted phase
     did not run (below). Further cases are recorded on #488.
 - **Not measured:** resolution toggled in both directions, and what
   Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
