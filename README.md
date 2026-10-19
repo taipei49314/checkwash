@@ -174,15 +174,18 @@ its name, except a `.py` module or a JS/TS test file.
 From the next minor (unreleased,
 [#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
 the first 200 bytes of a side over the limit to tell, and uses them for
-nothing else; a Git side is streamed and checked against its object id. A
-file that large whose side starts with a shell shebang stops the run, naming
-that side, whatever its suffix (a `.py` module or a JS/TS test file that
-large stops the run anyway, by its own rule). A file with no extension (a
-dotfile such as `.envrc` counts) without one, such as a `README` or a
-`LICENSE`, is set aside like any document, unless another rule above makes
-it one a detector must read. v0.8.0 reads no byte of such a side, so every file
-with no extension that large stops the run there; on main one still does
-when a Git side is over 64,000,000 bytes, which is not streamed.
+nothing else; a Git side is streamed and checked against its object id.
+Where those bytes are read, a file that large whose side starts with a shell
+shebang stops the run, naming that side, whatever its suffix (a `.py` module
+or a JS/TS test file that large stops the run anyway, by its own rule). A
+file with no extension (a dotfile such as `.envrc` counts) without one, such
+as a `README` or a `LICENSE`, is set aside like any document, unless another
+rule above makes it one a detector must read. v0.8.0 reads no byte of such a
+side, so every file with no extension that large stops the run there. On main
+a Git side over 64,000,000 bytes is not streamed, so its first bytes are not
+known: a file with no extension still stops the run when one of its Git sides
+is that large, and a suffixed file whose shebang is only on such a side is
+still set aside.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension whose
