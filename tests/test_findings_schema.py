@@ -516,7 +516,8 @@ def test_cli_documents_with_unread_sides_match_schema(tmp_path):
     # schema is checked against what the CLI writes, not only against
     # `unread_entry` by reading. A range gives a base and a head side on a
     # block, the worktree a base and a worktree side on a pass: every `side`
-    # the schema allows, under both verdicts.
+    # the schema allows appears in real output, across one block and one
+    # pass (`head` only on the block, `worktree` only on the pass).
     schema = _schema()
     limit = MAX_SOURCE_BYTES
     repo = _repo(tmp_path / "repo")
