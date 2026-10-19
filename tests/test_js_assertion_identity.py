@@ -6,7 +6,6 @@ what is pinned for them.
 """
 
 import datetime
-import hashlib
 
 import pytest
 
@@ -34,13 +33,6 @@ def _source(body):
     return 'test("sample", () => { ' + body + " });\n"
 
 
-def _key(rule, identity):
-    # Inputs below explicitly spell the old normalized evidence, independently
-    # of the new helper or either version's parser.
-    digest = hashlib.sha256(f"{rule}/{_PATH}/sample/{identity}".encode()).hexdigest()[:12]
-    return f"{rule}/{_PATH}/sample/{digest}"
-
-
 def _identities(monkeypatch):
     """Every assertion-level identity computed while the test runs (#421)."""
     seen = []
@@ -56,7 +48,8 @@ def _identities(monkeypatch):
 
 def _refines(finding, identities, rule, identity):
     # The content-bound key is computed from an identity whose legacy
-    # pre-image is the old normalized evidence, spelled as `_key` spells it.
+    # pre-image is the old normalized evidence. Inputs below spell it
+    # explicitly, independently of the new helper or either version's parser.
     assert finding.fingerprint.startswith(f"{rule}/{_PATH}/sample/v2:")
     legacy = f"{rule}/{_PATH}/sample/{identity}"
     assert finding.fingerprint in {assertion_key(i) for i in identities if i["legacy"] == legacy}
