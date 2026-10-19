@@ -135,13 +135,20 @@ def test_stored_expectation_sarif_uses_content_bound_version():
     assert _result(hit, None)['partialFingerprints'] == {'checkwash/v2': hit.fingerprint}
 
 
-def test_unrelated_production_change_retains_existing_snapshot_cochange_policy():
+def test_an_unrelated_new_production_function_does_not_explain_rewriting_the_stored_expectation():
+    # Ruling 463 Q1 (a): a Python production file the diff adds is not an
+    # implementation change for the file-scoped form. This pin (#133) asserted
+    # pass and no EXPECTED_VALUE_CHANGED until the owner approved the move on
+    # 2026-10-19 (D-157, rule 2). A changed symbol in an existing module still
+    # counts: snapshot_unrelated_symbol_edit_neg.
     _, findings, verdict = check([
         FileChange('tests/golden/invoice.txt', 'modified', b'105.3', b'104.0'),
         FileChange('unused.py', 'added', None, b'def unrelated():\n    return 3\n'),
     ])
-    assert verdict == 'pass'
-    assert not any(f.rule == 'EXPECTED_VALUE_CHANGED' for f in findings)
+    assert verdict == 'block'
+    assert sorted((f.rule, f.severity) for f in findings) == [
+        ('EXPECTED_VALUE_CHANGED', 'high'), ('SNAPSHOT_CODE_COCHANGE', 'warn'),
+    ]
 
 
 def test_missing_stored_expectation_evidence_is_an_engine_error():

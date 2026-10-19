@@ -10,7 +10,12 @@ Assertion pairing inside a matched unit:
 1. exact normalized-text multiset matches; in Python, then the same parsed
    statement, so a quote or line respelled (black) pairs (#332)
 2. (form, normalized left operand) key, in span order
-3. leftovers: span-order fallback
+3. leftovers: span-order fallback; in Python, among a unit's own
+   assertions, an old assertion first takes a leftover that checks the same
+   subject, written out or through one plain local binding (#434 A)
+4. Python, own assertions: a bare `pytest.raises(E)` still unpaired takes an
+   unused `pytest.raises(E, match=...)` of the same callee, expected types
+   and other keywords (#434 B)
 
 A marker is added when no marker on the other side has its identity; in
 Python, a condition that parses the same is the same identity (#332), and in
@@ -31,7 +36,7 @@ from decimal import Decimal, InvalidOperation
 
 from checkwash.frontends.javascript.literals import comparable_operand
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
-from checkwash.ir.astutil import same_expr, stable_dump
+from checkwash.ir.astutil import same_expr, same_raises_check, stable_dump
 from checkwash.ir.markers import is_helper_skip, is_setup_skip, parse_text
 from checkwash.ir.model import (
     AssertionPair,
@@ -43,6 +48,7 @@ from checkwash.ir.model import (
     normalize_text,
     param_tables,
 )
+from checkwash.ir.subjects import subject_key
 
 JACCARD_THRESHOLD = 0.8  # frozen, SPEC §7
 MAX_UNPAIRED = 64  # frozen, SPEC §7
@@ -126,7 +132,7 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False
     # the after side's own assertions left unpaired.
     b_own = [b for b in before.side.assertions if b.via is None]
     a_own = [a for a in after.side.assertions if a.via is None]
-    pairs, removed, added = _match_assertions(b_own, a_own, python)
+    pairs, removed, added = _match_assertions(b_own, a_own, python, own=True)
     b_via = [b for b in before.side.assertions if b.via is not None]
     a_via = [a for a in after.side.assertions if a.via is not None]
     if b_via or a_via:
@@ -137,8 +143,54 @@ def _pair_assertions(before: ParsedUnit, after: ParsedUnit, python: bool = False
     return _delta(before, after, pairs, removed, added, python)
 
 
-def _match_assertions(b_asserts: list, a_asserts: list, python: bool) -> tuple[list, list, list]:
-    """(pairs, removed, added) for two lists of assertions: the staged matching below."""
+def _compatible(b, a) -> bool:
+    """May the order fallback pair these two? Both strengths known, or one form."""
+    return (b.strength is not None and a.strength is not None) or b.form == a.form
+
+
+def _subject_partner(b, leftovers: list, used: list[bool], keys: list) -> int | None:
+    """The leftover an old assertion takes first in the order fallback (#434 A), or None.
+
+    A compatible, unused leftover that checks the old assertion's subject
+    (`ir.subjects.same_subject`, through each leftover's `subject_key` in
+    `keys`): written out, or through one plain local binding, read in the
+    same context. Among those, the same form comes first, then at least the
+    old strength, then span order. None when no leftover checks that
+    subject, and the fallback keeps today's rule.
+    """
+    key = subject_key(b)
+    if key is None:
+        return None
+    best = None
+    best_rank = None
+    for j, a in enumerate(leftovers):
+        if used[j] or keys[j] != key or not _compatible(b, a):
+            continue
+        weaker = b.strength is not None and (a.strength is None or a.strength < b.strength)
+        rank = (a.form != b.form, weaker)
+        if best_rank is None or rank < best_rank:
+            best, best_rank = j, rank
+    return best
+
+
+def _raises_partner(b, leftovers: list, used: list[bool]) -> int | None:
+    """The unused `match=` call a removed bare raises call pairs with (#434 B), or None."""
+    if b.form != "raises":
+        return None
+    for j, a in enumerate(leftovers):
+        if not used[j] and a.form == "pattern" and same_raises_check(b.text, a.text):
+            return j
+    return None
+
+
+def _match_assertions(
+    b_asserts: list, a_asserts: list, python: bool, own: bool = False
+) -> tuple[list, list, list]:
+    """(pairs, removed, added) for two lists of assertions: the staged matching below.
+
+    `own`: these are a unit's own assertions, not those it reaches through a
+    helper method (`via`), so the two Python passes of #434 apply.
+    """
     b_asserts = list(b_asserts)
     a_asserts = list(a_asserts)
     pairs: list[tuple] = []  # (before, after, from_order_fallback)
@@ -227,22 +279,54 @@ def _match_assertions(b_asserts: list, a_asserts: list, python: bool) -> tuple[l
     # assertRaises would yield strength_change=None and silently suppress
     # ASSERT_REMOVED (confirmed red-team finding). A fallback pair requires
     # either both strengths known, or an identical form.
+    #
+    # In Python, an own old assertion first takes a leftover that checks its
+    # subject (#434 A, ruling 2026-10-16). Span order alone gave
+    # `assert area(4, 5) == 20.0` the `isinstance(result, float)` precondition
+    # written above its rewrite `assert result == 20.0`, and that blocked as a
+    # weakening, while the two lines swapped passed. The pair stays a fallback
+    # pair, so every rule reads it as it reads the swapped order's. Old
+    # assertions are still taken in span order; one with no such leftover
+    # left keeps today's rule. With one leftover the two rules agree, so the
+    # subjects are read only when there are two or more.
+    subject_first = python and own
+    keys = [subject_key(a) for a in a_rest2] if subject_first and b_rest2 and len(a_rest2) > 1 else None
     used = [False] * len(a_rest2)
     removed = []
     for b in b_rest2:
-        idx = None
-        for j, a in enumerate(a_rest2):
-            if used[j]:
-                continue
-            compatible = (b.strength is not None and a.strength is not None) or b.form == a.form
-            if compatible:
-                idx = j
-                break
+        idx = _subject_partner(b, a_rest2, used, keys) if keys is not None else None
+        if idx is None:
+            for j, a in enumerate(a_rest2):
+                if used[j]:
+                    continue
+                if _compatible(b, a):
+                    idx = j
+                    break
         if idx is None:
             removed.append(b)
         else:
             used[idx] = True
             pairs.append((b, a_rest2[idx], True))
+
+    # 4. Python, own assertions: a bare `pytest.raises(E)` the fallback could
+    # not pair takes an unused `pytest.raises(E, match=...)` of the same
+    # callee, the same expected types and the same other keywords (#434 B).
+    # The fallback refuses a pair of an unknown strength with another form,
+    # so adding `match=` read as the bare call removed. This runs after the
+    # fallback: where an excinfo assert folded into `match=` took the new
+    # call there, the bare call stays removed (`raises_match_fold_neg`), and
+    # ASSERT_REMOVED says the raise is still checked. The pair records no
+    # strength change, which every pair rule skips.
+    if subject_first and removed:
+        kept = []
+        for b in removed:
+            idx = _raises_partner(b, a_rest2, used)
+            if idx is None:
+                kept.append(b)
+            else:
+                used[idx] = True
+                pairs.append((b, a_rest2[idx], False))
+        removed = kept
     added = [a for j, a in enumerate(a_rest2) if not used[j]]
     return pairs, removed, added
 
@@ -295,8 +379,27 @@ def _delta(before: ParsedUnit, after: ParsedUnit, pairs: list, removed: list, ad
 
     before_cases = before.side.param_cases
     after_cases = after.side.param_cases
+    # A JS/TS `.each`/`.for` table whose rows cannot be counted (#428). Only
+    # the JS frontend sets the flag, so no Python reading moves.
+    before_unknown = getattr(before.side, "param_rows_unknown", False)
+    after_unknown = getattr(after.side, "param_rows_unknown", False)
     param_removed = 0
-    if before_cases is not None and after_cases is not None and after_cases < before_cases:
+    if before_unknown or after_unknown:
+        # Between two tables the count rule stays silent when either side
+        # is unknown (428.Q1b). A plain test, which runs once, paired with
+        # such a table is that one test item lost, as it is beside a table
+        # of no rows below (428.Q2a); a table that becomes a plain test with
+        # its rows unknown loses nothing countable.
+        if before_cases is None and not before_unknown:
+            param_removed = 1
+    elif not python and before_cases is None and after_cases == 0:
+        # A plain JS/TS test, one item, paired with a table of no rows: the
+        # JS counterpart of Python's empty-parameter-set rule (428.Q2a,
+        # `frontends/python/empty_parameter_sets.py`). A Python test with no
+        # count can still be parametrized by a hook, so Python keeps its
+        # two-sided proof instead.
+        param_removed = 1
+    elif before_cases is not None and after_cases is not None and after_cases < before_cases:
         param_removed = before_cases - after_cases
     elif before_cases is not None and after_cases is None:
         param_removed = before_cases - 1

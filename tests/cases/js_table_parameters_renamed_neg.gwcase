@@ -1,0 +1,27 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+issue: 428
+title: renaming every parameter of a test.each callback, and the assertion with them, is no finding
+origin: issue #428, ruling Q1 (a) and Q2b (a): columns are named by row position, never by the callback's parameter names, so the rename moves no column
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (a, b, sum) => {
+  expect(add(a, b)).toBe(sum);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  [1, 2, 3],
+  [2, 3, 5],
+])("add(%i, %i) = %i", (x, y, want) => {
+  expect(add(x, y)).toBe(want);
+});
+=== expect ===
+[]

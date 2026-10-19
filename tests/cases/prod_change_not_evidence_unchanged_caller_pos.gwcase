@@ -1,0 +1,35 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 473
+title: a weakened test whose callee calls the changed function from an unchanged module says production changed and was not its evidence
+origin: #473 ruling Q4, new pin 2 (owner, 2026-10-18): #420's reproduction with `render` moved
+origin2: into an unchanged module. The test calls `render`, which calls the changed `invoice_total`,
+origin3: but the caller index reads only changed files, so no hop reaches it; #420's proposed fix
+origin4: would not reach it either. The old label said no production change over a diff that
+origin5: changed the very function the test runs.
+=== head: views.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return invoice_total(items, 0.05)
+=== before: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== after: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax) + 5.0, 2)
+=== before: tests/test_billing.py ===
+from views import render
+
+
+def test_invoice_renders():
+    assert render([50.0, 50.0]) == 105.0
+=== after: tests/test_billing.py ===
+from views import render
+
+
+def test_invoice_renders():
+    assert render([50.0, 50.0]) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

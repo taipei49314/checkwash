@@ -1,0 +1,16 @@
+=== meta ===
+bypass: 132
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a stored expectation rewritten beside one new production module that nothing calls still blocks
+origin: #463 reproduction step 1, ruling Q1 (a) (issuecomment-6248011246): a production file the diff
+origin2: adds is not an implementation change for the snapshot form. snapshot_expectation_only_pos plus a
+origin3: new app/_unused.py holding `X = 1`; SNAPSHOT_CODE_COCHANGE still reports the co-change at warn.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== after: app/_unused.py ===
+X = 1
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "path": "tests/golden/invoice.txt"}, {"rule": "SNAPSHOT_CODE_COCHANGE", "severity": "warn", "path": "tests/golden/invoice.txt"}]

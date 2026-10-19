@@ -24,20 +24,25 @@ from checkwash.frontends.javascript.bindings import Bindings, CALL, NAME
 from checkwash.frontends.javascript.exception_handlers import swallowing_handlers
 from checkwash.frontends.javascript.reachability import Reachability
 from checkwash.frontends.javascript.literals import (
+    _substitution_end,
+    _template_end,
+    comparable_operand,
     keyword_operand,
     literal_operand,
     number_operand,
     operand_callee,
+    operand_names,
     operand_text,
     populate_delta,
     populate_expectation,
     populate_precision,
     read_bound,
     same_operand,
+    scalar_literal,
 )
 from checkwash.frontends.python.frontend import ParsedFile, ParsedUnit
 from checkwash.ir import strength as S
-from checkwash.ir.model import Assertion, Marker, UnitSide, normalize_text
+from checkwash.ir.model import Assertion, Marker, ParamTable, UnitSide, normalize_text
 
 # Word boundary before every declaration word: `split("\n")` contains `it`
 # and `exit(` contains `xit`, so an unanchored match minted a test unit whose
@@ -1100,7 +1105,10 @@ class _Declaration:
 
     start: int
     unit: bool
-    table: bool  # `.each`/`.for`: one item per row, outside the unit scan
+    # `.each`/`.for`: one item per row. A `test`/`it` table is one unit whose
+    # rows are its `param_cases`/`param_rows` (#428); a `describe` table's
+    # rows are not read (428.Q2c).
+    table: bool
     opening: int
     name: str | None
     name_end: int | None
@@ -1108,6 +1116,15 @@ class _Declaration:
     markers: list[Marker]
     focus: Marker | None  # the evidence for every unit this focus turns off
     callback: tuple[int, int, int, tuple[int, int]] | None = None
+    # What a table passes (#428): ("array", span) for the one argument of
+    # its `.each(...)`/`.for(...)` call, ("template", (start, end)) for a
+    # tagged template; None for another number of arguments or a second
+    # table in the chain, whose rows are then unknown.
+    rows: tuple[str, tuple[int, int]] | None = None
+    # `.for` passes each row whole as the callback's first parameter and the
+    # test context as its second; `.each` spreads an array row into the
+    # parameters and passes no context (Jest, Vitest, Bun).
+    passes_row: bool = False
 
 
 def _truth(source: str) -> bool | None:
@@ -1214,6 +1231,9 @@ def _declaration(text: str, code: bytearray, bindings: Bindings,
     effects = {prefix}
     conditions: list[str] = []
     table = False
+    tables = 0
+    rows: tuple[str, tuple[int, int]] | None = None
+    passes_row = False
     cursor = match.end()
     while True:
         while cursor < len(text) and text[cursor].isspace():
@@ -1235,9 +1255,12 @@ def _declaration(text: str, code: bytearray, bindings: Bindings,
             cursor += 1
         if modifier in {"each", "for"} and text.startswith("`", cursor):
             # A tagged-template table is opaque to the code mask.
+            template = cursor
             while cursor < len(text) and not code[cursor]:
                 cursor += 1
             table = True
+            tables += 1
+            rows, passes_row = ("template", (template, cursor)), modifier == "for"
             continue
         if not text.startswith("(", cursor) or not code[cursor]:
             return None
@@ -1247,6 +1270,9 @@ def _declaration(text: str, code: bytearray, bindings: Bindings,
         arguments, cursor = curried
         if modifier in {"each", "for"}:
             table = True
+            tables += 1
+            rows = ("array", arguments[0]) if len(arguments) == 1 else None
+            passes_row = modifier == "for"
             continue
         if not arguments:
             return None
@@ -1309,6 +1335,7 @@ def _declaration(text: str, code: bytearray, bindings: Bindings,
         name=title.group("name") if title else None,
         name_end=title.end() if title else None,
         call=call, markers=markers, focus=focus,
+        rows=rows if tables == 1 else None, passes_row=passes_row,
     )
 
 
@@ -1363,19 +1390,22 @@ def _declarations(text: str, code: bytearray, bindings: Bindings) -> list[_Decla
         declaration = _declaration(text, code, bindings, match)
         if declaration is None:
             continue
-        scanned = declaration.unit and not declaration.table and declaration.name is not None
+        scanned = declaration.unit and declaration.name is not None
         if scanned or declaration.markers or declaration.focus is not None:
             declaration.callback = _test_body(text, code, bindings, declaration)
         declarations.append(declaration)
     return declarations
 
 
-def _callback_receivers(bindings: Bindings, span: tuple[int, int]) -> frozenset[str]:
+def _callback_receivers(bindings: Bindings, span: tuple[int, int],
+                        context: int | None = 0) -> frozenset[str]:
     """The names a callback's own test context answers to.
 
     Its first simple parameter (node:test `t`, a Vitest `ctx`) and, for a
     `function` callback, Mocha's `this`. A destructured context is not
-    followed.
+    followed. A table's callback takes its row first (#428): `context` is
+    1 for `.for`, whose context is its second parameter, and None for
+    `.each`, which passes no context.
     """
     starts = bindings.token_starts
     first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
@@ -1389,6 +1419,15 @@ def _callback_receivers(bindings: Bindings, span: tuple[int, int]) -> frozenset[
         first += 1
         if re.fullmatch(NAME, bindings.token(first)):
             first += 1
+    if context is None:
+        return frozenset(names)
+    if context:
+        parameters = _parameter_parts(bindings, span)
+        if parameters is not None and len(parameters) > context:
+            parameter = _simple_parameter(bindings, parameters[context])
+            if parameter is not None:
+                names.add(parameter)
+        return frozenset(names)
     if bindings.token(first) == "(":
         first += 1
     parameter = bindings.token(first)
@@ -1397,14 +1436,86 @@ def _callback_receivers(bindings: Bindings, span: tuple[int, int]) -> frozenset[
     return frozenset(names)
 
 
+def _splits_cleanly(bindings: Bindings, first: int, last: int) -> bool:
+    """Do the commas between tokens `first` and `last` split where JavaScript splits them?
+
+    `Bindings._parts` splits at commas outside brackets, and a TypeScript
+    type argument is no bracket to it: `(m: Map<string, number>, a, want)`
+    would read as four parameters and put `a` on the third column. So a
+    comma outside brackets after a `<` that no `>` has closed means the list
+    or pattern is not split (#428). A `<` in a default (`a = x < y, b`)
+    reads the same way, which only reads less.
+    """
+    depth = 0
+    while first < last:
+        token = bindings.token(first)
+        if token == "<":
+            depth += 1
+        elif token == ">" and depth:
+            depth -= 1
+        elif token == "," and depth:
+            return False
+        elif token in {"(", "[", "{"} and first in bindings.pairs:
+            first = bindings.pairs[first]
+        first += 1
+    return True
+
+
+def _parameter_parts(bindings: Bindings, span: tuple[int, int]) -> list[tuple[int, int]] | None:
+    """The token range of each parameter of the inline callback at `span`, or None.
+
+    Read as `_callback_body` reads the callback: an arrow with a parameter
+    list or one bare parameter, or a `function` expression. Commas inside a
+    nested pattern or a default do not split. A list whose commas a type
+    argument holds (`m: Map<string, number>`) is None (`_splits_cleanly`).
+    """
+    starts = bindings.token_starts
+    first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
+    while bindings.token(first) == "(" and bindings.pairs.get(first) == last - 1:
+        first, last = first + 1, last - 1
+    if bindings.token(first) == "async":
+        first += 1
+    if bindings.token(first) == "function":
+        first += 1
+        if re.fullmatch(NAME, bindings.token(first)):
+            first += 1
+    elif re.fullmatch(NAME, bindings.token(first)) and bindings.token(first + 1) == "=>":
+        return [(first, first + 1)]
+    if bindings.token(first) != "(" or first not in bindings.pairs:
+        return None
+    closing = bindings.pairs[first]
+    if closing == first + 1:
+        return []
+    if not _splits_cleanly(bindings, first + 1, closing):
+        return None
+    parts = bindings._parts(first + 1, closing)
+    if parts and parts[-1][0] == parts[-1][1]:
+        parts.pop()  # a trailing comma
+    if parts and bindings.token(parts[0][0]) == "this":
+        parts.pop(0)  # TypeScript's `this` parameter is no parameter
+    return parts
+
+
+def _simple_parameter(bindings: Bindings, part: tuple[int, int]) -> str | None:
+    """The name a parameter binds when it is one plain name (`a`, `a = 1`, `a: T`, `a?: T`), else None."""
+    start, end = part
+    name = bindings.token(start)
+    if (not re.fullmatch(NAME, name) or name == "this"
+            or (end > start + 1 and bindings.token(start + 1) not in {"=", ":", "?"})):
+        return None
+    return name
+
+
 def _imperative_skips(text: str, code: bytearray, bindings: Bindings,
                       callback: tuple[int, int, int, tuple[int, int]] | None,
-                      start: int, end: int, owned: Callable[[int], bool]) -> list[Marker]:
+                      start: int, end: int, owned: Callable[[int], bool],
+                      context: int | None = 0) -> list[Marker]:
     """`t.skip()`/`t.todo()` on the callback's own context, Mocha `this.skip()`.
 
     The imperative spelling of the same skip: Vitest and Mocha stop the test
     there, node:test reports it skipped (or todo) without stopping it. A call
     in a nested function belongs to that function, as an assertion would.
+    `context` is the parameter that holds the context (`_callback_receivers`).
     """
     if callback is None:
         return []
@@ -1415,7 +1526,7 @@ def _imperative_skips(text: str, code: bytearray, bindings: Bindings,
         if method not in {"skip", "todo"} or not owned(candidate.start()):
             continue
         if receivers is None:
-            receivers = _callback_receivers(bindings, callback[3])
+            receivers = _callback_receivers(bindings, callback[3], context)
         if receiver not in receivers or (receiver == "this" and method != "skip"):
             continue
         call = _call_argument_spans(text, code, candidate.end() - 1, end)
@@ -2157,6 +2268,487 @@ def _candidate_assertions(text: str, code: bytearray, bindings: Bindings, start:
     return recorded
 
 
+# `.each`/`.for` tables (#428). A table declaration is one unit whose rows
+# are its `param_cases` and one `ParamTable` of canonical cells, as a
+# `parametrize` decorator's are in Python, so the language-neutral rules read
+# them: a row lost is TEST_DISABLED, a rewritten expected cell
+# EXPECTATION_DEFINITION_CHANGED, an input cell rewritten under its answer
+# SUBJECT_INPUT_CHANGED. Columns are identified by row position, object key
+# or template heading, never by the callback's parameter names (428.Q1 (a)),
+# and spelled `#0`, `#expected`, which no identifier can be.
+
+
+def _literal_items(text: str, code: bytearray, opening: int) -> tuple[list[tuple[int, int]], int] | None:
+    """(item spans, end) of the `[...]` or `{...}` literal opening at `opening`.
+
+    Split at its top-level commas, reading brackets through the code mask as
+    `_call_argument_spans` does. An item holding only whitespace or a
+    comment is kept, so the caller sees a hole; a trailing comma adds no
+    item. None when the literal does not close, or when a top-level `;`
+    comes first.
+    """
+    closing = {"(": ")", "[": "]", "{": "}"}
+    stack = [closing[text[opening]]]
+    items: list[tuple[int, int]] = []
+    start = opening + 1
+    for i in range(opening + 1, len(text)):
+        if not code[i]:
+            continue
+        char = text[i]
+        if char in closing:
+            stack.append(closing[char])
+        elif char in ")]}":
+            if char != stack.pop():
+                return None
+            if not stack:
+                if not _EMPTY_ARGUMENT.fullmatch(text, start, i):
+                    items.append((start, i))
+                return items, i + 1
+        elif char == "," and len(stack) == 1:
+            items.append((start, i))
+            start = i + 1
+        elif char == ";" and len(stack) == 1:
+            return None
+    return None
+
+
+def _lead(text: str, start: int, end: int) -> int:
+    """The first position in `start..end` past whitespace and comments."""
+    while start < end:
+        if text[start].isspace():
+            start += 1
+        elif text.startswith("//", start):
+            newline = text.find("\n", start, end)
+            start = end if newline < 0 else newline + 1
+        elif text.startswith("/*", start):
+            close = text.find("*/", start + 2, end)
+            start = end if close < 0 else close + 2
+        else:
+            break
+    return start
+
+
+def _scalar_value(source: str) -> str | None:
+    """`right_value` of an operand that is one Number, string, Boolean or null literal, else None."""
+    probe = Assertion(id="", form="compare_eq", strength=None, text="", span=(0, 0))
+    populate_expectation(probe, source)
+    return probe.right_value
+
+
+def _table_cell(source: str) -> str:
+    """One table cell as canonical text (428.Q2b).
+
+    A Number or a quoted string is its value, as `right_value` records an
+    expected value (`literals.py`): `5`, `5.0` and `0x5` are one cell, and
+    so are `'a'` and `"a"`. Anything else, `true`, `null` and a template
+    included, is its text with comments, wrapping parentheses and
+    formatting taken out (`operand_text`, `comparable_operand`), so a
+    formatter changes no cell.
+    """
+    value = _scalar_value(source)
+    if value is not None and value not in {"True", "False", "None"}:
+        return value
+    text = operand_text(source)
+    return comparable_operand(text) if text is not None else normalize_text(source)
+
+
+def _row_kind(text: str, code: bytearray, start: int, end: int) -> str:
+    """What one table row is: "array" or "object" when it is exactly one such
+    literal, "value" when it is certainly no array (a scalar or a template
+    literal), and "other" when it may be one."""
+    if text[start] in "[{" and code[start]:
+        items = _literal_items(text, code, start)
+        if items is not None and _EMPTY_ARGUMENT.fullmatch(text, items[1], end):
+            return "array" if text[start] == "[" else "object"
+        return "other"
+    if text[start] == "`":
+        close = _template_end(text, start)
+        return "value" if close is not None and _EMPTY_ARGUMENT.fullmatch(text, close, end) else "other"
+    return "value" if _scalar_value(text[start:end]) is not None else "other"
+
+
+def _array_cells(text: str, code: bytearray, start: int) -> list[str] | None:
+    """The cells of one array-literal row, or None for a hole or a spread in it."""
+    items = _literal_items(text, code, start)
+    if items is None:
+        return None
+    cells: list[str] = []
+    for first, last in items[0]:
+        first = _lead(text, first, last)
+        if first >= last or text.startswith("...", first):
+            return None
+        cells.append(text[first:last].strip())
+    return cells
+
+
+def _object_cells(text: str, code: bytearray, bindings: Bindings, start: int) -> dict[str, str] | None:
+    """Key -> cell source of one object-literal row, or None.
+
+    Only `key: value`, `"key": value` and shorthand `key` properties whose
+    key is a name are read. A spread, a computed or numeric key, a method,
+    an accessor or a key written twice gives None.
+    """
+    items = _literal_items(text, code, start)
+    if items is None:
+        return None
+    cells: dict[str, str] = {}
+    for first, last in items[0]:
+        first = _lead(text, first, last)
+        index = bisect_left(bindings.token_starts, first)
+        if first >= last or index >= len(bindings.tokens) or bindings.tokens[index][1] != first:
+            return None
+        key = bindings.token(index)
+        quoted = key[:1] in "'\""
+        if quoted:
+            literal = scalar_literal(key)
+            key = literal[1] if literal is not None and literal[0] == "string" else ""
+        if not re.fullmatch(NAME, key) or key in cells:
+            return None
+        following = index + 1
+        if following >= len(bindings.tokens) or bindings.tokens[following][1] >= last:
+            if quoted:
+                return None
+            cells[key] = key  # shorthand: the value of the name
+        elif bindings.token(following) == ":":
+            value = text[bindings.tokens[following][2]:last].strip()
+            if not value:
+                return None
+            cells[key] = value
+        else:
+            return None
+    return cells
+
+
+def _row_table(text: str, code: bytearray, bindings: Bindings,
+               rows: list[tuple[int, int]]) -> tuple[tuple[ParamTable, ...], str | None]:
+    """The row table of a counted array table, and how its columns are identified.
+
+    "positional" when every row is an array literal of one width (`#0`,
+    `#1`, ...): `.each` spreads such rows into the callback's parameters.
+    Otherwise, once some row is certainly no array, the runners pass every
+    row whole: "keyed" when every row is an object literal with the same
+    name keys (`#total`), else "single", one column `#0` holding each row.
+    When every row may be an array, whether a runner spreads them is
+    unknown, and so are the columns: no table.
+    """
+    if not rows:
+        return (), None
+    kinds = [_row_kind(text, code, first, last) for first, last in rows]
+    disabled = (False,) * len(rows)
+    if all(kind == "array" for kind in kinds):
+        cells = [_array_cells(text, code, first) for first, _last in rows]
+        width = len(cells[0]) if cells[0] is not None else 0
+        if not width or any(row is None or len(row) != width for row in cells):
+            return (), None
+        names = tuple(f"#{column}" for column in range(width))
+        return (ParamTable(names, tuple(tuple(_table_cell(cell) for cell in row) for row in cells),
+                           disabled),), "positional"
+    if not any(kind in {"object", "value"} for kind in kinds):
+        return (), None
+    if all(kind == "object" for kind in kinds):
+        objects = [_object_cells(text, code, bindings, first) for first, _last in rows]
+        first_keys = set(objects[0]) if objects[0] is not None else set()
+        if first_keys and all(row is not None and set(row) == first_keys for row in objects):
+            keys = sorted(first_keys)
+            return (ParamTable(tuple("#" + key for key in keys),
+                               tuple(tuple(_table_cell(row[key]) for key in keys) for row in objects),
+                               disabled),), "keyed"
+    return (ParamTable(("#0",), tuple((_table_cell(text[first:last].strip()),) for first, last in rows),
+                       disabled),), "single"
+
+
+def _template_rows(text: str, start: int) -> tuple[int | None, tuple[ParamTable, ...], str | None]:
+    """(row count, row table, column shape) of the tagged-template table at `start` (428.Q1b).
+
+    The runners' reading: the headings are the static text before the first
+    substitution with its whitespace taken out, split at `|`, and each
+    substitution is the next cell, row by row. A cell count that does not
+    divide by the headings, or a template the reader cannot follow, leaves
+    the rows unknown. Headings that are not distinct names leave the rows
+    counted and their columns unread.
+    """
+    end = _template_end(text, start)
+    if end is None:
+        return None, (), None
+    heading: str | None = None
+    cells: list[str] = []
+    i = start + 1
+    while i < end - 1:
+        if text[i] == "\\":
+            i += 2
+        elif text.startswith("${", i):
+            close = _substitution_end(text, i + 2, 1)
+            if close is None:
+                return None, (), None
+            if heading is None:
+                heading = text[start + 1:i]
+            cells.append(text[i + 2:close - 1].strip())
+            i = close
+        else:
+            i += 1
+    if heading is None:
+        heading = text[start + 1:end - 1]
+    names = re.sub(r"\s", "", heading).split("|")
+    if len(cells) % len(names):
+        return None, (), None
+    count = len(cells) // len(names)
+    if not count or len(set(names)) != len(names) or not all(re.fullmatch(NAME, name) for name in names):
+        return count, (), None
+    order = sorted(range(len(names)), key=lambda column: names[column])
+    rows = tuple(tuple(_table_cell(cells[row * len(names) + column]) for column in order) for row in range(count))
+    return count, (ParamTable(tuple("#" + names[column] for column in order), rows, (False,) * count),), "keyed"
+
+
+class _ConstReads:
+    """The file-wide reads `_const_rows` makes, each built once per file (#235).
+
+    `_const_rows` runs for every table whose argument is a bare name, and it
+    reads every mention of that name and every template literal. Scanning
+    the whole file again for each such table made the parse quadratic in
+    tables; these indexes are built on the first such table, so a file with
+    none pays nothing.
+    """
+
+    def __init__(self, text: str, code: bytearray, bindings: Bindings,
+                 table_arguments: dict[int, int]) -> None:
+        self.text = text
+        self.code = code
+        self.bindings = bindings
+        # Where each table call's one argument starts -> where it ends.
+        self.table_arguments = table_arguments
+        self._mentions: dict[str, list[int]] | None = None
+        self._template_words: set[str] | None = None
+
+    def mentions(self, name: str) -> list[int]:
+        """The indexes of the tokens spelled `name`, in order."""
+        if self._mentions is None:
+            self._mentions = {}
+            for index, (token, _start, _end) in enumerate(self.bindings.tokens):
+                self._mentions.setdefault(token, []).append(index)
+        return self._mentions.get(name, [])
+
+    def in_template(self, name: str) -> bool:
+        """Does a template literal mention `name`? A substitution runs, and the token stream does not see it.
+
+        A mention is the whole word anywhere in a run of masked text that
+        opens with a backtick: the template, its substitutions, and any
+        comment or literal that follows it unbroken.
+        """
+        if self._template_words is None:
+            text, code = self.text, self.code
+            words: set[str] = set()
+            start = text.find("`")
+            while start >= 0:
+                if code[start] or (start > 0 and not code[start - 1]):
+                    start = text.find("`", start + 1)  # code, or inside a run
+                    continue
+                end = start + 1
+                while end < len(text) and not code[end]:
+                    end += 1
+                words.update(re.findall(r"[\w$]+", text[start:end]))
+                start = text.find("`", end)
+            self._template_words = words
+        return name in self._template_words
+
+
+# Words that continue an expression on the next line, after a literal.
+_CONTINUING_WORDS = frozenset({"in", "instanceof", "as", "satisfies"})
+
+
+def _const_rows(text: str, bindings: Bindings, name: str, position: int,
+                reads: _ConstReads) -> int | None:
+    """Where the array literal that a table's argument `name` reads opens, one hop away, or None (428.Q1b (iii)).
+
+    `name` must read a `const` this file declares, not exported, bound to an
+    array literal in a statement that ends there (TypeScript's `as const`
+    after it is read through). Every other mention of the name that reads
+    that binding must be the whole argument of a `.each`/`.for` table: any
+    other read could change its rows (`CASES.splice(0)`,
+    `CASES.length = 0`, `CASES.push(row)`, `reset(CASES)`), and so could one
+    in a template literal's substitution, which the token stream does not
+    see. The mentions and the template words come from `reads`, built once
+    per file.
+    """
+    scope = bindings._declaration_scope(name, position)
+    if scope is None or bindings._written((name,), position):
+        return None
+    mentions = reads.mentions(name)
+    sites = [index for index in mentions
+             if bindings.token(index - 1) == "const" and bindings.scope_at[index - 1] == scope]
+    if len(sites) != 1 or bindings.token(sites[0] - 2) in {"export", "declare"}:
+        return None
+    site = sites[0]
+    assignment = site + 1
+    if bindings.token(assignment) == ":":
+        assignment = bindings._annotation_end(assignment + 1)
+    opening = assignment + 1
+    if bindings.token(assignment) != "=" or bindings.token(opening) != "[" or opening not in bindings.pairs:
+        return None
+    after = bindings.pairs[opening] + 1
+    if bindings.token(after) == "as" and bindings.token(after + 1) == "const":
+        after += 2
+    following = bindings.token(after)
+    if following not in {"", ";", ",", "}"} and not (
+            "\n" in text[bindings.tokens[after - 1][2]:bindings.tokens[after][1]]
+            and re.fullmatch(NAME, following) and following not in _CONTINUING_WORDS):
+        return None
+    for index in mentions:
+        if index == site or bindings.token(index - 1) in {".", "?."}:
+            continue
+        start = bindings.tokens[index][1]
+        if (bindings._declaration_scope(name, start) == scope
+                and reads.table_arguments.get(start) != start + len(name)):
+            return None
+    if reads.in_template(name):
+        return None
+    return bindings.tokens[opening][1]
+
+
+def _table_rows(text: str, code: bytearray, bindings: Bindings, declaration: _Declaration,
+                reads: _ConstReads) -> tuple[int | None, tuple[ParamTable, ...], str | None]:
+    """(row count, row table, column shape) of a `.each`/`.for` table (#428).
+
+    The count is None when the rows cannot be counted (428.Q1b (iii)): a
+    table argument that is not an inline array literal with no spread or
+    hole, a tagged template or a name `_const_rows` follows to one. The
+    shape is `_row_table`'s, and the table is empty when the rows are
+    counted but their columns cannot be told apart.
+    """
+    if declaration.rows is None:
+        return None, (), None
+    kind, span = declaration.rows
+    if kind == "template":
+        return _template_rows(text, span[0])
+    start, end = _trim(text, code, span)
+    if start < end and re.fullmatch(NAME, text[start:end]):
+        opening = _const_rows(text, bindings, text[start:end], start, reads)
+        if opening is None:
+            return None, (), None
+        literal = _literal_items(text, code, opening)
+    elif start < end and text[start] == "[":
+        literal = _literal_items(text, code, start)
+        if literal is not None and literal[1] != end:
+            literal = None  # `[...].concat(more)` is no array literal
+    else:
+        literal = None
+    if literal is None:
+        return None, (), None
+    rows: list[tuple[int, int]] = []
+    for first, last in literal[0]:
+        first = _lead(text, first, last)
+        if first >= last or text.startswith("...", first):
+            return None, (), None  # a hole or a spread
+        rows.append((first, last))
+    return (len(rows), *_row_table(text, code, bindings, rows))
+
+
+def _parameter_columns(bindings: Bindings, span: tuple[int, int], names: tuple[str, ...],
+                       shape: str, passes_row: bool) -> dict[str, str]:
+    """Each callback parameter name that receives one table column -> that column's id (428.Q2b).
+
+    `.each` spreads an array row, so its parameter i is column i; `.for`
+    passes the row whole, so an array pattern in its first parameter takes
+    the columns by position. Both pass an object row, or a template's row
+    object, whole, and an object pattern in the first parameter takes the
+    columns by key. A table whose rows are passed whole as one cell gives
+    that cell to the first parameter. A parameter that is not one plain
+    name, and an object pattern's nested, quoted or computed property or
+    rest element, take no column. A parameter list or pattern whose commas
+    a type argument holds gives no column at all (`_splits_cleanly`).
+    """
+    parameters = _parameter_parts(bindings, span)
+    if not parameters:
+        return {}
+    columns: dict[str, str] = {}
+    if shape == "positional" and not passes_row:
+        for index, part in enumerate(parameters[:len(names)]):
+            name = _simple_parameter(bindings, part)
+            if name is not None:
+                columns[name] = names[index]
+        return columns
+    first = parameters[0][0]
+    if shape == "single":
+        name = _simple_parameter(bindings, parameters[0])
+        return {name: names[0]} if name is not None else {}
+    opening = bindings.token(first)
+    if first not in bindings.pairs or opening != ("[" if shape == "positional" else "{"):
+        return {}
+    if not _splits_cleanly(bindings, first + 1, bindings.pairs[first]):
+        return {}
+    for index, (start, end) in enumerate(bindings._parts(first + 1, bindings.pairs[first])):
+        if start == end:
+            continue  # a hole in an array pattern, or a trailing comma
+        if opening == "[":
+            name = _simple_parameter(bindings, (start, end))
+            if name is not None and index < len(names):
+                columns[name] = names[index]
+            continue
+        key = bindings.token(start)
+        if not re.fullmatch(NAME, key):
+            continue
+        if end == start + 1 or bindings.token(start + 1) == "=":
+            local = key
+        elif (bindings.token(start + 1) == ":" and re.fullmatch(NAME, bindings.token(start + 2))
+              and (end == start + 3 or bindings.token(start + 3) == "=")):
+            local = bindings.token(start + 2)
+        else:
+            continue
+        if "#" + key in names:
+            columns[local] = "#" + key
+    return columns
+
+
+def _columns_read(bindings: Bindings, source: str | None, position: int, scope: int,
+                  columns: dict[str, str]) -> tuple[str, ...]:
+    """The column ids an operand names directly through the callback's own parameters, sorted (428.Q2b).
+
+    A name counts only where it reads the parameter itself: not a property
+    or an object key, not a name a nested scope, a `var` or a function in
+    the callback binds again, and not a parameter a write may have reached.
+    What a local the operand names was computed from is not followed.
+    """
+    text = operand_text(source) if source else None
+    if text is None:
+        return ()
+    found: set[str] = set()
+    for name in operand_names(text):
+        column = columns.get(name)
+        if column is None or bindings._declaration_scope(name, position) != scope:
+            continue
+        ready, _value = bindings.scopes[scope].declarations[name]
+        if (ready == -1 and (scope, name) not in bindings.function_declarations
+                and not bindings._written((name,), position)):
+            found.add(column)
+    return tuple(sorted(found))
+
+
+def _read_table(text: str, code: bytearray, bindings: Bindings, declaration: _Declaration,
+                side: UnitSide, reads: _ConstReads) -> None:
+    """A `.each`/`.for` unit's rows, and the columns each of its assertions names (#428).
+
+    The rows become `param_cases` and one `ParamTable` (428.Q1 (a)); rows
+    that cannot be counted set `param_rows_unknown` (Q1b (iii)). An
+    assertion records in `right_depends_on` the column ids its expected
+    operand names directly and in `left_names` those its subject names
+    (Q2b (a)), which nothing else in this frontend records.
+    """
+    count, tables, shape = _table_rows(text, code, bindings, declaration, reads)
+    side.param_cases = count
+    side.param_rows = tables
+    side.param_rows_unknown = count is None
+    callback = declaration.callback
+    if not tables or shape is None or callback is None:
+        return
+    columns = _parameter_columns(bindings, callback[3], tables[0].names, shape, declaration.passes_row)
+    if not columns:
+        return
+    scope = bindings.scope(callback[0])
+    for assertion in side.assertions:
+        position = assertion.span[0]
+        assertion.right_depends_on = _columns_read(bindings, assertion.operand_source, position, scope, columns)
+        assertion.left_names = _columns_read(bindings, assertion.left, position, scope, columns)
+
+
 def _decoded(data: bytes) -> str:
     return data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
 
@@ -2178,8 +2770,14 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
     declarations = _declarations(text, code, bindings)
-    scanned = [d for d in declarations if d.unit and not d.table and d.name is not None]
+    # A `test`/`it` table is a unit too (#428), named by its title as written.
+    scanned = [d for d in declarations if d.unit and d.name is not None]
     test_body_starts = {d.callback[0] for d in scanned if d.callback is not None}
+    # Where each table call's one argument starts and ends, `describe` tables
+    # included: the only reads a `const` table may have (`_const_rows`).
+    const_reads = _ConstReads(text, code, bindings,
+                              dict(_trim(text, code, d.rows[1]) for d in declarations
+                                   if d.rows is not None and d.rows[0] == "array"))
     # What nested units inherit, the file's first focus, and the units that
     # focus stops running.
     ancestors = [d for d in declarations
@@ -2406,7 +3004,10 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             assertions = [assertion for assertion, gone in zip(assertions, cut) if not gone]
         for assertion_index, assertion in enumerate(assertions):
             assertion.id = f"a{assertion_index}"
-        imperative = _imperative_skips(text, code, bindings, callback, start, end, owned)
+        # A table's callback takes its row first: `.for` passes the context
+        # second, `.each` none (#428).
+        context = (1 if declaration.passes_row else None) if declaration.table else 0
+        imperative = _imperative_skips(text, code, bindings, callback, start, end, owned, context)
         markers = _unit_markers(declaration, ancestors, stops.get(id(declaration)), imperative)
         body_hash = hashlib.sha256(normalize_text(body).encode("utf-8")).hexdigest()
         side = UnitSide(
@@ -2415,6 +3016,8 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             markers=markers,
             body_hash=body_hash,
         )
+        if declaration.table:
+            _read_table(text, code, bindings, declaration, side, const_reads)
         units.append(ParsedUnit(qualname=name, span=(declaration.start, unit_end), side=side))
     # A declaration counts with an inline callback, which a runner collects
     # as a test or a suite; a bare `.test(value)` call is a method.

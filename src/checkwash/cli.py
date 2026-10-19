@@ -436,9 +436,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
     diagnostics, report_context = run.diagnostics, run.report_context
 
     # Sides over the source byte limit that no detector must read (#415).
-    for change in changes:
-        for unread in change.unread:
-            write_text(f"checkwash: {unread.note()}\n", sys.stderr)
+    # Json, sarif and term name them too, sorted; hook-json and --emit-ir
+    # keep their bytes (#454 ruling, item 6). The notes keep the diff's order.
+    unread_sides = [side for change in changes for side in change.unread]
+    for side in unread_sides:
+        write_text(f"checkwash: {side.note()}\n", sys.stderr)
     for gap in report_context.coverage_gaps:
         write_text(f"checkwash: {gap.message()}\n", sys.stderr)
     if args.coverage_report:
@@ -452,9 +454,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _write_machine(ir_to_json(ir))
         return 0
     if args.format == "json":
-        _write_machine(findings_to_json(ir, findings, verdict, diagnostics))
+        _write_machine(findings_to_json(ir, findings, verdict, diagnostics, unread=unread_sides))
     elif args.format == "sarif":
-        _write_machine(findings_to_sarif(ir, findings, report_context))
+        _write_machine(findings_to_sarif(ir, findings, report_context, unread=unread_sides))
     elif args.format == "hook-json":
         # Claude Code Stop-hook protocol: JSON on stdout carries the decision,
         # exit 0 either way (non-zero would read as a hook failure).
@@ -489,7 +491,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _write_term(render(
             ir, findings, verdict, config.fail_on, errors=diagnostics,
             ledger_path=resolve_config_file(repo, "allow.toml"),
-            context=report_context,
+            context=report_context, unread=unread_sides,
         ))
     return 1 if verdict == "block" else 0
 

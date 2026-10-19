@@ -1,0 +1,30 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 473
+title: the test-only twin of prod_change_not_evidence_unchanged_caller_pos keeps NO_PROD_CHANGE_IN_DIFF
+origin: #473 ruling Q4, new pin 4 (owner, 2026-10-18): the same weakened test and the same
+origin2: unchanged modules, with `invoice_total` unchanged too. The diff changes no production-role
+origin3: file, so the old label is true and stays.
+=== head: views.py ===
+from billing import invoice_total
+
+
+def render(items):
+    return invoice_total(items, 0.05)
+=== head: billing.py ===
+def invoice_total(items, tax):
+    return round(sum(items) * (1 + tax), 2)
+=== before: tests/test_billing.py ===
+from views import render
+
+
+def test_invoice_renders():
+    assert render([50.0, 50.0]) == 105.0
+=== after: tests/test_billing.py ===
+from views import render
+
+
+def test_invoice_renders():
+    assert render([50.0, 50.0]) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

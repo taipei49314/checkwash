@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 129
+rule: BROAD_EXCEPT_ADDED
+title: a bare `except:` that holds only `assert True` still swallows the assertion its `try` wraps
+origin: #496, one of the three further spellings the issue names, added for the hosted reproduction (owner ruling 2026-10-19, R31) before any fix
+note: the issue's pair with a bare `except: assert True` as the handler; app.py is unchanged and outside the diff
+=== before: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 1
+=== after: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    try:
+        assert value() == 1
+    except:
+        assert True
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

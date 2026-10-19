@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: the same rewrite with the precondition written below the rewritten `==` gets the same verdict
+origin: #434 A2 - span order already paired the old `==` with `result == 20.0`, a rename ASSERT_SUBSTITUTED skips; #434 A1 now pairs the same way
+=== before: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    assert area(4, 5) == 20.0
+=== after: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    result = area(4, 5)
+    assert result == 20.0
+    assert isinstance(result, float)
+=== expect ===
+[]

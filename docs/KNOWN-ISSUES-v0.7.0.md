@@ -17,6 +17,7 @@ results are recorded separately from those preparation receipts.
 | #366 / #367 / #364 | Deferred from this fixed release scope. No fresh model benchmark, corpus expansion or unrelated issue closure is inferred from these receipts. |
 | T-528 A–D and historical materializer | Original held-out/custody work remains incomplete and T-528 remains CLAIMED. The protected historical materializer is unchanged. The narrower release preparation does not complete that work. |
 | Release and Action identity | Historical candidate 0d6c5ec receipts retain actual pre-tag parity failures and two existing macOS performance skips. Later release verification must bind its own final commit/tree/artifacts. The recommended Action keeps published v0.6.0 under the one-release lag and lacks later CLI fixes; actual branch-protection activation is not proved by workflow inspection. |
+| [#428](https://github.com/taipei49314/checkwash/issues/428) JS/TS tables | Reported on 2026-10-14, after this release, so the acceptance below does not cover it. JS/TS `test.each`, `it.each` and `test.for` are never scanned: a weakened or deleted assertion, an edited row or a deleted table passes with zero findings. Ruled, not implemented. v0.8.0 has the same gap. |
 
 The maintainer accepted the six-clause preparation proposal without modification
 on 2026-10-12 and subsequently authorized one v0.7.0 publication with “發佈”.

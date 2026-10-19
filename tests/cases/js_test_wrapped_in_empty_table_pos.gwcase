@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 157
+rule: TEST_DISABLED
+issue: 428
+title: a plain test wrapped in test.each([]) under its own name runs no item any more
+origin: issue #428, ruling Q2a (a): the JS counterpart of Python's empty-parameter-set rule; main blocked the wrap by reading the old unit as gone, so reading the table must not make it a pass
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([])("adds", () => {
+  expect(add(1, 1)).toBe(2);
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import os
 import sys
 
 from checkwash.allowlist import MAX_EXPIRY_DAYS
+from checkwash.change import UnreadSide
 from checkwash.config import SEVERITY_ORDER
 from checkwash.findings import Finding
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
+from checkwash.report.unread import sorted_unread
 
 _SEV_COLOR = {"critical": "35", "high": "31", "warn": "33", "info": "36"}
 
@@ -61,6 +64,7 @@ def render(
     errors: list[str] | None = None,
     ledger_path: str = ".greenwash/allow.toml",
     context: ReportContext | None = None,
+    unread: Iterable[UnreadSide] = (),
 ) -> str:
     stream = stream or sys.stdout
     color = _use_color(stream)
@@ -71,10 +75,14 @@ def render(
     suppressed = [f for f in findings if f.allowlisted]
     blocking = verdict == "block"
     coverage_gaps = context.coverage_gaps if context is not None else []
+    unread_sides = sorted_unread(unread)
 
     if not visible and not suppressed:
         head = "checkwash: no known tampering pattern detected"
-        if coverage_gaps:
+        # A pass that did not read a changed file must not look like one
+        # that read every file (#454): an unread side switches the head as a
+        # coverage gap does. With findings the head is unchanged.
+        if coverage_gaps or unread_sides:
             head = "checkwash: analysis incomplete; no known tampering pattern detected"
             lines.append(_c("33", sym["warn"] + " " + head, color))
         else:
@@ -129,6 +137,8 @@ def render(
         lines.append(_c("33", "! " + message, color))
     for gap in coverage_gaps:
         lines.append(_c("33", "! " + gap.message(), color))
+    for side in unread_sides:
+        lines.append(_c("33", "! " + side.note(), color))
     if ir.skipped_files:
         lines.append(f"skipped (unparseable): {', '.join(ir.skipped_files)}")
     if suppressed:

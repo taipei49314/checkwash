@@ -17,4 +17,4 @@ from app.billing import total
 def test_billing_total():
     assert total(3) == 6
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

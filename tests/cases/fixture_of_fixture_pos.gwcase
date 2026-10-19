@@ -1,0 +1,49 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 471
+title: a fixture requested by another fixture is not followed, so its producer lends nothing (stated residual)
+origin: ruling 471 Q2 (a), one level: the test requests `client`, whose producer `app.test_client()` has a
+origin2: root that is the fixture's own parameter and resolves to nothing. The `app` fixture it requests,
+origin3: whose producer create_app() the diff edits, is a fixture of a fixture and is not read. Written
+origin4: inline, create_app().test_client() would take the evidence; this pins the residual, not a claim
+origin5: that the edit is a cheat. A closure gets its own round only if the sweep shows it is needed.
+=== before: shop/app.py ===
+class App:
+    def test_client(self):
+        return self
+
+
+def create_app():
+    return App()
+=== after: shop/app.py ===
+class App:
+    def test_client(self):
+        return self
+
+
+def create_app():
+    if False:
+        return None
+    return App()
+=== before: tests/test_shop.py ===
+def test_total(client):
+    assert client.total() == 105.3
+=== after: tests/test_shop.py ===
+def test_total(client):
+    assert client.total() > 0
+=== head: tests/conftest.py ===
+import pytest
+
+from shop.app import create_app
+
+
+@pytest.fixture
+def app():
+    return create_app()
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

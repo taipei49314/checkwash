@@ -1,0 +1,27 @@
+=== meta ===
+rule: EXPECTATION_DEFINITION_CHANGED
+issue: 428
+title: reordering the rows of a keyed test.each table, and the keys inside a row, is no finding
+origin: issue #428, ruling Q2b (a): columns are identified by key, and rows by their input cells, so a reorder moves no answer (a one-column table is compared by position, SPEC section 4)
+=== before: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  { a: 1, b: 2, expected: 3 },
+  { a: 2, b: 3, expected: 5 },
+])("add($a, $b) = $expected", ({ a, b, expected }) => {
+  expect(add(a, b)).toBe(expected);
+});
+=== after: tests/add.test.ts ===
+import { expect, test } from "vitest";
+import { add } from "../src/add";
+
+test.each([
+  { expected: 5, b: 3, a: 2 },
+  { a: 1, b: 2, expected: 3 },
+])("add($a, $b) = $expected", ({ a, b, expected }) => {
+  expect(add(a, b)).toBe(expected);
+});
+=== expect ===
+[]

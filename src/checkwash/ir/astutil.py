@@ -114,6 +114,62 @@ def dotted_name(node: ast.AST) -> str | None:
     return None
 
 
+# The calls the Python frontend records as an exception or warning check
+# (`raises` bare, `pattern` with `match=`).
+RAISES_CALLEES = frozenset({"pytest.raises", "pytest.warns", "raises"})
+
+
+def raises_call(text: str | None) -> tuple[str, frozenset[str] | None, tuple[tuple[str, str], ...], bool] | None:
+    """What a recorded `pytest.raises` / `pytest.warns` / `raises` call checks, or None (#434 B).
+
+    (callee, expected types, other keywords, whether it passes `match=`), read
+    from the call's text. Only the context-manager form is read: exactly one
+    positional argument, not starred, and no `**`. The expected types are
+    read as a catcher's are (`frontend._caught_types`): one name chain, or a
+    tuple of them, as a set; any other spelling (a call, a subscript, a name
+    the reader would have to resolve) is None, which is the same as nothing.
+    The other keywords are kept as written, through `ast.unparse`.
+    """
+    node = parse_expr(text) if text else None
+    if not isinstance(node, ast.Call):
+        return None
+    callee = dotted_name(node.func)
+    if callee not in RAISES_CALLEES:
+        return None
+    if (len(node.args) != 1 or isinstance(node.args[0], ast.Starred)
+            or any(keyword.arg is None for keyword in node.keywords)):
+        return None
+    spelled = node.args[0].elts if isinstance(node.args[0], ast.Tuple) else [node.args[0]]
+    names = [dotted_name(element) for element in spelled]
+    types = frozenset(names) if names and None not in names else None
+    keywords = []
+    match = False
+    for keyword in node.keywords:
+        if keyword.arg == "match":
+            match = True
+            continue
+        try:
+            keywords.append((keyword.arg, ast.unparse(keyword.value)))
+        except (RecursionError, ValueError):
+            return None
+    return callee, types, tuple(sorted(keywords)), match
+
+
+def same_raises_check(bare: str | None, matched: str | None) -> bool:
+    """Is `matched` the bare `bare` call with a `match=` added, and nothing else changed? (#434 B)
+
+    The same callee, the same readable set of expected types and the same
+    other keywords; `bare` passes no `match=` and `matched` does.
+    """
+    old, new = raises_call(bare), raises_call(matched)
+    return (
+        old is not None and new is not None
+        and not old[3] and new[3]
+        and old[1] is not None
+        and old[:3] == new[:3]
+    )
+
+
 def same_expr(before: str | None, after: str | None) -> bool:
     """Are these the same expression, ignoring spelling and spacing?"""
     if before is None or after is None:

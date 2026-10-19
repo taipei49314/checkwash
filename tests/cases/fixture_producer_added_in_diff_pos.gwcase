@@ -1,0 +1,52 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 471
+title: a conftest the diff edits so that the fixture now returns the changed class lends nothing: the before side governs
+origin: ruling 471 Q3 (b): the fixture is read as it was before the diff. Before it, `ledger` returned
+origin2: Archive(), which is unchanged; the diff makes it return Ledger() and keeps a no-op edit in
+origin3: Ledger. Reading the after side would let one diff both point the fixture at an edited class
+origin4: and weaken the test. Blocks.
+=== before: billing.py ===
+class Ledger:
+    def total(self, items):
+        return sum(items)
+
+
+class Archive:
+    def total(self, items):
+        return 0.0
+=== after: billing.py ===
+class Ledger:
+    def total(self, items):
+        return sum(items) + 0
+
+
+class Archive:
+    def total(self, items):
+        return 0.0
+=== before: tests/conftest.py ===
+import pytest
+
+from billing import Archive, Ledger
+
+
+@pytest.fixture
+def ledger():
+    return Archive()
+=== after: tests/conftest.py ===
+import pytest
+
+from billing import Archive, Ledger
+
+
+@pytest.fixture
+def ledger():
+    return Ledger()
+=== before: tests/test_billing.py ===
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) == 100.0
+=== after: tests/test_billing.py ===
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) > 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

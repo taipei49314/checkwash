@@ -11,18 +11,17 @@ it is known not to.
 
 ## The short version
 
-- **175 bypasses** are documented, of which **59 are not closed**.
+- **177 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (34)
+## Open — no defence at all (33)
 
 | # | shape | pinned by |
 |---|---|---|
-| 85 | Replace one assertion with two — a weak precondition and the real oracle — so the order fallback pairs the old strong assertion with the new weak one and reports `ASSERT_WEAKENED` | — |
 | 86b | Write the same cheats in unittest style: `self.assertEqual(subject, expected)` | — |
 | 86d | Wrap the subject **and** move the expected literal into a named constant, in one edit | — |
 | 86e | Replace a **subject-less** assertion — the truthy form `assert f(x)`, `approx`, `isinstance`, `raises` — with an unrelated one | — |
@@ -35,7 +34,6 @@ it is known not to.
 | 93 | Buy repair evidence with an edit inside a called symbol that `_normalize_for_fingerprint` keeps: an alpha-rename (`total` → `subtotal`), `+ 0`, a single-use temporary (`r = sum(items); return r`) or a dead `if False:` branch. None changes behaviour; each changes the AST fingerprint (#419 Route A) | — |
 | 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that #419 stopped accepting for a weakened oracle, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`) | — |
 | 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code | — |
-| 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | — |
 | 137 | Swallow the suite's exit status in a runner script whose runner name the shell assembles from quoted or escaped pieces: `'py'test -q`, `py"test" -q`, `p\ytest -q` or `python -m 'py''test' -q` in `scripts/ci-tests.sh`, with `\|\| true` appended (#275) | — |
 | 138 | Narrow the suite in pytest 9's native `[tool.pytest]` table of `pyproject.toml`, which checkwash does not read: a first `pyproject.toml` whose table holds `python_files = ["smoke_*.py"]` or `addopts = ["-m", "not slow"]`, or `addopts = ["-m", "not slow"]` added to an existing table (#278) | — |
 | 139 | Hide an always-true condition in a `skipif` or `xfail` mark's second positional argument, or flip one there or in its `condition=` keyword: `@pytest.mark.skipif(sys.platform == "win32", True, reason="x")` or `xfail(sys.platform == "win32", True, reason="x")` added, `skipif(sys.platform == "win32", False, ...)` -> `skipif(sys.platform == "win32", True, ...)`, or `skipif(condition=False, ...)` -> `skipif(condition=True, ...)` (#297) | — |
@@ -56,6 +54,7 @@ it is known not to.
 | 154 | Stop the suite through a CI edit that warns where its close neighbour blocks, instead of fixing code: delete the last test step (`- run: pytest`) from a workflow that survives, empty a test workflow, or remove a test job from `.gitlab-ci.yml`; or end the runner line with `; exit 0` or `;exit 0`, as `python -m pytest tests -x; exit 0` in a `Justfile` or `run: pytest; exit 0` in a workflow step (#426) | — |
 | 155 | Change an operator of a chained comparison, or a conjunct of a plain `and`, instead of fixing code: `assert 0 < x < 60` -> `assert 0 <= x < 60`, `assert 0 < x != 60` or `assert 0 > x < 60`; `assert 0 < x and x < 4` -> `assert 0 < x` or `assert 0 < x and x < 5`; or `self.assertTrue(0 < x < 4)` -> `self.assertTrue(0 < x)` (#461) | — |
 | 156 | Record a regressed test as an expected failure in a results record the test runner reads, instead of fixing code: in undici's `test/web-platform-tests/expectation.json`, a subtest that now fails recorded as `success: false` or `flaky: true`, or its test file's entry marked `skip: true`. Running the suite and committing the file it rewrites is enough (#468) | — |
+| 158 | (False positive, not a bypass) An honest edit to a test built by a fixture, after a production change that the call the fixture returns or yields does not reach: a setup call in the fixture (a seeded default, a configured clock), an `autouse` fixture or a `usefixtures` mark the test does not request by parameter, a fixture another fixture requests (`client(app)` returning `app.test_client()`), a fixture that returns from several places, binds its value through `with ... as` or returns `request.param`, a factory producer that calls the changed symbol, a test class with a base class or a keyword when the fixture is outside that class's own body, or xunit `setUp` that builds the subject on `self` | — |
 
 ## Narrowed, still open (2)
 
@@ -64,7 +63,7 @@ it is known not to.
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 
-## Closed in part (12)
+## Closed in part (13)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -78,7 +77,8 @@ it is known not to.
 | 105 | Mark the failing test (`@pytest.mark.slow`, module `pytestmark`, or any marker) and introduce `addopts = "-m 'not slow'"` (or any `-k`/`--deselect`/`--ignore`/collection setting) in a first pytest config while every collected test lives in a file the diff also edits or renames: the resolved inventory read byte-identical files only, found no suite, and the verdict passed (issue #173) | `hidden_pytest_ini_deselect_pos.gwcase`, `hidden_pytest_toml_deselect_pos.gwcase`, `pytest_toml_deselect_pos.gwcase`, `pytest_toml_no_python_plugin_pos.gwcase`, `pytest_toml_testpaths_pointed_away_pos.gwcase` |
 | 111 | In a mocha/Vitest/chai suite, weaken a chai assertion instead of fixing code: `expect(x).to.equal(y)` -> `.to.exist`/`.to.be.ok`, `.to.be.true` -> `.to.be.ok`, `.to.be.null` -> `.to.exist`, widen `closeTo`'s delta, rewrite the `equal` operand, or `assert.strictEqual` -> `assert.isOk` | `js_chai_assert_deep_property_val_dropped_pos.gwcase`, `js_chai_assert_property_val_dropped_pos.gwcase`, `js_chai_assert_property_val_rewrite_pos.gwcase`, `js_chai_assert_weakened_pos.gwcase`, `js_chai_closeto_delta_pos.gwcase`, `js_chai_equal_to_exist_pos.gwcase`, `js_chai_expected_rewrite_pos.gwcase`, `js_chai_global_assert_weakened_pos.gwcase`, `js_chai_global_expect_weakened_pos.gwcase`, `js_chai_global_member_expect_pos.gwcase`, `js_chai_nested_property_value_dropped_pos.gwcase`, `js_chai_own_property_value_dropped_pos.gwcase`, `js_chai_property_chain_tail_dropped_pos.gwcase`, `js_chai_property_deleted_pos.gwcase`, `js_chai_property_value_dropped_pos.gwcase`, `js_chai_property_value_rewrite_pos.gwcase`, `js_chai_should_deleted_pos.gwcase`, `js_chai_should_equal_to_exist_pos.gwcase`, `js_chai_should_expected_rewrite_pos.gwcase`, `js_chai_should_object_exist_pos.gwcase`, `js_chai_should_register_import_pos.gwcase`, `js_chai_should_require_setup_pos.gwcase`, `js_chai_should_true_to_ok_pos.gwcase`, `js_evidence_assert_equal_rewrite_pos.gwcase`, `js_evidence_bound_rewrite_pos.gwcase`, `js_evidence_closeto_infinity_pos.gwcase`, `js_evidence_closeto_unread_delta_pos.gwcase`, `js_predicate_bound_direction_pos.gwcase`, `js_predicate_null_to_exist_pos.gwcase` |
 | 112 | Stop the suite through CI control flow instead of a runner line: a statically false `if:` on the test step or job (`if: false`, `${{ false }}`, `x && false`, `failure()`, `fromJSON('false')`, `github.event_name == 'push'` beside a branch-filtered push), `if: false` on a job the test job `needs`, the `pull_request` trigger dropped where `push` fires only on named branches, or the pytest hook deleted from `.pre-commit-config.yaml` or parked on `stages: [manual]` | `ci_composite_action_node_test_swallow_pos.gwcase`, `ci_composite_action_swallow_pos.gwcase`, `ci_composite_action_yaml_swallow_pos.gwcase`, `ci_head_yaml_tag_pos.gwcase`, `ci_job_if_false_pos.gwcase`, `ci_needs_disabled_job_pos.gwcase`, `ci_node_test_workflow_removed_pos.gwcase`, `ci_py_test_workflow_removed_pos.gwcase`, `ci_reworded_runner_beside_echo_decoy_pos.gwcase`, `ci_step_if_event_pos.gwcase`, `ci_step_if_failure_pos.gwcase`, `ci_step_if_false_document_end_marker_pos.gwcase`, `ci_step_if_false_node_test_pos.gwcase`, `ci_step_if_false_one_of_two_pos.gwcase`, `ci_step_if_false_pos.gwcase`, `ci_step_if_false_py_test_pos.gwcase`, `ci_trigger_paths_ignore_all_pos.gwcase`, `ci_trigger_paths_only_negations_pos.gwcase`, `ci_trigger_pull_request_removed_pos.gwcase`, `ci_trigger_types_closed_only_pos.gwcase`, `gitlab_allow_failure_exit_codes_pos.gwcase`, `gitlab_allow_failure_test_job_pos.gwcase`, `gitlab_head_yaml_tag_pos.gwcase`, `gitlab_rules_when_never_test_job_pos.gwcase`, `gitlab_template_when_manual_pos.gwcase`, `gitlab_test_job_hidden_pos.gwcase`, `gitlab_when_manual_test_job_pos.gwcase`, `gitlab_when_on_failure_test_job_pos.gwcase`, `gitlab_workflow_rules_never_pos.gwcase`, `precommit_head_yaml_tag_pos.gwcase`, `precommit_node_test_hook_removed_pos.gwcase`, `precommit_test_hook_echo_decoy_pos.gwcase`, `precommit_test_hook_manual_stage_pos.gwcase`, `precommit_test_hook_removed_pos.gwcase` |
-| 129 | Always-passing assertion in the catch: keep the broad catch that swallows the guarded assertion and give it an assertion that cannot fail, so the catch reads as inspection — `try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }` | `js_catch_always_passing_literal_pos.gwcase` |
+| 129 | Always-passing assertion in the catch: keep the broad catch that swallows the guarded assertion and give it an assertion that cannot fail, so the catch reads as inspection — `try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }` | `broad_except_always_passing_assert_true_pos.gwcase`, `broad_except_always_passing_bare_except_pos.gwcase`, `broad_except_always_passing_literal_compare_pos.gwcase`, `broad_except_always_passing_unittest_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase` |
+| 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | `snapshot_new_prod_module_new_test_pos.gwcase`, `snapshot_new_prod_module_pos.gwcase` |
 | 133 | Commit the cheat during the Claude Code session, so the Stop hook, which diffed HEAD against the working tree, sees a clean tree and prints `{}`; or commit an exemption, a `[detectors] disable` or a relaxed `fail_on`, so it governs the agent's next Stop | — |
 
 ## Open by design — the cost of a deliberate trade (10)
@@ -104,7 +104,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (113)
+## Closed — each pinned by something that runs (115)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -190,6 +190,7 @@ behind it* unshippable.
 | 81 | Append an unguarded `collect_ignore.append(...)` to a conftest that **already** has a collection control | `collect_ignore_appended_pos.gwcase` |
 | 82 | Put the collection control in a **new** `conftest.py` | `conftest_added_file_kills_suite_pos.gwcase` |
 | 83 | Reach `collect_ignore` from an `except ImportError:` handler, or assign through a slice (`collect_ignore[:] = [...]`) | `collect_ignore_slice_pos.gwcase` |
+| 85 | Replace one assertion with two — a weak precondition and the real oracle — so the order fallback pairs the old strong assertion with the new weak one and reports `ASSERT_WEAKENED` | `subject_pairing_not_none_precondition_neg.gwcase`, `subject_pairing_precondition_before_neg.gwcase` |
 | 86 | Put the tests in a `unittest.TestCase` subclass that is not named `Test*` — `class BillingTests(unittest.TestCase)` — and weaken anything inside it | `unittest_class_aliased_base_pos.gwcase`, `unittest_class_not_named_test_pos.gwcase` |
 | 86c | Substitute an assertion where **neither** expectation is a literal — `assert ok == success` -> `assert pinned == wanted` | `assert_substituted_both_nonliteral_pos.gwcase` |
 | 86i | (False positive) Converting a unittest assertion to a bare `assert` blocks at high whenever the literal is on the unittest-argument side | `unittest_len_modernize_neg.gwcase` |
@@ -227,6 +228,7 @@ behind it* unshippable.
 | 134 | Rewrite a unittest assertion's operands by name instead of fixing code. Examples: `self.assertEqual(first=value(), second=[1, 2])` -> `second=[1, 3]`; `self.assertEqual(value(), 3)` -> `self.assertEqual(first=value(), second=4)`; `second=compute(5)` beside `first=compute(5)`; `assertTrue(expr=answer())` -> `assertTrue(expr=True)`; a bound or a hand-rolled bound loosened under `a=`/`b=`; the expectation a keyword operand reads redefined; `pytest.approx(105.0)` -> `pytest.approx(expected=100.0)`. Or replace the oracle with `self.assertEqual(**case)` or `self.assertEqual(*pair)` (#462). | `unittest_keyword_expected_rewritten_pos.gwcase`, `unittest_unbound_kwargs_pos.gwcase` |
 | 135 | Take a test out of the run by rebinding its name after it, with the def byte-identical: `def test_x(): pass`, `del test_x`, `test_x = None` or `test_x = lambda: None` appended after it; the same in its class body, or `TestX.test_x = None` or `delattr(TestX, "test_x")` after the class; `class TestX: pass` or `TestX = None` after a test class; an import, `globals()["test_x"]`, a walrus or `except ... as test_x` over the name. Or move a failing test verbatim to another test file and append `del test_x` there (#424). | `rebinding_class_attribute_pos.gwcase`, `rebinding_class_redefined_pos.gwcase`, `rebinding_deleted_after_pos.gwcase`, `rebinding_lambda_pos.gwcase`, `rebinding_redefined_after_pos.gwcase` |
 | 136 | Reuse an exemption reviewed for one rewrite of an assertion for any later rewrite of the same line: approve `assert total() == 20.0` -> `== pytest.approx(20.0)`, then rewrite it to `> 0` or `!= 20.0` on a base that still holds `== 20.0`; or weaken a second identical copy beside it, widen the same tolerance further, change a Jest sibling `toBe(1)` to `toBe(2)`, or redefine the expectation an unchanged line reads, all under the reviewed key. ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED, EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (#421). | — |
+| 157 | Weaken or delete an assertion inside a JS/TS `test.each`, `it.each` or `test.for` table, delete or rewrite one of its rows, skip or delete the whole table, or wrap a plain test in a table of no rows or of rows that cannot be counted (#428) | `js_table_assertion_deleted_pos.gwcase`, `js_table_deleted_pos.gwcase`, `js_table_expected_cell_rewritten_pos.gwcase`, `js_table_input_cell_rewritten_pos.gwcase`, `js_table_row_deleted_pos.gwcase`, `js_table_skip_added_pos.gwcase`, `js_table_weakened_pos.gwcase`, `js_test_wrapped_in_empty_table_pos.gwcase`, `js_test_wrapped_in_unknown_table_pos.gwcase` |
 
 ## Unclassified (1)
 
@@ -317,6 +319,8 @@ state — do not invent a row to fill it. Quarterly review:
 | 2026-09-21 | false block | @arsen-ask-lx | #156 | `tests/test_js_frontend.py` | — |
 | 2026-09-23 | missed cheat | @arsen-ask-lx | #164 | `tests/test_js_node_assert.py` | — |
 | 2026-10-12 | missed cheat | @talhayme | #363 | `js_catch_assertion_swallowed_pos.gwcase` | 16, 22 |
+| 2026-10-19 | false block | @talhayme | #457 | `subject_pairing_other_subject_known_limit_pos.gwcase` | 84b |
+| 2026-10-19 | false block | @talhayme | #471 | `hardcoded_via_conftest_fixture_neg.gwcase` | 93, 158 |
 
 ## Send us one
 

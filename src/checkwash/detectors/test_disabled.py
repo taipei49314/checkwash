@@ -189,6 +189,15 @@ def detect(ir: IR) -> list[Finding]:
                 before_n = unit.before.param_cases if unit.before else None
                 after_n = unit.after.param_cases
                 live_after = after_n if after_n is not None else 1
+                shown_after = after_n
+                if before_n is None:
+                    # A plain JS/TS test whose pair is a `.each`/`.for` table
+                    # of no rows, or of rows that cannot be counted (#428
+                    # Q2a): the one item it was. Only that pairing reaches
+                    # here without a count on the before side.
+                    before_n = 1
+                    if getattr(unit.after, "param_rows_unknown", False):
+                        live_after = shown_after = "unknown"
                 if disabled:
                     # A marked row is still written down, so the live count
                     # can stay put (F-063: one row marked, one appended).
@@ -211,7 +220,7 @@ def detect(ir: IR) -> list[Finding]:
                         path=file.path,
                         unit=unit.qualname,
                         before=None,
-                        after=Evidence(text=f"parametrize cases: {after_n}", span=unit.after.span),
+                        after=Evidence(text=f"parametrize cases: {shown_after}", span=unit.after.span),
                         fingerprint=make_fingerprint(
                             "TEST_DISABLED", file.path, unit.qualname, "parametrize"
                         ),

@@ -1,0 +1,19 @@
+=== meta ===
+bypass: 132
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a stored expectation rewritten beside a new production module and a new unrelated test still blocks
+origin: #463 reproduction step 2, ruling Q1 (a) (issuecomment-6248011246): the new test is test logic, so
+origin2: SNAPSHOT_CODE_COCHANGE stands down (Q4 (a)); the file-scoped EXPECTED_VALUE_CHANGED reads no test
+origin3: logic, and the new module is no implementation change, so it blocks.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== after: app/_unused.py ===
+X = 1
+=== after: tests/test_smoke.py ===
+def test_smoke():
+    assert 1 + 1 == 2
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "path": "tests/golden/invoice.txt"}]

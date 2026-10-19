@@ -1,0 +1,145 @@
+=== meta ===
+rule: ASSERT_SUBSTITUTED
+issue: 471
+credit: @talhayme (#471)
+title: class-method tests with an annotated fixture parameter take the producer's evidence, beside an edit to the conftest's mock data
+origin: #471, @talhayme's report and comment 6264130796 on punt-labs/langlearn-tts b4bc4e63 (MIT),
+origin2: "fix: change ElevenLabs default voice from rachel to matilda (#30)". Each before-side assertion
+origin3: reads `elevenlabs_provider`; its conftest fixture (annotated, a docstring, then one return)
+origin4: returns ElevenLabsProvider(client=mock_elevenlabs_client), one level although it requests
+origin5: another fixture. The conftest's mock data also changes (fixture data, #425 deferred in #504).
+origin6: Before #471: five high with NO_PROD_CHANGE_IN_DIFF.
+=== before: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "rachel"
+
+    def resolve_voice(self, name: str) -> str:
+        return name.lower()
+
+    def infer_language_from_voice(self, voice: str) -> str | None:
+        return None
+=== after: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "matilda"
+
+    def resolve_voice(self, name: str) -> str:
+        return name.lower()
+
+    def infer_language_from_voice(self, voice: str) -> str | None:
+        return None
+=== before: tests/conftest.py ===
+"""Shared test fixtures."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+@pytest.fixture
+def mock_elevenlabs_client() -> MagicMock:
+    """A mock ElevenLabs client with one voice."""
+    client = MagicMock()
+    voice = MagicMock()
+    voice.name = "Rachel - calm"
+    voices_response = MagicMock()
+    voices_response.voices = [voice]
+    client.voices.get_all.return_value = voices_response
+    return client
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client: MagicMock) -> ElevenLabsProvider:
+    """Create an ElevenLabsProvider with a mocked client."""
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== after: tests/conftest.py ===
+"""Shared test fixtures."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+@pytest.fixture
+def mock_elevenlabs_client() -> MagicMock:
+    """A mock ElevenLabs client with one voice."""
+    client = MagicMock()
+    voice = MagicMock()
+    voice.name = "Matilda - professional"
+    voices_response = MagicMock()
+    voices_response.voices = [voice]
+    client.voices.get_all.return_value = voices_response
+    return client
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client: MagicMock) -> ElevenLabsProvider:
+    """Create an ElevenLabsProvider with a mocked client."""
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== before: tests/test_elevenlabs_provider.py ===
+"""Tests for the ElevenLabs provider."""
+
+from __future__ import annotations
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderResolveVoice:
+    def test_resolve_case_insensitive(
+        self, elevenlabs_provider: ElevenLabsProvider
+    ) -> None:
+        assert elevenlabs_provider.resolve_voice("Rachel") == "rachel"
+        assert elevenlabs_provider.resolve_voice("RACHEL") == "rachel"
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_infer_language_returns_none(
+        self, elevenlabs_provider: ElevenLabsProvider
+    ) -> None:
+        assert elevenlabs_provider.infer_language_from_voice("rachel") is None
+=== after: tests/test_elevenlabs_provider.py ===
+"""Tests for the ElevenLabs provider."""
+
+from __future__ import annotations
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderResolveVoice:
+    def test_resolve_case_insensitive(
+        self, elevenlabs_provider: ElevenLabsProvider
+    ) -> None:
+        assert elevenlabs_provider.resolve_voice("Matilda") == "matilda"
+        assert elevenlabs_provider.resolve_voice("MATILDA") == "matilda"
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_infer_language_returns_none(
+        self, elevenlabs_provider: ElevenLabsProvider
+    ) -> None:
+        assert elevenlabs_provider.infer_language_from_voice("matilda") is None
+=== expect ===
+[{"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "ASSERT_SUBSTITUTED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive"},
+ {"rule": "SUBJECT_INPUT_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none"}]

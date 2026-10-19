@@ -24,7 +24,7 @@ and xunit setup, and in the conftest fixtures it reaches (`ConftestLevel`,
 from __future__ import annotations
 
 import ast
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from checkwash.ir.astutil import dotted_name
 
@@ -770,6 +770,11 @@ class ConftestLevel:
     star: bool
     # May it add a mark a static reading of a test does not see (#358)?
     adds_marks: bool = False
+    # Fixture name -> (dotted callee, modules) of the call it returns or
+    # yields, resolved through this conftest's own imports, for each fixture
+    # that has one (`fixture_producers.producer`, #471). A test that requests
+    # the fixture by parameter reaches it one level deep.
+    producers: dict = field(default_factory=dict)
 
 
 def unreadable_level(path):
@@ -950,10 +955,14 @@ def conftest_level(path, tree, text_of, span_of):
     `text_of` and `span_of` give a node's source text and span in that file.
     A guarded outcome keeps its guard, closed over the conftest's names, and
     is judged on the unit as a guarded skip in its own setup is (#351).
+    Each fixture's producer is read through the conftest's own imports
+    (#471).
     """
+    from .fixture_producers import ProducerScope, import_modules
     from .own_marks import adds_marks
 
-    scope = SetupScope(tree.body, module_bindings(tree), condition=ConftestGuard(tree, text_of, span_of))
+    bindings = module_bindings(tree)
+    scope = SetupScope(tree.body, bindings, condition=ConftestGuard(tree, text_of, span_of))
     fixtures = {}
     for name, (requested, autouse, outcome) in scope.fixtures.items():
         if outcome is not None:
@@ -965,7 +974,10 @@ def conftest_level(path, tree, text_of, span_of):
                 ))
             outcome = (effect, (text_of(evidence), span_of(evidence)), guard)
         fixtures[name] = (requested, autouse, outcome)
-    return ConftestLevel(path, fixtures, scope.opaque, scope.star, adds_marks=adds_marks(tree))
+    made = ProducerScope(tree.body, bindings, import_modules(tree)).producers
+    producers = {name: made[name] for name in sorted(made) if made[name] is not None}
+    return ConftestLevel(path, fixtures, scope.opaque, scope.star, adds_marks=adds_marks(tree),
+                         producers=producers)
 
 
 def setup_outcomes(scopes, function, *, method, chain=()):

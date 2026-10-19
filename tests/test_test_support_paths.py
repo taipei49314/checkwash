@@ -93,10 +93,13 @@ def test_unreadable_production_data_outside_them_keeps_the_exemption():
 
 
 def test_test_data_moved_into_production_was_not_production_at_base():
+    # The new path is production-role, so the diff changed production and E1
+    # says so (#473, D-161); the rename still buys no opaque credit.
     moved = FileChange("src/data.json", "renamed", DATA.encode(), NOTED.encode(),
                        old_path="src/__tests__/data.json")
     _ir, findings, verdict = _analyze([JEST, moved])
-    assert (verdict, _summary(findings)) == ("block", BLOCKED)
+    assert (verdict, _summary(findings)) == (
+        "block", [("ASSERT_WEAKENED", "high", ("PROD_CHANGE_NOT_EVIDENCE",), ())])
 
 
 def test_production_moved_beneath_a_test_support_directory_buys_nothing():

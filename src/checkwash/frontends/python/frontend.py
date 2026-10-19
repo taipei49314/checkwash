@@ -19,6 +19,14 @@ from types import SimpleNamespace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.fixture_producers import (
+    ProducerScope,
+    _binders as _fixture_binders,
+    assertion_names,
+    import_modules,
+    nested_bound_names,
+    unit_producers,
+)
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
@@ -73,6 +81,7 @@ from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import Assertion, Handler, Marker, ParamTable, UnitSide, normalize_text
+from checkwash.ir.subjects import reaching_signature
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 
@@ -1399,6 +1408,83 @@ def _reaching_sig(reaching: dict[str, str], direct: set[str]) -> str:
     )
 
 
+def _plain_names(func, ordered: dict[str, list]) -> frozenset[str]:
+    """The unit's names bound only by plain `name = <expr>` statements (#434).
+
+    Such a name holds what one of those statements bound, so the subject an
+    assertion checks through it is that statement's expression. Every
+    binding of the name anywhere in the unit, nested scopes included, must be
+    the single target of an `=`. A name is left out when anything else binds
+    or declares it: a parameter (the unit's or a nested one), `global` or
+    `nonlocal`, an augmented, annotated, tuple or chained assignment, a
+    walrus, `for`, `with ... as`, `except ... as`, an import, a def or class,
+    a match capture, `del`, or a comprehension target. A plain assignment in
+    a nested scope binds that scope's own name, but one the unit's statement
+    walk does not record is left out too: the counts must agree.
+    """
+    plain_targets: set[int] = set()
+    stores: dict[str, list[int]] = {}
+    other: set[str] = set()
+    for node in _walk(func):
+        if isinstance(node, ast.Name):
+            if not isinstance(node.ctx, ast.Load):
+                stores.setdefault(node.id, []).append(id(node))
+        elif isinstance(node, ast.Assign):
+            if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                plain_targets.add(id(node.targets[0]))
+        elif isinstance(node, ast.arg):
+            other.add(node.arg)
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            other.update(node.names)
+        elif isinstance(node, ast.alias):
+            other.add((node.asname or node.name).partition(".")[0])
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            other.add(node.name)
+        elif isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)):
+            if node.name:
+                other.add(node.name)
+        elif isinstance(node, ast.MatchMapping):
+            if node.rest:
+                other.add(node.rest)
+    return frozenset(
+        name for name, ids in stores.items()
+        if name not in other
+        and len(ids) == len(ordered.get(name, ()))
+        and all(i in plain_targets for i in ids)
+    )
+
+
+def _resolved_subject(
+    node: ast.AST,
+    name: str,
+    ordered: dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]],
+) -> tuple[str, str] | None:
+    """(expression, reading context) a plain local name stands for at this assertion (#434).
+
+    The caller has checked that `name` is one of the unit's `_plain_names`
+    and that the assertion is in the unit's own scope. Exactly one binding
+    may reach it. A conditional one is enough: had it not run, the local
+    would be unbound and the assertion would raise. No conditional binding
+    may follow the assertion, since a loop around both would bring it back
+    to the assertion. The context is the reaching keys of the names the
+    expression reads, at the binding, in `ir.subjects.reaching_signature`'s
+    form, so it compares with a subject written out at an assertion.
+    """
+    pos = (node.lineno, node.col_offset)
+    reach = _reaching_entries(pos, name, ordered)
+    if len(reach) != 1 or any(entry[1] and entry[0] > pos for entry in ordered.get(name, ())):
+        return None
+    bound_at, _conditional, key, refs = reach[0]
+    if not key:
+        return None
+    keys = {
+        ref: "\x1f".join(entry[2] for entry in _reaching_entries(bound_at, ref, ordered))
+        for ref in refs
+        if ref in ordered
+    }
+    return key, reaching_signature(keys, refs)
+
+
 def _exclusive_bindings(func) -> tuple[str, ...]:
     """Multiply-bound names whose every binding sits in a different branch arm.
 
@@ -1523,6 +1609,53 @@ def _resolve_through(names: tuple[str, ...], bindings: dict[str, tuple[str, ...]
         seen.add(name)
         queue.extend(bindings.get(name, ()))
     return tuple(sorted(seen))
+
+
+def _fixture_read_bindings(
+    func,
+    nested: set[int],
+    refs_memo: dict[int, tuple[str, ...]] | None = None,
+) -> dict[str, tuple[str, ...]]:
+    """`_binding_maps`' reference half as `fixture_reads` follows it: the unit's own scope only (#471).
+
+    `fixture_reads` follows the unit's own assignments through this map
+    (D-155, reading 3). In `result = (lambda ledger: ledger.fee)(make())`,
+    the lambda's `ledger` is not the fixture parameter, so `result` leads to
+    `make` only. Each assigned value's `fixture_producers.nested_bound_names`
+    are dropped from its references, even where such a name also occurs
+    outside the lambda or comprehension that binds it, erring toward no
+    evidence. An assignment or walrus inside a nested def, class or lambda
+    (`nested`, the ids of their nodes) binds another scope's name and is not
+    followed: neither `(lambda ledger: (fee := ledger.fee))(make())` nor a
+    nested def's `fee = ledger.fee` leads `fee` to `ledger`. A walrus in what
+    such a def, class or lambda evaluates in the unit's scope (a default or a
+    decorator) is left out too, erring toward no evidence; a walrus in a
+    comprehension of the unit's own scope is kept. So the keys are the
+    binding map's, less the names bound only there; `fixture_reads` still
+    checks the binding map for a parameter the body assigns again.
+    `refs_memo` is the unit's memo of `_referenced_names`, which
+    `_binding_maps` has already filled.
+    """
+    references: dict[str, set[str]] = {}
+    for node in _walk(func):
+        if isinstance(node, ast.Assign):
+            targets, value = node.targets, node.value
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets, value = [node.target], node.value
+        elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            targets, value = [node.target], node.value
+        else:
+            continue
+        if value is None or id(node) in nested:
+            continue
+        names = refs_memo.get(id(value)) if refs_memo is not None else None
+        if names is None:
+            names = _referenced_names(value)
+        kept = set(names) - nested_bound_names(value)
+        for target in targets:
+            for name in _assignment_name_targets(target):
+                references.setdefault(name, set()).update(kept)
+    return {name: tuple(sorted(refs)) for name, refs in references.items()}
 
 
 def _referenced_names(node) -> tuple[str, ...]:
@@ -2269,11 +2402,7 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     A handler that re-raises, or that asserts on what it caught, still lets
     the test fail — it is inspection, not suppression.
     """
-    for stmt in handler.body:
-        for sub in ast.walk(stmt):
-            if isinstance(sub, ast.Raise):
-                return False
-    return not _contains_oracle(handler.body)
+    return not _raises_in(handler) and not _contains_oracle(handler.body)
 
 
 def _unreachable_ids(
@@ -2481,6 +2610,269 @@ def _truthy_literal(node: ast.AST) -> bool:
         return bool(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError):
         return True
+
+
+# A broad handler whose every oracle is proved to always pass (#496). D-015
+# counted any oracle in a handler as inspection, so adding `assert True` to an
+# `except Exception:` turned row 16's block back into a clean pass. Ruling 496
+# (R49 to R51): only a proof moves a handler, and it is a narrow one, apart
+# from `_static_truth`. That folder answers True where a pass proof must not:
+# `_truthy_literal` on a `literal_eval` failure (`assert -"a"` raises), and an
+# `or` with one True operand (`assert check() or True` runs `check()` first).
+# The proof answers "proved to pass" or nothing; anything else keeps the
+# handler inspection, as on main.
+
+# The evidence text of such a handler is its first line, a space and this
+# suffix (R50). `_norm` leaves no space in any other handler's text, so the two
+# never compare equal and main's set of texts is unchanged.
+_ALWAYS_PASSING = " [always-passing assertion]"
+
+_UNPROVED = object()
+
+# The unittest methods the proof reads (R49), each with the predicate its
+# operands' values pass (`Lib/unittest/case.py`). `assertEqual` on two values
+# of one type dispatches to a type-specific method, and each of unittest's
+# own passes when `==` holds; `_REACHED` names them.
+_PROVED_UNITTEST = {
+    "assertTrue": lambda expr: bool(expr),
+    "assertFalse": lambda expr: not expr,
+    "assertIsNone": lambda obj: obj is None,
+    "assertIsNotNone": lambda obj: obj is not None,
+    "assertEqual": lambda first, second: first == second,
+    "assertNotEqual": lambda first, second: first != second,
+}
+
+# The names a passing call looks up on its receiver (`Lib/unittest/case.py`,
+# CPython 3.11 to 3.14). `assertEqual` asks `_getAssertEqualityFunc`, which
+# returns `_baseAssertEqual` or, for two values of one type, the method
+# registered for that type by name and found with `getattr` on the receiver
+# (`assertDictEqual`, `assertListEqual`, `assertTupleEqual`,
+# `assertSetEqual`, `assertMultiLineEqual`); those call `assertSequenceEqual`
+# and `assertIsInstance`. A same-file class can bind any of them, so
+# condition two reads each as it reads the called name. The other five
+# methods look up nothing else when they pass.
+_REACHED = {
+    "assertEqual": frozenset({
+        "assertEqual", "_getAssertEqualityFunc", "_baseAssertEqual", "assertDictEqual", "assertListEqual",
+        "assertTupleEqual", "assertSetEqual", "assertMultiLineEqual", "assertSequenceEqual", "assertIsInstance",
+    }),
+}
+
+# Names a same-file class of the order must not bind, as for a helper method
+# (#306, `self_methods.Methods._resolve`): each lets the class answer a lookup
+# on, or a store into, the receiver with something its body does not say.
+_RECEIVER_HOOKS = frozenset({"__getattribute__", "__init_subclass__", "__setattr__"})
+
+
+def _proved_literal(node: ast.AST):
+    """A literal's value, or `_UNPROVED` when `literal_eval` refuses it (`-"a"`, `{[1]: 2}`)."""
+    if not _is_literal(node):
+        return _UNPROVED
+    try:
+        return ast.literal_eval(node)
+    except Exception:  # ValueError, TypeError, SyntaxError, RecursionError, MemoryError
+        return _UNPROVED
+
+
+def _holds_bytes(node: ast.AST) -> bool:
+    """Comparing bytes with str or int warns under `python -b` and raises under `-bb`."""
+    return any(isinstance(sub, ast.Constant) and isinstance(sub.value, bytes) for sub in ast.walk(node))
+
+
+def _proved_comparison(node: ast.Compare):
+    """A comparison between literals, every link evaluated, or `_UNPROVED`.
+
+    `is` and `is not` only with None on one side: None is one object in every
+    interpreter, so the answer does not depend on interning (R49).
+    """
+    operands = [node.left, *node.comparators]
+    values = [_proved_literal(operand) for operand in operands]
+    if any(value is _UNPROVED for value in values) or any(_holds_bytes(operand) for operand in operands):
+        return _UNPROVED
+    outcome = True
+    for op, left, right in zip(node.ops, values, values[1:]):
+        if isinstance(op, (ast.Is, ast.IsNot)):
+            if left is not None and right is not None:
+                return _UNPROVED
+            result = (left is right) == isinstance(op, ast.Is)
+        else:
+            compare = _CMP_OPS.get(type(op))
+            if compare is None:
+                return _UNPROVED
+            try:
+                result = bool(compare(left, right))  # type: ignore[operator]
+            except Exception:
+                return _UNPROVED
+        outcome = outcome and result
+    return outcome
+
+
+def _proved_value(node: ast.AST):
+    """The value of an `assert` test the narrow proof evaluates (R49), or `_UNPROVED`.
+
+    A literal; `not` before a literal; a comparison between literals; and
+    `and` or `or` over these. Every operand of `and` and `or` is evaluated
+    on its own, so a short circuit never hides one that raises or calls.
+    """
+    if _is_literal(node):
+        return _proved_literal(node)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        value = _proved_literal(node.operand)
+        return _UNPROVED if value is _UNPROVED else not value
+    if isinstance(node, ast.Compare):
+        return _proved_comparison(node)
+    if isinstance(node, ast.BoolOp):
+        values = [_proved_value(value) for value in node.values]
+        if any(value is _UNPROVED for value in values):
+            return _UNPROVED
+        # Python's own result: `or` stops at the first truthy operand, `and`
+        # at the first falsy one, and otherwise gives the last.
+        stops_on = isinstance(node.op, ast.Or)
+        return next((value for value in values[:-1] if bool(value) == stops_on), values[-1])
+    return _UNPROVED
+
+
+def _proved_unittest_call(call: ast.Call, testcase) -> bool:
+    """`<receiver>.<method>(...)` with literal operands that pass (R49).
+
+    Condition one: the call passes the method's operands and at most one
+    `msg`, by position or by keyword, and nothing else; any other argument
+    list raises TypeError. The operands are bound by `_unittest_operands`.
+    Unlike an `assert` message, `msg` is evaluated before the call, so it
+    must be a literal that `literal_eval` reads. Condition two, that the
+    receiver is the TestCase running the method, is `testcase(call)`.
+    """
+    func = call.func
+    if not (isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name)):
+        return False
+    predicate = _PROVED_UNITTEST.get(func.attr)
+    if predicate is None:
+        return False
+    names = _UNITTEST_OPERANDS[func.attr]
+    params = (*names, "msg")
+    if len(call.args) > len(params) or any(isinstance(arg, ast.Starred) for arg in call.args):
+        return False
+    given = list(params[:len(call.args)])
+    for keyword in call.keywords:
+        # A `**` argument has no name, so it is not in `params` either.
+        if keyword.arg not in params or keyword.arg in given:
+            return False
+        given.append(keyword.arg)
+    if not set(names) <= set(given):
+        return False
+    message = (call.args[len(names)] if len(call.args) > len(names)
+               else next((keyword.value for keyword in call.keywords if keyword.arg == "msg"), None))
+    if message is not None and _proved_literal(message) is _UNPROVED:
+        return False
+    operands = (_unittest_operands(func.attr, call) or [])[:len(names)]
+    values = [_proved_literal(operand) for operand in operands]
+    if len(values) != len(names) or any(value is _UNPROVED for value in values):
+        return False
+    if len(names) == 2 and any(_holds_bytes(operand) for operand in operands):
+        return False
+    try:
+        if not predicate(*values):
+            return False
+    except Exception:
+        return False
+    return testcase(call)
+
+
+_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+
+
+def _raises_in(handler: ast.ExceptHandler) -> bool:
+    return any(isinstance(sub, ast.Raise) for stmt in handler.body for sub in ast.walk(stmt))
+
+
+def _proved_to_pass(handler: ast.ExceptHandler, testcase) -> bool:
+    """Is every oracle in this handler proved to always pass (R49, condition three)?
+
+    It walks the handler as `_contains_oracle` does, except that it does not
+    enter an assertion's message, and every oracle it meets must be proved.
+    An `assert` passes when its test is proved truthy; its message runs
+    only when it fails, so the message is not read. One oracle the proof
+    cannot read keeps the handler inspection, as 431.Q2 ruled for `assert
+    str(e) == "y"`, `assert False`, `self.fail()`, `pytest.fail()` and
+    `assert e == e`. Reachability is not read (R66): an oracle under
+    `if False:` is read as any other.
+    """
+    stack: list[ast.AST] = list(handler.body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ast.Assert):
+            value = _proved_value(node.test)
+            if value is _UNPROVED or not value:
+                return False
+            continue
+        if _is_oracle_call(node):
+            if not _proved_unittest_call(node, testcase):
+                return False
+            continue
+        stack.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, _SCOPES))
+    return True
+
+
+def _handler_methods(tree: ast.Module) -> dict[int, tuple[ast.ClassDef, ast.AST]]:
+    """id(handler) -> (class, method) for each handler that a method of a
+    top-level class runs itself, outside any nested def, lambda or class."""
+    found: dict[int, tuple[ast.ClassDef, ast.AST]] = {}
+    for cls in tree.body:
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        for function in cls.body:
+            if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            stack: list[ast.AST] = [node for node in function.body if not isinstance(node, _SCOPES)]
+            while stack:
+                node = stack.pop()
+                if isinstance(node, ast.ExceptHandler):
+                    found[id(node)] = (cls, function)
+                stack.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, _SCOPES))
+    return found
+
+
+def _testcase_method(call: ast.Call, cls: ast.ClassDef, function, methods: Methods, raw: str) -> bool:
+    """Is `call` the unittest method of the TestCase running `function` (R49, condition two)?
+
+    The receiver is the method's first positional parameter, which it never
+    rebinds, and the method is neither a staticmethod nor a classmethod. In
+    the class's local order (`Methods.order`), no same-file class binds the
+    method's name, and the first base the file does not define is spelled
+    with a name ending in `TestCase`: a class with no such base, as a
+    same-file mixin, may be collected by pytest, and there the call raises
+    AttributeError; and a base from another module that comes first may
+    define the name itself. As for a helper method (#306), the name is
+    unproved when the module stores it, stores an item into a `__dict__`,
+    sets a computed name on the receiver or on a class of the order, or a
+    class of the order binds `__getattribute__`, `__init_subclass__` or
+    `__setattr__` (`_RECEIVER_HOOKS`). `assertEqual` is read the same way
+    for every name it reaches (`_REACHED`), and is unproved when the module
+    registers a type-equality function.
+    """
+    if any(isinstance(d, ast.Name) and d.id in ("staticmethod", "classmethod") for d in function.decorator_list):
+        return False
+    name = call.func.value.id  # type: ignore[attr-defined]
+    attr = call.func.attr  # type: ignore[attr-defined]
+    reached = _REACHED.get(attr, frozenset({attr}))
+    if (name != receiver(function) or not reached.isdisjoint(methods.stored) or methods.dict_store
+            or name in methods.computed):
+        return False
+    if attr == "assertEqual" and ("addTypeEqualityFunc" in raw or "_type_equality_funcs" in raw):
+        return False
+    order = methods.order(cls)
+    if order is None:
+        return False
+    local = [entry for entry in order if not isinstance(entry, tuple)]
+    if any(entry.name in methods.computed or not _RECEIVER_HOOKS.isdisjoint(methods.binds(entry)) for entry in local):
+        return False
+    spelled = {ast.dump(base): _dotted(base) or "" for entry in local for base in entry.bases}
+    for entry in order:
+        if isinstance(entry, tuple):
+            return spelled.get(entry[1], "").rsplit(".", 1)[-1].endswith("TestCase")
+        if not reached.isdisjoint(methods.binds(entry)):
+            return False
+    return False
 
 
 def _param_row_disabled(node: ast.AST) -> bool:
@@ -3161,10 +3553,13 @@ def _collect_unit(
     origins: dict | None = None,
     instance: _Instance | None = None,
     resolved: dict | None = None,
+    producers: tuple[tuple[str, str, tuple[str, ...]], ...] = (),
 ) -> ParsedUnit:
     """`instance`: the class running a method unit, for the helper methods it
     reaches through `self` (#306); `resolved` collects each one it follows,
-    by its class-qualified name."""
+    by its class-qualified name. `producers`: the fixtures the unit requests
+    by parameter whose producer was read (`fixture_producers`, #471), whose
+    parameters an assertion records reading (`Assertion.fixture_reads`)."""
     assertions: list[Assertion] = []
     calls: set[str] = set()
     patches: set[tuple[str, str]] = set()
@@ -3215,6 +3610,54 @@ def _collect_unit(
     )
     vacuous = _vacuous_bound_asserts(func)
 
+    # The parameters naming a fixture whose producer was read (#471), the
+    # nodes inside the unit's nested scopes, whose names may be another
+    # scope's, and the unit's assignments as `fixture_reads` follows them:
+    # worked out only for a unit that has such a parameter.
+    fixture_params = frozenset(param for param, _callee, _modules in producers)
+    nested_nodes: set[int] | None = None
+    rebound: frozenset[str] = frozenset()
+    followed: dict[str, tuple[str, ...]] = {}
+
+    def fixture_reads(node: ast.AST, expression: ast.AST) -> tuple[str, ...]:
+        """The fixture parameters assertion `node` of the unit's own body reads in `expression` (471 Q3).
+
+        Directly, or through the unit's own assignments (`_resolve_through`):
+        not one made inside a nested def, class or lambda, and less the names
+        an assigned value binds in a lambda or comprehension of its own
+        (`_fixture_read_bindings`, D-155 reading 3). A parameter the body binds
+        again holds another value there, and is not counted: one the binding
+        map records (`=`, augmented, annotated or walrus), and one bound any
+        other way in the unit's own scope (`_fixture_binders`: a `for` or
+        comprehension target, `with ... as`, `except ... as`, `del`, an
+        import, `global` or `nonlocal`, a match capture, a nested def or class
+        of that name). A name inside a lambda or a comprehension of the
+        assertion that binds it is not read, nor followed (`assertion_names`);
+        a parameter all of whose occurrences there are such names is not
+        counted, even when a name the assertion reads leads to it, which errs
+        toward no evidence.
+        """
+        nonlocal nested_nodes, rebound, followed
+        if not fixture_params:
+            return ()
+        if nested_nodes is None:
+            nested_nodes = {
+                id(inner)
+                for scope in _walk(func)
+                if scope is not func
+                and isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
+                for inner in ast.walk(scope)
+            }
+            rebound = frozenset(param for param in fixture_params if _fixture_binders(func, param))
+            followed = _fixture_read_bindings(func, nested_nodes, _refs_memo)
+        if id(node) in nested_nodes:
+            return ()
+        read, shadowed = assertion_names(expression)
+        return tuple(sorted(
+            name for name in _resolve_through(tuple(sorted(read)), followed)
+            if name in fixture_params and name not in bindings and name not in rebound and name not in shadowed
+        ))
+
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
     # helper's assertions are this unit's oracle, a helper's `except` is not
     # this unit's handler. Only the assertion set follows reachability.
@@ -3240,6 +3683,21 @@ def _collect_unit(
     helper_calls: list[ast.Call] = []
     # Calls through the instance that run, for the helper methods they reach (#306).
     method_calls: list[ast.Call] = []
+    # The subject a bare local name stands for (#434), worked out per unit
+    # only once an assertion checks a name the unit binds.
+    plain_names: frozenset[str] | None = None
+    own_scope: frozenset[int] | None = None
+
+    def resolved_subject(node: ast.AST, left: str | None) -> tuple[str, str] | None:
+        nonlocal plain_names, own_scope
+        if not left or not left.isidentifier() or left not in ordered_bindings:
+            return None
+        if plain_names is None:
+            plain_names = _plain_names(func, ordered_bindings)
+            own_scope = frozenset(map(id, _scope_nodes_cached(func, nodes_cache)))
+        if left not in plain_names or id(node) not in own_scope:
+            return None
+        return _resolved_subject(node, left, ordered_bindings)
 
     for node in _walk(func):
         if id(node) in dead:
@@ -3312,6 +3770,8 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
+                    resolved_subject=resolved_subject(node, c.left),
+                    fixture_reads=fixture_reads(node, node.test) if fixture_params else (),
                 )
             )
             counter += 1
@@ -3381,6 +3841,8 @@ def _collect_unit(
                         trivial=c.trivial,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
+                        resolved_subject=resolved_subject(node, c.left),
+                        fixture_reads=fixture_reads(node, node) if fixture_params else (),
                     )
                 )
                 counter += 1
@@ -3552,6 +4014,7 @@ def _collect_unit(
             for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
             if a.arg not in ("self", "cls")
         ),
+        fixture_producers=producers,
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -4146,6 +4609,33 @@ def _parse_python(
             scopes = scopes + (class_setup[key],)
         return scopes
 
+    # The producer of each fixture a unit requests by parameter (#471), read
+    # from the module, the classes enclosing the unit and the conftest chain.
+    # Only a unit that takes a parameter reads any, and each body is read
+    # once per module.
+    producer_scopes: dict[int, ProducerScope] = {}
+
+    def fixture_producers(func, classes: tuple[ast.ClassDef, ...]) -> tuple:
+        if not collect_tests or conftest:
+            return ()
+        args = func.args
+        if not (args.posonlyargs or args.args or args.kwonlyargs):
+            return ()
+        module_scope = producer_scopes.get(id(tree))
+        if module_scope is None:
+            module_scope = producer_scopes[id(tree)] = ProducerScope(
+                tree.body, module_bindings(tree), import_modules(tree))
+        scopes = [module_scope]
+        for cls in classes:
+            scope = producer_scopes.get(id(cls))
+            if scope is None:
+                scope = producer_scopes[id(cls)] = ProducerScope(
+                    cls.body, module_scope.bindings, module_scope.modules, in_class=True,
+                    marks=cls.decorator_list, bases=cls.bases, keywords=cls.keywords,
+                )
+            scopes.append(scope)
+        return unit_producers(scopes, func, method=bool(classes), chain=chain)
+
     own_marks: list[OwnMarks] = []
 
     def setup_markers(func, scopes: tuple[SetupScope, ...], classes: tuple[ast.ClassDef, ...] = ()) -> list[Marker]:
@@ -4304,6 +4794,7 @@ def _parse_python(
                         attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
                         instance=instance_of(owner if owner is not None else classes[-1]) if classes else None,
                         resolved=resolved_methods,
+                        producers=fixture_producers(child, classes),
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -4391,6 +4882,7 @@ def _parse_python(
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
                 helpers=helper_outcomes, origins=marker_origins, instance=instance_of(cls),
                 resolved=resolved_methods,
+                producers=fixture_producers(method, (owner, cls)),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
@@ -4404,6 +4896,18 @@ def _parse_python(
         seen_names[unit.qualname] = n + 1
         if n:
             unit.qualname = f"{unit.qualname}#{n + 1}"
+
+    # The class and method each handler runs in, read the first time a
+    # handler's unittest call reaches condition two of ruling 496 (R49).
+    handler_scopes: list[dict[int, tuple[ast.ClassDef, ast.AST]]] = []
+
+    def testcase_of(handler: ast.ExceptHandler):
+        def testcase(call: ast.Call) -> bool:
+            if not handler_scopes:
+                handler_scopes.append(_handler_methods(tree))
+            scope = handler_scopes[0].get(id(handler))
+            return scope is not None and _testcase_method(call, *scope, methods_of(), raw)
+        return testcase
 
     broad: list[str] = []
     swallowing: list[str] = []
@@ -4434,8 +4938,14 @@ def _parse_python(
                     continue
                 seg = _norm((text.seg(handler) or "except:").split("\n")[0])
                 broad.append(seg)
-                if guards_oracle and _swallows(handler):
+                if not guards_oracle:
+                    continue
+                if _swallows(handler):
                     swallowing.append(seg)
+                elif not _raises_in(handler) and _proved_to_pass(handler, testcase_of(handler)):
+                    # Its oracles cannot fail, so it swallows too, under its
+                    # own text (#496, R50).
+                    swallowing.append(seg + _ALWAYS_PASSING)
         elif isinstance(node, (ast.With, ast.AsyncWith)):
             # The with-context twins of `except AssertionError`:
             # `suppress(...)` swallows a failed assert, the raises family

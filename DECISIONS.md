@@ -12865,8 +12865,10 @@ whenever the fallback is used, the case-mismatched path handled too,
 `doctor` on its own 5-second timeout, a test to confirm whether
 KNOWN-ISSUES row 21 overstates, and P3. The details under the issue's
 "Direction" are the agent's recommendation within that direction, for
-review in this PR. D-151 to D-157 are reserved for other open pull
-requests, so this entry is D-158; the number may change at merge.
+review in this PR. D-151 to D-163 were assigned to pull requests
+prepared in parallel. When integration batch 2 merged, all of them were
+on main except D-153, which is unused, and D-154, which is pending in
+#511. This entry is D-158.
 
 #500 reports, from reading the code at `6d78d8dd`, that at the root
 `check --task` reads the contract from the base tree at
@@ -13059,9 +13061,10 @@ and a pool sweep; "This issue stays open for (b)." On 2026-10-19
 (「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
 the reply was a button whose text the agent wrote), R57, R58 and R64
 completed (c), replaced that last sentence and narrowed that ruling's
-item 2 (item 3 below). D-151 is the last entry on
-main, D-153 is unused, and D-152 and D-154 to D-159 are assigned to open
-pull requests, so this entry is D-160.
+item 2 (item 3 below). D-151 to D-163 were assigned to
+pull requests prepared in parallel. When integration batch 2 merged, all
+of them were on main except D-153, which is unused, and D-154, which is
+pending in #511. This entry is D-160.
 
 #468 reports that undici's `test/web-platform-tests/expectation.json`,
 the record its Web Platform Tests runner reads, can mark a regressed
@@ -13210,8 +13213,9 @@ part of the v0.9.0 release preparation and has no issue: a tag-push run
 requires `[baseline]` to be the highest other `v*` tag merged into the
 tagged commit (`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which
 for a v0.9.0 tag is v0.8.0.
-D-151 to D-161 (D-153 is unused) are assigned to pull requests prepared in
-parallel, so this entry is D-162.
+D-151 to D-163 were assigned to pull requests prepared in parallel. When
+integration batch 2 merged, all of them were on main except D-153, which
+is unused, and D-154, which is pending in #511. This entry is D-162.
 
 After the rotation, pull requests, `main` and the next tag are compared
 with v0.8.0 instead of v0.7.0.
@@ -13357,3 +13361,1983 @@ read-only claims review, the note that D-153 is unused and the sentence
 on R56's cited reason in the first paragraph, and narrows A33's commit
 reference above to its sentence; these correct facts and change no
 decision, and no approval item names them.
+
+## D-152 (2026-10-19): a JS/TS `.each`/`.for` table is one test unit whose rows are read (#428)
+
+Ruling 428 (owner, 2026-10-14, 「P1 全部照建議」, "all P1 as recommended";
+#428 issuecomment-6170355202, stating each decision in full): Q1 (a),
+Q1b (iii), Q1c (i), Q2a (a), Q2b (a) in this round, Q2c (b), Q2d (a),
+Q3 (a), Q4 (a). D-151 to D-163 were assigned to pull requests prepared in
+parallel. When integration batch 2 merged, all of them were on main
+except D-153, which is unused, and D-154, which is pending in #511. This
+entry is D-152.
+
+#428 reports that the JS/TS frontend marked every `test.each`, `it.each`
+and `test.for` declaration as a table and kept it out of the unit scan
+(`frontend.py:1321` and `:2131` at 30cfb8bd, `not d.table`). No unit-based
+detector compared a table on either side, so a weakened or deleted
+assertion in one, an edited or deleted row, `.skip.each` and a deleted
+table all passed with zero findings, in v0.7.0 and v0.8.0 alike; the
+unread `expect` calls were only coverage notices.
+
+Implementation, lines at this PR:
+
+- Q1 (a), `frontends/javascript/frontend.py`. A `test`/`it` table, in the
+  call and the tagged-template form, with chained modifiers, is one unit
+  (`parse_javascript`, `:2774`), named by its title as written (the
+  literal's text, `add(%i, %i) = %i`), its callback scanned as a test's.
+  `_declaration` keeps what the table passes (`_Declaration.rows` and
+  `.passes_row`, `:1103`), and `_read_table` (`:2725`) turns its rows into
+  `param_cases` and one `ParamTable` (`ir/model.py`) whose cells are
+  canonical (`_table_cell`, `:2338`).
+- Q1b (iii). `_table_rows` (`:2607`) counts the rows of an inline array
+  literal with no spread or hole, of a tagged template whose cells divide
+  by its headings (`_template_rows`, `:2460`), and of a same-file `const`
+  one hop away (`_const_rows`, `:2558`, reading the mentions and template
+  words `_ConstReads` indexes once per file). Any other table sets the new
+  optional `UnitSide.param_rows_unknown` (`ir/model.py:229`), which only
+  this frontend sets; `param_cases` is then None and `param_rows` empty.
+- Q2a (a), `ir/diffalign.py:303-317`, the count rule. Between two tables
+  it stays silent when either side is unknown. A plain test (no count, not
+  unknown) paired with an unknown table, or with a table of no rows, is
+  one item lost. The second arm is gated on the file not being Python: a
+  Python test with no count can still be parametrized by a hook, which is
+  why Python's own rule needs its two-sided proof
+  (`frontends/python/empty_parameter_sets.py`). A table of N rows paired
+  with a plain test is N - 1 lost, as in Python, and row identity
+  (`_param_rows_lost`) reads JS tables unchanged.
+- Q2b (a). Each table assertion records in `right_depends_on` the column
+  ids its expected operand (`operand_source`) names directly, and in
+  `left_names` those its subject names (`_columns_read`, `:2701`), so the
+  language-neutral rules read the cells as they read a `parametrize`
+  table's, with no detector change: EXPECTATION_DEFINITION_CHANGED's
+  row-keyed comparison, SUBJECT_INPUT_CHANGED's literal-table arm (Q2d),
+  EXPECTED_VALUE_DERIVED, ASSERT_SUBSTITUTED's reorientation check and
+  TEST_PATCHES' name set. A plain JS assertion still records neither.
+- `detectors/test_disabled.py:193-200`: the finding for a plain test
+  wrapped in a table says `(1 -> 0)` or `(1 -> unknown)`, and its evidence
+  `parametrize cases: unknown`, instead of printing None. Only that
+  pairing reaches these lines with no count on the before side; the rule,
+  its key and its other messages are unchanged. It is the round's one
+  detector change, and Q2b says the language-neutral detectors run
+  unchanged, so it was put to the owner, who kept it (below). Without it
+  the message would read `(None -> 0)` for a table of no rows and
+  `(None -> 1)` for an unknown one, whose evidence would be
+  `parametrize cases: None`.
+- Q1c (i), Q3 (a): alignment, D5 and `gating.py` are unchanged. Q2c (b):
+  `describe.each` is a block, as before; its rows are not read.
+
+Readings the ruling leaves to the implementation; the owner approved all
+eight as written (below):
+
+1. **Column ids.** `#0`, `#1`, ... by an array row's position; `#key` by
+   an object row's key or a template's heading. A key or heading must be a
+   name (quoted or not); otherwise the rows are counted and no columns are
+   read. A name never starts with a digit, so the two spellings cannot
+   meet, and no identifier holds a `#`.
+2. **Which rows a runner spreads** (`_row_table`, `:2422`), as the Jest,
+   Vitest and Bun documentation states it (not measured). When every row
+   is an array literal, `.each` spreads it into the parameters: positional
+   columns. Once some row is certainly no array (a number, string,
+   Boolean, null, template or object literal), every row is passed whole:
+   keyed columns when every row is an object literal with the same name
+   keys, else one column `#0` holding each row. When every row may be an
+   array (names, calls), or array rows differ in width, the rows are
+   counted and no columns are read. So `[1, 2]` and `[[1], [2]]` are one
+   table.
+3. **Canonical cells.** A Number or a quoted string is its value as
+   `right_value` records it (`5`, `5.0` and `0x5` are one cell, and so are
+   `'a'` and `"a"`); anything else, `true`, `false` and `null` included,
+   is its text with comments, wrapping parentheses and formatting taken
+   out (`operand_text`, `comparable_operand`). D-060's arm reads a row
+   only when every cell parses as a Python literal, so it skips a row that
+   holds `true`, `null`, a template, a name or an object with an unquoted
+   key, as the recommendation intends; an array of numbers or strings and
+   an object whose keys are quoted (`{ "a" : 1 }`) parse as Python's and
+   are read.
+4. **The template heading** is Jest's reading: the static text before the
+   first substitution, with its whitespace taken out, split at `|`. Vitest
+   reads the template's first line, which is the same for a heading on its
+   own line.
+5. **The one-hop `const`** (`_const_rows`). "Bound once" is one `const`
+   declaration of the name in the scope the table argument reads, whose
+   initializer is the array literal (TypeScript's `as const` after it read
+   through), in a statement that ends there, and not `export`ed. "Never
+   reassigned or mutated, and used only as a table argument" is read as
+   one rule: every other token that reads that binding must be the whole
+   argument of a table call (`test`, `it` or `describe`). So a member
+   (`CASES.push`, `CASES.length = 0`), a call argument, a spread, an
+   object key and a TypeScript `typeof` all make the rows unknown, and so
+   does any mention of the name inside a template literal, whose
+   substitutions the token stream does not see. A destructured `const` is
+   not followed, and of a `const` that declares several names only the
+   first is (`const CASES = [[1, 2]], X = 1;` follows `CASES`; in
+   `const X = 1, CASES = [[1, 2]];` the rows are unknown).
+6. **Plain to unknown.** Q2a's "a plain test that pairs with a table of
+   ... unknown rows" is read through the count rule, so Q1b's "stays
+   silent when either side is unknown" is read for a pair of tables, as
+   the recommendation's text has it. An unknown table that becomes a plain
+   test, and a table of no rows that becomes one, lose nothing countable
+   and stay silent.
+7. **Q2b's "names directly".** A name in the expected operand or the
+   subject counts only where it reads the callback's own parameter at the
+   assertion: not a property, not a name that a nested block, a `var` or a
+   function around the assertion binds again, and not a parameter a write
+   may have reached (`Bindings._written`). Every name is resolved at the
+   assertion's start, so a name that a function inside the operand binds
+   (`toEqual(rows.map((sum) => sum))`) is read as the parameter it
+   shadows. `.each` maps parameter i to array column i; `.for` passes the
+   row whole, so its first parameter's array pattern takes the columns by
+   position; an object pattern takes object and template columns by key
+   (`({ expected: want })` reads `#expected`); a one-column table gives its
+   cell to the first plain parameter. A member, an index and a local
+   computed from a cell are not followed, and a table whose columns are
+   unknown records none. The expected operand is the one `operand_source`
+   records: the expected value or bound of an equality, ordering or
+   closeness check, in Jest's, chai's and node's spellings, and a
+   hand-rolled tolerance's centre. The argument of `toContain(c)`,
+   `toMatch(re)` or chai's `include` and `match` records no column, so a
+   cell rewritten under it passes (row 157, residual 5). A parameter list
+   or `.for` array pattern whose commas a type argument holds
+   (`m: Map<string, number>`) gives no column at all (`_splits_cleanly`,
+   `:1439`): split at those commas, it put later parameters on other
+   columns, so a rewritten expected cell read as a shared producer and
+   went unreported.
+8. **The test context.** A table callback's first parameter is its row,
+   so `t.skip()` on it is no imperative skip. `.for` passes the context
+   second, and `.each` none (`_callback_receivers`, `:1400`).
+
+**Sequencing with #293 (Q2b).** The ruling allows either order: land
+#428 after #293, or record on #293 that #428 is its tables round. The
+second is done: the owner's consolidated ruling of 2026-10-19 (R60, #293
+issuecomment-6261346913) closed #293 as not planned, moved it to #504
+until after 1.0, and noted on it that #428 is its table round. #293's
+2026-10-08 ruling still applies when it is scheduled; its JS reading of a
+binding or a module constant then has to leave a column id to this
+reading.
+
+**Q4.** The ruling, made when v0.7.0 was the latest release, orders a
+docs-only PR first: a sentence in README "Know the limits", a row in
+`docs/KNOWN-ISSUES-v0.7.0.md` that the owner approves in that PR, and a
+rewording of `docs/stability.md:236-238`. No such PR was opened. v0.8.0,
+released since, carries the row in `docs/KNOWN-ISSUES-v0.8.0.md` (from its
+release preparation, `8a17a80e`). This PR adds the v0.7.0 row, at the end
+of the table in `docs/KNOWN-ISSUES-v0.7.0.md`. It copies v0.8.0's row and
+adds two sentences: the report came on 2026-10-14, after the release, so
+the acceptance at the foot of that page does not cover it; and v0.8.0 has
+the same gap.
+The README sentence and the `docs/stability.md` rewording were not made
+either; this PR makes both, worded for main after the fix and naming the
+v0.8.0 gap. The owner chose to keep them and the row in this PR, with no
+separate docs-only PR (below).
+
+**Costs, by reading; the sweep counts them.** New blocks in a test-only
+change: an expected cell corrected (as in Python); an input cell changed
+under the same answer (SUBJECT_INPUT_CHANGED, Q2d); a row deleted or
+deduplicated; an assertion weakened or deleted in a table; a whole table
+deleted, unless D2 or D10 credits it; and what other rules now report on
+table units (stand-ins, #363's catches, focus and skips,
+EXPECTED_VALUE_DERIVED). JS pairs by span order (Q1c (i)), so these
+transitions, which pass on main, read as tests rewritten or lost: a table
+expanded into plain tests; `test.each` into `describe.each` around one
+test (N rows read as N - 1 deleted, since the nested unit carries no
+rows); a table rewritten as a loop in one test; a table moved to another
+file while the file gains a plain test; a plain test renamed beside a new
+table. Renaming only the parameter an expected value reads (`sum` to
+`want`) is EXPECTED_VALUE_CHANGED, as renaming such a local is in a plain
+JS test (#198); renaming every parameter, and the assertion with them, is
+no finding (`js_table_parameters_renamed_neg`). A plain test honestly
+wrapped in an imported or computed table blocks, as it already does on
+main by reading the old unit as gone. Folding plain tests into a table
+still blocks (`js_table_fold_altered_value_pos`, row 92).
+
+Two kinds of block on main can turn into a pass. One is intended: a plain
+test wrapped, its assertion text unchanged, in a table whose rows are
+counted and not zero. The other is a cost, found in review: a plain test
+deleted in a file that gains a counted table pairs with that table in span
+order, so it is no longer read as gone, and the change passes when
+nothing on the pair reports. That happens when the deleted test asserted
+nothing, or asserted `toBeTruthy()` on a call whose literal argument the
+table makes a column: ASSERT_SUBSTITUTED sees the same unrecorded
+expectation on both sides, and SUBJECT_INPUT_CHANGED cannot resolve the
+column to a literal, where the plain spelling of the same edit gives it
+two literals and blocks. On main the table was no unit, so the deleted
+test was TEST_DISABLED. A deleted plain test already pairs with a new
+plain test this way on main; keeping span-order pairing (Q1c (i)) makes
+tables partners too. Row 157 and `docs/KNOWN-ISSUES-next.md` state it; it
+is not pinned. The owner accepted it as a disclosed cost, for the sweep
+and R29's lists to count (below).
+
+**Residuals** are listed in THREATMODEL row 157 and
+`docs/KNOWN-ISSUES-next.md`. The two P2 follow-ups the ruling names, a JS
+fold projection with kind-aware pairing (Q3 (b) with Q1c (ii)) and
+`describe.each` rows (Q2c), are not filed as issues: R47 of the owner's
+consolidated ruling of 2026-10-19 (#428 issuecomment-6261646666) records
+them on #428 and in KNOWN-ISSUES instead (the `describe.each` rows also as
+row 108's residual), and an issue opens when a fix is scheduled. That
+replaces the ruling's "Deferred to a P2 follow-up issue" (Q2c) and
+"becomes a P2 follow-up" (Q3). Two shapes the review found stay residuals,
+with no issue, as the owner chose (below): the TypeScript
+`test.each<Row>(...)` form, which is no unit (row 157, residual 10), and
+the argument of `toContain` or `toMatch`, which records no column
+(residual 5).
+
+**D-073.** This supersedes, in D-073 reading 1, the clause that the unit
+scan does not read a `.each` table: a `test`/`it` table is now a scanned
+unit. D-073 itself, and what declares a test for E7, are unchanged.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. The one fixture with a table,
+`js_describe_restructure_neg`, uses `describe.each`, which stays a block,
+and stays `[]`. The inline sources with a table hold as written:
+`tests/test_js_focus_rules.py:176` (`plain` stays stopped; the focused
+table is a unit now, and runs), `tests/test_js_liveness.py:47` and `:55`
+(block tables, one unit), `:134` (`computes` is still stopped; the table
+unit is another key), `tests/test_scope_table_role.py:58` (both sides are
+one unit) and `:118` (`declares_tests` stays true); only the comment at
+`tests/test_scope_table_role.py:55-57` changed. Python's `param_*` and
+`expectation_parametrize_*` fixtures are untouched: the flag is never set
+there and the zero-row arm is not Python's. `tests/test_duplicate_units.py`
+pins the span-order pairing this round keeps. Nothing under `tests/gates`
+holds a table. If CI shows an existing expectation moving, the round stops
+and asks.
+
+**Fingerprints and IR.** No fingerprint scheme changes. A table unit's
+findings are keyed by its title template, so two tables with one title
+share keys (row 157, residual 8). `--emit-ir` gains `param_rows_unknown`
+on every unit side, false outside JS tables; IR_VERSION stays 2. JS table
+units now carry `param_cases`, `param_rows`, and column ids in their
+assertions' `right_depends_on` and `left_names`.
+
+**Measurement.** Not measured yet. Under the owner's consolidated ruling
+of 2026-10-19 (#419 issuecomment-6261642679), this fix merges before the
+combined sweep's manifest is frozen and is measured in that one run (R1,
+R2), where its merge gets its own before/after pair in the chain. The
+issue-acceptance batches run on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546) after R5's two approval steps, and the
+v0.8.0-to-RC comparisons that gate the tag run on the EC pool (R3, R29).
+What this round asks of that run, for the owner's approval with the
+manifest: the standard set (1,800 commits) and D-088's sets (895 and 368)
+identical across the pair, since `ir/diffalign.py`, `ir/model.py` and
+`detectors/test_disabled.py` are language-neutral code; and a JS target
+set, built as D-118 builds one, of the non-merge commits in the 13
+in-sample JS histories whose test diff touches `.each`, `.for(` or a
+tagged-template table, outside #212's selection. Acceptance: zero verdict
+moves on format-only or rename-only table edits; every block-to-pass
+listed, where the two kinds above are predicted and any other kind stops
+the round to ask; every new block with its diff, labelled cheat or false
+positive and counted by class; and the number of degraded JS files. Also
+the verdict gate (T1 and T3), the perf gate, and Jest, Vitest and Bun run
+on an empty table, recorded here. If transitions and mispairings dominate
+the false positives, the round stops to ask whether to take Q1c (ii). The
+v0.8.0-to-RC JS replay (#212) and R29's lists, which put every
+block-to-pass before the owner, measure the cost before a release ships
+it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run, sweep or runner was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; CI runs the tests. Added: fourteen `.gwcase` fixtures
+(nine pinning row 157: `js_table_weakened_pos`,
+`js_table_assertion_deleted_pos`, `js_table_deleted_pos`,
+`js_table_row_deleted_pos`, `js_table_expected_cell_rewritten_pos`,
+`js_table_input_cell_rewritten_pos`, `js_table_skip_added_pos`,
+`js_test_wrapped_in_empty_table_pos` and
+`js_test_wrapped_in_unknown_table_pos`; the fold cost
+`js_table_fold_altered_value_pos`; the controls `js_table_row_added_neg`,
+`js_table_reformatted_neg`, `js_table_keyed_rows_reordered_neg` and
+`js_table_parameters_renamed_neg`), labels the owner approved, and 74
+collected items in `tests/test_issue428_js_tables.py`, counted from its
+parametrize lists. By reading, the documented test count becomes 19738
+(19650 + 74 + 14); CI's collection checks it. A review of the branch
+before the pull request opened found the new block-to-pass above; two
+unread shapes row 157 now lists (a matcher that records no expected
+operand, and the TypeScript `test.each<Row>(...)` form); a comma inside a
+type argument that put parameters on the wrong columns (fixed by
+`_splits_cleanly`, one item pins it); the file rescanned for every
+bare-name table (fixed by `_ConstReads`, not pinned by a timing test); and
+three readings that said more or less than the code does (3, 5 and 7,
+corrected above). Each finding was checked against the code before use.
+
+The agent wrote this entry in #428's fix PR #525. The owner approved it
+on 2026-10-19: 「PR 核可清單全部照建議」, "the PR approval list, all as
+recommended". The reply was a button whose text the assistant wrote. It
+answers the agent's list of that day, which asked, for this PR, items A60
+to A66, each with a recommended answer that the reply adopts: the wording
+of the SPEC (3a306370, 47380c24), THREATMODEL (62ce4c85, 48f021a9, with
+the hand edit of `benchmarks/FAILURES.md`) and D-152 (a1527e85, 9d1d2c0f)
+commits, as committed (A60); the labels of the fourteen `.gwcase`
+fixtures listed above (A61); the eight readings (A62); keeping the
+`detectors/test_disabled.py` change, which touches only the message and
+evidence text, as a departure from Q2b (A63); for Q4, keeping the README
+sentence, the `docs/stability.md` rewording and the three
+KNOWN-ISSUES-next rows in this PR (e9e1cfc4, 2a213371), approving them,
+and adding the v0.7.0 row here as a copy of v0.8.0's (A64); accepting
+the new block-to-pass as a disclosed cost, not pinned, for the sweep and
+R29's lists to count (A65); and keeping the TypeScript
+`test.each<Row>(...)` form and the `toContain`/`toMatch` argument as row
+157's residuals 10 and 5, with no issue (A66). The v0.7.0 row
+(da7f5d55) was written after the reply. Its copy of v0.8.0's row is what
+A64 approved; its two added sentences, on the report's date and on
+v0.8.0, were not in the list the owner answered.
+
+## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
+
+Ruling 471 (owner, 2026-10-16, issuecomment-6230178131, 「#468、#471
+都照建議。」, "#468 and #471 both as recommended"), adopting the analysis in
+issuecomment-6229395341: Q1 (c), Q2 (a), Q3 (b), Q4 (a), and Q5 (b) as a
+separate issue (#473, no label change here). The fix follows the analysis's
+§4. The three cases built from the reporter's unit names were approved on
+2026-10-18 (「19 項全部照建議做（價值判斷的題也照你的傾向）」, "all as
+recommended, value judgements included", quoted in issuecomment-6248629600).
+D-151 to D-163 were assigned to pull requests prepared in parallel. When
+integration batch 2 merged, all of them were on main except D-153, which
+is unused, and D-154, which is pending in #511. This entry is D-155.
+
+#471 (talhayme, punt-labs/langlearn-tts `b4bc4e63`): a production default
+changed from `"rachel"` to `"matilda"`, and the tests that get the provider
+from a conftest fixture followed it. Repair evidence credits a symbol the
+test calls (SPEC §5 clause 1), and a call is one written in the unit's own
+body, so the tests called nothing that builds the provider:
+`EXPECTED_VALUE_HARDCODED` blocked with NO_PROD_CHANGE_IN_DIFF three times.
+The same tests calling `ElevenLabsProvider()` themselves passed.
+
+Implementation (lines at this PR):
+
+- `frontends/python/fixture_producers.py` (new). `producer` (`:222-275`):
+  the fixture's only `return <value>`, or in a generator its only
+  `yield <value>`, outside nested defs, classes and lambdas, and under no
+  branch, loop, `match`, or `try` handler, `else` or `finally`
+  (`_unconditional`, `:196-209`); the value is a call with a dotted callee,
+  or a name, not a parameter, bound exactly once in the fixture's scope by
+  a plain `=` or annotated `=` of such a call (`_binders`, `:89-124`;
+  `_assigned_value`, `:212-219`). The callee's root must be resolved by
+  `import_modules` (`:53-86`) of the fixture's file and not be bound by the
+  fixture itself. `ProducerScope` (`:278-317`) reads one module or class
+  body as `SetupScope` reads its fixtures; `unit_producers` (`:320-351`)
+  resolves each fixture the unit requests by parameter.
+- `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
+  `conftest_level` (`:977-980`) through the conftest's own imports.
+- `frontend`: `UnitSide.fixture_producers` per side (`fixture_producers`,
+  `:4258-4283`, passed at `:4443` and `:4531`), and
+  `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
+  `:3276-3322`, used at `:3421` and `:3491`, with
+  `fixture_producers.assertion_names`, `:130-166`, and
+  `_fixture_read_bindings`, `:1536-1580`, with
+  `fixture_producers.nested_bound_names`, `:169-193`). Only a unit that
+  takes a parameter reads any. `ir/model.py:130-137`, `:259-268`.
+- `gating.py`, in its own commit (da116dd1), as the analysis's §4.5 has
+  it; the owner approved it on 2026-10-19, as D-048 and D-141 approved
+  policy code:
+  `_finding_assertion` (`:331-358`) finds the before half of the assertion a
+  finding cites, by span and text, through the pair when the finding cites
+  only its after side (EXPECTED_VALUE_HARDCODED); `_fixture_producer_evidence`
+  (`:361-384`) matches the producer of each fixture that assertion reads
+  with `_symbol_match` (`:166-213`, D-046) against the modules its root's
+  import names; `_repair_evidence` checks it last (`:442-445`), and
+  `apply_gates` passes no assertion for TEST_DISABLED (`:875`).
+
+What the ruling's four answers become:
+
+- Q1 (c). Only the producer counts, not the other calls in the fixture's
+  body, the producer's own arguments included. "Resolved through the
+  fixture file's own imports" is read as: the root is a name whose final
+  top-level binding in that file is an `import` or an absolute
+  `from ... import`, after any star import, and the modules that statement
+  names are the only imports the D-046 match reads. A root the fixture
+  binds (`return app.test_client()`, with `app` a parameter), a root under a
+  top-level `if` or `try`, a relative import and a same-file def give no
+  producer.
+- Q2 (a). One level, for an argument without a default (`request` and the
+  instance excepted), resolved as pytest resolves it: the innermost class,
+  enclosing classes, the module, then each `conftest.py` above it, nearest
+  first, the `<plugin-configuration>` context passing through (#358). A
+  name a `parametrize` supplies directly runs no fixture; `indirect` still
+  runs it. The fixtures a fixture requests count nothing, and so do an
+  `autouse` fixture and a `usefixtures` mark the test does not also request
+  by parameter. One it requests by parameter is a fixture like any other,
+  as the ruling's "requests by parameter" reads
+  (`test_an_autouse_fixture_the_test_also_requests_by_parameter_has_a_producer`).
+- Q3 (b). The finding's assertion is its before-side one: the assertion it
+  cites on its before side (for ASSERT_REMOVED, the removed one), or the
+  before half of the pair whose after side it cites. It reads the parameter
+  directly or through the unit's own assignments (`_resolve_through`,
+  `frontend.py:1510-1533`, whose unit-level map joins every definition of a
+  name: the analysis's stated residual). The fixture is resolved from the
+  module and the conftest chain as they were before the diff
+  (`fixture_producer_added_in_diff_pos`), and a unit with no before side
+  takes nothing.
+- Q4 (a). Every oracle rule that takes symbol evidence, except
+  TEST_DISABLED (and TOLERANCE_LOOSENED in practice, the first departure
+  below); no PACKAGE_REPAIR (`hardcoded_package_only_pos`); classes and
+  factories alike as producers, matched directly (the second departure).
+  The TEST_DISABLED guard in `apply_gates`
+  (`:875`) is defensive today: no TEST_DISABLED finding cites an assertion
+  (a unit gone cites its unit's span, `detectors/test_disabled.py:96`; the
+  other shapes cite a marker or the unit's span on the after side), so
+  `_finding_assertion` finds none, and `fixture_producer_test_disabled_pos`
+  is a parity pin that blocks with or without the guard.
+  `test_the_test_disabled_guard_is_what_withholds_a_changed_producer` hands
+  every finding an assertion that reads the changed producer, and pins the
+  guard itself.
+
+Readings where the ruling is silent, each erring toward no evidence; the
+owner approved all four on 2026-10-19:
+
+1. Stricter than `_setup_reach` (`setup_skip_controls.py:1037-1093`) in two
+   places: at the test's own levels, a name bound another way or a star
+   import stops the lookup at that level, where `_setup_reach` looks past a
+   class to the module; and a class with a base other than `object`, or
+   with a keyword, stops it, since a base may define the fixture and
+   `SetupScope` reads only the class's own body. A same-file inherited test
+   is resolved from its collecting class, which has a base, so it takes a
+   producer only from a fixture that class defines.
+2. One value site: several `return` statements, a bare `yield`, a
+   `yield from`, an awaited call, a conditional expression, and a value
+   bound through `for`, `with ... as` or twice give no producer. The code
+   first committed did not hold to this, since one site under an `if`, a
+   loop or a `try` handler still gave a producer although the fixture may
+   return `None` (raised by GLM, verified by Claude); now the site must be
+   a statement of the fixture's body, or of a `with` or `try` body reached
+   from it, and any other gives no producer (`conditional-return`,
+   `bound-then-yielded-under-with`).
+3. An assertion records a read only when written in the unit's own body
+   outside a nested def, class or lambda. A parameter the body binds again
+   in any form is not counted: `=`, augmented, annotated or walrus (the
+   binding map), and a `for` or comprehension target, `with ... as`,
+   `except ... as`, `del`, an import, `global` or `nonlocal`, a match
+   capture, or a nested def or class of that name
+   (`fixture_producers._binders` on the unit's own scope, 1bf47526, raised
+   in review). One such binding drops the parameter for every assertion of
+   the unit, a comprehension target that only shadows it included. Names
+   bound by `for`, `with ... as` and `except ... as` are not followed as
+   intermediate bindings either, as the binding map does not record them.
+   The code first committed did not hold to this inside the assertion
+   itself, since a name a lambda there binds as its parameter still counted
+   as a read of the fixture (raised by GLM, verified by Claude); now a name
+   that a lambda's parameters or a comprehension's targets bind within the
+   assertion is no read, and a parameter all of whose occurrences there are
+   such names is not counted, even through a local the assertion reads
+   (`assertion_names`; `lambda-parameter-of-that-name`). That fix did not
+   reach the unit's own assignments, where
+   `result = (lambda ledger: ledger.fee)(make())` then `assert result == 5`
+   still read `ledger` (found in the round-2 review, fixed under C2): now a
+   name that a lambda's parameters or a comprehension's targets bind within
+   an assigned value is not followed from it, even where it also occurs
+   outside them, erring toward no evidence (`_fixture_read_bindings`;
+   `lambda-parameter-of-that-name-in-an-assignment`). Nor is an assignment
+   or walrus inside a nested def, class or lambda followed, since it binds
+   another scope's name: a walrus in the assigned lambda
+   (`(lambda ledger: (fee := ledger.fee))(make())`) and a nested def's own
+   `fee = ledger.fee` still led to the fixture until the review of the
+   round-3 commits found them. A walrus such a def or lambda evaluates in
+   the unit's scope, in a default or a decorator, is left out with them,
+   erring toward no evidence. These two shapes, and a comprehension in an
+   assigned value (`vals = [fee for fee in rows]` after
+   `fee = ledger.fee`), have no pin of their own, as C2 approved one.
+4. The finding's assertion is matched by span and text. A finding whose
+   evidence is not one of its unit's assertions takes nothing.
+
+**Two departures from the ruling, which the owner kept on 2026-10-19.**
+
+1. TOLERANCE_LOOSENED takes symbol evidence, but its finding cites its
+   unit's span (`detectors/tolerance_loosened.py:213-214`), not an
+   assertion, so it never has a before-side assertion and takes no
+   producer: Q4 (a) as implemented covers it in name only. The alternatives
+   were to recover the pair in gating from the unit's tolerance changes
+   (the detector's `_sources`, duplicated), or to cite the pair's spans in
+   the finding, which changes its reported evidence. The owner took
+   neither: he accepted the limit as disclosed in row 158 and
+   KNOWN-ISSUES-next, with no issue opened.
+2. Neither the one-hop callers route (SPEC §5 clause 2) nor a helper hop is
+   followed from a producer. A factory producer that is unchanged and calls
+   a changed symbol gives nothing, while the same factory called inline
+   takes the callers route
+   (`test_the_one_hop_callers_route_is_not_followed_from_a_producer`). The
+   first draft of this entry filed it as a reading where the ruling is
+   silent; review found that the ruling is not silent. The ruling adopted
+   the analysis, which has the producer compose with that route: its §2.2
+   says a top-level factory producer "reaches a changed top-level class only
+   through #420's hop", and its §4.5 lists "a top-level factory producer
+   until #420 lands" as the residual. Only a top-level factory over a
+   top-level callee would then stay out, through #420's leaf defect
+   (`evidence.py:239`; #420 is deferred in #504). The code is narrower:
+   every factory gives nothing, one that calls a changed method included.
+   The alternative was to check the producer's leaf in
+   `prod_symbol_callers` for the reading assertion, as `_repair_evidence`
+   checks a unit's calls (`gating.py:422`). That route matches leaf names
+   with no module check, so a producer would carry that looseness, as an
+   inline call does today. Row 158, SPEC §5 and the docs would then have
+   kept only the top-level case, and the pin above would have flipped to
+   warn with REPAIR_EVIDENCE. The owner kept the narrower reading,
+   recorded as this departure, so the pin stays as it is.
+
+Residuals, kept documented as the ruling says (THREATMODEL row 158, new,
+false positive): a setup call in the fixture, an `autouse` fixture or
+`usefixtures` mark the test does not request by parameter, fixtures of
+fixtures, the readings above, both departures (kept by the owner), a test
+class with a base or a keyword (for a fixture outside its own body), and
+xunit `setUp` on `self` (#306's `self` resolution). What the fix newly
+allows is one more spelling of row 93's Route A, on the class or factory
+that builds the value the assertion reads, which the inline spelling had
+already (`route_a_fixture_producer_neg`); row 93 says so. Row 86j notes that
+the chain carries a producer and still no value (#425, deferred in #504).
+SPEC §5 states the producer, the T1.9 hop, and PACKAGE_REPAIR's scope
+(EXPECTED_VALUE_CHANGED and EXPECTATION_DEFINITION_CHANGED). Its D9 row
+said DEPENDENCY_DRIFT holds "those two only, exactly like PACKAGE_REPAIR";
+`gating.py` has also given that credit to EXPECTATION_DEFINITION_CHANGED
+since T1.9 (58fe2e9f), and the owner chose on 2026-10-19 to correct the
+row here, within the SPEC §5 wording, so it names all three rules.
+
+**Effect, by reading.** The reduced case holds its six findings at warn
+with REPAIR_EVIDENCE and passes at the default `fail_on`; its three
+EXPECTED_VALUE_CHANGED move from PACKAGE_REPAIR to REPAIR_EVIDENCE, which is
+checked first. It still blocks under `fail_on = "warn"` or `oracle_freeze`,
+as the direct twin does. For the full commit, the reporter named the units
+of the two ASSERT_SUBSTITUTED and the SUBJECT_INPUT_CHANGED; built from
+that description (each assertion reading `elevenlabs_provider` directly),
+they are held at warn (`fixture_producer_assert_substituted_neg`,
+`fixture_producer_subject_input_changed_neg`), with the conftest edited in
+the same diff too (`hardcoded_via_edited_conftest_fixture_neg`). His
+comment 6264130796 then showed how those tests are written, and
+`fixture_producer_annotated_class_methods_neg` follows it, credited to him
+as the cases built from his report now are: class methods with an
+annotated fixture parameter, a fixture whose producer takes another
+fixture, and the conftest's mock data edited in the same diff, with its
+seven findings held at warn by reading. The six other
+EXPECTED_VALUE_HARDCODED findings of that commit are not traced, so this
+entry does not say the commit passes.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. The change only adds an evidence
+route, so no finding is added or removed and a verdict can move only toward
+pass. By a read-only scan on 0e60832a: among `tests/cases`, the 17 cases
+with a fixture beside a changed non-test file are CI, guardrail, JS,
+collection-control and `<suite>` shapes, with no oracle finding on an
+assertion that reads a requested fixture's producer; in
+`tests/verdict_gate/cases` only `i199/P5`, a `<suite>` TEST_DISABLED; in the
+decoy arms one autouse conftest patch, which Q2 (a) does not follow; the
+tamper and refactor corpora are test-only diffs. The inline sources of the
+pytest files were scanned by heuristic only; CI is the check. Nothing under
+`tests/gates` changed. If CI shows an existing expectation moving, the
+round stops.
+
+**Fingerprints and IR.** No fingerprint scheme, finding or key changes:
+escalators and de-escalators are outside `make_fingerprint` (D-141).
+`--emit-ir` gains `UnitSide.fixture_producers` and `Assertion.fixture_reads`,
+both optional, so IR_VERSION stays 2 (`docs/stability.md:104`).
+
+**Release.** v0.8.0 does not include this. The owner put #471 in
+v0.9.0's scope on 2026-10-19 (consolidated ruling, #419
+issuecomment-6261642679, R1), so this fix merges before the combined
+sweep's manifest is frozen. No release is authorized (AGENTS.md rule 5).
+`docs/KNOWN-ISSUES-next.md` has a #471 row, and
+`docs/assertion-coverage.md` a section.
+
+**Measurement.** Not measured yet. Pre-registered here, before any engine
+runs, as D-141 did. Under the same ruling, this fix is measured in the
+combined sweep's one run (R1, R2), where its merge gets its own
+before/after pair in the chain: the standard set (1,800) and D-088's sets,
+before and after. The issue-acceptance batches run on LAPTOP-01AGNPJU
+under EC POLICY `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared
+run, after R5's two approval steps (the frozen manifest and engine commits
+approved first); the v0.8.0-to-RC comparisons that gate the tag run on the
+EC pool (R3). Every verdict that moves is named and adjudicated; a move
+judged to lose a spec-correct block stops the round. The analysis's §4.4
+report-only arms pricing the alternatives (Q1 (b), Q2 (b), Q3 (a),
+Q4 (d)) need engine variants that this PR does not build. They run in the
+same sweep as never-merged counterfactual engine commits on checkwash-lab,
+pinned by SHA and tree, which T-546 covers (R4), and they report only:
+none gates this fix. The perf gate (D-007) runs in CI; by reading, a unit
+with no parameter reads nothing new, and the gate's modules have none.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash,
+engine or product code ran; CI runs the tests. Added: 20 `.gwcase`
+fixtures, 19 whose labels the owner approved on 2026-10-19 (A77) and one
+he approved adding the same day (B24), and 97 collected items in
+`tests/test_issue471_fixture_producers.py`, counted from its parametrize
+lists, one of them the C2 pin; no existing test changed. By reading, the
+documented test count becomes 19939 (19822 + 97 + 20); CI's collection
+checks it.
+
+The agent wrote this entry in #471's fix PR #522. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
+recommended", in reply to the agent's approval list, whose recommended
+answers for this PR were: the SPEC §5 (b74b20eb, fb5b317d), THREATMODEL
+rows 93, 86j and 158 with `benchmarks/FAILURES.md` (20ee51b8, 642adf05),
+D-155 (4a84d818, 15a02925, 6f25134d) and docs (21adce95, 34a75607)
+wording as committed, with D-155 citing R1 and R2 and the passages left
+for the owner written as decided before merge (A72); the gating commit
+da116dd1 as policy code (A73); the TOLERANCE_LOOSENED departure accepted
+as a limit disclosed in row 158 and KNOWN-ISSUES-next, with no issue
+opened (A74); the narrower reading of the second departure kept and
+recorded as a departure (A75); the four readings (A76); the labels of the
+19 new `.gwcase` fixtures (64cc9233; A77); and the stale SPEC §5 D9 row
+corrected in this PR, within the SPEC §5 wording (A78). a8810511,
+bad234b4, a489a067, fff04c1d, 22dc8f64, 16b6832b and f853630b make those
+changes. The reply was a button whose text the agent wrote, which the
+owner chose.
+
+The maintainer approved further text and changes on 2026-10-19:
+「第二輪核可全部照建議」, "the round-2 approval list, all as recommended",
+in reply to the agent's round-2 list, whose recommended answers for this
+PR were: the Measurement paragraph's reading of the analysis's §4.4
+report-only arms as never-merged counterfactual engine commits on
+checkwash-lab, under R4 (16b6832b; B10); and a fixture written the
+reporter's way, `fixture_producer_annotated_class_methods_neg`, with
+`credit: @talhayme (#471)` in its header, the same credit on the cases
+built from his report, his row in `benchmarks/external-credits.json`, the
+test count raised for it, and GLM's two findings (F-1, a lambda's
+parameter; F-2, a single conditional `return`) fixed by the readings
+already approved, with pins for each (B24). 9755fb4a, 420795e7, ad1c02aa,
+fab761b1 and 034e517e make those changes. The reply was a button whose
+text the agent wrote, which the owner chose. The same list approved the
+closing paragraph above (B3). The round-2 list did not show the wording
+of this paragraph or of the sentences 034e517e adds to the
+implementation, readings 2 and 3, the Effect paragraph and the evidence
+status, nor the date, fixture and row fields of the credit row
+(2026-10-19, `hardcoded_via_conftest_fixture_neg.gwcase`, rows 93 and
+158): the agent wrote them after the approval. From a read-only review of
+those commits (Claude, under B2), the evidence status now says which item
+covers which fixture, and the implementation sentence and the module's
+docstrings (94a46475) no longer say the value site runs on every path; no
+approval item names these fixes.
+
+The maintainer approved further changes on 2026-10-19:
+「第三輪核可 C1～C6 全部照建議」, "the round-3 approval list C1–C6, all as
+recommended", in reply to the agent's round-3 list, whose recommended
+answers for this PR were: fix in this PR the case of F-1 that the round-2
+review left open, `result = (lambda ledger: ledger.fee)(make())` then
+`assert result == 5`, erring toward no evidence, with one pin (C2); add
+reading 2's rule, that a single `return` or `yield` under a branch, a
+loop, a `match` or a `try`'s handler, `else` or `finally` gives no
+producer, to SPEC §5, THREATMODEL row 158 and `docs/assertion-coverage.md`,
+one sentence each (C3); and accept the credit row's three values as the
+agent chose them, its date becoming the merge date (C4). e4397e07,
+220e244a, d2439e2b, 61c3916f, ee19dbd9, 96fd4c80 and f1e1d181 make those
+changes; the date changes when the PR merges. The list quoted the row's
+`threatmodel_row` as "93"; the file has "93, 158", unchanged here, with
+158 following the row's number at merge. The reply was a button whose
+text the agent wrote, which the owner chose. The round-3 list did not show
+the wording of the three C3 sentences, of reading 3's C2 sentence or of
+this paragraph: the agent wrote them after the approval. From a read-only
+review of those commits (Claude), 4e2b6d16 completes C2's fix, with no new
+pin: an assignment or walrus inside a nested def, class or lambda is no
+longer followed, so neither a walrus in the assigned lambda nor a nested
+def's own assignment leads to the fixture. The nested def's case is older
+than C2, and no approval item names its fix, which only removes reads and
+holds the code to SPEC §5's approved wording (the test's own assignments,
+written in its body outside a nested def, class or lambda).
+fa0086dd and 4e2b6d16 have the docstrings cite reading 3, not the list's
+label. Reading 3's sentence on these shapes was also written after the
+approval.
+
+## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
+
+Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
+#434 issuecomment-6223293429) adopted every recommendation of the analysis
+(issuecomment-6218034432): A as the variant in its A.4, B as B1 with B2's
+message for the fold shape, C closed into THREATMODEL row 119, and #457 as
+A.5 (a). D-151 to D-163 were assigned to pull requests prepared in
+parallel. When integration batch 2 merged, all of them were on main
+except D-153, which is unused, and D-154, which is pending in #511. This
+entry is D-156.
+
+#434 reports two false findings, both read from the code. A: the order
+fallback gave an old assertion the first leftover of known strength in span
+order, so `assert area(4, 5) == 20.0` rewritten as `result = area(4, 5)`,
+`assert isinstance(result, float)`, `assert result == 20.0` paired the old
+`==` with the precondition and blocked as EXACT_VALUE(90) -> TYPE_SHAPE(50),
+while the two lines swapped passed. #457 (@talhayme) is a real commit of a
+related shape, executed on 0.7.0. B: `pytest.raises(E)` ->
+`pytest.raises(E, match=...)` read as the bare call removed, held at warn by
+`SAME_UNIT_REWRITE`, which blocks under `fail_on = "warn"` or an
+`oracle_freeze` contract. C (an approx tightening that blocks only beside
+`pytest.raises`) had no repro.
+
+Implementation (lines at this PR):
+
+- A, `ir/diffalign.py`. In the stage-3 loop (`:292-309`), for Python and a
+  unit's own assertions (`_match_assertions(..., own=True)`, `:135`), an old
+  assertion first takes `_subject_partner` (`:151-173`): an unused leftover
+  that the fallback may pair with it (`_compatible`, `:146-148`, the rule it
+  always had) and that checks the same subject. Among those, the same form
+  comes first, then at least the old strength, then span order. With none,
+  the old rule picks. The pair stays a fallback pair, so every rule reads it
+  as it reads the swapped order's pair. With one leftover the two rules
+  agree, so the leftovers' subjects are read only when there are two or
+  more. The pass for assertions reached
+  through a helper method (`via`, #306) is unchanged.
+- The subject test is one helper, `ir/subjects.same_subject` (`:86-89`),
+  which #460 can reuse: the same expression as parsed (as `same_expr`
+  compares it) read in the same context, through `subject_key`
+  (`:63-83`), which the fallback computes once per leftover. `subject_of`
+  (`:45-60`) reads the subject written out (`left`,
+  with the reaching keys of the names it reads at the assertion,
+  `Assertion.reaching`) or the recorded resolved subject, and is None for
+  an assertion with no subject, an inherited copy or a `via` assertion.
+  `reaching_signature` (`:35-42`) serializes the keys for both.
+- The Python frontend records the resolved subject as an optional field,
+  `Assertion.resolved_subject` (`ir/model.py:130-138`): for a subject that
+  is one local name, the expression the binding that reaches the assertion
+  gave it (its `_ordered_bindings` key, `ast.unparse`) and the reaching keys
+  of the names that expression reads at that binding. `_collect_unit` asks
+  for it at the two own-assertion sites (`frontend.py:3408`, `:3478`)
+  through `resolved_subject` (`:3321-3335`), which computes `_plain_names`
+  (`:1403-1446`) and the unit's own-scope nodes once per unit, and only
+  when an assertion's subject is a name the unit binds; `_resolved_subject`
+  (`:1449-1477`) checks the binding that reaches the assertion.
+- B, `ir/diffalign.py:311-329`. After the stage-3 loop, a removed `raises`
+  record takes `_raises_partner` (`:176-183`): an unused `pattern` record
+  that `ir/astutil.same_raises_check` (`:158-170`) reads as the same call
+  with `match=` added. `raises_call` (`:122-155`), which #423 can reuse,
+  reads the callee, the expected types, the other keywords and `match=`
+  from the record's text. The pair is not a fallback pair and records no
+  strength change, which every pair rule skips (`assert_weakened.py`,
+  `assert_substituted.py`, `expected_changed.py`,
+  `expectation_definition.py`, `subject_input_changed.py`,
+  `subject_normalized.py`); the readers in `normalization.py`,
+  `param_input_identity.py` and `subject_replacements.py` pass over it, as
+  a raises record has no subject and is no `assert` statement.
+- B2, `detectors/assert_removed.py:12-30`, `:46-49`: a removed bare raises
+  call in a Python file, where the after side has a newly written `match=`
+  call that `same_raises_check` accepts, gets "; the raise is still checked
+  by <call>" appended to its message. Fingerprints do not use the message.
+
+Readings where the ruling is silent; the owner approved each as written
+(below):
+
+1. Old assertions are taken in span order, as before; one whose candidates
+   are all taken by earlier ones keeps the old rule. There is no two-pass
+   matching.
+2. "One plain single-target local binding" is `name = <expr>`, an
+   `ast.Assign` with one `Name` target. Every binding of the name anywhere
+   in the unit must be one: a parameter (the unit's or a nested one),
+   `global`, `nonlocal`, an augmented, annotated, tuple or chained
+   assignment, a walrus, a `for`, `with` or `except` target, an import, a
+   def, a class, a match capture, `del` or a comprehension target excludes
+   the name. An annotated assignment (`result: float = area(4, 5)`) is
+   excluded too, the narrower reading of "plain". A plain assignment in a
+   nested scope binds that scope's own name but is counted: the number of
+   plain targets must equal the bindings the unit's statement walk records.
+3. "Resolved at that assertion" is the per-assertion reaching definition:
+   exactly one binding reaches it. A conditional one is enough, as the
+   analysis says: had it not run, the local would be unbound and the
+   assertion would raise. Not in the analysis: no conditional binding of
+   the name may follow the assertion, since a loop around both would carry
+   it back.
+4. Only an assertion in the unit's own body is resolved. One in an invoked
+   nested function reads the name when the function runs, which its
+   position does not tell; its written-out subject still compares.
+5. "The names that expression reads have the same reaching keys on both
+   sides" compares the direct names' keys, as `reaching_sig` does, at the
+   binding for a resolved subject and at the assertion for a written-out
+   one. A name the unit never binds has no key on either side.
+6. A candidate must still be one the fallback may pair (both strengths
+   known, or one form), so no unclassifiable record is paired with a
+   classifiable one (the red-team finding the fallback carries).
+7. "Own assertions only": the variant runs in the own pass, and a
+   same-file helper's inherited copy, a doctest record or a cross-file copy
+   is neither a candidate nor looks for one.
+8. The order among candidates is one key, (same form, at least the old
+   strength, span), so among same-form candidates one of at least the old
+   strength comes first.
+9. B reads only the context-manager form: exactly one positional argument,
+   not starred, and no `**`; the legacy call form passes `match=` to the
+   called function. The expected types are a set of name chains, so
+   `(TypeError, ValueError)` and `(ValueError, TypeError)` are the same;
+   anything else matches nothing, as `_caught_types` reads a catcher. The
+   other keywords are compared as `ast.unparse` writes them. The callee is
+   the dotted name as written, as the frontend records it.
+10. A "newly written" `match=` call for B2 is one in `assertions_added` or
+    the after half of a fallback pair; one paired by text or by (form,
+    subject) was there before.
+11. #457's pin keeps the reduced case as the reporter wrote it, with its
+    real findings as the expectation: the ASSERT_WEAKENED high, and the two
+    TEST_DISABLED warns held by RESTRUCTURED (the analysis notes the pin
+    cannot use the report's `expect: []`). The reporter is credited in the
+    fixture header and in `benchmarks/external-credits.json`, as
+    CONTRIBUTING promises.
+
+**Effect, by reading.** #434 A1 and the `is not None` precondition no
+longer block and give no finding, as A2 never did. The control (`is not
+None` in place of the rewritten `==`) still blocks, now as "subject and
+polarity both changed" instead of EXACT_VALUE(90) -> TYPE_SHAPE(50). A
+weakening that still reads the old subject beside a decoy of the old
+expectation on another subject blocks in both orders; with the decoy
+written first it passed before (row 84b's residual), so such a commit goes
+from pass to block. #457 is unchanged: no new assertion checks `mock_lock`,
+so it blocks as before. So is the v0.1.14 dogfooded commit that opened row
+85: a membership assert whose needle is not a literal records the needle as
+its subject, so its derived `f"{n}/{n} tampering cases blocked" in out`
+does not check `out`, and the old `"7/7 ..." in out` still pairs with the
+count guard written above it and blocks. Row 85 is Closed as ruled, with
+that shape as its first residual; the ruling did not address it, and the
+owner kept it so, with no pin and no issue (below). B: `match=` added
+gives no finding (it was a warn);
+the fold shape keeps its finding with the new message; another expected
+type, another callee or a dropped `match=` is unchanged. A `match=` call B
+pairs no longer counts as an added assertion in D2's moved-assertion
+multiset. JavaScript is unchanged. By reading, a result the subject
+preference turns silent is the result the old rule gives with the other
+leftovers deleted, so it opens no route that deleting them did not (the
+analysis found no cheat that newly passes); a restatement that never runs,
+under a runtime `if` or after the raising call in `with pytest.raises`, is
+read like any other assertion, as an unchanged assertion there always was.
+
+**C.** Closed into row 119: candidate 1 (`approx(20.0)` ->
+`approx(20.0, abs=1e-9)` read as new slack although the bound shrinks) is a
+named instance of its residual, and candidate 2 (approx checks paired in
+span order) is in `docs/assertion-coverage.md`. A raises-dependent repro, if
+one exists, is a new issue.
+
+**#457.** A.5 (a): it stays blocking and is pinned as a known limit
+(`subject_pairing_other_subject_known_limit_pos`, row 84b). A credit that
+passed it would also pass an exact check rewritten as a wide approx beside
+one unrelated strong assertion (row 13). This replaces the 2026-10-16 plan
+to ship #457 in the next release; the reason was stated on #457, and the
+reporter agreed. The known limit is written into row 84b, not a new row,
+as the owner approved (below).
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. A read-only text scan of the
+fixture corpora (711 Python file pairs in `tests/cases` and the
+verdict-gate cases, 140 in `benchmarks/tamper` and `benchmarks/refactors`)
+found no test function with an assertion gone and two new, where the
+fallback has a choice, and one bare raises gone beside a new `match=`
+call: `raises_match_fold_neg`, whose pinned fields (`cases.py`) do not
+include the message. A scan of the inline sources in `tests/*.py` found
+one before/after pair a test diffs where the subject preference has a
+choice: `tests/test_exact_unique_predicates.py`, #434 A1's own shape,
+whose assertions (a pass; a rewritten answer that blocks with
+EXPECTED_VALUE_CHANGED; whether a projection is made) hold under either
+pairing.
+Nothing under `tests/gates` changed, and `benchmarks/decoy/expected.json`
+cites none of rows 84b, 85 and 119. If CI shows an existing expectation
+moving, the round stops.
+
+**Fingerprints and IR.** No fingerprint scheme, rule or key changes.
+`--emit-ir` gains `resolved_subject` on every assertion (null where it does
+not apply), an optional field, so `IR_VERSION` stays 2
+(`docs/stability.md`). A finding whose pair changes changes its
+content-bound fingerprint with it (the control's after text and kind), so
+an exemption recorded for the old finding stops matching.
+
+**Maintainer text.** SPEC §3 (the one exception to an unclassifiable
+removal) and §4 (the fallback's subject preference); THREATMODEL row 85 to
+Closed, pinned by the two `bypass: 85` fixtures, and rows 84b and 119;
+`benchmarks/FAILURES.md` changes with row 85. The §7 parameters and the
+rule table are unchanged, and `gating.py` is not touched.
+
+**Release.** None is authorized (AGENTS.md rule 5). Under R1 of the
+owner's consolidated ruling of 2026-10-19 (「裁決總表全部照建議」; #434
+issuecomment-6261648129 and #457 issuecomment-6261649543, recorded across
+issues on #419, issuecomment-6261642679), v0.9.0 includes #434 and #457,
+and this fix merges before the combined sweep freezes. For #457 that is
+the known-limit pin only: its reported commit still blocks (A.5 (a),
+above). `docs/KNOWN-ISSUES-next.md` gains a #434 row with the limits
+above.
+
+**Measurement.** Not measured yet. As ruling 434 says, the sweep measures
+the change on the pool, or on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` with an approved manifest. Under R1 and R2 that
+sweep is the combined sweep: its manifest is frozen only after the R1
+scope has merged, it runs once, and this fix's merge gets its own
+before/after pair in its chain, which measures A and B. Under R3, the
+sweep's issue-acceptance batches run on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546), and the v0.8.0-to-RC comparisons that gate
+the tag run on the EC pool. The effect above is expected; the measured
+cost goes here once it has run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, test, generator or sweep was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; CI runs the tests. Added: thirteen `.gwcase` fixtures
+(`subject_pairing_precondition_before_neg`,
+`subject_pairing_precondition_after_neg`,
+`subject_pairing_not_none_precondition_neg`,
+`subject_pairing_oracle_replaced_pos`,
+`subject_pairing_parameter_binding_pos`, `subject_pairing_rebound_name_pos`,
+`subject_pairing_decoy_after_pos`, `subject_pairing_decoy_before_pos`,
+`subject_pairing_other_subject_known_limit_pos`, `raises_match_added_neg`,
+`raises_match_added_type_changed_pos`, `raises_match_warns_to_raises_pos`,
+`raises_match_dropped_pos`), labels approved by the owner (below), and 71
+collected items in `tests/test_issue434_subject_pairing.py`, counted from its
+parametrize lists; no existing test changed. By reading, the documented
+test count becomes 19822 (19738 + 71 + 13); CI's collection checks it.
+
+The agent wrote this entry in #434's fix PR #527. On 2026-10-19 the
+maintainer approved items A67 to A71 of the agent's approval list:
+「PR 核可清單全部照建議」 ("the PR approval list, all as recommended").
+Those items approve this PR's SPEC §3 and §4 (4472dd6e), THREATMODEL rows
+85, 84b and 119 (17f90195, 3048e83a, with `benchmarks/FAILURES.md`,
+45028942), D-156 (3860dfd1, f746b599, b041e17c, a9d7095e) and
+`docs/assertion-coverage.md` (b634bd30, edaa6971) text as committed, with
+D-156's release and measurement paragraphs to be changed before merge to
+cite R1 and R2; the labels of the thirteen fixtures above; readings 1-11;
+keeping row 85 Closed with its dogfooded shape as the first residual, not
+pinned and with no issue; and two additions the ruling did not ask for,
+the credit to @talhayme (the fixture header, `benchmarks/external-credits.json`
+and the FAILURES table), dated 2026-10-19, and #457's known limit written
+into row 84b rather than a new row. The reply was a button whose text the
+assistant wrote.
+
+The two commits written after that reply were approved the same day:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as recommended"),
+in reply to the agent's round-2 list (items B1 to B25). Item B3 approves,
+as one, the maintainer text the agent wrote while applying approved
+options; for this entry that is the release and measurement paragraphs as
+changed to cite R1 and R2 (c41cdb17) and the approval record above
+(7117ee40). Item B9 approves adding a sentence to the measurement
+paragraph that cites R3, as D-155 does; it was written after that reply
+(efd130f5). This paragraph, and the rewording of the one above to say
+only what items A67 to A71 say, were also written after that reply. That
+reply, too, was a button whose text the assistant wrote.
+
+## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
+
+Ruling 463 (owner, 2026-10-18, issuecomment-6248011246, 「照建議」, "as
+recommended") adopted the issue's recommendations: Q1 (a); Q2 (a) for now;
+Q3 (a); Q4 (a) for now, with the escape through a test unit added in an
+unrelated file named as a residual; and Q5's measurement. The maintainer
+text goes in the fix PR as drafts. D-151 to D-163 were assigned to pull
+requests prepared in parallel. When integration batch 2 merged, all of
+them were on main except D-153, which is unused, and D-154, which is
+pending in #511. This entry is D-157.
+
+#463 reports that the file-scoped `EXPECTED_VALUE_CHANGED` (#129) is not
+raised when any Python production symbol changed, or any opaque production
+change exists, anywhere in the diff
+(`detectors/snapshot_expectation.py:10-11@0e60832a`), and that an added
+Python production file put every symbol it defines into
+`prod_symbols_changed` (`engine.py:1416-1423@0e60832a`). So a new module
+holding `X = 1` silenced a rewritten golden file: what remained was
+`SNAPSHOT_CODE_COCHANGE` at warn, which passes at the default `fail_on`,
+and nothing at all once any test logic changed. #419 Q7 (a) named it a
+residual (row 132, D-141).
+
+Implementation, in `ir/model.py`, `engine.py` and
+`detectors/snapshot_expectation.py` (lines at this PR):
+
+- Q1 (a). `DiffGlobals.prod_symbols_in_added_files`
+  (`ir/model.py:436-445`) holds the entries of `prod_symbols_changed` that
+  `build_ir`'s added-file branch contributes, one per entry
+  (`engine.py:1416-1427`). The file-scoped form subtracts them as a
+  multiset before asking whether a production symbol changed
+  (`_existing_prod_symbol_changed`, `detectors/snapshot_expectation.py:8-18`):
+  an added `pkg.py` and a modified `pkg/__init__.py` both give `pkg::X`,
+  and the modified one still counts. A deleted Python production file keeps
+  counting (`engine.py:1428-1442`), as (a) rules and (b) would not. The
+  reason is the one the added-file branch's own comment gives
+  (`engine.py:1417-1418`, quoted by the issue), which clause 3 of repair
+  evidence (SPEC §5, row 73) and `PACKAGE_REPAIR` (D-010) already act on:
+  nothing in a brand-new file explains rewriting an existing expectation.
+- Every other reader of `prod_symbols_changed` is unchanged: symbol repair
+  evidence and the one-hop callers (`gating._repair_evidence`,
+  `evidence._record_callers`) still read an added file's symbols. Nothing
+  in `gating.py`, the severity table or `ORACLE_RULES` changes.
+- Q2 (a). The form stays diff-global: a changed symbol in any existing or
+  deleted Python production file counts, whether or not a test reaches it.
+- Q3 (a). `prod_opaque_change` still silences the form, consistent with
+  #419 Q1 (D-141), until a sweep prices (b). A file the diff adds never set
+  it (row 73), and an added data file or unparseable `.py` gave no symbol,
+  so neither ever counted.
+- Q4 (a). `SNAPSHOT_CODE_COCHANGE` (`detectors/globals_rules.py:22-47`) is
+  unchanged: every production-role file the diff changes counts, a new one
+  included, except a file renamed out of a test, conftest, CI, guardrail or
+  snapshot path or out of test collection, which arrives as a synthetic
+  addition and never enters `prod_files_changed` (`engine.py:1379-1384`);
+  and test logic in any test or conftest file removes it. Beside
+  a new module, a rewritten golden file now reports both findings; beside a
+  new module and a new unrelated test, `EXPECTED_VALUE_CHANGED` alone.
+
+The newly raised finding goes through E1 as the snapshot-only form does.
+It has no unit, so only the opaque-change credit could hold it
+(`gating._file_repair_evidence`), and this diff has none. `PACKAGE_REPAIR`
+needs a package with a modified existing symbol (D-010), and whenever this
+diff had one the form would not fire. So the finding is high with
+`NO_PROD_CHANGE_IN_DIFF`, or warn under D9 `DEPENDENCY_DRIFT` when a
+dependency manifest's dependencies changed too, as for a golden file
+rewritten alone.
+
+Readings within the ruling's text:
+
+- "A production file the diff adds" is a change with status `added`. A
+  Python file renamed out of a test, conftest, CI, guardrail or snapshot
+  path arrives as a synthetic addition that contributes nothing at all
+  (`_expand_renames`, `engine.py:370-415`); a rename within production is
+  the existing file it was. A rename onto a `.py` production path from a
+  docs or lockfile path whose base side parses as Python still counts its
+  changed symbols. That costs no less than residual (1) below, so it is
+  left as it is; the owner approved this reading (below).
+- A symbol is counted per entry, not per name: the multiset difference
+  above.
+
+Not settled by the ruling; the owner settled each as follows (below):
+
+- The E1 label. At this PR the newly raised finding is labelled
+  `NO_PROD_CHANGE_IN_DIFF` over a diff that adds a production file. SPEC
+  §5 gives that label to every E1 finding outside its two named cases, and
+  an oracle finding beside an unrelated production change already reads
+  the same way; but as a sentence it is untrue of this diff, the class
+  `docs/integrations.md` §6 describes. #473 settles it, so it needs no
+  ruling of its own: under ruling 473 Q2 a diff that changes a
+  production-role file that is not inert, an added one included
+  (`prod_files_changed`), changed production, and Q3 names the label for
+  it. Once #473's PR #528 (D-161) merges, this finding, when it escalates
+  through E1, is labelled `PROD_CHANGE_NOT_EVIDENCE`. The label is
+  escalation policy in `gating.py`, which this PR does not touch; neither
+  this PR's fixtures and tests nor #528's assert this finding's label, so
+  the order the two merge in moves no pin.
+- The honest cost of Q1 (a). A pytest file kept under `golden/`,
+  `expected/` or `__snapshots__/` has the snapshot role and test
+  obligations (#219), so the file-scoped form reads any edit to it as a
+  rewrite. Adding a test there for a brand-new production module used to
+  pass: the module's symbols silenced the form, and the new test unit
+  silenced `SNAPSHOT_CODE_COCHANGE`. Now it blocks with
+  `EXPECTED_VALUE_CHANGED` at high, and the reason above, that nothing in a
+  brand-new file explains the rewrite, is untrue of it: the new module is
+  what the new test exercises. Pinned as current behaviour, not as a
+  judgement of the edit, by
+  `test_a_test_added_for_a_new_module_to_a_pytest_file_under_golden`
+  (`tests/test_issue463_snapshot_added_production.py`), with a control
+  beside a changed existing symbol. The owner accepted the cost under
+  Q1 (a) (below), to be named in the release notes and in
+  `docs/KNOWN-ISSUES-next.md` and counted by the Q5 sweep; the
+  alternative, not adopted, was to give it its own treatment, for example
+  leaving the added-file exclusion out for a snapshot-role file with test
+  obligations. By reading and not pinned, a module that an existing loader
+  discovers with no existing file changed (a plugin directory scan) can
+  honestly change a stored output too. The Q5 sweep is to count both.
+
+**Residuals**, open by ruling and pinned as current behaviour, not as
+honest edits (row 132): (1) a changed symbol in any existing or deleted
+Python production file, `snapshot_unrelated_symbol_edit_neg` (Q2 (a));
+(2) an edit to an existing production file checkwash cannot read,
+`snapshot_template_comment_edit_neg` (Q3 (a)); (3) any test logic change
+in the diff removes `SNAPSHOT_CODE_COCHANGE`, and with (1) or (2) nothing
+is reported, `snapshot_unrelated_symbol_edit_new_test_neg` (Q4 (a)). The
+cheapest full escape is now (3) with (1): a no-op `+ 0` in any existing
+production function and a new test anywhere.
+
+**Fingerprints and IR.** No fingerprint scheme changes: the newly raised
+finding has the file-scoped content-bound v2 key the form always had
+(`event: stored_expectation_rewritten`). `--emit-ir` gains
+`globals.prod_symbols_in_added_files`, a new optional field, so
+`IR_VERSION` stays 2 (`docs/stability.md`: no bump for a new optional
+field); an IR without it counts every changed symbol, as before.
+
+**Release.** The change newly blocks, so the release that ships it names
+the newly blocking shape in its notes: a stored snapshot, golden or
+expected file rewritten beside one or more new Python production modules
+and no other production change that counts, including the honest edit
+named above (a test added for a new module to a pytest file kept under a
+snapshot directory), whose cost the owner accepted. The next release is
+a minor anyway because of #421 (`docs/stability.md:17-22`). No release is
+authorized (AGENTS.md rule 5). `docs/KNOWN-ISSUES-next.md` gains a #463
+row, which names the same honest edit as an accepted cost.
+
+**Rule 2.** The ruling names no change to an existing expectation, and the
+change moves one:
+`tests/test_snapshot_expectations.py::test_unrelated_production_change_retains_existing_snapshot_cochange_policy`
+(PR #133's pin of the policy #129 kept) rewrites `tests/golden/invoice.txt`
+beside an added `unused.py` holding `def unrelated(): return 3` and
+asserted verdict pass and no `EXPECTED_VALUE_CHANGED`. Under Q1 (a) it
+blocks, with `EXPECTED_VALUE_CHANGED` at high and `SNAPSHOT_CODE_COCHANGE`
+at warn. The round stopped there: the test was left unchanged, and CI
+showed it failing, and no other test, on every leg (runs 39215965313 and
+39215965326). The owner approved the move as recommended (below), and
+commit 6f6ad594 makes it: the test keeps its inputs, asserts the block and
+both findings, and is renamed
+`test_an_unrelated_new_production_function_does_not_explain_rewriting_the_stored_expectation`;
+what its old name says about an existing module is pinned by
+`snapshot_unrelated_symbol_edit_neg` and
+`test_a_changed_symbol_in_an_existing_module_still_counts_beside_an_added_one`.
+By reading, no other existing expectation moves: no `.gwcase` fixture,
+demo case, verdict-gate case or corpus case rewrites a snapshot-role file
+beside an added Python production file and nothing else that counts, and
+nothing under `tests/gates` changes. If CI shows anything else moving, the
+round stops.
+
+**Measurement (Q5).** Not measured. The standard set and D-088's sets, any
+verdict move stopping the round, pre-registered on a checkwash-lab branch
+before any engine runs (D-048's method), and run on the pool; on
+LAPTOP-01AGNPJU only under EC POLICY `checkwash-pju-sweep` (T-546), with
+the frozen manifest and engine commit approved first. Under the owner's
+consolidated ruling of 2026-10-19 (#419 issuecomment-6261642679), Q5's
+sweep is not run on its own: it joins the combined sweep's one run, in
+which this fix's merge gets its own before/after pair in the chain (R2),
+and its manifest and engine commits are approved with the combined
+manifest when that is frozen, in the second of R5's two approval steps.
+By reading, a commit
+can move only if it modifies a snapshot-role file, adds a Python production
+file defining at least one symbol, and changes no symbol of an existing or
+deleted Python production file and no production file checkwash cannot
+read. Each such commit gains one `EXPECTED_VALUE_CHANGED` per modified
+snapshot-role file. How many there are is unknown.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run or sweep was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: seven `.gwcase` fixtures with
+owner-approved labels (`snapshot_new_prod_module_pos` and
+`snapshot_new_prod_module_new_test_pos`, which carry `bypass: 132`;
+`snapshot_new_prod_module_with_caller_neg`,
+`snapshot_deleted_prod_module_neg`, `snapshot_unrelated_symbol_edit_neg`,
+`snapshot_template_comment_edit_neg` and
+`snapshot_unrelated_symbol_edit_new_test_neg`), and 24 collected items in
+`tests/test_issue463_snapshot_added_production.py`. Not pinned: the E1
+label of the new finding, the rename reading, `DEPENDENCY_DRIFT` beside an
+added module, and the plugin-discovery shape. By reading, the documented
+test count becomes 19650 (19619 + 24 + 7); CI's collection checks it,
+and other open pull requests move it too. `benchmarks/FAILURES.md` was
+edited by hand to what `benchmarks/make_failures.py` produces, by reading
+the generator.
+
+The agent wrote this entry in #463's fix PR #524. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval list as
+recommended"), in reply to the agent's approval list, whose items for this
+PR asked for: the one rule-2 move, re-pinning and renaming the test above
+as recommended (A55); accepting the cost of Q1 (a), to be named in the
+release notes and `docs/KNOWN-ISSUES-next.md` as drafted and counted by
+the Q5 sweep, with the drafts that name it: the cost pin (dbcaa86b), the
+detector comment (4b506f90), `docs/assertion-coverage.md` and the
+`docs/KNOWN-ISSUES-next.md` row (ec6bd662), and the SPEC, row 132 and
+entry drafts named under A58 (A56); the labels of the seven fixtures
+(A57); the wording of SPEC §4 (59d13e77, 78e330e6), THREATMODEL row 132
+as Partly closed (9666da66, 93b07116), this entry (24c1e6a0, dff4d5ff,
+827bc03c), and the `docs/KNOWN-ISSUES-next.md` row and the note in
+`docs/issue-remediation-2026-09-06.md` (e9b2f1ff), with the E1 label point
+changed to name #473 instead of asking for a ruling (A58); and the
+reading above of "a production file the diff adds" (A59). The reply was a
+button whose text the agent wrote, which the owner chose. Commits
+6f6ad594 (the move), 6fac1f98, 9a6615ff, 7c8e41b2, b598accd and e02b3f20
+(the accepted cost) and 8c6492ad (the E1 label point) apply those
+answers.
+
+The owner approved the agent's second-round list on 2026-10-19:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"). Its items for this PR asked for: approving together the
+maintainer text written while applying the answers above, namely this
+entry's Rule 2, cost and Release paragraphs (b598accd), the E1 label
+point naming #473 (8c6492ad) and the approval record above (6baa4026,
+bfa27ae7), and row 132's cost sentence changed from "for the owner's
+decision" to "which the owner accepted" (7c8e41b2), with the detector
+comment (9a6615ff) and the two comments in the #463 test file (e02b3f20)
+changed with it (B3); and a sentence in the Measurement paragraph citing
+R2 and R5, as D-155 does (B9). This reply too was a button whose text
+the agent wrote, which the owner chose. Commit d56d7080 applies B9.
+6fac1f98 changes the `docs/KNOWN-ISSUES-next.md` row in the same way as
+row 132; B3 does not name it.
+
+## D-159 (2026-10-19): the rebinding spellings #306 left out leave a helper method unresolved (#502)
+
+Ruling 502 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"). The go-ahead answered a
+recommendation list prepared off GitHub, and #502's body, filed on it,
+quotes it. It adopted the direction that list gave for this issue: complete
+the literal-key spellings, read `vars(C)[...]` as `C.__dict__[...]` is
+read, rule #487 first, and P2. The issue's Direction items 1 to 7 are the
+agent's recommendation within that direction, for review in this PR.
+#487's ruling (issuecomment-6248630528, item 2) settled what item 5 depends
+on: (b) is not adopted. D-151 to D-163 were assigned to pull requests
+prepared in parallel. When integration batch 2 merged, all of them were
+on main except D-153, which is unused, and D-154, which is pending in
+#511. This entry is D-159.
+
+#502: since #306's fix (D-145, #476, `81c69d28`), Sub-Q3 leaves a helper
+call unresolved when the module rebinds the helper's name, but the module
+scan read only a `.<name>` store or del, a `.__dict__[...]` store or del,
+an exact set of dotted setattr names (`_SETATTR`) with a literal name, or
+with a computed one on the receiver or a class of the order by name,
+`patch.object` and `monkeypatch.setattr`. So a `setUp` that runs
+`self.__dict__.update({"_check": lambda value: None})`, or
+`vars(self)["_check"] = fake`, a class body's `vars()["_check"] = fake`,
+`self.__setattr__("_check", fake)`, or
+`Alias = TotalTest; setattr(Alias, NAME, fake)`, left the call resolved:
+the frontend followed the def while another function answered the call at
+run time, so the helper's assertions stayed the unit's and nothing read
+them as removed. #476 is in no tag and v0.8.0 follows no such call, so
+this is an incomplete closure, not a regression from v0.8.0.
+
+Implementation, in `frontends/python/self_methods.py` only (lines at this
+PR):
+
+- Item 1. A store into or del from `vars(x)[...]`, for any `x` and any key,
+  joins the module-wide channel of `x.__dict__[...]` (`_object_namespace`,
+  `:193-198`, used at `:427-429`): `dict_store` leaves every helper name in
+  the module unresolved (`resolve`, `:681`). `vars(C)[...]` on a class
+  raises at run time, since a class's `vars()` is a read-only mappingproxy.
+  So does the pinned `TotalTest.__dict__["_check"] = print`, already read
+  as a rebinding, and #422's reader treats the two alike
+  (`exit_status_controls.py:810-814`). Narrowing the channel to the literal
+  name is not part of #502.
+- Item 2, name-specific as Sub-Q3. Each spelling adds the name to `stored`,
+  which leaves that name unresolved for every class of the module
+  (`_namespaces`, `:462-504`; `_namespace_call`, `:506-537`; `_key`,
+  `:539-545`):
+  - a call whose last name is `__setattr__` or `__delattr__`
+    (`_DUNDER_SETTERS`, `:125`; `:510-518`), by its name argument. A bound
+    call carries the name at index 0 (`self.__setattr__("_check", f)`,
+    `super().__setattr__(...)`), an unbound one at index 1
+    (`type.__setattr__(C, "_check", f)`, `object.__setattr__(...)`), and
+    the count of positional arguments tells them apart: two bound and three
+    unbound for `__setattr__`, one and two for `__delattr__`, which takes
+    no value. So `self.__setattr__(NAME, "x")` is read by `NAME`, never by
+    its value. The draft read the first str literal among the first two
+    arguments, as #422's `_setter` reads its status names
+    (`exit_status_controls.py:839-851`), and so took that call's `"x"` as
+    the name; raised by GLM, verified by Claude;
+  - on `x.__dict__` or `vars(x)` (with an argument), the keywords of
+    `update()` and the str-literal keys of a dict literal passed as its one
+    positional argument (`:524-532`), and the literal key of `setdefault()`
+    (`:533-534`);
+  - in a class body, a literal key of `vars()` or `locals()` with no
+    argument (`_class_namespace`, `:201-208`), stored or deleted
+    (`:481-483`). A node's scope is read by `_scoped` (`:211-227`): the
+    def, lambda or class whose body holds it, where a header (`_header`)
+    runs in the scope that holds the def, as D-149's `_module_binds` reads
+    it.
+- Item 3. These leave every name in the module unresolved (`dict_store`):
+  in `update()`, a `**` argument, a positional argument that is no dict
+  literal, a second positional argument, or a `**` entry or a key that is
+  no str literal in the dict literal; a key of `setdefault()`, or of a
+  class body's `vars()` or `locals()`, that is no str literal; a
+  `__setattr__` or `__delattr__` whose name argument is no str literal, or
+  with a starred argument or a count that is neither form's; and a store
+  or del of `x.__dict__` itself, `x.__dict__ = ...` and
+  `x.__dict__ |= ...`, read as `__dict__` in `stored` (`:435-438`), which
+  also takes `del x.__dict__` and a literal-name setattr or patch of
+  `__dict__`.
+- Item 4. A computed-name `setattr` or `delattr` (`_SETATTR`, `:113-114`)
+  also records the name `_target` reads from its target (`:230-244`): `x`
+  for `x`, `x.attr`, `x.__class__` or `type(x)`, as `_root` reads them. It
+  is followed one hop through a plain assignment of that name (annotated
+  or walrus too) whose value is one the ruling names: a name, `type(x)` or
+  `x.__class__` (`_alias`, `:247-259`). The name is looked up as Python
+  looks a name up: in the call's own scope, the defs and lambdas around
+  it, and the module (`:492-504`). So a module-level or function-local
+  `x = C` counts as `C`, and `x = type(self)` or `x = self.__class__` as
+  the receiver, as the direct `setattr(type(self), NAME, f)` is read
+  (D-145; reading 7). A target reached through a subscript or another call
+  (`globals()["C"]`, `sys.modules[__name__].C`, `make()`) counts as every
+  class in the order (`any_class`, `:496`, read at `:697`). The reading in
+  `_call` (`:443-460`) stays.
+
+Readings where the ruling is silent; the owner approved each as written
+(below). 1 to 4 err toward unresolved, 5 and 6 toward resolved, 7 both
+ways:
+
+1. `__setitem__` and `__delitem__` called on `x.__dict__` or `vars(x)` are
+   read as the item store and del they spell, so every name, as item 1
+   (`:535-537`); called on a class body's `vars()` or `locals()`, as its
+   item store, name-specific.
+2. A class body's `vars()` and `locals()` are read as `x.__dict__` is for
+   `update()` and `setdefault()` too, by name.
+3. A `setattr` or `delattr` whose target or name is a starred argument
+   (`setattr(*(C, "_check", f))`) leaves every name unresolved
+   (`:487-489`); before, it was not read.
+4. The alias lookup also reads the defs and lambdas around the call (a
+   nested `install()` in `setUp` that reads the `setUp`'s
+   `klass = type(self)`), beyond the ruling's "module-level or
+   function-local". A comprehension is read as part of its scope, so a
+   `vars()` or `locals()` in a class-body comprehension is read as the
+   class's namespace.
+5. `vars()` and `locals()` outside a class body rebind no method: at
+   module scope they are the module's namespace and in a function its
+   locals, neither of which holds the class's methods, so neither a literal
+   nor a computed key there is read (`:481-483` and `:521` read only a
+   class body).
+6. Only the alias values the ruling names are followed: `x = C`,
+   `x = type(self)` and `x = self.__class__` (`_alias`). Any other value
+   is not: an attribute (`cfg = self.settings`, `x = C.attr`), a call
+   (`obj = Fake()`) or a subscript (`x = globals()["C"]`). Following
+   `cfg = self.settings` as `_target` reads a direct target would make the
+   common `cfg = self.settings; setattr(cfg, key, value)` leave every
+   `self.<helper>()` call in the module unresolved, and reading a value
+   that is no name as every class would do the same for
+   `obj = Fake(); setattr(obj, key, value)`; both are pinned resolved. The
+   direct target keeps D-145's reading, so `setattr(self.settings, key,
+   value)` still counts as one on `self` while its aliased spelling does
+   not. The owner kept this asymmetry and left `x = globals()["C"]` a
+   residual (below).
+7. The ruling says `x = type(self)` and `x = self.__class__` count as `C`.
+   They are read under the name inside them, the receiver's, as the direct
+   `setattr(type(self), NAME, f)` is: a call through a receiver of that
+   name stays unresolved in every class of the module, which is wider than
+   `C`'s order, and a unit whose receiver has another name is not reached,
+   which is narrower.
+
+`pop()`, `popitem()` and `clear()` are not read (`:119-123`): on an
+instance's namespace a deletion shows the class's def again, and on a
+class's mappingproxy it raises. In a class body, `vars().pop("_check")`
+removes the def; that stays a residual.
+
+**Stated cost, accepted (item 5).** A change that adds one of these
+spellings leaves the helper resolved at the parent and unresolved at the
+commit, so the assertions followed through it read as removed
+(`ir/diffalign.py:122-136`; ASSERT_REMOVED at warn,
+`detectors/assert_removed.py:27`, raised to high under
+NO_PROD_CHANGE_IN_DIFF, `gating.py:888` and `:917`), as the spellings
+caught before already do.
+That is what catches the issue's evasion
+(`self_method_dict_update_rebinding_pos`). Under items 1 and 3, an
+innocent write added anywhere in the test module leaves every helper
+unresolved on the head side and reads the same way: `vars(self)["data"] =
+1`, a non-literal `update()` such as a class whose `__init__` runs
+`self.__dict__.update(attrs)` (`self_method_namespace_update_added_pos`),
+a `super().__setattr__(name, value)` in a fake's `__setattr__`, or a
+`setattr` on `globals()[...]`. In a module whose base already has such a
+write, the #306 closure is lost on both sides; that is a missed detection,
+not a block. Removing such a write reads nothing as removed. This
+detection depends on #487's option (b) not being adopted; the owner did
+not adopt it (D-149), and if (b) is ever reconsidered, this detection goes
+with it. Reading every reflective spelling as module-wide unknown (D-095's
+reading) is not proposed: it would reverse D-145's ruled name-specific
+choice, and it would cost more.
+
+Residuals, by kind (D-145 and D-149 name the others), each leaving the call
+resolved as before this entry: an aliased `setattr` (`s = setattr`) and an
+alias more than one hop away, which the issue names; an alias bound other
+than by a plain assignment (a `for` or `with` target, an unpacking) or to
+another value; an alias assigned in a def that declares it `global`
+(`def bind(): global Alias; Alias = TotalTest`), which a computed-name
+`setattr(Alias, NAME, f)` at module level or in a def outside that one
+does not follow, since an alias is keyed by the scope its assignment is
+written in (`:477-480`, `:499-504`), and which works only once that def
+has run (raised by GLM, verified by Claude); a computed-name `setattr` whose
+target is a parameter that holds the class (a `setUpClass`'s `cls`, or
+`def install(target)` called with the class); `pop()`, `popitem()` or
+`clear()` on a class body's namespace; and a namespace written through
+`monkeypatch.setitem`, `operator.setitem`, `patch.dict`, an unbound dict
+method (`dict.update(self.__dict__, ...)`), or `vars` or `locals` under
+another name.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed.
+`tests/test_issue306_self_methods.py` is unchanged; its sources that use a
+newly read spelling (`pytest.mark.__setattr__('slow', wrap)`,
+`vars(pytest.mark).update(slow=wrap)`,
+`type.__setattr__(MarkDecorator, '__call__', wrap)`, and a class's
+`__setattr__` that calls `object.__setattr__(self, name, value)`) already
+expect the call unresolved. The `.gwcase` fixtures that write through
+`vars(...)` (`conftest_request_module_vars_store_pos`,
+`conftest_setitem_vars_request_module_pos`) do so in a conftest, where no
+helper method is resolved, and no other fixture uses a newly read spelling
+beside a helper method reached through `self`. The other inline sources
+under `tests/` with these spellings
+(`test_issue254_class_attribute_guards.py:522`, `test_issue422_exit_status.py`,
+`test_issue432_noop_replacement.py`, `test_issue_runtime_acceptance.py`,
+`test_param_input_identity.py`, `test_standin_installations_main.py`,
+`test_subject_helper_dispatch.py`, `test_subject_helper_module_authority.py`,
+`test_truthiness_oracles.py`) call no helper method through `self`.
+Nothing under `tests/gates` changed. If CI shows an existing expectation
+moving, the round stops and lists each for the owner, as D-141 did.
+
+**Fingerprints and IR.** No fingerprint scheme, IR field or key changes.
+Fewer calls resolve, so `--emit-ir` loses `via` assertions and
+class-qualified `helper_calls` keys for helper methods in modules with a
+newly read spelling (not measured).
+
+**Release.** #476 is in no tag (v0.8.0 is from 2026-10-15), so this
+changes no released behaviour. Under R1 of the owner's consolidated ruling
+of 2026-10-19 (「裁決總表全部照建議」, recorded across issues on #419,
+issuecomment-6261642679), v0.9.0 includes #502, which stays P2 (item 7),
+and this fix merges before the combined sweep freezes. No release is
+authorized (AGENTS.md rule 5): v0.9.0 still needs the owner's one-time
+named authorization.
+
+**Measurement (item 6).** Not measured yet. After the fix merges, the
+standard set and D-088's sets are rerun before and after where the owner
+approves, as a checkwash-lab-declared run: on LAPTOP-01AGNPJU only under
+EC POLICY `checkwash-pju-sweep` (T-546), with the frozen manifest and
+engine commits approved first, otherwise on the pool. The measured cost of
+item 5 goes here once the rerun has run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash,
+product or test code ran; CI runs the tests. Added: three `.gwcase` fixtures
+(`self_method_dict_update_rebinding_pos`,
+`self_method_namespace_update_added_pos`,
+`self_method_other_name_update_neg`), whose labels the owner approved
+(below), and 75 collected items in
+`tests/test_issue502_helper_rebinding_spellings.py`, counted from its
+parametrize lists; no existing test changed. By reading, the documented
+test count becomes 19609 (19531 + 75 + 3); CI's collection checks it, and
+other open pull requests may change the base.
+
+The agent wrote this entry in #502's fix PR #520. On 2026-10-19 the
+maintainer approved items A44 to A49 of the agent's approval list:
+「PR 核可清單全部照建議」 ("the PR approval list, all as recommended").
+Those items approve, for this PR: the wording of SPEC §3 (75f35ca7,
+2e822f1e, c583ab02), THREATMODEL row 91 (4cf15200, bd8d3ab8) and this
+entry (39aad0bc, 625e5640, f55f6093) as committed, with the Release
+paragraph to be brought in line with R1 and the residual lists to be
+completed before merge (A44); the three fixtures' labels (A45, 09ccc6ba);
+readings 1 to 5 (A46); reading 7 (A47); reading 6, with the asymmetry
+between a direct and an aliased target kept and `x = globals()["C"]` left
+a residual (A48); and, for `__setattr__`, reading the name argument at
+index 0 of a call with two positional arguments and at index 1 of one
+with three, with this entry's reading changed to match (A49). The reply
+was a button whose text the assistant wrote. The changes A44 and A49 ask
+for were made after the reply: the code and its pins (27c42fd2,
+f6974b13), SPEC §3's residual sentence (fa236589), row 91 (a2e968a0) and
+this entry (a2a6727f, efa57c35). Made with them, and not covered by those
+items: the same rule for `__delattr__`, with one and two arguments;
+leaving every name unresolved for a dunder setter with a starred argument
+in any position, where the draft looked only at the first two, or with a
+count neither form takes (items 2 and 3; 27c42fd2, a2a6727f); and SPEC
+§3's sentence that reads the name argument by the count (9c8c794b). A
+residual raised after the reply, an alias a def assigns under `global`
+(9b0d8661), was taken out again (b2f0f052) until its wording was approved.
+
+What was written or left open after that reply was approved later the
+same day: 「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"), in reply to the agent's round-2 list (items B1 to B25).
+Item B3 approves, as one, the maintainer text the agent wrote while
+applying approved options; for this entry it names the approval record
+above (1d11fe24, a2dd63aa). Item B7 approves what A49 did not cover: the
+`__delattr__` rule, every name left unresolved for a starred argument or
+another count, SPEC §3's sentence (9c8c794b) and the module docstring as
+changed with them (27c42fd2), and adds a dunder setter with a starred
+argument or an argument count neither form takes to SPEC §3's list of
+writes that leave every name unresolved (27a36315), which the module
+docstring now says too (b34a9c2f, its line count kept). Item B8 approves
+the `global` alias residual in this entry and adds one sentence for it to
+row 91's "Still not read", with SPEC §3 unchanged, so SPEC §3's residual
+sentence does not name it. B8 described the residual as written in this
+entry only, as it had been until b2f0f052, so 9b0d8661's wording is
+restored (6ef73158) and row 91 gains its sentence (1320f3cc). This
+paragraph, and the rewording of the one above to say only what items A44
+to A49 say, were also written after that reply. That reply, too, was a
+button whose text the assistant wrote.
+
+## D-161 (2026-10-19): E1 says PROD_CHANGE_NOT_EVIDENCE when the diff changed production (#473)
+
+Ruling 473 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"; #473
+issuecomment-6248629776, which states each decision in full, as the list it
+answers went to the owner off GitHub). Its direction, Q1 (b), was ruled in
+#471 (Q5 (b), issuecomment-6230178131, item 5). The owner put #473 in
+v0.9.0's scope on 2026-10-19 (owner ruling 2026-10-19, R1). D-151 to
+D-163 were assigned to pull requests prepared in parallel. When
+integration batch 2 merged, all of them were on main except D-153, which
+is unused, and D-154, which is pending in #511. This entry is D-161.
+
+#473: E1 escalates an oracle finding that has no repair evidence and that no
+de-escalator holds. Its label `NO_PROD_CHANGE_IN_DIFF` is true when the diff
+changes no production file. It was also printed when the diff does change
+production and the finding's evidence does not reach the change. There the
+sentence is false, and it sends the reader to look for a production change
+that is already there. `EXPECTED_VALUE_HARDCODED` fires only when production
+changed, so the label was false on every block of that rule (#471). #420
+reports the same sentence for a weakened test of a top-level callee. The
+scrapy commits `fada8be1db` and `c76190d491`, recorded on the issue, and
+earlier commits of at least five other upstream repositories printed it too.
+
+**The decisions:**
+- **Q2, the condition, amended from #471's "readable Python production
+  file".** The new label applies when the diff changes a production-role file
+  (`ir.globals.prod_files_changed`) that is not inert (`roles._is_inert`:
+  `.gitignore`, `LICENSE*`, `.pyi` stubs, `mkdocs.yml`, `CODEOWNERS` and the
+  rest of that list). `engine.py:1384` records each production-role path
+  before the branches that decide symbol or opaque evidence, so a production
+  file that stops parsing, an added or deleted non-Python file, one renamed
+  without a byte change, and a non-Python production file whose content runs
+  the test suite take the new label when no earlier label applies. A
+  non-Python file renamed with a byte change from a production path outside
+  the test-support directories is an opaque change, as a modified one is
+  (`engine.py:1498-1513`), so a finding gets repair evidence from it or
+  `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`, not the new label. Inert files change
+  no runtime behaviour by the engine's own list, so a diff that changes only
+  those keeps the old label. Changes set aside unread (#415) and generated
+  artifacts never reach
+  `prod_files_changed`; "unread" stays #448's word.
+- **Q3, the name: `PROD_CHANGE_NOT_EVIDENCE`.** It is true over every diff
+  Q2 covers and parallels `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`.
+  `PROD_CHANGE_NOT_REACHED` is false over `trivial_prod_change_pos`, whose
+  test calls the very function the diff edits, and `NO_RELEVANT_PROD_CHANGE`
+  claims the change is irrelevant.
+- **Q4, rule 2: named approvals, in D-141's form.** Four new pins are
+  approved. No move of an existing pin is approved in advance: the
+  implementer stops when CI on the fix PR shows them and lists each one, old
+  and new label, for the owner's approval by name. Inputs, severity and
+  de-escalators stay as they are.
+- **Q5.** This entry, SPEC §5's E1 row, the `gating.py` label chain and its
+  comment (frozen zone) and THREATMODEL row 86h are drafts for the owner's
+  approval of the wording. Dated records keep their text
+  (`docs/integrations.md`, `docs/launch.md`, `docs/releases/`, `STATE.md`,
+  `benchmarks/`). No sweep for the label alone, no `FINDINGS_VERSION` or
+  `IR_VERSION` bump, and no version bump of its own.
+- **Q6.** The label does not lift #488's block: scrapy `fada8be1db`'s six
+  findings stay high under any label, and their cause is #488's question.
+
+**Implementation**, in `src/checkwash/gating.py` (lines at this PR).
+`apply_gates` computes `prod_changed` once (`:543-553`): true when any path
+in `ir.globals.prod_files_changed` is not inert (`_is_inert`, imported from
+`roles.py` at `:24`, as `engine.py` imports it). The E1 label chain
+(`:925-948`, with its comment) is now: an unguarded suite control with
+evidence or any production-role file, `COLLECTION_CONTROL_UNEXPLAINED`;
+else a refused opaque change, `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`; else
+`prod_changed`, `PROD_CHANGE_NOT_EVIDENCE`; else `NO_PROD_CHANGE_IN_DIFF`.
+The new label comes after both existing ones, which keep their conditions:
+`COLLECTION_CONTROL_UNEXPLAINED` keeps D-066's test, inert files included,
+and `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` is unchanged, so no pin of either
+moves. Nothing outside `gating.py` changes, and the IR does not change.
+
+**This amends and settles.** It amends 419.Q5 (`DECISIONS.md:10569-10572`),
+"`NO_PROD_CHANGE_IN_DIFF` is unchanged otherwise": that label is now kept
+only for a diff that changes no production-role file, or only inert ones.
+It settles the unit-level wording that D-066 left "not decided here"
+(`DECISIONS.md:2344-2347`). One report can still carry two labels: a suite
+control beside only an inert file says `COLLECTION_CONTROL_UNEXPLAINED`
+(D-066 counts inert files), and a unit finding in the same diff says
+`NO_PROD_CHANGE_IN_DIFF`.
+
+**Existing pins that move.** CI on 4352949c (ci run 39219097422, every
+test job, and docs suite run 39219097558) failed on exactly the 34 test
+items below (33 fixtures with 34 findings, and one pytest row) and on no
+other, the same set in every job, each printing the same findings with
+only the label changed. A fixture's failure reports only its first
+unmatched expectation (`cases.match_expectations`), so the second finding
+of `js_test_in_expected_dir_weakened_with_prod_edit_pos` shows its new
+label in the printed actuals. The owner approved each move by name
+(below), and this PR re-pins all 35 expectations in one commit
+(353e91d4). Each moves from `NO_PROD_CHANGE_IN_DIFF` to
+`PROD_CHANGE_NOT_EVIDENCE`, with its inputs, severity and de-escalators
+unchanged:
+- A readable Python production edit or deletion that the finding's evidence
+  does not reach (19 fixtures, 20 findings): `dead_prod_line_pos`,
+  `deleted_prod_unrelated_pos`, `evidence_annotation_neg`,
+  `evidence_dead_local_neg`, `evidence_string_stmt_neg`,
+  `expectation_definition_package_unrelated_pos`,
+  `js_test_in_expected_dir_weakened_with_prod_edit_pos` (two findings; it
+  carries pin 3's shape, see below),
+  `leaf_name_collision_pos`, `package_repair_needs_modified_symbol_pos`,
+  `prod_reorder_pos`, `prod_symbol_added_only_pos`,
+  `prod_symbol_removed_marker_pos`, `prod_symbol_removed_unrelated_pos`,
+  `python_test_in_golden_weakened_with_prod_edit_pos`,
+  `repair_via_helper_unrelated_pos`, `root_import_sibling_sameleaf_pos`,
+  `row36_file_scoped_no_sibling_evidence_pos` (its `BROAD_EXCEPT_ADDED`),
+  `srclayout_sibling_module_pos`, `trivial_prod_change_pos`.
+- A production change checkwash reads no symbols from (3):
+  `unparseable_self_inflicted_pos` (a file that stops parsing),
+  `opaque_deleted_file_not_evidence_pos` (a deleted data file),
+  `opaque_new_file_not_evidence_pos` (an added data file).
+- A JS setup file or `package.json` that the role table makes production
+  and whose content names a test runner, so it is no opaque change (7). In
+  each, the finding's stand-in is installed in such a file (#218), and the
+  diff changes no other production-role file:
+  `js_cra_setup_tests_mock_pos`, `js_package_json_automock_pos`,
+  `js_setup_file_added_with_listing_pos`,
+  `js_setup_file_enable_automock_pos`, `js_setup_file_listed_spy_pos`,
+  `js_setup_file_mock_pos`, `js_vitest_setup_mock_pos`.
+- Production files present with byte-identical sides (4):
+  `expected_call_to_literal_pos`, `expected_call_to_twin_pos`,
+  `unittest_literal_first_pos`, `unittest_trivial_pad_pos`. The fixture
+  harness passes such a file as a modification (`cases.case_to_changes`),
+  and the engine records it in `prod_files_changed`, so by the ruled
+  condition they move. A Git diff does not list an unchanged file, except
+  for a mode-only change. In these fixtures' own terms the new sentence is
+  false, and the ruling's size estimate expected unchanged paths not to
+  move. Their label is an artifact of the fixture harness, not a claim
+  about a real diff, and their moves are approved as such (below).
+- One pytest row:
+  `tests/test_test_support_paths.py::test_test_data_moved_into_production_was_not_production_at_base`
+  (`src/__tests__/data.json` renamed to `src/data.json`: the new path is
+  production-role, and the rename buys no opaque credit).
+
+These keep the old label by reading, as the ruling says: the unread rows of
+`tests/test_issue415_oversized_sources.py` (`:145-151`, `:532-537`; the
+`image_added` row is also a generated artifact),
+`tests/test_issue419_opaque_refusal.py:100-103`, and the six
+`src/checkwash/demo_cases` that pin the label, which change only tests.
+`inert_doc_change_pos` (`mkdocs.yml`), `stub_change_pos` (a `.pyi` stub)
+and `artifact_cannot_disarm_pos` (a `.pyc`) hold the inert and artifact
+edges. Every other pin of `NO_PROD_CHANGE_IN_DIFF` that names a non-test
+path changes no production-role file by reading: the path is a JS/TS test,
+a file beneath a test-support directory, a file the role table gives
+another role directly (`ci`: `pyproject.toml`, a `Justfile`, a composite
+action's `action.yml`; `lockfile`: `requirements.txt`; `guardrail`:
+`.greenwash/allow.toml`), a runner script or test command promoted to
+`ci`, or, in the pytest and e2e rows, a test relocated out of collection
+(`renamed_from_test`; a `.gwcase` cannot express a rename, since
+`cases.case_to_changes` sets no `old_path`).
+
+**Not settled by the ruling; the owner decided it (below):** the four
+byte-identical fixtures. Their moves are approved, and their new label is
+recorded as a harness artifact (above). The engine does not skip a
+byte-identical change when it records `prod_files_changed`: that option
+was wider than this ruling, since D-066's label and
+`SNAPSHOT_CODE_COCHANGE` read the same list and the IR would change.
+
+**Settled by Q2:** the seven JS setup-file fixtures take the new label, as
+Q2 says a production file that runs the test suite does. Their only
+production-role changes are the carrier the finding reports and, in
+`js_setup_file_added_with_listing_pos`, the `package.json` that lists it,
+so the sentence points the reader at the stand-in itself. The approval
+list recorded this as settled by Q2 and asked nothing about it; the owner
+approved the seven moves by name with the rest (below).
+
+**Residuals, stated.** The label says that production changed and that no
+evidence the finding may take reached it; it does not say why. A production
+file renamed into a non-production role (beneath a test-support directory,
+or into `tests/`) is recorded under its new path only, so the old label
+stays although production lost a file
+(`test_production_moved_beneath_a_test_support_directory_buys_nothing`,
+unchanged); D-066's label has the same edge. A mode-only change of a
+production file counts as a production change.
+
+**Contracts.** The label is chosen after `f.severity = "high"`
+(`gating.py:900`, `:940-948`). Fingerprints are computed by the detectors
+before gating runs, and none of `make_fingerprint`,
+`make_assertion_fingerprint` or `make_change_fingerprint` reads escalators
+(`findings.py:162-166`, `:367-369`, `:396-413`). So severity, verdict,
+de-escalators and fingerprints do not move. No `FINDINGS_VERSION` or
+`IR_VERSION` bump: the label is a new value in the existing `escalators`
+list, as in D-066 and D-141 (`DECISIONS.md:10760-10763`), and
+`docs/stability.md` does not freeze escalator strings. Nothing newly blocks
+or passes. The change ships in the next authorized release, with one
+release-note line that names the new label; no release is authorized
+(AGENTS.md rule 5).
+
+**Tests and fixtures.** Three new `.gwcase` files, pins 1, 2 and 4 of the
+four Q4 approves, none with a `bypass:` line:
+- Pin 1, `prod_change_not_evidence_hardcoded_pos`: #471's `pricing`
+  example, `EXPECTED_VALUE_HARDCODED` high with the new label beside
+  `EXPECTED_VALUE_CHANGED` warn with `PACKAGE_REPAIR`. If #471's fix
+  (#522) merges first and brings `hardcoded_package_only_pos`, the same
+  shape, this pin is dropped (Q4), and that fixture's
+  `EXPECTED_VALUE_HARDCODED` expectation moves from
+  `NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE` without a further
+  stop. If this PR merges first, #522's `hardcoded_package_only_pos` takes
+  the new label in #522 at its merge, also without a stop. The owner
+  approved that move by name in advance, whichever PR merges first
+  (below).
+- Pin 2, `prod_change_not_evidence_unchanged_caller_pos`: #420's
+  reproduction with `render` in an unchanged module, `ASSERT_WEAKENED` high
+  with the new label.
+- Pin 4, `no_prod_change_unchanged_caller_pos`: the test-only twin of pin 2,
+  which keeps `NO_PROD_CHANGE_IN_DIFF`.
+
+Pin 3, a JS/TS test weakened beside a Python-only production edit, is not
+added: `js_test_in_expected_dir_weakened_with_prod_edit_pos` already has
+that shape (a `node:test` file weakened beside a Python-only edit to
+`app/util.py`), so by Q4 no duplicate is added and that fixture's move,
+listed above, went to the stop and was approved by name.
+
+Seven collected items in `tests/test_issue473_e1_label.py` pin the edges: an
+inert file alone (`LICENSE`, `.gitignore`, `CITATION.cff`) keeps the old
+label; an inert file beside a readable production edit, and a production
+file whose content names a test runner, take the new one; a refused opaque
+change keeps its label beside a readable edit; and an unguarded suite
+control beside only an inert file keeps `COLLECTION_CONTROL_UNEXPLAINED`.
+None is under `tests/gates`. By reading, the documented test count becomes
+19619 (19609 + 10: three fixtures, each one item of
+`tests/test_cases_runner.py::test_case`, and seven items); the re-pins add
+none. On this PR's own base, CI on 4352949c collected 19485 (19475 + 10).
+Other open PRs move it too, which is resolved at merge time.
+
+**Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
+later acceptance sweep that compares escalators reports label-only
+differences as their own class.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and no test, checkwash run or sweep was run on the work machine; the list of moving pins and the count collected on this PR's own base are the ones CI on 4352949c showed`.
+
+The agent wrote this entry in #473's fix PR #528. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"), in reply to the agent's approval list of that day, which
+went to the owner off GitHub. For this PR it covers items A50 to A54:
+each move by name of the 34 test items CI failed on (33 fixtures with 34
+findings, and one pytest row), once CI showed exactly those (A50;
+re-pinned in 353e91d4); the four byte-identical fixtures' moves,
+recorded as a harness artifact (A51); moving `hardcoded_package_only_pos`
+to the new label in advance without a stop, whichever PR merges first,
+with pin 1 dropped if #522 merges first (A52); the labels of the three
+new fixtures (A53, ee35d145); and the wording of the `gating.py` label
+chain and its comment (e33845eb), the SPEC §5 E1 row (0a3d0f53),
+THREATMODEL row 86h (0b334f2f) and this entry (88b6b33a, 4017d0e5,
+3b6583ad), with this entry's number and the test count renumbered in
+merge order at merge time (A54). The reply was a button whose text the
+agent wrote, which the owner chose. 260466d7, the commits after it and
+this paragraph record it. Their sentences in this entry (the CI result,
+the harness-artifact sentence, the order clauses for #522, the "Settled
+by Q2" paragraph, the pin 3 and test-count sentences and this paragraph)
+were written after the reply and were not on the list.
+
+## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
+
+Ruling 496 (owner, 2026-10-19, 「裁決總表全部照建議」, "the consolidated
+ruling list, all as recommended", in reply to the agent's list of 104
+decisions; the reply was a button whose text the assistant wrote; #496
+issuecomment-6261652527 states each decision in full) adopted, for this
+issue: R31 (Q4 (a), a throwaway hosted draft PR before any fix), R32 (Q5,
+the measurement plan), R35 (closing time), R49 (Q1 (a) with three
+conditions), R50 (Q2 (b), a separate evidence text), R51 (Q3 (b), a
+separate narrow proof) and R66 (an unreachable oracle in a handler is not
+fixed in this round). 431.Q2 (#431 issuecomment-6170356603) had ruled the
+Python counterpart a separate issue and PR in the 1.0 scope, filed as P1
+after a reproduction, in which a handler assertion stops counting only
+when proved to always pass, not on the TAUTOLOGY rating.
+
+#496 reports that in a Python test file or conftest, a broad handler on a
+`try` whose body holds an oracle was added to `swallowing_handlers` only
+when it neither re-raised nor held an oracle, and that any `assert`
+statement and any `assert*`, `fail` or `raises` call counted as an oracle,
+even one that cannot fail. Adding `assert True` to the handler therefore
+turned row 16's `BROAD_EXCEPT_ADDED` block back into a clean pass. The
+hosted reproduction (R31) ran on draft PR #518, closed unmerged: run
+39215282880, `pull_request` event, head `ae7deb49` on main `0e60832a`,
+pytest 9.1.1 on all nine `test` legs, each with a full summary. On every
+leg each of the four new cases failed with `expected 1 finding(s), got 0:
+[]`: `except AssertionError: assert True` (the issue's pair), `except
+Exception: assert 1 == 1`, a bare `except: assert True`, and `except
+Exception: self.assertTrue(True)` in a `unittest.TestCase` method. It was
+read as #518's body says (A87, below) and recorded on #496
+(issuecomment-6263372986). All four reproduced, so under R31 the fix is
+written and covers all four.
+
+**D-015, refined.** D-015 froze that, in a test file, a broad handler
+counts only when the guarded block holds an oracle and the handler neither
+re-raises nor asserts; D-138 refined "asserts" for JS/TS only. In Python,
+"asserts" now means "holds an oracle not proved to always pass".
+Production files keep comparing every broad handler (`broad_handlers`),
+unchanged.
+
+Implementation, in `src/checkwash/frontends/python/frontend.py` only (lines
+at this PR):
+
+- R51. The proof is its own set of helpers (`:2482-2742`), and
+  `_static_truth` (`:2385-2444`), which folds `if` guards, is unchanged.
+  That folder answers True where a pass proof must not: `_truthy_literal`
+  returns True when `literal_eval` fails (`:2475-2479`), so `assert -"a"`,
+  which raises TypeError, would read as passing; and an `or` with one True
+  operand folds to True, so `assert check() or True`, which runs `check()`
+  first, would too. The proof shares `_is_literal` (`:373`) and `_CMP_OPS`
+  (`:2370`) and answers only "proved to pass" or nothing (`_UNPROVED`); an
+  unknown keeps the exemption.
+- R49, `assert`. `_proved_value` (`:2577-2599`) evaluates a literal
+  (`_is_literal`, read by `literal_eval`; `_proved_literal`,
+  `:2534-2541`), `not` before a literal, a comparison between literals by
+  `_CMP_OPS`, or by `is` and `is not` only when one side is None
+  (`_proved_comparison`, `:2549-2574`), and `and` or `or` over these. Every
+  operand of `and` and `or`, and every link of a chained comparison, is
+  evaluated on its own, so no short circuit decides; Python's own result is
+  then taken. A `literal_eval` failure (`-"a"`, `{[1]: 2}`) or a comparison
+  that raises (`1 < "a"`) is unknown. The assertion passes when the value
+  is truthy. Its message is not read, since Python evaluates it only on
+  failure.
+- R49, unittest. `_proved_unittest_call` (`:2602-2645`) reads
+  `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`,
+  `assertEqual` and `assertNotEqual` (`_PROVED_UNITTEST`, `:2503-2510`,
+  each with the predicate `Lib/unittest/case.py` applies; `assertEqual` on
+  two values of one type dispatches to a type-specific method, and each of
+  unittest's own passes when `==` holds, which reading 7 relies on).
+  Condition one: the call passes the method's operands and at most one
+  `msg`, by position or by keyword, and nothing else, with no `*` or `**`;
+  the operands are bound by `_unittest_operands` (`:1616`), must be
+  literals that `literal_eval` reads, and must pass. Condition two is
+  `_testcase_method` (`:2702-2742`), reached through `testcase_of`
+  (`:4669-4677`) and `_handler_methods` (`:2683-2699`), which maps each
+  handler that a method of a top-level class runs itself to that class
+  and method, once per file and only when a call gets this far.
+  `self_methods.Methods` (#306) is built at most once, by the existing
+  `methods_of`.
+- R49, condition three. `_proved_to_pass` (`:2655-2680`) walks the
+  handler as `_contains_oracle` (`:2187-2204`) does, except that it does
+  not enter an assertion's message, and every oracle it meets must be
+  proved. One `assert False`, `assert str(e) == "y"`,
+  `assert e == e`, `self.fail()`, `pytest.fail()`, `pytest.raises(...)` or
+  any other call `_is_oracle_call` (`:2177-2184`) names keeps the handler
+  inspection, so the shapes 431.Q2 keeps as inspection fall outside the
+  proof by construction. A handler with a `raise` anywhere stays
+  inspection (`_raises_in`, `:2651-2652`, which `_swallows`,
+  `:2266-2272`, now also uses, with the same reading).
+- R50. A handler that holds an oracle, all of them proved, joins
+  `swallowing_handlers` as its normalized first line followed by a space
+  and `[always-passing assertion]` (`_ALWAYS_PASSING`, `:2495`; the walk,
+  `:4701-4715`). `_norm` removes every space from a handler's text, so the
+  new text never equals another Python text, and the per-file multisets
+  (`engine.py:1581-1591`) compare it apart from main's texts: every diff
+  main blocks still blocks, a pre-existing literal-only handler cannot
+  offset a newly added swallowing one, and an old empty handler cannot
+  offset a new literal-only one. The fingerprint function
+  (`detectors/globals_rules.py:59`: the rule, the path and the text), the
+  rule id, `FINDINGS_VERSION` and `IR_VERSION` (both 2) do not change, and
+  an existing finding keeps its fingerprint; a finding with the new text
+  has a new one. `swallowing_handlers` gains values with the suffix and no
+  new field.
+
+**Readings where the ruling is silent**; the owner approved each as
+written (below). Each errs toward unknown, which keeps main's reading:
+
+1. `not` is read only before a literal, as R49 lists it, so
+   `not (1 == 2)` is unknown; a comparison's operands are literals only.
+   `and` and `or` take any of the forms, nested.
+2. A comparison, `assertEqual` or `assertNotEqual` whose operands hold a
+   bytes literal is unknown: comparing bytes with str or int warns under
+   `python -b` and raises under `-bb` (`_holds_bytes`, `:2544-2546`).
+3. A unittest call's `msg` must be a literal that `literal_eval` reads,
+   since it is evaluated before the call: `self.assertTrue(True, -"a")`
+   raises TypeError.
+4. Condition two's base is the first entry of the class's local order
+   (`Methods.order`, `self_methods.py:437`) that the file does not define,
+   read by its spelling: the last part of its dotted name ends in
+   `TestCase` (`unittest.TestCase`, `TestCase` imported from `unittest`,
+   Django's `SimpleTestCase`, `unittest.IsolatedAsyncioTestCase`, or a
+   project's class so named); what the name is bound to is not read. A
+   same-file class does not count by its own name; its order must reach
+   such a base. A base from another module that comes first, `object`
+   included, leaves the call unknown, because it may define the method
+   itself: `class FooTests(Mixin, unittest.TestCase)` with `Mixin`
+   imported is unknown, and `class FooTests(unittest.TestCase, Mixin)` is
+   proved. This is narrower than the ruling's text, which asks only for
+   such a base somewhere on the same-file chain; it extends R49's residual
+   "a project base imported from another module", which the ruling names
+   for `class FooTests(MyBase)`.
+5. "`self` is the receiver" is read as `self_methods.receiver`
+   (`self_methods.py:524`) reads it: the method's first positional
+   parameter, whatever its name, which the method never rebinds. The
+   method is no `staticmethod` and no `classmethod`, and the handler is in
+   the method's own body, not in a nested def, lambda or class, in a
+   top-level class of the module. Other decorators on the method or the
+   class are not read.
+6. "Defines or assigns the method's name" is read as #306 reads the
+   rebinding of a helper method (D-145 Sub-Q3, D-149 (c)). Besides a
+   binding in a same-file class of the order before the base, the call is
+   unknown when the module stores the name anywhere (`x.assertTrue = f`,
+   `self.assertTrue = f` in `setUp`, a literal-name `setattr`,
+   `patch.object`), stores an item into any `__dict__`, or sets a computed
+   name on the receiver or on a class of the order, or when a same-file
+   class of the order binds `__getattribute__`, `__init_subclass__` or
+   `__setattr__` (`_RECEIVER_HOOKS`, `:2531`), as #306's
+   `Methods._resolve` (`self_methods.py:496`) does. A class keyword (a
+   metaclass) or a class name the module binds twice makes the order
+   unreadable, so the call is unknown.
+7. `assertEqual` is unknown when the module's text contains
+   `addTypeEqualityFunc` or `_type_equality_funcs`: a registered
+   type-equality function decides the comparison for its type instead of
+   `==`. It is also unknown when reading 6 finds any name it looks up on
+   the receiver on the way to a pass stored or bound, not only its own
+   (`_REACHED`, `:2521-2526`): `_getAssertEqualityFunc`,
+   `_baseAssertEqual`, the methods unittest registers by name for `dict`,
+   `list`, `tuple`, `set` and `str` (`assertDictEqual`, `assertListEqual`,
+   `assertTupleEqual`, `assertSetEqual`, `assertMultiLineEqual`), and
+   `assertSequenceEqual` and `assertIsInstance`, which those call. A
+   same-file `assertListEqual` that raises makes
+   `self.assertEqual([1], [1])` fail, so reading it as proved would report
+   a swallow the handler does not do. The other five methods look up
+   nothing else on the receiver when they pass.
+8. An `except*` handler is read as an `except` handler is.
+
+**R66.** `_contains_oracle` does not read reachability, and neither does
+the proof: a handler holding only `if False: assert value() == 1`, or an
+assertion after `return`, held an oracle on main and holds an unproved one
+now, so it stays inspection and the pair passes, before and after this
+change. It is a named Python residual in THREATMODEL row 129 and in
+`docs/KNOWN-ISSUES-next.md`. Handling it would mean carrying
+`_unreachable_ids` over to handlers, a wider round than 431.Q2's scope.
+
+**Cost.** As in JS/TS (D-138), adding an always-passing assertion to a
+handler that already swallows reports the new text once, under a new
+fingerprint. One shape this newly reports, as #496 names it:
+`try: f(); assert False` with `except Exception: assert True`. That test
+cannot fail, because the handler also catches the `AssertionError` that
+`assert False` raises, so the report is correct; but the shape looks
+honest, and only the sweep can say how common it is.
+
+**Residuals,** which keep the exemption: a name bound to a literal
+(`ok = True`, then `assert ok`); an assertion on the caught binding that
+cannot fail once it is caught (`assert error`, `assert error is not None`,
+`assert isinstance(error, Exception)`); other always-true shapes the
+TAUTOLOGY rating recognizes (`assert (x, "msg")`, `isinstance(x, object)`,
+`"" in s`, `len(x) >= 0`); a unittest call in a class that reaches its
+TestCase base only through a base imported from another module, or in a
+same-file mixin with no TestCase base (R49); other `assert*` methods, and
+third-party and mock assertion calls; the unreachable oracle (R66); the
+forms readings 1 to 7 leave unknown; and an equal-count exchange of two
+handler sites with the same text.
+
+**Rule 2.** The ruling approves no change to an existing expectation. A
+grep of `tests/cases`, `benchmarks`, `src/checkwash/demo_cases` and the
+inline sources in `tests/*.py` found no broad handler whose only oracles
+are literal assertions, so by reading none moves, and none was changed.
+The grep is not exhaustive; this PR's CI is the check, and if an existing
+expectation moves, the round stops and lists it for the owner.
+
+**Tests.** Four positives, from #518 unchanged but for `bypass: 129`
+(R31): `broad_except_always_passing_assert_true_pos`,
+`broad_except_always_passing_literal_compare_pos`,
+`broad_except_always_passing_bare_except_pos` and
+`broad_except_always_passing_unittest_pos`, each BROAD_EXCEPT_ADDED high
+with `NO_PROD_CHANGE_IN_DIFF`; their titles were approved under A88
+(below) and are unchanged. Four negatives, one per condition, carry new
+labels, which the owner approved (below):
+`broad_except_literal_beside_inspection_neg` (condition three),
+`broad_except_unittest_argument_count_neg` (condition one),
+`broad_except_unittest_not_testcase_neg` (condition two) and
+`broad_except_unproven_oracle_neg` (`assert value() or True`, R51).
+`benchmarks/FAILURES.md` was edited by hand: row 129's pins gain the four
+positives. `tests/test_issue496_python_handler_literal.py` adds 136
+collected items, counted from its parametrize lists: the `assert` family
+(29), the unittest methods (17), what stays inspection (30), condition
+one (13), condition two (11 proved, 21 unknown), verdicts for the pair,
+the offsets and the cost, the unchanged branch folder, the R66 residual
+and `except*`. By reading, the documented test count becomes 20083
+(19939 + 8 + 136); CI's collection checks it. Nothing under `tests/gates`
+changes.
+
+**Sweep** (R32). The pair's before side ran on #518 (run 39215282880,
+the four ids above). The after side and the refactor benchmark
+(`tests/gates/test_refactor_corpus.py`) run in this PR's CI. The standard
+and D-088 sets, compared byte for byte between this fix's parent commit
+and its merge commit, join the combined sweep. A checkwash-lab branch
+declares it before any engine runs, and the owner approves the frozen
+manifest and both engine commits first; it runs on LAPTOP-01AGNPJU only
+under EC POLICY `checkwash-pju-sweep` (T-546), otherwise on the pool. Its
+report lists every commit where `BROAD_EXCEPT_ADDED` changes, each one
+read. Waived (R32): the targeted set of Python commits that add a literal
+assertion to a broad handler, because only assertions proved to always
+pass leave the exemption and a newly reported handler counts as
+swallowing under main's rule anyway; and the Python cost difference,
+which is one literal evaluation per oracle in a broad handler that guards
+one. `NOT_RUN：工作機規則（POLICY work-machine-local），the standard and D-088 comparison waits for the combined sweep; nothing ran on the work machine`.
+
+**Closing** (R35). #496 closes when this PR and its approved maintainer
+text merge, without waiting for the sweep, which departs from
+`docs/KNOWN-ISSUES-v0.8.0.md:31`. What has not run is recorded here, in
+the combined sweep's lab declaration and in a `docs/KNOWN-ISSUES-next.md`
+row. Still to measure: the standard and D-088 comparison above. Fallback:
+if it shows a new block on the new text that review finds false, #496
+reopens, and the proof is narrowed to leave that shape unknown before a
+release ships it. The owner accepted this fallback (below).
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code,
+and this PR's CI is the first run.
+
+First approvals: the owner answered the agent's PR approval list on
+2026-10-19 with 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"); the reply was a button whose text the assistant wrote. Its
+A87 approved reading #518 as its body says, and its A88 approved the four
+positives' titles, with no second review while they are unchanged.
+
+The agent wrote this entry in #496's fix PR #531. The maintainer approved
+it on 2026-10-19: 「第二輪核可全部照建議」 ("the round-2 approval list, all
+as recommended"), in reply to the agent's second list of approval items
+for the open pull requests, which takes every item's recommended answer.
+For this PR those are: B16, the wording as committed of SPEC §4's
+`BROAD_EXCEPT_ADDED` Python clause (a4bc8111, a0a1b4a6), THREATMODEL row
+129's Python paragraph and residuals and the qualification in the
+false-positive table (f1b2cc08, 2c7fd0c4), this entry (7c2ae41a,
+bb83ffd6, fe8a82ef), the `docs/KNOWN-ISSUES-next.md` #496 row (6953e3ec,
+a0a1b4a6) and the Python pointer in `docs/js-catch-swallowing.md`
+(6953e3ec); B17, readings 1 to 8 as written, each erring toward unknown,
+including reading 4, whose base rule is narrower than R49's text, and the
+conservative conditions of readings 6 and 7 (#306's reading of a
+rebinding, and `assertEqual` unknown when the module's text holds
+`addTypeEqualityFunc`); B18, the four negatives' labels; and B19, the
+fallback under **Closing** (R35). The reply is the text of a button the
+agent wrote, which the owner chose; the agent also wrote the list and
+each item's options. After the approval the agent changed only the
+readings' heading and the negatives' sentence, which had said they
+awaited it, added the sentence after the fallback saying the owner
+accepted it, retitled the paragraph on the first approvals, and wrote
+this paragraph.

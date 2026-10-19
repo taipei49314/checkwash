@@ -76,6 +76,12 @@ below remain; the v0.3.0 IR adds reviewed-change evidence described in the
 | `skipped_files` | unparseable paths |
 | `config_errors` | parse failures for base-side config/allow, and config values that are not valid |
 | `verdict` | `pass` or `block` |
+| `unread` | from the next minor (unreleased, [#454](https://github.com/taipei49314/checkwash/issues/454)): changed sides over the 1,000,000-byte source limit that no detector had to read, the sides the stderr notes name. One object per side with exactly `path`, `side` (`base`, `head` or `worktree`), `size` and `limit` in bytes, sorted by path, then side. The change holding a listed side was set aside whole, its readable side included; in a range-mode rename with one side over the limit, the readable side's path is not listed (the new path when the base side is over, the old path when the head side is). The skip of a root `poetry.lock` or `uv.lock` over the limit at the base is not listed; its note stays on stderr. When the diff also changes that lockfile, the change's sides over the limit are listed like any other. The key is omitted when empty |
+
+`unread` is the first key that a run can omit. It needs no version bump (a
+new optional field, below), but a consumer that validates the envelope
+strictly meets it only on a run with an unread side. `--emit-ir` and the
+`--format hook-json` payload do not carry it.
 
 Each finding object is the dataclass field set of `Finding`: `rule`,
 `severity`, `message`, `path`, `unit`, `before`, `after`, `escalators`,
@@ -97,7 +103,11 @@ key on `version` inside the payload, not on field order.
 
 `--format sarif` is a **projection** of the same findings into SARIF
 2.1.0. It does not bump `FINDINGS_VERSION`. Allowlisted findings are
-omitted there.
+omitted there. From the next minor (unreleased, #454), each unread side is
+a `warning` tool execution notification after any coverage gaps, never a
+result: the stderr note as its text, and `checkwash.path`, `checkwash.side`,
+`checkwash.size` and `checkwash.limit` as its properties. A head or
+worktree side names the file as its location; a base side has none.
 
 **Pre-rename compatibility:** v0.2.12 and v0.2.13 emit the `checkwash_*` keys above,
 with `FINDINGS_VERSION = 1`. Older consumers expecting
@@ -277,9 +287,16 @@ declares a subtest instead. Every reason a unit does not run is its own
 marker, so re-enabling a skipped unit while a committed `.only` still holds
 the focus adds no disable. Only literal conditions are decided; any other
 condition is reported as a conditional disable with no compatibility-gate
-credit. Hooks, block callbacks defined elsewhere, destructured contexts,
-`test.extend` functions and parametrized `.each`/`.for` units stay outside
-this model.
+credit. Hooks, block callbacks defined elsewhere, destructured contexts and
+`test.extend` functions stay outside this model. Since
+[#428](https://github.com/taipei49314/checkwash/issues/428) (unreleased), a
+`test.each`, `it.each` or `test.for` table is one unit, named by its title as
+written, whose liveness is read as any unit's and whose rows are its test
+items: a deleted row, or a plain test turned into a table of no rows or of
+rows that cannot be counted, is reported as no longer running. In v0.8.0
+these tables are not scanned at all: their assertions, their rows and their
+deletion go unchecked. The rows of a `describe.each` table are still not
+read.
 It is a bounded text scan, not a full JavaScript parser or a general assertion
 library model. JS/TS production semantics remain unread, so a modified
 production file the engine cannot parse is the only repair evidence a JS/TS

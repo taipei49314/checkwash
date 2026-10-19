@@ -1,0 +1,21 @@
+=== meta ===
+bypass: 85
+rule: ASSERT_WEAKENED
+title: an `isinstance` precondition written above a rewritten `==` on the same subject does not take the old `==`'s place
+origin: #434 A1, ruling 434 A (2026-10-16) - the order fallback first gives the old `==` a leftover that checks its subject, here `result == 20.0` through `result = area(4, 5)`; span order alone paired the precondition and blocked as EXACT_VALUE(90) -> TYPE_SHAPE(50)
+=== before: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    assert area(4, 5) == 20.0
+=== after: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    result = area(4, 5)
+    assert isinstance(result, float)
+    assert result == 20.0
+=== expect ===
+[]

@@ -1,0 +1,42 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+title: a fixture in the test module counts through the call it returns, read through that module's imports
+origin: ruling 471 Q1 (c) and Q2 (a): the module's own `ledger` fixture returns Ledger(), and the diff
+origin2: changes the Ledger class. The assertion reads `ledger`, so both findings take repair evidence.
+origin3: Before #471, EXPECTED_VALUE_HARDCODED blocked and EXPECTED_VALUE_CHANGED held by PACKAGE_REPAIR.
+=== before: billing.py ===
+class Ledger:
+    fee = 5.0
+=== after: billing.py ===
+class Ledger:
+    fee = 7.5
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import Ledger
+
+
+@pytest.fixture
+def ledger():
+    return Ledger()
+
+
+def test_fee(ledger):
+    assert ledger.fee == 5.0
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import Ledger
+
+
+@pytest.fixture
+def ledger():
+    return Ledger()
+
+
+def test_fee(ledger):
+    assert ledger.fee == 7.5
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

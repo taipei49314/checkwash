@@ -127,6 +127,23 @@ class Assertion:
     # repair evidence from that method's callees only for findings about
     # itself (306 Sub-Q8). Optional, so IR_VERSION stays 2.
     via: str | None = None
+    # The subject a bare local name stands for (#434): when `left` is one
+    # name of the unit, bound only by plain `name = <expr>` statements, and
+    # exactly one of them reaches this assertion, the bound expression as
+    # canonical source (`ast.unparse`) and the reaching keys of the names
+    # that expression reads at that statement (`ir.subjects`). Python only,
+    # an own assertion in the unit's own scope only; None for every other
+    # assertion. The order fallback reads it through
+    # `ir.subjects.same_subject`. Optional, so IR_VERSION stays 2.
+    resolved_subject: tuple[str, str] | None = None
+    # The unit's parameters this assertion reads that name a fixture whose
+    # producer was read (`UnitSide.fixture_producers`): directly, or through
+    # the unit's own assignments (#471). Only an assertion written in the
+    # unit's own body, outside a nested def, class or lambda, records any,
+    # and a parameter the body binds again, in any form, is not recorded.
+    # Repair evidence reads the before half's for the finding about it
+    # (471 Q3). Sorted. Optional, so IR_VERSION stays 2.
+    fixture_reads: tuple[str, ...] = ()
 
 
 @dataclass
@@ -217,6 +234,16 @@ class UnitSide:
     # list), so that whoever reads the rows sees exactly the decorators
     # `param_cases` counted, or nothing.
     param_rows: tuple[ParamTable, ...] = ()
+    # JS/TS only (#428): this unit is a `.each`/`.for` table whose rows
+    # cannot be counted, so `param_cases` is None and `param_rows` empty.
+    # A table's rows are counted when it passes an array literal with no
+    # spread or hole, a tagged template, or a same-file `const` bound once
+    # to such a literal and read nowhere but as a table argument. When either
+    # side of a table pair is unknown the count rule stays silent; a plain
+    # test whose pair is such a table is the one test item it was (428.Q2a).
+    # The Python frontend never sets it, so no Python reading moves.
+    # Optional, so IR_VERSION stays 2.
+    param_rows_unknown: bool = False
     # Literal paths a conftest removes from collection, sorted. Markers
     # deduplicate by name, so appending a second control to a conftest that
     # already had one produced no event at all (THREATMODEL 81). The path set
@@ -248,6 +275,16 @@ class UnitSide:
     # rich c8abbb3bd2 (adjudicated false positive, 2026-08-25) is the first
     # shape; the guard that spares it must not spare the second.
     exclusive_bindings: tuple[str, ...] = ()
+    # Each fixture this unit requests by parameter whose producer was read,
+    # as (parameter, dotted callee, modules): the call the fixture returns or
+    # yields, and the modules that the import binding the callee's root names
+    # in the fixture's own file (#471, `frontends/python/fixture_producers`).
+    # One level deep, resolved as pytest resolves the fixture for this test,
+    # from this side's module and conftest chain. Repair evidence reads the
+    # before side's, for a finding whose before-side assertion reads the
+    # parameter (`Assertion.fixture_reads`). Sorted by parameter. Optional,
+    # so IR_VERSION stays 2.
+    fixture_producers: tuple[tuple[str, str, tuple[str, ...]], ...] = ()
 
     @property
     def disabled(self) -> bool:
@@ -433,6 +470,16 @@ class DiffGlobals:
     # files. Feature removal explains a deleted test the way a modified
     # symbol explains an edited expectation (PROD_SYMBOL_REMOVED).
     prod_symbols_deleted: list[str] = field(default_factory=list)
+    # The entries of `prod_symbols_changed` that a Python prod file the diff
+    # adds contributed, one per entry: a multiset, since an added `pkg.py`
+    # and a modified `pkg/__init__.py` can both give `pkg::X`. Only the
+    # file-scoped EXPECTED_VALUE_CHANGED reads it: nothing in a brand-new
+    # file explains rewriting an existing stored expectation (#463 Q1 (a)),
+    # the reason repair-evidence clause 3 and PACKAGE_REPAIR already give for
+    # refusing new code. Every other reader of `prod_symbols_changed` is
+    # unchanged. Optional, so IR_VERSION stays 2; an IR without it counts
+    # every changed symbol, as before.
+    prod_symbols_in_added_files: list[str] = field(default_factory=list)
     # Callers of changed prod symbols, for one-hop repair evidence:
     # {caller leaf name: [changed symbol leaf names it calls]}.
     prod_symbol_callers: dict[str, list[str]] = field(default_factory=dict)
@@ -443,7 +490,7 @@ class DiffGlobals:
     # unguarded suite control (D-028), and a weakening-class finding in a
     # Python test or conftest (gating.OPAQUE_REFUSED_RULES, #419). The flag
     # itself stays a diff-level fact: the sweep counts it and the snapshot
-    # rule reads it exactly as before.
+    # rule reads it exactly as before (#463 Q3 (a) keeps that).
     prod_opaque_change: bool = False
     # Top-level packages/modules of changed prod files, and what each test
     # file imports. Symbol-level evidence is confined to files the diff

@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 
 from checkwash import FINDINGS_VERSION, __version__
+from checkwash.change import UnreadSide
 from checkwash.findings import Finding
 from checkwash.ir.model import IR, to_jsonable
+from checkwash.report.unread import unread_entries
 
 
 def findings_to_json(
-    ir: IR, findings: list[Finding], verdict: str, errors: list[str] | None = None
+    ir: IR, findings: list[Finding], verdict: str, errors: list[str] | None = None,
+    unread: Iterable[UnreadSide] = (),
 ) -> str:
     counts = {"critical": 0, "high": 0, "warn": 0, "info": 0}
     for f in findings:
@@ -28,6 +32,11 @@ def findings_to_json(
         "config_errors": list(errors or []),
         "verdict": verdict,
     }
+    entries = unread_entries(unread)
+    if entries:
+        # Optional, so omitted when empty: a run with no unread side keeps
+        # the envelope it had before #454, byte for byte.
+        payload["unread"] = entries
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
 
 

@@ -1,0 +1,20 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a stored expectation rewritten beside a comment edit in an existing template stays at warn (named residual)
+origin: #463 reproduction step 3, ruling Q3 (a) (issuecomment-6248011246): an opaque production change
+origin2: still counts for the snapshot form, consistent with #419 Q1, until a sweep prices refusing it.
+origin3: Current behaviour pinned as a named residual (THREATMODEL row 132), not a claim that the edit is
+origin4: honest.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== before: app/templates/invoice.html ===
+<!-- invoice -->
+<p>Total: {{ total }}</p>
+=== after: app/templates/invoice.html ===
+<!-- invoice, two decimals -->
+<p>Total: {{ total }}</p>
+=== expect ===
+[{"rule": "SNAPSHOT_CODE_COCHANGE", "severity": "warn", "path": "tests/golden/invoice.txt"}]

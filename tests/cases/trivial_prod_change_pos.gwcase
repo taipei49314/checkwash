@@ -25,4 +25,4 @@ def compute_invoice_total(items):
     """Sum the invoice items."""
     return sum(items)
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

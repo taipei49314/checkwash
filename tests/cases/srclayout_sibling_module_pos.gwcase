@@ -22,4 +22,4 @@ from pkg.module_b import calculate
 def test_calc():
     assert calculate(2) == 99
 === expect ===
-[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

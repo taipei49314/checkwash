@@ -41,11 +41,31 @@ answer it (ruling 306, 2026-10-14):
   import binds into the package or by a dotted string.
 - Sub-Q3: in the first class of the order that binds the name, its one
   binding is a plain def in the class body, not under `if` or `try`. Nowhere
-  in the module does code store or delete `.<name>`, store into a
-  `.__dict__`, call `setattr`, `delattr` or `object.__setattr__` with that
-  literal name (or with a computed name on a receiver or on a class of the
-  order), or name it in `patch.object` or `monkeypatch.setattr`; and no
-  class of the order defines `__setattr__`.
+  in the module does code store or delete `.<name>`, call `setattr`,
+  `delattr` or `object.__setattr__` with that literal name (or with a
+  computed name on a receiver or on a class of the order), or name it in
+  `patch.object` or `monkeypatch.setattr`; and no class of the order defines
+  `__setattr__`. Since #502 these also name it: a call whose last name is
+  `__setattr__` or `__delattr__`, by its name argument, the first of a bound
+  call (`self.__setattr__("_check", f)`) and the second of an unbound one
+  (`type.__setattr__(C, "_check", f)`); a keyword or a literal dict key of
+  `update()`, or the literal key of `setdefault()`, on `x.__dict__` or
+  `vars(x)`; and in a class body a literal key of `vars()` or `locals()`
+  stored, deleted, or written by those calls, `__setitem__` or `__delitem__`.
+  No name resolves anywhere in the module after a store into or del from
+  `x.__dict__[...]` or `vars(x)[...]` with any key (`vars(C)[...]` raises at
+  run time, as `C.__dict__[...]` does, and is read the same way), a
+  `__setitem__` or `__delitem__` on either, a store or del of `x.__dict__`
+  itself (`=`, `|=`, a literal-name setattr), or any of these writes whose
+  name is not a literal: a `**` argument or another mapping in `update()`, a
+  computed key, a `__setattr__` or `__delattr__` with no literal name, a
+  starred argument or a count neither form takes, or a `setattr` or `delattr`
+  whose target or name is a starred argument (`setattr(*(C, "_check", f))`).
+  A computed-name `setattr` on a plain alias of the receiver or of a class of
+  the order counts as one on it, one hop and only from `x = C`,
+  `x = type(self)` or `x = self.__class__` bound in the call's own scope, a
+  def or lambda around it, or the module; one whose target is reached through
+  a subscript or another call (`globals()["C"]`) counts as one on every class.
 - Sub-Q4: only an undecorated `def` or `async def` resolves, so a
   `staticmethod` or `classmethod` called through the instance does not.
 - Sub-Q6: a name `unittest.TestCase` defines is never followed, in any
@@ -96,6 +116,13 @@ _SETATTR = {"setattr", "delattr", "object.__setattr__", "object.__delattr__",
 _SETTERS = frozenset({"setattr", "delattr", "setitem", "delitem",
                       "__setattr__", "__delattr__", "__setitem__", "__delitem__"})
 _DICT_SETTERS = frozenset({"update", "setdefault", "pop", "popitem", "clear", "__setitem__", "__delitem__"})
+# The namespace methods that rebind a helper's name (#502): `update` and
+# `setdefault` by the names they write, `__setitem__` and `__delitem__` as
+# the item store and del they spell. A deletion from an instance's namespace
+# shows the class's def again, so `pop`, `popitem` and `clear` are not read.
+_NAMESPACE_WRITES = frozenset({"update", "setdefault", "__setitem__", "__delitem__"})
+# Matched by a call's last name, bound or unbound (#502).
+_DUNDER_SETTERS = frozenset({"__setattr__", "__delattr__"})
 # unittest's class decorators that return the class they decorate, as a
 # fixed literal list read through the bindings to `unittest` or
 # `unittest.case` (#487; `Lib/unittest/case.py` of CPython 3.11 to 3.14):
@@ -161,6 +188,75 @@ def _through_dict(node) -> bool:
     """Is this `x.__dict__` or `vars(x)`?"""
     return getattr(node, "attr", None) == "__dict__" or (
         isinstance(node, ast.Call) and dotted_name(node.func) == "vars")
+
+
+def _object_namespace(node) -> bool:
+    """Is this an object's namespace, `x.__dict__` or `vars(x)` with an argument (#502)?"""
+    if isinstance(node, ast.Attribute):
+        return node.attr == "__dict__"
+    return (isinstance(node, ast.Call) and dotted_name(node.func) in ("vars", "builtins.vars")
+            and bool(node.args or node.keywords))
+
+
+def _class_namespace(node) -> bool:
+    """Is this `vars()` or `locals()` with no argument, a class's namespace in its body (#502)?
+
+    At module scope it is the module's namespace and in a function its
+    locals, where a write rebinds no method.
+    """
+    return (isinstance(node, ast.Call) and not node.args and not node.keywords
+            and dotted_name(node.func) in ("vars", "locals", "builtins.vars", "builtins.locals"))
+
+
+def _scoped(tree: ast.Module):
+    """(node, scopes) for each node of the module (#502).
+
+    `scopes` runs from the module to the def, lambda or class whose body
+    holds the node. A def's, lambda's or class's header (`_header`) runs in
+    the scope that holds it. A comprehension is read as part of its scope.
+    """
+    stack = [(statement, (tree,)) for statement in tree.body]
+    while stack:
+        node, scopes = stack.pop()
+        yield node, scopes
+        if isinstance(node, (*_DEFS, ast.ClassDef, ast.Lambda)):
+            stack.extend((child, scopes) for child in _header(node))
+            inner = (*scopes, node)
+            stack.extend((child, inner) for child in ([node.body] if isinstance(node, ast.Lambda) else node.body))
+        else:
+            stack.extend((child, scopes) for child in ast.iter_child_nodes(node))
+
+
+def _target(node) -> str | None:
+    """The name a computed-name `setattr` writes under (#502).
+
+    `x` for `x`, `x.attr`, `x.__class__` or `type(x)`, as `_root` reads them;
+    None when the target is reached through a subscript or another call
+    (`globals()["C"]`, `make()`), or is no name at all.
+    """
+    while True:
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type"
+                and len(node.args) == 1 and not node.keywords):
+            node = node.args[0]
+        elif isinstance(node, ast.Attribute):
+            node = node.value
+        else:
+            return node.id if isinstance(node, ast.Name) else None
+
+
+def _alias(node) -> str | None:
+    """The name a plain alias stands for (#502, item 4).
+
+    `x` for `x`, `type(x)` or `x.__class__`: the values ruling 502 names
+    (`x = C`, `x = type(self)`, `x = self.__class__`). Any other value
+    (`self.settings`, `C.attr`, `make()`, `globals()["C"]`) is not followed.
+    """
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "type"
+            and len(node.args) == 1 and not node.keywords):
+        node = node.args[0]
+    elif isinstance(node, ast.Attribute) and node.attr == "__class__":
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
 
 
 def _module(target: str) -> str:
@@ -304,10 +400,17 @@ class Methods:
                         self._imported.setdefault(alias.asname or alias.name, set()).add(_module(node.module))
         self._mutated: set[str] = set()
         # Attribute names something stores or deletes, and literal names
-        # reflective calls or patches name, anywhere in the module.
+        # reflective calls, patches or namespace writes name, anywhere in the
+        # module.
         self.stored: set[str] = set()
+        # A write that may bind any name: into `x.__dict__[...]` or
+        # `vars(x)[...]`, or one whose name is not a literal (#502).
         self.dict_store = False
-        self.computed: set[str] = set()  # receiver roots of a computed-name setattr/delattr
+        # Receiver roots of a computed-name setattr/delattr, and of the plain
+        # aliases they are written through (#502).
+        self.computed: set[str] = set()
+        # A computed-name setattr whose target is no name: any class (#502).
+        self.any_class = False
         for node in ast.walk(tree):
             if isinstance(node, ast.Global):
                 # A body that declares the name `global` binds the module's
@@ -321,12 +424,18 @@ class Methods:
                 self._opaque.add(_root(node) or "")
                 self._mutate(node)
             elif isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del)):
-                if isinstance(node.value, ast.Attribute) and node.value.attr == "__dict__":
+                if _object_namespace(node.value):
+                    # `x.__dict__[...]` or `vars(x)[...]`, for any key (#502).
                     self.dict_store = True
                 self._opaque.add(_root(node) or "")
                 self._mutate(node)
             elif isinstance(node, ast.Call):
                 self._call(node)
+        self._namespaces(tree)
+        if "__dict__" in self.stored:
+            # `x.__dict__ = ...`, `|=`, `del` or a literal-name setattr of it
+            # replaces a whole namespace (#502).
+            self.dict_store = True
         self._orders: dict[int, tuple | None] = {}
         self._binds: dict[int, dict[str, list[ast.stmt]]] = {}
         self._resolved: dict[tuple[int, str], tuple | None] = {}
@@ -349,6 +458,91 @@ class Methods:
             target = _literal(_argument(node, 0, "target"))
             if target is not None:
                 self.stored.add(target.rsplit(".", 1)[-1])
+
+    def _namespaces(self, tree: ast.Module) -> None:
+        """The rebinding spellings #502 adds to Sub-Q3's (ruling 502, items 1 to 4).
+
+        A class body's `vars()` or `locals()` is its namespace, so a literal
+        key written there rebinds that name. A computed-name `setattr` or
+        `delattr` is followed one hop through a plain assignment of its
+        target's name (or an annotated or walrus one), as Python looks the
+        name up: in the call's own scope, the defs and lambdas around it, and
+        the module. Only the values `_alias` reads are followed
+        (`x = self.settings` and `x = make()` are not).
+        """
+        aliases: dict[tuple[int, str], list] = {}
+        targets: list[tuple[ast.expr, tuple]] = []
+        for node, scopes in _scoped(tree):
+            in_class = isinstance(scopes[-1], ast.ClassDef)
+            if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)) and node.value is not None:
+                for target in node.targets if isinstance(node, ast.Assign) else [node.target]:
+                    if isinstance(target, ast.Name):
+                        aliases.setdefault((id(scopes[-1]), target.id), []).append(node.value)
+            elif isinstance(node, ast.Subscript) and isinstance(node.ctx, (ast.Store, ast.Del)):
+                if in_class and _class_namespace(node.value):
+                    self._key(node.slice)
+            elif isinstance(node, ast.Call):
+                self._namespace_call(node, in_class)
+                if (dotted_name(node.func) or "") in _SETATTR:
+                    if any(isinstance(arg, ast.Starred) for arg in node.args[:2]):
+                        # `setattr(*(C, "_check", f))`: any target, any name.
+                        self.dict_store = True
+                    elif len(node.args) >= 2 and _literal(node.args[1]) is None:
+                        targets.append((node.args[0], scopes))
+        for target, scopes in targets:
+            root = _target(target)
+            if root is None:
+                # `setattr(globals()["C"], NAME, f)`: every class (item 4).
+                self.any_class = True
+                continue
+            self.computed.add(root)
+            around = [scope for scope in reversed(scopes[:-1]) if not isinstance(scope, ast.ClassDef)]
+            for scope in (scopes[-1], *around):
+                for value in aliases.get((id(scope), root), ()):
+                    alias = _alias(value)
+                    if alias is not None:
+                        self.computed.add(alias)
+
+    def _namespace_call(self, node: ast.Call, in_class: bool) -> None:
+        """A call that rebinds a name through a namespace or a dunder setter (#502)."""
+        func = node.func
+        last = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if last in _DUNDER_SETTERS:
+            # By the count: a bound call carries the name first (`self.__setattr__("_check", f)`),
+            # an unbound one second (`type.__setattr__(C, "_check", f)`); `__delattr__` takes no value.
+            count, bound = len(node.args), 2 if last == "__setattr__" else 1
+            if any(isinstance(arg, ast.Starred) for arg in node.args) or count not in (bound, bound + 1):
+                self.dict_store = True  # no argument the count shows is the name: any name
+            else:
+                self._key(node.args[count - bound])  # a name that is no str literal: any name
+            return
+        if not isinstance(func, ast.Attribute) or last not in _NAMESPACE_WRITES:
+            return
+        by_key = in_class and _class_namespace(func.value)
+        if not (by_key or _object_namespace(func.value)):
+            return
+        if last == "update":
+            if (any(keyword.arg is None for keyword in node.keywords) or len(node.args) > 1
+                    or (node.args and not isinstance(node.args[0], ast.Dict))):
+                # `update(**attrs)`, `update(attrs)`: any name.
+                self.dict_store = True
+                return
+            self.stored.update(keyword.arg for keyword in node.keywords)
+            for key in node.args[0].keys if node.args else ():
+                self._key(key)  # a `**` entry's key is None: any name
+        elif last == "setdefault" or by_key:
+            self._key(node.args[0] if node.args else None)
+        else:
+            # `x.__dict__.__setitem__(...)` is the item store it spells: any name.
+            self.dict_store = True
+
+    def _key(self, node) -> None:
+        """A name a namespace write gives: a str literal rebinds it, anything else every name (#502)."""
+        key = _literal(node)
+        if key is None:
+            self.dict_store = True
+        else:
+            self.stored.add(key)
 
     def _writes(self, node: ast.Call, name: str) -> None:
         """Record the packages a call that may write into its target reaches (#487).
@@ -500,7 +694,7 @@ class Methods:
         local = [entry for entry in order if not isinstance(entry, tuple)]
         if any(lookup in self.binds(entry) for entry in local for lookup in (*_LOOKUP, "__setattr__")):
             return None
-        if any(entry.name in self.computed for entry in local):
+        if self.any_class or any(entry.name in self.computed for entry in local):
             return None
         for entry in order:
             if isinstance(entry, tuple):

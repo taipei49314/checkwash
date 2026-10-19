@@ -30,4 +30,4 @@ from app.exceptions import AppError
 def test_error_is_exception():
     assert issubclass(AppError, Exception)
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

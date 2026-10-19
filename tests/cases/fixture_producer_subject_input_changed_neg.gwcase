@@ -1,0 +1,62 @@
+=== meta ===
+rule: SUBJECT_INPUT_CHANGED
+issue: 471
+credit: @talhayme (#471)
+title: a changed subject input on an assertion that reads the provider fixture takes its producer's evidence
+origin: #471, built from the reporter's description of punt-labs/langlearn-tts b4bc4e63 (MIT): the
+origin2: SUBJECT_INPUT_CHANGED finding of TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none.
+origin3: The assertion reads `elevenlabs_provider`, whose conftest fixture returns
+origin4: ElevenLabsProvider(client=...), one level deep although the fixture requests another fixture.
+origin5: Blocked before #471 with NO_PROD_CHANGE_IN_DIFF.
+=== before: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "rachel"
+
+    def infer_language_from_voice(self, voice: str):
+        return None
+=== after: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "matilda"
+
+    def infer_language_from_voice(self, voice: str):
+        return None
+=== before: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_infer_language_returns_none(self, elevenlabs_provider):
+        assert elevenlabs_provider.infer_language_from_voice("rachel") is None
+=== after: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_infer_language_returns_none(self, elevenlabs_provider):
+        assert elevenlabs_provider.infer_language_from_voice("matilda") is None
+=== head: tests/conftest.py ===
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+@pytest.fixture
+def mock_elevenlabs_client():
+    return object()
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client):
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== expect ===
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none"}]
