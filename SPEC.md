@@ -1207,14 +1207,29 @@ changed:
 
 - a marker added (`marker_added`, `collection_control`, and `inert_mark` for
   a conftest's `pytestmark`): the marker's complete text as the after text,
-  and its recorded guard as the context, null when it has none, so a guarded
-  skip and an unguarded one of the same name are two approvals;
+  and its recorded guard as the context, null when it has none, so where the
+  frontend records the guard, as the Python frontend does, a guarded skip
+  and an unguarded one of the same name are two approvals; a JS/TS
+  imperative skip (`ctx.skip()`, `t.skip()`, `this.skip()`) records none, so
+  for it they are one. Alignment records only the names of the markers it
+  leaves unpaired, so the markers a name added are read by content: the
+  head markers of that name whose text and guard no base marker of that
+  name has. When there are as many of them as the name has findings, each
+  finding binds one of them, in the head side's order. Otherwise (a marker
+  of that name also edited, one moved in from a helper, or one paired with a
+  marker of another name) each finding of the name binds, as the context,
+  every marker of the unit on both sides, each a name, text and guard, each
+  side sorted;
 - a guard made always true or removed (`guard_weakened`, or `inert_mark` in a
   conftest): the guard before and the guard after as the before and after
   texts, the after null when the guard was removed, so the two events are
-  two approvals; a path gained by an unguarded `collect_ignore`
-  (THREATMODEL row 81), reported in the same shape, has no guard on either
-  side, so both texts are null and no path is bound;
+  two approvals, and as the context what every marker of that name ran
+  under on each side (its guard, or the first line of the `except` block it
+  sits in, null when neither), each side sorted, so removing one of two
+  guards of a name and removing the other are two approvals; a path gained
+  by an unguarded `collect_ignore` (THREATMODEL row 81), reported in the same
+  shape, has no guard on either side, so both texts are null and no path is
+  bound;
 - parametrized cases deleted or disabled (`param_cases_removed`): as the
   context, the rows that ran before and are no longer written (an edited
   row's old text among them) and the rows still written but newly disabled,
