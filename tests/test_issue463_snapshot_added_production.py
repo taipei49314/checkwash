@@ -155,6 +155,41 @@ def test_a_new_unrelated_test_silences_only_the_cochange_warning():
     assert findings == [REWRITE]
 
 
+# --- the cost, open for the owner's decision (D-157): a pytest file under golden/ --------
+
+
+GOLDEN_TEST = "tests/golden/test_x.py"
+GOLDEN_TEST_EDIT = FileChange(
+    GOLDEN_TEST, "modified",
+    b"from app.billing import total\n\n\ndef test_total():\n    assert total() == 78.75\n",
+    b"from app.billing import total\nfrom app.feature import double\n\n\n"
+    b"def test_total():\n    assert total() == 78.75\n\n\n"
+    b"def test_double():\n    assert double(21) == 42\n",
+)
+FEATURE = FileChange("app/feature.py", "added", None, b"def double(x):\n    return x * 2\n")
+
+
+@pytest.mark.parametrize("extra,expected,expected_verdict", [
+    pytest.param((), [("EXPECTED_VALUE_CHANGED", "high", GOLDEN_TEST)], "block",
+                 id="beside-the-new-module-only"),
+    pytest.param((NO_OP_EDIT,), [], "pass", id="beside-a-changed-existing-symbol"),
+])
+def test_a_test_added_for_a_new_module_to_a_pytest_file_under_golden(extra, expected, expected_verdict):
+    # A pytest file kept under golden/ is a stored expectation as well as a
+    # test (#219), so adding a test to it rewrites it. Before #463 the new
+    # module's symbols silenced the file-scoped form and the new test
+    # silenced SNAPSHOT_CODE_COCHANGE, so the first case passed. Pinned as
+    # current behaviour, not as a judgement that the edit is dishonest:
+    # whether Q1 (a) accepts this cost is open (D-157, THREATMODEL row 132).
+    ir, findings, verdict = check(GOLDEN_TEST_EDIT, FEATURE, *extra)
+    assert [(file.role, file.test_obligations) for file in ir.files if file.path == GOLDEN_TEST] == [
+        ("snapshot", True)]
+    assert ir.globals.test_logic_changed
+    assert ir.globals.prod_symbols_in_added_files == ["app.feature::double"]
+    assert verdict == expected_verdict
+    assert findings == expected
+
+
 # --- the detector reads the new field and nothing else new -------------------------------
 
 
