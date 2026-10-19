@@ -12478,16 +12478,16 @@ The same tests calling `ElevenLabsProvider()` themselves passed.
 
 Implementation (lines at this PR):
 
-- `frontends/python/fixture_producers.py` (new). `producer` (`:134-176`):
+- `frontends/python/fixture_producers.py` (new). `producer` (`:136-178`):
   the fixture's only `return <value>`, or in a generator its only
   `yield <value>`, outside nested defs, classes and lambdas; the value is a
   call with a dotted callee, or a name, not a parameter, bound exactly once
   in the fixture's scope by a plain `=` or annotated `=` of such a call
-  (`_binders`, `:87-121`; `_assigned_value`, `:124-131`). The callee's
-  root must be resolved by `import_modules` (`:51-84`) of the fixture's
-  file and not be bound by the fixture itself. `ProducerScope` (`:179-218`)
+  (`_binders`, `:88-123`; `_assigned_value`, `:126-133`). The callee's
+  root must be resolved by `import_modules` (`:52-85`) of the fixture's
+  file and not be bound by the fixture itself. `ProducerScope` (`:181-220`)
   reads one module or class body as `SetupScope` reads its fixtures;
-  `unit_producers` (`:221-252`) resolves each fixture the unit requests by
+  `unit_producers` (`:223-254`) resolves each fixture the unit requests by
   parameter.
 - `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
   `conftest_level` (`:977-980`) through the conftest's own imports.
