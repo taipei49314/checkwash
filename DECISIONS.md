@@ -14958,10 +14958,11 @@ owner-approved labels (`snapshot_new_prod_module_pos` and
 `tests/test_issue463_snapshot_added_production.py`. Not pinned: the E1
 label of the new finding, the rename reading, `DEPENDENCY_DRIFT` beside an
 added module, and the plugin-discovery shape. By reading, the documented
-test count becomes 19650 (19619 + 24 + 7); CI's collection checks it,
-and other open pull requests move it too. `benchmarks/FAILURES.md` was
-edited by hand to what `benchmarks/make_failures.py` produces, by reading
-the generator.
+test count becomes 19650 (19619 + 24 + 7); CI's collection checks it.
+When integration batch 2 merged, the four pull requests merged after this
+one in it (#525, #527, #522 and #531) had taken it to 20083.
+`benchmarks/FAILURES.md` was edited by hand to what
+`benchmarks/make_failures.py` produces, by reading the generator.
 
 The agent wrote this entry in #463's fix PR #524. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval list as
@@ -15232,8 +15233,11 @@ product or test code ran; CI runs the tests. Added: three `.gwcase` fixtures
 (below), and 75 collected items in
 `tests/test_issue502_helper_rebinding_spellings.py`, counted from its
 parametrize lists; no existing test changed. By reading, the documented
-test count becomes 19609 (19531 + 75 + 3); CI's collection checks it, and
-other open pull requests may change the base.
+test count becomes 19609 (19531 + 75 + 3); CI's collection checks it.
+The base, 19531, is main's 19505 and the 26 items of #509, which merged
+before this pull request in integration batch 2. When that batch merged,
+the six pull requests merged after this one in it (#528, #524, #525, #527,
+#522 and #531) had taken the count to 20083.
 
 The agent wrote this entry in #502's fix PR #520. On 2026-10-19 the
 maintainer approved items A44 to A49 of the agent's approval list:
@@ -15505,7 +15509,8 @@ None is under `tests/gates`. By reading, the documented test count becomes
 19619 (19609 + 10: three fixtures, each one item of
 `tests/test_cases_runner.py::test_case`, and seven items); the re-pins add
 none. On this PR's own base, CI on 4352949c collected 19485 (19475 + 10).
-Other open PRs move it too, which is resolved at merge time.
+When integration batch 2 merged, the five pull requests merged after this
+one in it (#524, #525, #527, #522 and #531) had taken the count to 20083.
 
 **Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
 later acceptance sweep that compares escalators reports label-only
