@@ -15375,7 +15375,7 @@ Implementation (lines at this PR):
   under `--format json` without `--emit-ir`, `_json_size_refusal`
   (`cli.py:991-1009`) writes the stderr line `main()` writes for the
   refusal in every other format (`cli.py:929-933`, `:936-939`), then
-  `size_refusal_to_json` (`report/jsonout.py:43-55`), and returns 2.
+  `size_refusal_to_json` (`report/jsonout.py:43-57`), and returns 2.
   Otherwise the exception reaches `main()` as before.
 - The document is `{"unread": [<entry>]}`. Its one entry is
   `unread_entry` (`report/unread.py:30-40`) of the side the refusal names,
@@ -15384,8 +15384,11 @@ Implementation (lines at this PR):
   findings JSON is: sorted keys, two-space indent, UTF-8, one final LF.
 - It is not a findings document: it carries no
   `checkwash_findings_version`, `run`, `findings`, `summary` or `verdict`.
-  A consumer that requires the version, as `docs/embedding.md` says to,
-  reads it as the error it is, and none can read a pass from it.
+  A consumer that checks the exit status, or requires the version as
+  `docs/embedding.md` says to, reads it as the error it is and cannot read
+  a pass from it. One that does neither and takes a missing `verdict` for
+  no block can, where an empty stdout used to fail to parse (Contract,
+  below).
 
 **Readings where the ruling is silent**, for the owner's approval:
 
@@ -15408,17 +15411,29 @@ Implementation (lines at this PR):
    (D-150). Other unread sides of the same change, and other changes in
    the diff that were set aside, are not listed: the run stopped before
    their stderr notes.
-4. **Which refusals.** Every `SourceOverLimit` that reaches `_cmd_check`:
-   a must-read change (`engine.py:303`, `:314`), a guarded read of a
-   set-aside path (`engine.py:341`) and a context read of a file the diff
-   does not hold (`gitio/snapshot.py:629`), whose side no change holds. Not
+4. **Which refusals.** Every `SourceOverLimit` that reaches `_cmd_check`.
+   By reading, it is raised for a must-read change (`engine.py:303`,
+   `:314`); a guarded read of a set-aside path (`engine.py:341`); the unread
+   base side of a set-aside root `package.json` or `tsconfig.json`
+   (`_base_root_file`, `engine.py:200`); and a context read through a
+   snapshot reader, the working tree's (`gitio/snapshot.py:629`) or, with a
+   range, the head snapshot's (`GitSnapshot.read`, `:433`, and `read_many`,
+   `:208`), whose side may be one no change holds. These are the raise
+   sites found by reading; the rule is the exception type. Not
    a root manifest, config, exemption list or `--task` file over the limit
    at the base, which `_analyse` reads before the analysis and which
    refuses as a `GitSourceOverLimit`, a `GitError` (`gitio/git.py:152-163`):
    `tests/test_issue415_oversized_sources.py:620` asserts an empty stdout
    for it and is not among the approved pins. Not the range-mode pytest
    configuration symlink target that D-150 lists, which refuses as a plain
-   `EngineError`, nor any other engine error.
+   `EngineError` (`gitio/snapshot.py:322`), nor any other engine error.
+   By reading, `read_config_many`'s check of a configuration's own size
+   (`gitio/snapshot.py:281`) is a plain `EngineError` too. With a range, the
+   collection-inventory and runtime-shadow consumers reach it for a pytest
+   configuration the diff does not change (`collection_inventory.py:473`,
+   `shadow.py:2694`). Whether another reader refuses such a file first, as
+   a `SourceOverLimit`, was not traced, so such a run may print the document
+   or nothing.
 5. **`--emit-ir`** keeps an empty stdout: #454 item 6 keeps the IR free of
    unread sides, and a refused run has no IR.
 
