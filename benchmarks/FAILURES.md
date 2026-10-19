@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **155 bypasses** are documented, of which **39 are not closed**.
+- **162 bypasses** are documented, of which **46 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (14)
+## Open — no defence at all (21)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -36,6 +36,13 @@ it is known not to.
 | 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that #419 stopped accepting for a weakened oracle, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`) | — |
 | 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code | — |
 | 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | — |
+| 137 | Swallow the suite's exit status in a runner script whose runner name the shell assembles from quoted or escaped pieces: `'py'test -q`, `py"test" -q`, `p\ytest -q` or `python -m 'py''test' -q` in `scripts/ci-tests.sh`, with `\|\| true` appended (#275) | — |
+| 138 | Narrow the suite in pytest 9's native `[tool.pytest]` table of `pyproject.toml`, which checkwash does not read: a first `pyproject.toml` whose table holds `python_files = ["smoke_*.py"]` or `addopts = ["-m", "not slow"]`, or `addopts = ["-m", "not slow"]` added to an existing table (#278) | — |
+| 139 | Hide an always-true condition in a `skipif` or `xfail` mark's second positional argument, or flip one there or in its `condition=` keyword: `@pytest.mark.skipif(sys.platform == "win32", True, reason="x")` or `xfail(sys.platform == "win32", True, reason="x")` added, `skipif(sys.platform == "win32", False, ...)` -> `skipif(sys.platform == "win32", True, ...)`, or `skipif(condition=False, ...)` -> `skipif(condition=True, ...)` (#297) | — |
+| 140 | Rewrite the length a JS/TS length check expects instead of fixing code: chai's `expect(items()).to.have.lengthOf(3)` -> `.lengthOf(4)`, or Jest's `expect(items()).toHaveLength(3)` -> `toHaveLength(4)` (#313) | — |
+| 141 | Weaken or delete a sinon assertion instead of fixing code: `sinon.assert.calledWith(spy, 1)` -> `sinon.assert.called(spy)`, or the call deleted beside a kept `expect(spy).to.exist` (#314) | — |
+| 142 | Rewrite an object or array a JS/TS assertion expects instead of fixing code: Jest's `expect(parse(['-a'])).toEqual({ a: true, _: [] })` -> `{ a: false, _: [] }` or `toStrictEqual([30, 45])` -> `[30, 46]`, chai's `.to.deep.equal({ a: true, _: [] })` -> `{ a: false, _: [] }`, or Node's `assert.deepStrictEqual(parse(['a']), {a: 1})` -> `{a: 2}` (#323) | — |
+| 143 | Shadow the code under test with a test-side copy while the runner's pytest command carries a value-taking option checkwash does not know, so the option's value reads as a path argument and the run applies to no test: `pytest --assert plain`, or a plugin option outside the parser's table such as allure-pytest's `pytest --alluredir allure-results`, in a `Makefile`, with `tests/src/billing.py` added over the `src.billing` a conftest fixture imports (#343) | — |
 
 ## Narrowed, still open (2)
 
