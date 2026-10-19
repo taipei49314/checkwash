@@ -12998,3 +12998,170 @@ numbering sentence up to date with main, which the pull request's claims
 review found stale. Those two edits and this paragraph as it now reads
 were written after the second reply. Both replies were buttons whose text
 the agent wrote, which the owner chose.
+
+## D-162 (2026-10-19): the verdict gate's baseline rotates to v0.8.0
+
+Owner ruling 2026-10-19, R56. The owner answered a table of 104 rulings
+with 「裁決總表全部照建議」 ("the whole ruling table as recommended"); the
+reply is the text of an answer the agent suggested, which the owner chose.
+R56 asked whether to open the v0.8.0 rotation PR now, with the
+protected-file dispositions asked in the PR, and adopted "open it now and
+merge it before the sweep freeze". This PR rests on R56. The v0.8.0
+one-time authorization (`docs/RELEASING.md`, 2026-10-15) listed "the
+verdict-baseline rotation PR (step 9), whose protected changes keep the
+maintainer's disposition" among what it covers, but its publication record
+says the grant "was consumed by publication" and that the rotation remains
+separate, so this entry does not rely on it. R56's recommendation also
+cited that grant as a reason; since the grant is consumed, the PR rests on
+the option R56 adopted and on approval items A31 to A34 (below). The PR is
+part of the v0.9.0 release preparation and has no issue: a tag-push run
+requires `[baseline]` to be the highest other `v*` tag merged into the
+tagged commit (`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which
+for a v0.9.0 tag is v0.8.0.
+D-151 to D-161 (D-153 is unused) are assigned to pull requests prepared in
+parallel, so this entry is D-162.
+
+After the rotation, pull requests, `main` and the next tag are compared
+with v0.8.0 instead of v0.7.0.
+
+- **`[baseline]`** in `tests/verdict_gate/baseline.toml` pins tag v0.8.0,
+  version 0.8.0, release commit
+  `f02b5d8a07fa39ee1898881f66c571eb164cb11c` (the merge commit of #458,
+  tag object `1d869062`) and the Release's `checkwash.pyz`: 796,565 bytes,
+  sha256 `87b097cdca4ca34dc43be8be8ddf8ef7f3197894dc6f554fe1bddc1d86e74d0c`,
+  as the GitHub Releases API reports the asset and as the
+  [publication record](docs/releases/v0.8.0-publication-verification.md)
+  lists it. The gate re-checks both on every run, and checks that the
+  archive's `checkwash/*` members equal `src/checkwash` at `f02b5d8`.
+- **`baseline_blocked`** stays 159, sha256 `9993cab6…`. The tag-push
+  verdict run of v0.8.0,
+  [38768985301/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/38768985301)
+  (job 116539533210, v0.7.0 against the tag), logs 185 cases (159 T1,
+  26 T3), zero failures and zero reported, with 159 block -> block and
+  26 pass -> pass. Zero failures means v0.7.0's blocks matched this pin.
+  With no block -> pass and no pass -> block, the candidate there, built
+  from the tag's own source, blocks exactly the same 159 cases; the
+  Release's pyz must hold that same `src/checkwash`. The run proposed
+  nothing: the gate proposes an entry or a pin only where one is missing
+  or has drifted, and that is a failure too (`tools/verdict_gate.py:123-135`).
+  The rotation run (below), with v0.8.0 itself as the baseline, observed
+  the same pin and reported no `baseline-blocked-drift`.
+- **`[t3.cases]`** is unchanged. `tests/data/javascript_chai_mutations.json`
+  is the same git blob (`4f363109`) at v0.5.0, v0.6.0, v0.7.0 and v0.8.0,
+  so the T3 cases read at `f02b5d8` are those read at `d647a65`, which the
+  tag-push run matched with no drift. The rotation run, reading them at
+  `f02b5d8`, reported no `t3-drift`.
+- **`[canary]`** is not rotated (step 9). The v0.4.2 -> v0.5.0 pair and its
+  71-case `block_to_pass` set stay; the tag-push run reproduced them
+  (canary 71 block -> pass, 45 block -> block, 6 pass -> block and
+  37 pass -> pass).
+- **The acceptance file**, `tests/gates/verdict_gate_accepted.toml`, is
+  maintainer-only. Its file-level `baseline` becomes `v0.8.0`: the gate
+  fails `acceptance-baseline` while it differs from the pin
+  (`tools/verdict_gate.py:1414-1416`). The owner authorized the agent to
+  change exactly that line and add a dated header comment (below), and
+  nothing else in the file changes. It holds no `[[accept]]` entry, so
+  the rotation removes and adds none, and no case needs one (below).
+
+Nothing else moves. The case files, labels, acceptance file, gate code
+(`tools/verdict_gate.py`, `tools/qualify_assertions.py`) and workflow are
+the same at `main` `0e60832a` as at `f02b5d8`. The main-push verdict run
+[39206619788/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39206619788)
+on `0e60832a` (v0.7.0 against `main`) logs the same counts, with zero
+failures and zero reported. So `main` judges every case as v0.8.0 does,
+and the rotation run below, whose candidate is `main` with this PR's
+engine-neutral changes, observes it directly: against v0.8.0 it has no
+block -> pass, needs no entry and reports nothing. From this rotation on, a candidate that turns any of
+v0.8.0's 159 blocks into a pass needs an accepted entry. No engine code,
+case input, label, fixture expectation or gate rule changes;
+`tests/verdict_gate/README.md` records the re-pin.
+
+The rotation run is the rotation PR's (#516) first verdict run,
+[39214083418/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39214083418)
+(job 117933789875), on pin head `5490b4e86572dffe347d13ac890e70d69f398316`
+with merge checkout `5c7a93fe` (that head merged into `0e60832a`). It ran
+with the rotated `[baseline]`, checked out `f02b5d8` and the Release's pyz,
+and passed the engine identity check: a sha256, size, member, commit or
+version mismatch is an `engine-identity` failure and stops every case, and
+none was reported. All 185 cases ran (159 T1, 26 T3): 159 block -> block,
+26 pass -> pass, zero reported, and the canary at 71 block -> pass,
+45 block -> block, 6 pass -> block and 37 pass -> pass. Its one failure is
+`acceptance-baseline` ("acceptance file baseline 'v0.7.0' differs from the
+pinned baseline 'v0.8.0'"). With no blocked-pin, T3 or entry failure, it
+proposed no pin and no entry, so `[baseline_blocked]` and `[t3.cases]`
+stay as first committed (`3871d5ac`). This failed run is not the merge
+evidence: the PR's final head, with the acceptance line changed, still
+needs a successful verdict run and the normal required checks before
+merge.
+
+Evidence status. The three runs above are read from their logs
+(`gh run view --log`). Their receipt artifacts, each named
+`verdict-gate-receipt-1`, were downloaded on 2026-10-19 before they
+expired, as the owner approved (below), and each ZIP's SHA256 equals the
+one its upload step logs. Artifact 11991306312 (run 38768985301) is a
+20815-byte ZIP with SHA256
+`e5683c9cd7962de4e459c0bb719b43cc863e8d945b4b8eea58fabda12098bd84`
+holding `verdict-gate.json` (SHA256
+`dd5170b15eec7d4a7f15e3bea4a444ae94f2ea9956c4b249988c50c99f37b90b`) and
+`verdict-gate.md` (SHA256
+`ef35af3b9e1a4beabf999ea3fa6dfe20e05f029a40f85f3b65684a2b5a01e206`);
+artifact 12165673670 (run 39206619788) is a 20781-byte ZIP with SHA256
+`0f7b1e929d583fb3c56d892b0ae3ec8edfb42d1d949286aec6c689a506ac87e7`
+holding them with SHA256s
+`fa25501ef1a46392e36e84b03d86795de6358791c123fba1d4c11a9f23315739` and
+`a7b5aaed66bcdb0f75ba092fb2d2fbcded440c06dabd448fe92a4160b016289d`; and
+artifact 12169571379 (run 39214083418) is a 21003-byte ZIP with SHA256
+`d8e44ab6defeaef452b130c34a21910ac46d87d5f50a8aa1cc766fce979a2139`
+holding them with SHA256s
+`df9fdf1e92a4d4c3c4b777e7b40d09b63baa977953af24d56c142f510450fc53` and
+`69c5564e992452e68b51c08f154dd8f6af13b2e827bb61a8e343e1b4f2cadb9f`.
+The work machine only downloaded and hashed them; no verdict run or test
+ran there
+(`NOT_RUN：工作機規則（POLICY work-machine-local），the verdict runs above are hosted CI runs`).
+
+The agent drafted this entry in the rotation PR #516. The maintainer
+approved it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval
+list as recommended"), in reply to the agent's list of approval items for
+the open pull requests, which takes every item's recommended answer. For
+this PR those are: A31, on who changes the protected file's `baseline`
+line, 「准 agent 改這一行，並加 PR 本文的日期註解」 ("the agent may change
+this line and add the dated comment from the PR body"), so the agent
+changed exactly `baseline = "v0.7.0"` to `baseline = "v0.8.0"` in
+`tests/gates/verdict_gate_accepted.toml` and added the header comment the
+PR body proposed, and nothing else (f9bf2a2c); A32, this entry's wording
+as committed in 308dc412, 5490b4e8 (it rests on R56) and bf655e2d (it
+records the observed rotation run); A33, fetching the three receipt
+artifacts before they expire and recording their SHA256s here in one
+sentence, with no further approval (the sentence that gives each
+artifact's size and SHA256s, 0faaea28); and A34, keeping
+`[baseline_blocked]` at 159 and `[t3.cases]` as carried over, since the
+tag-push run had no failure and its proposal is empty and the rotation run
+observed no drift, while the final head still needs a successful verdict
+run before merge. The reply is the text of a button the agent wrote, which
+the owner chose; the agent also wrote the list and each item's options,
+including A31's.
+
+Some of this entry was written after that approval, and none of A31 to
+A34 names it: in 0faaea28, besides the SHA256 sentence, the
+evidence-status sentence saying the receipts were downloaded on
+2026-10-19 and that each ZIP's SHA256 equals the one its upload step logs
+(it replaced "were not downloaded, and they are kept for seven days") and
+the sentence that the work machine only downloaded and hashed them (it
+replaced "Nothing ran on the work machine"); in 36919754, the
+acceptance-file bullet's "becomes" (it was "must become") and its sentence
+that the owner authorized the agent to change exactly that line, which
+replaced "the agent's commits do not touch it" and "The owner's
+disposition of this line is asked in the PR", and the approval paragraph
+above. The maintainer approved these on 2026-10-19 with 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended"), item B3, option A,
+「一併核可」 ("approve them together"): the sentences that write an
+already approved option into the documents, or turn a pending owner
+decision into a decided one, are approved together rather than one by
+one, and for this PR the approval record names the sentences D-162 gained
+after the approval. That reply, too, is the text of a button the agent
+wrote, which the owner chose; the agent also wrote the round-2 list and
+B3's options. The commit that adds this paragraph also adds, from a
+read-only claims review, the note that D-153 is unused and the sentence
+on R56's cited reason in the first paragraph, and narrows A33's commit
+reference above to its sentence; these correct facts and change no
+decision, and no approval item names them.
