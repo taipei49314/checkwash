@@ -12493,11 +12493,11 @@ Implementation (lines at this PR):
 - `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
   `conftest_level` (`:977-980`) through the conftest's own imports.
 - `frontend`: `UnitSide.fixture_producers` per side (`fixture_producers`,
-  `:4241-4266`, passed at `:4426` and `:4514`), and
+  `:4258-4283`, passed at `:4443` and `:4531`), and
   `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
-  `:3260-3305`, used at `:3404` and `:3474`, with
+  `:3276-3322`, used at `:3421` and `:3491`, with
   `fixture_producers.assertion_names`, `:130-166`, and
-  `_fixture_read_bindings`, `:1536-1564`, with
+  `_fixture_read_bindings`, `:1536-1580`, with
   `fixture_producers.nested_bound_names`, `:169-193`). Only a unit that
   takes a parameter reads any. `ir/model.py:130-137`, `:259-268`.
 - `gating.py`, in its own commit (da116dd1), as the analysis's §4.5 has
@@ -12599,7 +12599,16 @@ owner approved all four on 2026-10-19:
    name that a lambda's parameters or a comprehension's targets bind within
    an assigned value is not followed from it, even where it also occurs
    outside them, erring toward no evidence (`_fixture_read_bindings`;
-   `lambda-parameter-of-that-name-in-an-assignment`).
+   `lambda-parameter-of-that-name-in-an-assignment`). Nor is an assignment
+   or walrus inside a nested def, class or lambda followed, since it binds
+   another scope's name: a walrus in the assigned lambda
+   (`(lambda ledger: (fee := ledger.fee))(make())`) and a nested def's own
+   `fee = ledger.fee` still led to the fixture until the review of the
+   round-3 commits found them. A walrus such a def or lambda evaluates in
+   the unit's scope, in a default or a decorator, is left out with them,
+   erring toward no evidence. These two shapes, and a comprehension in an
+   assigned value (`vals = [fee for fee in rows]` after
+   `fee = ledger.fee`), have no pin of their own, as C2 approved one.
 4. The finding's assertion is matched by span and text. A finding whose
    evidence is not one of its unit's assertions takes nothing.
 
@@ -12786,4 +12795,14 @@ changes; the date changes when the PR merges. The list quoted the row's
 137 following the row's number at merge. The reply was a button whose
 text the agent wrote, which the owner chose. The round-3 list did not show
 the wording of the three C3 sentences, of reading 3's C2 sentence or of
-this paragraph: the agent wrote them after the approval.
+this paragraph: the agent wrote them after the approval. From a read-only
+review of those commits (Claude), 4e2b6d16 completes C2's fix, with no new
+pin: an assignment or walrus inside a nested def, class or lambda is no
+longer followed, so neither a walrus in the assigned lambda nor a nested
+def's own assignment leads to the fixture. The nested def's case is older
+than C2, and no approval item names its fix, which only removes reads and
+holds the code to SPEC §5's approved wording (the test's own assignments,
+written in its body outside a nested def, class or lambda).
+fa0086dd and 4e2b6d16 have the docstrings cite reading 3, not the list's
+label. Reading 3's sentence on these shapes was also written after the
+approval.
