@@ -377,9 +377,9 @@ A JS/TS test or block registered where no run of the file reaches is no unit
 static `import` declaration whose end it proves (`export`, TypeScript's
 `import x = require(...)` and an import with attributes stop it), the block
 callback of every `describe`, `suite` and `context` declaration, their `x`
-and `f` forms included, and the callback of a test that registers a test of
-its own (node:test's and tap's `t.test`), even one with no assertions. A
-declaration that starts where the walk proves no statement runs is no unit,
+and `f` forms included, and the callback of a test that registers a named
+test or a block of its own (node:test's and tap's `t.test`), even one with
+no assertions. A declaration that starts where the walk proves no statement runs is no unit,
 and neither is any declaration inside it. Its loss is a disappearance, its
 skip, focus and options apply to nothing, and it earns no D2, D5 or D10
 credit. An expression statement of `&&` or `||` whose literal operand decides
