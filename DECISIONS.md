@@ -12548,7 +12548,8 @@ Implementation (lines at this PR):
   names. `docs/KNOWN-ISSUES-next.md` gains a #469 row. The #345 row of
   `docs/KNOWN-ISSUES-v0.8.0.md` stays as the v0.8.0 record.
 
-Readings within the ruling's text, for the owner's approval:
+Readings within the ruling's text; the owner approved each as written
+(below):
 
 - When both counters fire on the same step, the message names
   `counter=proof`, the counter `_step` compares first, with its steps and
@@ -12717,5 +12718,19 @@ error. By reading, the documented test count becomes 19499 (19475 + 24);
 CI's collection checks it.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source; no test, timing, checkwash run or sweep was run`.
 
-The agent wrote this entry in #469's fix PR, for the maintainer's approval
-of its wording, as the ruling asks.
+The agent wrote this entry in #469's fix PR #511. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」, in reply to the agent's approval
+list, whose items for this PR asked how to take the time at 200,000 nodes
+(A82: a temporary CI timing step at 30,000, 100,000 and 200,000 nodes,
+removed once its numbers are written here), whether to add the cache now
+(A83: yes, and time the cached pass), when to report the superlinear
+reading on #469 (A84: once, with the numbers), the wording of this entry
+as of 86788e34 and 20f5f1a7 (A85: approved, leaving only the paragraphs
+added for the timing, CI and dogfood results to review), and its five
+readings (A86: approved as written). The reply is the text of a button the
+agent wrote, which the owner chose. The text added or changed in 11e370d2
+(the cache, the Time paragraph recast for the code before it, the two new
+effects, the timing placeholder, the residual sentence, one line reference
+and the evidence status) is not covered by this approval and still needs
+the owner's review, as the timing paragraph will once its numbers are
+filled.
