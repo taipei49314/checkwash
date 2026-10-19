@@ -15397,8 +15397,8 @@ at this PR):
    #499 names they include the `else` of an `if` whose condition folds to
    true, `if False and x:`, the body of a `while` whose condition folds to
    false, and the handlers of a `try` whose body cannot raise by D-144's
-   strict reading (`pass`, a docstring, a constant assigned to plain
-   names, an undecorated def or class of those). A loop's `else`, a `with`
+   strict list (`pass`, a docstring, a constant assigned to plain names,
+   and an undecorated def or class that cannot raise). A loop's `else`, a `with`
    body, a `try` body, `else` and `finally`, and a `match` on a subject
    that is not a literal stay live. The folder is `_static_truth` with no
    fixture or class-attribute resolution, as D-144 reads module and class
@@ -15424,9 +15424,14 @@ live unit with no marker, as #484 keeps `if (process.env.X)` (R99 Q4); its
 assertion-level form is #433, now listed in #504; a name bound to a
 constant (`ENABLED = False`, then `if ENABLED:`); a def after a
 module-level `raise` (row 135's residual) or `sys.exit()`; and,
-under 424.Q9, a dead class statement between a base class and a subclass
-of its name, which still counts as the name's binding when the subclass's
-bases are resolved, as on main.
+under 424.Q9, a dead class statement of a base's name, between that base
+and its subclass, which still counts as the name's binding when the
+subclass's bases are resolved, as on main.
+
+**Unchanged.** The file-level reading of broad handlers
+(`BROAD_EXCEPT_ADDED`, `broad_handlers` and `swallowing_handlers`) still
+walks the whole module, dead code included, as #484's ruling keeps the
+JS/TS catch evidence; only units move.
 
 **Cost.** Two edits that main reported now pass, because code that never
 runs is not judged, as #484's ruling reads it for JS/TS: an edit to a test
