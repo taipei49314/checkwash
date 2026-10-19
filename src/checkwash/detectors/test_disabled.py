@@ -132,16 +132,16 @@ def _marker_added_keys(path: str, unit, shapes: dict[str, str]) -> list[str]:
     and records only the names it left unpaired. So the marker it leaves
     unpaired is not always the one the diff added: a skip inserted above
     another of the same name pairs with it and leaves that one unpaired. The
-    markers a name added are read by content instead: the head markers of
-    that name whose text and guard no base marker of that name has, in the
-    head side's order. When there are as many of them as the name has
-    findings, each finding binds its own (`_marker_added_key`), in that
-    order. When there are not (a marker of that name was also edited, one
-    moved in from a helper, or alignment paired one with a marker of another
-    name, a decorator whose condition is spelled another way), no finding
-    can be given its own, and each finding of the name binds every marker
-    of the unit on both sides (`_unit_markers_key`). `shapes` maps each
-    name to its findings' shape.
+    markers a name added are read by content instead: each base marker of
+    the name cancels one head marker of the name with the same text and
+    guard, and those left over, in the head side's order, are the ones
+    added. When there are as many as the name has findings, each finding
+    binds its own (`_marker_added_key`), in that order. When there are not
+    (a marker of that name was also edited, one moved in from a helper, or
+    alignment paired one with a marker of another name, a decorator whose
+    condition is spelled another way), no finding can be given its own, and
+    each finding of the name binds every marker of the unit on both sides
+    (`_unit_markers_key`). `shapes` maps each name to its findings' shape.
     """
     names = unit.delta.markers_added
     wanted = set(names)
