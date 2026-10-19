@@ -12599,16 +12599,20 @@ Implementation (lines at this PR):
   and the stand-in checks their parameters, over the kept bindings in a
   `ChainMap` instead of copying them. Under the owner's third choice (C5,
   below) the pass also keeps, in two dicts per file (`:645-647`,
-  `:656-657`, `:698-699`), the answer of `math_import_authority`
-  (`literal_stdlib_standins.py:72-109`) per target and old callee, the only
-  part of the old call it reads, and the answer of the checks of
-  `parameterized_abs_event` (`parameterized_subject_replacements.py:39-139`),
-  of which only which call is a test's first depends on the test; as both
-  read the repository only through the context, which keeps every source
-  it reads, and the inventory, for a snapshot that does not change during
-  the run each kept answer is the one a fresh check gives. Only the
-  `math.gcd` helper's check of the module's other functions is still made
-  once per pair (Residuals).
+  `:656-657`, `:698-699`), the parts of `math_import_authority`
+  (`literal_stdlib_standins.py:72-151`), each made once when first asked:
+  the file's top-level imports, with which each target is compared; the
+  answer of `pure_imported_calls` for each function an old callee's name
+  imports, the only part of the old call it reads (the table it reads is
+  `oracle_purity.py:263-276`); and the startup check, which reads neither.
+  It also keeps the answer of the checks of `parameterized_abs_event`
+  (`parameterized_subject_replacements.py:39-139`), of which only which
+  call is a test's first depends on the test. As both read the repository
+  only through the context, which keeps every source it reads, and the
+  inventory, for a snapshot that does not change during the run each kept
+  answer is the one a fresh check gives. Only the `math.gcd` helper's
+  check of the module's other functions is still made once per pair
+  (Residuals).
 - `standin_installations.py:38` names the per-proof limit
   `_MAX_PROOF_STEPS`, the 20,000 `_step` compared inline. `_step`
   (`:434-438`) keeps its two comparisons; only a refusal calls
@@ -12793,7 +12797,7 @@ in `.greenwash/allow.toml` like #451's goes in the PR for the owner's
 approval. If CI moves any other expectation, the round stops and asks.
 
 Evidence status: prepared on a work machine where no pytest, checkwash or
-code of this repository ran; CI runs the tests. Added: 34 collected items in
+code of this repository ran; CI runs the tests. Added: 35 collected items in
 `tests/test_issue469_limit_messages.py`, none under `tests/gates`: the
 shared constant; trees of 30,001 and 200,000 nodes; a test file of about
 35,000 nodes giving its `TEST_PATCHES_SUBJECT` verdict; the node and byte
@@ -12812,13 +12816,15 @@ through `analyze` each side's module is read once for a file of 30
 helper-call tests and one of 30 changed-callee tests, and that the
 findings on helper, changed-callee, literal-string and `math.gcd` files
 equal those of fresh reads; and, for the answers kept under C5, that a
-kept `math_import_authority` answer equals a fresh check's, that through
+kept `math_import_authority` answer equals a fresh check's for several
+targets, old callees and two names of one imported function, that through
 `analyze` the authority is checked once for a file of 30 `math.gcd`
 tests and the parameterized-helper checks are made once for a file of 30
-parameterized-helper tests, and that the findings on both kinds of file
-equal those of fresh checks. No
+parameterized-helper tests, that the findings on both kinds of file
+equal those of fresh checks, and that each of two changed files has its
+own kept checks. No
 `.gwcase` fixture is added: the golden runner cannot expect an engine
-error. By reading, the documented test count becomes 19516 (19482 + 34);
+error. By reading, the documented test count becomes 19517 (19482 + 35);
 CI's collection checks it.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source; no test, timing, checkwash run or sweep was run`.
 
@@ -12864,7 +12870,11 @@ reads of the two checks B13 left reading the module once per test, the
 `parameterized_abs_event`, instead of leaving them as residuals, and let
 the timing job measure the version with these caches. Under C5, 90f6a70d
 keeps their answers for each file and 81084439 pins that no result
-changes. The timing job keeps its shapes; none of them reaches either
-check, so its numbers time the pass with these caches but not the two
-checks themselves. The text this entry gained for them is under B15's
-review as well.
+changes. A read-only review of these commits found that 90f6a70d kept the
+authority's answer per target and old callee, so a file whose tests call
+distinct old callees still read its module once per test; 88a95270 keeps
+the authority's parts once per file instead, and 81f7b949 pins that and
+that each file has its own kept checks. The timing job keeps its shapes;
+none of them reaches either check, so its numbers time the pass with
+these caches but not the two checks themselves. The text this entry
+gained for them is under B15's review as well.
