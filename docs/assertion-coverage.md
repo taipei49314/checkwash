@@ -613,8 +613,16 @@ none of its assertions is the test's; each call on its first parameter
 that names one of the runner's assertions is an `unresolved` coverage
 candidate (see
 [Make unrepresented assertion candidates visible](#make-unrepresented-assertion-candidates-visible)).
-Before #480 the first parameter of every annotated arrow callback went
-unread, with no candidate, so the report could say `no_known_gaps`.
+An arrow callback with type parameters (`<T>(t: T): void =>`) keeps the
+old reading: its first parameter is not read, and its calls on it are no
+coverage candidates, so the report can still say `no_known_gaps`, unless
+the parameter is named `t`, which is read as a `t` that nothing declares
+(below). Before #480 the binder declared the return type, or nothing, in
+place of an annotated arrow callback's parameters. A `t` was then read
+only through node:test's fallback for a `t` that nothing declares, or as
+tap's root where a subtest's `t` was named like it; AVA's `t.assert` was
+reported as an unrepresented Node candidate; and every other call on the
+parameter was no candidate, so the report could say `no_known_gaps`.
 
 An object named `t`, a `t` from any other library (tape's included), a `t`
 the file writes over and a `t` passed to a helper are not read. In a file
@@ -1052,11 +1060,14 @@ node:test, AVA or tap test, read from the callback's own tokens, is a
 candidate when the name does not resolve and its member is one of that
 runner's assertions: `assert` for node:test, AVA's assertion names, tap's
 names ([#480](https://github.com/taipei49314/checkwash/issues/480)). So a
-context the scan cannot read, as under a return annotation it does not read
-([above](#ava-and-tap-assertions)), is reported as an `unresolved`
+context the binder does not read under a return type it does not step over
+([above](#ava-and-tap-assertions)) is reported as an `unresolved`
 candidate, and the report says `incomplete`, not `no_known_gaps`. A
-parameter that a function nested in the callback declares again is that
-function's, not the context.
+callback with type parameters (`<T>(ctx: T): void =>`) is not read this
+way: its first parameter is not named, so its calls on it are no
+candidates and the report can still say `no_known_gaps`, unless the
+parameter is named `t`. A parameter that a function nested in the
+callback declares again is that function's, not the context.
 
 Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
