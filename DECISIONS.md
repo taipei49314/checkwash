@@ -12624,7 +12624,13 @@ round stops.
 verdict move stopping the round, pre-registered on a checkwash-lab branch
 before any engine runs (D-048's method), and run on the pool; on
 LAPTOP-01AGNPJU only under EC POLICY `checkwash-pju-sweep` (T-546), with
-the frozen manifest and engine commit approved first. By reading, a commit
+the frozen manifest and engine commit approved first. Under the owner's
+consolidated ruling of 2026-10-19 (#419 issuecomment-6261642679), Q5's
+sweep is not run on its own: it joins the combined sweep's one run, in
+which this fix's merge gets its own before/after pair in the chain (R2),
+and its manifest and engine commits are approved with the combined
+manifest when that is frozen, in the second of R5's two approval steps.
+By reading, a commit
 can move only if it modifies a snapshot-role file, adds a Python production
 file defining at least one symbol, and changes no symbol of an existing or
 deleted Python production file and no production file checkwash cannot
