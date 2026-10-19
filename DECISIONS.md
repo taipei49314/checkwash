@@ -12455,3 +12455,209 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-159 (2026-10-19): the rebinding spellings #306 left out leave a helper method unresolved (#502)
+
+Ruling 502 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"). The go-ahead answered a
+recommendation list prepared off GitHub, and #502's body, filed on it,
+quotes it. It adopted the direction that list gave for this issue: complete
+the literal-key spellings, read `vars(C)[...]` as `C.__dict__[...]` is
+read, rule #487 first, and P2. The issue's Direction items 1 to 7 are the
+agent's recommendation within that direction, for review in this PR.
+#487's ruling (issuecomment-6248630528, item 2) settled what item 5 depends
+on: (b) is not adopted. D-151 to D-158 are assigned to other open pull
+requests, so this entry is D-159; the number may change at merge time.
+
+#502: since #306's fix (D-145, #476, `81c69d28`), Sub-Q3 leaves a helper
+call unresolved when the module rebinds the helper's name, but the module
+scan read only a `.<name>` store or del, a `.__dict__[...]` store or del,
+an exact set of dotted setattr names (`_SETATTR`), `patch.object` and
+`monkeypatch.setattr`. So a `setUp` that runs
+`self.__dict__.update({"_check": lambda value: None})`, or
+`vars(self)["_check"] = fake`, a class body's `vars()["_check"] = fake`,
+`self.__setattr__("_check", fake)`, or
+`Alias = TotalTest; setattr(Alias, NAME, fake)`, left the call resolved:
+the frontend followed the def while another function answered the call at
+run time, so the helper's assertions stayed the unit's and nothing read
+them as removed. #476 is in no tag and v0.8.0 follows no such call, so
+this is an incomplete closure, not a regression from v0.8.0.
+
+Implementation, in `frontends/python/self_methods.py` only (lines at this
+PR):
+
+- Item 1. A store into or del from `vars(x)[...]`, for any `x` and any key,
+  joins the module-wide channel of `x.__dict__[...]` (`_object_namespace`,
+  `:193-198`, used at `:412-414`): `dict_store` leaves every helper name in
+  the module unresolved (`resolve`, `:666`). `vars(C)[...]` on a class
+  raises at run time, since a class's `vars()` is a read-only mappingproxy.
+  So does the pinned `TotalTest.__dict__["_check"] = print`, already read
+  as a rebinding, and #422's reader treats the two alike
+  (`exit_status_controls.py:810-814`). Narrowing the channel to the literal
+  name is not part of #502.
+- Item 2, name-specific as Sub-Q3. Each spelling adds the name to `stored`,
+  which leaves that name unresolved for every class of the module
+  (`_namespaces`, `:447-489`; `_namespace_call`, `:491-522`; `_key`,
+  `:524-530`):
+  - a call whose last name is `__setattr__` or `__delattr__`
+    (`_DUNDER_SETTERS`, `:125`; `:495-503`), by the first str literal among
+    its first two positional arguments, as #422's `_setter` reads them
+    (`exit_status_controls.py:839-851`). A bound call carries the name at
+    index 0 (`self.__setattr__("_check", f)`, `super().__setattr__(...)`),
+    an unbound one at index 1 (`type.__setattr__(C, "_check", f)`,
+    `object.__setattr__(...)`);
+  - on `x.__dict__` or `vars(x)` (with an argument), the keywords of
+    `update()` and the str-literal keys of a dict literal passed as its one
+    positional argument (`:509-517`), and the literal key of `setdefault()`
+    (`:518-519`);
+  - in a class body, a literal key of `vars()` or `locals()` with no
+    argument (`_class_namespace`, `:201-208`), stored or deleted
+    (`:466-468`). A node's scope is read by `_scoped` (`:211-227`): the
+    def, lambda or class whose body holds it, where a header (`_header`)
+    runs in the scope that holds the def, as D-149's `_module_binds` reads
+    it.
+- Item 3. These leave every name in the module unresolved (`dict_store`):
+  in `update()`, a `**` argument, a positional argument that is no dict
+  literal, a second positional argument, or a `**` entry or a key that is
+  no str literal in the dict literal; a key of `setdefault()`, or of a
+  class body's `vars()` or `locals()`, that is no str literal; a
+  `__setattr__` or `__delattr__` with no str literal among its first two
+  positional arguments, or with a starred one there; and a store or del of
+  `x.__dict__` itself, `x.__dict__ = ...` and `x.__dict__ |= ...`, read as
+  `__dict__` in `stored` (`:420-423`), which also takes `del x.__dict__`
+  and a literal-name setattr or patch of `__dict__`.
+- Item 4. A computed-name `setattr` or `delattr` (`_SETATTR`, `:113-114`)
+  also records the name `_target` reads from its target (`:230-244`): `x`
+  for `x`, `x.attr`, `x.__class__` or `type(x)`, as `_root` reads them. It
+  is followed one hop through a plain assignment of that name
+  (`x = <value>`, annotated or walrus too), looked up as Python looks a
+  name up: in the call's own scope, the defs and lambdas around it, and
+  the module (`:477-489`). So a module-level or function-local `x = C`
+  counts as `C`, and `x = type(self)` or `x = self.__class__` as the
+  receiver, as the direct `setattr(type(self), NAME, f)` is read (D-145;
+  reading 7).
+  A target reached through a subscript or another call (`globals()["C"]`,
+  `sys.modules[__name__].C`, `make()`) counts as every class in the order
+  (`any_class`, `:481`, read at `:682`). The reading in `_call`
+  (`:428-445`) stays.
+
+Readings where the ruling is silent, for the owner's approval (1 to 4 err
+toward unresolved, 5 and 6 toward resolved, 7 both ways):
+
+1. `__setitem__` and `__delitem__` called on `x.__dict__` or `vars(x)` are
+   read as the item store and del they spell, so every name, as item 1
+   (`:520-522`); called on a class body's `vars()` or `locals()`, as its
+   item store, name-specific.
+2. A class body's `vars()` and `locals()` are read as `x.__dict__` is for
+   `update()` and `setdefault()` too, by name.
+3. A `setattr` or `delattr` whose target or name is a starred argument
+   (`setattr(*(C, "_check", f))`) leaves every name unresolved
+   (`:472-474`); before, it was not read.
+4. The alias lookup also reads the defs and lambdas around the call (a
+   nested `install()` in `setUp` that reads the `setUp`'s
+   `klass = type(self)`), beyond the ruling's "module-level or
+   function-local". A comprehension is read as part of its scope, so a
+   `vars()` or `locals()` in a class-body comprehension is read as the
+   class's namespace.
+5. `vars()` at module scope and `locals()` in a function rebind no method:
+   the module's namespace and the function's locals do not hold the class's
+   methods, so neither a literal nor a computed key there is read
+   (`:466-468` reads only a class body).
+6. An alias whose value is no name as `_target` reads it (`obj = Fake()`,
+   `x = globals()["C"]`) is not followed. The ruling names `x = C`,
+   `x = type(self)` and `x = self.__class__`; reading such a value as
+   every class would make the common `obj = Fake(); setattr(obj, name,
+   value)` leave every helper in the module unresolved. So
+   `x = globals()["C"]` stays a residual.
+7. The ruling says `x = type(self)` and `x = self.__class__` count as `C`.
+   They are read under the name inside them, the receiver's, as the direct
+   `setattr(type(self), NAME, f)` is: a call through a receiver of that
+   name stays unresolved in every class of the module, which is wider than
+   `C`'s order, and a unit whose receiver has another name is not reached,
+   which is narrower.
+
+`pop()`, `popitem()` and `clear()` are not read (`:119-123`): on an
+instance's namespace a deletion shows the class's def again, and on a
+class's mappingproxy it raises. In a class body, `vars().pop("_check")`
+removes the def; that stays a residual.
+
+**Stated cost, accepted (item 5).** A change that adds one of these
+spellings leaves the helper resolved at the parent and unresolved at the
+commit, so the assertions followed through it read as removed
+(ASSERT_REMOVED at warn, raised to high under NO_PROD_CHANGE_IN_DIFF;
+`ir/diffalign.py:120-135`), as the spellings caught before already do.
+That is what catches the issue's evasion
+(`self_method_dict_update_rebinding_pos`). Under items 1 and 3, an
+innocent write added anywhere in the test module leaves every helper
+unresolved on the head side and reads the same way: `vars(self)["data"] =
+1`, a non-literal `update()` such as a class whose `__init__` runs
+`self.__dict__.update(attrs)` (`self_method_namespace_update_added_pos`),
+a `super().__setattr__(name, value)` in a fake's `__setattr__`, or a
+`setattr` on `globals()[...]`. In a module whose base already has such a
+write, the #306 closure is lost on both sides; that is a missed detection,
+not a block. Removing such a write reads nothing as removed. This
+detection depends on #487's option (b) not being adopted; the owner did
+not adopt it (D-149), and if (b) is ever reconsidered, this detection goes
+with it. Reading every reflective spelling as module-wide unknown (D-095's
+reading) is not proposed: it would reverse D-145's ruled name-specific
+choice, and it would cost more.
+
+Residuals, by kind (D-145 and D-149 name the others), each leaving the call
+resolved as before this entry: an aliased `setattr` (`s = setattr`) and an
+alias more than one hop away, which the issue names; an alias bound other
+than by a plain assignment (a `for` or `with` target, an unpacking) or to
+a value that is no name; a computed-name `setattr` whose target is a
+parameter that holds the class (a `setUpClass`'s `cls`, or
+`def install(target)` called with the class); `pop()`, `popitem()` or
+`clear()` on a class body's namespace; and a namespace written through
+`monkeypatch.setitem`, `operator.setitem`, `patch.dict`, an unbound dict
+method (`dict.update(self.__dict__, ...)`), or `vars` or `locals` under
+another name.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed.
+`tests/test_issue306_self_methods.py` is unchanged; its sources that use a
+newly read spelling (`pytest.mark.__setattr__('slow', wrap)`,
+`vars(pytest.mark).update(slow=wrap)`,
+`type.__setattr__(MarkDecorator, '__call__', wrap)`, and a class's
+`__setattr__` that calls `object.__setattr__(self, name, value)`) already
+expect the call unresolved. The `.gwcase` fixtures that write through
+`vars(...)` (`conftest_request_module_vars_store_pos`,
+`conftest_setitem_vars_request_module_pos`) do so in a conftest, where no
+helper method is resolved, and no other fixture uses a newly read spelling
+beside a helper method reached through `self`. The other inline sources
+under `tests/` with these spellings
+(`test_issue254_class_attribute_guards.py:522`, `test_issue422_exit_status.py`,
+`test_issue432_noop_replacement.py`, `test_issue_runtime_acceptance.py`,
+`test_param_input_identity.py`, `test_standin_installations_main.py`,
+`test_subject_helper_dispatch.py`, `test_subject_helper_module_authority.py`,
+`test_truthiness_oracles.py`) call no helper method through `self`.
+Nothing under `tests/gates` changed. If CI shows an existing expectation
+moving, the round stops and lists each for the owner, as D-141 did.
+
+**Fingerprints and IR.** No fingerprint scheme, IR field or key changes.
+Fewer calls resolve, so `--emit-ir` loses `via` assertions and
+class-qualified `helper_calls` keys for helper methods in modules with a
+newly read spelling (not measured).
+
+**Release.** #476 is in no tag (v0.8.0 is from 2026-10-15), so this
+changes no released behaviour. At P2 (item 7) it does not block the next
+release. Any release still needs the owner's one-time named authorization.
+
+**Measurement (item 6).** Not measured yet. After the fix merges, the
+standard set and D-088's sets are rerun before and after where the owner
+approves, as a checkwash-lab-declared run: on LAPTOP-01AGNPJU only under
+EC POLICY `checkwash-pju-sweep` (T-546), with the frozen manifest and
+engine commits approved first, otherwise on the pool. The measured cost of
+item 5 goes here once the rerun has run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: three `.gwcase` fixtures
+(`self_method_dict_update_rebinding_pos`,
+`self_method_namespace_update_added_pos`,
+`self_method_other_name_update_neg`), labels reviewed before merge, and 71
+collected items in `tests/test_issue502_helper_rebinding_spellings.py`,
+counted from its parametrize lists; no existing test changed. By reading,
+the documented test count becomes 19549 (19475 + 71 + 3); CI's collection
+checks it, and other open pull requests may change the base.
