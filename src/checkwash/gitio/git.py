@@ -25,14 +25,16 @@ class GitRootUnresolved(GitError):
     outside Git it stays silent."""
 
 
-def _run(repo: str, args: list[str], *, env: dict[str, str] | None = None) -> bytes:
+def _run(repo: str, args: list[str], *, env: dict[str, str] | None = None,
+         timeout: float = 60, stdin=None) -> bytes:
     try:
         proc = subprocess.run(
             ["git", "-C", repo, *args],
             capture_output=True,
             check=False,
-            timeout=60,
+            timeout=timeout,
             env=env,
+            stdin=stdin,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise GitError("git read could not complete") from exc
@@ -56,7 +58,8 @@ class RepositoryRoot:
     prefix: str = ""
 
 
-def resolve_repository_root(repo: str, *, env: dict[str, str] | None = None) -> RepositoryRoot:
+def resolve_repository_root(repo: str, *, env: dict[str, str] | None = None,
+                            timeout: float = 60, stdin=None) -> RepositoryRoot:
     """The directory every later Git call runs in, for `--repo` (#416).
 
     From a subdirectory Git answers in two path bases: `diff`, `status` and
@@ -69,9 +72,13 @@ def resolve_repository_root(repo: str, *, env: dict[str, str] | None = None) -> 
     directory a lexical `..` lands elsewhere. Any failure, Git's own message
     included, is a GitError; the caller decides whether it is fatal. Once Git
     has answered that `repo` is a subdirectory of a work tree, it is a
-    GitRootUnresolved, so a caller that keeps `repo` can say why.
+    GitRootUnresolved, so a caller that keeps `repo` can say why. Both
+    queries run with `env`, `timeout` and `stdin`; the defaults are every
+    other Git call's (60 seconds, inherited stdin), and `checkwash doctor`
+    passes its own (#500).
     """
-    raw = _run(repo, ["rev-parse", "--is-inside-work-tree", "--show-prefix"], env=env)
+    query = {"env": env, "timeout": timeout, "stdin": stdin}
+    raw = _run(repo, ["rev-parse", "--is-inside-work-tree", "--show-prefix"], **query)
     answer = re.fullmatch(rb"(true|false)\n([^\n]*)\n", raw)
     if answer is None:
         # Git prints the prefix raw, so a directory name holding a newline
@@ -88,7 +95,7 @@ def resolve_repository_root(repo: str, *, env: dict[str, str] | None = None) -> 
     if not prefix.endswith("/") or any(part in {"", ".", ".."} for part in prefix[:-1].split("/")):
         raise GitRootUnresolved(f"git rev-parse returned an invalid prefix {prefix!r}")
     try:
-        raw = _run(repo, ["rev-parse", "--show-toplevel"], env=env)
+        raw = _run(repo, ["rev-parse", "--show-toplevel"], **query)
     except GitError as exc:
         raise GitRootUnresolved(str(exc)) from exc
     try:

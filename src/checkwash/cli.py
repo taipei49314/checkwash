@@ -764,7 +764,7 @@ def _closest_command(token: str) -> str | None:
     return None
 
 
-def _reroot(args: argparse.Namespace, *, required: bool, env: dict[str, str] | None = None) -> None:
+def _reroot(args: argparse.Namespace, *, required: bool, **lookup) -> None:
     """Point `args.repo` at the repository root when it names a subdirectory (#416).
 
     For a `required` command (check, sweep) a GitError reaches the engine
@@ -772,11 +772,13 @@ def _reroot(args: argparse.Namespace, *, required: bool, env: dict[str, str] | N
     outside Git or with no git binary, as they ran before. When Git has
     named a subdirectory but not its root, one stderr line says so and why;
     stdout and the exit code are unchanged. `repo_given` and `repo_prefix`
-    keep what a `--task` path is mapped from.
+    keep what a `--task` path is mapped from. `lookup` goes to
+    `resolve_repository_root`: doctor's environment, timeout and stdin
+    (#416, #500).
     """
     given = args.repo
     try:
-        root = resolve_repository_root(given, env=env)
+        root = resolve_repository_root(given, **lookup)
     except GitError as exc:
         if required:
             raise
@@ -893,11 +895,16 @@ def main(argv: list[str] | None = None) -> int:
 
             return run_demo()
         if args.command == "doctor":
-            from checkwash.doctor import discovery_env, run as run_doctor
+            import subprocess
+
+            from checkwash.doctor import QUERY_TIMEOUT, discovery_env, run as run_doctor
 
             # Doctor's own sanitized Git environment, or the caller's GIT_DIR
-            # could name a repository its later queries never see (#416).
-            _reroot(args, required=False, env=discovery_env())
+            # could name a repository its later queries never see (#416). Its
+            # own timeout and no stdin too, so a Git that hangs stalls the
+            # lookup no longer than one of its later queries (#500).
+            _reroot(args, required=False, env=discovery_env(), timeout=QUERY_TIMEOUT,
+                    stdin=subprocess.DEVNULL)
             return run_doctor(args.repo)
         if args.command == "bench":
             from checkwash.bench import run as run_bench
