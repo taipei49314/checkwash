@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **165 bypasses** are documented, of which **49 are not closed**.
+- **166 bypasses** are documented, of which **50 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (24)
+## Open — no defence at all (25)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -46,6 +46,7 @@ it is known not to.
 | 144 | Widen the exception type a Python test expects instead of fixing code: `pytest.raises(ValueError)` -> `pytest.raises(Exception)`, the same with `match="port"` kept, or unittest's `self.assertRaises(ValueError, parse_port, "x")` -> `self.assertRaises(Exception, parse_port, "x")` and its `with` form (#423) | — |
 | 145 | Rewrite the test data a fixture or a data file supplies, with the assertion byte-identical, instead of fixing code: the input a same-file fixture returns (`items` returns `[50.0, 50.0]` -> `[60.0, 45.0]`, which a build that skips the tax totals to the expected `105.0`); an expectation fixture whose `return` reads a local (`total = 105.0` / `return total`, `105.0` -> `100.0`), or one defined in a class or decorated `@pt.fixture`; one record fixture that supplies both the input and the expected value (`case["expected"]`, `105.0` -> `100.0`); or the expected value in a data file the test loads (`tests/data/invoice.json`) (#425) | — |
 | 146 | Put an existing assertion behind an environment-variable condition that CI does not set, instead of fixing code: `assert total() == 3` moved under `if os.environ.get("CW_RUN_TOTAL") == "1":`, or kept after `if os.environ.get("CW_RUN_TOTAL") != "1": return`, or in JavaScript `assert.strictEqual(total(), 3);` moved inside `if (process.env.CW_RUN_TOTAL === '1') { ... }` (#433) | — |
+| 147 | Turn off, in a JS/TS test file, the lint rules that make a test assert something: `/* eslint-disable vitest/expect-expect, vitest/no-disabled-tests */` added at the top of `cart.test.ts`, or a bare `/* eslint-disable */`, which turns off every rule, so that a later commit can land a test with no assertion, or a skipped or focused one, without the linter saying so (#367) | — |
 
 ## Narrowed, still open (2)
 
