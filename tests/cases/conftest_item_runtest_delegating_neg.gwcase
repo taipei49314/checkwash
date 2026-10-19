@@ -1,0 +1,22 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 432
+title: a hook that captures item.runtest and calls it from the replacement still runs the test
+origin: issue #432's first control, ruling 432.Q4: delegation is traced through carriers
+origin2: of the original. tests/test_issue432_noop_replacement.py runs this conftest under
+origin3: real pytest, where the failing test still fails (item-capture-and-call).
+=== head: app.py ===
+def value():
+    return 0
+=== head: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 1
+=== after: tests/conftest.py ===
+def pytest_runtest_call(item):
+    original = item.runtest
+    item.runtest = lambda: original()
+=== expect ===
+[]
