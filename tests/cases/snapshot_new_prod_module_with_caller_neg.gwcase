@@ -1,0 +1,24 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a new production module that existing production code now calls is an implementation change for a rewritten golden file
+origin: #463 ruling Q1 (a) (issuecomment-6248011246): a genuinely new implementation arrives with the
+origin2: Python that reaches it, and that modified caller counts; the co-change stays at warn.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+105.2
+=== before: app/billing.py ===
+def invoice_total(items):
+    return sum(items)
+=== after: app/billing.py ===
+from app.rounding import round_down
+
+
+def invoice_total(items):
+    return round_down(sum(items))
+=== after: app/rounding.py ===
+def round_down(value):
+    return int(value * 10) / 10
+=== expect ===
+[{"rule": "SNAPSHOT_CODE_COCHANGE", "severity": "warn", "path": "tests/golden/invoice.txt"}]
