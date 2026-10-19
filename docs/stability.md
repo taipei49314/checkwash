@@ -75,6 +75,12 @@ below remain; the v0.3.0 IR adds reviewed-change evidence described in the
 | `skipped_files` | unparseable paths |
 | `config_errors` | parse failures for base-side config/allow |
 | `verdict` | `pass` or `block` |
+| `unread` | from the next minor (unreleased, [#454](https://github.com/taipei49314/checkwash/issues/454)): changed sides over the 1,000,000-byte source limit that no detector had to read, the sides the stderr notes name. One object per side with exactly `path`, `side` (`base`, `head` or `worktree`), `size` and `limit` in bytes, sorted by path, then side. The change holding a listed side was set aside whole, its readable side included; in a range-mode rename with one side over the limit, the readable side's path is not listed (the new path when the base side is over, the old path when the head side is). A root `poetry.lock` or `uv.lock` skipped at the base is not listed; its note stays on stderr. The key is omitted when empty |
+
+`unread` is the first key that a run can omit. It needs no version bump (a
+new optional field, below), but a consumer that validates the envelope
+strictly meets it only on a run with an unread side. `--emit-ir` and the
+`--format hook-json` payload do not carry it.
 
 Each finding object is the dataclass field set of `Finding`: `rule`,
 `severity`, `message`, `path`, `unit`, `before`, `after`, `escalators`,
@@ -88,7 +94,11 @@ key on `version` inside the payload, not on field order.
 
 `--format sarif` is a **projection** of the same findings into SARIF
 2.1.0. It does not bump `FINDINGS_VERSION`. Allowlisted findings are
-omitted there.
+omitted there. From the next minor (unreleased, #454), each unread side is
+a `warning` tool execution notification after any coverage gaps, never a
+result: the stderr note as its text, and `checkwash.path`, `checkwash.side`,
+`checkwash.size` and `checkwash.limit` as its properties. A head or
+worktree side names the file as its location; a base side has none.
 
 **Pre-rename compatibility:** v0.2.12 and v0.2.13 emit the `checkwash_*` keys above,
 with `FINDINGS_VERSION = 1`. Older consumers expecting

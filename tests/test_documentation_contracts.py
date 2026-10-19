@@ -35,17 +35,24 @@ def test_enterprise_required_context_matches_shipped_ruleset():
 
 
 def test_stability_json_envelope_matches_actual_renderer():
+    from checkwash.change import UnreadSide
     from checkwash.ir.model import IR
     from checkwash.report.jsonout import findings_to_json
 
-    # Rendering an empty report needs neither a repository nor detector input.
-    payload = json.loads(findings_to_json(IR(base="BASE", head="HEAD"), [], "pass"))
-    keys = (set(payload) - {"run"}) | {f"run.{key}" for key in payload["run"]}
+    def keys(payload):
+        return (set(payload) - {"run"}) | {f"run.{key}" for key in payload["run"]}
+
+    # Rendering a report needs neither a repository nor detector input. It is
+    # rendered twice: empty, and with one unread side, the one key so far
+    # that is omitted when empty (#454 ruling, 2(b)).
+    empty = json.loads(findings_to_json(IR(base="BASE", head="HEAD"), [], "pass"))
+    full = json.loads(findings_to_json(IR(base="BASE", head="HEAD"), [], "pass",
+                                       unread=[UnreadSide("assets/logo.png", "head", 1_500_000, 1_000_000)]))
     text = (ROOT / "docs" / "stability.md").read_text(encoding="utf-8")
     table = text.split("Current keys, closed:", 1)[1].split("Each finding object", 1)[0]
-    documented = {
-        key
-        for line in table.splitlines() if line.startswith("| `")
-        for key in re.findall(r"`([^`]+)`", line.split("|")[1])
-    }
-    assert documented == keys
+    rows = [line.split("|") for line in table.splitlines() if line.startswith("| `")]
+    documented = {key for cells in rows for key in re.findall(r"`([^`]+)`", cells[1])}
+    optional = {key for cells in rows if "omitted when empty" in cells[2]
+                for key in re.findall(r"`([^`]+)`", cells[1])}
+    assert documented == keys(full)
+    assert documented - optional == keys(empty)
