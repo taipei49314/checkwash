@@ -174,7 +174,8 @@ and any other changed file that large the analysis needs as context. From
 the next minor (unreleased), `--format json` then prints
 `{"unread": [...]}` on stdout instead of nothing: one `unread` entry, for
 the side the run refused. It is not a findings document, and term and SARIF
-output stay empty.
+output stay empty. With a range, json output stays empty too when that file
+is a symlinked pytest configuration's target that no detector must read.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension. A root

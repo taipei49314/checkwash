@@ -212,8 +212,9 @@ by that field.
   the refusal names, as below. It is not a findings document: it has no
   `checkwash_findings_version`, `findings` or `verdict`, so the version check
   above treats it as the error it is. A root manifest, config, exemption list
-  or task file over the limit at the base, and every other engine error, still
-  print nothing; so do `--emit-ir`, term and SARIF.
+  or task file over the limit at the base, with a range a symlinked pytest
+  configuration's target over the limit that no detector must read, and every
+  other engine error still print nothing; so do `--emit-ir`, term and SARIF.
 - **A new optional top-level key,** `unread` (#454). It lists the changed
   sides over the 1,000,000-byte source limit that checkwash set aside unread,
   one object per side with `path`, `side`, `size` and `limit`, and it is
