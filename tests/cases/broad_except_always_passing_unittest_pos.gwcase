@@ -1,0 +1,28 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: in a `unittest.TestCase` method, an `except Exception` that holds only `self.assertTrue(True)` still swallows the `assertEqual` its `try` wraps
+origin: #496, one of the three further spellings the issue names, added for the hosted reproduction (owner ruling 2026-10-19, R31) before any fix
+note: the class subclasses unittest.TestCase, so `self.assertTrue` is the standard-library method (R31); app.py is unchanged and outside the diff
+=== before: tests/test_value.py ===
+import unittest
+
+from app import value
+
+
+class ValueTest(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), 1)
+=== after: tests/test_value.py ===
+import unittest
+
+from app import value
+
+
+class ValueTest(unittest.TestCase):
+    def test_value(self):
+        try:
+            self.assertEqual(value(), 1)
+        except Exception:
+            self.assertTrue(True)
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
