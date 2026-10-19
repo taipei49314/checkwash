@@ -12589,7 +12589,12 @@ weakening that still reads the old subject beside a decoy of the old
 expectation on another subject blocks in both orders; with the decoy
 written first it passed before (row 84b's residual), so such a commit goes
 from pass to block. #457 is unchanged: no new assertion checks `mock_lock`,
-so it blocks as before. B: `match=` added gives no finding (it was a warn);
+so it blocks as before. So is the v0.1.14 dogfooded commit that opened row
+85: a membership assert whose needle is not a literal records the needle as
+its subject, so its derived `f"{n}/{n} tampering cases blocked" in out`
+does not check `out`, and the old `"7/7 ..." in out` still pairs with the
+count guard written above it and blocks. Row 85 is Closed as ruled, with
+that shape among its residuals; the ruling did not address it. B: `match=` added gives no finding (it was a warn);
 the fold shape keeps its finding with the new message; another expected
 type, another callee or a dropped `match=` is unchanged. A `match=` call B
 pairs no longer counts as an added assertion in D2's moved-assertion
