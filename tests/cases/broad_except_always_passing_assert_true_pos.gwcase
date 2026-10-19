@@ -2,7 +2,7 @@
 rule: BROAD_EXCEPT_ADDED
 title: an `except AssertionError` that holds only `assert True` still swallows the assertion its `try` wraps
 origin: #496, the issue's own pair, added for the hosted reproduction (owner ruling 2026-10-19, R31) before any fix
-note: the same wrap as broad_except_in_test_pos with `assert True` in the handler; app.py is unchanged and outside the diff, as there
+note: broad_except_in_test_pos's shape, a `try` added around the test's assertion, with `except AssertionError: assert True` as the handler in place of the template's `except Exception: pass`; app.py is unchanged and outside the diff, as cache.py is there
 === before: tests/test_value.py ===
 from app import value
 
