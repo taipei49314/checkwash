@@ -12519,7 +12519,8 @@ Implementation (lines at this PR):
   case route; that correction holds only if CI confirms the test.
 - Priority: P3 for both parts.
 
-Readings within the ruling's text, for the owner's approval:
+Readings within the ruling's text; the owner accepted 1, 2 and 4 to 6,
+and kept 3 a residual (below):
 
 1. A submodule at a proper prefix, compared with case ignored, is refused
    too. The ruling names "a symlink or a file"; a submodule is neither,
@@ -12592,8 +12593,8 @@ an engine error, and hook-json reports it as #414 does), so
 `docs/stability.md` does not change. No fingerprint, IR field or key
 changes. The sweep passes an empty `Contract()` (`sweep.py:132`), so it is
 not expected to move. THREATMODEL row 18 ("Closed — contract read
-base-side") is unchanged; whether it should name the root fallback is
-left to the owner.
+base-side") is unchanged; the owner kept it so, with the residuals left
+here and in KNOWN-ISSUES-next (below).
 
 Rule 2. The ruling approves no change to an existing expectation: by
 reading none moves, and none was changed. Every existing `--task` run at
@@ -12622,5 +12623,15 @@ reading, the documented test count becomes 19497 (19475 + 22); CI's
 collection checks it.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and from Git's; no test, checkwash run or sweep was run`.
 
-The agent wrote this entry in #500's fix PR. It awaits the maintainer's
-approval of its wording and of the readings above.
+The agent wrote this entry in #500's fix PR #517. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
+recommended", in reply to the agent's approval list, whose recommended
+answers for this PR were: the SPEC §4c (bd2043cf) and D-158 (02b47bf5,
+ecebc2b1) wording as committed (A35); readings 1, 2 and 4 to 6 accepted
+(A36); reading 3, a task path that names a base submodule exactly, kept a
+residual in KNOWN-ISSUES-next rather than refused (A37); THREATMODEL row
+18 unchanged, with the residual left in KNOWN-ISSUES-next and this entry
+(A38); and both departures accepted, the KNOWN-ISSUES-next #500 row
+(c3ecd099, c85a55f6) and the CLI symlink test's base `ci` entry written
+as a mode-120000 blob through `update-index` (A39). The reply was a
+button whose text the agent wrote, which the owner chose.
