@@ -12455,3 +12455,60 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-151 (2026-10-19): a machine-readable findings schema, and what a fingerprint promises (#364)
+
+#364 (talhayme, pr-witness) asked whether the findings shape is stable
+across minor versions and offered to match a published schema. The reply of
+2026-10-14 left the schema undecided and suggested `checkwash>=0.7,<0.8` as
+a package requirement; pr-witness 0.3.2 then declared
+`checkwash<0.8,>=0.6`, and v0.8.0 changed nothing it reads.
+
+- `docs/findings.schema.json` (draft 2020-12) describes
+  `checkwash_findings_version` 2. Every current key is required and unknown
+  keys are allowed, because a release may add an optional key without a new
+  number. `tests/test_findings_schema.py` holds the producer side strict.
+  Real output from every `.gwcase` and from the CLI must validate with no
+  undeclared key. The schema's keys must equal the stability table and
+  cover the `Finding` and `Evidence` fields. The schema may not take back
+  anything in `tests/data/findings-schema-v2.json`, whose digest the test
+  pins. The validator is a standard-library subset that refuses keywords it
+  does not implement (D-001).
+- A compatible release line is one minor line. A minor release can move
+  fingerprints in any namespace, and its DECISIONS entry and release notes
+  name them. `checkwash_findings_version` does not move for a fingerprint
+  change. Read from the code: v0.3.4, v0.4.1 and v0.4.2 moved keys
+  unrecorded, and v0.7.0's moves are recorded only in its round entries.
+- Advice to embedders (`docs/embedding.md`): pin exactly in CI. A tool that
+  reads the document and stores no fingerprints requires a lower bound and
+  checks the version at run time. A tool that stores fingerprints stays
+  below the next minor. This replaces the suggestion of 2026-10-14 on #364.
+  The owner approved this advice on 2026-10-19
+  (「版本範圍照新建議：CI 釘死；只讀文件的工具不設上限、執行時檢查版本；會存
+  fingerprint 的工具上限設在下一個 minor 之前。」, "version ranges as newly
+  recommended: pin exactly in CI; a tool that only reads the document has no
+  upper bound and checks the version at run time; a tool that stores
+  fingerprints stays below the next minor").
+
+Correction to D-148: a removed JS/TS test whose callback held an assertion
+it never reaches gets a new TEST_DISABLED key, because
+`detectors/test_disabled.py:86-88` reads the unit's assertions after
+`frontends/javascript/frontend.py:2398-2406` cuts the unreachable ones.
+
+Not decided here: shipping the schema as package data; a fingerprint-scheme
+version in the document; a jsonschema cross-check in CI; moving the frozen
+copy under `tests/gates`.
+
+Evidence status: prepared on a work machine where no pytest or checkwash
+ran; CI ran the tests.
+
+The agent wrote this entry in #364's PR #507. The maintainer approved it
+on 2026-10-19: 「裁決總表全部照建議」 ("the whole ruling table as
+recommended"), in reply to the agent's table of 104 decisions. For this
+PR: R59 approved the `docs/stability.md` text (the fingerprint row, the
+`config_errors` row, the paragraph on unknown keys, the do-not-bump list
+and the "Fingerprint stability" subsection); R61 kept the schema, with
+#507 as the answer to #364; R62 approved this entry with its correction to
+D-148; R63 left shipping the schema as package data, a jsonschema
+cross-check and moving the frozen copy undecided. The reply is the text of
+an answer the agent wrote, which the owner chose.

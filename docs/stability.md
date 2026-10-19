@@ -9,15 +9,16 @@ evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
 fingerprints and retire their old path-only exemptions. This intentionally
-breaks the matching promise below for those namespaces; existing v0.2.13
+moves those namespaces' fingerprints, as a minor release may
+([fingerprint stability](#fingerprint-stability)); existing v0.2.13
 installations retain their broad keys. IR and findings versions are 2 since
 v0.3.0 and 1 in v0.2.13. Read the [migration procedure and
 runtime limits](remediation-upgrade.md) before upgrading.
 
 **Next minor (unreleased, #421):** nine assertion-level oracle rules get
 content-bound v2 fingerprints that bind the after side too, and retire their
-before-only exemptions. This breaks the matching promise below for those
-namespaces as well; IR and findings versions stay 2. The
+before-only exemptions. This moves those namespaces' fingerprints as well,
+as a minor release may; IR and findings versions stay 2. The
 [assertion-level notes](remediation-upgrade.md#assertion-level-rules-next-minor-421)
 list the rules and the re-review step.
 
@@ -38,7 +39,7 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 | Rule IDs | `SPEC.md` §4 | `ASSERT_WEAKENED` will never be renamed or reused for something else. Your allowlist entries and your log greps keep working |
 | Severity model | `SPEC.md` §5 | Every detector reports at `warn`; only the escalator table promotes to `high`/`critical`. A detector will never start blocking on its own |
 | Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not. Since v0.8.0, in `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`; a usage error such as a malformed range still exits 2. The hook is an author-side check; the required CI check remains the gate, and every other format keeps exit 2 for an engine error ([#414](https://github.com/taipei49314/checkwash/issues/414)). From the next minor (unreleased), one engine error is reported as a block there: a size refusal exits 0 with `decision: block` and a `reason` naming path, side, size and limit, only when it is for a change in the diff that decides the verdict (for the Stop hook, HEAD against the working tree) and that change has a head or worktree side over the limit; `SPEC.md` §9 lists the size refusals that keep the message. Every other engine error still carries no `decision`, and term, json and sarif keep exit 2 for every engine error, this size refusal included ([#456](https://github.com/taipei49314/checkwash/issues/456)). With `--hook-input stdin`, the managed Stop handler's flag, a pass may also carry a non-blocking `systemMessage` about the session's commits, a size refusal in their analysis included, and the flag with another format or a range is a usage error, exit 2. `hook session-start`, the managed SessionStart handler, prints nothing and always exits 0 ([#418](https://github.com/taipei49314/checkwash/issues/418)) |
-| Finding fingerprints | `src/checkwash/findings.py` | Within a compatible release line, a recorded exemption keeps matching. v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. The next minor retires the before-only keys of nine assertion-level rules the same way (#421). Other namespaces keep their identities |
+| Finding fingerprints | `src/checkwash/findings.py` | Within one minor release line (x.y.0 to x.y.z), a recorded exemption keeps matching. A minor release can move fingerprints in any namespace; its `DECISIONS.md` entry and release notes name the rules and shapes that move ([fingerprint stability](#fingerprint-stability)). v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. The next minor retires the before-only keys of nine assertion-level rules the same way (#421), and renumbers units that share a name (#424) |
 | IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A shape change bumps the number; see the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | Both `.checkwash/config.toml` and `.greenwash/config.toml` are supported, with the precedence below. A malformed config is reported, never silently ignored |
 | Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. Proved on every push by a job that diffs artifacts from all nine matrix legs |
@@ -73,7 +74,7 @@ below remain; the v0.3.0 IR adds reviewed-change evidence described in the
 | `findings` | array of finding objects |
 | `summary` | counts for `info`, `warn`, `high`, `critical` |
 | `skipped_files` | unparseable paths |
-| `config_errors` | parse failures for base-side config/allow |
+| `config_errors` | parse failures for base-side config/allow, and config values that are not valid |
 | `verdict` | `pass` or `block` |
 | `unread` | from the next minor (unreleased, [#454](https://github.com/taipei49314/checkwash/issues/454)): changed sides over the 1,000,000-byte source limit that no detector had to read, the sides the stderr notes name. One object per side with exactly `path`, `side` (`base`, `head` or `worktree`), `size` and `limit` in bytes, sorted by path, then side. The change holding a listed side was set aside whole, its readable side included; in a range-mode rename with one side over the limit, the readable side's path is not listed (the new path when the base side is over, the old path when the head side is). The skip of a root `poetry.lock` or `uv.lock` over the limit at the base is not listed; its note stays on stderr. When the diff also changes that lockfile, the change's sides over the limit are listed like any other. The key is omitted when empty |
 
@@ -87,6 +88,14 @@ Each finding object is the dataclass field set of `Finding`: `rule`,
 `deescalators`, `fingerprint`, `allowlisted`, `strength_drop`,
 `strength_after`, `subject_changed`, `shape`. Evidence objects have
 `text` and `span` (character offsets into CRLF→LF-normalized source).
+
+The table lists every key checkwash writes today. A release can add an
+optional key without a new number (below), and an optional key can be
+absent, so a consumer must ignore keys it does not know.
+[`findings.schema.json`](findings.schema.json) is the machine-readable form
+of this section, checked against real output by
+`tests/test_findings_schema.py`; [Embedding checkwash](embedding.md) is the
+guide for tools that read it.
 
 `checkwash.IR_VERSION` is `--emit-ir`. The IR is a dataclass tree
 serialized by `to_jsonable` (tuples become lists). A consumer should
@@ -111,13 +120,38 @@ not evidence of an unchanged machine interface.
 
 - **Bump `FINDINGS_VERSION` or `IR_VERSION`** if a field is renamed,
   removed, or changes meaning, or if a required key is added.
-- **Do not bump** for a new optional field, a new rule id, or a new
-  `--format`. Rule ids themselves are frozen (table above).
+- **Do not bump** for a new optional field, a new rule id, a new escalator
+  or de-escalator label, a new TEST_DISABLED `shape` value (as in D-092), a
+  moved fingerprint, or a new `--format`. Rule ids themselves are frozen
+  (table above).
 - A bump is a breaking change: the minor version moves with it and
   `DECISIONS.md` records why. Pin the package in CI if you parse JSON.
 
 `--format json` remains sorted keys, `ensure_ascii=False`, LF, UTF-8
 bytes, no timestamps (SPEC §8).
+
+### Fingerprint stability
+
+A fingerprint is the key an exemption records. Compare it for equality
+only: its unit part can contain `/`, and its last part has more than one
+form.
+
+- Within one minor release line a recorded exemption keeps matching. Before
+  v0.5.0, the patch releases v0.3.4, v0.4.1 and v0.4.2 moved some keys
+  without saying so; there has been no patch release since.
+- A minor release can move fingerprints in any namespace. Its
+  `DECISIONS.md` entry and its release notes name the rules and shapes
+  whose keys move. `checkwash_findings_version` does not move for this.
+- An exemption whose key moved no longer applies: the finding is gated as
+  if it had never been exempted, and can block. When a key format is
+  retired, `check` reports the entry on stderr, `allow` refuses the old key
+  and `doctor` warns. A key that changed in any other way matches nothing,
+  without a message.
+- New findings bring new keys in any release, because detector coverage
+  grows.
+
+[Embedding checkwash](embedding.md#upgrade-notes) lists what each release
+since v0.6.0 moved.
 
 ### Separate assertion-coverage report
 
