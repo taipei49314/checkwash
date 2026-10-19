@@ -1,0 +1,23 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a stored expectation rewritten beside a no-op production edit and a new unrelated test gives no finding (named residual)
+origin: #463 rulings Q2 (a) and Q4 (a) (issuecomment-6248011246): the changed symbol silences the snapshot
+origin2: form, and the new test, which reads no snapshot, is test logic that silences SNAPSHOT_CODE_COCHANGE.
+origin3: The cheapest full escape left, pinned as a named residual (THREATMODEL row 132), not a claim that
+origin4: the edit is honest; snapshot_with_test_change_neg is the honest twin.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== before: app/rounding.py ===
+def round_total(x):
+    return x
+=== after: app/rounding.py ===
+def round_total(x):
+    return x + 0
+=== after: tests/test_smoke.py ===
+def test_smoke():
+    assert 1 + 1 == 2
+=== expect ===
+[]

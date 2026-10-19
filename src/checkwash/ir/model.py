@@ -433,6 +433,16 @@ class DiffGlobals:
     # files. Feature removal explains a deleted test the way a modified
     # symbol explains an edited expectation (PROD_SYMBOL_REMOVED).
     prod_symbols_deleted: list[str] = field(default_factory=list)
+    # The entries of `prod_symbols_changed` that a Python prod file the diff
+    # adds contributed, one per entry: a multiset, since an added `pkg.py`
+    # and a modified `pkg/__init__.py` can both give `pkg::X`. Only the
+    # file-scoped EXPECTED_VALUE_CHANGED reads it: nothing in a brand-new
+    # file explains rewriting an existing stored expectation (#463 Q1 (a)),
+    # the reason repair-evidence clause 3 and PACKAGE_REPAIR already give for
+    # refusing new code. Every other reader of `prod_symbols_changed` is
+    # unchanged. Optional, so IR_VERSION stays 2; an IR without it counts
+    # every changed symbol, as before.
+    prod_symbols_in_added_files: list[str] = field(default_factory=list)
     # Callers of changed prod symbols, for one-hop repair evidence:
     # {caller leaf name: [changed symbol leaf names it calls]}.
     prod_symbol_callers: dict[str, list[str]] = field(default_factory=dict)
@@ -443,7 +453,7 @@ class DiffGlobals:
     # unguarded suite control (D-028), and a weakening-class finding in a
     # Python test or conftest (gating.OPAQUE_REFUSED_RULES, #419). The flag
     # itself stays a diff-level fact: the sweep counts it and the snapshot
-    # rule reads it exactly as before.
+    # rule reads it exactly as before (#463 Q3 (a) keeps that).
     prod_opaque_change: bool = False
     # Top-level packages/modules of changed prod files, and what each test
     # file imports. Symbol-level evidence is confined to files the diff

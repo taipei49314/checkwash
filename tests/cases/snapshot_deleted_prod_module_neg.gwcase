@@ -1,0 +1,15 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a stored expectation rewritten beside a deleted production module stays at warn
+origin: #463 ruling Q1 (a) (issuecomment-6248011246): only a file the diff adds stops counting. A deleted
+origin2: module can honestly retire the behaviour its golden file recorded, so its symbols still count.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== before: app/legacy_rounding.py ===
+def legacy_round(value):
+    return round(value, 1)
+=== expect ===
+[{"rule": "SNAPSHOT_CODE_COCHANGE", "severity": "warn", "path": "tests/golden/invoice.txt"}]

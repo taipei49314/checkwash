@@ -946,8 +946,11 @@ role's own rules ([#197](https://github.com/taipei49314/checkwash/issues/197)).
 So `__tests__/__snapshots__/out.js` is a stored expectation, and any test units
 it holds are judged as well. A real test kept under `expected/`, `golden/` or
 `__snapshots__/` is a stored expectation too, so editing it reports
-EXPECTED_VALUE_CHANGED unless the same diff changes production code, even when
-the edit is honest. A shell shebang or a `Makefile` name prefix does not make a
+EXPECTED_VALUE_CHANGED unless the same diff changes existing production code,
+even when the edit is honest. Since
+[#463](https://github.com/taipei49314/checkwash/issues/463) a new Python
+production module is not such a change, so adding a test there for a new
+module reports it too. A shell shebang or a `Makefile` name prefix does not make a
 test file a CI script, even when the file names a test runner.
 Generated/build/dependency paths remain excluded.
 

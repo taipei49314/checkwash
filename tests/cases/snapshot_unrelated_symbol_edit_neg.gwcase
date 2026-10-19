@@ -1,0 +1,20 @@
+=== meta ===
+rule: EXPECTED_VALUE_CHANGED
+issue: 463
+title: a stored expectation rewritten beside a no-op edit to an unrelated production function stays at warn (named residual)
+origin: #463 reproduction step 3, ruling Q2 (a) (issuecomment-6248011246): the snapshot form stays
+origin2: diff-global, so a changed symbol in an existing production file counts whether or not a test
+origin3: reaches it. Current behaviour pinned as a named residual (THREATMODEL row 132), not a claim that
+origin4: the edit is honest; snapshot_cochange_pos is the honest twin.
+=== before: tests/golden/invoice.txt ===
+105.3
+=== after: tests/golden/invoice.txt ===
+104.0
+=== before: app/rounding.py ===
+def round_total(x):
+    return x
+=== after: app/rounding.py ===
+def round_total(x):
+    return x + 0
+=== expect ===
+[{"rule": "SNAPSHOT_CODE_COCHANGE", "severity": "warn", "path": "tests/golden/invoice.txt"}]

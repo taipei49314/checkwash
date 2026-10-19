@@ -28,6 +28,10 @@ The role is a naming convention, not proof that a specific test reads a file.
 New/deleted expectations and unclassified data are outside this added event.
 The old co-change policy is preserved: an unrelated new production function
 or opaque production change can still leave a golden rewrite at warning.
+Later change, not in a release yet: since #463 a Python production file the
+diff adds no longer counts as such a change, so a new module beside a golden
+rewrite blocks; a changed symbol in an existing or deleted production file and
+an opaque production change still hold it at warning.
 
 ## Conftest stand-ins
 

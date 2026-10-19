@@ -1416,9 +1416,13 @@ def build_ir(
             elif is_python and change.status == "added" and after_parsed and after_parsed.parse_ok:
                 # A brand-new prod file is all new symbols; nothing "modified"
                 # in it explains editing an existing test's expectation.
-                g.prod_symbols_changed.extend(
-                    f"{_module_of(path)}::{q}" for q in sorted(after_parsed.symbols)
-                )
+                new_symbols = [f"{_module_of(path)}::{q}" for q in sorted(after_parsed.symbols)]
+                g.prod_symbols_changed.extend(new_symbols)
+                # The file-scoped EXPECTED_VALUE_CHANGED does not count them as
+                # an implementation change (#463 Q1 (a)); every other reader of
+                # `prod_symbols_changed` still does. A deleted file (below)
+                # keeps counting for both.
+                g.prod_symbols_in_added_files.extend(new_symbols)
                 _record_callers(g, after_parsed, g.prod_symbols_changed)
                 g.new_literals_in_prod.extend(sorted(after_parsed.literals))
             elif (
