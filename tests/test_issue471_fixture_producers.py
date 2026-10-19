@@ -378,15 +378,16 @@ FACTORY_CONFTEST = (
 
 
 def test_the_one_hop_callers_route_is_not_followed_from_a_producer():
-    """The producer counts as the test's call for a direct match only (D-155, a departure for the owner).
+    """The producer counts as the test's call for a direct match only (D-155, a departure the owner kept).
 
     `make_ledger` is unchanged and calls the changed `Ledger.reset`. Written
     inline, `make_ledger()` takes the one-hop callers route (SPEC section 5
     clause 2); returned by the fixture, it does not, as the T1.9 helper hop
     and 306 Sub-Q8 match their callees directly only. The analysis the
     ruling adopted has the producer take that route (its sections 2.2 and
-    4.5), so D-155 records this as a departure: if the owner rules for the
-    route, this pin flips to warn with REPAIR_EVIDENCE.
+    4.5), so D-155 records this as a departure, which the owner kept on
+    2026-10-19. Following the route would flip this pin to warn with
+    REPAIR_EVIDENCE.
     """
     test_before = "def test_total(ledger):\n    assert ledger.total([1.0]) == 1.0\n"
     _ir_, through_fixture, verdict = _judge(
