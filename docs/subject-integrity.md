@@ -73,7 +73,9 @@ memoized source reads and one million total symbolic execution steps (also
 direct subject-replacement pass (#132) reads the same 200,000-node limit
 (#469). Over any of these limits the run stops with an engine error: exit 2,
 or the Stop hook's non-blocking message (see the snapshot and adapter
-contract below, and #506). The per-file byte and node refusals of both passes
+contract below, and #506), except that a changed file in the diff that
+decides the verdict whose head or working-tree side is over 1 MB blocks the
+stop (#456, below). The per-file byte and node refusals of both passes
 name the path, the side (`before` or `after`), the byte count and, for nodes,
 the node count (#345, #469). The step refusal names which counter fired
 (`counter=proof` for one trace, `counter=analysis` for the whole analysis),
