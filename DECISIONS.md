@@ -12463,13 +12463,16 @@ with 「裁決總表全部照建議」 ("the whole ruling table as recommended")
 reply is the text of an answer the agent suggested, which the owner chose.
 R56 asked whether to open the v0.8.0 rotation PR now, with the
 protected-file dispositions asked in the PR, and adopted "open it now and
-merge it before the sweep freeze". The v0.8.0 one-time authorization
-(`docs/RELEASING.md`, 2026-10-15) already covers this PR: "the
+merge it before the sweep freeze". This PR rests on R56. The v0.8.0
+one-time authorization (`docs/RELEASING.md`, 2026-10-15) listed "the
 verdict-baseline rotation PR (step 9), whose protected changes keep the
-maintainer's disposition". The PR is part of the v0.9.0 release
-preparation and has no issue: a tag-push run requires `[baseline]` to be
-the highest other `v*` tag merged into the tagged commit (`check_tag_rule`,
-`tools/verdict_gate.py:1564-1594`), which for a v0.9.0 tag is v0.8.0.
+maintainer's disposition" among what it covers, but its publication record
+says the grant "was consumed by publication" and that the rotation remains
+separate, so this entry does not rely on it. The PR is part of the v0.9.0
+release preparation and has no issue: a tag-push run requires `[baseline]`
+to be the highest other `v*` tag merged into the tagged commit
+(`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which for a v0.9.0
+tag is v0.8.0.
 D-151 to D-161 are assigned to pull requests prepared in parallel, so this
 entry is D-162.
 
