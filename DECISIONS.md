@@ -12539,10 +12539,14 @@ control beside only an inert file says `COLLECTION_CONTROL_UNEXPLAINED`
 `NO_PROD_CHANGE_IN_DIFF`.
 
 **Existing pins that move.** CI on 4352949c (ci run 39219097422, every
-test job, and docs suite run 39219097558) failed on exactly the 34
-expectations below and on no other, the same set in every job, each
-printing the same finding with only the label changed. The owner approved
-each move by name (below), and this PR re-pins them in one commit
+test job, and docs suite run 39219097558) failed on exactly the 34 test
+items below (33 fixtures with 34 findings, and one pytest row) and on no
+other, the same set in every job, each printing the same findings with
+only the label changed. A fixture's failure reports only its first
+unmatched expectation (`cases.match_expectations`), so the second finding
+of `js_test_in_expected_dir_weakened_with_prod_edit_pos` shows its new
+label in the printed actuals. The owner approved each move by name
+(below), and this PR re-pins all 35 expectations in one commit
 (353e91d4). Each moves from `NO_PROD_CHANGE_IN_DIFF` to
 `PROD_CHANGE_NOT_EVIDENCE`, with its inputs, severity and de-escalators
 unchanged:
@@ -12604,18 +12608,20 @@ action's `action.yml`; `lockfile`: `requirements.txt`; `guardrail`:
 (`renamed_from_test`; a `.gwcase` cannot express a rename, since
 `cases.case_to_changes` sets no `old_path`).
 
-**Not settled by the ruling; the owner decided each (below):**
-- The four byte-identical fixtures. Their moves are approved, and their new
-  label is recorded as a harness artifact (above). The engine does not skip
-  a byte-identical change when it records `prod_files_changed`: that
-  option was wider than this ruling, since D-066's label and
-  `SNAPSHOT_CODE_COCHANGE` read the same list and the IR would change.
-- The seven JS setup-file fixtures. By Q2 they take the new label, as Q2
-  says a production file that runs the test suite does. Their only
-  production-role changes are the carrier the finding reports and, in
-  `js_setup_file_added_with_listing_pos`, the `package.json` that lists it,
-  so the sentence points the reader at the stand-in itself. The owner
-  approved their moves by name with the rest.
+**Not settled by the ruling; the owner decided it (below):** the four
+byte-identical fixtures. Their moves are approved, and their new label is
+recorded as a harness artifact (above). The engine does not skip a
+byte-identical change when it records `prod_files_changed`: that option
+was wider than this ruling, since D-066's label and
+`SNAPSHOT_CODE_COCHANGE` read the same list and the IR would change.
+
+**Settled by Q2:** the seven JS setup-file fixtures take the new label, as
+Q2 says a production file that runs the test suite does. Their only
+production-role changes are the carrier the finding reports and, in
+`js_setup_file_added_with_listing_pos`, the `package.json` that lists it,
+so the sentence points the reader at the stand-in itself. The approval
+list recorded this as settled by Q2 and asked nothing about it; the owner
+approved the seven moves by name with the rest (below).
 
 **Residuals, stated.** The label says that production changed and that no
 evidence the finding may take reached it; it does not say why. A production
@@ -12648,7 +12654,10 @@ four Q4 approves, none with a `bypass:` line:
   shape, this pin is dropped (Q4), and that fixture's
   `EXPECTED_VALUE_HARDCODED` expectation moves from
   `NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE` without a further
-  stop: the owner approved that move by name in advance (below).
+  stop. If this PR merges first, #522's `hardcoded_package_only_pos` takes
+  the new label in #522 at its merge, also without a stop. The owner
+  approved that move by name in advance, whichever PR merges first
+  (below).
 - Pin 2, `prod_change_not_evidence_unchanged_caller_pos`: #420's
   reproduction with `render` in an unchanged module, `ASSERT_WEAKENED` high
   with the new label.
@@ -12682,14 +12691,19 @@ The agent wrote this entry in #473's fix PR #528. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
 recommended"), in reply to the agent's approval list of that day, which
 went to the owner off GitHub. For this PR it covers items A50 to A54:
-each of the 34 existing pins' moves by name, once CI showed exactly those
-(A50; re-pinned in 353e91d4); the four byte-identical fixtures' moves,
+each move by name of the 34 test items CI failed on (33 fixtures with 34
+findings, and one pytest row), once CI showed exactly those (A50;
+re-pinned in 353e91d4); the four byte-identical fixtures' moves,
 recorded as a harness artifact (A51); moving `hardcoded_package_only_pos`
-to the new label in advance, with pin 1 dropped, if #522 merges first
-(A52); the labels of the three new fixtures (A53, ee35d145); and the
-wording of the `gating.py` label chain and its comment (e33845eb), the
-SPEC §5 E1 row (0a3d0f53), THREATMODEL row 86h (0b334f2f) and this entry
-(88b6b33a, 4017d0e5, 3b6583ad), with this entry's number and the test
-count renumbered in merge order at merge time (A54). The reply was a
-button whose text the agent wrote, which the owner chose. 260466d7 and
-this paragraph record it.
+to the new label in advance without a stop, whichever PR merges first,
+with pin 1 dropped if #522 merges first (A52); the labels of the three
+new fixtures (A53, ee35d145); and the wording of the `gating.py` label
+chain and its comment (e33845eb), the SPEC §5 E1 row (0a3d0f53),
+THREATMODEL row 86h (0b334f2f) and this entry (88b6b33a, 4017d0e5,
+3b6583ad), with this entry's number and the test count renumbered in
+merge order at merge time (A54). The reply was a button whose text the
+agent wrote, which the owner chose. 260466d7, the commits after it and
+this paragraph record it. Their sentences in this entry (the CI result,
+the harness-artifact sentence, the order clauses for #522, the "Settled
+by Q2" paragraph, the pin 3 and test-count sentences and this paragraph)
+were written after the reply and were not on the list.
