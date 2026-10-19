@@ -8,7 +8,9 @@ counter fired, the file, the side, the unit and that counter's steps and
 limit. The pass reads each side's module statements once per file (the
 owner's choice of 2026-10-19), and keeps the module reads of the
 assertion-helper, changed-callee and literal-helper proofs too (the owner's
-second choice of that day); the last pins show that neither changes a
+second choice of that day), and the answers of the `math.gcd` import
+authority and the parameterized-helper checks once per file (the owner's
+third choice of that day); the last pins show that none of them changes a
 result. Source bytes are parsed only; the sources here are never executed.
 """
 
@@ -19,8 +21,11 @@ import pytest
 
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
+from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.engine import analyze
+from checkwash.frontends.python import literal_stdlib_standins as literal_stdlib
+from checkwash.frontends.python import replacement_authority
 from checkwash.frontends.python import standin_installations as standin
 from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python import subject_replacements as subject
@@ -617,3 +622,131 @@ def test_kept_reads_leave_helper_and_changed_callee_verdicts_as_fresh_reads_give
     for (_, _, expected), findings in zip(cases, kept):
         if expected is not None:
             assert any(f.rule == "TEST_PATCHES_SUBJECT" for f in findings) is expected
+
+
+# The owner's third choice of 2026-10-19: the `math.gcd` import authority and
+# the parameterized-helper checks are made once per file, and that changes no
+# result either.
+
+GCD_HELPER = b"import math\ndef local_gcd(a, b):\n    return math.gcd(a, b)\n"
+CHECK_VALUE = b"def check_value(value, expected):\n    assert abs(value) == expected\n"
+
+
+def _gcd_rows(count):
+    """`count` tests whose callee changed to a local `math.gcd` helper."""
+    tests = b"".join(b"def test_%d():\n    assert CALLEE(%d, 8) == 4\n" % (n, 4 * (2 * n + 1)) for n in range(count))
+    return PREFIX + tests.replace(b"CALLEE", b"total"), PREFIX + GCD_HELPER + tests.replace(b"CALLEE", b"local_gcd")
+
+
+def _abs_rows(count):
+    """`count` tests whose literal row became a call of one parameterized `abs` helper."""
+    before = PREFIX + b"".join(b"def test_%d():\n    assert total(-%d) == %d\n" % (n, n + 1, n + 1) for n in range(count))
+    after = PREFIX + CHECK_VALUE + b"".join(b"def test_%d():\n    check_value(-%d, %d)\n" % (n, n + 1, n + 1)
+                                            for n in range(count))
+    return before, after
+
+
+def _context(after):
+    sources = {**PRODUCTION, PATH: after}
+    return ConftestContext([FileChange(PATH, "modified", BEFORE, after)], sources.get), (lambda _needles: sorted(sources))
+
+
+def test_a_kept_math_gcd_authority_answers_as_a_fresh_check_does():
+    cases = [
+        (GCD_AFTER, "app.billing.total", ["total(12, 8)", "total(4, 6)"]),
+        (GCD_AFTER, "app.billing.total", ["other(12, 8)", "total(12, 8)"]),
+        (GCD_AFTER, "app.billing.other", ["total(12, 8)"]),
+        (GCD_AFTER.replace(b"import math\n", b"import math\nimport os\n"), "app.billing.total", ["total(12, 8)"]),
+        # Over 65,536 bytes, `pure_imported_calls` refuses the test source.
+        (GCD_AFTER + b"pass\n" * 20_000, "app.billing.total", ["total(12, 8)"]),
+    ]
+    seen = set()
+    for source, target, calls in cases:
+        tree = ast.parse(source)
+        context, search = _context(source)
+        kept = {}
+        for text in calls:
+            call = parse_expr(text)
+            for _ in range(2):
+                answer = literal_stdlib.math_import_authority(source, tree, call, target, PATH, context, search, kept)
+                assert answer == literal_stdlib.math_import_authority(source, tree, call, target, PATH, *_context(source))
+            seen.add(answer)
+        # Calls of one callee share one kept answer.
+        assert len(kept) == len({parse_expr(text).func.id for text in calls})
+    # The check admits some sources and calls and refuses others.
+    assert seen == {True, False}
+
+
+@pytest.mark.parametrize("shape", ["gcd", "parameterized"])
+def test_the_pass_checks_math_gcd_and_parameterized_tests_once_per_file(monkeypatch, shape):
+    count = 30
+    asked, checked, trees = [], [], []
+
+    def counted(name, original, tree_at=None):
+        def call(*args, **kwargs):
+            if tree_at is None or any(args[tree_at] is tree for tree in trees):
+                checked.append(name)
+            return original(*args, **kwargs)
+        return call
+
+    if shape == "gcd":
+        before, after = _gcd_rows(count)
+        authority = subject.math_import_authority
+
+        def ask(*args):
+            asked.append(args[2])
+            return authority(*args)
+
+        monkeypatch.setattr(subject, "math_import_authority", ask)
+        monkeypatch.setattr(literal_stdlib, "pure_imported_calls", counted("source", literal_stdlib.pure_imported_calls))
+        monkeypatch.setattr(literal_stdlib, "inert_test_execution_context",
+                            counted("startup", literal_stdlib.inert_test_execution_context))
+        expected = ["source", "startup"]
+    else:
+        before, after = _abs_rows(count)
+        event = subject.parameterized_abs_event
+
+        def ask(*args):
+            asked.append(args[0])
+            if not trees:
+                # Every test of the file passes the same two trees.
+                trees.extend(args[1])
+            return event(*args)
+
+        monkeypatch.setattr(subject, "parameterized_abs_event", ask)
+        # Only reads of the trees this pass checks count; other passes read their own.
+        monkeypatch.setattr(subject, "_helper_module_inert", counted("inert", subject._helper_module_inert, 0))
+        monkeypatch.setattr(replacement_authority, "closed_replacement_authority",
+                            counted("authority", replacement_authority.closed_replacement_authority, 0))
+        expected = ["authority", "inert", "inert"]
+    findings = [f for f in _analyse(before, after)[1] if f.rule == "TEST_PATCHES_SUBJECT"]
+    # Every test asks; the checks are made once for the file.
+    assert len(asked) == count
+    assert sorted(checked) == expected
+    # Every test's replacement is still found, each at its own first call.
+    assert {f"test_{n}" for n in range(count)} <= {f.unit for f in findings}
+    if shape == "parameterized":
+        assert {(f"test_{n}", f"check_value(-{n + 1}, {n + 1})") for n in range(count)} <= {
+            (f.unit, f.after.text) for f in findings}
+
+
+def test_kept_checks_leave_math_gcd_and_parameterized_verdicts_as_fresh_checks_give_them(monkeypatch):
+    abs_before, abs_after = _abs_rows(2)
+    gcd_before, gcd_after = _gcd_rows(2)
+    cases = [
+        (abs_before, abs_after, True),
+        (abs_before, abs_after.replace(b"check_value(-2, 2)", b"check_value(-2, 3)"), False),
+        (abs_before, abs_after + UNCLOSED, False),
+        (gcd_before, gcd_after, True),
+        (gcd_before, gcd_after.replace(b"import math\n", b"import math\nimport os\n"), False),
+        (gcd_before + UNCLOSED, gcd_after + UNCLOSED, False),
+    ]
+    kept = [_analyse(before, after)[1] for before, after, _ in cases]
+    event, authority = subject.parameterized_abs_event, subject.math_import_authority
+    # Without the dicts the pass keeps, each test is checked afresh.
+    monkeypatch.setattr(subject, "parameterized_abs_event", lambda *args: event(*args[:7]))
+    monkeypatch.setattr(subject, "math_import_authority", lambda *args: authority(*args[:7]))
+    fresh = [_analyse(before, after)[1] for before, after, _ in cases]
+    assert kept == fresh
+    for (_, _, expected), findings in zip(cases, kept):
+        assert any(f.rule == "TEST_PATCHES_SUBJECT" for f in findings) is expected
