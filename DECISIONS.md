@@ -11662,7 +11662,25 @@ PJU, NOT EC pool. Its plain before/after compares #424's engine
     still covers it, which checkwash does not model. Two commits fall
     under two of these.
   - The decorator reading and the local-class reading are filed as
-    #487, the helper-skip liveness as #488.
+    #487. The helper-skip liveness is filed as #488, whose ruling
+    (2026-10-18, option (a)) records the block on `fada8be1db` as a
+    known false block, not correct behaviour: by reading the scrapy
+    source, the commit only adds coverage on the test side. D-087's
+    maintainer decision kept this liveness cost for guarded setup skips,
+    but in D-087's and D-111's sweeps it never turned a pass into a block
+    by itself; here it does. It is not the first liveness-only block in
+    DECISIONS: D-116's sweep blocked pytest `4f5d7948`, where a test
+    moves into a file in which it carries a guarded `py.test.skip`, and
+    D-116 does not call that block false. The block stays until a later
+    change removes it, such as #488's per-row liveness (option (b)),
+    which needs its own ruling. Meanwhile an author can exempt the six
+    findings by fingerprint only through an `allow.toml` entry already
+    on the base side (SPEC §5 D3, §6); one added in the blocked change
+    itself shows as `EXEMPTION_ADDED` and does not lift the block. How
+    often this happens is not known. So far it is the only verdict this
+    reading moves in the standard set and D-088's sets, but 19 commits
+    of the d088 batch are not judged (above), and most of the targeted
+    phase did not run (below). Further cases are recorded on #488.
 - **Not measured:** resolution toggled in both directions, and what
   Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
   variant that is not a commit on main. Sub-Q7 asks for its cost to be
@@ -11703,6 +11721,34 @@ approved that text on 2026-10-18: 「照你建議」, in reply to the agent's li
 asking for approval of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144
 (dfde00e1) drafts. The follow-up issue numbers (#487, #488) were filled in
 once the issues were filed, as that list said.
+
+The follow-up bullet that ends Cost's source review was rewritten from
+#488's ruling (issuecomment-6248630774, item 1) in PR #510. The
+maintainer approved it on 2026-10-19: 「PR 核可清單全部照建議」, which
+takes every item of the agent's approval list as the agent recommended.
+For #510 that list asked for approval of the bullet's wording (6aaa93ac,
+8ae71cf5; item A13), whether to add a `docs/KNOWN-ISSUES-next.md` row for
+#488 (added in 6abaf2a9; A14), and whether to keep the `fada8be1db`
+sub-bullet's last sentence and add the ruling's D-116 contrast (the
+sentence kept, the contrast added in 570a81fd; A15). The reply is the
+text of an answer button the agent wrote, which the owner chose.
+
+A14 decided that the row is added; the row's text (6abaf2a9, ee4facf4)
+and the paragraph above were written after that approval. The maintainer
+approved them on 2026-10-19: 「第二輪核可全部照建議」, which takes every
+item of the agent's round-2 approval list as the agent recommended. For
+#510 that list asked whether to approve together the text written to
+apply options already approved, the paragraph above and the #488 row
+among it (item B3), and whether the page's first header sentence, which
+said every residual below was found by reading, should also yield to a
+row, with #510 and #521 using one wording (B4). Under B4, 7dc0cd20 ends
+that sentence with "unless a row names another source", the wording
+#521 (775aa3dd, accepted under A22) uses. A read-only claims review of
+#510 found that the row said lost credit always sends the findings to
+high; 8678ed8b says they go to high unless repair evidence or another
+de-escalator holds them at warn (SPEC §5 E1, D1). That correction was
+written after the approval. The reply is the text of an answer button
+the agent wrote, which the owner chose.
 
 ## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
 
