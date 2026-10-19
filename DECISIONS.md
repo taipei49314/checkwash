@@ -12492,9 +12492,9 @@ Implementation (lines at this PR):
 - `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
   `conftest_level` (`:977-980`) through the conftest's own imports.
 - `frontend`: `UnitSide.fixture_producers` per side (`fixture_producers`,
-  `:4187-4212`, passed at `:4372` and `:4460`), and
+  `:4198-4223`, passed at `:4383` and `:4471`), and
   `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
-  `:3222-3251`, used at `:3350` and `:3420`). Only a unit that takes a
+  `:3227-3262`, used at `:3361` and `:3431`). Only a unit that takes a
   parameter reads any. `ir/model.py:130-137`, `:259-268`.
 - `gating.py`, in its own commit (da116dd1) for the owner's approval, as the
   analysis's §4.5 has it and as D-048 and D-141 approved policy code:
@@ -12522,32 +12522,37 @@ What the ruling's four answers become:
   enclosing classes, the module, then each `conftest.py` above it, nearest
   first, the `<plugin-configuration>` context passing through (#358). A
   name a `parametrize` supplies directly runs no fixture; `indirect` still
-  runs it. The fixtures a fixture requests, `autouse` and `usefixtures`
-  count nothing.
+  runs it. The fixtures a fixture requests count nothing, and so do an
+  `autouse` fixture and a `usefixtures` mark the test does not also request
+  by parameter. One it requests by parameter is a fixture like any other,
+  as the ruling's "requests by parameter" reads
+  (`test_an_autouse_fixture_the_test_also_requests_by_parameter_has_a_producer`).
 - Q3 (b). The finding's assertion is its before-side one: the assertion it
   cites on its before side (for ASSERT_REMOVED, the removed one), or the
   before half of the pair whose after side it cites. It reads the parameter
   directly or through the unit's own assignments (`_resolve_through`,
-  `frontend.py:1503-1526`, whose unit-level map joins every definition of a
+  `frontend.py:1508-1531`, whose unit-level map joins every definition of a
   name: the analysis's stated residual). The fixture is resolved from the
   module and the conftest chain as they were before the diff
   (`fixture_producer_added_in_diff_pos`), and a unit with no before side
   takes nothing.
 - Q4 (a). Every oracle rule that takes symbol evidence, except
-  TEST_DISABLED (`fixture_producer_test_disabled_pos`); no PACKAGE_REPAIR
-  (`hardcoded_package_only_pos`); classes and factories alike.
+  TEST_DISABLED (and TOLERANCE_LOOSENED in practice, the first departure
+  below); no PACKAGE_REPAIR (`hardcoded_package_only_pos`); classes and
+  factories alike as producers, matched directly (the second departure).
+  The TEST_DISABLED guard in `apply_gates`
+  (`:875`) is defensive today: no TEST_DISABLED finding cites an assertion
+  (a unit gone cites its unit's span, `detectors/test_disabled.py:96`; the
+  other shapes cite a marker or the unit's span on the after side), so
+  `_finding_assertion` finds none, and `fixture_producer_test_disabled_pos`
+  is a parity pin that blocks with or without the guard.
+  `test_the_test_disabled_guard_is_what_withholds_a_changed_producer` hands
+  every finding an assertion that reads the changed producer, and pins the
+  guard itself.
 
 Readings where the ruling is silent, each erring toward no evidence:
 
-1. Neither the one-hop callers route (SPEC §5 clause 2) nor a helper hop is
-   followed from a producer: a factory producer that is unchanged and calls
-   the changed symbol gives nothing, while the same factory called inline
-   takes the callers route
-   (`test_the_one_hop_callers_route_is_not_followed_from_a_producer`). The
-   T1.9 hop and 306 Sub-Q8 match their callees directly only. The
-   analysis's §2.2 says the producer composes with #420's hop to top-level
-   callees; that would need this route. #420 is deferred in #504.
-2. Stricter than `_setup_reach` (`setup_skip_controls.py:1037-1093`) in two
+1. Stricter than `_setup_reach` (`setup_skip_controls.py:1037-1093`) in two
    places: at the test's own levels, a name bound another way or a star
    import stops the lookup at that level, where `_setup_reach` looks past a
    class to the module; and a class with a base other than `object`, or
@@ -12555,29 +12560,58 @@ Readings where the ruling is silent, each erring toward no evidence:
    `SetupScope` reads only the class's own body. A same-file inherited test
    is resolved from its collecting class, which has a base, so it takes a
    producer only from a fixture that class defines.
-3. One value site: several `return` statements, a bare `yield`, a
+2. One value site: several `return` statements, a bare `yield`, a
    `yield from`, an awaited call, a conditional expression, and a value
    bound through `for`, `with ... as` or twice give no producer.
-4. An assertion records a read only when written in the unit's own body
-   outside a nested def, class or lambda, and a parameter the body assigns
-   to again (`=`, augmented, annotated or walrus) is not counted. Names
-   bound by `for`, `with ... as` and `except ... as` are not followed, as
-   the binding map does not record them.
-5. The finding's assertion is matched by span and text. A finding whose
+3. An assertion records a read only when written in the unit's own body
+   outside a nested def, class or lambda. A parameter the body binds again
+   in any form is not counted: `=`, augmented, annotated or walrus (the
+   binding map), and a `for` or comprehension target, `with ... as`,
+   `except ... as`, `del`, an import, `global` or `nonlocal`, a match
+   capture, or a nested def or class of that name
+   (`fixture_producers._binders` on the unit's own scope, 1bf47526, raised
+   in review). One such binding drops the parameter for every assertion of
+   the unit, a comprehension target that only shadows it included. Names
+   bound by `for`, `with ... as` and `except ... as` are not followed as
+   intermediate bindings either, as the binding map does not record them.
+4. The finding's assertion is matched by span and text. A finding whose
    evidence is not one of its unit's assertions takes nothing.
 
-**One departure from the ruling, for the owner's decision.**
-TOLERANCE_LOOSENED takes symbol evidence, but its finding cites its unit's
-span (`detectors/tolerance_loosened.py:213-214`), not an assertion, so it
-never has a before-side assertion and takes no producer: Q4 (a) as
-implemented covers it in name only. The alternatives are to recover the
-pair in gating from the unit's tolerance changes (the detector's
-`_sources`, duplicated), or to cite the pair's spans in the finding, which
-changes its reported evidence.
+**Two departures from the ruling, for the owner's decision.**
+
+1. TOLERANCE_LOOSENED takes symbol evidence, but its finding cites its
+   unit's span (`detectors/tolerance_loosened.py:213-214`), not an
+   assertion, so it never has a before-side assertion and takes no
+   producer: Q4 (a) as implemented covers it in name only. The alternatives
+   are to recover the pair in gating from the unit's tolerance changes (the
+   detector's `_sources`, duplicated), or to cite the pair's spans in the
+   finding, which changes its reported evidence.
+2. Neither the one-hop callers route (SPEC §5 clause 2) nor a helper hop is
+   followed from a producer. A factory producer that is unchanged and calls
+   a changed symbol gives nothing, while the same factory called inline
+   takes the callers route
+   (`test_the_one_hop_callers_route_is_not_followed_from_a_producer`). The
+   first draft of this entry filed it as a reading where the ruling is
+   silent; review found that the ruling is not silent. The ruling adopted
+   the analysis, which has the producer compose with that route: its §2.2
+   says a top-level factory producer "reaches a changed top-level class only
+   through #420's hop", and its §4.5 lists "a top-level factory producer
+   until #420 lands" as the residual. Only a top-level factory over a
+   top-level callee would then stay out, through #420's leaf defect
+   (`evidence.py:239`; #420 is deferred in #504). The code is narrower:
+   every factory gives nothing, one that calls a changed method included.
+   The alternative is to check the producer's leaf in `prod_symbol_callers`
+   for the reading assertion, as `_repair_evidence` checks a unit's calls
+   (`gating.py:422`). That route matches leaf names with no module check,
+   so a producer would carry that looseness, as an inline call does today.
+   Row 137, SPEC §5 and the docs would then keep only the top-level case,
+   and the pin above would flip to warn with REPAIR_EVIDENCE.
 
 Residuals, kept documented as the ruling says (THREATMODEL row 137, new,
-false positive): a setup call in the fixture, `autouse` and `usefixtures`,
-fixtures of fixtures, the readings above, a test class with a base, and
+false positive): a setup call in the fixture, an `autouse` fixture or
+`usefixtures` mark the test does not request by parameter, fixtures of
+fixtures, the readings above, both departures while they stand, a test
+class with a base or a keyword (for a fixture outside its own body), and
 xunit `setUp` on `self` (#306's `self` resolution). What the fix newly
 allows is one more spelling of row 93's Route A, on the class or factory
 that builds the value the assertion reads, which the inline spelling had
@@ -12634,13 +12668,13 @@ this PR does not build. The perf gate (D-007) runs in CI; by reading, a
 unit with no parameter reads nothing new, and the gate's modules have none.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
 
-Evidence status: prepared on a work machine where no pytest, checkwash or
-Python ran; CI runs the tests. Added: 19 `.gwcase` fixtures, labels
-reviewed before merge, and 74 collected items in
+Evidence status: prepared on a work machine where no pytest, checkwash,
+engine or product code ran; CI runs the tests. Added: 19 `.gwcase`
+fixtures, labels reviewed before merge, and 79 collected items in
 `tests/test_issue471_fixture_producers.py`, counted from its parametrize
 lists; no existing test changed. By reading, the documented test count
-becomes 19568 (19475 + 74 + 19); CI's collection checks it.
+becomes 19573 (19475 + 79 + 19); CI's collection checks it.
 
 The agent wrote this entry in #471's fix PR, as a draft for the
-maintainer's approval of its wording, of the gating commit, of the five
-readings and of the departure above.
+maintainer's approval of its wording, of the gating commit, of the four
+readings and of the two departures above.
