@@ -10772,6 +10772,23 @@ Fingerprints sentence and the Sweeps paragraph were rewritten after
 publication, in the D-131 to D-140 record PR (owner ruling 2026-10-19,
 R33).
 
+That record PR is #523. The maintainer approved it on 2026-10-19:
+「PR 核可清單全部照建議」 ("the whole PR approval list as recommended"), in
+reply to the agent's list of the approvals the open PRs needed before
+merging. For this PR: A4 approved, as committed, the wording of D-136's
+Sweep paragraph (166e3362, 0f86f0c3, cff623a9), D-137's Sweep paragraph
+(55d0ac80, 0f86f0c3, cff623a9), D-138's Sweep paragraph and #513 pointer
+(22a14c5c), this entry's Fingerprints sentence and Sweeps paragraph
+(07c3409f, 0f86f0c3) and THREATMODEL row 129 (faea08da); A5 kept the two
+commits beyond R33's list, the follow-up issues named in the Residuals of
+D-136 to D-138 (281f7d0d) and R68's narrower scope for #494 in D-136
+(a34141d4); A6 kept the "Not run (D-140)" lines of D-131 to D-135 and
+D-139 as they are, with this entry's Sweeps paragraph as their record; A7
+accepted the readings: R39 as one sentence here, KNOWN-ISSUES-v0.8.0 row
+29 also pointing to #496, and the reopen triggers combining R35 with R8
+and R10. The reply is the text of an answer the agent wrote, which the
+owner chose.
+
 ## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
 
 Oracle findings start at warn. E1 raises one to high only when it has neither
