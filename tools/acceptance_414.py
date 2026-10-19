@@ -347,13 +347,17 @@ def _execute(argv, repo, stdin):
 
 
 def _classify(mode, record):
-    """pass, block, refusal, silent-exit-2, timeout or other.
+    """pass, pass-with-note, block, refusal, silent-exit-2, timeout or other.
 
     A refusal is an engine error the user is told about: exit 2 with the
     engine-error line in term mode; in hook-json, exit 0 with only a
     `systemMessage` that says the change was not analysed (#414). A silent
     exit 2 is hook-json before #414: exit 2, the line on stderr, nothing on
-    stdout.
+    stdout. In hook-json a pass is `{}`; a pass-with-note carries only the
+    session note (#418), which no row expects: no commit is made during the
+    session, so after a recorded SessionStart the Stop prints `{}`, and a note
+    ("no start was recorded ...") means the record was not found or not used.
+    `hook session-start` exits 0 whatever happens, so its exit cannot show it.
     """
     code, stdout, stderr = record["exit"], record["stdout"], record["stderr"]
     error_line = ENGINE_ERROR in stderr
@@ -384,7 +388,11 @@ def _classify(mode, record):
     if error_line:
         return "other"
     if "decision" not in payload:
-        return "pass"  # `{}`, or a pass with the session note (#418)
+        if not payload:
+            return "pass"
+        if set(payload) == {"systemMessage"} and isinstance(message, str):
+            return "pass-with-note"
+        return "other"
     reason = payload.get("reason")
     if payload["decision"] == "block" and isinstance(reason, str) and "not analysed" not in reason:
         return "block"
@@ -460,6 +468,10 @@ def _evaluate(setup, rows):
         label = f"{row['engine']} {row['mode']}"
         if row["expected"] and "pass" in row["expected"]["outcomes"] and row["outcome"] == "block":
             notes.append(f"{label}: block, where this honest edit was expected to pass")
+        if row["outcome"] == "pass-with-note":
+            note = json.loads(row["stdout"])["systemMessage"]
+            notes.append(f"{label}: a pass with a session note, which no row expects "
+                         f"(the SessionStart record was not found or not used): {note}")
         if row["role"] == "report" and row["matches"] is False:
             notes.append(f"{label}: differs from its expectation (report only)")
         if row["expected"] is None:

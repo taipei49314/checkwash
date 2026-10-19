@@ -101,7 +101,13 @@ The driver sorts each run into one outcome:
 
 - **pass** or **block** (a verdict): in term mode, exit 0 or 1 with
   `verdict=pass` or `verdict=block` and no engine-error line; in hook-json, exit
-  0 with `{}`, a block, or a pass with the session note.
+  0 with `{}` (a pass) or a block.
+- **pass with a note**: hook-json, exit 0 with only a `systemMessage` that is
+  the session note (#418), not a refusal. No row expects it. No commit is made
+  during the session, so after a recorded SessionStart the Stop prints `{}` on
+  a pass; a note ("no start was recorded ...") means the record was not found
+  or not used, which the SessionStart call cannot show, because it exits 0
+  whatever happens. It is a mismatch, and the summary quotes the note.
 - **refusal**: an engine error the user is told about. In term mode that is
   exit 2 with the `checkwash engine error:` line. In hook-json it is exit 0
   with only a `systemMessage` that begins "checkwash: this change was not
@@ -139,6 +145,9 @@ Why:
   symlinks"). The tree is small, so main and v0.8.0 give a verdict. Whether
   v0.7.0 refuses depends on whether pnpm made junctions or symlinks, so its
   rows have no expectation; the receipt records each link's kind.
+- **stop-hook.** `hook session-start` records HEAD for the session. The Stop
+  finds that record with no commit since, so the session's base is HEAD and
+  main adds no session note: stdout is `{}` on a pass.
 - **npm-large.** The limit is unchanged (#414 ruling, item 1). The walk counts
   every file, ignored ones included, and stops at entry 200,001, inside
   `node_modules/big-tree/`; by reading, that entry is
@@ -160,7 +169,8 @@ Each leg gets one status:
 
 The job is green only for **accepted**. v0.8.0 rows are reported and never
 change the status. A block where a pass was expected still counts as a
-verdict for #414, and the summary lists it.
+verdict for #414, and the summary lists it. A pass with a note does not
+match.
 
 #414's real-setup acceptance is met when all four legs are accepted. With the
 range-mode part below and the CI test above, #414 can then be closed, as item
