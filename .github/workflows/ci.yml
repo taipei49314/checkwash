@@ -271,3 +271,152 @@ jobs:
           name: corpus-comparison-attempt-${{ github.run_attempt }}
           path: corpus-comparison.json
           if-no-files-found: error
+
+  timing-469:
+    # TEMPORARY (#469, D-154; approval list A82). Remove this whole job when
+    # D-154's timing paragraph is filled from its log. It times the
+    # subject-replacement pass on synthetic test files of 30,000, 100,000
+    # and 200,000 syntax nodes per side and prints the times. It runs only
+    # for #511's branch and judges nothing. It never fails the run: every
+    # measurement runs in its own process under its own time budget, and an
+    # overrun, an error or a crash there is printed, not raised.
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/subject-replacement-limits-469'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: time the subject-replacement pass (temporary, issue 469)
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          CHECKOUT_SHA: ${{ github.sha }}
+          CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -I -B - <<'PY'
+          import json, os, statistics, subprocess, sys, time
+
+          # One measurement: build the source files and run analyze to the end of the
+          # subject-replacement pass, timing the pass itself.
+          CHILD = r'''
+          import ast, datetime, json, os, sys, time
+          sys.path.insert(0, os.path.abspath("src"))
+          from checkwash import engine
+          from checkwash.change import FileChange
+          from checkwash.config import Config
+          from checkwash.contract import Contract
+          from checkwash.frontends.python import subject_replacements as subject
+
+          shape, target = sys.argv[1], int(sys.argv[2])
+          # straight: tests asserting a name bound earlier (the shape the cache is for);
+          # helper: tests that call one module helper holding a literal assertion;
+          # statements: one such test among module-level assignments.
+          UNITS = {
+              "straight": (b"", lambda i: b"def test%d():\n    value = f(1)\n    assert value == 2\n" % i),
+              "helper": (b"def check():\n    assert f(1) == 2\n", lambda i: b"def test%d():\n check()\n" % i),
+              "statements": (b"def test0():\n    value = f(1)\n    assert value == 2\n", lambda i: b"v%d = 1\n" % i),
+          }
+
+          def nodes(source):
+              return sum(1 for _ in ast.walk(ast.parse(source)))
+
+          def side(name):
+              prefix, unit = UNITS[shape]
+              head = b'"""Timing input for #469, %s side."""\nfrom app.calc import f\n' % name + prefix
+              count, rest = divmod(target - nodes(head), nodes(unit(1)) - 1)
+              return head + b"".join(unit(i + 1) for i in range(count)) + b"pass\n" * rest
+
+          before, after = side(b"before"), side(b"after")
+          path = "tests/test_timing.py"
+          sources = {"app/__init__.py": b"", "app/calc.py": b"def f(x):\n    return x + 1\n", path: after}
+          record = {"shape": shape, "nodes": [nodes(before), nodes(after)], "bytes": [len(before), len(after)]}
+          calls = {"subject_call": 0, "assertion_scope": 0}
+
+          def counting(name, original):
+              def counted(*args, **kwargs):
+                  calls[name] += 1
+                  return original(*args, **kwargs)
+              return counted
+
+          subject._subject_call = counting("subject_call", subject._subject_call)
+          subject._assertion_scope = counting("assertion_scope", subject._assertion_scope)
+
+          class Reached(BaseException):
+              pass
+
+          original = engine.subject_replacement_events
+
+          def timed(*args, **kwargs):
+              record["to_pass_s"] = round(time.perf_counter() - start, 3)
+              began = time.perf_counter()
+              events = original(*args, **kwargs)
+              record["pass_s"] = round(time.perf_counter() - began, 3)
+              record["events"] = len(events)
+              raise Reached
+
+          engine.subject_replacement_events = timed
+          start = time.perf_counter()
+          try:
+              engine.analyze([FileChange(path, "modified", before, after)], Config(), Contract(), [],
+                             datetime.date(2026, 10, 19), root_reader=sources.get,
+                             root_path_lister=lambda: sorted(sources),
+                             root_batch_reader=lambda paths: {p: sources.get(p) for p in paths})
+              record["error"] = "the pass was not reached"
+          except Reached:
+              pass
+          except Exception as error:
+              record["error"] = f"{type(error).__name__}: {error}"[:300]
+          record.update(calls)
+          print(json.dumps(record))
+          '''
+
+          def main():
+              deadline = time.monotonic() + 35 * 60
+              plan = [("straight", (30_000, 100_000, 200_000), 3),
+                      ("statements", (30_000, 100_000, 200_000), 1),
+                      ("helper", (10_000, 30_000, 100_000, 200_000), 1)]
+              print("python", sys.version.split()[0], "checkout", os.environ.get("CHECKOUT_SHA"),
+                    "head", os.environ.get("CANDIDATE_HEAD"), flush=True)
+              summary = []
+              for shape, sizes, runs in plan:
+                  overran = False
+                  for size in sizes:
+                      seconds = []
+                      for run in range(1, runs + 1):
+                          label = f"{shape} nodes={size} run={run}"
+                          budget = min(300, deadline - time.monotonic())
+                          if overran or budget < 10:
+                              reason = "a smaller size overran its budget" if overran else "the job's budget is spent"
+                              print(f"{label}: not run, {reason}", flush=True)
+                              break
+                          try:
+                              done = subprocess.run([sys.executable, "-I", "-B", "-c", CHILD, shape, str(size)],
+                                                    capture_output=True, text=True, timeout=budget)
+                          except subprocess.TimeoutExpired:
+                              print(f"{label}: over its {budget:.0f} s budget", flush=True)
+                              overran = True
+                              break
+                          lines = done.stdout.strip().splitlines()
+                          print(f"{label}: exit {done.returncode}, {lines[-1] if lines else 'no output'}", flush=True)
+                          if done.returncode:
+                              print(done.stderr[-3000:], flush=True)
+                          try:
+                              seconds.append(json.loads(lines[-1])["pass_s"])
+                          except (IndexError, KeyError, ValueError):
+                              pass
+                      if seconds:
+                          summary.append(f"{shape} nodes={size} runs={len(seconds)} median_pass_s={statistics.median(seconds)}")
+              print("summary (the subject-replacement pass's own time):", flush=True)
+              for row in summary:
+                  print(row, flush=True)
+
+          try:
+              main()
+          except BaseException as error:
+              print(f"timing stopped early: {type(error).__name__}: {error}", flush=True)
+          PY
