@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **162 bypasses** are documented, of which **46 are not closed**.
+- **165 bypasses** are documented, of which **49 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (21)
+## Open — no defence at all (24)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -43,6 +43,9 @@ it is known not to.
 | 141 | Weaken or delete a sinon assertion instead of fixing code: `sinon.assert.calledWith(spy, 1)` -> `sinon.assert.called(spy)`, or the call deleted beside a kept `expect(spy).to.exist` (#314) | — |
 | 142 | Rewrite an object or array a JS/TS assertion expects instead of fixing code: Jest's `expect(parse(['-a'])).toEqual({ a: true, _: [] })` -> `{ a: false, _: [] }` or `toStrictEqual([30, 45])` -> `[30, 46]`, chai's `.to.deep.equal({ a: true, _: [] })` -> `{ a: false, _: [] }`, or Node's `assert.deepStrictEqual(parse(['a']), {a: 1})` -> `{a: 2}` (#323) | — |
 | 143 | Shadow the code under test with a test-side copy while the runner's pytest command carries a value-taking option checkwash does not know, so the option's value reads as a path argument and the run applies to no test: `pytest --assert plain`, or a plugin option outside the parser's table such as allure-pytest's `pytest --alluredir allure-results`, in a `Makefile`, with `tests/src/billing.py` added over the `src.billing` a conftest fixture imports (#343) | — |
+| 144 | Widen the exception type a Python test expects instead of fixing code: `pytest.raises(ValueError)` -> `pytest.raises(Exception)`, the same with `match="port"` kept, or unittest's `self.assertRaises(ValueError, parse_port, "x")` -> `self.assertRaises(Exception, parse_port, "x")` and its `with` form (#423) | — |
+| 145 | Rewrite the test data a fixture or a data file supplies, with the assertion byte-identical, instead of fixing code: the input a same-file fixture returns (`items` returns `[50.0, 50.0]` -> `[60.0, 45.0]`, which a build that skips the tax totals to the expected `105.0`); an expectation fixture whose `return` reads a local (`total = 105.0` / `return total`, `105.0` -> `100.0`), or one defined in a class or decorated `@pt.fixture`; one record fixture that supplies both the input and the expected value (`case["expected"]`, `105.0` -> `100.0`); or the expected value in a data file the test loads (`tests/data/invoice.json`) (#425) | — |
+| 146 | Put an existing assertion behind an environment-variable condition that CI does not set, instead of fixing code: `assert total() == 3` moved under `if os.environ.get("CW_RUN_TOTAL") == "1":`, or kept after `if os.environ.get("CW_RUN_TOTAL") != "1": return`, or in JavaScript `assert.strictEqual(total(), 3);` moved inside `if (process.env.CW_RUN_TOTAL === '1') { ... }` (#433) | — |
 
 ## Narrowed, still open (2)
 
