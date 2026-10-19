@@ -1010,8 +1010,8 @@ fixture as the test's:
   as for the T1.9 hop; `TOLERANCE_LOOSENED` takes nothing in practice, as
   its finding cites no assertion. Neither the one-hop route of clause 2 nor
   a helper hop is followed from a producer, and no package-level credit is
-  added. (Draft: both limits depart from the analysis the ruling adopted
-  and await the owner's decision, D-155.)
+  added. Both limits depart from the analysis the ruling adopted, and the
+  owner kept both on 2026-10-19 (D-155).
 
 `EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
 (`PACKAGE_REPAIR`): the test file imports a package in which the diff changed
