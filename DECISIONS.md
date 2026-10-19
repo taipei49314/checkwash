@@ -15410,7 +15410,10 @@ Implementation, lines at this PR:
   (`l: function f() {}`) included (a call before it may run the hoisted
   body, which the binder does not always scope: `function f<T>()`); a
   function expression hoists nothing, so a dead region that holds one is
-  read" (`_declares_function`, `reachability.py:516`). The walker is
+  read, except a named one in a position the walk reads conservatively as
+  a declaration's, such as an object property's value after `:`, which
+  refuses it too (D-165 reading 6; THREATMODEL row 159, residual 6)"
+  (`_declares_function`, `reachability.py:516`). The walker is
   shared, so the narrowing moves #429's cuts too: an assertion parked in a
   dead region that also holds a function expression, silent before because
   the whole callback was refused, now reports ASSERT_REMOVED, and an edit
