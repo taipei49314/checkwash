@@ -12678,6 +12678,18 @@ later acceptance sweep that compares escalators reports label-only
 differences as their own class.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and no test, checkwash run or sweep was run on the work machine; the list of moving pins and the collected count are the ones CI on 4352949c showed`.
 
-The agent wrote this entry in #473's fix PR as a draft for the owner's
-approval of the wording, of the two points above and of each existing
-pin's move by name.
+The agent wrote this entry in #473's fix PR #528. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"), in reply to the agent's approval list of that day, which
+went to the owner off GitHub. For this PR it covers items A50 to A54:
+each of the 34 existing pins' moves by name, once CI showed exactly those
+(A50; re-pinned in 353e91d4); the four byte-identical fixtures' moves,
+recorded as a harness artifact (A51); moving `hardcoded_package_only_pos`
+to the new label in advance, with pin 1 dropped, if #522 merges first
+(A52); the labels of the three new fixtures (A53, ee35d145); and the
+wording of the `gating.py` label chain and its comment (e33845eb), the
+SPEC §5 E1 row (0a3d0f53), THREATMODEL row 86h (0b334f2f) and this entry
+(88b6b33a, 4017d0e5, 3b6583ad), with this entry's number and the test
+count renumbered in merge order at merge time (A54). The reply was a
+button whose text the agent wrote, which the owner chose. 260466d7 and
+this paragraph record it.
