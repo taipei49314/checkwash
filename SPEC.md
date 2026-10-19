@@ -391,7 +391,8 @@ is canonical: a Number or a quoted string by its value, anything else by its
 text without formatting. A table callback's first parameter is its row, not
 its test context; `.for` passes the context second and `.each` none. The rows
 of a `describe.each` table are not read, and the units inside it are read as
-any others.
+any others. A TypeScript type argument after `.each` or `.for`
+(`test.each<Row>([...])`) ends the declaration, so such a table is no unit.
 
 ### Bounded Python carriers and table projection
 
