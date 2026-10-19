@@ -167,9 +167,10 @@ Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension. A root
 `poetry.lock` or `uv.lock` that large at the base is skipped with a note on
-stderr, and is not listed under `unread`; a root `pyproject.toml` or
-`requirements*.txt` that large at the base stops every run with exit 2,
-naming it. The Claude Code Stop hook (`--format
+stderr, and the skip is not listed under `unread`; when the diff also changes
+that lockfile, the change's sides over the limit are listed like any other. A
+root `pyproject.toml` or `requirements*.txt` that large at the base stops
+every run with exit 2, naming it. The Claude Code Stop hook (`--format
 hook-json`) reports an engine error as a non-blocking "not analysed" message.
 From the next minor (unreleased), when the run stops on a file the hook's diff
 changes and that file's working-tree side is over the limit, the hook blocks
