@@ -10452,8 +10452,13 @@ residuals):
   swallowing catch in the same test file, and an old empty catch cannot
   offset a new literal-only one. The cost: adding an always-passing assertion
   to a catch that already swallows reports the new text.
-- **Literal spellings follow #429's always-pass helper,** keyed on the
-  evaluated outcome, never on the TAUTOLOGY strength rating.
+- **The literal, message-argument and self-comparison spellings are
+  #513's** (P2; owner ruling 2026-10-19, R37). 431.Q5 (a') expected them
+  to close through a shared constant-truth helper added by #429. #429 rates
+  the literal ones TAUTOLOGY (D-147) but added no such helper, and no
+  ruling connects its literal-only folder (D-148) to this proof. #513 is
+  to prove them on the evaluated outcome, never on the TAUTOLOGY strength
+  rating; until it lands they keep the exemption.
 
 **Fingerprints.** A BROAD_EXCEPT_ADDED fingerprint is its rule, path and
 evidence text. `catch assertion` is exactly v0.7.0's set, so a finding with
@@ -10480,16 +10485,69 @@ regenerated. The documented count goes from 18258 to 18330. The #363
 controls and the four v0.7.0 `js_catch_*.gwcase` fixtures keep their
 results; no existing expectation changes.
 
-**Sweep.** Not run (D-140): the issue's pair before this change (expected to
+**Sweep.** The plan was the issue's pair before this change (expected to
 pass) and with it (expected to block); the standard and D-088 sets, byte for
 byte; #212's JS/TS replay transitions; a targeted mined set of
 literal-in-catch commits, including the exchange population and the cost of
 literals added to swallowing catches; the refactor benchmark, unchanged; and
-the JS/TS cost delta.
+the JS/TS cost delta. The v0.8.0 acceptance sweep (D-140) ran after
+publication. It compares v0.7.0 with v0.8.0, so it measures the release,
+not #449 alone. Each part is now run, derived as 0 or waived (owner rulings
+2026-10-19, R11, R12 and R36):
+- **Run.** In the sweep: the standard and D-088 sets, and the JS batch,
+  v0.7.0's 1,800-commit JS/TS replay (300 commits from each of six
+  repositories), the nearest run to "#212's JS/TS replay transitions".
+  Findings and verdicts are identical on the commits both versions
+  analysed: 6,168 in all, 1,773 of them in the JS batch, where 25 more went
+  from a v0.7.0 engine error to a v0.8.0 pass and 2 exit 2 on both. The new
+  text appears in no result. The record says identical findings and
+  verdicts, not "byte for byte" as planned: the JSON output names the
+  engine version, so no row's output bytes match across the two versions.
+  In CI on #449's merge `03ebcc1b`: the issue's pair with this change
+  (`js_catch_always_passing_literal_pos.gwcase`, which blocks) and the
+  refactor benchmark (`tests/gates/test_refactor_corpus.py`) passed in all
+  nine test legs (ci run 38714509787), and #449 changed nothing under
+  `tests/gates/`; the verdict gate passed (run 38714509780).
+- **Derived as 0: the JS/TS cost of this change alone** (R12). In the JS
+  batch v0.8.0 analysed 1,798 commits, and neither version reports any
+  BROAD_EXCEPT_ADDED on them. #449 only adds findings with the new text, so
+  its cost on those commits is 0 findings and 0 verdict changes. Against
+  v0.8.0 without #449 this follows exactly; against v0.7.0 with #449 it
+  rests on reading. The other 2 commits are refused on both versions
+  before analysis (a symlink the snapshot refuses), where #449 cannot act.
+  It holds for these 1,798 in-sample commits only (D-053, D-128); a
+  held-out false-positive rate stays #212's. It was derived by reading the
+  code and the harness's result files (POLICY `work-machine-local` item
+  (4)); nothing was run for it. The shard results it rests on are kept on
+  LAPTOP-01AGNPJU; checkwash-lab archives only the batch aggregates, which
+  hold no per-rule counts.
+- **Waived by the owner** (R36, R11; 「裁決總表全部照建議」, "the ruling
+  list, all as recommended"; the reply was a button whose text the
+  assistant wrote):
+  - the issue's pair before this change, expected to pass. That it passed
+    before rests on reading: v0.7.0 exempts a catch that reaches any
+    resolved assertion. The pair with the change is pinned in CI:
+    `test_issue_pair_reports_the_always_passing_text` asks for
+    `catch always-passing assertion`, a text v0.7.0 cannot produce. Main's
+    CI runs the same exemption path on every push for the spellings still
+    exempt (`tests/test_issue431_js_catch_literal.py:110-131`), though not
+    on the issue's pair itself, so row 129's statement that the literal
+    turned #363's block into a pass rests on reading for that pair.
+  - the targeted mined set of literal-in-catch commits, with the exchange
+    population and the cost of literals added to swallowing catches. #449
+    leaves the `catch assertion` set as it was, and the JS batch holds no
+    BROAD_EXCEPT_ADDED on either version, so that sample could not show
+    either spelling. The mined set moves to #513's sweep plan; until then
+    how often the two spellings occur in real history is unknown.
+
+  `NOT_RUN：工作機規則（POLICY work-machine-local），waived by the owner (R36, R11)`.
+  Neither is recorded as passed.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #449's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record and the
+pointer to #513 were added after publication, in the D-131 to D-140 record
+PR.
 
 ## D-139 (2026-10-15): commands read the repository from its root (#416)
 
