@@ -849,8 +849,9 @@ properties named `success`
 (`test/web-platform-tests/wpt-runner.mjs:818-825` at undici `5550222761`,
 unchanged at `e8f34234d1`). jsondiffpatch applies that filter at every
 depth, so the top-level directory keys are dropped too, the diff is always
-empty, and a changed result never fails the step.
-`NOT_RUN：工作機規則（POLICY work-machine-local），read from undici's and jsondiffpatch's source; nothing was run`.
+empty, and a changed result never fails the step. This comes from reading
+undici's and jsondiffpatch's source, not from a run:
+`NOT_RUN：工作機規則（POLICY work-machine-local），read-only inference`.
 
 So marking a newly failing subtest `success: false` or `flaky: true` hides
 the regression in the record, and marking its file `skip` stops that file
