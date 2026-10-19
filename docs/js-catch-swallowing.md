@@ -91,8 +91,9 @@ Named residuals, which keep the exemption:
 - assertions on the caught binding that cannot fail when the guarded
   assertion fails (`expect(e).toBeDefined()`, `toBeTruthy()`,
   `toBeInstanceOf(Error)`), and assertions on unrelated always-true state;
-- the Python counterpart (`except Exception: assert True`), which is not
-  covered by this rule.
+- the Python counterpart (`except Exception: assert True`), which this
+  JS/TS rule does not cover; Python has its own narrow proof since #496
+  (SPEC §4 `BROAD_EXCEPT_ADDED`, DECISIONS D-163).
 
 Literal, message-argument and proved self-comparison spellings are expected
 to close through a shared always-pass helper (#429), keyed on the evaluated
