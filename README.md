@@ -81,8 +81,9 @@ unchanged. [v0.6.0 evidence and limits](https://github.com/taipei49314/checkwash
 ([#421](https://github.com/taipei49314/checkwash/issues/421)).** Through
 v0.8.0, an exemption for one rewrite of an assertion also allowed every later
 rewrite of the same line. Nine assertion-level rules now key a finding by the
-old and the new assertion as well, and their old keys stop matching: re-review
-and re-record those entries. [Assertion-level notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md#assertion-level-rules-next-minor-421)
+old and the new assertion as well, TEST_DISABLED keys one by what the change
+disabled ([#512](https://github.com/taipei49314/checkwash/issues/512)), and
+their old keys stop matching: re-review and re-record those entries. [Assertion-level notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md#assertion-level-rules-next-minor-421)
 
 ## Try it
 
