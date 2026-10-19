@@ -24,4 +24,4 @@ from retry import total_attempts
 def test_total_attempts_includes_first_try():
     assert total_attempts(3) == 3
 === expect ===
-[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

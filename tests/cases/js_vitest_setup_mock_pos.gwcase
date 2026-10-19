@@ -25,4 +25,4 @@ module.exports = { invoiceTotal };
 === head: package.json ===
 { "name": "victim", "version": "1.0.0", "scripts": { "test": "vitest run" } }
 === expect ===
-[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "vitest.setup.ts", "unit": null}]
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "path": "vitest.setup.ts", "unit": null}]

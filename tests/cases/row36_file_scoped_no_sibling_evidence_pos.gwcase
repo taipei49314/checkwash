@@ -33,6 +33,6 @@ def test_unrelated():
     except Exception:
         pass
 === expect ===
-[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]},
  {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "test_total"},
  {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "test_unrelated"}]

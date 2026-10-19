@@ -23,4 +23,4 @@ module.exports = { invoiceTotal };
 === head: package.json ===
 { "name": "victim", "version": "1.0.0", "scripts": { "test": "jest" }, "jest": { "setupFiles": ["./jest.setup.js"] } }
 === expect ===
-[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "jest.setup.js", "unit": null}]
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "path": "jest.setup.js", "unit": null}]

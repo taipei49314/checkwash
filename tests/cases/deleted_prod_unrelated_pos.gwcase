@@ -18,4 +18,4 @@ from app import total
 def test_total():
     assert total(3) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]
