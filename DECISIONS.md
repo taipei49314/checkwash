@@ -15350,9 +15350,8 @@ of 104 decisions; the reply was a button whose text the assistant wrote;
 #499 issuecomment-6261653646 states each in full). R99 answers #499's Q1 to
 Q4 the way #484's ruling (issuecomment-6248630321) answers them for JS/TS,
 R100 answers Q5, and R101 makes #499 P2 and puts it in the same round as
-#484, which R1 (recorded on #419) makes v0.9.0. This round gave #455, #484,
-#499, #480, #454 (d) and #512 the numbers D-164 to D-169 in that order, so
-this entry is D-166 and #484's is D-165.
+#484, which R1 (recorded on #419) makes v0.9.0. The round assigned #499
+the number D-166.
 
 #499 reports that pytest collects a module's or a class's tests from its
 `__dict__` once that scope has run, so a `def test_*` under a module-level
@@ -15396,9 +15395,14 @@ at this PR):
 1. The arms are every arm `entry` reads as `_DEAD`, so besides the shapes
    #499 names they include the `else` of an `if` whose condition folds to
    true, `if False and x:`, the body of a `while` whose condition folds to
-   false, and the handlers of a `try` whose body cannot raise by D-144's
-   strict list (`pass`, a docstring, a constant assigned to plain names,
-   and an undecorated def or class that cannot raise). A loop's `else`, a `with`
+   false, and the handlers of a `try` whose body cannot raise, as
+   `_Walk.quiet` (`:263-295`) reads it: `pass`, a constant expression
+   statement (a docstring among them), a constant assigned to plain names,
+   an annotated name with no value or a constant one whose annotation is a
+   constant or not evaluated, and an undecorated def or class that cannot
+   raise. That is D-144's strict list and two shapes its text does not
+   name, the constant expression statement and the annotated name, which
+   the code has read since D-144. A loop's `else`, a `with`
    body, a `try` body, `else` and `finally`, and a `match` on a subject
    that is not a literal stay live. The folder is `_static_truth` with no
    fixture or class-attribute resolution, as D-144 reads module and class
@@ -15433,10 +15437,13 @@ subclass's bases are resolved, as on main.
 walks the whole module, dead code included, as #484's ruling keeps the
 JS/TS catch evidence; only units move.
 
-**Cost.** Two edits that main reported now pass, because code that never
-runs is not judged, as #484's ruling reads it for JS/TS: an edit to a test
-that is dead on both sides, and deleting a test that never ran (main read
-it as a live test disappearing, at high). A test moved under a dead arm on
+**Cost.** Three edits that main reported now pass, because code that
+never runs is not judged, as #484's ruling reads it for JS/TS: an edit to a
+test that is dead on both sides; deleting a test that never ran (main read
+it as a live test disappearing, at high); and an edit made while a test is
+taken out of a dead arm, which reads as a new test, so its assertions are
+compared with nothing (main paired the two sides by name and reported the
+edit). A test moved under a dead arm on
 purpose, a disable whatever the reason, now blocks.
 
 **Rule 2.** The ruling approves no change to an existing expectation. A
@@ -15466,15 +15473,19 @@ residual, zero findings: `dead_def_environment_condition_residual_neg`.
 The new reading, zero findings: `dead_def_weakened_on_both_sides_neg`.
 Each positive keeps a live test beside the dead one. Not one carries
 `bypass:` in this PR (R100, above). `tests/test_issue499_dead_defs.py`
-adds 36 collected items, counted from its parametrize lists: 13 dead arms
+adds 37 collected items, counted from its parametrize lists: 13 dead arms
 and an async def, 10 live or undecided arms, 3 class-body arms, 2 dead
-classes, three pins on what a dead def binds (an earlier def keeps its
-unit, a later def is the unit, a dead subclass keeps no deleted base
-running), and four engine pins (the key a deletion has, the two quiet
-edits, and an assertion moved into a dead def, which stays
-`ASSERT_REMOVED` at high). By reading, the documented test
-count becomes 20133 (20083 + 14 + 36); CI's collection checks it. Nothing
-under `tests/gates` changes.
+classes, two pins on what a dead def binds (an earlier def keeps its unit,
+and a dead subclass keeps no deleted base running), a control (a later def
+is the unit, as on main), and five engine pins (the key a deletion has,
+the three quiet edits, and an assertion moved into a dead def, which stays
+`ASSERT_REMOVED` at high). By reading, the live and undecided arms, the
+control and three of the negative fixtures (all but
+`dead_def_weakened_on_both_sides_neg`) pass on main as well; they guard the
+fix's edges. Together this adds 51 collected items (14 + 37): on this
+PR's base, integration batch 2 at 9c19c344, the documented test count goes
+from 20083 to 20134; CI's collection checks it. Nothing under `tests/gates`
+changes.
 
 **Fingerprints.** A finding keyed by a dead def's unit goes. In a file
 with same-named defs, a dead def no longer takes a `name#N` place, so a
