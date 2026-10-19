@@ -455,8 +455,12 @@ class GitSnapshot:
         `path` when case is ignored and is a file, symlink or submodule; or
         else an entry that equals `path` itself only when case is ignored.
         An entry equal to `path` byte for byte is what `read` answers, so it
-        is no alias. Every comparison is on text, with `str.casefold`, so the
-        answer is the same on every file system.
+        is no alias. `read` answers a submodule named exactly as absent, so
+        the caller's fallback then opens whatever the working tree holds
+        there. Every comparison is on text, with `str.casefold`, so the
+        answer is the same on every file system; casefold is no file
+        system's own case table, so it can join names one keeps apart and
+        miss names one joins (D-158 readings 2 and 3).
         """
         self.list_paths()
         folded = {}
