@@ -354,6 +354,24 @@ def test_a_skipped_root_lockfile_is_not_listed(tmp_path, name):
     assert _notes(stderr) == []
 
 
+@pytest.mark.parametrize("name", ["poetry.lock", "uv.lock"])
+def test_a_changed_root_lockfile_lists_its_unread_side_beside_the_skip(tmp_path, name):
+    # The skip is not listed, but a change the diff makes to that lockfile is
+    # set aside like any other (no detector must read a lockfile), so its
+    # side over the limit is an entry; listing the skip too would name it
+    # twice (ruling Q4).
+    repo = _repo(tmp_path, {name: blob(1_200_000, name)})
+    _write(repo, {name: b"version = 1\n", "tests/test_billing.py": TEST + b"# reviewed\n"})
+    _commit(repo)
+    code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+    assert code == 0, stderr
+    payload = json.loads(stdout)
+    assert payload["unread"] == [entry(name, "base", 1_200_000)]
+    assert (f"checkwash: skipped {described(name, 'base', 1_200_000)}: over the source byte limit; "
+            "the run continues without its declared modules") in stderr.splitlines()
+    assert _notes(stderr) == _matched(payload)
+
+
 @pytest.mark.parametrize("case", ["hook_json_pass", "hook_json_block", "emit_ir"])
 def test_hook_json_and_emit_ir_name_no_unread_side(tmp_path, case):
     # Neither output changes for an unread side (ruling Q6); only stderr
