@@ -1,0 +1,117 @@
+name: acceptance 414 (hosted)
+
+# The hosted acceptance run for #414 (owner ruling 2026-10-19, R26 option A):
+# only #414's legs, a venv, a pnpm workspace and an npm tree over the path
+# limit on ubuntu, and the pnpm workspace on windows. The declaration, with
+# the engines, commands, expected results and what counts as accepted, is
+# docs/acceptance/414-hosted.md; the owner approves it before the pull request
+# that runs this is opened.
+#
+# It runs only for a draft pull request from a branch named
+# `ci/acceptance-414-*` in this repository, which is never merged, so the file
+# is never on main and no ordinary pull request runs it. The `paths` filter and
+# the job condition both hold that if it ever lands elsewhere. Results are
+# hosted CI, not the EC pool; nothing runs on a work machine.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/acceptance-414.yml"
+      - "tools/acceptance_414.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  # Each push runs to the end; every run is its own receipt.
+  group: acceptance-414-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  leg:
+    name: ${{ matrix.leg }}
+    if: >-
+      startsWith(github.head_ref, 'ci/acceptance-414-')
+      && github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: ubuntu-venv
+            os: ubuntu-latest
+          - leg: ubuntu-pnpm
+            os: ubuntu-latest
+          - leg: ubuntu-npm-large
+            os: ubuntu-latest
+          - leg: windows-pnpm
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      LEG: ${{ matrix.leg }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: the engines are checked out at their exact commits.
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: install main, v0.8.0 and v0.7.0 from their exact commits
+        run: python -I -B tools/acceptance_414.py engines --root "$RUNNER_TEMP/acceptance-414"
+      - name: write the scenario repository
+        run: python -I -B tools/acceptance_414.py scaffold --root "$RUNNER_TEMP/acceptance-414" --leg "$LEG"
+
+      # The real setups. Each writes the tool versions it used into the receipt.
+      - name: "real setup: python3 -m venv .venv with pinned packages"
+        if: matrix.leg == 'ubuntu-venv'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/acceptance-414/repo"
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check --no-input --no-deps \
+            pytest==8.3.4 iniconfig==2.0.0 packaging==24.2 pluggy==1.5.0
+          {
+            echo "python3: $(python3 --version)"
+            echo "venv: $(.venv/bin/python --version)"
+            .venv/bin/python -m pip --version
+            .venv/bin/python -m pip list --disable-pip-version-check --format=freeze
+          } >> "$RUNNER_TEMP/acceptance-414/receipt/tools.txt"
+      - name: "real setup: pnpm install of a two-package workspace"
+        if: matrix.leg == 'ubuntu-pnpm' || matrix.leg == 'windows-pnpm'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/acceptance-414/repo"
+          npx --yes pnpm@9.15.0 install --no-frozen-lockfile
+          {
+            echo "node: $(node --version)"
+            echo "npm: $(npm --version)"
+            echo "pnpm: $(npx --yes pnpm@9.15.0 --version)"
+          } >> "$RUNNER_TEMP/acceptance-414/receipt/tools.txt"
+      - name: "real setup: npm install of a pinned package and a generated 201,002-file package"
+        if: matrix.leg == 'ubuntu-npm-large'
+        run: |
+          set -euo pipefail
+          python -I -B tools/acceptance_414.py bigpack --root "$RUNNER_TEMP/acceptance-414"
+          cd "$RUNNER_TEMP/acceptance-414/repo"
+          npm install --no-audit --no-fund --save-exact semver@7.6.3 "$RUNNER_TEMP/acceptance-414/bigpack/big-tree-1.0.0.tgz"
+          {
+            echo "node: $(node --version)"
+            echo "npm: $(npm --version)"
+          } >> "$RUNNER_TEMP/acceptance-414/receipt/tools.txt"
+
+      - name: commit the setup, edit one .py file, run every engine and mode
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -I -B tools/acceptance_414.py run --root "$RUNNER_TEMP/acceptance-414" --leg "$LEG"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: acceptance-414-${{ matrix.leg }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/acceptance-414/receipt
+          if-no-files-found: error
