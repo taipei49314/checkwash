@@ -6,7 +6,9 @@ gives a verdict; its node and byte refusals name the path, the requested side
 and the counts. The stand-in step limits stay, and their refusal names which
 counter fired, the file, the side, the unit and that counter's steps and
 limit. The pass reads each side's module statements once per file (the
-owner's choice of 2026-10-19), and the last pins show that this changes no
+owner's choice of 2026-10-19), and keeps the module reads of the
+assertion-helper, changed-callee and literal-helper proofs too (the owner's
+second choice of that day); the last pins show that neither changes a
 result. Source bytes are parsed only; the sources here are never executed.
 """
 
@@ -22,6 +24,7 @@ from checkwash.engine import analyze
 from checkwash.frontends.python import standin_installations as standin
 from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python import subject_replacements as subject
+from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import IR, DiffGlobals
 
 from test_mock_testcase_replacements import AFTER as TESTCASE_AFTER, BEFORE as TESTCASE_BEFORE
@@ -285,6 +288,29 @@ class _Fresh(subject._ModuleReads):
     def values(self):
         return subject._bindings(self.tree.body)
 
+    def inert(self):
+        return subject._helper_module_inert(self.tree)
+
+    def top_level(self, node):
+        return node in self.tree.body
+
+    def reflective(self):
+        return any((isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"})
+                   or (isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)))
+                   for node in ast.walk(self.tree))
+
+    def rebinds(self, name):
+        return any(isinstance(node, (ast.Global, ast.Nonlocal, ast.NamedExpr))
+                   or isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, (ast.Store, ast.Del))
+                   or isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del))
+                   or isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                   and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"}
+                   for node in ast.walk(self.tree))
+
+    def closed_callers(self, replacement, prove):
+        return subject._closed_callers(self.tree, replacement, prove)
+
 
 def _dump(node):
     return None if node is None else ast.dump(node)
@@ -362,3 +388,232 @@ def test_kept_reads_leave_the_pass_verdicts_as_fresh_reads_give_them(monkeypatch
     fresh = _analyse(CAPTURES, REPLACED)[1]
     assert kept == fresh
     assert "test_capture" in {f.unit for f in kept if f.rule == "TEST_PATCHES_SUBJECT"}
+
+
+# The owner's second choice of 2026-10-19: the assertion-helper, changed-callee
+# and literal-helper proofs keep their module reads too, and that changes no
+# result either.
+
+ORACLE = PREFIX + b"def oracle():\n    assert total([1, 2]) == 3\ndef test_total():\n    oracle()\n"
+ORACLE_REPLACED = (ORACLE.replace(b"def oracle():", b"def standin(values):\n    return 3\ndef oracle():")
+                   .replace(b"assert total(", b"assert standin("))
+CLONE = b"def clone(value):\n    return value.lower()\n"
+CLONE_BEFORE = PREFIX + b'def test_total():\n    assert total("Hello") == "hello"\n'
+CLONE_AFTER = PREFIX + CLONE + b'def test_total():\n    assert clone("Hello") == "hello"\n'
+GCD_BEFORE = PREFIX + b"def test_total():\n    assert total(12, 8) == 4\n"
+GCD_AFTER = PREFIX + (b"import math\ndef local_gcd(a, b):\n    return math.gcd(a, b)\n"
+                      b"def test_total():\n    assert local_gcd(12, 8) == 4\n")
+REFLECTIVE = b"def test_other():\n    globals()['oracle'] = other\n"
+UNCLOSED = b"def test_callback():\n    mutate()\n"
+
+WRITES = [
+    ORACLE,
+    ORACLE + REFLECTIVE,
+    ORACLE + b"def test_other():\n    oracle.__code__ = other.__code__\n",
+    ORACLE + b"def test_other():\n    del cache[0]\n",
+    ORACLE + b"def test_other():\n    global oracle\n",
+    ORACLE + b"def test_other():\n    assert (value := 1)\n",
+    ORACLE + b"def test_other():\n    standin = total\n",
+    ORACLE + b"oracle = other\n",
+    b"from provider import *\n" + ORACLE,
+    CLONE_AFTER,
+    GCD_AFTER,
+    SCOPES,
+]
+
+
+def test_kept_reads_answer_the_helper_checks_as_fresh_reads_do():
+    seen = {"inert": set(), "reflective": set(), "rebinds": set(), "top_level": set()}
+    for source in WRITES:
+        tree = ast.parse(source)
+        reads, fresh = subject._ModuleReads(tree), _Fresh(tree)
+        definitions = [node for node in ast.walk(tree)
+                       if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))]
+        for _ in range(2):
+            assert reads.inert() == fresh.inert()
+            assert reads.reflective() == fresh.reflective()
+            for name in ("oracle", "standin", "clone", "value", "cache", "missing"):
+                assert reads.rebinds(name) == fresh.rebinds(name)
+                seen["rebinds"].add(fresh.rebinds(name))
+            for node in definitions:
+                assert reads.top_level(node) == fresh.top_level(node)
+                seen["top_level"].add(fresh.top_level(node))
+        seen["inert"].add(fresh.inert())
+        seen["reflective"].add(fresh.reflective())
+    # Each check answers both ways across these modules.
+    assert all(answers == {True, False} for answers in seen.values())
+
+
+HELPERS = [
+    ORACLE,
+    ORACLE_REPLACED,
+    ORACLE + REFLECTIVE,
+    ORACLE + b"oracle = other\n",
+    ORACLE.replace(b"def oracle():", b"@decorate\ndef oracle():"),
+    ORACLE.replace(b"    oracle()", b"    mutate()\n    oracle()"),
+    ORACLE.replace(b"def test_total():", b"def test_total(oracle):"),
+    ORACLE.replace(b"assert total([1, 2]) == 3", b"assert total([1, 2]) == 3\n    assert True"),
+    ORACLE + b"def test_more():\n    oracle()\n    assert (seen := 1)\n",
+    ORACLE + b"def test_twice():\n    oracle()\n    oracle()\n",
+    ORACLE + b"class TestGroup:\n    def test_method(self):\n        oracle()\n",
+]
+
+
+def test_kept_reads_locate_each_assertion_helper_as_fresh_reads_do():
+    seen = set()
+    for source in HELPERS:
+        tree = ast.parse(source)
+        reads = subject._ModuleReads(tree)
+        for unit in parse_python(source, collect_tests=True).units:
+            for assertion in unit.side.assertions:
+                if not assertion.inherited:
+                    continue
+                for _ in range(2):
+                    kept = subject._assertion_scope(tree, unit.qualname, assertion, reads)
+                    assert kept == subject._assertion_scope(tree, unit.qualname, assertion, _Fresh(tree))
+                seen.add(kept)
+    # Some callers are admitted to the helper and some are refused.
+    assert seen == {None, "oracle"}
+
+
+BINDINGS = PREFIX + b"""import os as system
+LIMIT = 3
+alias = total
+def standin(values):
+    return 3
+def test_arguments(total, /, alias, *, limit):
+    assert total([1, 2]) == 3
+def test_reaching():
+    value = total([1, 2])
+    assert value == 3
+def test_local():
+    def total(values):
+        return 3
+    assert total([1, 2]) == 3
+class TestGroup:
+    def test_method(self, standin):
+        assert standin([1, 2]) == 3
+"""
+
+
+def _copied_bindings(tree, qualname, assertion):
+    """`_scoped_bindings` as it read before the module's bindings were kept: a fresh copy for each call."""
+    bindings = subject._bindings(tree.body)
+    scope = subject._scope(tree, qualname)
+    if scope is None:
+        return None
+    for arg in scope.args.posonlyargs + scope.args.args + scope.args.kwonlyargs:
+        bindings[arg.arg] = None
+    for name, expression in (assertion.reaching or {}).items():
+        if expression:
+            bindings[name] = parse_expr(expression)
+    bindings.update({name: value for name, value in subject._bindings(scope.body).items()
+                     if isinstance(value, (ast.FunctionDef, ast.AsyncFunctionDef))})
+    return bindings
+
+
+def _names(bindings):
+    if bindings is None:
+        return None
+    return {name: ast.dump(bindings[name], include_attributes=True) if isinstance(bindings[name], ast.AST)
+            else bindings[name] for name in bindings}
+
+
+def test_kept_bindings_read_as_the_copy_made_for_each_pair():
+    seen = set()
+    for source in (BINDINGS, CAPTURES, ORACLE_REPLACED):
+        tree = ast.parse(source)
+        reads = subject._ModuleReads(tree)
+        module = subject._bindings(tree.body)
+        for unit in parse_python(source, collect_tests=True).units:
+            for assertion in unit.side.assertions:
+                for qualname in (unit.qualname, "oracle", "missing"):
+                    kept = subject._scoped_bindings(tree, qualname, assertion, reads)
+                    copied = _names(_copied_bindings(tree, qualname, assertion))
+                    assert _names(kept) == copied
+                    # A direct call, with no kept reads, reads the same names.
+                    assert _names(subject._scoped_bindings(tree, qualname, assertion)) == copied
+                    seen.add(kept is None)
+        # No test's names reach the kept module bindings.
+        assert reads.values() == module
+    assert seen == {True, False}
+
+
+@pytest.mark.parametrize("shape", ["helper", "callee"])
+def test_the_pass_reads_each_sides_module_once_for_helper_and_changed_callee_tests(monkeypatch, shape):
+    count = 30
+    if shape == "helper":
+        callers = b"".join(b"def test_%d():\n    oracle()\n" % n for n in range(count))
+        before = ORACLE.replace(b"def test_total():\n    oracle()\n", callers)
+        after = ORACLE_REPLACED.replace(b"def test_total():\n    oracle()\n", callers)
+        expected = ["inert", "inert", "sites", "sites", "values", "values", "walk", "walk"]
+    else:
+        tests = b"".join(b'def test_%d():\n    assert CALLEE("A%d") == "a%d"\n' % (n, n, n) for n in range(count))
+        before = PREFIX + tests.replace(b"CALLEE", b"total")
+        after = PREFIX + CLONE + tests.replace(b"CALLEE", b"clone")
+        expected = ["callers", "inert", "values", "values", "walk"]
+    kept, reads, calls = [], [], []
+
+    class Recording(subject._ModuleReads):
+        def __init__(self, tree):
+            super().__init__(tree)
+            kept.append(self)
+
+    def body_read(name, original):
+        def read(statements):
+            if any(statements is module.tree.body for module in kept):
+                reads.append(name)
+            return original(statements)
+        return read
+
+    def tree_read(name, original):
+        def read(tree, *args, **kwargs):
+            if any(tree is module.tree for module in kept):
+                reads.append(name)
+            return original(tree, *args, **kwargs)
+        return read
+
+    def counted(name, original):
+        def call(*args, **kwargs):
+            calls.append(name)
+            return original(*args, **kwargs)
+        return call
+
+    monkeypatch.setattr(subject, "_ModuleReads", Recording)
+    monkeypatch.setattr(subject, "_binding_sites", body_read("sites", subject._binding_sites))
+    monkeypatch.setattr(subject, "_bindings", body_read("values", subject._bindings))
+    monkeypatch.setattr(subject, "_helper_module_inert", tree_read("inert", subject._helper_module_inert))
+    monkeypatch.setattr(subject, "_closed_callers", tree_read("callers", subject._closed_callers))
+    # Only walks of a kept tree count; `_parse` counts each tree's nodes before it is kept.
+    monkeypatch.setattr(ast, "walk", tree_read("walk", ast.walk))
+    monkeypatch.setattr(subject, "_assertion_scope", counted("scope", subject._assertion_scope))
+    monkeypatch.setattr(subject, "_scoped_bindings", counted("bindings", subject._scoped_bindings))
+    findings = _analyse(before, after)[1]
+    # Each pair asks both sides; each side's module is read once.
+    assert len(kept) == 2
+    assert calls.count("scope") == calls.count("bindings") == 2 * count
+    assert sorted(reads) == expected
+    # Every test's replacement is still found.
+    assert {f"test_{n}" for n in range(count)} <= {f.unit for f in findings if f.rule == "TEST_PATCHES_SUBJECT"}
+
+
+def test_kept_reads_leave_helper_and_changed_callee_verdicts_as_fresh_reads_give_them(monkeypatch):
+    more = b'def test_more():\n    assert CALLEE("World") == "world"\n'
+    cases = [
+        (ORACLE, ORACLE_REPLACED, True),
+        (ORACLE + REFLECTIVE, ORACLE_REPLACED + REFLECTIVE, None),
+        (BEFORE, AFTER, True),
+        (CAPTURES, REPLACED, True),
+        (CLONE_BEFORE, CLONE_AFTER, True),
+        (CLONE_BEFORE + more.replace(b"CALLEE", b"total"), CLONE_AFTER + more.replace(b"CALLEE", b"clone"), True),
+        (CLONE_BEFORE + UNCLOSED, CLONE_AFTER + UNCLOSED, False),
+        (GCD_BEFORE, GCD_AFTER, True),
+        (GCD_BEFORE + UNCLOSED, GCD_AFTER + UNCLOSED, False),
+    ]
+    kept = [_analyse(before, after)[1] for before, after, _ in cases]
+    monkeypatch.setattr(subject, "_ModuleReads", _Fresh)
+    fresh = [_analyse(before, after)[1] for before, after, _ in cases]
+    assert kept == fresh
+    for (_, _, expected), findings in zip(cases, kept):
+        if expected is not None:
+            assert any(f.rule == "TEST_PATCHES_SUBJECT" for f in findings) is expected
