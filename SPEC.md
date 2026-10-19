@@ -1200,9 +1200,10 @@ TEST_DISABLED uses the same form since #512, `TEST_DISABLED/path/qualname/v2:<64
 a focus a diff adds to a file under the qualname `<file>`, with the same
 scheme name and encoding. Its identity holds the legacy pre-image unchanged
 (the text the legacy key hashed: the marker's name, `guard:<marker>`,
-`parametrize`, a removed unit's own assertions in the legacy text form, or
-the focus marker's name), the finding's `shape` as the event kind, no
-ordinal or count, and what that shape changed:
+`parametrize`, a removed unit's own assertions in the legacy text form or
+its name when it has none, or the focus marker's name), the finding's
+`shape` as the event kind, no ordinal or count, and what that shape
+changed:
 
 - a marker added (`marker_added`, `collection_control`, and `inert_mark` for
   a conftest's `pytestmark`): the marker's complete text as the after text,
