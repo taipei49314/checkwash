@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 7a
+rule: TEST_DISABLED
+issue: 432
+title: a new conftest whose pytest_runtest_call swaps item.runtest for a no-op
+origin: issue #432 shape (a), ruling 432.Q2: the item callback written in a listed hook.
+origin2: tests/test_issue432_noop_replacement.py runs this conftest under real pytest,
+origin3: where a failing test passes (item-runtest).
+=== head: app.py ===
+def value():
+    return 0
+=== head: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 1
+=== after: tests/conftest.py ===
+import pytest
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_call(item):
+    item.runtest = lambda: None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "<suite>"}]
