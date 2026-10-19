@@ -31,8 +31,9 @@ def unread_entry(side: UnreadSide) -> dict[str, object]:
     An explicit projection, never `to_jsonable(side)`, which would write
     every dataclass field: the bounded prefix #455 stores on the side must
     stay out of machine output. The four keys are the stderr note's, so
-    entries and notes match one to one. #456 (d) can reuse this entry for
-    the side an exit-2 run refused; nothing here emits it for a refusal.
+    entries and notes match one to one. Option (d), which moved from #456
+    to #454, can reuse this entry for the side an exit-2 run refused;
+    nothing here emits it for a refusal.
     """
     return {"path": side.path, "side": side.side, "size": side.size, "limit": side.limit}
 
