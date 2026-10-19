@@ -12566,20 +12566,36 @@ from source read for the 2026-10-18 analysis.
 `NOT_RUN：工作機規則（POLICY work-machine-local），read-only inference; nothing was run`.
 
 The agent wrote this entry in #468's docs PR #521. The maintainer approved
-it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
-recommended"), in reply to the agent's list asking for approval of this
-PR's SPEC §4 `SUPPRESSION_ADDED` row (b5aac2c6, c1a68fa9), THREATMODEL
-row 137 (f9c6dace, 629baffe) and D-160 (276c44ec, 97f6816a) text, with
-the hand edit of `benchmarks/FAILURES.md` (A21), and of its departures
-from the rulings (A22): this entry's record that R58 and R64 narrowed the
-2026-10-16 ruling's item 2, the quote case in the #421 row, the #497
-spellings in their own sentence, the #480 wording that differs from the
-2026-10-18 draft, and the introduction of `docs/KNOWN-ISSUES-next.md`
-defining *Existing* rows. The same reply chose to correct the v0.8.0
-known-issues page's sentence that listed #423, #425, #426 and #433 as
-open (A23), to name #278's gap on that page (A24), and to shorten the
-#468 row's source in `docs/KNOWN-ISSUES-next.md` to "the v0.8.0
-acceptance sweep (D-140)" while this entry keeps the host and policy
-(A25). Those three edits (ab989698, 38613ccc, eb3d9dcf) were written
-after the reply, so their wording is the agent's. The reply is the text
-of an answer the agent wrote, which the owner chose.
+its text as it stood at 97f6816a on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR
+approval list, all as recommended"), in reply to the agent's list asking
+for approval of this PR's SPEC §4 `SUPPRESSION_ADDED` row (b5aac2c6,
+c1a68fa9), THREATMODEL row 137 (f9c6dace, 629baffe) and D-160 (276c44ec,
+97f6816a) text, with the hand edit of `benchmarks/FAILURES.md` (A21), and
+of its departures from the rulings (A22): this entry's record that R58 and
+R64 narrowed the 2026-10-16 ruling's item 2, the quote case in the #421
+row, the #497 spellings in their own sentence, the #480 wording that
+differs from the 2026-10-18 draft, and the introduction of
+`docs/KNOWN-ISSUES-next.md` defining *Existing* rows. The same reply chose
+to correct the v0.8.0 known-issues page's sentence that listed #423, #425,
+#426 and #433 as open (A23), to name #278's gap on that page (A24), and to
+shorten the #468 row's source in `docs/KNOWN-ISSUES-next.md` to "the
+v0.8.0 acceptance sweep (D-140)" while this entry keeps the host and
+policy (A25). Those three edits (ab989698, 38613ccc, eb3d9dcf) and the
+first version of this paragraph (216c4dfe) were written after the reply,
+so their wording is the agent's. Later the same day the maintainer
+approved them as written: 「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"), in reply to the agent's round-2 list, which asked whether
+to approve together the text written to apply options already approved,
+this paragraph and those three edits among it (B3); whether the first
+header sentence of `docs/KNOWN-ISSUES-next.md`, which said every residual
+below was found by reading, should also yield to a row, with #510 and #521
+using one wording (B4); and whether to correct, as under A23, the v0.8.0
+page's sentence that still listed #417, #420, #436 and #437 as open (B5).
+Under B4 this branch keeps the wording it already had, "unless a row names
+another source" (775aa3dd, A22), which #510 now uses too (7dc0cd20). Under
+B5, 42410c38 says that #417, #420 and #437 are deferred until after 1.0
+(#504) and that #436 was closed as completed. f3dd7110 brings this entry's
+numbering sentence up to date with main, which the pull request's claims
+review found stale. Those two edits and this paragraph as it now reads
+were written after the second reply. Both replies were buttons whose text
+the agent wrote, which the owner chose.
