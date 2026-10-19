@@ -1212,7 +1212,9 @@ changed:
 - a guard made always true or removed (`guard_weakened`, or `inert_mark` in a
   conftest): the guard before and the guard after as the before and after
   texts, the after null when the guard was removed, so the two events are
-  two approvals;
+  two approvals; a path gained by an unguarded `collect_ignore`
+  (THREATMODEL row 81), reported in the same shape, has no guard on either
+  side, so both texts are null and no path is bound;
 - parametrized cases deleted or disabled (`param_cases_removed`): as the
   context, the rows that ran before and are no longer written (an edited
   row's old text among them) and the rows still written but newly disabled,
@@ -1223,8 +1225,10 @@ changed:
   counts are bound;
 - a unit removed (`unit_removed`): the complete texts of its own assertions,
   in its order, a JS/TS assertion with its expected value;
-- a focus added to a file (`marker_added`, file level): the focus call's text
-  as the after text.
+- a focus added to a file (`marker_added`, file level): the focus as the
+  frontend records it, its callee as written (`describe.only`, `fdescribe`)
+  or its `only` option's text, as the after text; its title and arguments
+  are not bound.
 
 Texts are in the normal form above. The guard stays out of the marker
 identity that alignment pairs markers on (§2b), so pairing, move detection
@@ -1291,10 +1295,11 @@ when its paths and relevant context are unchanged.
 
 Legacy keys in these five namespaces, since #421 in the nine
 assertion-level namespaces above, and since #512 TEST_DISABLED's, are
-retired even if their expiry has not passed. They remain parsed records so ledger deletions/rewrites remain
-detectable, but are excluded from eligibility; the writer rejects new legacy
-keys, and `doctor` and `check` report them. An entry's rule label cannot
-disguise a retired fingerprint namespace.
+retired even if their expiry has not passed. They remain parsed records so
+ledger deletions/rewrites remain detectable, but are excluded from
+eligibility; the writer rejects new legacy keys, and `doctor` and `check`
+report them. An entry's rule label cannot disguise a retired fingerprint
+namespace.
 Other namespaces keep their existing matching compatibility. Old reasons do
 not contain enough evidence for automatic migration; re-review the intended
 diff and record its complete v2 identity. Expiry and base-side loading policy
