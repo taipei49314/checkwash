@@ -36,14 +36,44 @@ def _comparison(statement):
             and isinstance(test.ops[0], ast.Eq) and isinstance(test.left, ast.Call) else None)
 
 
-def parameterized_abs_event(unit, trees, path, source, context, deny, search=None):
+def parameterized_abs_event(unit, trees, path, source, context, deny, search=None, kept=None):
     """Compare complete literal rows, then prove the first replacement runs.
 
     Later helper calls may be behind a failing assertion, so only the first
     invocation contributes evidence. All rows must retain their exact old
     input and answer, and every test in the module must have this closed form.
+
+    Of the checks' answer only which call is the unit's first depends on
+    the unit. `kept` is a dict the pass keeps for one file (#469), which
+    holds that answer, made when first asked, and the source's offsets.
+    Without it, each call checks the modules afresh.
     """
     from .frontend import _Offsets
+
+    if kept is None:
+        kept = {}
+    if "firsts" not in kept:
+        kept["firsts"] = _first_calls(trees, path, context, deny, search)
+    firsts = kept["firsts"]
+    if firsts is None or unit.qualname not in firsts:
+        return None
+    target, call = firsts[unit.qualname]
+    if "offsets" not in kept:
+        kept["offsets"] = _Offsets(source.decode("utf-8-sig"))
+    offsets = kept["offsets"]
+    return (path, unit.qualname, target, offsets.seg(call), offsets.span(call))
+
+
+def _first_calls(trees, path, context, deny, search):
+    """The checks of `parameterized_abs_event`, none of which depends on the
+    unit: None when one refuses, else each test's first helper call, by
+    name, with the target its old row called.
+
+    Besides both modules they read the repository, through `search` and
+    through `context`, whose cache keeps every source it reads, so for a
+    snapshot that does not change during the run a second check gives the
+    first one's answer.
+    """
     from .literal_stdlib_standins import _read
     from .replacement_authority import closed_replacement_authority
     from .subject_replacements import _bindings, _helper_module_inert, _resolve
@@ -74,7 +104,7 @@ def parameterized_abs_event(unit, trees, path, source, context, deny, search=Non
     if _resolve(comparison.left.func, {**bindings[1], **{name: None for name in parameters}}) != "builtins.abs":
         return None
     argument_index, answer_index = parameters.index(argument.id), parameters.index(answer.id)
-    first = None
+    firsts = {}
     rows = 0
     targets = set()
     for name, before in old_functions.items():
@@ -100,11 +130,10 @@ def parameterized_abs_event(unit, trees, path, source, context, deny, search=Non
                     or not context.contains(target, 0)):
                 return None
             targets.add(target)
-            if name == unit.qualname and index == 0:
-                offsets = _Offsets(source.decode("utf-8-sig"))
-                first = (path, unit.qualname, target, offsets.seg(call), offsets.span(call))
+            if index == 0:
+                firsts[name] = (target, call)
     if len(targets) != 1 or not closed_replacement_authority(
             trees[1], next(iter(targets)), path=path, read=lambda candidate: _read(context, candidate),
             search=search, modules={'builtins', 'pytest'}, symbols={'builtins': {'abs'}}):
         return None
-    return first
+    return firsts

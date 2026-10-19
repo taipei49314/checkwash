@@ -30,9 +30,12 @@ from checkwash.pyenv import known_baseline
 from checkwash.roles import collectable
 
 _MAX_SOURCE_BYTES = 1_000_000
+# The subject-replacement pass reads this limit too, so the two passes cannot
+# drift apart (#469).
 _MAX_SOURCE_NODES = 200_000
 _MAX_CONTEXT_READS = 4096
 _MAX_CONTEXT_BYTES = 64_000_000
+_MAX_PROOF_STEPS = 20_000
 _MAX_ANALYSIS_STEPS = 1_000_000
 
 
@@ -402,7 +405,8 @@ def _import_rebind(before, after, *, path="<unknown>"):
 
 
 class _Trace:
-    def __init__(self, modules, context, side, deny, budget=None, search=None):
+    def __init__(self, modules, context, side, deny, budget=None, search=None, *,
+                 path="<unknown>", unit="<unknown>"):
         self.modules = modules
         self.context = context
         self.side = side
@@ -417,6 +421,10 @@ class _Trace:
         self.budget = budget if budget is not None else [0]
         self.search = search
         self.failed_assertion = False
+        # Named by the step-limit refusal (#469): the file the proof is for,
+        # and its test, or the kind of proof when it belongs to no test.
+        self.path = path
+        self.unit = unit
 
     def owned(self, target):
         if target.startswith("@") or target.split(".", 1)[0] in self.deny:
@@ -426,8 +434,28 @@ class _Trace:
     def _step(self):
         self.steps += 1
         self.budget[0] += 1
-        if self.steps > 20_000 or self.budget[0] > _MAX_ANALYSIS_STEPS:
-            raise EngineError("stand-in execution proof exceeds the source step limit")
+        if self.steps > _MAX_PROOF_STEPS or self.budget[0] > _MAX_ANALYSIS_STEPS:
+            raise EngineError(self._step_refusal())
+
+    def _step_refusal(self):
+        """The step-limit message: which counter fired, the file, the side,
+        the unit, and that counter's steps and limit (#469).
+
+        The per-proof counter is named when both fire on the same step. The
+        analysis budget is shared by every proof in the run, so the unit it
+        fires in is where it ran out, not necessarily what used it.
+        """
+        side = ("before", "after")[self.side] if self.side in (0, 1) else "<unknown>"
+        if self.steps > _MAX_PROOF_STEPS:
+            counter, steps, limit, note = "proof", self.steps, _MAX_PROOF_STEPS, ""
+        else:
+            counter, steps, limit = "analysis", self.budget[0], _MAX_ANALYSIS_STEPS
+            note = "; the unit is where the shared analysis budget ran out, not necessarily its cause"
+        return (
+            f"stand-in execution proof exceeds the source step limit: counter={counter}, "
+            f"path={self.path!r}, requested_side={side!r}, unit={self.unit!r}, "
+            f"steps={steps}, limit={limit}{note}"
+        )
 
     def effect(self, target, kind="attribute"):
         return frozenset(e for (name, k), e in self.active.items()
@@ -908,7 +936,7 @@ def _fixture_requests(function):
 
 
 def _observed_for_test(modules, test_path, qualname, context, side, deny, budget, search=None):
-    trace = _Trace(modules, context, side, deny, budget, search)
+    trace = _Trace(modules, context, side, deny, budget, search, path=test_path, unit=qualname)
     active_modules = []
     for module in modules:
         if module.path == test_path:
@@ -1156,7 +1184,7 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                     raise EngineError("stand-in provider context could not be parsed")
                 # Baseline imports identify the removal-and-assignment form;
                 # they do not execute or activate a provider on the head side.
-                seed = _Trace([], context, side, deny, budget)
+                seed = _Trace([], context, side, deny, budget, path=source_path, unit="<module body>")
                 seed.block(module.tree.body, module, module.env, "")
                 if side == 0:
                     baseline = dict(module.baseline_imports)

@@ -10,6 +10,7 @@ not satisfy this predicate.
 from __future__ import annotations
 
 import ast
+from collections import ChainMap
 
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
@@ -18,6 +19,7 @@ from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_
 from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
 from checkwash.frontends.python.literal_extrema_replacements import literal_extrema_events
 from checkwash.frontends.python.generator_fixture_subjects import generator_fixture_subject_events
+from checkwash.frontends.python.standin_installations import _MAX_SOURCE_NODES
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.model import judged_as_test
 from checkwash.ir.markers import parse_expr, parse_text
@@ -27,13 +29,27 @@ _BUILTINS = frozenset({"abs", "all", "any", "bool", "dict", "enumerate", "float"
                       "len", "list", "max", "min", "range", "reversed", "round", "set",
                       "sorted", "str", "sum", "tuple", "zip"})
 _MOCKS = {"unittest.mock.Mock", "unittest.mock.MagicMock", "mock.Mock", "mock.MagicMock"}
+# Builtins whose call by name can rebind a module name or a function's code.
+_REFLECTIVE = frozenset({"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"})
+_MAX_BYTES = 1_000_000
 
 
-def _parse(data):
+def _parse(data, *, path="<unknown>", side="<unknown>"):
+    """The source's tree, or None when it is not UTF-8 Python.
+
+    Over the byte limit, or over the stand-in pass's node limit, which this
+    pass shares (#469), it refuses, naming the path, the requested side and
+    the counts as the stand-in pass's refusals do (#345). By reading, `check`
+    refuses a changed `.py` side over 1,000,000 bytes before this pass runs,
+    so only a direct call reaches the byte refusal.
+    """
     if not isinstance(data, bytes):
         return None
-    if len(data) > 1_000_000:
-        raise EngineError("subject replacement source exceeds the byte limit")
+    if len(data) > _MAX_BYTES:
+        raise EngineError(
+            f"subject replacement source exceeds the byte limit: path={path!r}, requested_side={side!r}, "
+            f"bytes={len(data)}, limit={_MAX_BYTES}"
+        )
     try:
         text = data.decode("utf-8-sig")
     except UnicodeError:
@@ -41,9 +57,21 @@ def _parse(data):
     tree = parse_text(text)
     if tree is None:
         return None
-    if sum(1 for _ in ast.walk(tree)) > 30_000:
-        raise EngineError("subject replacement source exceeds the syntax node limit")
+    nodes = sum(1 for _ in ast.walk(tree))
+    if nodes > _MAX_SOURCE_NODES:
+        raise EngineError(
+            f"subject replacement source exceeds the syntax node limit: path={path!r}, requested_side={side!r}, "
+            f"bytes={len(data)}, nodes={nodes}, limit={_MAX_SOURCE_NODES}"
+        )
     return tree
+
+
+def _trees(change):
+    """Both sides' trees, the base side first; a rename's base side is named
+    by its old path, as the engine reads it."""
+    before_path = (change.old_path or change.path).replace("\\", "/")
+    return (_parse(change.before, path=before_path, side="before"),
+            _parse(change.after, path=change.path.replace("\\", "/"), side="after"))
 
 
 def _bindings(statements):
@@ -136,14 +164,134 @@ def _standin(value, bindings):
         parameters.add(value.args.kwarg.arg)
     # A parameter named like a builtin may itself be a production callable;
     # its invocation cannot prove that this helper is a production-free stub.
-    scoped = {**bindings, **{name: None for name in parameters}}
+    # The parameters lie over the bindings, which are not copied (#469).
+    scoped = ChainMap({name: None for name in parameters}, bindings)
     return expression is not None and _pure(expression, parameters, scoped)
 
 
-def _scope(tree, qualname):
+class _ModuleReads:
+    """One tree's module-level reads, each made once (#469).
+
+    `_subject_call` asks a module the same questions for every eligible
+    assertion pair: which function or class a qualname part names, whether a
+    star import binds unknown names, and the module's binding sites and
+    values. Asked per pair, they made the pass's time grow with the pairs
+    times the module's top-level statements. The pass keeps one of these per
+    side of a file, so each is read once. Every answer is the one the
+    uncached read gives, and no caller changes one. Scope indexes are keyed
+    by id, as the frontend's scope caches are; the tree held here keeps
+    every node alive.
+
+    `_assertion_scope`, `_scoped_bindings` and the literal helper proof asked
+    a module their own questions once per pair as well, and these are kept
+    too: whether its top-level statements are inert, which nodes are its
+    statements, what one walk of the whole tree finds written, and, for a
+    proof that reads only its arguments, whether the module's other
+    functions are closed literal tests of one replacement. `_scoped_bindings`
+    reads the kept values without copying them.
+    """
+
+    def __init__(self, tree):
+        self.tree = tree
+        self._members = {}
+        self._star_import = None
+        self._sites = None
+        self._values = None
+        self._inert = None
+        self._statements = None
+        self._writes = None
+        self._callers = {}
+
+    def member(self, scope, name):
+        """The first function or class named `name` in `scope.body`, or None."""
+        members = self._members.get(id(scope))
+        if members is None:
+            members = {}
+            for node in scope.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    members.setdefault(node.name, node)
+            self._members[id(scope)] = members
+        return members.get(name)
+
+    def star_import(self):
+        if self._star_import is None:
+            self._star_import = any(
+                isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
+                for statement in self.tree.body)
+        return self._star_import
+
+    def sites(self):
+        if self._sites is None:
+            self._sites = _binding_sites(self.tree.body)
+        return self._sites
+
+    def values(self):
+        if self._values is None:
+            self._values = _bindings(self.tree.body)
+        return self._values
+
+    def inert(self):
+        """`_helper_module_inert(tree)`."""
+        if self._inert is None:
+            self._inert = _helper_module_inert(self.tree)
+        return self._inert
+
+    def top_level(self, node):
+        """Whether `node` is one of the module's statements, as `node in
+        tree.body` reads it: AST nodes compare by identity, and a live node's
+        id is its own."""
+        if self._statements is None:
+            self._statements = {id(statement) for statement in self.tree.body}
+        return id(node) in self._statements
+
+    def _walk(self):
+        if self._writes is None:
+            reflective = declared = False
+            stored = set()
+            for node in ast.walk(self.tree):
+                if isinstance(node, ast.Name):
+                    if isinstance(node.ctx, (ast.Store, ast.Del)):
+                        stored.add(node.id)
+                elif isinstance(node, (ast.Global, ast.Nonlocal, ast.NamedExpr)):
+                    declared = True
+                elif (isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del))
+                      or isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in _REFLECTIVE):
+                    reflective = True
+            self._writes = (reflective, declared, frozenset(stored))
+        return self._writes
+
+    def reflective(self):
+        """Whether any node of the tree calls a reflective builtin by name or
+        stores or deletes an attribute or an item."""
+        return self._walk()[0]
+
+    def rebinds(self, name):
+        """Whether any node of the tree is reflective (above), declares a name
+        global or nonlocal, binds one in an expression, or stores or deletes
+        `name`."""
+        reflective, declared, stored = self._walk()
+        return reflective or declared or name in stored
+
+    def closed_callers(self, replacement, prove):
+        """`_closed_callers(tree, replacement, prove)`, kept per replacement
+        and proof, for a proof that reads nothing but its two arguments.
+        `replacement` is one of the module's statements, so its id stays its
+        own, and the key keeps `prove` alive."""
+        key = (prove, id(replacement))
+        if key not in self._callers:
+            self._callers[key] = _closed_callers(self.tree, replacement, prove)
+        return self._callers[key]
+
+
+def _scope(tree, qualname, module=None):
+    """The function `qualname` names in `tree`, or None. With `module`, the
+    reads of `tree` the pass keeps (#469), which find the same node."""
     scope = tree
     for part in qualname.split("."):
-        scope = next((node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part), None)
+        if module is None:
+            scope = next((node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part), None)
+        else:
+            scope = module.member(scope, part)
         if scope is None:
             return None
     return scope if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)) else None
@@ -181,23 +329,25 @@ def _binding_sites(statements):
     return sites
 
 
-def _subject_call(assertion, tree, qualname):
+def _subject_call(assertion, tree, qualname, module=None):
     """Project only stable, straight-line captures of the asserted value.
 
     Assertion.reaching describes bindings at the assertion, not at an earlier
     assignment. Require a concrete assignment chain and stable dependencies
-    before using that environment to resolve the captured call.
+    before using that environment to resolve the captured call. `module` is
+    the pass's kept reads of `tree` (#469); a direct call reads them afresh.
     """
     node = parse_expr(assertion.left or "")
     if isinstance(node, ast.Call):
         return node
     if not isinstance(node, ast.Name):
         return None
-    scope = _scope(tree, qualname)
+    if module is None:
+        module = _ModuleReads(tree)
+    scope = _scope(tree, qualname, module)
     if scope is None:
         return None
-    if any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
-           for statement in tree.body):
+    if module.star_import():
         return None
     parsed = parse_text(assertion.text)
     if parsed is None:
@@ -226,9 +376,9 @@ def _subject_call(assertion, tree, qualname):
                   or isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)):
             return None
     local_sites = _binding_sites(scope.body)
-    module_sites = _binding_sites(tree.body)
+    module_sites = module.sites()
     local_values = _bindings(prefix)
-    module_values = _bindings(tree.body)
+    module_values = module.values()
     boundary = (scope.body[matches[0]].lineno, scope.body[matches[0]].col_offset)
     seen = set()
     for _ in range(8):
@@ -287,9 +437,18 @@ def _subject_call(assertion, tree, qualname):
     return node
 
 
-def _scoped_bindings(tree, qualname, assertion):
-    bindings = _bindings(tree.body)
-    scope = _scope(tree, qualname)
+def _scoped_bindings(tree, qualname, assertion, module=None):
+    """The names at `assertion` in the function `qualname`, or None.
+
+    `module` is the pass's kept reads of `tree` (#469); a direct call reads
+    them afresh. The function's own names lie over the module's bindings in
+    a mapping of their own, so the kept bindings are neither copied nor
+    changed, and every name reads as it did in the copy this made before.
+    """
+    if module is None:
+        module = _ModuleReads(tree)
+    bindings = ChainMap({}, module.values())
+    scope = _scope(tree, qualname, module)
     if scope is None:
         return None
     for arg in scope.args.posonlyargs + scope.args.args + scope.args.kwonlyargs:
@@ -354,7 +513,7 @@ def _helper_module_inert(tree):
     return True
 
 
-def _assertion_scope(tree, qualname, assertion):
+def _assertion_scope(tree, qualname, assertion, module=None):
     """Locate one directly called, zero-argument assertion helper.
 
     Inherited assertions normally carry the caller's environment. That is
@@ -362,12 +521,16 @@ def _assertion_scope(tree, qualname, assertion):
     only an unshadowed module helper with one literal assertion and a caller
     that begins with that call. Later assertions cannot change that dispatch,
     but every lexical local binding and reflective mutation remains unknown.
+    `module` is the pass's kept reads of `tree` (#469); a direct call reads
+    them afresh.
     """
     if not assertion.inherited:
         return qualname
-    if not _helper_module_inert(tree):
+    if module is None:
+        module = _ModuleReads(tree)
+    if not module.inert():
         return None
-    caller = _scope(tree, qualname)
+    caller = _scope(tree, qualname, module)
     if (caller is None or caller.decorator_list or caller.returns or caller.args.args or caller.args.posonlyargs
             or caller.args.kwonlyargs or caller.args.vararg or caller.args.kwarg
             or not caller.body or not isinstance(caller.body[0], ast.Expr)
@@ -378,15 +541,11 @@ def _assertion_scope(tree, qualname, assertion):
     call = caller.body[0].value
     if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name) or call.args or call.keywords:
         return None
-    if any(isinstance(node, ast.ImportFrom) and any(alias.name == '*' for alias in node.names)
-           for node in tree.body):
+    if module.star_import():
         return None
-    if any((isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-            and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"})
-           or (isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)))
-           for node in ast.walk(tree)):
+    if module.reflective():
         return None
-    sites = _binding_sites(tree.body).get(call.func.id, [])
+    sites = module.sites().get(call.func.id, [])
     if len(sites) != 1 or not isinstance(sites[0], ast.FunctionDef):
         return None
     helper = sites[0]
@@ -403,18 +562,11 @@ def _assertion_scope(tree, qualname, assertion):
     return helper.name
 
 
-def _literal_helper_replacement(tree, qualname, call, replacement, prove):
-    if (not isinstance(replacement, ast.FunctionDef) or replacement not in tree.body
-            or not isinstance(call.func, ast.Name) or call.func.id != replacement.name
-            or not _helper_module_inert(tree)):
-        return False
-    scope = _scope(tree, qualname)
-    if (scope is None or scope.decorator_list or scope.args.args or scope.args.posonlyargs
-            or scope.args.kwonlyargs or scope.args.vararg or scope.args.kwarg
-            or len(scope.body) != 1 or not isinstance(scope.body[0], ast.Assert)):
-        return False
-    # Another test in this module may run first. Only literal calls through
-    # this same closed helper can establish that its binding stays intact.
+def _closed_callers(tree, replacement, prove):
+    """Whether every other function of the module is a closed literal test
+    of `replacement`: an argument-free `test` function whose one statement
+    asserts that a call of it, which `prove` admits, equals a literal, with
+    a literal message if it has one."""
     for function in tree.body:
         if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)) or function is replacement:
             continue
@@ -436,19 +588,39 @@ def _literal_helper_replacement(tree, qualname, call, replacement, prove):
                 ast.literal_eval(assertion.msg)
         except (ValueError, TypeError, RecursionError, MemoryError):
             return False
+    return True
+
+
+def _literal_helper_replacement(tree, qualname, call, replacement, prove, module=None, *, kept_proof=False):
+    """`module` is the pass's kept reads of `tree` (#469); a direct call
+    reads them afresh. With `kept_proof`, `prove` reads nothing but its two
+    arguments, so the check of the module's other functions is kept per
+    replacement; otherwise it is made for each call."""
+    if module is None:
+        module = _ModuleReads(tree)
+    if (not isinstance(replacement, ast.FunctionDef) or not module.top_level(replacement)
+            or not isinstance(call.func, ast.Name) or call.func.id != replacement.name
+            or not module.inert()):
+        return False
+    scope = _scope(tree, qualname, module)
+    if (scope is None or scope.decorator_list or scope.args.args or scope.args.posonlyargs
+            or scope.args.kwonlyargs or scope.args.vararg or scope.args.kwarg
+            or len(scope.body) != 1 or not isinstance(scope.body[0], ast.Assert)):
+        return False
+    # Another test in this module may run first. Only literal calls through
+    # this same closed helper can establish that its binding stays intact.
+    if not (module.closed_callers(replacement, prove) if kept_proof else _closed_callers(tree, replacement, prove)):
+        return False
     # Rebinding or reflective writes cannot establish the invoked function.
-    for node in ast.walk(tree):
-        if (isinstance(node, (ast.Global, ast.Nonlocal, ast.NamedExpr))
-                or isinstance(node, ast.Name) and node.id == replacement.name and isinstance(node.ctx, (ast.Store, ast.Del))
-                or isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del))
-                or isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-                and node.func.id in {"globals", "locals", "vars", "exec", "eval", "setattr", "delattr"}):
-            return False
+    if module.rebinds(replacement.name):
+        return False
     return prove(replacement, call)
 
 
-def _literal_string_replacement(tree, qualname, call, replacement):
-    return _literal_helper_replacement(tree, qualname, call, replacement, literal_string_standin)
+def _literal_string_replacement(tree, qualname, call, replacement, module=None):
+    # literal_string_standin reads only the function and the call it is given.
+    return _literal_helper_replacement(tree, qualname, call, replacement, literal_string_standin, module,
+                                       kept_proof=True)
 
 
 def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=None, root_path_lister=None):
@@ -469,7 +641,10 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
         if (not judged_as_test(file) or not file.path.endswith(".py") or change is None
                 or not change.before or not change.after):
             continue
-        trees = None
+        trees = reads = None
+        # The parameterized-helper checks, and the parts of the `math.gcd`
+        # import authority, each kept once for the file's tests (#469).
+        parameterized, authorities = {}, {}
         for unit in file.units:
             if unit.before is None or unit.after is None or unit.delta is None:
                 continue
@@ -477,8 +652,9 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
             after = {a.id: a for a in unit.after.assertions}
             if any(assertion.inherited and assertion.right_literal is None for assertion in after.values()):
                 if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
-                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory)
+                    trees = _trees(change)
+                event = parameterized_abs_event(unit, trees, file.path, change.after, context, deny, inventory,
+                                                parameterized)
                 if event is not None:
                     events.append(event)
             for pair in unit.delta.assertion_pairs:
@@ -488,22 +664,26 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                         or a.right_literal != b.right_literal):
                     continue
                 if trees is None:
-                    trees = (_parse(change.before), _parse(change.after))
+                    trees = _trees(change)
                 if any(tree is None for tree in trees):
                     continue
-                old_scope = _assertion_scope(trees[0], unit.qualname, b)
-                new_scope = _assertion_scope(trees[1], unit.qualname, a)
+                if reads is None:
+                    # One set of module reads per side, kept for the file's pairs (#469).
+                    reads = (_ModuleReads(trees[0]), _ModuleReads(trees[1]))
+                old_scope = _assertion_scope(trees[0], unit.qualname, b, reads[0])
+                new_scope = _assertion_scope(trees[1], unit.qualname, a, reads[1])
                 if old_scope is None or new_scope is None:
                     continue
-                old_call, new_call = _subject_call(b, trees[0], old_scope), _subject_call(a, trees[1], new_scope)
+                old_call = _subject_call(b, trees[0], old_scope, reads[0])
+                new_call = _subject_call(a, trees[1], new_scope, reads[1])
                 if not isinstance(old_call, ast.Call) or not isinstance(new_call, ast.Call):
                     continue
                 if (stable_dump(old_call.func) == stable_dump(new_call.func)
                         or stable_dump(ast.Tuple(elts=old_call.args, ctx=ast.Load())) != stable_dump(ast.Tuple(elts=new_call.args, ctx=ast.Load()))
                         or [stable_dump(k) for k in old_call.keywords] != [stable_dump(k) for k in new_call.keywords]):
                     continue
-                old_bindings = _scoped_bindings(trees[0], old_scope, b)
-                new_bindings = _scoped_bindings(trees[1], new_scope, a)
+                old_bindings = _scoped_bindings(trees[0], old_scope, b, reads[0])
+                new_bindings = _scoped_bindings(trees[1], new_scope, a, reads[1])
                 if old_bindings is None or new_bindings is None:
                     continue
                 target = _resolve(old_call.func, old_bindings)
@@ -512,12 +692,14 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                         or not context.contains(target, 0)):
                     continue
                 if not (_standin(replacement, new_bindings)
-                        or _literal_string_replacement(trees[1], new_scope, new_call, replacement)
+                        or _literal_string_replacement(trees[1], new_scope, new_call, replacement, reads[1])
                         or literal_math_gcd_standin(replacement, new_call, new_bindings)
                         and math_is_unshadowed(context, file.path)
-                        and math_import_authority(change.after, trees[1], old_call, target, file.path, context, inventory)
+                        and math_import_authority(change.after, trees[1], old_call, target, file.path, context, inventory,
+                                                  authorities)
                         and _literal_helper_replacement(trees[1], new_scope, new_call, replacement,
-                            lambda function, call: literal_math_gcd_standin(function, call, new_bindings))):
+                            lambda function, call: literal_math_gcd_standin(function, call, new_bindings),
+                            reads[1])):
                     continue
                 events.append((file.path, unit.qualname, target, a.text, a.span))
     return sorted(set(events))
