@@ -12455,3 +12455,207 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-161 (2026-10-19): E1 says PROD_CHANGE_NOT_EVIDENCE when the diff changed production (#473)
+
+Ruling 473 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"; #473
+issuecomment-6248629776, which states each decision in full, as the list it
+answers went to the owner off GitHub). Its direction, Q1 (b), was ruled in
+#471 (Q5 (b), issuecomment-6230178131, item 5). The owner put #473 in
+v0.9.0's scope on 2026-10-19 (owner ruling 2026-10-19, R1). D-150 is the
+last entry on main, and D-151 to D-160 are assigned to open PRs prepared
+from the same base, so this entry is D-161; the number may move at merge
+time.
+
+#473: E1 escalates an oracle finding that has no repair evidence and that no
+de-escalator holds. Its label `NO_PROD_CHANGE_IN_DIFF` is true when the diff
+changes no production file. It was also printed when the diff does change
+production and the finding's evidence does not reach the change. There the
+sentence is false, and it sends the reader to look for a production change
+that is already there. `EXPECTED_VALUE_HARDCODED` fires only when production
+changed, so the label was false on every block of that rule (#471). #420
+reports the same sentence for a weakened test of a top-level callee. The
+scrapy commits `fada8be1db` and `c76190d491`, recorded on the issue, and
+earlier commits of at least five other upstream repositories printed it too.
+
+**The decisions:**
+- **Q2, the condition, amended from #471's "readable Python production
+  file".** The new label applies when the diff changes a production-role file
+  (`ir.globals.prod_files_changed`) that is not inert (`roles._is_inert`:
+  `.gitignore`, `LICENSE*`, `.pyi` stubs, `mkdocs.yml`, `CODEOWNERS` and the
+  rest of that list). `engine.py:1384` records each production-role path
+  before the branches that decide symbol or opaque evidence, so a production
+  file that stops parsing, an added, deleted or renamed non-Python file, and
+  a non-Python production file whose content runs the test suite all take
+  the new label. Inert files change no runtime behaviour by the engine's own
+  list, so a diff that changes only those keeps the old label. Changes set
+  aside unread (#415) and generated artifacts never reach
+  `prod_files_changed`; "unread" stays #448's word.
+- **Q3, the name: `PROD_CHANGE_NOT_EVIDENCE`.** It is true over every diff
+  Q2 covers and parallels `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`.
+  `PROD_CHANGE_NOT_REACHED` is false over `trivial_prod_change_pos`, whose
+  test calls the very function the diff edits, and `NO_RELEVANT_PROD_CHANGE`
+  claims the change is irrelevant.
+- **Q4, rule 2: named approvals, in D-141's form.** Four new pins are
+  approved. No move of an existing pin is approved in advance: the
+  implementer stops when CI on the fix PR shows them and lists each one, old
+  and new label, for the owner's approval by name. Inputs, severity and
+  de-escalators stay as they are.
+- **Q5.** This entry, SPEC §5's E1 row, the `gating.py` label chain and its
+  comment (frozen zone) and THREATMODEL row 86h are drafts for the owner's
+  approval of the wording. Dated records keep their text
+  (`docs/integrations.md`, `docs/launch.md`, `docs/releases/`, `STATE.md`,
+  `benchmarks/`). No sweep for the label alone, no `FINDINGS_VERSION` or
+  `IR_VERSION` bump, and no version bump of its own.
+- **Q6.** The label does not lift #488's block: scrapy `fada8be1db`'s six
+  findings stay high under any label, and their cause is #488's question.
+
+**Implementation**, in `src/checkwash/gating.py` (lines at this PR).
+`apply_gates` computes `prod_changed` once (`:543-553`): true when any path
+in `ir.globals.prod_files_changed` is not inert (`_is_inert`, imported from
+`roles.py` at `:24`, as `engine.py` imports it). The E1 label chain
+(`:925-948`, with its comment) is now: an unguarded suite control with
+evidence or any production-role file, `COLLECTION_CONTROL_UNEXPLAINED`;
+else a refused opaque change, `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`; else
+`prod_changed`, `PROD_CHANGE_NOT_EVIDENCE`; else `NO_PROD_CHANGE_IN_DIFF`.
+The new label comes after both existing ones, which keep their conditions:
+`COLLECTION_CONTROL_UNEXPLAINED` keeps D-066's test, inert files included,
+and `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` is unchanged, so no pin of either
+moves. Nothing outside `gating.py` changes, and the IR does not change.
+
+**This amends and settles.** It amends 419.Q5 (`DECISIONS.md:10569-10572`),
+"`NO_PROD_CHANGE_IN_DIFF` is unchanged otherwise": that label is now kept
+only for a diff that changes no production-role file, or only inert ones.
+It settles the unit-level wording that D-066 left "not decided here"
+(`DECISIONS.md:2344-2347`). One report can still carry two labels: a suite
+control beside only an inert file says `COLLECTION_CONTROL_UNEXPLAINED`
+(D-066 counts inert files), and a unit finding in the same diff says
+`NO_PROD_CHANGE_IN_DIFF`.
+
+**Existing pins that move, by reading.** None is changed in this PR. CI on
+the PR is the authority, and it may show others. Each moves from
+`NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE`, with its inputs,
+severity and de-escalators unchanged:
+- A readable Python production edit or deletion that the finding's evidence
+  does not reach (19 fixtures, 20 findings): `dead_prod_line_pos`,
+  `deleted_prod_unrelated_pos`, `evidence_annotation_neg`,
+  `evidence_dead_local_neg`, `evidence_string_stmt_neg`,
+  `expectation_definition_package_unrelated_pos`,
+  `js_test_in_expected_dir_weakened_with_prod_edit_pos` (two findings),
+  `leaf_name_collision_pos`, `package_repair_needs_modified_symbol_pos`,
+  `prod_reorder_pos`, `prod_symbol_added_only_pos`,
+  `prod_symbol_removed_marker_pos`, `prod_symbol_removed_unrelated_pos`,
+  `python_test_in_golden_weakened_with_prod_edit_pos`,
+  `repair_via_helper_unrelated_pos`, `root_import_sibling_sameleaf_pos`,
+  `row36_file_scoped_no_sibling_evidence_pos` (its `BROAD_EXCEPT_ADDED`),
+  `srclayout_sibling_module_pos`, `trivial_prod_change_pos`.
+- A production change checkwash reads no symbols from (3):
+  `unparseable_self_inflicted_pos` (a file that stops parsing),
+  `opaque_deleted_file_not_evidence_pos` (a deleted data file),
+  `opaque_new_file_not_evidence_pos` (an added data file).
+- A JS setup file or `package.json` that the role table makes production
+  and whose content names a test runner, so it is no opaque change (7). In
+  each, the finding's stand-in is installed in such a file (#218), and the
+  diff changes no other production-role file:
+  `js_cra_setup_tests_mock_pos`, `js_package_json_automock_pos`,
+  `js_setup_file_added_with_listing_pos`,
+  `js_setup_file_enable_automock_pos`, `js_setup_file_listed_spy_pos`,
+  `js_setup_file_mock_pos`, `js_vitest_setup_mock_pos`.
+- Production files present with byte-identical sides (4):
+  `expected_call_to_literal_pos`, `expected_call_to_twin_pos`,
+  `unittest_literal_first_pos`, `unittest_trivial_pad_pos`. The fixture
+  harness passes such a file as a modification (`cases.case_to_changes`),
+  and the engine records it in `prod_files_changed`, so by the ruled
+  condition they move. A Git diff does not list an unchanged file, except
+  for a mode-only change. In these fixtures' own terms the new sentence is
+  false, and the ruling's size estimate expected unchanged paths not to
+  move.
+- One pytest row:
+  `tests/test_test_support_paths.py::test_test_data_moved_into_production_was_not_production_at_base`
+  (`src/__tests__/data.json` renamed to `src/data.json`: the new path is
+  production-role, and the rename buys no opaque credit).
+
+These keep the old label by reading, as the ruling says: the unread rows of
+`tests/test_issue415_oversized_sources.py` (`:145-151`, `:532-537`; the
+`image_added` row is also a generated artifact),
+`tests/test_issue419_opaque_refusal.py:100-103`, and the six
+`src/checkwash/demo_cases` that pin the label, which change only tests.
+`inert_doc_change_pos` (`mkdocs.yml`), `stub_change_pos` (a `.pyi` stub)
+and `artifact_cannot_disarm_pos` (a `.pyc`) hold the inert and artifact
+edges. Every other pin of `NO_PROD_CHANGE_IN_DIFF` that names a non-test
+path changes no production-role file by reading: the path is a JS/TS test,
+a file beneath a test-support directory, a runner script or test command
+promoted to `ci`, or a test relocated out of collection
+(`renamed_from_test`).
+
+**Not settled by the ruling; for the owner's decision:**
+- The four byte-identical fixtures. Options: approve their moves as above;
+  or have the engine skip a byte-identical change when it records
+  `prod_files_changed`, which is wider than this ruling, since D-066's label
+  and `SNAPSHOT_CODE_COCHANGE` read the same list and the IR would change.
+- The seven JS setup-file fixtures. By Q2 they take the new label, as Q2
+  says a production file that runs the test suite does. Their only
+  production-role changes are the carrier the finding reports and, in
+  `js_setup_file_added_with_listing_pos`, the `package.json` that lists it,
+  so the sentence points the reader at the stand-in itself.
+- Pin 3 and `js_test_in_expected_dir_weakened_with_prod_edit_pos`. The
+  existing pin is a JS test weakened beside a Python-only edit too, but kept
+  under `expected/` with a skipped sibling, and it moves; pin 3 is the plain
+  `test/` path. If the owner reads them as one shape, pin 3 is dropped.
+
+**Residuals, stated.** The label says that production changed and that no
+evidence the finding may take reached it; it does not say why. A production
+file renamed into a non-production role (beneath a test-support directory,
+or into `tests/`) is recorded under its new path only, so the old label
+stays although production lost a file
+(`test_production_moved_beneath_a_test_support_directory_buys_nothing`,
+unchanged); D-066's label has the same edge. A mode-only change of a
+production file counts as a production change.
+
+**Contracts.** The label is chosen after `f.severity = "high"`
+(`gating.py:900`, `:940-948`). Fingerprints are computed by the detectors
+before gating runs, and none of `make_fingerprint`,
+`make_assertion_fingerprint` or `make_change_fingerprint` reads escalators
+(`findings.py:162-166`, `:367-369`, `:396-413`). So severity, verdict,
+de-escalators and fingerprints do not move. No `FINDINGS_VERSION` or
+`IR_VERSION` bump: the label is a new value in the existing `escalators`
+list, as in D-066 and D-141 (`DECISIONS.md:10760-10763`), and
+`docs/stability.md` does not freeze escalator strings. Nothing newly blocks
+or passes. The change ships in the next authorized release, with one
+release-note line that names the new label; no release is authorized
+(AGENTS.md rule 5).
+
+**Tests and fixtures.** Four new `.gwcase` files, the pins Q4 approves,
+none with a `bypass:` line:
+1. `prod_change_not_evidence_hardcoded_pos`: #471's `pricing` example,
+   `EXPECTED_VALUE_HARDCODED` high with the new label beside
+   `EXPECTED_VALUE_CHANGED` warn with `PACKAGE_REPAIR`. If #471's fix lands
+   first with `hardcoded_package_only_pos`, the same shape, this pin is
+   dropped and that fixture's move goes to the stop (Q4).
+2. `prod_change_not_evidence_unchanged_caller_pos`: #420's reproduction with
+   `render` in an unchanged module, `ASSERT_WEAKENED` high with the new
+   label.
+3. `prod_change_not_evidence_js_test_pos`: a `node:test` assertion weakened
+   beside a Python-only production edit, high with the new label.
+4. `no_prod_change_unchanged_caller_pos`: the test-only twin of 2, which
+   keeps `NO_PROD_CHANGE_IN_DIFF`.
+
+Seven collected items in `tests/test_issue473_e1_label.py` pin the edges: an
+inert file alone (`LICENSE`, `.gitignore`, `CITATION.cff`) keeps the old
+label; an inert file beside a readable production edit, and a production
+file whose content names a test runner, take the new one; a refused opaque
+change keeps its label beside a readable edit; and an unguarded suite
+control beside only an inert file keeps `COLLECTION_CONTROL_UNEXPLAINED`.
+None is under `tests/gates`. By reading, the documented test count becomes
+19486 (19475 + 11); other open PRs move it too, which is resolved at merge
+time.
+
+**Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
+later acceptance sweep that compares escalators reports label-only
+differences as their own class.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run, and the list of moving pins is by reading until CI on the PR shows it`.
+
+The agent wrote this entry in #473's fix PR as a draft for the owner's
+approval of the wording, of the three points above and of each existing
+pin's move by name.
