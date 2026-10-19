@@ -515,10 +515,33 @@ the binder carries a decorator that is not transparent (below), when a
 class of the order has a keyword or defines `__init_subclass__`,
 `__getattribute__` or `__setattr__`, when the order is not a C3 order or
 the module binds the name of a class in it again, and when the module
-stores or deletes `.<name>`, stores into a `.__dict__`, names it in
+stores or deletes `.<name>`, names it in
 `setattr`/`delattr`/`object.__setattr__`, `patch.object` or
 `monkeypatch.setattr`, or calls `setattr` with a computed name on the
-receiver or a class of the order (D-145, D-149). An unresolved call adds
+receiver or a class of the order (D-145, D-149). Since #502 (D-159) the
+module also names it in a call whose last name is `__setattr__` or
+`__delattr__`, by the first string literal among its first two positional
+arguments (`self.__setattr__("_check", f)`,
+`type.__setattr__(C, "_check", f)`); as a keyword or a literal dict key of
+`update()`, or the literal key of `setdefault()`, on `x.__dict__` or
+`vars(x)`; and, in a class body, as a literal key of `vars()` or
+`locals()` that is stored or deleted, or that those calls, `__setitem__`
+or `__delitem__` write. No name in the module resolves after a store into
+or a deletion from `x.__dict__[...]` or `vars(x)[...]` with any key
+(`vars(C)[...]` on a class raises at run time, as `C.__dict__[...]` does,
+and is read the same way), a `__setitem__` or `__delitem__` call on
+either, a store or deletion of `x.__dict__` itself (`=`, `|=`, `del`, or a
+literal-name setattr of `__dict__`), or one of these writes whose name is
+not a literal: a `**` argument or another mapping in `update()`, a
+computed key, a `__setattr__` or `__delattr__` with no literal name, or a
+`setattr` or `delattr` whose target or name is a starred argument. A
+computed-name `setattr` or `delattr` through a plain alias of the receiver
+or of a class of the order counts as one on it, one hop: `x = C`,
+`x = type(self)` or `x = self.__class__`, bound in the call's own scope, a
+def or lambda around it, or the module. One whose target is reached
+through a subscript or another call, such as `globals()["C"]`, counts as
+one on every class. `vars()` at module scope and `locals()` in a function
+rebind no method. An unresolved call adds
 no assertion to the unit, as before #306, but across a diff it does not
 keep the reading it had before #306: a call resolved at the parent and not
 at the commit reads as the helper's assertions removed, and one resolved
@@ -575,7 +598,14 @@ return value, or into a module named by a string key such as
 `globals()["pytest"]`, `sys.modules`, `__import__` or `importlib`); a
 store in a conftest or plugin; a star import that binds a class's name;
 and a class body whose metaclass's `__prepare__` returns the module's
-namespace. A `via` assertion is a
+namespace. Nor are these, a residual (D-159): an aliased `setattr`
+(`s = setattr`); an alias more than one hop away, bound other than by a
+plain assignment, or to a value that is no name (`x = globals()["C"]`); a
+computed-name `setattr` whose target is a parameter that holds the class,
+such as a `setUpClass`'s `cls`; `pop()`, `popitem()` or `clear()` on a
+class body's namespace; and a namespace written through `monkeypatch.setitem`,
+`operator.setitem`, `patch.dict` or an unbound dict method
+(`dict.update(self.__dict__, ...)`). A `via` assertion is a
 detection-only overlay: the unit's own assertions pair as before, and the
 `via` ones then pair among themselves and with the after side's own
 assertions left unpaired; they earn no credit and add no requirement for
