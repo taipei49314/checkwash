@@ -13673,6 +13673,266 @@ R29's lists to count (A65); and keeping the TypeScript
 A64 approved; its two added sentences, on the report's date and on
 v0.8.0, were not in the list the owner answered.
 
+## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
+
+Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
+#434 issuecomment-6223293429) adopted every recommendation of the analysis
+(issuecomment-6218034432): A as the variant in its A.4, B as B1 with B2's
+message for the fold shape, C closed into THREATMODEL row 119, and #457 as
+A.5 (a). D-151 is reserved for #507 and D-152 to D-155 for four other pull
+requests prepared from the same base, so this entry is D-156; the number
+may move at merge.
+
+#434 reports two false findings, both read from the code. A: the order
+fallback gave an old assertion the first leftover of known strength in span
+order, so `assert area(4, 5) == 20.0` rewritten as `result = area(4, 5)`,
+`assert isinstance(result, float)`, `assert result == 20.0` paired the old
+`==` with the precondition and blocked as EXACT_VALUE(90) -> TYPE_SHAPE(50),
+while the two lines swapped passed. #457 (@talhayme) is a real commit of a
+related shape, executed on 0.7.0. B: `pytest.raises(E)` ->
+`pytest.raises(E, match=...)` read as the bare call removed, held at warn by
+`SAME_UNIT_REWRITE`, which blocks under `fail_on = "warn"` or an
+`oracle_freeze` contract. C (an approx tightening that blocks only beside
+`pytest.raises`) had no repro.
+
+Implementation (lines at this PR):
+
+- A, `ir/diffalign.py`. In the stage-3 loop (`:292-309`), for Python and a
+  unit's own assertions (`_match_assertions(..., own=True)`, `:135`), an old
+  assertion first takes `_subject_partner` (`:151-173`): an unused leftover
+  that the fallback may pair with it (`_compatible`, `:146-148`, the rule it
+  always had) and that checks the same subject. Among those, the same form
+  comes first, then at least the old strength, then span order. With none,
+  the old rule picks. The pair stays a fallback pair, so every rule reads it
+  as it reads the swapped order's pair. With one leftover the two rules
+  agree, so the leftovers' subjects are read only when there are two or
+  more. The pass for assertions reached
+  through a helper method (`via`, #306) is unchanged.
+- The subject test is one helper, `ir/subjects.same_subject` (`:86-89`),
+  which #460 can reuse: the same expression as parsed (as `same_expr`
+  compares it) read in the same context, through `subject_key`
+  (`:63-83`), which the fallback computes once per leftover. `subject_of`
+  (`:45-60`) reads the subject written out (`left`,
+  with the reaching keys of the names it reads at the assertion,
+  `Assertion.reaching`) or the recorded resolved subject, and is None for
+  an assertion with no subject, an inherited copy or a `via` assertion.
+  `reaching_signature` (`:35-42`) serializes the keys for both.
+- The Python frontend records the resolved subject as an optional field,
+  `Assertion.resolved_subject` (`ir/model.py:130-138`): for a subject that
+  is one local name, the expression the binding that reaches the assertion
+  gave it (its `_ordered_bindings` key, `ast.unparse`) and the reaching keys
+  of the names that expression reads at that binding. `_collect_unit` asks
+  for it at the two own-assertion sites (`frontend.py:3408`, `:3478`)
+  through `resolved_subject` (`:3321-3335`), which computes `_plain_names`
+  (`:1403-1446`) and the unit's own-scope nodes once per unit, and only
+  when an assertion's subject is a name the unit binds; `_resolved_subject`
+  (`:1449-1477`) checks the binding that reaches the assertion.
+- B, `ir/diffalign.py:311-329`. After the stage-3 loop, a removed `raises`
+  record takes `_raises_partner` (`:176-183`): an unused `pattern` record
+  that `ir/astutil.same_raises_check` (`:158-170`) reads as the same call
+  with `match=` added. `raises_call` (`:122-155`), which #423 can reuse,
+  reads the callee, the expected types, the other keywords and `match=`
+  from the record's text. The pair is not a fallback pair and records no
+  strength change, which every pair rule skips (`assert_weakened.py`,
+  `assert_substituted.py`, `expected_changed.py`,
+  `expectation_definition.py`, `subject_input_changed.py`,
+  `subject_normalized.py`); the readers in `normalization.py`,
+  `param_input_identity.py` and `subject_replacements.py` pass over it, as
+  a raises record has no subject and is no `assert` statement.
+- B2, `detectors/assert_removed.py:12-30`, `:46-49`: a removed bare raises
+  call in a Python file, where the after side has a newly written `match=`
+  call that `same_raises_check` accepts, gets "; the raise is still checked
+  by <call>" appended to its message. Fingerprints do not use the message.
+
+Readings where the ruling is silent; the owner approved each as written
+(below):
+
+1. Old assertions are taken in span order, as before; one whose candidates
+   are all taken by earlier ones keeps the old rule. There is no two-pass
+   matching.
+2. "One plain single-target local binding" is `name = <expr>`, an
+   `ast.Assign` with one `Name` target. Every binding of the name anywhere
+   in the unit must be one: a parameter (the unit's or a nested one),
+   `global`, `nonlocal`, an augmented, annotated, tuple or chained
+   assignment, a walrus, a `for`, `with` or `except` target, an import, a
+   def, a class, a match capture, `del` or a comprehension target excludes
+   the name. An annotated assignment (`result: float = area(4, 5)`) is
+   excluded too, the narrower reading of "plain". A plain assignment in a
+   nested scope binds that scope's own name but is counted: the number of
+   plain targets must equal the bindings the unit's statement walk records.
+3. "Resolved at that assertion" is the per-assertion reaching definition:
+   exactly one binding reaches it. A conditional one is enough, as the
+   analysis says: had it not run, the local would be unbound and the
+   assertion would raise. Not in the analysis: no conditional binding of
+   the name may follow the assertion, since a loop around both would carry
+   it back.
+4. Only an assertion in the unit's own body is resolved. One in an invoked
+   nested function reads the name when the function runs, which its
+   position does not tell; its written-out subject still compares.
+5. "The names that expression reads have the same reaching keys on both
+   sides" compares the direct names' keys, as `reaching_sig` does, at the
+   binding for a resolved subject and at the assertion for a written-out
+   one. A name the unit never binds has no key on either side.
+6. A candidate must still be one the fallback may pair (both strengths
+   known, or one form), so no unclassifiable record is paired with a
+   classifiable one (the red-team finding the fallback carries).
+7. "Own assertions only": the variant runs in the own pass, and a
+   same-file helper's inherited copy, a doctest record or a cross-file copy
+   is neither a candidate nor looks for one.
+8. The order among candidates is one key, (same form, at least the old
+   strength, span), so among same-form candidates one of at least the old
+   strength comes first.
+9. B reads only the context-manager form: exactly one positional argument,
+   not starred, and no `**`; the legacy call form passes `match=` to the
+   called function. The expected types are a set of name chains, so
+   `(TypeError, ValueError)` and `(ValueError, TypeError)` are the same;
+   anything else matches nothing, as `_caught_types` reads a catcher. The
+   other keywords are compared as `ast.unparse` writes them. The callee is
+   the dotted name as written, as the frontend records it.
+10. A "newly written" `match=` call for B2 is one in `assertions_added` or
+    the after half of a fallback pair; one paired by text or by (form,
+    subject) was there before.
+11. #457's pin keeps the reduced case as the reporter wrote it, with its
+    real findings as the expectation: the ASSERT_WEAKENED high, and the two
+    TEST_DISABLED warns held by RESTRUCTURED (the analysis notes the pin
+    cannot use the report's `expect: []`). The reporter is credited in the
+    fixture header and in `benchmarks/external-credits.json`, as
+    CONTRIBUTING promises.
+
+**Effect, by reading.** #434 A1 and the `is not None` precondition no
+longer block and give no finding, as A2 never did. The control (`is not
+None` in place of the rewritten `==`) still blocks, now as "subject and
+polarity both changed" instead of EXACT_VALUE(90) -> TYPE_SHAPE(50). A
+weakening that still reads the old subject beside a decoy of the old
+expectation on another subject blocks in both orders; with the decoy
+written first it passed before (row 84b's residual), so such a commit goes
+from pass to block. #457 is unchanged: no new assertion checks `mock_lock`,
+so it blocks as before. So is the v0.1.14 dogfooded commit that opened row
+85: a membership assert whose needle is not a literal records the needle as
+its subject, so its derived `f"{n}/{n} tampering cases blocked" in out`
+does not check `out`, and the old `"7/7 ..." in out` still pairs with the
+count guard written above it and blocks. Row 85 is Closed as ruled, with
+that shape as its first residual; the ruling did not address it, and the
+owner kept it so, with no pin and no issue (below). B: `match=` added
+gives no finding (it was a warn);
+the fold shape keeps its finding with the new message; another expected
+type, another callee or a dropped `match=` is unchanged. A `match=` call B
+pairs no longer counts as an added assertion in D2's moved-assertion
+multiset. JavaScript is unchanged. By reading, a result the subject
+preference turns silent is the result the old rule gives with the other
+leftovers deleted, so it opens no route that deleting them did not (the
+analysis found no cheat that newly passes); a restatement that never runs,
+under a runtime `if` or after the raising call in `with pytest.raises`, is
+read like any other assertion, as an unchanged assertion there always was.
+
+**C.** Closed into row 119: candidate 1 (`approx(20.0)` ->
+`approx(20.0, abs=1e-9)` read as new slack although the bound shrinks) is a
+named instance of its residual, and candidate 2 (approx checks paired in
+span order) is in `docs/assertion-coverage.md`. A raises-dependent repro, if
+one exists, is a new issue.
+
+**#457.** A.5 (a): it stays blocking and is pinned as a known limit
+(`subject_pairing_other_subject_known_limit_pos`, row 84b). A credit that
+passed it would also pass an exact check rewritten as a wide approx beside
+one unrelated strong assertion (row 13). This replaces the 2026-10-16 plan
+to ship #457 in the next release; the reason was stated on #457, and the
+reporter agreed. The known limit is written into row 84b, not a new row,
+as the owner approved (below).
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. A read-only text scan of the
+fixture corpora (711 Python file pairs in `tests/cases` and the
+verdict-gate cases, 140 in `benchmarks/tamper` and `benchmarks/refactors`)
+found no test function with an assertion gone and two new, where the
+fallback has a choice, and one bare raises gone beside a new `match=`
+call: `raises_match_fold_neg`, whose pinned fields (`cases.py`) do not
+include the message. A scan of the inline sources in `tests/*.py` found
+one before/after pair a test diffs where the subject preference has a
+choice: `tests/test_exact_unique_predicates.py`, #434 A1's own shape,
+whose assertions (a pass; a rewritten answer that blocks with
+EXPECTED_VALUE_CHANGED; whether a projection is made) hold under either
+pairing.
+Nothing under `tests/gates` changed, and `benchmarks/decoy/expected.json`
+cites none of rows 84b, 85 and 119. If CI shows an existing expectation
+moving, the round stops.
+
+**Fingerprints and IR.** No fingerprint scheme, rule or key changes.
+`--emit-ir` gains `resolved_subject` on every assertion (null where it does
+not apply), an optional field, so `IR_VERSION` stays 2
+(`docs/stability.md`). A finding whose pair changes changes its
+content-bound fingerprint with it (the control's after text and kind), so
+an exemption recorded for the old finding stops matching.
+
+**Maintainer text.** SPEC §3 (the one exception to an unclassifiable
+removal) and §4 (the fallback's subject preference); THREATMODEL row 85 to
+Closed, pinned by the two `bypass: 85` fixtures, and rows 84b and 119;
+`benchmarks/FAILURES.md` changes with row 85. The §7 parameters and the
+rule table are unchanged, and `gating.py` is not touched.
+
+**Release.** None is authorized (AGENTS.md rule 5). Under R1 of the
+owner's consolidated ruling of 2026-10-19 (「裁決總表全部照建議」; #434
+issuecomment-6261648129 and #457 issuecomment-6261649543, recorded across
+issues on #419, issuecomment-6261642679), v0.9.0 includes #434 and #457,
+and this fix merges before the combined sweep freezes. For #457 that is
+the known-limit pin only: its reported commit still blocks (A.5 (a),
+above). `docs/KNOWN-ISSUES-next.md` gains a #434 row with the limits
+above.
+
+**Measurement.** Not measured yet. As ruling 434 says, the sweep measures
+the change on the pool, or on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` with an approved manifest. Under R1 and R2 that
+sweep is the combined sweep: its manifest is frozen only after the R1
+scope has merged, it runs once, and this fix's merge gets its own
+before/after pair in its chain, which measures A and B. Under R3, the
+sweep's issue-acceptance batches run on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546), and the v0.8.0-to-RC comparisons that gate
+the tag run on the EC pool. The effect above is expected; the measured
+cost goes here once it has run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, test, generator or sweep was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; CI runs the tests. Added: thirteen `.gwcase` fixtures
+(`subject_pairing_precondition_before_neg`,
+`subject_pairing_precondition_after_neg`,
+`subject_pairing_not_none_precondition_neg`,
+`subject_pairing_oracle_replaced_pos`,
+`subject_pairing_parameter_binding_pos`, `subject_pairing_rebound_name_pos`,
+`subject_pairing_decoy_after_pos`, `subject_pairing_decoy_before_pos`,
+`subject_pairing_other_subject_known_limit_pos`, `raises_match_added_neg`,
+`raises_match_added_type_changed_pos`, `raises_match_warns_to_raises_pos`,
+`raises_match_dropped_pos`), labels approved by the owner (below), and 71
+collected items in `tests/test_issue434_subject_pairing.py`, counted from its
+parametrize lists; no existing test changed. By reading, the documented
+test count becomes 19822 (19738 + 71 + 13); CI's collection checks it.
+
+The agent wrote this entry in #434's fix PR #527. On 2026-10-19 the
+maintainer approved items A67 to A71 of the agent's approval list:
+「PR 核可清單全部照建議」 ("the PR approval list, all as recommended").
+Those items approve this PR's SPEC §3 and §4 (4472dd6e), THREATMODEL rows
+85, 84b and 119 (17f90195, 3048e83a, with `benchmarks/FAILURES.md`,
+45028942), D-156 (3860dfd1, f746b599, b041e17c, a9d7095e) and
+`docs/assertion-coverage.md` (b634bd30, edaa6971) text as committed, with
+D-156's release and measurement paragraphs to be changed before merge to
+cite R1 and R2; the labels of the thirteen fixtures above; readings 1-11;
+keeping row 85 Closed with its dogfooded shape as the first residual, not
+pinned and with no issue; and two additions the ruling did not ask for,
+the credit to @talhayme (the fixture header, `benchmarks/external-credits.json`
+and the FAILURES table), dated 2026-10-19, and #457's known limit written
+into row 84b rather than a new row. The reply was a button whose text the
+assistant wrote.
+
+The two commits written after that reply were approved the same day:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as recommended"),
+in reply to the agent's round-2 list (items B1 to B25). Item B3 approves,
+as one, the maintainer text the agent wrote while applying approved
+options; for this entry that is the release and measurement paragraphs as
+changed to cite R1 and R2 (c41cdb17) and the approval record above
+(7117ee40). Item B9 approves adding a sentence to the measurement
+paragraph that cites R3, as D-155 does; it was written after that reply
+(efd130f5). This paragraph, and the rewording of the one above to say
+only what items A67 to A71 say, were also written after that reply. That
+reply, too, was a button whose text the assistant wrote.
+
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
 Ruling 463 (owner, 2026-10-18, issuecomment-6248011246, 「照建議」, "as

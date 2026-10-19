@@ -1,0 +1,189 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: KNOWN LIMIT - a device-id test rewritten from a MagicMock to a real fixture lock, whose new oracle checks another subject against another expectation, still blocks as ASSERT_WEAKENED; the two warning tests merged into one parametrised test stay at warn
+origin: #457, reduced by the reporter from raman325/lock_code_manager 5890ae5b (MIT), "Rewrite test_helpers with proper fixtures; fix resource cleanup bug (#926)"
+credit: @talhayme (#457)
+note: ruling 434 A.5 (a) (2026-10-16). No new assertion checks `mock_lock`, so no leftover checks the old subject and the order fallback still pairs `assert mock_lock in locks` with the precondition `assert entry is not None` ("subject and polarity both changed").
+note2: the new oracle `lock.lock.entity_id == LOCK_1_ENTITY_ID` checks another subject against another expectation, THREATMODEL 84b's shape. A credit that passed it would also pass an exact check rewritten as a wide approx beside one unrelated strong assertion (row 13), so it stays blocking; a reviewed rewrite like this one takes a reviewed exemption.
+=== before: custom_components/lock_code_manager/__init__.py ===
+async def async_unload_entry(hass, config_entry):
+    hass_data = hass.data[DOMAIN]
+    unload_ok = await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    if unload_ok:
+        await async_unload_lock(hass, config_entry)
+
+    if {k: v for k, v in hass_data.items() if k != "resources"} == {
+        CONF_LOCKS: {},
+    }:
+        await _async_cleanup_strategy_resource(hass, hass_data)
+        hass.data.pop(DOMAIN)
+
+    return unload_ok
+=== after: custom_components/lock_code_manager/__init__.py ===
+async def async_unload_entry(hass, config_entry):
+    hass_data = hass.data[DOMAIN]
+    unload_ok = await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    if unload_ok:
+        await async_unload_lock(hass, config_entry)
+
+    if not hass_data.get(CONF_LOCKS):
+        await _async_cleanup_strategy_resource(hass, hass_data)
+        hass.data.pop(DOMAIN)
+
+    return unload_ok
+=== before: tests/test_helpers.py ===
+"""Test the helpers module."""
+
+from unittest.mock import MagicMock
+
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from homeassistant.components.lock import DOMAIN as LOCK_DOMAIN
+from homeassistant.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import (
+    area_registry as ar,
+    device_registry as dr,
+    entity_registry as er,
+)
+
+from custom_components.lock_code_manager.const import CONF_LOCKS, DOMAIN
+from custom_components.lock_code_manager.helpers import get_locks_from_targets
+
+# =============================================================================
+# get_locks_from_targets Tests
+# =============================================================================
+
+
+async def test_get_locks_from_targets_warns_for_non_lock_entity(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+):
+    """Test get_locks_from_targets warns when entity is not a lock."""
+    config_entry = MockConfigEntry(domain=DOMAIN)
+    config_entry.add_to_hass(hass)
+
+    hass.data[DOMAIN] = {CONF_LOCKS: {}}
+
+    # Pass a switch entity instead of a lock
+    target_data = {ATTR_ENTITY_ID: ["switch.not_a_lock"]}
+    locks = get_locks_from_targets(hass, target_data)
+
+    assert len(locks) == 0
+    assert "invalid lock entities" in caplog.text
+    assert "switch.not_a_lock" in caplog.text
+
+
+async def test_get_locks_from_targets_warns_when_lock_not_in_lcm(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+):
+    """Test get_locks_from_targets warns when lock is not managed by LCM."""
+    config_entry = MockConfigEntry(domain=DOMAIN)
+    config_entry.add_to_hass(hass)
+
+    # No locks registered in LCM
+    hass.data[DOMAIN] = {CONF_LOCKS: {}}
+
+    target_data = {ATTR_ENTITY_ID: ["lock.unmanaged_lock"]}
+    locks = get_locks_from_targets(hass, target_data)
+
+    assert len(locks) == 0
+    assert "not managed by Lock Code Manager" in caplog.text
+    assert "lock.unmanaged_lock" in caplog.text
+
+
+async def test_get_locks_from_targets_with_device_id(hass: HomeAssistant):
+    """Test get_locks_from_targets with device IDs."""
+    config_entry = MockConfigEntry(domain=DOMAIN)
+    config_entry.add_to_hass(hass)
+
+    # Create device
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_or_create(
+        config_entry_id=config_entry.entry_id,
+        identifiers={("test", "device_1")},
+    )
+
+    # Create entity on device
+    ent_reg = er.async_get(hass)
+    lock_entry = ent_reg.async_get_or_create(
+        LOCK_DOMAIN,
+        "test",
+        "device_lock",
+        config_entry=config_entry,
+        device_id=device.id,
+    )
+
+    # Create mock lock
+    mock_lock = MagicMock()
+    mock_lock.lock.entity_id = lock_entry.entity_id
+
+    hass.data[DOMAIN] = {CONF_LOCKS: {lock_entry.entity_id: mock_lock}}
+
+    target_data = {ATTR_DEVICE_ID: [device.id]}
+    locks = get_locks_from_targets(hass, target_data)
+
+    assert len(locks) == 1
+    assert mock_lock in locks
+=== after: tests/test_helpers.py ===
+"""Test the helpers module."""
+
+import pytest
+
+from homeassistant.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar, entity_registry as er
+
+from custom_components.lock_code_manager.helpers import get_locks_from_targets
+
+from .common import LOCK_1_ENTITY_ID, LOCK_2_ENTITY_ID
+
+# =============================================================================
+# get_locks_from_targets Tests
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    ("entity_id", "expected_warning"),
+    [
+        ("switch.not_a_lock", "invalid lock entities"),
+        ("lock.unmanaged_lock", "not managed by Lock Code Manager"),
+    ],
+)
+async def test_get_locks_from_targets_warns_for_bad_entities(
+    hass: HomeAssistant,
+    mock_lock_config_entry,
+    lock_code_manager_config_entry,
+    caplog: pytest.LogCaptureFixture,
+    entity_id: str,
+    expected_warning: str,
+):
+    """Test get_locks_from_targets warns for non-lock and unmanaged entities."""
+    locks = get_locks_from_targets(hass, {ATTR_ENTITY_ID: [entity_id]})
+
+    assert len(locks) == 0
+    assert expected_warning in caplog.text
+    assert entity_id in caplog.text
+
+
+async def test_get_locks_from_targets_with_device_id(
+    hass: HomeAssistant,
+    mock_lock_config_entry,
+    lock_code_manager_config_entry,
+):
+    """Test get_locks_from_targets resolves device IDs to locks."""
+    # Get the device for lock.test_1
+    ent_reg = er.async_get(hass)
+    entry = ent_reg.async_get(LOCK_1_ENTITY_ID)
+    assert entry is not None
+    assert entry.device_id is not None
+
+    locks = get_locks_from_targets(hass, {ATTR_DEVICE_ID: [entry.device_id]})
+
+    assert len(locks) == 1
+    lock = next(iter(locks))
+    assert lock.lock.entity_id == LOCK_1_ENTITY_ID
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "unit": "test_get_locks_from_targets_with_device_id"},
+ {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"], "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"},
+ {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"], "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"}]

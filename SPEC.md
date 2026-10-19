@@ -656,7 +656,16 @@ strength decreases. Defined once, in `src/greenwash/ir/strength.py`.
 Assertion forms that cannot be classified (e.g. `assertRaises`, custom
 helpers) get strength `null` and are **excluded** from weakening comparisons
 (fail-safe: no guess, no noise). Their removal still counts for
-`ASSERT_REMOVED`. The JavaScript frontend records a call to a resolved
+`ASSERT_REMOVED`, with one exception (#434): a bare Python `pytest.raises(E)`,
+`pytest.warns(W)` or `raises(E)` that the order fallback (§4) leaves
+unpaired is paired, after the fallback, with an unused newly written call
+that only adds `match=` (PATTERN): the same callee, the same expected types
+(a name chain or a tuple of them, as a set) and the same other keywords. That
+pair records no strength change. Where an excinfo assert folded into
+`match=` takes that call in the fallback, the bare call still counts as
+removed, and the finding says the raise is still checked by the new call. A
+dropped `match=`, another expected type or another callee is no pair. The
+JavaScript frontend records a call to a resolved
 assertion API whose predicate it does not read the same way: `raises` for a
 throw check, `unknown` otherwise (#196 190.5).
 
@@ -879,6 +888,22 @@ effect or statement joins its guarded ones, or when its guard is a constant
   specific way: two unrelated assertions pair up and the delta describes a
   deletion as an unchanged assertion. It is the only rule keyed on *how* a
   pair was formed rather than on what the pair contains.
+- In Python, the fallback stage first gives a test's own old assertion a
+  compatible leftover that checks the same subject (#434): the same
+  expression read in the same context, either written out, or through a
+  local name that only plain `name = <expr>` statements bind, exactly one of
+  which reaches the assertion with no conditional one after it, in the
+  test's own body. A test parameter, a `global` or `nonlocal` name, and a
+  name any other statement binds are read as written, and the names the
+  expression reads must have the same reaching bindings on both sides. Among
+  such leftovers the same form comes first, then at least the old strength,
+  then span order; with none, span order decides. Old assertions are taken in
+  span order, and the pair is still a fallback pair. So a precondition
+  written above a rewritten oracle on the same subject is added rather than
+  paired, and a weakening that still reads the old subject takes the old
+  assertion's place ahead of a decoy on another subject in either order. A
+  new oracle on another subject against another expectation still pairs by
+  span order (#457, THREATMODEL 84b).
 - `EXPECTED_VALUE_DERIVED` covers the cheat that survives all three of the
   rules above. Replace the assertion with a *different* one of the same
   strength whose expected side is not a literal: the lattice sees

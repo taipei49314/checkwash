@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `match=` dropped from `pytest.raises(ValueError, match=...)` is not paired: the PATTERN check reads as removed and blocks
+origin: #434 B control - only a bare call removed beside a newly written `match=` call pairs, never the reverse
+=== before: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError, match="must be absolute"):
+        create("relative/path")
+=== after: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError):
+        create("relative/path")
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

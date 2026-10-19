@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_REMOVED
+title: `match=` added to a bare `pytest.raises(ValueError)` is the same raise, checked more strictly
+origin: #434 B, ruling 434 B (2026-10-16) - the bare call pairs with the new `match=` call of the same callee, expected types and other keywords, in a pass after the order fallback; it read as ASSERT_REMOVED (strength UNKNOWN), held at warn
+=== before: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError):
+        create("relative/path")
+=== after: tests/test_paths.py ===
+import pytest
+
+from app import create
+
+
+def test_relative_path_rejected():
+    with pytest.raises(ValueError, match="must be absolute"):
+        create("relative/path")
+=== expect ===
+[]

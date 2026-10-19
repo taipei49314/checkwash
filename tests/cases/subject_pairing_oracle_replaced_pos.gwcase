@@ -1,0 +1,20 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: the control - the rewritten `==` replaced by `is not None`, with the precondition above it, still blocks
+origin: #434 Acceptance - the only leftover that checks the old subject is `result is not None`, so the old `==` pairs with it ("subject and polarity both changed"); span order paired the `isinstance` instead, which blocked too
+=== before: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    assert area(4, 5) == 20.0
+=== after: tests/test_geometry.py ===
+from app.geometry import area
+
+
+def test_area():
+    result = area(4, 5)
+    assert isinstance(result, float)
+    assert result is not None
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

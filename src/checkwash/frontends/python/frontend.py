@@ -73,6 +73,7 @@ from checkwash.ir.astutil import dotted_name as _dotted
 from checkwash.ir.astutil import stable_dump as _stable_dump
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import Assertion, Handler, Marker, ParamTable, UnitSide, normalize_text
+from checkwash.ir.subjects import reaching_signature
 
 _SUPPRESSION_RE = re.compile(r"#\s*(noqa|type:\s*ignore)", re.IGNORECASE)
 
@@ -1397,6 +1398,83 @@ def _reaching_sig(reaching: dict[str, str], direct: set[str]) -> str:
     return "\x1e".join(
         f"{name}\x1d{reaching[name]}" for name in sorted(direct) if name in reaching
     )
+
+
+def _plain_names(func, ordered: dict[str, list]) -> frozenset[str]:
+    """The unit's names bound only by plain `name = <expr>` statements (#434).
+
+    Such a name holds what one of those statements bound, so the subject an
+    assertion checks through it is that statement's expression. Every
+    binding of the name anywhere in the unit, nested scopes included, must be
+    the single target of an `=`. A name is left out when anything else binds
+    or declares it: a parameter (the unit's or a nested one), `global` or
+    `nonlocal`, an augmented, annotated, tuple or chained assignment, a
+    walrus, `for`, `with ... as`, `except ... as`, an import, a def or class,
+    a match capture, `del`, or a comprehension target. A plain assignment in
+    a nested scope binds that scope's own name, but one the unit's statement
+    walk does not record is left out too: the counts must agree.
+    """
+    plain_targets: set[int] = set()
+    stores: dict[str, list[int]] = {}
+    other: set[str] = set()
+    for node in _walk(func):
+        if isinstance(node, ast.Name):
+            if not isinstance(node.ctx, ast.Load):
+                stores.setdefault(node.id, []).append(id(node))
+        elif isinstance(node, ast.Assign):
+            if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                plain_targets.add(id(node.targets[0]))
+        elif isinstance(node, ast.arg):
+            other.add(node.arg)
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            other.update(node.names)
+        elif isinstance(node, ast.alias):
+            other.add((node.asname or node.name).partition(".")[0])
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            other.add(node.name)
+        elif isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)):
+            if node.name:
+                other.add(node.name)
+        elif isinstance(node, ast.MatchMapping):
+            if node.rest:
+                other.add(node.rest)
+    return frozenset(
+        name for name, ids in stores.items()
+        if name not in other
+        and len(ids) == len(ordered.get(name, ()))
+        and all(i in plain_targets for i in ids)
+    )
+
+
+def _resolved_subject(
+    node: ast.AST,
+    name: str,
+    ordered: dict[str, list[tuple[tuple[int, int], bool, str, tuple[str, ...]]]],
+) -> tuple[str, str] | None:
+    """(expression, reading context) a plain local name stands for at this assertion (#434).
+
+    The caller has checked that `name` is one of the unit's `_plain_names`
+    and that the assertion is in the unit's own scope. Exactly one binding
+    may reach it. A conditional one is enough: had it not run, the local
+    would be unbound and the assertion would raise. No conditional binding
+    may follow the assertion, since a loop around both would bring it back
+    to the assertion. The context is the reaching keys of the names the
+    expression reads, at the binding, in `ir.subjects.reaching_signature`'s
+    form, so it compares with a subject written out at an assertion.
+    """
+    pos = (node.lineno, node.col_offset)
+    reach = _reaching_entries(pos, name, ordered)
+    if len(reach) != 1 or any(entry[1] and entry[0] > pos for entry in ordered.get(name, ())):
+        return None
+    bound_at, _conditional, key, refs = reach[0]
+    if not key:
+        return None
+    keys = {
+        ref: "\x1f".join(entry[2] for entry in _reaching_entries(bound_at, ref, ordered))
+        for ref in refs
+        if ref in ordered
+    }
+    return key, reaching_signature(keys, refs)
 
 
 def _exclusive_bindings(func) -> tuple[str, ...]:
@@ -3240,6 +3318,21 @@ def _collect_unit(
     helper_calls: list[ast.Call] = []
     # Calls through the instance that run, for the helper methods they reach (#306).
     method_calls: list[ast.Call] = []
+    # The subject a bare local name stands for (#434), worked out per unit
+    # only once an assertion checks a name the unit binds.
+    plain_names: frozenset[str] | None = None
+    own_scope: frozenset[int] | None = None
+
+    def resolved_subject(node: ast.AST, left: str | None) -> tuple[str, str] | None:
+        nonlocal plain_names, own_scope
+        if not left or not left.isidentifier() or left not in ordered_bindings:
+            return None
+        if plain_names is None:
+            plain_names = _plain_names(func, ordered_bindings)
+            own_scope = frozenset(map(id, _scope_nodes_cached(func, nodes_cache)))
+        if left not in plain_names or id(node) not in own_scope:
+            return None
+        return _resolved_subject(node, left, ordered_bindings)
 
     for node in _walk(func):
         if id(node) in dead:
@@ -3312,6 +3405,7 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
+                    resolved_subject=resolved_subject(node, c.left),
                 )
             )
             counter += 1
@@ -3381,6 +3475,7 @@ def _collect_unit(
                         trivial=c.trivial,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
+                        resolved_subject=resolved_subject(node, c.left),
                     )
                 )
                 counter += 1
