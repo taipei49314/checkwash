@@ -12512,7 +12512,3 @@ and the "Fingerprint stability" subsection); R61 kept the schema, with
 D-148; R63 left shipping the schema as package data, a jsonschema
 cross-check and moving the frozen copy undecided. The reply is the text of
 an answer the agent wrote, which the owner chose.
-
-Since a recorded exemption now keeps matching within a minor line, the
-release that carries D-144's renumbering is a minor, which D-144 left to
-the owner; D-146 had already ruled out a patch for the next release.
