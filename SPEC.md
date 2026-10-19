@@ -981,8 +981,10 @@ fixture as the test's:
   as a call of the test is (clause 1, with the D-046 module check), against
   the modules that the import binding its root names in the fixture's own
   file, not the test file's imports. A root the fixture binds itself, as a
-  parameter (`return app.test_client()`) or a local, or that no top-level
-  `import` binds in that file, gives no producer.
+  parameter (`return app.test_client()`) or a local, gives no producer, and
+  so does a root whose final top-level binding in that file is not an
+  `import` or an absolute `from ... import` outside any `if` or `try`, or is
+  followed by a star import.
 - **One level.** Only a fixture the test requests by parameter (an argument
   without a default, `request` and the instance excepted), resolved as
   pytest resolves it for that test: the innermost class, then the enclosing
@@ -990,20 +992,26 @@ fixture as the test's:
   first. A name a `parametrize` supplies directly runs no fixture. A level
   that binds the name some other way, a star import, an unreadable
   `conftest.py`, or a class with a base other than `object` or a keyword
-  stops the lookup with no producer. The fixtures a fixture requests,
-  `autouse` fixtures and `usefixtures` marks count nothing.
+  stops the lookup with no producer. The fixtures a fixture requests count
+  nothing, and so do an `autouse` fixture and a `usefixtures` mark that the
+  test does not also request by parameter.
 - **Only the findings whose before-side assertion reads the fixture's
   value.** The assertion is the one the finding cites on its before side,
   or the before half of the pair whose after side it cites
   (`EXPECTED_VALUE_HARDCODED`). It reads the parameter directly or through
   the test's own assignments, written in the test's body outside a nested
-  def, class or lambda, and the test does not assign to the parameter. The
-  fixture is resolved and read as the test module and its `conftest.py`
-  files were before the diff. A finding that cites no assertion of the unit
-  (a unit gone, `TEST_PATCHES_SUBJECT`, a tolerance change) takes nothing.
+  def, class or lambda, and the test does not bind the parameter again (an
+  assignment, a `for` or comprehension target, `with ... as`,
+  `except ... as`, `del`, an import or a nested def). The fixture is
+  resolved and read as the test module and its `conftest.py` files were
+  before the diff. A finding that cites no assertion of the unit (a unit
+  gone, `TEST_PATCHES_SUBJECT`, a tolerance change) takes nothing.
 - **Every oracle rule that takes symbol evidence, except `TEST_DISABLED`**,
-  as for the T1.9 hop. Neither the one-hop route of clause 2 nor a helper
-  hop is followed from a producer, and no package-level credit is added.
+  as for the T1.9 hop; `TOLERANCE_LOOSENED` takes nothing in practice, as
+  its finding cites no assertion. Neither the one-hop route of clause 2 nor
+  a helper hop is followed from a producer, and no package-level credit is
+  added. (Draft: both limits depart from the analysis the ruling adopted
+  and await the owner's decision, D-155.)
 
 `EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
 (`PACKAGE_REPAIR`): the test file imports a package in which the diff changed
