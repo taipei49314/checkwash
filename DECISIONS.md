@@ -12499,10 +12499,13 @@ with v0.8.0 instead of v0.7.0.
   Release's pyz must hold that same `src/checkwash`. The run proposed
   nothing: the gate proposes an entry or a pin only where one is missing
   or has drifted, and that is a failure too (`tools/verdict_gate.py:123-135`).
+  The rotation run (below), with v0.8.0 itself as the baseline, observed
+  the same pin and reported no `baseline-blocked-drift`.
 - **`[t3.cases]`** is unchanged. `tests/data/javascript_chai_mutations.json`
   is the same git blob (`4f363109`) at v0.5.0, v0.6.0, v0.7.0 and v0.8.0,
   so the T3 cases read at `f02b5d8` are those read at `d647a65`, which the
-  tag-push run matched with no drift.
+  tag-push run matched with no drift. The rotation run, reading them at
+  `f02b5d8`, reported no `t3-drift`.
 - **`[canary]`** is not rotated (step 9). The v0.4.2 -> v0.5.0 pair and its
   71-case `block_to_pass` set stay; the tag-push run reproduced them
   (canary 71 block -> pass, 45 block -> block, 6 pass -> block and
@@ -12520,23 +12523,39 @@ Nothing else moves. The case files, labels, acceptance file, gate code
 the same at `main` `0e60832a` as at `f02b5d8`. The main-push verdict run
 [39206619788/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39206619788)
 on `0e60832a` (v0.7.0 against `main`) logs the same counts, with zero
-failures and zero reported. So by reading, `main` judges every case as
-v0.8.0 does: against v0.8.0 it has no block -> pass, needs no entry and
-reports nothing. From this rotation on, a candidate that turns any of
+failures and zero reported. So `main` judges every case as v0.8.0 does,
+and the rotation run below, whose candidate is `main` with this PR's
+engine-neutral changes, observes it directly: against v0.8.0 it has no
+block -> pass, needs no entry and reports nothing. From this rotation on, a candidate that turns any of
 v0.8.0's 159 blocks into a pass needs an accepted entry. No engine code,
 case input, label, fixture expectation or gate rule changes;
 `tests/verdict_gate/README.md` records the re-pin.
 
-Evidence status. Both runs above are read from their logs
+The rotation run is the rotation PR's (#516) first verdict run,
+[39214083418/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39214083418)
+(job 117933789875), on pin head `5490b4e86572dffe347d13ac890e70d69f398316`
+with merge checkout `5c7a93fe` (that head merged into `0e60832a`). It ran
+with the rotated `[baseline]`, checked out `f02b5d8` and the Release's pyz,
+and passed the engine identity check: a sha256, size, member, commit or
+version mismatch is an `engine-identity` failure and stops every case, and
+none was reported. All 185 cases ran (159 T1, 26 T3): 159 block -> block,
+26 pass -> pass, zero reported, and the canary at 71 block -> pass,
+45 block -> block, 6 pass -> block and 37 pass -> pass. Its one failure is
+`acceptance-baseline` ("acceptance file baseline 'v0.7.0' differs from the
+pinned baseline 'v0.8.0'"). With no blocked-pin, T3 or entry failure, it
+proposed no pin and no entry, so `[baseline_blocked]` and `[t3.cases]`
+stay as first committed (`3871d5ac`). This failed run is not the merge
+evidence: the PR's final head, with the acceptance line changed, still
+needs a successful verdict run and the normal required checks before
+merge.
+
+Evidence status. The three runs above are read from their logs
 (`gh run view --log`). Their receipt artifacts, each named
-`verdict-gate-receipt-1` (artifacts 11991306312 and 12165673670, whose
-upload steps log ZIP SHA256s `e5683c9c…` and `0f7b1e92…`), were not
-downloaded, and they are kept for seven days. This PR's own verdict run is
-the rotation run: with the rotated `[baseline]` it re-checks the engine,
-both pins and the T3 map. By reading, it fails on `acceptance-baseline`
-alone until the acceptance line changes, and then passes all 185 cases.
-Its run ID is added here once it exists. Nothing ran on the work machine
-(`NOT_RUN：工作機規則（POLICY work-machine-local），the rotation run is this PR's hosted verdict gate`).
+`verdict-gate-receipt-1` (artifacts 11991306312, 12165673670 and
+12169571379, whose upload steps log ZIP SHA256s `e5683c9c…`, `0f7b1e92…`
+and `d8e44ab6…`), were not downloaded, and they are kept for seven days.
+Nothing ran on the work machine
+(`NOT_RUN：工作機規則（POLICY work-machine-local），the verdict runs above are hosted CI runs`).
 
 The agent drafted this entry in the rotation PR; the owner approves its
 wording there.
