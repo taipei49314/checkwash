@@ -12694,6 +12694,20 @@ items in `tests/test_issue471_fixture_producers.py`, counted from its
 parametrize lists; no existing test changed. By reading, the documented test count
 becomes 19573 (19475 + 79 + 19); CI's collection checks it.
 
-The agent wrote this entry in #471's fix PR, as a draft for the
-maintainer's approval of its wording, of the gating commit, of the four
-readings and of the two departures above.
+The agent wrote this entry in #471's fix PR #522. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
+recommended", in reply to the agent's approval list, whose recommended
+answers for this PR were: the SPEC §5 (b74b20eb, fb5b317d), THREATMODEL
+rows 93, 86j and 137 with `benchmarks/FAILURES.md` (20ee51b8, 642adf05),
+D-155 (4a84d818, 15a02925, 6f25134d) and docs (21adce95, 34a75607)
+wording as committed, with D-155 citing R1 and R2 and the passages left
+for the owner written as decided before merge (A72); the gating commit
+da116dd1 as policy code (A73); the TOLERANCE_LOOSENED departure accepted
+as a limit disclosed in row 137 and KNOWN-ISSUES-next, with no issue
+opened (A74); the narrower reading of the second departure kept and
+recorded as a departure (A75); the four readings (A76); the labels of the
+19 new `.gwcase` fixtures (64cc9233; A77); and the stale SPEC §5 D9 row
+corrected in this PR, within the SPEC §5 wording (A78). a8810511,
+bad234b4, a489a067, fff04c1d, 22dc8f64, 16b6832b and f853630b make those
+changes. The reply was a button whose text the agent wrote, which the
+owner chose.
