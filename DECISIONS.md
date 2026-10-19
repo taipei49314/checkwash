@@ -13068,29 +13068,99 @@ Effects by reading:
   one module-global lookup in `_step`, where the per-proof limit was a
   literal (up to 1,000,000 steps per analysis).
 
-**Timing (to be filled from CI run ...).** Ruling item 1's condition is
-not met until this paragraph holds the numbers. The temporary `timing-469`
-job in `.github/workflows/ci.yml` (A82) runs only for this pull request's
-branch, on ubuntu-latest with Python 3.12, and is removed once they are
-written here. It builds synthetic test files of exactly 30,000, 100,000 and
-200,000 syntax nodes per side in four shapes: the straight-line tests
-above (15 nodes each, three runs per size); one such test among
-module-level assignments; the helper-call tests above (six nodes each,
-also at 10,000 nodes); and, under B13, tests whose callee changed with the
-same arguments (ten nodes each), `assert f("a") == "a"` on the base side
-and `assert g("a") == "a"` on the head side with a literal-string helper
-`def g(s): return s.lower()`, so that every pair reaches `_scoped_bindings`
-and the literal-string helper check. In the first three shapes the sides
-differ only in their module docstring, so every pair keeps its callee and
-the pass moves on at `subject_replacements.py:681`. For each run it times
-`analyze` up to `subject_replacement_events` and the pass itself, and
-counts its events and its `_subject_call`, `_assertion_scope` and
-`_scoped_bindings` calls. Each run has its own process and a 300-second
-budget within a 35-minute deadline, and a shape's larger sizes are skipped
-after an overrun. To be recorded here: the run id, the commit, each shape's times,
-and their growth against linear (3.3 times from 30,000 to 100,000 nodes,
-2 times from 100,000 to 200,000), with this pull request's CI and dogfood
-results. D-131 item 2's stand-in time is not taken by this job.
+**Timing (CI run 39253512334, job 118062910969).** The temporary
+`timing-469` job (A82) ran once, on GitHub's hosted ubuntu-latest runner
+(image ubuntu-24.04, version 20261012.334.1) with Python 3.12.15, at
+`dac1a476`, the merge of this pull request's head `4c5e631d` into main
+`0eff0e52`. This is one run on a shared hosted machine, not a benchmark,
+and its times move with the machine. The job built synthetic test files of
+exactly 30,000, 100,000 and 200,000 syntax nodes per side in four shapes:
+the straight-line tests above (15 nodes each, three runs per size); one
+such test among module-level assignments (statements); the helper-call
+tests above (six nodes each, also at 10,000 nodes); and, under B13, tests
+whose callee changed with the same arguments (ten nodes each),
+`assert f("a") == "a"` on the base side and `assert g("a") == "a"` on the
+head side with a literal-string helper `def g(s): return s.lower()`, so
+that every pair reaches `_scoped_bindings` and the literal-string helper
+check. In the first three shapes the sides differ only in their module
+docstring, so every pair keeps its callee and the pass moves on at
+`subject_replacements.py:681`. Each measurement ran in its own process
+with a 300-second budget within a 35-minute deadline; every one exited 0,
+and none overran its budget or was skipped. For each, the job printed the
+time `analyze` took before `subject_replacement_events` began
+(`to_pass_s`), the pass's own time, its parse of both sides included
+(`pass_s`), the pass's events, and its `_subject_call`, `_assertion_scope`
+and `_scoped_bindings` calls. In seconds, with the three straight-line
+runs in run order and their median:
+
+| Shape | Nodes per side | `pass_s` | `to_pass_s` | Events | `_subject_call` | `_assertion_scope` | `_scoped_bindings` |
+|---|---:|---|---|---:|---:|---:|---:|
+| straight | 30,000 | 0.375, 0.392, 0.401; median 0.392 | 1.312, 1.357, 1.368; median 1.357 | 0 | 3,998 | 3,998 | 0 |
+| straight | 100,000 | 1.532, 1.541, 1.615; median 1.541 | 6.743, 6.798, 6.903; median 6.798 | 0 | 13,332 | 13,332 | 0 |
+| straight | 200,000 | 3.229, 3.336, 3.309; median 3.309 | 17.581, 17.822, 17.616; median 17.616 | 0 | 26,666 | 26,666 | 0 |
+| statements | 30,000 | 0.13 | 0.839 | 0 | 2 | 2 | 0 |
+| statements | 100,000 | 0.565 | 3.18 | 0 | 2 | 2 | 0 |
+| statements | 200,000 | 1.125 | 6.635 | 0 | 2 | 2 | 0 |
+| helper | 10,000 | 0.245 | 0.694 | 0 | 3,328 | 3,328 | 0 |
+| helper | 30,000 | 0.814 | 2.882 | 0 | 9,994 | 9,994 | 0 |
+| helper | 100,000 | 2.832 | 16.722 | 0 | 33,328 | 33,328 | 0 |
+| helper | 200,000 | 6.021 | 53.499 | 0 | 66,660 | 66,660 | 0 |
+| callee | 30,000 | 0.378 | 1.854 | 2,998 | 5,996 | 5,996 | 5,996 |
+| callee | 100,000 | 1.283 | 9.441 | 9,998 | 19,996 | 19,996 | 19,996 |
+| callee | 200,000 | 3.267 | 27.846 | 19,998 | 39,996 | 39,996 | 39,996 |
+
+At 200,000 nodes the sides were 538,955 to 855,598 bytes. Only the callee
+shape gave events or reached `_scoped_bindings`.
+
+Linear growth multiplies a time by 3.3 from 30,000 to 100,000 nodes, by 2
+from 100,000 to 200,000 and by 6.7 from 30,000 to 200,000. The pass's own
+time grew by 3.9, 2.1 and 8.4 for the straight-line shape (medians), 4.3,
+2.0 and 8.7 for statements, 3.5, 2.1 and 7.4 for the helper shape (and
+3.3 from 10,000 to 30,000, where linear is 3), and 3.4, 2.5 and 8.6 for
+the callee shape. Per node at 30,000, 100,000 and 200,000 nodes, that is
+13.1, 15.4 and 16.5 microseconds for the straight-line shape, 4.3, 5.7 and
+5.6 for statements, 27.1, 28.3 and 30.1 for the helper shape (24.5 at
+10,000) and 12.6, 12.8 and 16.3 for the callee shape.
+
+Against ruling item 1's condition: this is the time at 200,000 nodes it
+asks for, measured on the fix in CI. There the pass's own time was 1.1 s
+for statements, 3.3 s for the straight-line shape (median of three) and
+for the callee shape, and 6.0 s for the helper shape, the slowest. With
+the caches its growth is close to linear: from 30,000 to 200,000 nodes it
+grew 7.4 to 8.7 times where linear is 6.7, so its time per node rose by
+11 to 30 per cent across the range, where the straight-line shape before
+the cache was read as growing with the square of the file, some 44 times
+(above). The largest step over linear is the callee shape's 2.5 times from
+100,000 to 200,000 nodes; one run cannot tell whether that excess comes
+from the code or the machine, and the job does not look for its cause.
+The agent does not read this as the faster-than-linear growth the
+condition names, so it proposes no work budget; the owner's review of
+this paragraph (B15) settles that reading.
+
+The time before the pass is outside the condition, and in this run it grew
+faster than linearly in three shapes. From 30,000 to 200,000 nodes it grew
+13.0 times for the straight-line shape (medians, 1.357 to 17.616 s), 18.6
+times for the helper shape (2.882 to 53.499 s; 5.8 times from 30,000 to
+100,000 alone) and 15.0 times for the callee shape (1.854 to 27.846 s),
+against 7.9 times for statements (0.839 to 6.635 s). At 200,000 nodes it
+is most of the time to the end of the pass: 53.5 s of the helper shape's
+59.5 s. It covers every step `analyze` takes before this pass, the
+frontend's parse of both sides and the stand-in pass (`engine.py:1735`)
+among them, and the job does not split it, so which step grows is unknown,
+and D-131 item 2's stand-in time is still not taken. No ruling covers this
+growth (Residuals).
+
+The same run's other jobs, at the same checkout: the nine test jobs
+(ubuntu-latest, macos-latest and windows-latest, each with Python 3.11,
+3.12 and 3.13), install-from-tag, dogfood and byte-compare passed, and
+published-source was skipped. Dogfood's verdict was pass, with three WARN
+findings: CI_WORKFLOW_TOUCHED for this job's change to
+`.github/workflows/ci.yml`, and IMPORT_UNRESOLVED for each of
+`tests/test_issue469_limit_messages.py`'s imports of
+`test_mock_testcase_replacements` and `test_standin_installations_main`,
+sibling modules in `tests/`. b77240d5 then removed the job, which returns
+`.github/workflows/ci.yml` to main's bytes; the runs after it are this
+pull request's later CI.
 
 **The Stop hook.** These refusals are engine errors. Under D-134 item 2 a
 hook-json engine error exits 0 with the "not analysed" `systemMessage` and
@@ -13111,8 +13181,9 @@ D-131 recorded that "`subject_replacements._parse` keeps its own
 Residuals. Two more stand-in limit refusals name nothing:
 `stand-in strict inventory is invalid or exceeds the path limit`
 (`standin_installations.py:1084`) and `stand-in context exceeds the source
-read limit` (`:1123`). They are not in this round. The time at 200,000
-nodes and D-131 item 2's stand-in time are not measured. By reading, one
+read limit` (`:1123`). They are not in this round. D-131 item 2's
+stand-in time is not measured, and which step makes the time before this
+pass grow faster than linearly in the Timing run is unknown. By reading, one
 check still reads the module once per pair: for a pair whose new callee
 is a `math.gcd` helper, the check of the module's other functions
 (`subject_replacements.py:612`) is made for each pair, since its proof
@@ -13168,7 +13239,7 @@ own kept checks. No
 `.gwcase` fixture is added: the golden runner cannot expect an engine
 error. By reading, the documented test count becomes 19540 (19505 + 35);
 CI's collection checks it.
-`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source; no test, timing, checkwash run or sweep was run`.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source, except the Timing numbers, which are read from CI's job log; no test, timing, checkwash run or sweep was run on the work machine`.
 
 The agent wrote this entry in #469's fix PR #511. On 2026-10-19 the
 maintainer replied 「PR 核可清單全部照建議」 ("the PR approval list, all as
@@ -13216,10 +13287,15 @@ changes. A read-only review of these commits found that 90f6a70d kept the
 authority's answer per target and old callee, so a file whose tests call
 distinct old callees still read its module once per test; 88a95270 keeps
 the authority's parts once per file instead, and 81f7b949 pins that and
-that each file has its own kept checks. The timing job keeps its shapes;
-none of them reaches either check, so its numbers time the pass with
+that each file has its own kept checks. The timing job kept its shapes;
+none of them reached either check, so its numbers time the pass with
 these caches but not the two checks themselves. The text this entry
 gained for them is under B15's review as well.
+
+After these approvals the Timing paragraph was filled from the log of run
+39253512334, and b77240d5 removed the timing job. That paragraph, and the
+Residuals and evidence-status sentences changed with it, are under B15's
+review.
 
 ## D-158 (2026-10-19): at the root, a `--task` path the base tree holds only by another name is an engine error, and `doctor` looks up the root on its own timeout (#500)
 
