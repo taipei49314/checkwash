@@ -12480,22 +12480,26 @@ related shape, executed on 0.7.0. B: `pytest.raises(E)` ->
 
 Implementation (lines at this PR):
 
-- A, `ir/diffalign.py`. In the stage-3 loop (`:287-303`), for Python and a
+- A, `ir/diffalign.py`. In the stage-3 loop (`:292-309`), for Python and a
   unit's own assertions (`_match_assertions(..., own=True)`, `:135`), an old
-  assertion first takes `_subject_partner` (`:151-169`): an unused leftover
+  assertion first takes `_subject_partner` (`:151-173`): an unused leftover
   that the fallback may pair with it (`_compatible`, `:146-148`, the rule it
   always had) and that checks the same subject. Among those, the same form
   comes first, then at least the old strength, then span order. With none,
   the old rule picks. The pair stays a fallback pair, so every rule reads it
-  as it reads the swapped order's pair. The pass for assertions reached
+  as it reads the swapped order's pair. With one leftover the two rules
+  agree, so the leftovers' subjects are read only when there are two or
+  more. The pass for assertions reached
   through a helper method (`via`, #306) is unchanged.
-- The subject test is one helper, `ir/subjects.same_subject` (`:62-71`),
-  which #460 can reuse: the same expression (`same_expr`) read in the same
-  context. `subject_of` (`:44-59`) reads the subject written out (`left`,
+- The subject test is one helper, `ir/subjects.same_subject` (`:86-89`),
+  which #460 can reuse: the same expression as parsed (as `same_expr`
+  compares it) read in the same context, through `subject_key`
+  (`:63-83`), which the fallback computes once per leftover. `subject_of`
+  (`:45-60`) reads the subject written out (`left`,
   with the reaching keys of the names it reads at the assertion,
   `Assertion.reaching`) or the recorded resolved subject, and is None for
   an assertion with no subject, an inherited copy or a `via` assertion.
-  `reaching_signature` (`:34-41`) serializes the keys for both.
+  `reaching_signature` (`:35-42`) serializes the keys for both.
 - The Python frontend records the resolved subject as an optional field,
   `Assertion.resolved_subject` (`ir/model.py:130-138`): for a subject that
   is one local name, the expression the binding that reaches the assertion
@@ -12506,9 +12510,9 @@ Implementation (lines at this PR):
   (`:1403-1446`) and the unit's own-scope nodes once per unit, and only
   when an assertion's subject is a name the unit binds; `_resolved_subject`
   (`:1449-1477`) checks the binding that reaches the assertion.
-- B, `ir/diffalign.py:305-323`. After the stage-3 loop, a removed `raises`
-  record takes `_raises_partner` (`:172-179`): an unused `pattern` record
-  that `ir/astutil.same_raises_check` (`:158-171`) reads as the same call
+- B, `ir/diffalign.py:311-329`. After the stage-3 loop, a removed `raises`
+  record takes `_raises_partner` (`:176-183`): an unused `pattern` record
+  that `ir/astutil.same_raises_check` (`:158-170`) reads as the same call
   with `match=` added. `raises_call` (`:122-155`), which #423 can reuse,
   reads the callee, the expected types, the other keywords and `match=`
   from the record's text. The pair is not a fallback pair and records no
@@ -12518,7 +12522,7 @@ Implementation (lines at this PR):
   `subject_normalized.py`); the readers in `normalization.py`,
   `param_input_identity.py` and `subject_replacements.py` pass over it, as
   a raises record has no subject and is no `assert` statement.
-- B2, `detectors/assert_removed.py:12-29`, `:47-49`: a removed bare raises
+- B2, `detectors/assert_removed.py:12-30`, `:46-49`: a removed bare raises
   call in a Python file, where the after side has a newly written `match=`
   call that `same_raises_check` accepts, gets "; the raise is still checked
   by <call>" appended to its message. Fingerprints do not use the message.
