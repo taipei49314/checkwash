@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test moved under `if 1 == 2:` is never defined, so its unit disappears
+origin: #499, ruling R99 (Q1, Q2) - the folder that reads dead arms for rebindings (D-144 Q6 (a)) folds a comparison of literals; by reading, main reported nothing
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+if 1 == 2:
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_adds"}]

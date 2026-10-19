@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test class moved under a module-level `if False:` is never defined, so each of its units disappears
+origin: #499, ruling R99 (Q1, as #484 rules a dead `describe`) - a class whose own statement never runs takes its units with it; by reading, main reported nothing
+=== before: tests/test_total.py ===
+from app import total
+
+
+class TestTotal:
+    def test_adds(self):
+        assert total([1, 2]) == 3
+
+    def test_three(self):
+        assert total([1, 2, 3]) == 6
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+if False:
+    class TestTotal:
+        def test_adds(self):
+            assert total([1, 2]) == 3
+
+        def test_three(self):
+            assert total([1, 2, 3]) == 6
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "TestTotal.test_adds"}, {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "TestTotal.test_three"}]

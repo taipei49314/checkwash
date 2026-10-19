@@ -1,0 +1,28 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a deleted test beside a new test of equal oracle mass under `if False:` is no restructure
+origin: #499, ruling R99 (Q3) - a dead def adds no oracle mass, so D5 holds nothing; by reading, main held the deletion at warn as RESTRUCTURED
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+if False:
+    def test_total_of_three():
+        values = [1, 2, 3]
+        assert total(values) == 6
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_adds"}]

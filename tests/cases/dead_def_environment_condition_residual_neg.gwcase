@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+title: named residual - a test wrapped in a condition the folder cannot decide keeps its unit, though pytest never defines it where the variable is unset
+origin: #499, ruling R99 (Q4) - today's reading kept, as #484 keeps `if (process.env.X)`; #433 is its assertion-level form
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+import os
+
+from app import total
+
+
+if os.environ.get("CHECK_TOTALS"):
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[]

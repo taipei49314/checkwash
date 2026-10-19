@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test moved under a module-level `if False:` is never defined, so its unit disappears
+origin: #499, ruling R99 (Q1, as #484 rules JS/TS) - a def whose own statement never runs is no unit; by reading, main reported nothing
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+if False:
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_adds"}]
