@@ -12505,7 +12505,10 @@ Implementation, in `ir/model.py`, `engine.py` and
   so neither ever counted.
 - Q4 (a). `SNAPSHOT_CODE_COCHANGE` (`detectors/globals_rules.py:22-47`) is
   unchanged: every production-role file the diff changes counts, a new one
-  included, and test logic in any test or conftest file removes it. Beside
+  included, except a file renamed out of a test, conftest, CI, guardrail or
+  snapshot path or out of test collection, which arrives as a synthetic
+  addition and never enters `prod_files_changed` (`engine.py:1379-1384`);
+  and test logic in any test or conftest file removes it. Beside
   a new module, a rewritten golden file now reports both findings; beside a
   new module and a new unrelated test, `EXPECTED_VALUE_CHANGED` alone.
 
@@ -12541,6 +12544,24 @@ Not settled by the ruling, for the owner's decision:
   `docs/integrations.md` §6 describes. The label is escalation policy in
   `gating.py`, which this PR does not touch; renaming it would need its own
   ruling.
+- The honest cost of Q1 (a). A pytest file kept under `golden/`,
+  `expected/` or `__snapshots__/` has the snapshot role and test
+  obligations (#219), so the file-scoped form reads any edit to it as a
+  rewrite. Adding a test there for a brand-new production module used to
+  pass: the module's symbols silenced the form, and the new test unit
+  silenced `SNAPSHOT_CODE_COCHANGE`. Now it blocks with
+  `EXPECTED_VALUE_CHANGED` at high, and the reason above, that nothing in a
+  brand-new file explains the rewrite, is untrue of it: the new module is
+  what the new test exercises. Pinned as current behaviour, not as a
+  judgement of the edit, by
+  `test_a_test_added_for_a_new_module_to_a_pytest_file_under_golden`
+  (`tests/test_issue463_snapshot_added_production.py`), with a control
+  beside a changed existing symbol. Accept the cost under Q1 (a), or give
+  it its own treatment, for example leaving the added-file exclusion out
+  for a snapshot-role file with test obligations; either is the owner's
+  call. By reading and not pinned, a module that an existing loader
+  discovers with no existing file changed (a plugin directory scan) can
+  honestly change a stored output too. The Q5 sweep would count both.
 
 **Residuals**, open by ruling and pinned as current behaviour, not as
 honest edits (row 132): (1) a changed symbol in any existing or deleted
@@ -12562,8 +12583,10 @@ field); an IR without it counts every changed symbol, as before.
 **Release.** The change newly blocks, so the release that ships it names
 the newly blocking shape in its notes: a stored snapshot, golden or
 expected file rewritten beside one or more new Python production modules
-and no other production change that counts. The next release is a minor
-anyway because of #421 (`docs/stability.md:17-22`). No release is
+and no other production change that counts, including the honest edit
+named above (a test added for a new module to a pytest file kept under a
+snapshot directory) unless the owner rules otherwise. The next release is
+a minor anyway because of #421 (`docs/stability.md:17-22`). No release is
 authorized (AGENTS.md rule 5). `docs/KNOWN-ISSUES-next.md` gains a #463
 row.
 
@@ -12605,14 +12628,15 @@ reviewed before merge (`snapshot_new_prod_module_pos` and
 `snapshot_new_prod_module_with_caller_neg`,
 `snapshot_deleted_prod_module_neg`, `snapshot_unrelated_symbol_edit_neg`,
 `snapshot_template_comment_edit_neg` and
-`snapshot_unrelated_symbol_edit_new_test_neg`), and 22 collected items in
+`snapshot_unrelated_symbol_edit_new_test_neg`), and 24 collected items in
 `tests/test_issue463_snapshot_added_production.py`. Not pinned: the E1
-label of the new finding, the rename reading, and `DEPENDENCY_DRIFT`
-beside an added module. By reading, the documented test count becomes
-19504 (19475 + 22 + 7); CI's collection checks it, and other open pull
-requests move it too. `benchmarks/FAILURES.md` was edited by hand to what
-`benchmarks/make_failures.py` produces, by reading the generator.
+label of the new finding, the rename reading, `DEPENDENCY_DRIFT` beside an
+added module, and the plugin-discovery shape. By reading, the documented
+test count becomes 19506 (19475 + 24 + 7); CI's collection checks it,
+and other open pull requests move it too. `benchmarks/FAILURES.md` was
+edited by hand to what `benchmarks/make_failures.py` produces, by reading
+the generator.
 
 The agent wrote this entry in #463's fix PR. It is a draft for the owner's
-approval of its wording, of the rule-2 recommendation and of the open point
-above.
+approval of its wording, of the rule-2 recommendation and of the open
+points above.
