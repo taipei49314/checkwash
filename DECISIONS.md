@@ -12511,17 +12511,15 @@ Implementation, lines at this PR:
   pairing reaches these lines with no count on the before side; the rule,
   its key and its other messages are unchanged. It is the round's one
   detector change, and Q2b says the language-neutral detectors run
-  unchanged, so it is for the owner's approval. Without it the message
-  reads `(None -> 0)` for a table of no rows and `(None -> 1)` for an
-  unknown one, whose evidence is `parametrize cases: None`; if he declines,
-  the hunk is reverted and the two items of
-  `test_a_plain_test_wrapped_in_a_table_reports_the_one_item_it_was` are
-  updated.
+  unchanged, so it was put to the owner, who kept it (below). Without it
+  the message would read `(None -> 0)` for a table of no rows and
+  `(None -> 1)` for an unknown one, whose evidence would be
+  `parametrize cases: None`.
 - Q1c (i), Q3 (a): alignment, D5 and `gating.py` are unchanged. Q2c (b):
   `describe.each` is a block, as before; its rows are not read.
 
-Readings the ruling leaves to the implementation, for the owner's
-approval:
+Readings the ruling leaves to the implementation; the owner approved all
+eight as written (below):
 
 1. **Column ids.** `#0`, `#1`, ... by an array row's position; `#key` by
    an object row's key or a template's heading. A key or heading must be a
@@ -12621,8 +12619,8 @@ the acceptance at the foot of that page does not cover it; and v0.8.0 has
 the same gap.
 The README sentence and the `docs/stability.md` rewording were not made
 either; this PR makes both, worded for main after the fix and naming the
-v0.8.0 gap. The owner decides whether they and the row stay here or move
-into the separate docs-only PR.
+v0.8.0 gap. The owner chose to keep them and the row in this PR, with no
+separate docs-only PR (below).
 
 **Costs, by reading; the sweep counts them.** New blocks in a test-only
 change: an expected cell corrected (as in Python); an input cell changed
@@ -12658,7 +12656,8 @@ two literals and blocks. On main the table was no unit, so the deleted
 test was TEST_DISABLED. A deleted plain test already pairs with a new
 plain test this way on main; keeping span-order pairing (Q1c (i)) makes
 tables partners too. Row 137 and `docs/KNOWN-ISSUES-next.md` state it; it
-is not pinned.
+is not pinned. The owner accepted it as a disclosed cost, for the sweep
+and R29's lists to count (below).
 
 **Residuals** are listed in THREATMODEL row 137 and
 `docs/KNOWN-ISSUES-next.md`. The two P2 follow-ups the ruling names, a JS
@@ -12668,7 +12667,11 @@ consolidated ruling of 2026-10-19 (#428 issuecomment-6261646666) records
 them on #428 and in KNOWN-ISSUES instead (the `describe.each` rows also as
 row 108's residual), and an issue opens when a fix is scheduled. That
 replaces the ruling's "Deferred to a P2 follow-up issue" (Q2c) and
-"becomes a P2 follow-up" (Q3).
+"becomes a P2 follow-up" (Q3). Two shapes the review found stay residuals,
+with no issue, as the owner chose (below): the TypeScript
+`test.each<Row>(...)` form, which is no unit (row 137, residual 10), and
+the argument of `toContain` or `toMatch`, which records no column
+(residual 5).
 
 **D-073.** This supersedes, in D-073 reading 1, the clause that the unit
 scan does not read a `.each` table: a `test`/`it` table is now a scanned
@@ -12733,7 +12736,7 @@ product code ran; CI runs the tests. Added: fourteen `.gwcase` fixtures
 `js_test_wrapped_in_unknown_table_pos`; the fold cost
 `js_table_fold_altered_value_pos`; the controls `js_table_row_added_neg`,
 `js_table_reformatted_neg`, `js_table_keyed_rows_reordered_neg` and
-`js_table_parameters_renamed_neg`), labels reviewed before merge, and 74
+`js_table_parameters_renamed_neg`), labels the owner approved, and 74
 collected items in `tests/test_issue428_js_tables.py`, counted from its
 parametrize lists. By reading, the documented test count becomes 19563
 (19475 + 74 + 14); CI's collection checks it. A review of the branch
@@ -12746,6 +12749,24 @@ bare-name table (fixed by `_ConstReads`, not pinned by a timing test); and
 three readings that said more or less than the code does (3, 5 and 7,
 corrected above). Each finding was checked against the code before use.
 
-The agent wrote this entry in #428's fix PR, for the owner's approval of
-its wording, the eight readings, the Q4 placement and the
-`detectors/test_disabled.py` message change.
+The agent wrote this entry in #428's fix PR #525. The owner approved it
+on 2026-10-19: 「PR 核可清單全部照建議」, "the PR approval list, all as
+recommended". The reply was a button whose text the assistant wrote. It
+answers the agent's list of that day, which asked, for this PR, items A60
+to A66, each with a recommended answer that the reply adopts: the wording
+of the SPEC (3a306370, 47380c24), THREATMODEL (62ce4c85, 48f021a9, with
+the hand edit of `benchmarks/FAILURES.md`) and D-152 (a1527e85, 9d1d2c0f)
+commits, as committed (A60); the labels of the fourteen `.gwcase`
+fixtures listed above (A61); the eight readings (A62); keeping the
+`detectors/test_disabled.py` change, which touches only the message and
+evidence text, as a departure from Q2b (A63); for Q4, keeping the README
+sentence, the `docs/stability.md` rewording and the three
+KNOWN-ISSUES-next rows in this PR (e9e1cfc4, 2a213371), approving them,
+and adding the v0.7.0 row here as a copy of v0.8.0's (A64); accepting
+the new block-to-pass as a disclosed cost, not pinned, for the sweep and
+R29's lists to count (A65); and keeping the TypeScript
+`test.each<Row>(...)` form and the `toContain`/`toMatch` argument as row
+137's residuals 10 and 5, with no issue (A66). The v0.7.0 row
+(da7f5d55) was written after the reply. Its copy of v0.8.0's row is what
+A64 approved; its two added sentences, on the report's date and on
+v0.8.0, were not in the list the owner answered.
