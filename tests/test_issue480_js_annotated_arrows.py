@@ -293,6 +293,7 @@ HELPER = "function check(value) {\n  t.is(value, 4);\n}\n"
     pytest.param('import { test } from "node:test";\n', "context", [], id="node-test"),
     pytest.param("", "context", [], id="no runner"),
     pytest.param('const test = require("tape");\n', "context", [], id="tape"),
+    pytest.param('const runner = loader.require("tap");\n', "context", [], id="a member named require"),
 ])
 def test_an_undeclared_t_follows_the_runners_the_file_names(head, kind, found):
     """Where only AVA or tap is named, `t` is no node:test context, and `t.is`

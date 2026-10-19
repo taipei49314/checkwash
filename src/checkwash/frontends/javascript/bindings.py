@@ -375,7 +375,8 @@ class Bindings:
         coverage candidate instead of being dropped. It gets no AVA or tap
         authority by its name either, which would go beyond D-118 reading 3.
         A specifier counts after `from` or `import`, and as the only argument
-        of `require(...)` or `import(...)`.
+        of `require(...)` or `import(...)`, but not of a method so named
+        (`loader.require("tap")`, `this.#import("ava")`).
         """
         runners = set()
         for i, (token, _start, _end) in enumerate(self.tokens):
@@ -383,7 +384,8 @@ class Bindings:
                 continue
             before = self.token(i - 1)
             if before in {"from", "import"} or (
-                    before == "(" and self.token(i - 2) in {"require", "import"} and self.token(i + 1) == ")"):
+                    before == "(" and self.token(i - 2) in {"require", "import"} and self.token(i + 1) == ")"
+                    and self.token(i - 3) not in {".", "?.", "#"}):
                 runners.add(_T_RUNNERS[token[1:-1]])
         if not runners or "context" in runners:
             return Value("context"), frozenset({"context"})
