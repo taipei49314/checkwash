@@ -15366,23 +15366,23 @@ mass and the D10 survivor credit.
 How each answer is implemented, in `frontends/python/rebindings.py` (lines
 at this PR):
 
-- Q2, where the reading lives. `_Judge.never_runs` (`:670-677`) asks
+- Q2, where the reading lives. `_Judge.never_runs` (`:695-702`) asks
   whether an arm on the def's or class's own path is one `entry`
-  (`:571`) reads as `_DEAD`: the arms where a later binding already binds
+  (`:596`) reads as `_DEAD`: the arms where a later binding already binds
   nothing (D-144 Q6 (a)). So one folder decides what a binding does to a
   def and whether the def itself runs, and the frontend reads both through
   the `dropped` flag it already reads for #424 (`frontend.py:4789`,
   `:4820`).
-- Q1, the unit model. `drop_dead` (`:679-699`) marks such a def or class
+- Q1, the unit model. `drop_dead` (`:704-724`) marks such a def or class
   `dropped`: it is no unit, and a class takes its units with it, since
   every def and class in its body has the dead arm on its path and the
   frontend collects nothing in a dropped class. Its loss is a
   disappearance, `TEST_DISABLED` "test unit disappeared", with no marker
-  and under the key a deletion has. `run` (`:737-746`) does not judge a
+  and under the key a deletion has. `run` (`:762-771`) does not judge a
   dead def as one a later binding replaces. `final_bindings` used to stop
   when no name was bound twice; it now also reads a module in which a def
   or class sits under an `if`, a loop, a `try` or a `match`
-  (`_ARMED`, `:77`; `:927-931`), the only places a dead arm can be.
+  (`_ARMED`, `:82`; `:952-956`), the only places a dead arm can be.
 - Q3, credits. No rule text changes: D2's move credits read live added
   units (`engine.py:1650-1680`), D5's restructure mass and split/rename
   budget read the units of the file (`gating.py:480-567`), and D10's
@@ -15396,13 +15396,29 @@ at this PR):
    #499 names they include the `else` of an `if` whose condition folds to
    true, `if False and x:`, the body of a `while` whose condition folds to
    false, and the handlers of a `try` whose body cannot raise, as
-   `_Walk.quiet` (`:263-295`) reads it: `pass`, a constant expression
+   `_Walk.quiet` (`:287-320`) reads it: `pass`, a constant expression
    statement (a docstring among them), a constant assigned to plain names,
    an annotated name with no value or a constant one whose annotation is a
-   constant or not evaluated, and an undecorated def or class that cannot
-   raise. That is D-144's strict list and two shapes its text does not
+   constant or not evaluated, an undecorated def whose defaults and
+   annotations are constants (or not evaluated), and an undecorated class
+   with no bases or keywords whose body is made of these and binds no
+   dunder name. That is D-144's strict list, two shapes its text does not
    name, the constant expression statement and the annotated name, which
-   the code has read since D-144. A loop's `else`, a `with`
+   the code has read since D-144, and one narrowing this PR adds after
+   review. Creating a class reads some dunder names from its namespace
+   and raises on a bad value: `__slots__ = 1` and `__qualname__ = 1` raise
+   `TypeError`, so does `__classcell__ = 1`, and `__slots__ = "a"` beside
+   `a = 1` raises `ValueError`. So a class whose body binds any dunder
+   name, by an assignment, an annotation, a def or a class statement
+   (`_binds_dunder`, `:155-171`), is read as one that may raise. The
+   narrowing applies wherever D-144 asks whether a try-body statement can
+   raise: such a class after a try-body def no longer makes a handler def
+   of that name exclusive with it; a rebinding in that try's handler is
+   judged under the handler's guard rather than as binding nothing; and
+   one in its `else`, or later in its body, is undecided rather than
+   certain. By reading, no expectation on main moves (Rule 2, below).
+   `dead_def_handler_of_raising_class_pos` pins a test in such a handler
+   as live. A loop's `else`, a `with`
    body, a `try` body, `else` and `finally`, and a `match` on a subject
    that is not a literal stay live. The folder is `_static_truth` with no
    fixture or class-attribute resolution, as D-144 reads module and class
@@ -15427,23 +15443,34 @@ folder cannot decide (`if os.environ.get("X"):`, `if TYPE_CHECKING:`), a
 live unit with no marker, as #484 keeps `if (process.env.X)` (R99 Q4); its
 assertion-level form is #433, now listed in #504; a name bound to a
 constant (`ENABLED = False`, then `if ENABLED:`); a def after a
-module-level `raise` (row 135's residual) or `sys.exit()`; and,
+module-level `raise` (row 135's residual) or `sys.exit()`;
 under 424.Q9, a dead class statement of a base's name, between that base
 and its subclass, which still counts as the name's binding when the
-subclass's bases are resolved, as on main.
+subclass's bases are resolved, as on main; and a dead class statement
+that `_Walk.resolve` (`:570-581`) still takes as the class a module-level
+`Cls.attr = ...`, `del Cls.attr`, `setattr` or `delattr` names, when it
+is the latest class statement of that name before it, as on main.
+`resolve` runs before any deadness is read. So a dead
+`class TestTotal: pass` placed between a live `TestTotal` and
+`TestTotal.test_adds = None` takes that binding, and the live class's
+unit stays, with zero findings, where without it row 135's shape blocks.
+The module docstring names both class forms.
 
 **Unchanged.** The file-level reading of broad handlers
 (`BROAD_EXCEPT_ADDED`, `broad_handlers` and `swallowing_handlers`) still
 walks the whole module, dead code included, as #484's ruling keeps the
 JS/TS catch evidence; only units move.
 
-**Cost.** Three edits that main reported now pass, because code that
+**Cost.** Four edits that main reported now pass, because code that
 never runs is not judged, as #484's ruling reads it for JS/TS: an edit to a
 test that is dead on both sides; deleting a test that never ran (main read
-it as a live test disappearing, at high); and an edit made while a test is
+it as a live test disappearing, at high); an edit made while a test is
 taken out of a dead arm, which reads as a new test, so its assertions are
 compared with nothing (main paired the two sides by name and reported the
-edit). A test moved under a dead arm on
+edit); and, by reading 2, an edit to a base class's test method that a
+later `del` of the base removes, when the only subclass that still ran it
+on main is dead (main kept the method as a unit and reported the edit;
+pytest collects it on neither side). A test moved under a dead arm on
 purpose, a disable whatever the reason, now blocks.
 
 **Rule 2.** The ruling approves no change to an existing expectation. A
@@ -15455,11 +15482,18 @@ never run) found no def or class at module or class level under a dead
 arm whose reading this changes. `tests/test_issue424_rebinding.py`'s
 handler cases use a `try` body that can raise, and
 `tests/test_issue344_walk_once.py`'s are docstring checks that collect no
-unit. By reading, none moves, and none was changed. Sources built at run
-time are not all covered by the scan; this PR's CI is the check, and if an
-existing expectation moves, the round stops and asks the owner.
+unit. By reading, none moves, and none was changed. For reading 1's
+dunder narrowing, a read-only grep of `tests/` (fixtures, test sources,
+`gates`, `data`, `e2e`), `benchmarks/`, `examples` and
+`src/checkwash/demo_cases` found no source on main with a `try` whose
+body holds a class with no bases that binds a dunder name: the `try`
+statements in the test sources' strings sit in function bodies, which the
+reading never enters, or hold no class, or only classes with bases.
+Sources built at run time are not all covered by the scan; this PR's CI
+is the check, and if an existing expectation moves, the round stops and
+asks the owner.
 
-**Tests.** Fourteen new `.gwcase` fixtures, whose labels are listed for the
+**Tests.** Fifteen new `.gwcase` fixtures, whose labels are listed for the
 owner. Positives, `TEST_DISABLED` high with `NO_PROD_CHANGE_IN_DIFF`:
 `dead_def_if_false_pos` (the issue's reproduction),
 `dead_def_method_if_false_pos`, `dead_def_class_if_false_pos` (two
@@ -15471,20 +15505,26 @@ units), `dead_def_if_not_true_pos`, `dead_def_if_compare_pos`,
 `dead_def_if_true_neg` and `dead_def_taken_out_of_if_false_neg`. The named
 residual, zero findings: `dead_def_environment_condition_residual_neg`.
 The new reading, zero findings: `dead_def_weakened_on_both_sides_neg`.
-Each positive keeps a live test beside the dead one. Not one carries
+A guard on reading 1's narrowing, `ASSERT_WEAKENED` high with
+`NO_PROD_CHANGE_IN_DIFF`: `dead_def_handler_of_raising_class_pos`, an
+assertion weakened in a test in the handler of a `try` whose body
+creates a class with `__slots__ = 1`. Each `TEST_DISABLED` positive keeps
+a live test beside the dead one. Not one fixture carries
 `bypass:` in this PR (R100, above). `tests/test_issue499_dead_defs.py`
 adds 37 collected items, counted from its parametrize lists: 13 dead arms
 and an async def, 10 live or undecided arms, 3 class-body arms, 2 dead
 classes, two pins on what a dead def binds (an earlier def keeps its unit,
 and a dead subclass keeps no deleted base running), a control (a later def
 is the unit, as on main), and five engine pins (the key a deletion has,
-the three quiet edits, and an assertion moved into a dead def, which stays
-`ASSERT_REMOVED` at high). By reading, the live and undecided arms, the
-control and three of the negative fixtures (all but
-`dead_def_weakened_on_both_sides_neg`) pass on main as well; they guard the
-fix's edges. Together this adds 51 collected items (14 + 37): on this
+the first three quiet edits under **Cost**, and an assertion moved into a
+dead def, which stays `ASSERT_REMOVED` at high; the fourth quiet edit
+follows from the dead-subclass pin). By reading, the live and undecided arms, the
+control, three of the negative fixtures (all but
+`dead_def_weakened_on_both_sides_neg`) and
+`dead_def_handler_of_raising_class_pos` pass on main as well; they guard
+the fix's edges. Together this adds 52 collected items (15 + 37): on this
 PR's base, integration batch 2 at 9c19c344, the documented test count goes
-from 20083 to 20134; CI's collection checks it. Nothing under `tests/gates`
+from 20083 to 20135; CI's collection checks it. Nothing under `tests/gates`
 changes.
 
 **Fingerprints.** A finding keyed by a dead def's unit goes. In a file
