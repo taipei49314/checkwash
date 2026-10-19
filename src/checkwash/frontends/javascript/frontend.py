@@ -1436,12 +1436,38 @@ def _callback_receivers(bindings: Bindings, span: tuple[int, int],
     return frozenset(names)
 
 
+def _splits_cleanly(bindings: Bindings, first: int, last: int) -> bool:
+    """Do the commas between tokens `first` and `last` split where JavaScript splits them?
+
+    `Bindings._parts` splits at commas outside brackets, and a TypeScript
+    type argument is no bracket to it: `(m: Map<string, number>, a, want)`
+    would read as four parameters and put `a` on the third column. So a
+    comma outside brackets after a `<` that no `>` has closed means the list
+    or pattern is not split (#428). A `<` in a default (`a = x < y, b`)
+    reads the same way, which only reads less.
+    """
+    depth = 0
+    while first < last:
+        token = bindings.token(first)
+        if token == "<":
+            depth += 1
+        elif token == ">" and depth:
+            depth -= 1
+        elif token == "," and depth:
+            return False
+        elif token in {"(", "[", "{"} and first in bindings.pairs:
+            first = bindings.pairs[first]
+        first += 1
+    return True
+
+
 def _parameter_parts(bindings: Bindings, span: tuple[int, int]) -> list[tuple[int, int]] | None:
     """The token range of each parameter of the inline callback at `span`, or None.
 
     Read as `_callback_body` reads the callback: an arrow with a parameter
     list or one bare parameter, or a `function` expression. Commas inside a
-    nested pattern or a default do not split.
+    nested pattern or a default do not split. A list whose commas a type
+    argument holds (`m: Map<string, number>`) is None (`_splits_cleanly`).
     """
     starts = bindings.token_starts
     first, last = bisect_left(starts, span[0]), bisect_left(starts, span[1])
@@ -1460,6 +1486,8 @@ def _parameter_parts(bindings: Bindings, span: tuple[int, int]) -> list[tuple[in
     closing = bindings.pairs[first]
     if closing == first + 1:
         return []
+    if not _splits_cleanly(bindings, first + 1, closing):
+        return None
     parts = bindings._parts(first + 1, closing)
     if parts and parts[-1][0] == parts[-1][1]:
         parts.pop()  # a trailing comma
@@ -2582,7 +2610,8 @@ def _parameter_columns(bindings: Bindings, span: tuple[int, int], names: tuple[s
     columns by key. A table whose rows are passed whole as one cell gives
     that cell to the first parameter. A parameter that is not one plain
     name, and an object pattern's nested, quoted or computed property or
-    rest element, take no column.
+    rest element, take no column. A parameter list or pattern whose commas
+    a type argument holds gives no column at all (`_splits_cleanly`).
     """
     parameters = _parameter_parts(bindings, span)
     if not parameters:
@@ -2600,6 +2629,8 @@ def _parameter_columns(bindings: Bindings, span: tuple[int, int], names: tuple[s
         return {name: names[0]} if name is not None else {}
     opening = bindings.token(first)
     if first not in bindings.pairs or opening != ("[" if shape == "positional" else "{"):
+        return {}
+    if not _splits_cleanly(bindings, first + 1, bindings.pairs[first]):
         return {}
     for index, (start, end) in enumerate(bindings._parts(first + 1, bindings.pairs[first])):
         if start == end:

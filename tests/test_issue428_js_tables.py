@@ -196,6 +196,10 @@ def test_rows_that_cannot_be_counted_are_unknown(source):
                  '  expect(add(row.a, 0)).toBe(row.expected);\n});\n', (), (), id="a-member-is-not-followed"),
     pytest.param('test.each([[1, 2]])("t", (a: number, b: number) => {\n  expect(add(a, 0)).toBe(b);\n});\n',
                  ("#1",), ("#0",), id="typed-parameters"),
+    # A comma inside a type argument would shift `a` onto the third column
+    # and drop `want`, so the list gives no column at all.
+    pytest.param('test.each([[1, 2, 3]])("t", (m: Map<string, number>, a: number, want: number) => {\n'
+                 '  expect(add(a, 0)).toBe(want);\n});\n', (), (), id="a-type-argument-holds-a-comma"),
 ])
 def test_an_assertion_records_the_columns_it_names_directly(source, expected, subject):
     (assertion,) = _table(source).assertions
