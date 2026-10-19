@@ -12688,18 +12688,30 @@ collected items in `tests/test_issue434_subject_pairing.py`, counted from its
 parametrize lists; no existing test changed. By reading, the documented
 test count becomes 19559 (19475 + 71 + 13); CI's collection checks it.
 
-The agent wrote this entry in #434's fix PR #527. The maintainer approved
-it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
-recommended"), in reply to the agent's list (items A67 to A71) asking for
-approval of this PR's SPEC §3 and §4 (4472dd6e), THREATMODEL rows 85, 84b
-and 119 (17f90195, 3048e83a, with `benchmarks/FAILURES.md`, 45028942),
-D-156 (3860dfd1, f746b599, b041e17c, a9d7095e) and
-`docs/assertion-coverage.md` (b634bd30, edaa6971) text, with D-156's
-release and measurement paragraphs changed before merge to cite R1 and R2
-(c41cdb17); the labels of the thirteen fixtures above; readings 1-11;
+The agent wrote this entry in #434's fix PR #527. On 2026-10-19 the
+maintainer approved items A67 to A71 of the agent's approval list:
+「PR 核可清單全部照建議」 ("the PR approval list, all as recommended").
+Those items approve this PR's SPEC §3 and §4 (4472dd6e), THREATMODEL rows
+85, 84b and 119 (17f90195, 3048e83a, with `benchmarks/FAILURES.md`,
+45028942), D-156 (3860dfd1, f746b599, b041e17c, a9d7095e) and
+`docs/assertion-coverage.md` (b634bd30, edaa6971) text as committed, with
+D-156's release and measurement paragraphs to be changed before merge to
+cite R1 and R2; the labels of the thirteen fixtures above; readings 1-11;
 keeping row 85 Closed with its dogfooded shape as the first residual, not
 pinned and with no issue; and two additions the ruling did not ask for,
 the credit to @talhayme (the fixture header, `benchmarks/external-credits.json`
 and the FAILURES table), dated 2026-10-19, and #457's known limit written
 into row 84b rather than a new row. The reply was a button whose text the
 assistant wrote.
+
+The two commits written after that reply were approved the same day:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as recommended"),
+in reply to the agent's round-2 list (items B1 to B25). Item B3 approves,
+as one, the maintainer text the agent wrote while applying approved
+options; for this entry that is the release and measurement paragraphs as
+changed to cite R1 and R2 (c41cdb17) and the approval record above
+(7117ee40). Item B9 approves adding a sentence to the measurement
+paragraph that cites R3, as D-155 does; it was written after that reply
+(efd130f5). This paragraph, and the rewording of the one above to say
+only what items A67 to A71 say, were also written after that reply. That
+reply, too, was a button whose text the assistant wrote.
