@@ -11,6 +11,7 @@ import hashlib
 import pytest
 
 import checkwash.findings as findings_module
+from checkwash.allowlist import AllowEntry
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import FileChange, analyze
@@ -107,6 +108,33 @@ def test_new_expected_value_rule_uses_the_complete_before_assertion(monkeypatch)
     finding, = [finding for finding in findings if finding.rule == "EXPECTED_VALUE_CHANGED"]
     _refines(finding, identities, "EXPECTED_VALUE_CHANGED", "expect(subject()).toBe(42)")
     assert finding.before.text == "expect(subject()).toBe(42)"
+
+
+def test_an_exemption_for_one_jest_rewrite_does_not_allow_its_sibling():
+    """#421's JS sibling (R46): `toBe(1)` and `toBe(2)` on one subject are two approvals.
+
+    Through v0.8.0 a Jest or Vitest assertion was keyed by its text through
+    the matcher's `(`, so an exemption recorded for `toBe(42)` -> `toBe(1)`
+    also allowed `toBe(42)` -> `toBe(2)` on the same subject in the same
+    test. The content-bound key binds the complete after text (#421 Q2 (b)).
+    """
+    def run(after, allow=()):
+        _ir, findings, verdict = analyze(
+            [FileChange(_PATH, "modified", _source("expect(subject()).toBe(42);").encode(), after.encode())],
+            Config(), Contract(), list(allow), datetime.date(2026, 9, 23),
+        )
+        hit, = [finding for finding in findings if finding.rule == "EXPECTED_VALUE_CHANGED"]
+        return hit, verdict
+
+    reviewed, sibling = _source("expect(subject()).toBe(1);"), _source("expect(subject()).toBe(2);")
+    first, _verdict = run(reviewed)
+    allow = [AllowEntry(first.fingerprint, rule="EXPECTED_VALUE_CHANGED", reason="reviewed exact change",
+                        author="reviewer", created="2026-09-20", expires="2026-12-01")]
+    exempt, _verdict = run(reviewed, allow)
+    assert exempt.allowlisted and "ALLOWLISTED" in exempt.deescalators
+    later, verdict = run(sibling, allow)
+    assert later.fingerprint != first.fingerprint
+    assert not later.allowlisted and verdict == "block"
 
 
 def test_node_finding_identity_remains_the_complete_assertion(monkeypatch):
