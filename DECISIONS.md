@@ -10748,37 +10748,7 @@ POLICY `checkwash-pju-sweep` (T-546), never on LAPTOP-16NUA5I8:
 6. Gates: the PR's CI, with only the eleven authorised moves; any red leg or
    natural-arm block stops the round.
 7. Report-only: Q2 (b) and (c), Q8 for `ASSERT_SUBSTITUTED` and for
-   `*_PATCHES_*`, Q4's `fail_on = "warn"` and `oracle_freeze: true`, and
-   `cf-js131` (below).
-
-**Arm 7's `cf-js131`** (owner ruling 2026-10-19, R30; added while the
-preregistration is still DRAFT and before any arm has run). Row 131 stays
-with #212, and this arm prices it. `cf-js131` is a report-only engine
-variant that also refuses opaque-change evidence for the five rules of
-`OPAQUE_REFUSED_RULES` in JS/TS test files. It runs on `javascript` (#212's
-1,800) against its base, the newest engine in the sweep (the release
-candidate if there is one), which the manifest names. Like the other
-report-only variants it is written, reviewed and approved with the
-manifest, and never merged; if it is not written by dispatch, it is NOT_RUN
-and #212 stays open. Each pass-to-block it adds is adjudicated by two
-blind raters, as in D-048, named once the count is known and before anyone
-sees a label (owner ruling 2026-10-19, R21). Its line, registered before
-it runs:
-- At most 5 false, and at most 5 false plus unclear, zero new blocks
-  included: refusing opaque evidence in JS/TS tests becomes a fix, and a
-  fix issue is opened. That fix changes the expectation of
-  `opaque_residual_js_assert_weakened_template_neg` and needs its own
-  rule-2 approval.
-- More than 5 false: JS/TS tests keep the evidence, no issue is opened, and
-  row 131 becomes Open, by ruling, with the measured N/1,800 and the false
-  count. Adjudication may stop at the sixth false block.
-- At most 5 false but more than 5 false plus unclear: the result goes to
-  the owner.
-
-Either way the result is recorded in this entry's Sweep section and in
-row 131, both maintainer text for the owner's approval, and #212 then
-closes. The lab file cited above does not hold this arm yet; it is added
-there before the owner approves the preregistration.
+   `*_PATCHES_*`, and Q4's `fail_on = "warn"` and `oracle_freeze: true`.
 
 **Residuals.** Row 93: Route A. Row 130: Route B for the expectation family,
 `ASSERT_SUBSTITUTED` and `*_PATCHES_*`. Row 131: Route B for JS/TS tests,
