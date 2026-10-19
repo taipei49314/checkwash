@@ -69,7 +69,7 @@ and the rule's context, and their old keys are retired the same way. Each
 reviewed rewrite needs its own entry. In the same minor (#512), TEST_DISABLED's
 key binds what each disabling changed (an added skip's text and guard, the
 guard before and after, which parametrize rows went, a removed test's complete
-assertions, the focus call), and its old keys are retired too.
+assertions, a file-level focus's spelling), and its old keys are retired too.
 EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
 before-only keys for now.
 

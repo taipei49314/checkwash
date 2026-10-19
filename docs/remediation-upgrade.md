@@ -104,9 +104,10 @@ and the complete 64-character digest (a file-level focus under the unit
 `<file>`). The key binds what kind of change it is and what changed: an
 added marker's text and its guard, the guard before and after, which rows
 were deleted or newly disabled and the live counts, a removed unit's
-complete assertions, or the focus call. Reformatting outside string literals
-and moving the lines keep the key. Which markers pair, and how many findings
-a change gives, do not change.
+complete assertions, or a file-level focus's spelling (`describe.only`,
+`fdescribe` or an `only` option, not the block it is on). Reformatting
+outside string literals and moving the lines keep the key. Which markers
+pair, and how many findings a change gives, do not change.
 
 Legacy TEST_DISABLED keys are retired the same way: kept as records, never
 honoured, refused by `allow` (exit 2, naming #512), and reported by doctor

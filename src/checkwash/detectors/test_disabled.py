@@ -366,7 +366,9 @@ def detect(ir: IR) -> list[Finding]:
                     before=None,
                     after=Evidence(text=focus.text, span=focus.span),
                     # File level: keyed under `<file>`, as the legacy key was,
-                    # and bound to the focus call's text (#512 Q2).
+                    # and bound to the focus as the frontend records it: its
+                    # callee as written (`describe.only`, `fdescribe`) or its
+                    # `only` option's text, not its title (#512 Q2; D-169).
                     fingerprint=_key(file.path, "<file>", focus.name, SHAPE_MARKER_ADDED, after=focus.text),
                     shape=SHAPE_MARKER_ADDED,
                 )
