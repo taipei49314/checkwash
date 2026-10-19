@@ -1416,8 +1416,8 @@ def _dead_code(text: str, code: bytearray, bindings: Bindings, declarations: lis
     The walker reads the module's own statements, the block callback of
     every `describe`, `suite` and `context` declaration (their `x`/`f`
     forms, modifiers and tables included), and the callback of a test that
-    registers a test of its own (node:test's and tap's `t.test`), even one
-    that asserts nothing. A literal-decided `&&`/`||` statement drops a
+    registers a named test or a block (node:test's and tap's `t.test`), even
+    one that asserts nothing. A literal-decided `&&`/`||` statement drops a
     declaration as it drops an assertion: the declaration's call, from its
     callee (a receiver such as `t` included) to its `)`, must be the
     statement's last operand. A declaration whose call was recovered is not

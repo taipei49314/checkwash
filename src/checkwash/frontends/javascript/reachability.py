@@ -134,11 +134,11 @@ _STATEMENT_KEYWORDS = frozenset({
 # pass, no backtracking. A comment between `with` and `(` is caught on the tokens.
 _SCOPE_CHANGERS = re.compile(r"(?<![\w$])(?:with[\s\N{ZERO WIDTH NO-BREAK SPACE}]*\(|eval(?![\w$]))")
 # Tokens after which `function` can only begin an expression, a line break
-# between them or not (#484, D-148 reading 10 as D-165 amends it): an opening
-# bracket, a comma, a spread, and an operator that waits for its operand. Not
-# `:`, which also ends a label or a `case` (`l: function f() {}` declares
-# one), and not `)`, `]`, `}`, a name or a literal, after which a statement
-# may start.
+# between them or not (#484, D-148 reading 10 as D-165 amends it): `(`, `[`, a
+# comma and an operator that waits for its operand. Not `:`, which also ends a
+# label or a `case` (`l: function f() {}` declares one), not `>`, which may
+# close a type (`>>` is two `>` tokens), nor `{`, `)`, `]`, `}`, a name or a
+# literal, after which a statement may start. A spread's `...` is three `.`.
 _EXPRESSION_BEFORE = (_UNFINISHED - {":"}) | {
     "(", "[", "...", "~", "&&=", "||=", "??=", "**=", "<<=", ">>=", ">>>=",
 }
@@ -518,18 +518,18 @@ class Reachability:
 
         A declaration needs a name, so `function () {}` and `function* () {}`
         declare nothing. Neither does a `function` that can only begin an
-        expression: after a `.`, `?.` or `#` (a property), after an opening
-        bracket, a comma, a spread or an operator that waits for its operand
+        expression: after a `.`, `?.` or `#` (a property, or a spread's last
+        `.`), after `(` or `[`, a comma or an operator that waits for its operand
         (`it("x", function named() {})`, `const f = function g() {}`), or
         after `return`, `throw`, `yield`, `await`, `void` or a prefix `!` on
         the same line. Anything else reads as a declaration: first in a
-        statement, after a label's or a `case`'s `:` (`l: function f() {}`),
-        after `)` (`if (x) function f() {}`), `]` or `}`, after an operand at
-        a line break, after a template or regular expression, which the
-        tokens omit, so the token before it is not the one JavaScript reads
-        (`` const s = `x` `` then a declaration on the next line), and after a
-        `.` that ends a number (`x = 1.` then one on the next line). An
-        `async` right before it on its line is read past.
+        statement, after `{` or any `:` (a label's, a `case`'s, a property's),
+        after `)` (`if (x) function f() {}`), `]`, `}` or `>` (`>>` is two `>`),
+        after an operand at a line break, after a template or regular
+        expression, which the tokens omit, so the token before it is not the
+        one JavaScript reads (`` const s = `x` `` then a declaration on the next
+        line), and after a `.` that ends a number (`x = 1.` then one on the
+        next line). An `async` right before it on its line is read past.
         """
         following = index + 1
         if self.token(following) == "*":
@@ -800,7 +800,7 @@ class Reachability:
         """A static `import` declaration at the module's top level whose end the walk proves (#484).
 
         D-148 reading 7, as D-165 amends it. `import "m"`, and `import`
-        followed by names, `*`, `as`, commas and a braced list of names,
+        followed by names, `*`, `as`, commas and braced lists of names,
         strings and commas, then `from` and a string: `import x from "m"`,
         `import { a, b as c } from "m"`, `import * as ns from "m"`,
         `import x, { a } from "m"`, TypeScript's `import type { T } from "m"`.
