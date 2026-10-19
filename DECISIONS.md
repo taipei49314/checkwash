@@ -12652,20 +12652,29 @@ escalators and de-escalators are outside `make_fingerprint` (D-141).
 `--emit-ir` gains `UnitSide.fixture_producers` and `Assertion.fixture_reads`,
 both optional, so IR_VERSION stays 2 (`docs/stability.md:104`).
 
-**Release.** v0.8.0 does not include this. No release is authorized
-(AGENTS.md rule 5). `docs/KNOWN-ISSUES-next.md` has a #471 row, and
+**Release.** v0.8.0 does not include this. The owner put #471 in
+v0.9.0's scope on 2026-10-19 (consolidated ruling, #419
+issuecomment-6261642679, R1), so this fix merges before the combined
+sweep's manifest is frozen. No release is authorized (AGENTS.md rule 5).
+`docs/KNOWN-ISSUES-next.md` has a #471 row, and
 `docs/assertion-coverage.md` a section.
 
 **Measurement.** Not measured yet. Pre-registered here, before any engine
-runs, as D-141 did: the standard set (1,800) and D-088's sets are rerun
-before and after where the owner approves, as a checkwash-lab-declared run,
-on LAPTOP-01AGNPJU only under EC POLICY `checkwash-pju-sweep` (T-546) with
-the frozen manifest and engine commits approved first, otherwise on the
-pool. Every verdict that moves is named and adjudicated; a move judged to
-lose a spec-correct block stops the round. Report-only arms pricing the
-alternatives (Q1 (b), Q2 (b), Q3 (a), Q4 (d)) need engine variants that
-this PR does not build. The perf gate (D-007) runs in CI; by reading, a
-unit with no parameter reads nothing new, and the gate's modules have none.
+runs, as D-141 did. Under the same ruling, this fix is measured in the
+combined sweep's one run (R1, R2), where its merge gets its own
+before/after pair in the chain: the standard set (1,800) and D-088's sets,
+before and after. The issue-acceptance batches run on LAPTOP-01AGNPJU
+under EC POLICY `checkwash-pju-sweep` (T-546), as a checkwash-lab-declared
+run, after R5's two approval steps (the frozen manifest and engine commits
+approved first); the v0.8.0-to-RC comparisons that gate the tag run on the
+EC pool (R3). Every verdict that moves is named and adjudicated; a move
+judged to lose a spec-correct block stops the round. The analysis's §4.4
+report-only arms pricing the alternatives (Q1 (b), Q2 (b), Q3 (a),
+Q4 (d)) need engine variants that this PR does not build. They run in the
+same sweep as never-merged counterfactual engine commits on checkwash-lab,
+pinned by SHA and tree, which T-546 covers (R4), and they report only:
+none gates this fix. The perf gate (D-007) runs in CI; by reading, a unit
+with no parameter reads nothing new, and the gate's modules have none.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
 
 Evidence status: prepared on a work machine where no pytest, checkwash,
