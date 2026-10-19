@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 484
+title: a `return;` inside an iterator callback in a describe ends that callback, not the describe
+origin: issue #484, ruling Q3 control; the walker never enters a function or arrow body, so the tests after it stay registered
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  [1, 2].forEach(() => {
+    return;
+  });
+
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[]

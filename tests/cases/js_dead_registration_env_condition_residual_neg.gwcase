@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 484
+title: a test wrapped in `if (process.env.CI)` stays live (named residual, a known gap)
+origin: issue #484, ruling Q1's named residual; the folder cannot decide the condition, so the unit keeps today's reading
+origin2: the wrap drops the test from any run where the variable is unset, as `it.runIf(process.env.CI)` would,
+origin3: which reports an added `test.skipIf(!(...))`; a guard marker for this form is not decided (#484 Q1)
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  if (process.env.CI) {
+    it("adds", () => {
+      expect(total([1, 2])).toBe(3);
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[]

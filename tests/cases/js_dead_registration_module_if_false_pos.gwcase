@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: a module-level `if (false) { test(...) }` after the file's imports registers nothing
+origin: issue #484, ruling Q3 blocking 3; pins the module walk's step over a static import declaration (D-148 reading 7 as D-165 amends it)
+=== before: tests/total.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/total";
+
+test("is zero when empty", () => {
+  expect(total([])).toBe(0);
+});
+
+test("adds", () => {
+  expect(total([1, 2])).toBe(3);
+});
+=== after: tests/total.test.ts ===
+import { expect, test } from "vitest";
+import { total } from "../src/total";
+
+test("is zero when empty", () => {
+  expect(total([])).toBe(0);
+});
+
+if (false) {
+  test("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+}
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: `false && it(...);` in a describe callback never registers the test
+origin: issue #484, ruling Q3 blocking 4; #429 Q3's narrow `&&`/`||` reading covers a declaration as it covers an assertion
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  false && it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

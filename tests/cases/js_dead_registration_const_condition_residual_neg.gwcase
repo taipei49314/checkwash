@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 484
+title: a test under `if (enabled)` with `const enabled = false` stays live (named residual, a known gap)
+origin: issue #484, ruling Q3 residual pin; the folder reads literals only, so a `const` binding is #429 Q5's residual
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  const enabled = false;
+
+  if (enabled) {
+    it("adds", () => {
+      expect(total([1, 2])).toBe(3);
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[]

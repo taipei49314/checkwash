@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: Mocha's `it("x", function () { ... })` under `if (false)`: a function expression in a dead region does not refuse the walk
+origin: issue #484, ruling Q3 blocking 7; pins D-148 reading 10 as D-165 amends it (only a function declaration refuses)
+=== before: test/total.spec.js ===
+import { assert } from "chai";
+import { total } from "../src/total.js";
+
+describe("total", function () {
+  it("adds", function () {
+    assert.strictEqual(total([1, 2]), 3);
+  });
+
+  it("is zero when empty", function () {
+    assert.strictEqual(total([]), 0);
+  });
+});
+=== after: test/total.spec.js ===
+import { assert } from "chai";
+import { total } from "../src/total.js";
+
+describe("total", function () {
+  if (false) {
+    it("adds", function () {
+      assert.strictEqual(total([1, 2]), 3);
+    });
+  }
+
+  it("is zero when empty", function () {
+    assert.strictEqual(total([]), 0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

@@ -1,0 +1,36 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 484
+title: a test in the `else` of `if (false)` is still registered
+origin: issue #484, ruling Q3 control; only the branch the folder decides dead is cut, so today's reading is kept
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  if (false) {
+  } else {
+    it("adds", () => {
+      expect(total([1, 2])).toBe(3);
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[]
