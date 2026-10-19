@@ -15501,11 +15501,14 @@ How each answer is implemented (lines at this PR):
    shared the later one's key, so an approval of a guarded skip covered a
    diff that also added an unguarded one above it, and an inserted skip was
    keyed on the one already there. The markers a name added are read by content
-   instead: the head markers of that name whose text and guard no base
-   marker of that name has, in the head side's order. When there are as
-   many as the name has findings, each finding binds one of them, in that
-   order. Two different skips added together are then two keys, and an
-   inserted skip gets the key it would have if it were added alone. When
+   instead, as a multiset difference: each base marker of that name cancels
+   one head marker of that name with the same text and guard, and the head
+   markers left over, in the head side's order, are the ones added. So when
+   the head holds more copies of a marker than the base, each copy beyond
+   the base's is added. When there are as many as the name has findings,
+   each finding binds one of them, in that order. Two different skips added
+   together are then two keys, and an inserted skip gets the key it would
+   have if it were added alone. When
    there are not (a marker of that name was also edited, one moved in from
    a helper, or alignment paired one with a marker of another name, as it
    pairs a decorator whose condition is spelled another way), no finding
@@ -15513,7 +15516,11 @@ How each answer is implemented (lines at this PR):
    of the unit on both sides, each its name, text and guard, each side
    sorted: a stricter key, since any other marker change in the unit moves
    it. A finding's evidence is still the last head marker of its name, as
-   on the base; only its key moves. UnitDelta gains no field for this:
+   on the base; only its key moves. So with several markers of one name the
+   evidence can show another marker than the one the key binds, a residual:
+   taking the evidence from the bound marker could move existing pins on
+   the evidence text or span, so it is left for a follow-up the owner
+   decides. UnitDelta gains no field for this:
    `--emit-ir` serializes it and tests rebuild it from that JSON, so the
    detector reads both sides' markers instead.
 7. **Order.** Findings of one rule in one unit sort by key
@@ -15531,8 +15538,12 @@ same control; a constant edited behind an unchanged guard (row 59) is bound
 by the guard's text, so an approval covers another edit that makes the same
 guard always true; a focus added to a file is bound by its spelling
 (reading 5), so an approval covers another focus of that spelling in the
-file; and an approval still covers the identical reviewed change on a later
-diff, as D-055 intends.
+file; a marker-added finding's evidence is still the last head marker of
+its name (reading 6), so when a unit holds several markers of one name it
+can show another marker than the one the finding's key binds, and an
+approval given from the evidence alone can exempt a marker the evidence
+does not show; and an approval still covers the identical reviewed change
+on a later diff, as D-055 intends.
 
 **Fingerprints.** Every TEST_DISABLED finding has a new key, so every
 recorded TEST_DISABLED exemption stops matching, and the reviewed change
@@ -15610,4 +15621,7 @@ The agent wrote this entry in #512's fix PR. It is a draft for the
 owner's approval of its wording. Readings 1, 2 and 6, the residuals and the
 tests were revised after a second review of the PR found that several
 markers of one name were keyed on one of them and that a JS/TS imperative
-skip records no guard.
+skip records no guard. A third review then found that reading 6 described
+a set where the detector subtracts multisets, and that the evidence can
+show another marker than the key binds; reading 6 and the residuals were
+revised again.
