@@ -46,9 +46,9 @@ answer it (ruling 306, 2026-10-14):
   computed name on a receiver or on a class of the order), or name it in
   `patch.object` or `monkeypatch.setattr`; and no class of the order defines
   `__setattr__`. Since #502 these also name it: a call whose last name is
-  `__setattr__` or `__delattr__`, by the first str literal of its first two
-  positional arguments (`self.__setattr__("_check", f)`,
-  `type.__setattr__(C, "_check", f)`); a keyword or a literal dict key of
+  `__setattr__` or `__delattr__`, by its name argument, the first of a bound
+  call (`self.__setattr__("_check", f)`) and the second of an unbound one
+  (`type.__setattr__(C, "_check", f)`); a keyword or a literal dict key of
   `update()`, or the literal key of `setdefault()`, on `x.__dict__` or
   `vars(x)`; and in a class body a literal key of `vars()` or `locals()`
   stored, deleted, or written by those calls, `__setitem__` or `__delitem__`.
@@ -508,13 +508,13 @@ class Methods:
         func = node.func
         last = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
         if last in _DUNDER_SETTERS:
-            # A bound call carries the name first (`self.__setattr__("_check", f)`),
-            # an unbound one second (`type.__setattr__(C, "_check", f)`).
-            first = node.args[:2]
-            if any(isinstance(arg, ast.Starred) for arg in first):
-                self.dict_store = True
+            # By the count: a bound call carries the name first (`self.__setattr__("_check", f)`),
+            # an unbound one second (`type.__setattr__(C, "_check", f)`); `__delattr__` takes no value.
+            count, bound = len(node.args), 2 if last == "__setattr__" else 1
+            if any(isinstance(arg, ast.Starred) for arg in node.args) or count not in (bound, bound + 1):
+                self.dict_store = True  # no argument the count shows is the name: any name
             else:
-                self._key(next((arg for arg in first if _literal(arg) is not None), None))
+                self._key(node.args[count - bound])  # a name that is no str literal: any name
             return
         if not isinstance(func, ast.Attribute) or last not in _NAMESPACE_WRITES:
             return
