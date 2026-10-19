@@ -12616,8 +12616,8 @@ at this PR):
   has a new one. `swallowing_handlers` gains values with the suffix and no
   new field.
 
-**Readings where the ruling is silent**, for the owner's approval. Each
-errs toward unknown, which keeps main's reading:
+**Readings where the ruling is silent**; the owner approved each as
+written (below). Each errs toward unknown, which keeps main's reading:
 
 1. `not` is read only before a literal, as R49 lists it, so
    `not (1 == 2)` is unknown; a comparison's operands are literals only.
@@ -12719,10 +12719,11 @@ expectation moves, the round stops and lists it for the owner.
 `broad_except_always_passing_bare_except_pos` and
 `broad_except_always_passing_unittest_pos`, each BROAD_EXCEPT_ADDED high
 with `NO_PROD_CHANGE_IN_DIFF`; their titles were approved under A88
-(below) and are unchanged. Four negatives, one per condition, are new
-labels for the owner's review: `broad_except_literal_beside_inspection_neg`
-(condition three), `broad_except_unittest_argument_count_neg` (condition
-one), `broad_except_unittest_not_testcase_neg` (condition two) and
+(below) and are unchanged. Four negatives, one per condition, carry new
+labels, which the owner approved (below):
+`broad_except_literal_beside_inspection_neg` (condition three),
+`broad_except_unittest_argument_count_neg` (condition one),
+`broad_except_unittest_not_testcase_neg` (condition two) and
 `broad_except_unproven_oracle_neg` (`assert value() or True`, R51).
 `benchmarks/FAILURES.md` was edited by hand: row 129's pins gain the four
 positives. `tests/test_issue496_python_handler_literal.py` adds 136
@@ -12757,18 +12758,37 @@ the combined sweep's lab declaration and in a `docs/KNOWN-ISSUES-next.md`
 row. Still to measure: the standard and D-088 comparison above. Fallback:
 if it shows a new block on the new text that review finds false, #496
 reopens, and the proof is narrowed to leave that shape unknown before a
-release ships it.
+release ships it. The owner accepted this fallback (below).
 
 Evidence status: prepared on a work machine where no pytest, checkwash or
 product code ran; every expected result was traced by reading the code,
 and this PR's CI is the first run.
 
-Approvals so far: the owner answered the agent's PR approval list on
+First approvals: the owner answered the agent's PR approval list on
 2026-10-19 with 「PR 核可清單全部照建議」 ("the PR approval list, all as
 recommended"); the reply was a button whose text the assistant wrote. Its
 A87 approved reading #518 as its body says, and its A88 approved the four
 positives' titles, with no second review while they are unchanged.
 
-The agent wrote this entry in #496's fix PR, for the maintainer's approval
-of its wording, readings 1 to 8 and the four negatives' labels, as the
-ruling asks.
+The agent wrote this entry in #496's fix PR #531. The maintainer approved
+it on 2026-10-19: 「第二輪核可全部照建議」 ("the round-2 approval list, all
+as recommended"), in reply to the agent's second list of approval items
+for the open pull requests, which takes every item's recommended answer.
+For this PR those are: B16, the wording as committed of SPEC §4's
+`BROAD_EXCEPT_ADDED` Python clause (a4bc8111, a0a1b4a6), THREATMODEL row
+129's Python paragraph and residuals and the qualification in the
+false-positive table (f1b2cc08, 2c7fd0c4), this entry (7c2ae41a,
+bb83ffd6, fe8a82ef), the `docs/KNOWN-ISSUES-next.md` #496 row (6953e3ec,
+a0a1b4a6) and the Python pointer in `docs/js-catch-swallowing.md`
+(6953e3ec); B17, readings 1 to 8 as written, each erring toward unknown,
+including reading 4, whose base rule is narrower than R49's text, and the
+conservative conditions of readings 6 and 7 (#306's reading of a
+rebinding, and `assertEqual` unknown when the module's text holds
+`addTypeEqualityFunc`); B18, the four negatives' labels; and B19, the
+fallback under **Closing** (R35). The reply is the text of a button the
+agent wrote, which the owner chose; the agent also wrote the list and
+each item's options. After the approval the agent changed only the
+readings' heading and the negatives' sentence, which had said they
+awaited it, added the sentence after the fallback saying the owner
+accepted it, retitled the paragraph on the first approvals, and wrote
+this paragraph.
