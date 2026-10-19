@@ -19,6 +19,7 @@ from types import SimpleNamespace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.fixture_producers import ProducerScope, import_modules, unit_producers
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
@@ -3161,10 +3162,13 @@ def _collect_unit(
     origins: dict | None = None,
     instance: _Instance | None = None,
     resolved: dict | None = None,
+    producers: tuple[tuple[str, str, tuple[str, ...]], ...] = (),
 ) -> ParsedUnit:
     """`instance`: the class running a method unit, for the helper methods it
     reaches through `self` (#306); `resolved` collects each one it follows,
-    by its class-qualified name."""
+    by its class-qualified name. `producers`: the fixtures the unit requests
+    by parameter whose producer was read (`fixture_producers`, #471), whose
+    parameters an assertion records reading (`Assertion.fixture_reads`)."""
     assertions: list[Assertion] = []
     calls: set[str] = set()
     patches: set[tuple[str, str]] = set()
@@ -3214,6 +3218,37 @@ def _collect_unit(
         else {}
     )
     vacuous = _vacuous_bound_asserts(func)
+
+    # The parameters naming a fixture whose producer was read (#471), and the
+    # nodes inside the unit's nested scopes, whose names may be another
+    # scope's: worked out only for a unit that has such a parameter.
+    fixture_params = frozenset(param for param, _callee, _modules in producers)
+    nested_nodes: set[int] | None = None
+
+    def fixture_reads(node: ast.AST, names: tuple[str, ...]) -> tuple[str, ...]:
+        """The fixture parameters an assertion of the unit's own body reads (471 Q3).
+
+        Directly, or through the unit's own assignments (`_resolve_through`).
+        A parameter the body assigns to again holds another value there, and
+        is not counted.
+        """
+        nonlocal nested_nodes
+        if not fixture_params:
+            return ()
+        if nested_nodes is None:
+            nested_nodes = {
+                id(inner)
+                for scope in _walk(func)
+                if scope is not func
+                and isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
+                for inner in ast.walk(scope)
+            }
+        if id(node) in nested_nodes:
+            return ()
+        return tuple(sorted(
+            name for name in _resolve_through(names, bindings)
+            if name in fixture_params and name not in bindings
+        ))
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
     # helper's assertions are this unit's oracle, a helper's `except` is not
@@ -3312,6 +3347,7 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
+                    fixture_reads=fixture_reads(node, _referenced_names(node.test)) if fixture_params else (),
                 )
             )
             counter += 1
@@ -3381,6 +3417,7 @@ def _collect_unit(
                         trivial=c.trivial,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
+                        fixture_reads=fixture_reads(node, _referenced_names(node)) if fixture_params else (),
                     )
                 )
                 counter += 1
@@ -3552,6 +3589,7 @@ def _collect_unit(
             for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
             if a.arg not in ("self", "cls")
         ),
+        fixture_producers=producers,
     )
     return ParsedUnit(qualname=qualname, span=side.span, side=side, shingles=_shingles(func))
 
@@ -4146,6 +4184,33 @@ def _parse_python(
             scopes = scopes + (class_setup[key],)
         return scopes
 
+    # The producer of each fixture a unit requests by parameter (#471), read
+    # from the module, the classes enclosing the unit and the conftest chain.
+    # Only a unit that takes a parameter reads any, and each body is read
+    # once per module.
+    producer_scopes: dict[int, ProducerScope] = {}
+
+    def fixture_producers(func, classes: tuple[ast.ClassDef, ...]) -> tuple:
+        if not collect_tests or conftest:
+            return ()
+        args = func.args
+        if not (args.posonlyargs or args.args or args.kwonlyargs):
+            return ()
+        module_scope = producer_scopes.get(id(tree))
+        if module_scope is None:
+            module_scope = producer_scopes[id(tree)] = ProducerScope(
+                tree.body, module_bindings(tree), import_modules(tree))
+        scopes = [module_scope]
+        for cls in classes:
+            scope = producer_scopes.get(id(cls))
+            if scope is None:
+                scope = producer_scopes[id(cls)] = ProducerScope(
+                    cls.body, module_scope.bindings, module_scope.modules, in_class=True,
+                    marks=cls.decorator_list, bases=cls.bases, keywords=cls.keywords,
+                )
+            scopes.append(scope)
+        return unit_producers(scopes, func, method=bool(classes), chain=chain)
+
     own_marks: list[OwnMarks] = []
 
     def setup_markers(func, scopes: tuple[SetupScope, ...], classes: tuple[ast.ClassDef, ...] = ()) -> list[Marker]:
@@ -4304,6 +4369,7 @@ def _parse_python(
                         attrs=attrs_of(owner), helpers=helper_outcomes, origins=marker_origins,
                         instance=instance_of(owner if owner is not None else classes[-1]) if classes else None,
                         resolved=resolved_methods,
+                        producers=fixture_producers(child, classes),
                     )
                     units.append(credit_base(unit, child, owner) if owner is not None else unit)
                 # Nested defs are never collected as pytest items.
@@ -4391,6 +4457,7 @@ def _parse_python(
                 outcome_bindings=body_names, method=True, outcome_roots=body_roots, attrs=attrs_of(cls),
                 helpers=helper_outcomes, origins=marker_origins, instance=instance_of(cls),
                 resolved=resolved_methods,
+                producers=fixture_producers(method, (owner, cls)),
             ))
     if conftest:
         units = [_conftest_unit(tree, text, off)]
