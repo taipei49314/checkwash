@@ -2498,8 +2498,8 @@ _UNPROVED = object()
 
 # The unittest methods the proof reads (R49), each with the predicate its
 # operands' values pass (`Lib/unittest/case.py`). `assertEqual` on two values
-# of one type dispatches to a type-specific method, and each of those passes
-# when `==` holds.
+# of one type dispatches to a type-specific method, and each of unittest's
+# own passes when `==` holds; `_REACHED` names them.
 _PROVED_UNITTEST = {
     "assertTrue": lambda expr: bool(expr),
     "assertFalse": lambda expr: not expr,
@@ -2508,6 +2508,27 @@ _PROVED_UNITTEST = {
     "assertEqual": lambda first, second: first == second,
     "assertNotEqual": lambda first, second: first != second,
 }
+
+# The names a passing call looks up on its receiver (`Lib/unittest/case.py`,
+# CPython 3.11 to 3.14). `assertEqual` asks `_getAssertEqualityFunc`, which
+# returns `_baseAssertEqual` or, for two values of one type, the method
+# registered for that type by name and found with `getattr` on the receiver
+# (`assertDictEqual`, `assertListEqual`, `assertTupleEqual`,
+# `assertSetEqual`, `assertMultiLineEqual`); those call `assertSequenceEqual`
+# and `assertIsInstance`. A same-file class can bind any of them, so
+# condition two reads each as it reads the called name. The other five
+# methods look up nothing else when they pass.
+_REACHED = {
+    "assertEqual": frozenset({
+        "assertEqual", "_getAssertEqualityFunc", "_baseAssertEqual", "assertDictEqual", "assertListEqual",
+        "assertTupleEqual", "assertSetEqual", "assertMultiLineEqual", "assertSequenceEqual", "assertIsInstance",
+    }),
+}
+
+# Names a same-file class of the order must not bind, as for a helper method
+# (#306, `self_methods.Methods._resolve`): each lets the class answer a lookup
+# on, or a store into, the receiver with something its body does not say.
+_RECEIVER_HOOKS = frozenset({"__getattribute__", "__init_subclass__", "__setattr__"})
 
 
 def _proved_literal(node: ast.AST):
@@ -2634,8 +2655,9 @@ def _raises_in(handler: ast.ExceptHandler) -> bool:
 def _proved_to_pass(handler: ast.ExceptHandler, testcase) -> bool:
     """Is every oracle in this handler proved to always pass (R49, condition three)?
 
-    The oracles are the ones `_contains_oracle` finds, read the way it reads
-    them. An `assert` passes when its test is proved truthy; its message runs
+    It walks the handler as `_contains_oracle` does, except that it does not
+    enter an assertion's message, and every oracle it meets must be proved.
+    An `assert` passes when its test is proved truthy; its message runs
     only when it fails, so the message is not read. One oracle the proof
     cannot read keeps the handler inspection, as 431.Q2 ruled for `assert
     str(e) == "y"`, `assert False`, `self.fail()`, `pytest.fail()` and
@@ -2688,16 +2710,20 @@ def _testcase_method(call: ast.Call, cls: ast.ClassDef, function, methods: Metho
     same-file mixin, may be collected by pytest, and there the call raises
     AttributeError; and a base from another module that comes first may
     define the name itself. As for a helper method (#306), the name is
-    unproved when the module stores it, writes a `__dict__`, sets a computed
-    name on the receiver or on a class of the order, or a class of the order
-    defines `__getattribute__`; and `assertEqual` when the module registers a
-    type-equality function.
+    unproved when the module stores it, stores an item into a `__dict__`,
+    sets a computed name on the receiver or on a class of the order, or a
+    class of the order binds `__getattribute__`, `__init_subclass__` or
+    `__setattr__` (`_RECEIVER_HOOKS`). `assertEqual` is read the same way
+    for every name it reaches (`_REACHED`), and is unproved when the module
+    registers a type-equality function.
     """
     if any(isinstance(d, ast.Name) and d.id in ("staticmethod", "classmethod") for d in function.decorator_list):
         return False
     name = call.func.value.id  # type: ignore[attr-defined]
     attr = call.func.attr  # type: ignore[attr-defined]
-    if name != receiver(function) or attr in methods.stored or methods.dict_store or name in methods.computed:
+    reached = _REACHED.get(attr, frozenset({attr}))
+    if (name != receiver(function) or not reached.isdisjoint(methods.stored) or methods.dict_store
+            or name in methods.computed):
         return False
     if attr == "assertEqual" and ("addTypeEqualityFunc" in raw or "_type_equality_funcs" in raw):
         return False
@@ -2705,14 +2731,13 @@ def _testcase_method(call: ast.Call, cls: ast.ClassDef, function, methods: Metho
     if order is None:
         return False
     local = [entry for entry in order if not isinstance(entry, tuple)]
-    if any(entry.name in methods.computed or "__getattribute__" in methods.binds(entry)
-           or "__init_subclass__" in methods.binds(entry) for entry in local):
+    if any(entry.name in methods.computed or not _RECEIVER_HOOKS.isdisjoint(methods.binds(entry)) for entry in local):
         return False
     spelled = {ast.dump(base): _dotted(base) or "" for entry in local for base in entry.bases}
     for entry in order:
         if isinstance(entry, tuple):
             return spelled.get(entry[1], "").rsplit(".", 1)[-1].endswith("TestCase")
-        if attr in methods.binds(entry):
+        if not reached.isdisjoint(methods.binds(entry)):
             return False
     return False
 
