@@ -15032,14 +15032,14 @@ change keeps its label beside a readable edit; and an unguarded suite
 control beside only an inert file keeps `COLLECTION_CONTROL_UNEXPLAINED`.
 None is under `tests/gates`. By reading, the documented test count becomes
 19619 (19609 + 10: three fixtures, each one item of
-`tests/test_cases_runner.py::test_case`, and seven items), the number CI
-on 4352949c collected; the re-pins add none. Other open PRs move it too,
-which is resolved at merge time.
+`tests/test_cases_runner.py::test_case`, and seven items); the re-pins add
+none. On this PR's own base, CI on 4352949c collected 19485 (19475 + 10).
+Other open PRs move it too, which is resolved at merge time.
 
 **Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
 later acceptance sweep that compares escalators reports label-only
 differences as their own class.
-`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and no test, checkwash run or sweep was run on the work machine; the list of moving pins and the collected count are the ones CI on 4352949c showed`.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and no test, checkwash run or sweep was run on the work machine; the list of moving pins and the count collected on this PR's own base are the ones CI on 4352949c showed`.
 
 The agent wrote this entry in #473's fix PR #528. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
