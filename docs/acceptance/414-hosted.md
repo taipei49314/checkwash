@@ -23,9 +23,13 @@ on its own, and it runs first, before the combined sweep. Owner ruling
   `NOT_RUN：工作機規則（POLICY work-machine-local），#414 rows run on hosted CI`.
   Rulings list item 18 (2026-10-18, approved) puts these rows on hosted CI,
   and adopts its lean that hosted results may close the issue.
-- The pull request also gets the ordinary checks (the `ci` matrix,
-  `checkwash`, `docs suite`, `candidate assertion contract`), because it
-  changes files other than Markdown. They are not part of this acceptance.
+- The pull request also gets the ordinary checks, none of which is part of
+  this acceptance: every workflow with no `paths` filter (`checkwash`,
+  `verdict gate`, `assertion qualification` with its candidate and
+  recommended-Action jobs, and `quality qualification` with `qualify` and
+  `action-smoke`); the `ci` matrix, because the pull request changes files
+  other than Markdown; and `docs suite`, because it adds this Markdown file
+  under `docs/`.
 
 ## Engines
 
