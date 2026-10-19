@@ -871,14 +871,18 @@ four limits (ruling 471):
   package still takes it.
 - One level: a fixture the test requests by parameter, found as pytest finds
   it (the test's class, its module, then each `conftest.py` above it,
-  nearest first). A fixture that another fixture requests, an `autouse`
-  fixture and a `usefixtures` mark count nothing.
+  nearest first). A fixture that another fixture requests, and an `autouse`
+  fixture or a `usefixtures` mark that the test does not also request by
+  parameter, count nothing.
 - Only for a finding whose assertion, before the diff, reads that fixture's
   value: directly (`provider.default_voice == "matilda"`) or through a name
-  the test binds from it (`result = provider.resolve_voice("")`). The
-  fixture is read as it was before the diff.
-- Every oracle rule that takes repair evidence, except `TEST_DISABLED`. No
-  package-level credit is added.
+  the test binds from it (`result = provider.resolve_voice("")`). A
+  parameter the test binds again (`provider = ...`, `for provider in ...`)
+  no longer holds the fixture's value there. The fixture is read as it was
+  before the diff.
+- Every oracle rule that takes repair evidence, except `TEST_DISABLED`, and
+  except `TOLERANCE_LOOSENED` as implemented (below). No package-level
+  credit is added.
 
 These still get no evidence from the fixture, as known limits:
 
@@ -889,9 +893,15 @@ These still get no evidence from the fixture, as known limits:
 - a fixture that returns from several places, binds its value through
   `with ... as`, or returns `request.param`;
 - a producer that is a factory calling the changed symbol: neither the
-  one-hop callers route nor a helper hop is followed from a producer;
-- a test class with a base class, whose inherited fixtures are not followed;
-- xunit `setUp` that builds the subject on `self`.
+  one-hop callers route nor a helper hop is followed from a producer. The
+  analysis the ruling adopted has the producer take the callers route, so
+  this is a departure, pending the owner's decision (D-155);
+- a test class with a base class or a keyword: no fixture outside that
+  class's own body is followed, not even the module's or a `conftest.py`'s;
+- xunit `setUp` that builds the subject on `self`;
+- a `TOLERANCE_LOOSENED` finding, which cites its test rather than an
+  assertion, so it has no assertion that reads the fixture. This is also a
+  departure, pending the owner's decision (D-155).
 
 A kept no-op edit in the class a fixture builds now holds a weakened
 assertion on the fixture's value at warn, as the same test written inline
