@@ -12527,7 +12527,8 @@ Implementation (lines at this PR):
   call that `same_raises_check` accepts, gets "; the raise is still checked
   by <call>" appended to its message. Fingerprints do not use the message.
 
-Readings where the ruling is silent, accepted with this entry:
+Readings where the ruling is silent; the owner approved each as written
+(below):
 
 1. Old assertions are taken in span order, as before; one whose candidates
    are all taken by earlier ones keeps the old rule. There is no two-pass
@@ -12594,7 +12595,9 @@ so it blocks as before. So is the v0.1.14 dogfooded commit that opened row
 its subject, so its derived `f"{n}/{n} tampering cases blocked" in out`
 does not check `out`, and the old `"7/7 ..." in out` still pairs with the
 count guard written above it and blocks. Row 85 is Closed as ruled, with
-that shape among its residuals; the ruling did not address it. B: `match=` added gives no finding (it was a warn);
+that shape as its first residual; the ruling did not address it, and the
+owner kept it so, with no pin and no issue (below). B: `match=` added
+gives no finding (it was a warn);
 the fold shape keeps its finding with the new message; another expected
 type, another callee or a dropped `match=` is unchanged. A `match=` call B
 pairs no longer counts as an added assertion in D2's moved-assertion
@@ -12616,7 +12619,8 @@ one exists, is a new issue.
 passed it would also pass an exact check rewritten as a wide approx beside
 one unrelated strong assertion (row 13). This replaces the 2026-10-16 plan
 to ship #457 in the next release; the reason was stated on #457, and the
-reporter agreed.
+reporter agreed. The known limit is written into row 84b, not a new row,
+as the owner approved (below).
 
 Rule 2. The ruling approves no change to an existing expectation: by
 reading none moves, and none was changed. A read-only text scan of the
@@ -12676,10 +12680,23 @@ product code ran; CI runs the tests. Added: thirteen `.gwcase` fixtures
 `subject_pairing_decoy_after_pos`, `subject_pairing_decoy_before_pos`,
 `subject_pairing_other_subject_known_limit_pos`, `raises_match_added_neg`,
 `raises_match_added_type_changed_pos`, `raises_match_warns_to_raises_pos`,
-`raises_match_dropped_pos`), labels reviewed before merge, and 71 collected
-items in `tests/test_issue434_subject_pairing.py`, counted from its
+`raises_match_dropped_pos`), labels approved by the owner (below), and 71
+collected items in `tests/test_issue434_subject_pairing.py`, counted from its
 parametrize lists; no existing test changed. By reading, the documented
 test count becomes 19559 (19475 + 71 + 13); CI's collection checks it.
 
-The agent wrote this entry in #434's fix PR. It awaits the maintainer's
-approval of its wording, the readings above and the fixture labels.
+The agent wrote this entry in #434's fix PR #527. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"), in reply to the agent's list (items A67 to A71) asking for
+approval of this PR's SPEC §3 and §4 (4472dd6e), THREATMODEL rows 85, 84b
+and 119 (17f90195, 3048e83a, with `benchmarks/FAILURES.md`, 45028942),
+D-156 (3860dfd1, f746b599, b041e17c, a9d7095e) and
+`docs/assertion-coverage.md` (b634bd30, edaa6971) text, with D-156's
+release and measurement paragraphs changed before merge to cite R1 and R2
+(c41cdb17); the labels of the thirteen fixtures above; readings 1-11;
+keeping row 85 Closed with its dogfooded shape as the first residual, not
+pinned and with no issue; and two additions the ruling did not ask for,
+the credit to @talhayme (the fixture header, `benchmarks/external-credits.json`
+and the FAILURES table), dated 2026-10-19, and #457's known limit written
+into row 84b rather than a new row. The reply was a button whose text the
+assistant wrote.
