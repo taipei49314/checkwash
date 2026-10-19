@@ -12653,10 +12653,15 @@ it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval l
 recommended"), in reply to the agent's approval list, whose items for this
 PR asked for: the one rule-2 move, re-pinning and renaming the test above
 as recommended (A55); accepting the cost of Q1 (a), to be named in the
-release notes and `docs/KNOWN-ISSUES-next.md` as drafted (A56); the
-labels of the seven fixtures (A57); the wording of SPEC §4 (59d13e77,
-78e330e6), THREATMODEL row 132 as Partly closed (9666da66, 93b07116) and
-this entry (24c1e6a0, dff4d5ff, 827bc03c), with the E1 label point
+release notes and `docs/KNOWN-ISSUES-next.md` as drafted and counted by
+the Q5 sweep, with the drafts that name it: the cost pin (dbcaa86b), the
+detector comment (4b506f90), `docs/assertion-coverage.md` and the
+`docs/KNOWN-ISSUES-next.md` row (ec6bd662), and the SPEC, row 132 and
+entry drafts named under A58 (A56); the labels of the seven fixtures
+(A57); the wording of SPEC §4 (59d13e77, 78e330e6), THREATMODEL row 132
+as Partly closed (9666da66, 93b07116), this entry (24c1e6a0, dff4d5ff,
+827bc03c), and the `docs/KNOWN-ISSUES-next.md` row and the note in
+`docs/issue-remediation-2026-09-06.md` (e9b2f1ff), with the E1 label point
 changed to name #473 instead of asking for a ruling (A58); and the
 reading above of "a production file the diff adds" (A59). The reply was a
 button whose text the agent wrote, which the owner chose. Commits
