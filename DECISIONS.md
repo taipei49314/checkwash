@@ -12512,10 +12512,11 @@ Implementation, in `ir/model.py`, `engine.py` and
 The newly raised finding goes through E1 as the snapshot-only form does.
 It has no unit, so only the opaque-change credit could hold it
 (`gating._file_repair_evidence`), and this diff has none. `PACKAGE_REPAIR`
-needs a modified existing symbol and a test file's imports, and a snapshot
-path has neither. So the finding is high with `NO_PROD_CHANGE_IN_DIFF`, or
-warn under D9 `DEPENDENCY_DRIFT` when a dependency manifest's dependencies
-changed too, as for a golden file rewritten alone.
+needs a package with a modified existing symbol (D-010), and whenever this
+diff had one the form would not fire. So the finding is high with
+`NO_PROD_CHANGE_IN_DIFF`, or warn under D9 `DEPENDENCY_DRIFT` when a
+dependency manifest's dependencies changed too, as for a golden file
+rewritten alone.
 
 Readings within the ruling's text:
 
