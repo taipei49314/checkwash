@@ -1,4 +1,15 @@
-"""Golden runner: every .gwcase exercises the full pipeline (SPEC test layer 1)."""
+"""Golden runner: every .gwcase exercises the full pipeline (SPEC test layer 1).
+
+The runner passes `analyze` no exemptions: its fourth argument, the entries
+the CLI reads from the base side's `allow.toml`, is always `[]`. So a fixture
+cannot hold an exemption: a `before:` or `after:` section for
+`.checkwash/allow.toml` or `.greenwash/allow.toml` is a file in the diff, and
+an edit to it is judged as a ledger edit; a `head:` section for it is only
+snapshot content. No entry in either is ever honoured. A THREATMODEL row
+about how an exemption is honoured is pinned by a test that passes a real
+entry, through `E2E_PINNED` in `tests/test_threatmodel_pinned.py`, as rows
+39 and 136 are (#421, #501).
+"""
 
 import datetime
 import pathlib

@@ -1,7 +1,6 @@
 === meta ===
-bypass: 39
 rule: GUARDRAIL_TOUCHED
-title: A hand-edited exemption beyond the 180-day cap is not honoured
+title: A hand-edited expiry in the exemption ledger is a critical guardrail edit
 origin: reader audit — the cap was only enforced when writing, not reading
 === before: .greenwash/allow.toml ===
 [[allow]]
