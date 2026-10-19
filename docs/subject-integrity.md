@@ -67,9 +67,21 @@ detector coverage; this additional installation pass does not infer repository
 ownership from an omitted callback. A reader without either consumer inventory
 callback can analyze changed test consumers only. CLI and candidate mapping
 adapters supply the complete callback set. Source parsing is limited to 1 MB
-and 30,000 syntax nodes per file, 64 MB of changed or discovered context, 4,096
+and 200,000 syntax nodes per file, 64 MB of changed or discovered context, 4,096
 memoized source reads and one million total symbolic execution steps (also
-20,000 per individual trace). Ownership probes share the bounded reader.
+20,000 per individual trace). Ownership probes share the bounded reader. The
+direct subject-replacement pass (#132) reads the same 200,000-node limit
+(#469). Over any of these limits the run stops with an engine error: exit 2,
+or the Stop hook's non-blocking message (see the snapshot and adapter
+contract below, and #506). The per-file byte and node refusals of both passes
+name the path, the side (`before` or `after`), the byte count and, for nodes,
+the node count (#345, #469). The step refusal names which counter fired
+(`counter=proof` for one trace, `counter=analysis` for the whole analysis),
+the file, the side, the test it traced (`unit=`, or the kind of proof when it
+belongs to no test), and that counter's steps and limit. The analysis budget
+is shared by every trace, so when it fires the unit named is where it ran
+out, not necessarily what used it. The source read limit and the strict
+inventory path limit still name nothing.
 
 ## JavaScript module mocks and replacing spies
 
