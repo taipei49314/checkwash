@@ -16,8 +16,9 @@ A path appearing only in `after` is an added file; only in `before`, deleted.
 A `=== head: path ===` section is a file present in the head snapshot but not
 part of the diff — what the engine's head reader would find in the repo (used
 by D6 to resolve skip-condition constants imported from unchanged files).
-A ledger section (`.checkwash/allow.toml` or `.greenwash/allow.toml`) is a
-file in the diff, never an exemption: the golden runner
+A `before:` or `after:` ledger section (`.checkwash/allow.toml` or
+`.greenwash/allow.toml`) is a file in the diff, and a `head:` one is only
+snapshot content; neither is ever an exemption: the golden runner
 (`tests/test_cases_runner.py`) and `checkwash demo` pass `analyze` no allow
 entries, which the CLI reads from the base side. So a fixture cannot pin how
 an exemption is honoured; a test that passes a real entry does, named in
