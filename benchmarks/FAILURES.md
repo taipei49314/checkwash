@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **177 bypasses** are documented, of which **59 are not closed**.
+- **178 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -104,7 +104,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (115)
+## Closed — each pinned by something that runs (116)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -229,6 +229,7 @@ behind it* unshippable.
 | 135 | Take a test out of the run by rebinding its name after it, with the def byte-identical: `def test_x(): pass`, `del test_x`, `test_x = None` or `test_x = lambda: None` appended after it; the same in its class body, or `TestX.test_x = None` or `delattr(TestX, "test_x")` after the class; `class TestX: pass` or `TestX = None` after a test class; an import, `globals()["test_x"]`, a walrus or `except ... as test_x` over the name. Or move a failing test verbatim to another test file and append `del test_x` there (#424). | `rebinding_class_attribute_pos.gwcase`, `rebinding_class_redefined_pos.gwcase`, `rebinding_deleted_after_pos.gwcase`, `rebinding_lambda_pos.gwcase`, `rebinding_redefined_after_pos.gwcase` |
 | 136 | Reuse an exemption reviewed for one rewrite of an assertion for any later rewrite of the same line: approve `assert total() == 20.0` -> `== pytest.approx(20.0)`, then rewrite it to `> 0` or `!= 20.0` on a base that still holds `== 20.0`; or weaken a second identical copy beside it, widen the same tolerance further, change a Jest sibling `toBe(1)` to `toBe(2)`, or redefine the expectation an unchanged line reads, all under the reviewed key. ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED, EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (#421). | — |
 | 157 | Weaken or delete an assertion inside a JS/TS `test.each`, `it.each` or `test.for` table, delete or rewrite one of its rows, skip or delete the whole table, or wrap a plain test in a table of no rows or of rows that cannot be counted (#428) | `js_table_assertion_deleted_pos.gwcase`, `js_table_deleted_pos.gwcase`, `js_table_expected_cell_rewritten_pos.gwcase`, `js_table_input_cell_rewritten_pos.gwcase`, `js_table_row_deleted_pos.gwcase`, `js_table_skip_added_pos.gwcase`, `js_table_weakened_pos.gwcase`, `js_test_wrapped_in_empty_table_pos.gwcase`, `js_test_wrapped_in_unknown_table_pos.gwcase` |
+| 159 | Weaken, delete or rewrite an assertion on the test context of a JS/TS arrow test callback that carries a TypeScript return annotation, instead of fixing code: under node:test, `test("s", (ctx): void => { ctx.assert.strictEqual(sum(2, 2), 4) })` -> `ctx.assert.ok(sum(2, 2))`, the assertion deleted or its expected value rewritten, also under `async (ctx): Promise<void> =>`; AVA's `(t): void =>` with `t.is(...)` -> `t.truthy(...)`; tap's `t.test("s", (tt): void => ...)` with `tt.equal(...)` -> `tt.ok(...)` (#480) | `js_ava_annotated_arrow_weakened_pos.gwcase`, `js_node_context_annotated_arrow_deleted_pos.gwcase`, `js_node_context_annotated_arrow_expected_rewrite_pos.gwcase`, `js_node_context_annotated_arrow_weakened_pos.gwcase`, `js_tap_annotated_arrow_weakened_pos.gwcase` |
 
 ## Unclassified (1)
 
