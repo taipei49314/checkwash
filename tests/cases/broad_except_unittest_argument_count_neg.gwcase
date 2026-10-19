@@ -1,0 +1,28 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: `self.assertTrue(True, "first", "second")` in a `unittest.TestCase` handler raises TypeError, so the handler does not swallow
+origin: #496, a negative for R49's first condition: the call may pass only the method's operands and at most one literal `msg`
+note: broad_except_always_passing_unittest_pos with one more positional argument; `assertTrue(expr, msg=None)` takes two, so the call fails whatever its operand is; app.py is unchanged and outside the diff
+=== before: tests/test_value.py ===
+import unittest
+
+from app import value
+
+
+class ValueTest(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), 1)
+=== after: tests/test_value.py ===
+import unittest
+
+from app import value
+
+
+class ValueTest(unittest.TestCase):
+    def test_value(self):
+        try:
+            self.assertEqual(value(), 1)
+        except Exception:
+            self.assertTrue(True, "first", "second")
+=== expect ===
+[]

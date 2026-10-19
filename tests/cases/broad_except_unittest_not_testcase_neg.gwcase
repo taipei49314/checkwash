@@ -1,0 +1,24 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: `self.assertTrue(True)` in a handler of a test class that is no `unittest.TestCase` raises AttributeError, so the handler does not swallow
+origin: #496, a negative for R49's second condition: the class's same-file base chain must reach a base whose name ends in `TestCase`
+note: pytest collects `TestValue` without a TestCase base, and there `self` has no `assertTrue`; app.py is unchanged and outside the diff
+=== before: tests/test_value.py ===
+from app import value
+
+
+class TestValue:
+    def test_value(self):
+        assert value() == 1
+=== after: tests/test_value.py ===
+from app import value
+
+
+class TestValue:
+    def test_value(self):
+        try:
+            assert value() == 1
+        except Exception:
+            self.assertTrue(True)
+=== expect ===
+[]

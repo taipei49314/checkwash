@@ -2402,11 +2402,7 @@ def _swallows(handler: ast.ExceptHandler) -> bool:
     A handler that re-raises, or that asserts on what it caught, still lets
     the test fail — it is inspection, not suppression.
     """
-    for stmt in handler.body:
-        for sub in ast.walk(stmt):
-            if isinstance(sub, ast.Raise):
-                return False
-    return not _contains_oracle(handler.body)
+    return not _raises_in(handler) and not _contains_oracle(handler.body)
 
 
 def _unreachable_ids(
@@ -2614,6 +2610,269 @@ def _truthy_literal(node: ast.AST) -> bool:
         return bool(ast.literal_eval(node))
     except (ValueError, SyntaxError, TypeError):
         return True
+
+
+# A broad handler whose every oracle is proved to always pass (#496). D-015
+# counted any oracle in a handler as inspection, so adding `assert True` to an
+# `except Exception:` turned row 16's block back into a clean pass. Ruling 496
+# (R49 to R51): only a proof moves a handler, and it is a narrow one, apart
+# from `_static_truth`. That folder answers True where a pass proof must not:
+# `_truthy_literal` on a `literal_eval` failure (`assert -"a"` raises), and an
+# `or` with one True operand (`assert check() or True` runs `check()` first).
+# The proof answers "proved to pass" or nothing; anything else keeps the
+# handler inspection, as on main.
+
+# The evidence text of such a handler is its first line, a space and this
+# suffix (R50). `_norm` leaves no space in any other handler's text, so the two
+# never compare equal and main's set of texts is unchanged.
+_ALWAYS_PASSING = " [always-passing assertion]"
+
+_UNPROVED = object()
+
+# The unittest methods the proof reads (R49), each with the predicate its
+# operands' values pass (`Lib/unittest/case.py`). `assertEqual` on two values
+# of one type dispatches to a type-specific method, and each of unittest's
+# own passes when `==` holds; `_REACHED` names them.
+_PROVED_UNITTEST = {
+    "assertTrue": lambda expr: bool(expr),
+    "assertFalse": lambda expr: not expr,
+    "assertIsNone": lambda obj: obj is None,
+    "assertIsNotNone": lambda obj: obj is not None,
+    "assertEqual": lambda first, second: first == second,
+    "assertNotEqual": lambda first, second: first != second,
+}
+
+# The names a passing call looks up on its receiver (`Lib/unittest/case.py`,
+# CPython 3.11 to 3.14). `assertEqual` asks `_getAssertEqualityFunc`, which
+# returns `_baseAssertEqual` or, for two values of one type, the method
+# registered for that type by name and found with `getattr` on the receiver
+# (`assertDictEqual`, `assertListEqual`, `assertTupleEqual`,
+# `assertSetEqual`, `assertMultiLineEqual`); those call `assertSequenceEqual`
+# and `assertIsInstance`. A same-file class can bind any of them, so
+# condition two reads each as it reads the called name. The other five
+# methods look up nothing else when they pass.
+_REACHED = {
+    "assertEqual": frozenset({
+        "assertEqual", "_getAssertEqualityFunc", "_baseAssertEqual", "assertDictEqual", "assertListEqual",
+        "assertTupleEqual", "assertSetEqual", "assertMultiLineEqual", "assertSequenceEqual", "assertIsInstance",
+    }),
+}
+
+# Names a same-file class of the order must not bind, as for a helper method
+# (#306, `self_methods.Methods._resolve`): each lets the class answer a lookup
+# on, or a store into, the receiver with something its body does not say.
+_RECEIVER_HOOKS = frozenset({"__getattribute__", "__init_subclass__", "__setattr__"})
+
+
+def _proved_literal(node: ast.AST):
+    """A literal's value, or `_UNPROVED` when `literal_eval` refuses it (`-"a"`, `{[1]: 2}`)."""
+    if not _is_literal(node):
+        return _UNPROVED
+    try:
+        return ast.literal_eval(node)
+    except Exception:  # ValueError, TypeError, SyntaxError, RecursionError, MemoryError
+        return _UNPROVED
+
+
+def _holds_bytes(node: ast.AST) -> bool:
+    """Comparing bytes with str or int warns under `python -b` and raises under `-bb`."""
+    return any(isinstance(sub, ast.Constant) and isinstance(sub.value, bytes) for sub in ast.walk(node))
+
+
+def _proved_comparison(node: ast.Compare):
+    """A comparison between literals, every link evaluated, or `_UNPROVED`.
+
+    `is` and `is not` only with None on one side: None is one object in every
+    interpreter, so the answer does not depend on interning (R49).
+    """
+    operands = [node.left, *node.comparators]
+    values = [_proved_literal(operand) for operand in operands]
+    if any(value is _UNPROVED for value in values) or any(_holds_bytes(operand) for operand in operands):
+        return _UNPROVED
+    outcome = True
+    for op, left, right in zip(node.ops, values, values[1:]):
+        if isinstance(op, (ast.Is, ast.IsNot)):
+            if left is not None and right is not None:
+                return _UNPROVED
+            result = (left is right) == isinstance(op, ast.Is)
+        else:
+            compare = _CMP_OPS.get(type(op))
+            if compare is None:
+                return _UNPROVED
+            try:
+                result = bool(compare(left, right))  # type: ignore[operator]
+            except Exception:
+                return _UNPROVED
+        outcome = outcome and result
+    return outcome
+
+
+def _proved_value(node: ast.AST):
+    """The value of an `assert` test the narrow proof evaluates (R49), or `_UNPROVED`.
+
+    A literal; `not` before a literal; a comparison between literals; and
+    `and` or `or` over these. Every operand of `and` and `or` is evaluated
+    on its own, so a short circuit never hides one that raises or calls.
+    """
+    if _is_literal(node):
+        return _proved_literal(node)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        value = _proved_literal(node.operand)
+        return _UNPROVED if value is _UNPROVED else not value
+    if isinstance(node, ast.Compare):
+        return _proved_comparison(node)
+    if isinstance(node, ast.BoolOp):
+        values = [_proved_value(value) for value in node.values]
+        if any(value is _UNPROVED for value in values):
+            return _UNPROVED
+        # Python's own result: `or` stops at the first truthy operand, `and`
+        # at the first falsy one, and otherwise gives the last.
+        stops_on = isinstance(node.op, ast.Or)
+        return next((value for value in values[:-1] if bool(value) == stops_on), values[-1])
+    return _UNPROVED
+
+
+def _proved_unittest_call(call: ast.Call, testcase) -> bool:
+    """`<receiver>.<method>(...)` with literal operands that pass (R49).
+
+    Condition one: the call passes the method's operands and at most one
+    `msg`, by position or by keyword, and nothing else; any other argument
+    list raises TypeError. The operands are bound by `_unittest_operands`.
+    Unlike an `assert` message, `msg` is evaluated before the call, so it
+    must be a literal that `literal_eval` reads. Condition two, that the
+    receiver is the TestCase running the method, is `testcase(call)`.
+    """
+    func = call.func
+    if not (isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name)):
+        return False
+    predicate = _PROVED_UNITTEST.get(func.attr)
+    if predicate is None:
+        return False
+    names = _UNITTEST_OPERANDS[func.attr]
+    params = (*names, "msg")
+    if len(call.args) > len(params) or any(isinstance(arg, ast.Starred) for arg in call.args):
+        return False
+    given = list(params[:len(call.args)])
+    for keyword in call.keywords:
+        # A `**` argument has no name, so it is not in `params` either.
+        if keyword.arg not in params or keyword.arg in given:
+            return False
+        given.append(keyword.arg)
+    if not set(names) <= set(given):
+        return False
+    message = (call.args[len(names)] if len(call.args) > len(names)
+               else next((keyword.value for keyword in call.keywords if keyword.arg == "msg"), None))
+    if message is not None and _proved_literal(message) is _UNPROVED:
+        return False
+    operands = (_unittest_operands(func.attr, call) or [])[:len(names)]
+    values = [_proved_literal(operand) for operand in operands]
+    if len(values) != len(names) or any(value is _UNPROVED for value in values):
+        return False
+    if len(names) == 2 and any(_holds_bytes(operand) for operand in operands):
+        return False
+    try:
+        if not predicate(*values):
+            return False
+    except Exception:
+        return False
+    return testcase(call)
+
+
+_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+
+
+def _raises_in(handler: ast.ExceptHandler) -> bool:
+    return any(isinstance(sub, ast.Raise) for stmt in handler.body for sub in ast.walk(stmt))
+
+
+def _proved_to_pass(handler: ast.ExceptHandler, testcase) -> bool:
+    """Is every oracle in this handler proved to always pass (R49, condition three)?
+
+    It walks the handler as `_contains_oracle` does, except that it does not
+    enter an assertion's message, and every oracle it meets must be proved.
+    An `assert` passes when its test is proved truthy; its message runs
+    only when it fails, so the message is not read. One oracle the proof
+    cannot read keeps the handler inspection, as 431.Q2 ruled for `assert
+    str(e) == "y"`, `assert False`, `self.fail()`, `pytest.fail()` and
+    `assert e == e`. Reachability is not read (R66): an oracle under
+    `if False:` is read as any other.
+    """
+    stack: list[ast.AST] = list(handler.body)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, ast.Assert):
+            value = _proved_value(node.test)
+            if value is _UNPROVED or not value:
+                return False
+            continue
+        if _is_oracle_call(node):
+            if not _proved_unittest_call(node, testcase):
+                return False
+            continue
+        stack.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, _SCOPES))
+    return True
+
+
+def _handler_methods(tree: ast.Module) -> dict[int, tuple[ast.ClassDef, ast.AST]]:
+    """id(handler) -> (class, method) for each handler that a method of a
+    top-level class runs itself, outside any nested def, lambda or class."""
+    found: dict[int, tuple[ast.ClassDef, ast.AST]] = {}
+    for cls in tree.body:
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        for function in cls.body:
+            if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            stack: list[ast.AST] = [node for node in function.body if not isinstance(node, _SCOPES)]
+            while stack:
+                node = stack.pop()
+                if isinstance(node, ast.ExceptHandler):
+                    found[id(node)] = (cls, function)
+                stack.extend(child for child in ast.iter_child_nodes(node) if not isinstance(child, _SCOPES))
+    return found
+
+
+def _testcase_method(call: ast.Call, cls: ast.ClassDef, function, methods: Methods, raw: str) -> bool:
+    """Is `call` the unittest method of the TestCase running `function` (R49, condition two)?
+
+    The receiver is the method's first positional parameter, which it never
+    rebinds, and the method is neither a staticmethod nor a classmethod. In
+    the class's local order (`Methods.order`), no same-file class binds the
+    method's name, and the first base the file does not define is spelled
+    with a name ending in `TestCase`: a class with no such base, as a
+    same-file mixin, may be collected by pytest, and there the call raises
+    AttributeError; and a base from another module that comes first may
+    define the name itself. As for a helper method (#306), the name is
+    unproved when the module stores it, stores an item into a `__dict__`,
+    sets a computed name on the receiver or on a class of the order, or a
+    class of the order binds `__getattribute__`, `__init_subclass__` or
+    `__setattr__` (`_RECEIVER_HOOKS`). `assertEqual` is read the same way
+    for every name it reaches (`_REACHED`), and is unproved when the module
+    registers a type-equality function.
+    """
+    if any(isinstance(d, ast.Name) and d.id in ("staticmethod", "classmethod") for d in function.decorator_list):
+        return False
+    name = call.func.value.id  # type: ignore[attr-defined]
+    attr = call.func.attr  # type: ignore[attr-defined]
+    reached = _REACHED.get(attr, frozenset({attr}))
+    if (name != receiver(function) or not reached.isdisjoint(methods.stored) or methods.dict_store
+            or name in methods.computed):
+        return False
+    if attr == "assertEqual" and ("addTypeEqualityFunc" in raw or "_type_equality_funcs" in raw):
+        return False
+    order = methods.order(cls)
+    if order is None:
+        return False
+    local = [entry for entry in order if not isinstance(entry, tuple)]
+    if any(entry.name in methods.computed or not _RECEIVER_HOOKS.isdisjoint(methods.binds(entry)) for entry in local):
+        return False
+    spelled = {ast.dump(base): _dotted(base) or "" for entry in local for base in entry.bases}
+    for entry in order:
+        if isinstance(entry, tuple):
+            return spelled.get(entry[1], "").rsplit(".", 1)[-1].endswith("TestCase")
+        if not reached.isdisjoint(methods.binds(entry)):
+            return False
+    return False
 
 
 def _param_row_disabled(node: ast.AST) -> bool:
@@ -4638,6 +4897,18 @@ def _parse_python(
         if n:
             unit.qualname = f"{unit.qualname}#{n + 1}"
 
+    # The class and method each handler runs in, read the first time a
+    # handler's unittest call reaches condition two of ruling 496 (R49).
+    handler_scopes: list[dict[int, tuple[ast.ClassDef, ast.AST]]] = []
+
+    def testcase_of(handler: ast.ExceptHandler):
+        def testcase(call: ast.Call) -> bool:
+            if not handler_scopes:
+                handler_scopes.append(_handler_methods(tree))
+            scope = handler_scopes[0].get(id(handler))
+            return scope is not None and _testcase_method(call, *scope, methods_of(), raw)
+        return testcase
+
     broad: list[str] = []
     swallowing: list[str] = []
     for node in _walk(tree):
@@ -4667,8 +4938,14 @@ def _parse_python(
                     continue
                 seg = _norm((text.seg(handler) or "except:").split("\n")[0])
                 broad.append(seg)
-                if guards_oracle and _swallows(handler):
+                if not guards_oracle:
+                    continue
+                if _swallows(handler):
                     swallowing.append(seg)
+                elif not _raises_in(handler) and _proved_to_pass(handler, testcase_of(handler)):
+                    # Its oracles cannot fail, so it swallows too, under its
+                    # own text (#496, R50).
+                    swallowing.append(seg + _ALWAYS_PASSING)
         elif isinstance(node, (ast.With, ast.AsyncWith)):
             # The with-context twins of `except AssertionError`:
             # `suppress(...)` swallows a failed assert, the raises family

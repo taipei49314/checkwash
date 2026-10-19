@@ -15049,3 +15049,283 @@ this paragraph record it. Their sentences in this entry (the CI result,
 the harness-artifact sentence, the order clauses for #522, the "Settled
 by Q2" paragraph, the pin 3 and test-count sentences and this paragraph)
 were written after the reply and were not on the list.
+
+## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
+
+Ruling 496 (owner, 2026-10-19, 「裁決總表全部照建議」, "the consolidated
+ruling list, all as recommended", in reply to the agent's list of 104
+decisions; the reply was a button whose text the assistant wrote; #496
+issuecomment-6261652527 states each decision in full) adopted, for this
+issue: R31 (Q4 (a), a throwaway hosted draft PR before any fix), R32 (Q5,
+the measurement plan), R35 (closing time), R49 (Q1 (a) with three
+conditions), R50 (Q2 (b), a separate evidence text), R51 (Q3 (b), a
+separate narrow proof) and R66 (an unreachable oracle in a handler is not
+fixed in this round). 431.Q2 (#431 issuecomment-6170356603) had ruled the
+Python counterpart a separate issue and PR in the 1.0 scope, filed as P1
+after a reproduction, in which a handler assertion stops counting only
+when proved to always pass, not on the TAUTOLOGY rating.
+
+#496 reports that in a Python test file or conftest, a broad handler on a
+`try` whose body holds an oracle was added to `swallowing_handlers` only
+when it neither re-raised nor held an oracle, and that any `assert`
+statement and any `assert*`, `fail` or `raises` call counted as an oracle,
+even one that cannot fail. Adding `assert True` to the handler therefore
+turned row 16's `BROAD_EXCEPT_ADDED` block back into a clean pass. The
+hosted reproduction (R31) ran on draft PR #518, closed unmerged: run
+39215282880, `pull_request` event, head `ae7deb49` on main `0e60832a`,
+pytest 9.1.1 on all nine `test` legs, each with a full summary. On every
+leg each of the four new cases failed with `expected 1 finding(s), got 0:
+[]`: `except AssertionError: assert True` (the issue's pair), `except
+Exception: assert 1 == 1`, a bare `except: assert True`, and `except
+Exception: self.assertTrue(True)` in a `unittest.TestCase` method. It was
+read as #518's body says (A87, below) and recorded on #496
+(issuecomment-6263372986). All four reproduced, so under R31 the fix is
+written and covers all four.
+
+**D-015, refined.** D-015 froze that, in a test file, a broad handler
+counts only when the guarded block holds an oracle and the handler neither
+re-raises nor asserts; D-138 refined "asserts" for JS/TS only. In Python,
+"asserts" now means "holds an oracle not proved to always pass".
+Production files keep comparing every broad handler (`broad_handlers`),
+unchanged.
+
+Implementation, in `src/checkwash/frontends/python/frontend.py` only (lines
+at this PR):
+
+- R51. The proof is its own set of helpers (`:2482-2742`), and
+  `_static_truth` (`:2385-2444`), which folds `if` guards, is unchanged.
+  That folder answers True where a pass proof must not: `_truthy_literal`
+  returns True when `literal_eval` fails (`:2475-2479`), so `assert -"a"`,
+  which raises TypeError, would read as passing; and an `or` with one True
+  operand folds to True, so `assert check() or True`, which runs `check()`
+  first, would too. The proof shares `_is_literal` (`:373`) and `_CMP_OPS`
+  (`:2370`) and answers only "proved to pass" or nothing (`_UNPROVED`); an
+  unknown keeps the exemption.
+- R49, `assert`. `_proved_value` (`:2577-2599`) evaluates a literal
+  (`_is_literal`, read by `literal_eval`; `_proved_literal`,
+  `:2534-2541`), `not` before a literal, a comparison between literals by
+  `_CMP_OPS`, or by `is` and `is not` only when one side is None
+  (`_proved_comparison`, `:2549-2574`), and `and` or `or` over these. Every
+  operand of `and` and `or`, and every link of a chained comparison, is
+  evaluated on its own, so no short circuit decides; Python's own result is
+  then taken. A `literal_eval` failure (`-"a"`, `{[1]: 2}`) or a comparison
+  that raises (`1 < "a"`) is unknown. The assertion passes when the value
+  is truthy. Its message is not read, since Python evaluates it only on
+  failure.
+- R49, unittest. `_proved_unittest_call` (`:2602-2645`) reads
+  `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`,
+  `assertEqual` and `assertNotEqual` (`_PROVED_UNITTEST`, `:2503-2510`,
+  each with the predicate `Lib/unittest/case.py` applies; `assertEqual` on
+  two values of one type dispatches to a type-specific method, and each of
+  unittest's own passes when `==` holds, which reading 7 relies on).
+  Condition one: the call passes the method's operands and at most one
+  `msg`, by position or by keyword, and nothing else, with no `*` or `**`;
+  the operands are bound by `_unittest_operands` (`:1616`), must be
+  literals that `literal_eval` reads, and must pass. Condition two is
+  `_testcase_method` (`:2702-2742`), reached through `testcase_of`
+  (`:4669-4677`) and `_handler_methods` (`:2683-2699`), which maps each
+  handler that a method of a top-level class runs itself to that class
+  and method, once per file and only when a call gets this far.
+  `self_methods.Methods` (#306) is built at most once, by the existing
+  `methods_of`.
+- R49, condition three. `_proved_to_pass` (`:2655-2680`) walks the
+  handler as `_contains_oracle` (`:2187-2204`) does, except that it does
+  not enter an assertion's message, and every oracle it meets must be
+  proved. One `assert False`, `assert str(e) == "y"`,
+  `assert e == e`, `self.fail()`, `pytest.fail()`, `pytest.raises(...)` or
+  any other call `_is_oracle_call` (`:2177-2184`) names keeps the handler
+  inspection, so the shapes 431.Q2 keeps as inspection fall outside the
+  proof by construction. A handler with a `raise` anywhere stays
+  inspection (`_raises_in`, `:2651-2652`, which `_swallows`,
+  `:2266-2272`, now also uses, with the same reading).
+- R50. A handler that holds an oracle, all of them proved, joins
+  `swallowing_handlers` as its normalized first line followed by a space
+  and `[always-passing assertion]` (`_ALWAYS_PASSING`, `:2495`; the walk,
+  `:4701-4715`). `_norm` removes every space from a handler's text, so the
+  new text never equals another Python text, and the per-file multisets
+  (`engine.py:1581-1591`) compare it apart from main's texts: every diff
+  main blocks still blocks, a pre-existing literal-only handler cannot
+  offset a newly added swallowing one, and an old empty handler cannot
+  offset a new literal-only one. The fingerprint function
+  (`detectors/globals_rules.py:59`: the rule, the path and the text), the
+  rule id, `FINDINGS_VERSION` and `IR_VERSION` (both 2) do not change, and
+  an existing finding keeps its fingerprint; a finding with the new text
+  has a new one. `swallowing_handlers` gains values with the suffix and no
+  new field.
+
+**Readings where the ruling is silent**; the owner approved each as
+written (below). Each errs toward unknown, which keeps main's reading:
+
+1. `not` is read only before a literal, as R49 lists it, so
+   `not (1 == 2)` is unknown; a comparison's operands are literals only.
+   `and` and `or` take any of the forms, nested.
+2. A comparison, `assertEqual` or `assertNotEqual` whose operands hold a
+   bytes literal is unknown: comparing bytes with str or int warns under
+   `python -b` and raises under `-bb` (`_holds_bytes`, `:2544-2546`).
+3. A unittest call's `msg` must be a literal that `literal_eval` reads,
+   since it is evaluated before the call: `self.assertTrue(True, -"a")`
+   raises TypeError.
+4. Condition two's base is the first entry of the class's local order
+   (`Methods.order`, `self_methods.py:437`) that the file does not define,
+   read by its spelling: the last part of its dotted name ends in
+   `TestCase` (`unittest.TestCase`, `TestCase` imported from `unittest`,
+   Django's `SimpleTestCase`, `unittest.IsolatedAsyncioTestCase`, or a
+   project's class so named); what the name is bound to is not read. A
+   same-file class does not count by its own name; its order must reach
+   such a base. A base from another module that comes first, `object`
+   included, leaves the call unknown, because it may define the method
+   itself: `class FooTests(Mixin, unittest.TestCase)` with `Mixin`
+   imported is unknown, and `class FooTests(unittest.TestCase, Mixin)` is
+   proved. This is narrower than the ruling's text, which asks only for
+   such a base somewhere on the same-file chain; it extends R49's residual
+   "a project base imported from another module", which the ruling names
+   for `class FooTests(MyBase)`.
+5. "`self` is the receiver" is read as `self_methods.receiver`
+   (`self_methods.py:524`) reads it: the method's first positional
+   parameter, whatever its name, which the method never rebinds. The
+   method is no `staticmethod` and no `classmethod`, and the handler is in
+   the method's own body, not in a nested def, lambda or class, in a
+   top-level class of the module. Other decorators on the method or the
+   class are not read.
+6. "Defines or assigns the method's name" is read as #306 reads the
+   rebinding of a helper method (D-145 Sub-Q3, D-149 (c)). Besides a
+   binding in a same-file class of the order before the base, the call is
+   unknown when the module stores the name anywhere (`x.assertTrue = f`,
+   `self.assertTrue = f` in `setUp`, a literal-name `setattr`,
+   `patch.object`), stores an item into any `__dict__`, or sets a computed
+   name on the receiver or on a class of the order, or when a same-file
+   class of the order binds `__getattribute__`, `__init_subclass__` or
+   `__setattr__` (`_RECEIVER_HOOKS`, `:2531`), as #306's
+   `Methods._resolve` (`self_methods.py:496`) does. A class keyword (a
+   metaclass) or a class name the module binds twice makes the order
+   unreadable, so the call is unknown.
+7. `assertEqual` is unknown when the module's text contains
+   `addTypeEqualityFunc` or `_type_equality_funcs`: a registered
+   type-equality function decides the comparison for its type instead of
+   `==`. It is also unknown when reading 6 finds any name it looks up on
+   the receiver on the way to a pass stored or bound, not only its own
+   (`_REACHED`, `:2521-2526`): `_getAssertEqualityFunc`,
+   `_baseAssertEqual`, the methods unittest registers by name for `dict`,
+   `list`, `tuple`, `set` and `str` (`assertDictEqual`, `assertListEqual`,
+   `assertTupleEqual`, `assertSetEqual`, `assertMultiLineEqual`), and
+   `assertSequenceEqual` and `assertIsInstance`, which those call. A
+   same-file `assertListEqual` that raises makes
+   `self.assertEqual([1], [1])` fail, so reading it as proved would report
+   a swallow the handler does not do. The other five methods look up
+   nothing else on the receiver when they pass.
+8. An `except*` handler is read as an `except` handler is.
+
+**R66.** `_contains_oracle` does not read reachability, and neither does
+the proof: a handler holding only `if False: assert value() == 1`, or an
+assertion after `return`, held an oracle on main and holds an unproved one
+now, so it stays inspection and the pair passes, before and after this
+change. It is a named Python residual in THREATMODEL row 129 and in
+`docs/KNOWN-ISSUES-next.md`. Handling it would mean carrying
+`_unreachable_ids` over to handlers, a wider round than 431.Q2's scope.
+
+**Cost.** As in JS/TS (D-138), adding an always-passing assertion to a
+handler that already swallows reports the new text once, under a new
+fingerprint. One shape this newly reports, as #496 names it:
+`try: f(); assert False` with `except Exception: assert True`. That test
+cannot fail, because the handler also catches the `AssertionError` that
+`assert False` raises, so the report is correct; but the shape looks
+honest, and only the sweep can say how common it is.
+
+**Residuals,** which keep the exemption: a name bound to a literal
+(`ok = True`, then `assert ok`); an assertion on the caught binding that
+cannot fail once it is caught (`assert error`, `assert error is not None`,
+`assert isinstance(error, Exception)`); other always-true shapes the
+TAUTOLOGY rating recognizes (`assert (x, "msg")`, `isinstance(x, object)`,
+`"" in s`, `len(x) >= 0`); a unittest call in a class that reaches its
+TestCase base only through a base imported from another module, or in a
+same-file mixin with no TestCase base (R49); other `assert*` methods, and
+third-party and mock assertion calls; the unreachable oracle (R66); the
+forms readings 1 to 7 leave unknown; and an equal-count exchange of two
+handler sites with the same text.
+
+**Rule 2.** The ruling approves no change to an existing expectation. A
+grep of `tests/cases`, `benchmarks`, `src/checkwash/demo_cases` and the
+inline sources in `tests/*.py` found no broad handler whose only oracles
+are literal assertions, so by reading none moves, and none was changed.
+The grep is not exhaustive; this PR's CI is the check, and if an existing
+expectation moves, the round stops and lists it for the owner.
+
+**Tests.** Four positives, from #518 unchanged but for `bypass: 129`
+(R31): `broad_except_always_passing_assert_true_pos`,
+`broad_except_always_passing_literal_compare_pos`,
+`broad_except_always_passing_bare_except_pos` and
+`broad_except_always_passing_unittest_pos`, each BROAD_EXCEPT_ADDED high
+with `NO_PROD_CHANGE_IN_DIFF`; their titles were approved under A88
+(below) and are unchanged. Four negatives, one per condition, carry new
+labels, which the owner approved (below):
+`broad_except_literal_beside_inspection_neg` (condition three),
+`broad_except_unittest_argument_count_neg` (condition one),
+`broad_except_unittest_not_testcase_neg` (condition two) and
+`broad_except_unproven_oracle_neg` (`assert value() or True`, R51).
+`benchmarks/FAILURES.md` was edited by hand: row 129's pins gain the four
+positives. `tests/test_issue496_python_handler_literal.py` adds 136
+collected items, counted from its parametrize lists: the `assert` family
+(29), the unittest methods (17), what stays inspection (30), condition
+one (13), condition two (11 proved, 21 unknown), verdicts for the pair,
+the offsets and the cost, the unchanged branch folder, the R66 residual
+and `except*`. By reading, the documented test count becomes 20082
+(19938 + 8 + 136); CI's collection checks it. Nothing under `tests/gates`
+changes.
+
+**Sweep** (R32). The pair's before side ran on #518 (run 39215282880,
+the four ids above). The after side and the refactor benchmark
+(`tests/gates/test_refactor_corpus.py`) run in this PR's CI. The standard
+and D-088 sets, compared byte for byte between this fix's parent commit
+and its merge commit, join the combined sweep. A checkwash-lab branch
+declares it before any engine runs, and the owner approves the frozen
+manifest and both engine commits first; it runs on LAPTOP-01AGNPJU only
+under EC POLICY `checkwash-pju-sweep` (T-546), otherwise on the pool. Its
+report lists every commit where `BROAD_EXCEPT_ADDED` changes, each one
+read. Waived (R32): the targeted set of Python commits that add a literal
+assertion to a broad handler, because only assertions proved to always
+pass leave the exemption and a newly reported handler counts as
+swallowing under main's rule anyway; and the Python cost difference,
+which is one literal evaluation per oracle in a broad handler that guards
+one. `NOT_RUN：工作機規則（POLICY work-machine-local），the standard and D-088 comparison waits for the combined sweep; nothing ran on the work machine`.
+
+**Closing** (R35). #496 closes when this PR and its approved maintainer
+text merge, without waiting for the sweep, which departs from
+`docs/KNOWN-ISSUES-v0.8.0.md:31`. What has not run is recorded here, in
+the combined sweep's lab declaration and in a `docs/KNOWN-ISSUES-next.md`
+row. Still to measure: the standard and D-088 comparison above. Fallback:
+if it shows a new block on the new text that review finds false, #496
+reopens, and the proof is narrowed to leave that shape unknown before a
+release ships it. The owner accepted this fallback (below).
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code,
+and this PR's CI is the first run.
+
+First approvals: the owner answered the agent's PR approval list on
+2026-10-19 with 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"); the reply was a button whose text the assistant wrote. Its
+A87 approved reading #518 as its body says, and its A88 approved the four
+positives' titles, with no second review while they are unchanged.
+
+The agent wrote this entry in #496's fix PR #531. The maintainer approved
+it on 2026-10-19: 「第二輪核可全部照建議」 ("the round-2 approval list, all
+as recommended"), in reply to the agent's second list of approval items
+for the open pull requests, which takes every item's recommended answer.
+For this PR those are: B16, the wording as committed of SPEC §4's
+`BROAD_EXCEPT_ADDED` Python clause (a4bc8111, a0a1b4a6), THREATMODEL row
+129's Python paragraph and residuals and the qualification in the
+false-positive table (f1b2cc08, 2c7fd0c4), this entry (7c2ae41a,
+bb83ffd6, fe8a82ef), the `docs/KNOWN-ISSUES-next.md` #496 row (6953e3ec,
+a0a1b4a6) and the Python pointer in `docs/js-catch-swallowing.md`
+(6953e3ec); B17, readings 1 to 8 as written, each erring toward unknown,
+including reading 4, whose base rule is narrower than R49's text, and the
+conservative conditions of readings 6 and 7 (#306's reading of a
+rebinding, and `assertEqual` unknown when the module's text holds
+`addTypeEqualityFunc`); B18, the four negatives' labels; and B19, the
+fallback under **Closing** (R35). The reply is the text of a button the
+agent wrote, which the owner chose; the agent also wrote the list and
+each item's options. After the approval the agent changed only the
+readings' heading and the negatives' sentence, which had said they
+awaited it, added the sentence after the fallback saying the owner
+accepted it, retitled the paragraph on the first approvals, and wrote
+this paragraph.
