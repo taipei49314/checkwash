@@ -165,10 +165,65 @@ def _standin(value, bindings):
     return expression is not None and _pure(expression, parameters, scoped)
 
 
-def _scope(tree, qualname):
+class _ModuleReads:
+    """One tree's module-level reads, each made once (#469).
+
+    `_subject_call` asks a module the same questions for every eligible
+    assertion pair: which function or class a qualname part names, whether a
+    star import binds unknown names, and the module's binding sites and
+    values. Asked per pair, they made the pass's time grow with the pairs
+    times the module's top-level statements. The pass keeps one of these per
+    side of a file, so each is read once. Every answer is the one the
+    uncached read gives, and no caller changes one. Scope indexes are keyed
+    by id, as the frontend's scope caches are; the tree held here keeps
+    every node alive.
+    """
+
+    def __init__(self, tree):
+        self.tree = tree
+        self._members = {}
+        self._star_import = None
+        self._sites = None
+        self._values = None
+
+    def member(self, scope, name):
+        """The first function or class named `name` in `scope.body`, or None."""
+        members = self._members.get(id(scope))
+        if members is None:
+            members = {}
+            for node in scope.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    members.setdefault(node.name, node)
+            self._members[id(scope)] = members
+        return members.get(name)
+
+    def star_import(self):
+        if self._star_import is None:
+            self._star_import = any(
+                isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
+                for statement in self.tree.body)
+        return self._star_import
+
+    def sites(self):
+        if self._sites is None:
+            self._sites = _binding_sites(self.tree.body)
+        return self._sites
+
+    def values(self):
+        if self._values is None:
+            self._values = _bindings(self.tree.body)
+        return self._values
+
+
+def _scope(tree, qualname, module=None):
+    """The function `qualname` names in `tree`, or None. With `module`, the
+    reads of `tree` the pass keeps (#469), which find the same node."""
     scope = tree
     for part in qualname.split("."):
-        scope = next((node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part), None)
+        if module is None:
+            scope = next((node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part), None)
+        else:
+            scope = module.member(scope, part)
         if scope is None:
             return None
     return scope if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)) else None
@@ -206,23 +261,25 @@ def _binding_sites(statements):
     return sites
 
 
-def _subject_call(assertion, tree, qualname):
+def _subject_call(assertion, tree, qualname, module=None):
     """Project only stable, straight-line captures of the asserted value.
 
     Assertion.reaching describes bindings at the assertion, not at an earlier
     assignment. Require a concrete assignment chain and stable dependencies
-    before using that environment to resolve the captured call.
+    before using that environment to resolve the captured call. `module` is
+    the pass's kept reads of `tree` (#469); a direct call reads them afresh.
     """
     node = parse_expr(assertion.left or "")
     if isinstance(node, ast.Call):
         return node
     if not isinstance(node, ast.Name):
         return None
-    scope = _scope(tree, qualname)
+    if module is None:
+        module = _ModuleReads(tree)
+    scope = _scope(tree, qualname, module)
     if scope is None:
         return None
-    if any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
-           for statement in tree.body):
+    if module.star_import():
         return None
     parsed = parse_text(assertion.text)
     if parsed is None:
@@ -251,9 +308,9 @@ def _subject_call(assertion, tree, qualname):
                   or isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)):
             return None
     local_sites = _binding_sites(scope.body)
-    module_sites = _binding_sites(tree.body)
+    module_sites = module.sites()
     local_values = _bindings(prefix)
-    module_values = _bindings(tree.body)
+    module_values = module.values()
     boundary = (scope.body[matches[0]].lineno, scope.body[matches[0]].col_offset)
     seen = set()
     for _ in range(8):
@@ -494,7 +551,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
         if (not judged_as_test(file) or not file.path.endswith(".py") or change is None
                 or not change.before or not change.after):
             continue
-        trees = None
+        trees = reads = None
         for unit in file.units:
             if unit.before is None or unit.after is None or unit.delta is None:
                 continue
@@ -516,11 +573,15 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                     trees = _trees(change)
                 if any(tree is None for tree in trees):
                     continue
+                if reads is None:
+                    # One set of module reads per side, kept for the file's pairs (#469).
+                    reads = (_ModuleReads(trees[0]), _ModuleReads(trees[1]))
                 old_scope = _assertion_scope(trees[0], unit.qualname, b)
                 new_scope = _assertion_scope(trees[1], unit.qualname, a)
                 if old_scope is None or new_scope is None:
                     continue
-                old_call, new_call = _subject_call(b, trees[0], old_scope), _subject_call(a, trees[1], new_scope)
+                old_call = _subject_call(b, trees[0], old_scope, reads[0])
+                new_call = _subject_call(a, trees[1], new_scope, reads[1])
                 if not isinstance(old_call, ast.Call) or not isinstance(new_call, ast.Call):
                     continue
                 if (stable_dump(old_call.func) == stable_dump(new_call.func)
