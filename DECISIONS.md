@@ -12602,9 +12602,10 @@ Effects by reading:
   `_subject_call` is bounded by the test's own body: its statements, their
   binding sites and the assignments before the assertion. For the
   straight-line shape the pass's time therefore grows linearly with the
-  pairs. The cache adds, per file with an eligible pair, two small objects,
-  and one name index for each body `_scope` looks up, built over the whole
-  body where the scan stopped at the first match. On the files of about 20
+  pairs whose callee is unchanged; a pair whose callee changed still reads
+  the module (next item). The cache adds, per file with an eligible pair,
+  two small objects, and one name index for each body `_scope` looks up,
+  built over the whole body where the scan stopped at the first match. On the files of about 20
   nodes in `tests/test_perf_git.py` that is a few dictionary entries per
   file, so the performance gates below still cannot move.
 - **Still read once per pair, by reading.** The cache covers the four
@@ -12621,11 +12622,15 @@ Effects by reading:
   the module's nodes: at 200,000 nodes, some 33,000 tests, each walking all
   200,000 nodes on both sides. That is faster than linearly, and more than
   the straight-line shape cost before the cache. For a pair whose callee
-  changed, `_scoped_bindings` (`:373`) reads the module's bindings again,
-  since it extends them, and `_literal_helper_replacement` walks the tree
-  (`:522`), as before. Whether to keep these reads too, or to rule a budget
-  that fails closed, is for the owner; the timing job below also times the
-  helper shape, and this reading goes on #469 with the numbers (A84).
+  changed with the same arguments, the replacement the pass looks for,
+  `_scoped_bindings` reads the module's bindings again on both sides
+  (`:373`), since it extends them, and scans the module for the test
+  (`:374`); when the new callee reaches the literal-string helper check,
+  `_literal_helper_replacement` can also walk the whole tree (`:522`), as
+  before. Whether to keep these reads too, or to rule a budget that fails
+  closed, is for the owner; the timing job below also times the helper
+  shape but not the callee-changed path, and this reading goes on #469
+  with the numbers (A84).
 - The performance gate cannot move. `tests/gates/test_perf.py` calls
   `analyze` without a `root_reader`, and both passes return no events
   without one (`standin_installations.py:1038`,
@@ -12649,9 +12654,14 @@ written here. It builds synthetic test files of exactly 30,000, 100,000 and
 200,000 syntax nodes per side, the sides differing only in their module
 docstring, in three shapes: the straight-line tests above (15 nodes each,
 three runs per size); one such test among module-level assignments; and
-the helper-call tests above (six nodes each, also at 10,000 nodes). For
-each run it times `analyze` up to `subject_replacement_events` and the pass
-itself, and counts its events and its `_subject_call` and `_assertion_scope`
+the helper-call tests above (six nodes each, also at 10,000 nodes). With
+sides that differ only in their docstring, every pair keeps its callee and
+the pass moves on at `subject_replacements.py:587`, so the callee-changed
+path is not timed: neither `_scoped_bindings` (`:373-374`) nor the
+whole-tree walk in `_literal_helper_replacement` (`:522`; the ruling's
+`:440` at 6d78d8dd) runs. Whether to add a shape for it is for the owner.
+For each run it times `analyze` up to `subject_replacement_events` and the
+pass itself, and counts its events and its `_subject_call` and `_assertion_scope`
 calls. Each run has its own process and a 300-second budget within a
 35-minute deadline, and a shape's larger sizes are skipped after an
 overrun. To be recorded here: the run id, the commit, each shape's times,
@@ -12680,7 +12690,9 @@ Residuals. Two more stand-in limit refusals name nothing:
 (`standin_installations.py:1084`) and `stand-in context exceeds the source
 read limit` (`:1123`). They are not in this round. The time at 200,000
 nodes and D-131 item 2's stand-in time are not measured. By reading, an
-inherited helper assertion still has the module read once per pair (above).
+inherited helper assertion and a pair whose callee changed still have the
+module read once per pair (above); the timing job does not time the
+second.
 Which step counter fires on the 17 commits is unknown; finding out needs
 the approved run of ruling item 2. #345 stays open and is judged again when this lands and the
 sweep re-runs its commits (the owner's decision of 2026-10-16); for that
@@ -12731,6 +12743,6 @@ readings (A86: approved as written). The reply is the text of a button the
 agent wrote, which the owner chose. The text added or changed in 11e370d2
 (the cache, the Time paragraph recast for the code before it, the two new
 effects, the timing placeholder, the residual sentence, one line reference
-and the evidence status) is not covered by this approval and still needs
-the owner's review, as the timing paragraph will once its numbers are
-filled.
+and the evidence status), with the review corrections to it after
+d4ed8b3e, is not covered by this approval and still needs the owner's
+review, as the timing paragraph will once its numbers are filled.
