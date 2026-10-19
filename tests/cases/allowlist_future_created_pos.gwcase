@@ -1,5 +1,4 @@
 === meta ===
-bypass: 39
 rule: ASSERT_WEAKENED
 title: A future-dated created anchors the cap at today, not at itself
 origin: audit 2026-08-19 — created = "2030-01-01" / expires = "2030-06-01"
