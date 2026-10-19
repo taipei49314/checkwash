@@ -1397,6 +1397,55 @@ def _declarations(text: str, code: bytearray, bindings: Bindings) -> list[_Decla
     return declarations
 
 
+def _covered(spans: list[tuple[int, int]], position: int) -> bool:
+    return any(first <= position < last for first, last in spans)
+
+
+def _callee_start(bindings: Bindings, position: int) -> int:
+    """Where the callee of the declaration word at `position` starts: at its receiver (`t.test`), or at the word."""
+    index = bisect_left(bindings.token_starts, position)
+    while bindings.token(index - 1) in {".", "?."} and re.fullmatch(NAME, bindings.token(index - 2)):
+        index -= 2
+    return bindings.tokens[index][1] if index < len(bindings.tokens) else position
+
+
+def _dead_code(text: str, code: bytearray, bindings: Bindings, declarations: list[_Declaration],
+               reachability: Reachability) -> list[tuple[int, int]]:
+    """Spans of the file's code that no run reaches, as far as #429's walker proves (#484 Q1 (a)).
+
+    The walker reads the module's own statements, the block callback of
+    every `describe`, `suite` and `context` declaration (their `x`/`f`
+    forms, modifiers and tables included), and the callback of a test that
+    registers a test of its own (node:test's and tap's `t.test`), even one
+    that asserts nothing. A literal-decided `&&`/`||` statement drops a
+    declaration as it drops an assertion: the declaration's call, from its
+    callee (a receiver such as `t` included) to its `)`, must be the
+    statement's last operand. A declaration whose call was recovered is not
+    walked, as a recovered test callback is not; neither is the callback of
+    a declaration a span already holds, all of which is dead.
+    """
+    if not declarations:
+        return []
+    operands = {_callee_start(bindings, d.start): d.call[1] for d in declarations if d.call is not None}
+    dead = list(reachability.module_unreachable(operands))
+    # What a test callback may register: a named test or a block. A bare
+    # `.test(value)` call is read as a declaration with no name, and is none.
+    starts = [d.start for d in declarations if not d.unit or d.name is not None]
+    for declaration in declarations:
+        if declaration.call is None or _covered(dead, declaration.start):
+            continue
+        callback = declaration.callback or _test_body(text, code, bindings, declaration)
+        if callback is None:
+            continue
+        start, end = callback[0], callback[1]
+        if declaration.unit:
+            inner = bisect_left(starts, start)
+            if inner == len(starts) or starts[inner] >= end:
+                continue  # a test callback is read for what it registers only when it registers something
+        dead.extend(reachability.unreachable(start, end, operands))
+    return dead
+
+
 def _callback_receivers(bindings: Bindings, span: tuple[int, int],
                         context: int | None = 0) -> frozenset[str]:
     """The names a callback's own test context answers to.
@@ -2769,14 +2818,25 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     text = _decoded(data)
     code = _code_positions(text)
     bindings = Bindings(text, code, _code_positions(text, keep_strings=True))
-    declarations = _declarations(text, code, bindings)
+    written = _declarations(text, code, bindings)
+    reachability = Reachability(bindings, code)
+    # A declaration that starts where no run of the file reaches registers
+    # nothing: it is no unit, and neither is any declaration inside it, and
+    # its skip, focus and options apply to nothing (#484 Q1 (a)).
+    dead_code = _dead_code(text, code, bindings, written, reachability)
+    parked = {id(d) for d in written if _covered(dead_code, d.start)}
+    declarations = [d for d in written if id(d) not in parked]
     # A `test`/`it` table is a unit too (#428), named by its title as written.
-    scanned = [d for d in declarations if d.unit and d.name is not None]
+    # A parked unit is scanned too: its assertions are read, then recorded as
+    # never reached, and its callback stays a nested function of any test
+    # around it.
+    scanned = [d for d in written if d.unit and d.name is not None]
     test_body_starts = {d.callback[0] for d in scanned if d.callback is not None}
     # Where each table call's one argument starts and ends, `describe` tables
-    # included: the only reads a `const` table may have (`_const_rows`).
+    # included: the only reads a `const` table may have (`_const_rows`). A
+    # parked table's argument is such a read too.
     const_reads = _ConstReads(text, code, bindings,
-                              dict(_trim(text, code, d.rows[1]) for d in declarations
+                              dict(_trim(text, code, d.rows[1]) for d in written
                                    if d.rows is not None and d.rows[0] == "array"))
     # What nested units inherit, the file's first focus, and the units that
     # focus stops running.
@@ -2854,12 +2914,14 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     function_starts = [first for first, _last in functions]
     arrow_starts = [first for first, _last in arrows]
     units: list[ParsedUnit] = []
-    reachability = Reachability(bindings, code)
     # The catch evidence reads every assertion a callback spells, run or not
     # (#363); a unit keeps only those its statements reach (#429 Q1).
     spelled: list[Assertion] = []
     unreachable: list[tuple[int, int]] = []
     unreachable_unjudged: list[tuple[int, int]] = []
+    # Whether a parked declaration would have been a unit: it still makes the
+    # file declare tests (#484, D-165).
+    parked_unit = False
     for declaration in scanned:
         name = declaration.name
         callback = declaration.callback
@@ -2992,8 +3054,15 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
         assertions.extend(_candidate_assertions(text, code, bindings, start, end, covered, owned))
         assertions.sort(key=lambda assertion: assertion.span)
         spelled.extend(assertions)
+        if id(declaration) in parked:
+            # No run registers it (#484 Q1 (a)): no unit. Its assertions
+            # reached the catch evidence above, and are read, not missed.
+            for assertion in assertions:
+                (unreachable if assertion.strength is not None else unreachable_unjudged).append(assertion.span)
+            parked_unit = True
+            continue
         # A recovered body has no trustworthy end, so nothing in it is cut.
-        dead = (reachability.unreachable(start, end, [assertion.span for assertion in assertions])
+        dead = (reachability.unreachable(start, end, dict(assertion.span for assertion in assertions))
                 if assertions and callback is not None and declaration.call is not None else [])
         if dead:
             # Spans nest (a dead branch inside a dead branch), so each is asked.
@@ -3020,9 +3089,11 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             _read_table(text, code, bindings, declaration, side, const_reads)
         units.append(ParsedUnit(qualname=name, span=(declaration.start, unit_end), side=side))
     # A declaration counts with an inline callback, which a runner collects
-    # as a test or a suite; a bare `.test(value)` call is a method.
-    declares_tests = bool(units) or any(
-        (d.callback or _test_body(text, code, bindings, d)) is not None for d in declarations)
+    # as a test or a suite; a bare `.test(value)` call is a method. A parked
+    # one still counts, as it did before #484 (D-165), so E7's role reading
+    # of a JS/TS test path does not move.
+    declares_tests = bool(units) or parked_unit or any(
+        (d.callback or _test_body(text, code, bindings, d)) is not None for d in written)
     handlers = swallowing_handlers(bindings, spelled)
     # A tautology states no predicate (#429 Q6): two keyed spellings on one
     # subject would read as the same predicate, and `toBe(27)` -> `toBe(total)`

@@ -1,28 +1,37 @@
-"""Which statements of a JS/TS test callback run (#429: Q1, Q3, Q5).
+"""Which statements of a JS/TS test file run (#429: Q1, Q3, Q5; #484: Q1).
 
 The JS/TS twin of the Python frontend's reachability walk
 (`_unreachable_ids`, SPEC §2b). One bounded walker reads the statements of a
-test callback's block body. It cuts after an unconditional `return` or
-`throw`, and skips a branch whose condition `fold_condition` decides: the
-body of `if (false)`, `while (false)` and `for (; false; )`, and the `else`
-of `if (true)`. It descends into blocks, loop and `do` bodies,
-`try`/`catch`/`finally` blocks and labeled statements. Only a block and a
-statically selected branch pass their termination on, as only a statically
-selected branch does in Python; a loop, `do`, `try` or labeled body never
-does. It never enters a function, arrow or class body, so the `return` of an
-iterator callback ends nothing outside it. A literal-decided `&&`/`||`
-expression statement drops the assertion it ends with (Q3).
+block body: a test callback's, for the assertions it reaches (#429), and,
+for the tests and blocks it registers (#484), a `describe`, `suite` or
+`context` callback's, a test callback's that registers subtests, and the
+module's own statement list (`module_unreachable`). It cuts after an
+unconditional `return` or `throw`, and skips a branch whose condition
+`fold_condition` decides: the body of `if (false)`, `while (false)` and
+`for (; false; )`, and the `else` of `if (true)`. It descends into blocks,
+loop and `do` bodies, `try`/`catch`/`finally` blocks and labeled statements.
+Only a block and a statically selected branch pass their termination on, as
+only a statically selected branch does in Python; a loop, `do`, `try` or
+labeled body never does. It never enters a function, arrow or class body,
+so the `return` of an iterator callback ends nothing outside it. A
+literal-decided `&&`/`||` expression statement drops the assertion or the
+declaration call it ends with (Q3).
 
 Not a parser. The token stream omits templates and regular expressions, so a
-line break next to one, an unpaired bracket, a `with` statement, a
+line break next to one, an unpaired bracket, a `with` statement, `export`, an
+`import` other than a static import declaration at the module's top level, a
 TypeScript-annotated function declaration, or any statement whose end is not
 proved stops the walk of its statement list there, and everything after it
 keeps today's reading. A callback is not walked at all when its text holds
 U+2028 or U+2029, which the shared line-break test does not read, or text the
 token stream misreads as code: a template nested in a substitution, JSX, or
-an Annex B HTML-like comment. A dead body that is no block is not killed where
-its end at a line break is in doubt. A `switch` body is
-not read: the walk steps over it and goes on after it.
+an Annex B HTML-like comment; the module walk is refused when the file holds
+any of these anywhere. A dead region that holds a function declaration,
+whose hoisted body a call before it may run, refuses the whole walk; a
+function expression there does not (#484, amending D-148 reading 10). A dead
+body that is no block is not killed where its end at a line break is in
+doubt. A `switch` body is not read: the walk steps over it and goes on after
+it.
 """
 
 from __future__ import annotations
@@ -124,6 +133,23 @@ _STATEMENT_KEYWORDS = frozenset({
 # A `with (` or `eval` anywhere in the text, comments and strings included; one
 # pass, no backtracking. A comment between `with` and `(` is caught on the tokens.
 _SCOPE_CHANGERS = re.compile(r"(?<![\w$])(?:with[\s\N{ZERO WIDTH NO-BREAK SPACE}]*\(|eval(?![\w$]))")
+# Tokens after which `function` can only begin an expression, a line break
+# between them or not (#484, D-148 reading 10 as D-165 amends it): an opening
+# bracket, a comma, a spread, and an operator that waits for its operand. Not
+# `:`, which also ends a label or a `case` (`l: function f() {}` declares
+# one), and not `)`, `]`, `}`, a name or a literal, after which a statement
+# may start.
+_EXPRESSION_BEFORE = (_UNFINISHED - {":"}) | {
+    "(", "[", "...", "~", "&&=", "||=", "??=", "**=", "<<=", ">>=", ">>>=",
+}
+# Words, and a prefix `!`, after which a `function` on the same line begins an
+# expression, while a line break after them may end the statement (`return`
+# then a declaration on the next line; TypeScript's `x!`).
+_EXPRESSION_BEFORE_ON_LINE = frozenset({"return", "throw", "yield", "await", "void", "!"})
+# A static import declaration's specifier, and the words that may follow it
+# on the next line as part of it: import attributes.
+_QUOTES = frozenset({"'", '"'})
+_IMPORT_ATTRIBUTES = frozenset({"with", "assert"})
 
 
 class _Folder:
@@ -330,7 +356,7 @@ def _misread_run(text: str, start: int, end: int, before: str, dotted: bool) -> 
 
 
 class Reachability:
-    """The spans of each test callback in one file that never run, read on demand."""
+    """The spans of a file's block bodies, and of its module scope, that never run, read on demand."""
 
     def __init__(self, bindings: Bindings, code: bytearray):
         self.bindings = bindings
@@ -355,7 +381,10 @@ class Reachability:
         self.separators = [match.start() for match in
                            re.finditer("[\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]", bindings.text)]
         self.dead: list[tuple[int, int]] = []
-        self.assertions: dict[int, int] = {}
+        # The spans a literal-decided `&&`/`||` statement may drop, start -> end.
+        self.operands: dict[int, int] = {}
+        # True while the module's own statement list is walked (#484).
+        self.module = False
         # Whether each global the folder reads is spelled only as plain reads in the file.
         self.read_only: dict[str, bool] = {}
         # A `\` outside a string is an identifier escape (`return\u0041` is one name),
@@ -371,11 +400,13 @@ class Reachability:
     def token(self, index: int) -> str:
         return self.bindings.token(index)
 
-    def unreachable(self, start: int, end: int, assertions: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    def unreachable(self, start: int, end: int, operands: dict[int, int]) -> list[tuple[int, int]]:
         """Character spans of the block body `start`..`end` that never run; empty when none is proved.
 
-        `assertions` are the unit's assertion spans: a literal-decided
-        `&&`/`||` statement drops one only when it ends the statement.
+        `operands` maps each span a literal-decided `&&`/`||` statement may
+        drop, start to end: a unit's assertions (#429 Q3), or the file's
+        declaration calls (#484). It drops one only when it ends the
+        statement.
         """
         starts = self.bindings.token_starts
         first = bisect_left(starts, start)
@@ -390,8 +421,31 @@ class Reachability:
                 or (self.desync is not None and self.desync < end)):
             return []  # a misreading anywhere before the callback's end may shift its tokens
         self.dead, self.hoisted = [], False
-        self.assertions = dict(assertions)
+        self.operands = operands
         self._list(first, closing, 0)
+        return [] if self.hoisted else sorted(self.dead)
+
+    def module_unreachable(self, operands: dict[int, int]) -> list[tuple[int, int]]:
+        """Character spans of the module's own statements that never run; empty when none is proved (#484).
+
+        The module's statement list is walked as a block body is, and a
+        static `import` declaration at its top level whose end the walk
+        proves is stepped over (`_import`). The walk is refused when the
+        file holds anywhere what a callback walk is refused for: an
+        unpaired bracket, U+2028 or U+2029, an identifier escape, or text
+        the token stream misreads; and when text the tokens omit stands
+        before the first token.
+        """
+        if (not self.tokens or self.unpaired or self.separators or self.escaped or self.desync is not None
+                or not _trivia(self.bindings.text[:self.tokens[0][1]])):
+            return []
+        self.dead, self.hoisted = [], False
+        self.operands = operands
+        self.module = True
+        try:
+            self._list(0, len(self.tokens), 0)
+        finally:
+            self.module = False
         return [] if self.hoisted else sorted(self.dead)
 
     def _first_misread(self) -> int | None:
@@ -449,16 +503,52 @@ class Reachability:
     def _kill(self, first: int, after: int) -> None:
         """Statements from token `first` up to token `after` never run.
 
-        Where they hold a `function`, a call before them may run its hoisted
-        body, which the binder does not always scope (`function f<T>()`): the
-        callback is then refused.
+        Where they hold a function declaration, a call before them may run
+        its hoisted body, which the binder does not always scope
+        (`function f<T>()`): the walk is then refused. A function expression
+        hoists nothing (#484, amending D-148 reading 10).
         """
         if first < after:
-            self.hoisted = self.hoisted or any(self.token(index) == "function" for index in range(first, after))
+            self.hoisted = self.hoisted or any(
+                self.token(index) == "function" and self._declares_function(index) for index in range(first, after))
             self.dead.append((self.tokens[first][1], self.tokens[after - 1][2]))
 
+    def _declares_function(self, index: int) -> bool:
+        """Is the `function` at token `index` a declaration, read conservatively?
+
+        A declaration needs a name, so `function () {}` and `function* () {}`
+        declare nothing. Neither does a `function` that can only begin an
+        expression: after a `.`, `?.` or `#` (a property), after an opening
+        bracket, a comma, a spread or an operator that waits for its operand
+        (`it("x", function named() {})`, `const f = function g() {}`), or
+        after `return`, `throw`, `yield`, `await`, `void` or a prefix `!` on
+        the same line. Anything else reads as a declaration: first in a
+        statement, after a label's or a `case`'s `:` (`l: function f() {}`),
+        after `)` (`if (x) function f() {}`), `]` or `}`, and after an
+        operand at a line break. An `async` right before it on its line is
+        read past.
+        """
+        following = index + 1
+        if self.token(following) == "*":
+            following += 1
+        if not _NAME.fullmatch(self.token(following)):
+            return False
+        before = index - 1
+        if self.token(before) == "async" and not self.bindings._line_break(index):
+            before -= 1
+        previous = self.token(before)
+        if previous in {".", "?.", "#"}:
+            return False
+        if _NAME.fullmatch(previous) and self.token(before - 1) in {".", "?.", "#"}:
+            return True  # a property such as `cache.delete` is a whole operand
+        if previous in _EXPRESSION_BEFORE:
+            return False
+        return not (previous in _EXPRESSION_BEFORE_ON_LINE and not self.bindings._line_break(before + 1))
+
     def _gap(self, before: int, index: int) -> str:
-        return self.bindings.text[self.tokens[before][2]:self.tokens[index][1]]
+        """The text between token `before` and token `index`, or the file's end after the last token."""
+        end = self.tokens[index][1] if index < len(self.tokens) else len(self.bindings.text)
+        return self.bindings.text[self.tokens[before][2]:end]
 
     def _list(self, first: int, last: int, depth: int) -> bool:
         """Walk the statements from `first` to `last`; does the list end every run of it?"""
@@ -495,6 +585,8 @@ class Reachability:
         token = self.token(first)
         if token == ";":
             return first + 1, False  # an empty statement, as the body of `if (x);`
+        if token == "import" and self.module and depth == 0:
+            return self._import(first, last)
         if token == "{":
             closing = self.pairs.get(first)
             if closing is None or closing >= last:
@@ -685,6 +777,56 @@ class Reachability:
             self._list(opening + 1, closing, depth + 1)
         return cursor, False
 
+    def _import(self, first: int, last: int) -> tuple[int, bool] | None:
+        """A static `import` declaration at the module's top level whose end the walk proves (#484).
+
+        D-148 reading 7, as D-165 amends it. `import "m"`, and `import`
+        followed by names, `*`, `as`, commas and a braced list of names,
+        strings and commas, then `from` and a string: `import x from "m"`,
+        `import { a, b as c } from "m"`, `import * as ns from "m"`,
+        `import x, { a } from "m"`, TypeScript's `import type { T } from "m"`.
+        It ends at a `;`, at a line break before a token that cannot go on
+        with it, or at the file's end, and only where the text between its
+        tokens is whitespace and comments. Anything else stops the walk: a
+        dynamic `import(...)`, `import.meta`, TypeScript's
+        `import x = require(...)`, an import with attributes (`with` or
+        `assert`, on its line or the next), and a default import named
+        `from`.
+        """
+        cursor = first + 1
+        if self.token(cursor)[:1] not in _QUOTES:
+            while cursor < last and self.token(cursor) != "from":
+                token = self.token(cursor)
+                if token == "{":
+                    closing = self.pairs.get(cursor)
+                    if closing is None or closing >= last or not all(
+                            _NAME.fullmatch(self.token(index)) or self.token(index) == ","
+                            or self.token(index)[:1] in _QUOTES for index in range(cursor + 1, closing)):
+                        return None
+                    cursor = closing + 1
+                elif _NAME.fullmatch(token) or token in {",", "*"}:
+                    cursor += 1
+                else:
+                    return None  # `=` (`import x = require(...)`), `(`, `.`
+            if cursor == first + 1 or cursor >= last:
+                return None
+            cursor += 1  # past `from`
+        specifier = cursor
+        if specifier >= last or self.token(specifier)[:1] not in _QUOTES:
+            return None
+        if not all(_trivia(self._gap(index - 1, index)) for index in range(first + 1, specifier + 1)):
+            return None  # text the tokens omit stands between two of its tokens
+        after = specifier + 1
+        if after >= last:
+            return (last, False) if _trivia(self._gap(specifier, last)) else None
+        if not _trivia(self._gap(specifier, after)):
+            return None
+        if self.token(after) == ";":
+            return after + 1, False
+        if self.bindings._line_break(after) and self.token(after) not in _IMPORT_ATTRIBUTES:
+            return after, False
+        return None  # import attributes, or a token on its line that cannot follow it
+
     def _function(self, first: int, last: int) -> tuple[int, bool] | None:
         """A function declaration, whose body runs only when it is called."""
         cursor = first + (2 if self.token(first) == "async" else 1)
@@ -794,9 +936,10 @@ class Reachability:
         """Q3: `false && expect(...)` or `true || expect(...)`, as one expression statement.
 
         The statement starts on a boundary this walk proved, so its literal
-        cannot continue the line before; the assertion is the last operand of
-        the last top-level `&&` or `||` and runs to the statement's end; and
-        what comes before that operator folds to the value that skips it.
+        cannot continue the line before; the assertion, or the declaration
+        call (`false && it(...)`, #484), is the last operand of the last
+        top-level `&&` or `||` and runs to the statement's end; and what
+        comes before that operator folds to the value that skips it.
         Ternary, `??` and comma forms are residuals.
         """
         stop = end - 1 if self.token(end - 1) == ";" else end
@@ -815,12 +958,14 @@ class Reachability:
             return
         operator = operators[-1]
         start_char, end_char = self.tokens[operator + 2][1], self.tokens[stop - 1][2]
-        if self.assertions.get(start_char) != end_char:
+        if self.operands.get(start_char) != end_char:
             return
         if stop < end and not _trivia(self._gap(stop - 1, stop)):
             return  # an operand the tokens omit continues the statement
         before = first - 1
-        source = self.bindings.text[self.tokens[before][2]:self.tokens[operator][1]] if before >= 0 else ""
+        # The module walk's first statement has no token before it; only
+        # whitespace and comments do (`module_unreachable`).
+        source = self.bindings.text[self.tokens[before][2] if before >= 0 else 0:self.tokens[operator][1]]
         position = self.tokens[first][1]
         truth = fold_condition(source, lambda name: self._global(name, position))
         if truth is (self.token(operator) == "|"):
