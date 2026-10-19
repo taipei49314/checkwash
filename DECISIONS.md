@@ -12565,5 +12565,21 @@ Python ran; CI runs the tests. The undici and jsondiffpatch readings come
 from source read for the 2026-10-18 analysis.
 `NOT_RUN：工作機規則（POLICY work-machine-local），read-only inference; nothing was run`.
 
-The agent wrote this entry in #468's docs PR, as a draft for the owner's
-approval of the wording.
+The agent wrote this entry in #468's docs PR #521. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended"), in reply to the agent's list asking for approval of this
+PR's SPEC §4 `SUPPRESSION_ADDED` row (b5aac2c6, c1a68fa9), THREATMODEL
+row 137 (f9c6dace, 629baffe) and D-160 (276c44ec, 97f6816a) text, with
+the hand edit of `benchmarks/FAILURES.md` (A21), and of its departures
+from the rulings (A22): this entry's record that R58 and R64 narrowed the
+2026-10-16 ruling's item 2, the quote case in the #421 row, the #497
+spellings in their own sentence, the #480 wording that differs from the
+2026-10-18 draft, and the introduction of `docs/KNOWN-ISSUES-next.md`
+defining *Existing* rows. The same reply chose to correct the v0.8.0
+known-issues page's sentence that listed #423, #425, #426 and #433 as
+open (A23), to name #278's gap on that page (A24), and to shorten the
+#468 row's source in `docs/KNOWN-ISSUES-next.md` to "the v0.8.0
+acceptance sweep (D-140)" while this entry keeps the host and policy
+(A25). Those three edits (ab989698, 38613ccc, eb3d9dcf) were written
+after the reply, so their wording is the agent's. The reply is the text
+of an answer the agent wrote, which the owner chose.
