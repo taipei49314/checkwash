@@ -36,6 +36,20 @@ class ConfigSource:
     link_bytes: int = 0
 
 
+@dataclass(frozen=True)
+class TreeAlias:
+    """A tree entry that a path the tree lacks can stand for on disk (#500).
+
+    `kind` is "a symlink", "a file" or "a submodule". `whole` is true when
+    the entry is the path itself in another case, false when it lies at a
+    proper prefix of the path.
+    """
+
+    entry: str
+    kind: str
+    whole: bool
+
+
 def search_source_mapping(snapshot, needles):
     """Search a caller-owned complete byte snapshot.
 
@@ -429,6 +443,35 @@ class GitSnapshot:
             raise EngineError("strict snapshot blob is incomplete or exceeds the source limit")
         _verify_blob(parts[0], body[:-1])
         return body[:-1]
+
+    def alias(self, path):
+        """The entry a path this tree lacks can stand for on disk, or None (#500).
+
+        Git looks `<rev>:<path>` up byte for byte and never through an entry
+        that is not a directory. A working tree follows a symlink, opens a
+        directory the head put where this tree holds a file, and on a
+        case-insensitive checkout matches any case. So the answer is the
+        first entry, by the shortest prefix, that equals a proper prefix of
+        `path` when case is ignored and is a file, symlink or submodule; or
+        else an entry that equals `path` itself only when case is ignored.
+        An entry equal to `path` byte for byte is what `read` answers, so it
+        is no alias. Every comparison is on text, with `str.casefold`, so the
+        answer is the same on every file system.
+        """
+        self.list_paths()
+        folded = {}
+        entries = [(name, "a symlink" if mode == b"120000" else "a file")
+                   for name, (mode, _oid, _size) in self._tree_entries.items()]
+        entries += [(name, "a submodule") for name in self._opaque]
+        for name, kind in sorted(entries):
+            folded.setdefault(name.casefold(), []).append((name, kind))
+        parts = path.split("/")
+        for end in range(1, len(parts) + 1):
+            whole = end == len(parts)
+            for name, kind in folded.get("/".join(parts[:end]).casefold(), ()):
+                if not whole or name != path:
+                    return TreeAlias(name, kind, whole)
+        return None
 
     def search(self, needles):
         if not needles:

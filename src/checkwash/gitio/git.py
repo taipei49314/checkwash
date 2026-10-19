@@ -12,7 +12,7 @@ import subprocess
 from dataclasses import dataclass
 
 from checkwash.change import EngineError, FileChange, SourceOverLimit, UnreadSide
-from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
+from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
 
 
 class GitError(Exception):
@@ -169,6 +169,15 @@ def read_base_file(repo: str, base: str, path: str, *, side: str = "base") -> by
     """One file as `base` holds it; a file over the source byte limit raises
     `GitSourceOverLimit`. `side` is the diff side a size refusal names."""
     return _read_blob(repo, base, path, side=side)
+
+
+def base_alias(repo: str, base: str, path: str) -> TreeAlias | None:
+    """The entry of `base`'s tree that `path`, which the tree lacks, can
+    stand for on disk, or None: `GitSnapshot.alias` (#500)."""
+    try:
+        return GitSnapshot(repo, base, side="base").alias(path)
+    except EngineError as exc:
+        raise _git_error(exc) from exc
 
 
 def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False,
