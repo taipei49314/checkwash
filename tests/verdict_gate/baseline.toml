@@ -62,12 +62,27 @@ schema_version = 1
 # 71 block-to-pass IDs are unchanged. No acceptance entries are required.
 # Adopt the observed blocked pin below; protected acceptance/decision changes
 # remain a separate concrete draft, so rotation completion is not claimed.
+# (PR #371 completed that rotation at 818dd6c, D-129.)
+#
+# 2026-10-19: rotated to v0.8.0 (docs/RELEASING.md step 9, D-162; owner
+# ruling 2026-10-19, R56). [baseline] pins the release commit f02b5d8 (tag
+# object 1d869062) and the Release's checkwash.pyz: 796565 bytes and the
+# sha256 the GitHub Releases API reports for the asset, the same values as
+# docs/releases/v0.8.0-publication-verification.md. The tag-push verdict run
+# 38768985301 (attempt 1, v0.7.0 against the v0.8.0 tag) ran all 185 cases
+# (159 T1, 26 T3) with zero failures and zero reported: 159 block -> block
+# and 26 pass -> pass. So it proposed nothing, and v0.8.0 blocks the same 159
+# cases as v0.7.0: [baseline_blocked] stays. The chai file is the same blob
+# at f02b5d8 as at d647a65, so [t3.cases] stays. [canary] is not rotated.
+# The cases, labels, acceptance file and gate code are the same at main
+# 0e60832a as at f02b5d8. This PR's own verdict run, with this [baseline],
+# checks both pins and proposes any drift.
 [baseline]
-tag = "v0.7.0"
-version = "0.7.0"
-commit = "d647a65e9734f2b6e57b528ea595b1507dc31094"
-sha256 = "d905ea5fd63daacc8e705b7de8932ed2affac810d76ae988ca6a8e57f2e12c7c"
-size = 754757
+tag = "v0.8.0"
+version = "0.8.0"
+commit = "f02b5d8a07fa39ee1898881f66c571eb164cb11c"
+sha256 = "87b097cdca4ca34dc43be8be8ddf8ef7f3197894dc6f554fe1bddc1d86e74d0c"
+size = 796565
 
 [baseline_blocked]
 count = 159
@@ -166,7 +181,9 @@ size = 588886
 # `git show 24b60a2:tests/data/javascript_chai_mutations.json`
 # (file sha256 f10a5ef8d76e5dbeffa4f058715a41775358b31a959778b64f2f9c6b0a8c7c3a;
 # 26 block records, 13 pass records). No engine ran. The file is the same
-# at v0.6.0's 8c70efb, so the rotation keeps every case (D-094).
+# at v0.6.0's 8c70efb, so the rotation keeps every case (D-094). It is also
+# the same at v0.7.0's d647a65 and v0.8.0's f02b5d8 (git blob 4f363109), so
+# those rotations keep every case too (D-129, D-162).
 [t3.cases]
 "chai:chai.assert.closeTo.delta" = "ec0d36242bd1498195dd0f17419171a5282edf410e69f5a68ebbd003f7d8daf2"
 "chai:chai.assert.equal.exists" = "e095139792ca9d0607ee0391a5cba0cd5629bb662966a40890563d7a04b763b1"
