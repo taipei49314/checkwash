@@ -379,8 +379,8 @@ static `import` declaration whose end it proves (`export`, TypeScript's
 callback of every `describe`, `suite` and `context` declaration, their `x`
 and `f` forms included, and the callback of a test that registers a named
 test or a block of its own (node:test's and tap's `t.test`), even one with
-no assertions. A declaration that starts where the walk proves no statement runs is no unit,
-and neither is any declaration inside it. Its loss is a disappearance, its
+no assertions. A declaration that starts where the walk proves no
+statement runs is no unit, and neither is any declaration inside it. Its loss is a disappearance, its
 skip, focus and options apply to nothing, and it earns no D2, D5 or D10
 credit. An expression statement of `&&` or `||` whose literal operand decides
 it skips a declaration call that is its last operand, as it skips an
