@@ -167,7 +167,7 @@ def assertion_names(node: ast.AST) -> tuple[frozenset[str], frozenset[str]]:
 
 
 def nested_bound_names(node: ast.AST) -> frozenset[str]:
-    """The names a lambda's parameters or a comprehension's targets bind anywhere in `node` (#471, C2).
+    """The names a lambda's parameters or a comprehension's targets bind anywhere in `node` (#471, D-155 reading 3).
 
     `node` is a value the unit assigns. When the frontend's `fixture_reads`
     follows the unit's own assignments, these names are dropped from what
