@@ -12467,7 +12467,8 @@ format only; (c) in the next release, (b) after a ruling on the size limit
 and a pool sweep; "This issue stays open for (b)." On 2026-10-19
 (「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
 the reply was a button whose text the agent wrote), R57, R58 and R64
-completed (c) and replaced that last sentence. D-150 is the last entry on
+completed (c), replaced that last sentence and narrowed that ruling's
+item 2 (item 3 below). D-150 is the last entry on
 main, and D-151 to D-159 are assigned to open pull requests prepared from
 the same base, so this entry is D-160.
 
@@ -12495,15 +12496,17 @@ Decided:
    apart, and inherit row 132: any JS production edit silences the
    file-backed rule.
 3. Scope: undici's format only, recognised by path and shape (468.Q2).
-   Another runner's expected-failure format gets its own issue when a fix
-   for it is planned; with no fix scheduled, it is added to row 137
+   The 2026-10-16 ruling gave each other expected-failure format its own
+   issue when the corpus shows one. The analysis adopted through R58 and
+   R64 narrowed that: another runner's format gets its own issue when a
+   fix for it is planned; with no fix scheduled, it is added to row 137
    instead.
 4. (b) is not scheduled (R64). (b) is a detector that compares entries
    by identity and reports a subtest recorded as passing that no longer
    is, or a file newly marked `skip` or `flaky`. Building it would need,
    first, a ruling that lets this format be read past 1,000,000 bytes,
    with the limit to use (D-135 ruling 1 refuses a file a detector must
-   parse), then a new rule ID in the frozen §4 list, its §8 fingerprint,
+   parse), then a new rule ID in the frozen §4 list, its fingerprint (§6),
    and a pool sweep of its cost, including parse time on 2 MB sides.
    #468 is reopened when any of these happens: a cheat in this file is
    reported; undici fixes its runner's comparison, so that the file gates
