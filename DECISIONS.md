@@ -12590,9 +12590,10 @@ at this PR):
   of a top-level class runs itself to that class and method, once per file
   and only when a call gets this far. `self_methods.Methods` (#306) is
   built at most once, by the existing `methods_of`.
-- R49, condition three. `_proved_to_pass` (`:2634-2658`) reads the nodes
-  `_contains_oracle` (`:2187-2204`) reads, and every oracle among them
-  must be proved. One `assert False`, `assert str(e) == "y"`,
+- R49, condition three. `_proved_to_pass` (`:2634-2658`) walks the
+  handler as `_contains_oracle` (`:2187-2204`) does, except that it does
+  not enter an assertion's message, and every oracle it meets must be
+  proved. One `assert False`, `assert str(e) == "y"`,
   `assert e == e`, `self.fail()`, `pytest.fail()`, `pytest.raises(...)` or
   any other call `_is_oracle_call` (`:2177-2184`) names keeps the handler
   inspection, so the shapes 431.Q2 keeps as inspection fall outside the
@@ -12653,9 +12654,9 @@ errs toward unknown, which keeps main's reading:
    binding in a same-file class of the order before the base, the call is
    unknown when the module stores the name anywhere (`x.assertTrue = f`,
    `self.assertTrue = f` in `setUp`, a literal-name `setattr`,
-   `patch.object`), stores into any `__dict__`, or sets a computed name on
-   the receiver or on a class of the order, or when a same-file class of
-   the order defines `__getattribute__` or `__init_subclass__`. A class
+   `patch.object`), stores an item into any `__dict__`, or sets a computed
+   name on the receiver or on a class of the order, or when a same-file
+   class of the order binds `__getattribute__` or `__init_subclass__`. A class
    keyword (a metaclass) or a class name the module binds twice makes the
    order unreadable, so the call is unknown.
 7. `assertEqual` is unknown when the module's text contains
