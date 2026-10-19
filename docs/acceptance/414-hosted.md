@@ -6,6 +6,27 @@ on its own, and it runs first, before the combined sweep. Owner ruling
 2026-10-19, R25 (option A): #414's range-mode part is read from the v0.8.0 run
 (see "Range mode" below).
 
+## Beyond R26, for the owner's approval
+
+R26, as recorded on #414, names the legs: on ubuntu, an in-tree
+`python3 -m venv .venv` (with `lib64`) and a pnpm workspace, each in term and
+hook-json mode, and an npm tree over 200,000 files; on windows, pnpm. This
+declaration adds the following. The owner
+approves or declines each on its own; a declined one is removed from the
+driver and from this file before the pull request is opened.
+
+1. A v0.7.0 control arm, and the **inconclusive** status it brings (see
+   "What counts as accepted").
+2. A third mode on main, **stop-hook**: the managed SessionStart and Stop
+   pair (see "Scenario and commands").
+3. main pinned at `0e60832a`, where the combined sweep plan named a487
+   (`637222e8`) (see "Engines").
+4. v0.8.0 rows, report only (the plan: "optionally also at v0.8.0").
+5. The large npm tree from a generated package installed from a tarball
+   (see "Legs").
+6. In "Range mode", the earlier engine changes the v0.8.0 range also holds,
+   beside R25's "six changes".
+
 ## Where it runs
 
 - On GitHub-hosted runners, through `.github/workflows/acceptance-414.yml`
