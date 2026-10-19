@@ -12691,8 +12691,8 @@ Evidence status: prepared on a work machine where no pytest, checkwash,
 engine or product code ran; CI runs the tests. Added: 19 `.gwcase`
 fixtures, whose labels the owner approved on 2026-10-19, and 79 collected
 items in `tests/test_issue471_fixture_producers.py`, counted from its
-parametrize lists; no existing test changed. By reading, the documented test count
-becomes 19573 (19475 + 79 + 19); CI's collection checks it.
+parametrize lists; no existing test changed. By reading, the documented
+test count becomes 19573 (19475 + 79 + 19); CI's collection checks it.
 
 The agent wrote this entry in #471's fix PR #522. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
