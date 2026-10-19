@@ -94,6 +94,10 @@ def test_import_modules_reads_each_names_final_top_level_import(source, expected
     pytest.param('"""A ledger."""\nreturn Ledger()', id="docstring"),
     pytest.param("init_db()\nreturn Ledger()", id="setup-call-before"),
     pytest.param("with open('ledger.lock'):\n    yield Ledger()", id="yield-under-with"),
+    pytest.param("book = Ledger()\nwith open('ledger.lock'):\n    yield book", id="bound-then-yielded-under-with"),
+    pytest.param("try:\n    yield Ledger()\nfinally:\n    close()", id="yield-under-try"),
+    pytest.param("with open('ledger.lock'):\n    try:\n        yield Ledger()\n    finally:\n        close()",
+                 id="yield-under-try-under-with"),
 ])
 def test_the_producer_is_the_call_the_fixture_returns_or_yields(body):
     assert _fixture(body).producers == {"ledger": PRODUCER}
@@ -117,6 +121,17 @@ def test_the_producer_is_the_call_the_fixture_returns_or_yields(body):
     pytest.param("def ledger(app):", "return app.test_client()", id="root-is-a-requested-fixture"),
     pytest.param("def ledger(request):", "return request.param", id="request-param"),
     pytest.param("async def ledger():", "return await open_ledger()", id="awaited"),
+    pytest.param("def ledger():", "if fast:\n    return Ledger()", id="conditional-return"),
+    pytest.param("def ledger():", "if fast:\n    yield Ledger()", id="conditional-yield"),
+    pytest.param("def ledger():", "for _ in range(1):\n    return Ledger()", id="return-under-for"),
+    pytest.param("def ledger():", "while pending:\n    return Ledger()", id="return-under-while"),
+    pytest.param("def ledger(mode):", "match mode:\n    case 'fast':\n        return Ledger()", id="return-under-match"),
+    pytest.param("def ledger():", "try:\n    init_db()\nexcept OSError:\n    return Ledger()", id="return-under-except"),
+    pytest.param("def ledger():", "try:\n    init_db()\nexcept OSError:\n    raise\nelse:\n    return Ledger()",
+                 id="return-under-try-else"),
+    pytest.param("def ledger():", "try:\n    init_db()\nfinally:\n    yield Ledger()", id="yield-under-finally"),
+    pytest.param("def ledger():", "with open('ledger.lock'):\n    if fast:\n        return Ledger()",
+                 id="return-under-if-under-with"),
 ])
 def test_a_fixture_without_a_readable_producer_contributes_nothing(signature, body):
     level = _fixture(body, signature)

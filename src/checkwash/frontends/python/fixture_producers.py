@@ -8,8 +8,9 @@ the findings whose before-side assertion reads the fixture's value:
 
 - Q1 (c), what a fixture contributes: only its producer, the call whose
   value it returns or yields, directly (`return C(...)`, `yield C(...)`) or
-  through one plain local binding (`p = C(...)`, then `yield p`). The other
-  calls in its body do not count, the producer's own arguments included.
+  through one plain local binding (`p = C(...)`, then `yield p`), from a
+  site that runs on every path. The other calls in its body do not count,
+  the producer's own arguments included.
 - The producer is resolved through the fixture file's own imports. Its root
   is a name whose final top-level binding in that file is an `import` or an
   absolute `from ... import` (`import_modules`), and the modules that
@@ -165,6 +166,22 @@ def assertion_names(node: ast.AST) -> tuple[frozenset[str], frozenset[str]]:
     return frozenset(read), frozenset(seen - read)
 
 
+def _unconditional(body: list[ast.stmt]) -> list[ast.stmt]:
+    """The statements of `body`, and of each `with` or `try` body reached from it through such bodies only.
+
+    A branch, a loop, a `match`, and a `try`'s handlers, `else` and
+    `finally` are not entered: a statement there may not run.
+    """
+    found: list[ast.stmt] = []
+    stack = list(body)
+    while stack:
+        statement = stack.pop()
+        found.append(statement)
+        if isinstance(statement, (ast.With, ast.AsyncWith, ast.Try, ast.TryStar)):
+            stack.extend(statement.body)
+    return found
+
+
 def _assigned_value(nodes: list[ast.AST], target: ast.AST) -> ast.expr | None:
     """The value a plain assignment with `target` as its only target assigns, or None."""
     for node in nodes:
@@ -182,11 +199,16 @@ def producer(function, modules: dict[str, tuple[str, ...]]) -> tuple[str, tuple[
     nested def, class or lambda: its only `yield <value>` when it yields
     (a generator fixture's value is what it yields first), else its only
     `return <value>`. A `yield from`, a bare `yield`, a second site of
-    either kind, or no site at all gives no producer. The value is a call
-    with a dotted callee, or a name, not a parameter, that the body binds
-    exactly once, by a plain assignment of such a call. The callee's root
-    must be a name `modules` resolves (`import_modules` of the fixture's
-    file) that the function does not bind itself.
+    either kind, or no site at all gives no producer. The site runs on
+    every path: a `return` or `yield` statement of the body itself, or of
+    a `with` or `try` body reached from it (`_unconditional`). One under an
+    `if`, a loop, a `match`, or a `try`'s handler, `else` or `finally`
+    gives no producer, since the fixture may return something else, `None`
+    included. The value is a call with a dotted callee, or a name, not a
+    parameter, that the body binds exactly once, by a plain assignment of
+    such a call. The callee's root must be a name `modules` resolves
+    (`import_modules` of the fixture's file) that the function does not
+    bind itself.
     """
     args = function.args
     params = {
@@ -200,7 +222,13 @@ def producer(function, modules: dict[str, tuple[str, ...]]) -> tuple[str, tuple[
     sites = yields or [node for node in nodes if isinstance(node, ast.Return)]
     if len(sites) != 1 or sites[0].value is None:
         return None
-    value = sites[0].value
+    site = sites[0]
+    if not any(
+        statement is site or (isinstance(statement, ast.Expr) and statement.value is site)
+        for statement in _unconditional(function.body)
+    ):
+        return None
+    value = site.value
     if isinstance(value, ast.Name):
         if value.id in params:
             return None
