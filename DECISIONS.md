@@ -11395,16 +11395,19 @@ PJU, NOT EC pool. Its plain before/after compares #424's engine
     source, the commit only adds coverage on the test side. D-087's
     maintainer decision kept this liveness cost for guarded setup skips,
     but in D-087's and D-111's sweeps it never turned a pass into a block
-    by itself; here it does. The block stays until a later change
-    removes it, such as #488's per-row liveness (option (b)), which needs
-    its own ruling. Meanwhile an author can exempt the six findings by
-    fingerprint only through an `allow.toml` entry already on the base
-    side (SPEC §5 D3, §6); one added in the blocked change itself shows
-    as `EXEMPTION_ADDED` and does not lift the block. How often this
-    happens is not known. So far it is the only verdict this reading
-    moves in the standard set and D-088's sets, but 19 commits of the
-    d088 batch are not judged (above), and most of the targeted phase
-    did not run (below). Further cases are recorded on #488.
+    by itself; here it does. It is not the first liveness-only block in
+    DECISIONS: D-116's sweep blocked pytest `4f5d7948`, where a test
+    moves into a file in which it carries a guarded `py.test.skip`, and
+    D-116 does not call that block false. The block stays until a later
+    change removes it, such as #488's per-row liveness (option (b)),
+    which needs its own ruling. Meanwhile an author can exempt the six
+    findings by fingerprint only through an `allow.toml` entry already
+    on the base side (SPEC §5 D3, §6); one added in the blocked change
+    itself shows as `EXEMPTION_ADDED` and does not lift the block. How
+    often this happens is not known. So far it is the only verdict this
+    reading moves in the standard set and D-088's sets, but 19 commits
+    of the d088 batch are not judged (above), and most of the targeted
+    phase did not run (below). Further cases are recorded on #488.
 - **Not measured:** resolution toggled in both directions, and what
   Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
   variant that is not a commit on main. Sub-Q7 asks for its cost to be
