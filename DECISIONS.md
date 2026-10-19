@@ -12674,3 +12674,18 @@ button whose text the agent wrote, which the owner chose. Commits
 6f6ad594 (the move), 6fac1f98, 9a6615ff, 7c8e41b2, b598accd and e02b3f20
 (the accepted cost) and 8c6492ad (the E1 label point) apply those
 answers.
+
+The owner approved the agent's second-round list on 2026-10-19:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"). Its items for this PR asked for: approving together the
+maintainer text written while applying the answers above, namely this
+entry's Rule 2, cost and Release paragraphs (b598accd), the E1 label
+point naming #473 (8c6492ad) and the approval record above (6baa4026,
+bfa27ae7), and row 132's cost sentence changed from "for the owner's
+decision" to "which the owner accepted" (7c8e41b2), with the detector
+comment (9a6615ff) and the two comments in the #463 test file (e02b3f20)
+changed with it (B3); and a sentence in the Measurement paragraph citing
+R2 and R5, as D-155 does (B9). This reply too was a button whose text
+the agent wrote, which the owner chose. Commit d56d7080 applies B9.
+6fac1f98 changes the `docs/KNOWN-ISSUES-next.md` row in the same way as
+row 132; B3 does not name it.
