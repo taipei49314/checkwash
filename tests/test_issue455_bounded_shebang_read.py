@@ -37,7 +37,7 @@ from checkwash.engine import _guard_unread_reads, _set_aside_unread, analyze
 from checkwash.gitio import list_range_changes, list_worktree_changes
 from checkwash.gitio import snapshot as snapshots
 from checkwash.gitio.git import list_session_changes
-from checkwash.gitio.snapshot import GitSnapshot
+from checkwash.gitio.snapshot import GitSnapshot, WorkingTreeSnapshot
 from checkwash.roles import _shell_shebang
 from checkwash.shadow import find_runtime_subject_shadows
 
@@ -229,6 +229,33 @@ def test_a_side_without_a_prefix_keeps_the_old_answer():
     assert _set_aside_unread([data], Config(), []) == ([], [data])
 
 
+BILLING_JS = b"export const computeInvoiceTotal = (items) => items.reduce((a, b) => a + b, 0);\n"
+# test_issue415's unread rows, each side now with its prefix: still no
+# repair evidence of either kind (#419), so the weakening stays high.
+PREFIXED_EVIDENCE = {
+    "js_head_unread": FileChange("src/billing.js", "modified", BILLING_JS, None,
+                                 unread=(side("src/billing.js", "head"),)),
+    "js_base_unread": FileChange("src/billing.js", "modified", None, BILLING_JS,
+                                 unread=(side("src/billing.js", "base"),)),
+    "js_both_unread": FileChange("src/billing.js", "modified", None, None,
+                                 unread=(side("src/billing.js", "base"), side("src/billing.js", "head"))),
+    "data_unread": FileChange("data/rates.csv", "modified", None, None,
+                              unread=(side("data/rates.csv", "base"), side("data/rates.csv", "head"))),
+    "readme_unread": FileChange("README", "modified", None, None,
+                                unread=(side("README", "base"), side("README", "head"))),
+}
+
+
+@pytest.mark.parametrize("case", sorted(PREFIXED_EVIDENCE))
+def test_an_unread_side_with_its_prefix_earns_no_repair_evidence(case):
+    changes = [FileChange("tests/test_billing.py", "modified", TEST, WEAKENED), PREFIXED_EVIDENCE[case]]
+    _ir, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY)
+    assert [(f.rule, f.severity) for f in findings] == [("ASSERT_WEAKENED", "high")]
+    assert findings[0].escalators == ["NO_PROD_CHANGE_IN_DIFF"]
+    assert findings[0].deescalators == []
+    assert verdict == "block"
+
+
 def test_a_set_aside_document_leaves_the_verdict_on_the_test_change_unaffected():
     # The prefix earns nothing: a set-aside change is still no evidence (#419).
     test_change = FileChange("tests/test_billing.py", "modified", TEST, WEAKENED)
@@ -391,6 +418,38 @@ def test_worktree_sides_keep_their_prefix(tmp_path):
     assert _sides(changes[".envrc"]) == [(".envrc", "worktree", LIMIT + 1, envrc[:SHEBANG_PREFIX_BYTES])]
     assert _sides(changes["LICENSE"]) == [("LICENSE", "base", LIMIT + 1, licence[:SHEBANG_PREFIX_BYTES])]
     assert all((change.before, change.after) == (None, None) for change in changes.values())
+
+
+def test_the_working_tree_read_keeps_its_bound(tmp_path, monkeypatch):
+    # The prefix comes from the one read of 1,000,001 bytes the side already
+    # had; a 3,000,000-byte file is not read further for it.
+    data = headed(b"#!/bin/sh\n", 3 * LIMIT, "bound")
+    _write(tmp_path, {"bin/deploy": data})
+    asked = []
+    original = Path.open
+
+    class Recorded:
+        def __init__(self, handle):
+            self.handle = handle
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.handle.close()
+
+        def read(self, size=-1):
+            asked.append(size)
+            return self.handle.read(size)
+
+        def fileno(self):
+            return self.handle.fileno()
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(Path, "open", lambda self, *args, **kwargs: Recorded(original(self, *args, **kwargs)))
+        unread = WorkingTreeSnapshot(tmp_path).read("bin/deploy", unread_oversized=True)
+    assert asked == [LIMIT + 1]
+    assert (unread.size, unread.prefix) == (3 * LIMIT, data[:SHEBANG_PREFIX_BYTES])
 
 
 @pytest.mark.parametrize("size,streamed", [(LIMIT + 5, True), (LIMIT + 6, False)],
