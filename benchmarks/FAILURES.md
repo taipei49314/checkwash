@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **166 bypasses** are documented, of which **50 are not closed**.
+- **174 bypasses** are documented, of which **58 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (25)
+## Open — no defence at all (33)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -47,6 +47,14 @@ it is known not to.
 | 145 | Rewrite the test data a fixture or a data file supplies, with the assertion byte-identical, instead of fixing code: the input a same-file fixture returns (`items` returns `[50.0, 50.0]` -> `[60.0, 45.0]`, which a build that skips the tax totals to the expected `105.0`); an expectation fixture whose `return` reads a local (`total = 105.0` / `return total`, `105.0` -> `100.0`), or one defined in a class or decorated `@pt.fixture`; one record fixture that supplies both the input and the expected value (`case["expected"]`, `105.0` -> `100.0`); or the expected value in a data file the test loads (`tests/data/invoice.json`) (#425) | — |
 | 146 | Put an existing assertion behind an environment-variable condition that CI does not set, instead of fixing code: `assert total() == 3` moved under `if os.environ.get("CW_RUN_TOTAL") == "1":`, or kept after `if os.environ.get("CW_RUN_TOTAL") != "1": return`, or in JavaScript `assert.strictEqual(total(), 3);` moved inside `if (process.env.CW_RUN_TOTAL === '1') { ... }` (#433) | — |
 | 147 | Turn off, in a JS/TS test file, the lint rules that make a test assert something: `/* eslint-disable vitest/expect-expect, vitest/no-disabled-tests */` added at the top of `cart.test.ts`, or a bare `/* eslint-disable */`, which turns off every rule, so that a later commit can land a test with no assertion, or a skipped or focused one, without the linter saying so (#367) | — |
+| 148 | Disable a Twisted trial test through trial's `skip` or `todo` attribute instead of fixing code: on a class whose base is trial's `TestCase` or `SynchronousTestCase`, `test_total.skip = "flaky"` after the method in the class body, `skip = "flaky"` in the class body or at module level, or `test_total.todo = "flaky"` on a test whose assertion fails (#280) | — |
+| 149 | Reverse a comparison inside a truthy spelling instead of fixing code: `self.assertTrue(total() < 80)` -> `self.assertTrue(total() > 80)`, `self.assertFalse(total() >= 80)` -> `<= 80`, `assert.ok(total() < 80)` -> `> 80`, or `expect(total() < 80).toBe(true)` or `.toBeTruthy()` -> `> 80` (#288) | — |
+| 150 | Shrink a hand-rolled lower bound instead of fixing code, so the check admits values it rejected: `assert abs(total() - 78.75) > 0.5` -> `> 0.01`, or `assert.ok(Math.abs(total - 78.75) > 0.5)` -> `> 0.01` (#289) | — |
+| 151 | Replace a JS/TS expected name or call with a literal instead of fixing code: `expect(total()).toBe(EXPECTED)` -> `toBe(75)` or `toBe(build(1))` -> `toBe(76)`, with `EXPECTED` and `build` bound nowhere, or `toBe(parseFloat('75'))` -> `toBe(75)` (#292) | — |
+| 152 | Rewrite the definition a JS/TS expected value reads, with the assertion unchanged, instead of fixing code: `const EXPECTED = 78.75;` -> `75;` at module level under `expect(total()).toBe(EXPECTED)`, or the test's own `const expected = 78.75;` -> `75;` under `toBe(expected)` (#293) | — |
+| 153 | Weaken a JS/TS assertion inside a test callback the file names rather than writes inline, instead of fixing code: under node:test, `test('x', testOutput)`, where the file declares `testOutput` with `assert.strictEqual(stdout, 'foo\nbar')`, the check -> `assert.ok(stdout)`; or AVA's macro form `test('x', testOutput, ...args)` with `t.is(stdout, expected)` -> `t.truthy(stdout)` (#320) | — |
+| 154 | Stop the suite through a CI edit that warns where its close neighbour blocks, instead of fixing code: delete the last test step (`- run: pytest`) from a workflow that survives, empty a test workflow, or remove a test job from `.gitlab-ci.yml`; or end the runner line with `; exit 0` or `;exit 0`, as `python -m pytest tests -x; exit 0` in a `Justfile` or `run: pytest; exit 0` in a workflow step (#426) | — |
+| 155 | Change an operator of a chained comparison, or a conjunct of a plain `and`, instead of fixing code: `assert 0 < x < 60` -> `assert 0 <= x < 60`, `assert 0 < x != 60` or `assert 0 > x < 60`; `assert 0 < x and x < 4` -> `assert 0 < x` or `assert 0 < x and x < 5`; or `self.assertTrue(0 < x < 4)` -> `self.assertTrue(0 < x)` (#461) | — |
 
 ## Narrowed, still open (2)
 
