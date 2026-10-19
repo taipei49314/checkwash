@@ -12478,24 +12478,25 @@ The same tests calling `ElevenLabsProvider()` themselves passed.
 
 Implementation (lines at this PR):
 
-- `frontends/python/fixture_producers.py` (new). `producer` (`:136-178`):
+- `frontends/python/fixture_producers.py` (new). `producer` (`:195-248`):
   the fixture's only `return <value>`, or in a generator its only
-  `yield <value>`, outside nested defs, classes and lambdas; the value is a
-  call with a dotted callee, or a name, not a parameter, bound exactly once
-  in the fixture's scope by a plain `=` or annotated `=` of such a call
-  (`_binders`, `:88-123`; `_assigned_value`, `:126-133`). The callee's
-  root must be resolved by `import_modules` (`:52-85`) of the fixture's
-  file and not be bound by the fixture itself. `ProducerScope` (`:181-220`)
-  reads one module or class body as `SetupScope` reads its fixtures;
-  `unit_producers` (`:223-254`) resolves each fixture the unit requests by
-  parameter.
+  `yield <value>`, outside nested defs, classes and lambdas, on every path
+  (`_unconditional`, `:169-182`); the value is a call with a dotted callee,
+  or a name, not a parameter, bound exactly once in the fixture's scope by
+  a plain `=` or annotated `=` of such a call (`_binders`, `:89-124`;
+  `_assigned_value`, `:185-192`). The callee's root must be resolved by
+  `import_modules` (`:53-86`) of the fixture's file and not be bound by the
+  fixture itself. `ProducerScope` (`:251-290`) reads one module or class
+  body as `SetupScope` reads its fixtures; `unit_producers` (`:293-324`)
+  resolves each fixture the unit requests by parameter.
 - `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
   `conftest_level` (`:977-980`) through the conftest's own imports.
 - `frontend`: `UnitSide.fixture_producers` per side (`fixture_producers`,
-  `:4198-4223`, passed at `:4383` and `:4471`), and
+  `:4204-4229`, passed at `:4389` and `:4477`), and
   `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
-  `:3227-3262`, used at `:3361` and `:3431`). Only a unit that takes a
-  parameter reads any. `ir/model.py:130-137`, `:259-268`.
+  `:3228-3268`, used at `:3367` and `:3437`, with
+  `fixture_producers.assertion_names`, `:130-166`). Only a unit that takes
+  a parameter reads any. `ir/model.py:130-137`, `:259-268`.
 - `gating.py`, in its own commit (da116dd1), as the analysis's §4.5 has
   it; the owner approved it on 2026-10-19, as D-048 and D-141 approved
   policy code:
@@ -12532,7 +12533,7 @@ What the ruling's four answers become:
   cites on its before side (for ASSERT_REMOVED, the removed one), or the
   before half of the pair whose after side it cites. It reads the parameter
   directly or through the unit's own assignments (`_resolve_through`,
-  `frontend.py:1508-1531`, whose unit-level map joins every definition of a
+  `frontend.py:1509-1532`, whose unit-level map joins every definition of a
   name: the analysis's stated residual). The fixture is resolved from the
   module and the conftest chain as they were before the diff
   (`fixture_producer_added_in_diff_pos`), and a unit with no before side
@@ -12564,7 +12565,13 @@ owner approved all four on 2026-10-19:
    producer only from a fixture that class defines.
 2. One value site: several `return` statements, a bare `yield`, a
    `yield from`, an awaited call, a conditional expression, and a value
-   bound through `for`, `with ... as` or twice give no producer.
+   bound through `for`, `with ... as` or twice give no producer. The code
+   first committed did not hold to this, since one site under an `if`, a
+   loop or a `try` handler still gave a producer although the fixture may
+   return `None` (raised by GLM, verified by Claude); now the site must be
+   a statement of the fixture's body, or of a `with` or `try` body reached
+   from it, and any other gives no producer (`conditional-return`,
+   `bound-then-yielded-under-with`).
 3. An assertion records a read only when written in the unit's own body
    outside a nested def, class or lambda. A parameter the body binds again
    in any form is not counted: `=`, augmented, annotated or walrus (the
@@ -12576,6 +12583,13 @@ owner approved all four on 2026-10-19:
    the unit, a comprehension target that only shadows it included. Names
    bound by `for`, `with ... as` and `except ... as` are not followed as
    intermediate bindings either, as the binding map does not record them.
+   The code first committed did not hold to this inside the assertion
+   itself, since a name a lambda there binds as its parameter still counted
+   as a read of the fixture (raised by GLM, verified by Claude); now a name
+   that a lambda's parameters or a comprehension's targets bind within the
+   assertion is no read, and a parameter all of whose occurrences there are
+   such names is not counted, even through a local the assertion reads
+   (`assertion_names`; `lambda-parameter-of-that-name`).
 4. The finding's assertion is matched by span and text. A finding whose
    evidence is not one of its unit's assertions takes nothing.
 
@@ -12639,9 +12653,15 @@ of the two ASSERT_SUBSTITUTED and the SUBJECT_INPUT_CHANGED; built from
 that description (each assertion reading `elevenlabs_provider` directly),
 they are held at warn (`fixture_producer_assert_substituted_neg`,
 `fixture_producer_subject_input_changed_neg`), with the conftest edited in
-the same diff too (`hardcoded_via_edited_conftest_fixture_neg`). The six
-other EXPECTED_VALUE_HARDCODED findings of that commit are not traced, so
-this entry does not say the commit passes.
+the same diff too (`hardcoded_via_edited_conftest_fixture_neg`). His
+comment 6264130796 then showed how those tests are written, and
+`fixture_producer_annotated_class_methods_neg` follows it, credited to him
+as the cases built from his report now are: class methods with an
+annotated fixture parameter, a fixture whose producer takes another
+fixture, and the conftest's mock data edited in the same diff, with its
+seven findings held at warn by reading. The six other
+EXPECTED_VALUE_HARDCODED findings of that commit are not traced, so this
+entry does not say the commit passes.
 
 Rule 2. The ruling approves no change to an existing expectation: by
 reading none moves, and none was changed. The change only adds an evidence
@@ -12688,11 +12708,11 @@ with no parameter reads nothing new, and the gate's modules have none.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
 
 Evidence status: prepared on a work machine where no pytest, checkwash,
-engine or product code ran; CI runs the tests. Added: 19 `.gwcase`
-fixtures, whose labels the owner approved on 2026-10-19, and 79 collected
+engine or product code ran; CI runs the tests. Added: 20 `.gwcase`
+fixtures, whose labels the owner approved on 2026-10-19, and 96 collected
 items in `tests/test_issue471_fixture_producers.py`, counted from its
 parametrize lists; no existing test changed. By reading, the documented
-test count becomes 19573 (19475 + 79 + 19); CI's collection checks it.
+test count becomes 19591 (19475 + 96 + 20); CI's collection checks it.
 
 The agent wrote this entry in #471's fix PR #522. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
