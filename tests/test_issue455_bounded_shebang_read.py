@@ -774,7 +774,26 @@ def test_the_stop_hook_beside_an_untracked_oversized_extensionless_file(tmp_path
         assert _notes(stderr) == [f"checkwash: {NOTE}: {described('NOTES', 'worktree')}; it earns no repair evidence"]
 
 
-MARKER = b"Prefix marker 455: release notes of the billing service\n"
+def test_the_stop_hook_keeps_the_note_when_only_the_runners_base_side_is_over_the_limit(tmp_path):
+    # The session shrinks an existing runner, `sh ci/run.txt`, whose base
+    # side alone is over the limit and holds the shebang. The run refuses,
+    # naming that side, where the base set the change aside and the weakened
+    # test blocked the stop. The session's edit did not make that side, so
+    # the hook keeps #414's "not analysed" message (#456, ruling Q3): exit 0
+    # and no decision. The required range-mode check exits 2 (RANGE_REFUSALS).
+    repo = _repo(tmp_path, _base_files({"ci/run.txt": headed(RUNNER, LIMIT + 1, "runner")}))
+    _write(repo, {"ci/run.txt": b"set -e\necho skipped\n", "tests/test_billing.py": WEAKENED})
+    code, stdout, stderr = _check(repo, "--format", "hook-json")
+    assert code == 0, stderr
+    named = described("ci/run.txt", "base")
+    assert json.loads(stdout) == {"systemMessage": (
+        "checkwash: this change was not analysed, so it was neither passed nor blocked. "
+        f"Engine error: SourceOverLimit: {REFUSAL}: {named}")}
+    assert f"checkwash engine error: SourceOverLimit: {REFUSAL}: {named}" in stderr
+    assert _notes(stderr) == []
+
+
+MARKER =b"Prefix marker 455: release notes of the billing service\n"
 
 
 @pytest.mark.parametrize("args", [
