@@ -9,15 +9,16 @@ evidence and limitations.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
 fingerprints and retire their old path-only exemptions. This intentionally
-breaks the matching promise below for those namespaces; existing v0.2.13
+moves those namespaces' fingerprints, as a minor release may
+([fingerprint stability](#fingerprint-stability)); existing v0.2.13
 installations retain their broad keys. IR and findings versions are 2 since
 v0.3.0 and 1 in v0.2.13. Read the [migration procedure and
 runtime limits](remediation-upgrade.md) before upgrading.
 
 **Next minor (unreleased, #421):** nine assertion-level oracle rules get
 content-bound v2 fingerprints that bind the after side too, and retire their
-before-only exemptions. This breaks the matching promise below for those
-namespaces as well; IR and findings versions stay 2. The
+before-only exemptions. This moves those namespaces' fingerprints as well,
+as a minor release may; IR and findings versions stay 2. The
 [assertion-level notes](remediation-upgrade.md#assertion-level-rules-next-minor-421)
 list the rules and the re-review step.
 
