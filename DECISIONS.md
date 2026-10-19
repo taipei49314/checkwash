@@ -12455,3 +12455,192 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
+
+Ruling 471 (owner, 2026-10-16, issuecomment-6230178131, 「#468、#471
+都照建議。」, "#468 and #471 both as recommended"), adopting the analysis in
+issuecomment-6229395341: Q1 (c), Q2 (a), Q3 (b), Q4 (a), and Q5 (b) as a
+separate issue (#473, no label change here). The fix follows the analysis's
+§4. The three cases built from the reporter's unit names were approved on
+2026-10-18 (「19 項全部照建議做（價值判斷的題也照你的傾向）」, "all as
+recommended, value judgements included", quoted in issuecomment-6248629600).
+D-151 to D-154 are reserved for other open pull requests, so this entry is
+D-155.
+
+#471 (talhayme, punt-labs/langlearn-tts `b4bc4e63`): a production default
+changed from `"rachel"` to `"matilda"`, and the tests that get the provider
+from a conftest fixture followed it. Repair evidence credits a symbol the
+test calls (SPEC §5 clause 1), and a call is one written in the unit's own
+body, so the tests called nothing that builds the provider:
+`EXPECTED_VALUE_HARDCODED` blocked with NO_PROD_CHANGE_IN_DIFF three times.
+The same tests calling `ElevenLabsProvider()` themselves passed.
+
+Implementation (lines at this PR):
+
+- `frontends/python/fixture_producers.py` (new). `producer` (`:134-176`):
+  the fixture's only `return <value>`, or in a generator its only
+  `yield <value>`, outside nested defs, classes and lambdas; the value is a
+  call with a dotted callee, or a name, not a parameter, bound exactly once
+  in the fixture's scope by a plain `=` or annotated `=` of such a call
+  (`_binders`, `:87-121`; `_assigned_value`, `:124-131`). The callee's
+  root must be resolved by `import_modules` (`:51-84`) of the fixture's
+  file and not be bound by the fixture itself. `ProducerScope` (`:179-218`)
+  reads one module or class body as `SetupScope` reads its fixtures;
+  `unit_producers` (`:221-252`) resolves each fixture the unit requests by
+  parameter.
+- `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
+  `conftest_level` (`:977-980`) through the conftest's own imports.
+- `frontend`: `UnitSide.fixture_producers` per side (`fixture_producers`,
+  `:4187-4212`, passed at `:4372` and `:4460`), and
+  `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
+  `:3222-3251`, used at `:3350` and `:3420`). Only a unit that takes a
+  parameter reads any. `ir/model.py:130-137`, `:259-268`.
+- `gating.py`, in its own commit (da116dd1) for the owner's approval, as the
+  analysis's §4.5 has it and as D-048 and D-141 approved policy code:
+  `_finding_assertion` (`:331-358`) finds the before half of the assertion a
+  finding cites, by span and text, through the pair when the finding cites
+  only its after side (EXPECTED_VALUE_HARDCODED); `_fixture_producer_evidence`
+  (`:361-384`) matches the producer of each fixture that assertion reads
+  with `_symbol_match` (`:166-213`, D-046) against the modules its root's
+  import names; `_repair_evidence` checks it last (`:442-445`), and
+  `apply_gates` passes no assertion for TEST_DISABLED (`:875`).
+
+What the ruling's four answers become:
+
+- Q1 (c). Only the producer counts, not the other calls in the fixture's
+  body, the producer's own arguments included. "Resolved through the
+  fixture file's own imports" is read as: the root is a name whose final
+  top-level binding in that file is an `import` or an absolute
+  `from ... import`, after any star import, and the modules that statement
+  names are the only imports the D-046 match reads. A root the fixture
+  binds (`return app.test_client()`, with `app` a parameter), a root under a
+  top-level `if` or `try`, a relative import and a same-file def give no
+  producer.
+- Q2 (a). One level, for an argument without a default (`request` and the
+  instance excepted), resolved as pytest resolves it: the innermost class,
+  enclosing classes, the module, then each `conftest.py` above it, nearest
+  first, the `<plugin-configuration>` context passing through (#358). A
+  name a `parametrize` supplies directly runs no fixture; `indirect` still
+  runs it. The fixtures a fixture requests, `autouse` and `usefixtures`
+  count nothing.
+- Q3 (b). The finding's assertion is its before-side one: the assertion it
+  cites on its before side (for ASSERT_REMOVED, the removed one), or the
+  before half of the pair whose after side it cites. It reads the parameter
+  directly or through the unit's own assignments (`_resolve_through`,
+  `frontend.py:1503-1526`, whose unit-level map joins every definition of a
+  name: the analysis's stated residual). The fixture is resolved from the
+  module and the conftest chain as they were before the diff
+  (`fixture_producer_added_in_diff_pos`), and a unit with no before side
+  takes nothing.
+- Q4 (a). Every oracle rule that takes symbol evidence, except
+  TEST_DISABLED (`fixture_producer_test_disabled_pos`); no PACKAGE_REPAIR
+  (`hardcoded_package_only_pos`); classes and factories alike.
+
+Readings where the ruling is silent, each erring toward no evidence:
+
+1. Neither the one-hop callers route (SPEC §5 clause 2) nor a helper hop is
+   followed from a producer: a factory producer that is unchanged and calls
+   the changed symbol gives nothing, while the same factory called inline
+   takes the callers route
+   (`test_the_one_hop_callers_route_is_not_followed_from_a_producer`). The
+   T1.9 hop and 306 Sub-Q8 match their callees directly only. The
+   analysis's §2.2 says the producer composes with #420's hop to top-level
+   callees; that would need this route. #420 is deferred in #504.
+2. Stricter than `_setup_reach` (`setup_skip_controls.py:1037-1093`) in two
+   places: at the test's own levels, a name bound another way or a star
+   import stops the lookup at that level, where `_setup_reach` looks past a
+   class to the module; and a class with a base other than `object`, or
+   with a keyword, stops it, since a base may define the fixture and
+   `SetupScope` reads only the class's own body. A same-file inherited test
+   is resolved from its collecting class, which has a base, so it takes a
+   producer only from a fixture that class defines.
+3. One value site: several `return` statements, a bare `yield`, a
+   `yield from`, an awaited call, a conditional expression, and a value
+   bound through `for`, `with ... as` or twice give no producer.
+4. An assertion records a read only when written in the unit's own body
+   outside a nested def, class or lambda, and a parameter the body assigns
+   to again (`=`, augmented, annotated or walrus) is not counted. Names
+   bound by `for`, `with ... as` and `except ... as` are not followed, as
+   the binding map does not record them.
+5. The finding's assertion is matched by span and text. A finding whose
+   evidence is not one of its unit's assertions takes nothing.
+
+**One departure from the ruling, for the owner's decision.**
+TOLERANCE_LOOSENED takes symbol evidence, but its finding cites its unit's
+span (`detectors/tolerance_loosened.py:213-214`), not an assertion, so it
+never has a before-side assertion and takes no producer: Q4 (a) as
+implemented covers it in name only. The alternatives are to recover the
+pair in gating from the unit's tolerance changes (the detector's
+`_sources`, duplicated), or to cite the pair's spans in the finding, which
+changes its reported evidence.
+
+Residuals, kept documented as the ruling says (THREATMODEL row 137, new,
+false positive): a setup call in the fixture, `autouse` and `usefixtures`,
+fixtures of fixtures, the readings above, a test class with a base, and
+xunit `setUp` on `self` (#306's `self` resolution). What the fix newly
+allows is one more spelling of row 93's Route A, on the class or factory
+that builds the value the assertion reads, which the inline spelling had
+already (`route_a_fixture_producer_neg`); row 93 says so. Row 86j notes that
+the chain carries a producer and still no value (#425, deferred in #504).
+SPEC §5 states the producer, the T1.9 hop, and PACKAGE_REPAIR's scope
+(EXPECTED_VALUE_CHANGED and EXPECTATION_DEFINITION_CHANGED).
+
+**Effect, by reading.** The reduced case holds its six findings at warn
+with REPAIR_EVIDENCE and passes at the default `fail_on`; its three
+EXPECTED_VALUE_CHANGED move from PACKAGE_REPAIR to REPAIR_EVIDENCE, which is
+checked first. It still blocks under `fail_on = "warn"` or `oracle_freeze`,
+as the direct twin does. For the full commit, the reporter named the units
+of the two ASSERT_SUBSTITUTED and the SUBJECT_INPUT_CHANGED; built from
+that description (each assertion reading `elevenlabs_provider` directly),
+they are held at warn (`fixture_producer_assert_substituted_neg`,
+`fixture_producer_subject_input_changed_neg`), with the conftest edited in
+the same diff too (`hardcoded_via_edited_conftest_fixture_neg`). The six
+other EXPECTED_VALUE_HARDCODED findings of that commit are not traced, so
+this entry does not say the commit passes.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. The change only adds an evidence
+route, so no finding is added or removed and a verdict can move only toward
+pass. By a read-only scan on 0e60832a: among `tests/cases`, the 17 cases
+with a fixture beside a changed non-test file are CI, guardrail, JS,
+collection-control and `<suite>` shapes, with no oracle finding on an
+assertion that reads a requested fixture's producer; in
+`tests/verdict_gate/cases` only `i199/P5`, a `<suite>` TEST_DISABLED; in the
+decoy arms one autouse conftest patch, which Q2 (a) does not follow; the
+tamper and refactor corpora are test-only diffs. The inline sources of the
+pytest files were scanned by heuristic only; CI is the check. Nothing under
+`tests/gates` changed. If CI shows an existing expectation moving, the
+round stops.
+
+**Fingerprints and IR.** No fingerprint scheme, finding or key changes:
+escalators and de-escalators are outside `make_fingerprint` (D-141).
+`--emit-ir` gains `UnitSide.fixture_producers` and `Assertion.fixture_reads`,
+both optional, so IR_VERSION stays 2 (`docs/stability.md:104`).
+
+**Release.** v0.8.0 does not include this. No release is authorized
+(AGENTS.md rule 5). `docs/KNOWN-ISSUES-next.md` has a #471 row, and
+`docs/assertion-coverage.md` a section.
+
+**Measurement.** Not measured yet. Pre-registered here, before any engine
+runs, as D-141 did: the standard set (1,800) and D-088's sets are rerun
+before and after where the owner approves, as a checkwash-lab-declared run,
+on LAPTOP-01AGNPJU only under EC POLICY `checkwash-pju-sweep` (T-546) with
+the frozen manifest and engine commits approved first, otherwise on the
+pool. Every verdict that moves is named and adjudicated; a move judged to
+lose a spec-correct block stops the round. Report-only arms pricing the
+alternatives (Q1 (b), Q2 (b), Q3 (a), Q4 (d)) need engine variants that
+this PR does not build. The perf gate (D-007) runs in CI; by reading, a
+unit with no parameter reads nothing new, and the gate's modules have none.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no engine, engine variant, test, sweep or IR emission was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: 19 `.gwcase` fixtures, labels
+reviewed before merge, and 74 collected items in
+`tests/test_issue471_fixture_producers.py`, counted from its parametrize
+lists; no existing test changed. By reading, the documented test count
+becomes 19568 (19475 + 74 + 19); CI's collection checks it.
+
+The agent wrote this entry in #471's fix PR, as a draft for the
+maintainer's approval of its wording, of the gating commit, of the five
+readings and of the departure above.
