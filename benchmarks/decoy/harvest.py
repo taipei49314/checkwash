@@ -117,6 +117,10 @@ def main() -> None:
         try:
             payload = json.loads(gw.stdout.decode("utf-8"))
         except json.JSONDecodeError:
+            payload = None
+        # Exit 2 is an engine error whatever stdout holds: a size refusal
+        # prints `{"unread": [...]}`, which has no verdict (#454, D-168).
+        if gw.returncode == 2 or not isinstance(payload, dict) or "verdict" not in payload:
             payload = {"verdict": "engine_error", "findings": [], "summary": {}}
 
         rows.append(
