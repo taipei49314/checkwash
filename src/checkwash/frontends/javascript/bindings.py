@@ -599,11 +599,15 @@ class Bindings:
         the statement (`_expression_end`'s rule). Each `:` on the way answers
         one `?`; `??` is no conditional. The `:` of an annotated arrow's
         return type answers none: where the read meets the `=>` of an arrow
-        written `(...): T =>` at a place an arrow can start or right after a
-        `?`, it steps over that head. So in `c ? (x): T => (a) : b => b` the
-        `?` still waits, and `b => b` is the alternate, as TypeScript reads
-        it: an annotated arrow in a consequent needs a `:` after it. Stepping
-        over a head only lets fewer arrows be read as annotated.
+        written `(...): T =>`, or `<U>(...): T =>` with a type parameter list
+        (`_type_parameters`), at a place an arrow can start, after any
+        assignment operator or right after a `?`, it steps over that head.
+        So in `c ? (x): T => (a) : b => b`, `c ? x ||= (y): T => (a) : b => b`
+        and `c ? <U>(y): U => (a) : b => b` the `?` still waits, and
+        `b => b` is the alternate, as TypeScript reads it: an annotated arrow
+        in a consequent, on the right of an assignment there included, needs
+        a `:` after it. Stepping over a head only lets fewer arrows be read
+        as annotated.
         """
         colons = 0
         j = last
@@ -618,11 +622,12 @@ class Bindings:
             elif token == "=>":
                 opening = self._annotated_opening(j)
                 if opening is not None:
-                    head = opening - 1 - (self.token(opening - 1) == "async")
+                    start = self._type_parameters(opening)
+                    head = start - 1 - (self.token(start - 1) == "async")
                     question = self.token(head) == "?" and not (  # not the second `?` of `??`
                         self.token(head - 1) == "?" and self.tokens[head - 1][2] == self.tokens[head][1])
-                    if head < 0 or self.token(head) in _ARROW_STARTS or question:
-                        j = opening
+                    if head < 0 or self.token(head) in _ARROW_STARTS or self.token(head) in _ASSIGNMENTS or question:
+                        j = start
             elif token == ":":
                 colons += 1
             elif token == "?":
@@ -636,6 +641,45 @@ class Bindings:
                 return False
             j -= 1
         return False
+
+    def _type_parameters(self, opening: int) -> int:
+        """The `<` of a type parameter list that ends just before the `(` at
+        token `opening`, as in `<U>(x): U =>`, `<K, V extends Map<K, V>>(m): V =>`
+        or `<T = unknown>(x): T =>`; `opening` itself when none stands there.
+
+        The read goes back from the `>` over names, string literals,
+        `_RETURN_TYPE_TOKENS`, `&` and `=`, with `<` and `>` balanced, and
+        steps over a bracket group by its pair, as `_condition_waits` does,
+        to the `<` that opens the list, which a name must follow. Any other
+        token, `?`, `:` and `=>` among them, means no list. So outside its
+        bracket groups, which `_condition_waits` steps over by their pairs
+        too, a list holds no `?`, no `:` and no `=>`. Whether an arrow can
+        start at the `<` is the caller's test: in `c ? a > (y)` the read
+        meets the `?` and finds no list, and in the call `f<T>(y)` the `<`
+        follows an operand.
+        """
+        if self.token(opening - 1) != ">":
+            return opening
+        depth = 0
+        cursor = opening - 1
+        while cursor >= 0:
+            token = self.token(cursor)
+            if token == ">":
+                depth += 1
+            elif token == "<":
+                depth -= 1
+                if not depth:
+                    return cursor if _IDENT.fullmatch(self.token(cursor + 1)) else opening
+            elif token in {")", "]", "}"}:
+                if cursor not in self.pairs:
+                    return opening
+                cursor = self.pairs[cursor]
+            elif token in {"(", "[", "{"} or not (
+                    _IDENT.fullmatch(token) or token[:1] in {"'", '"'}
+                    or token in _RETURN_TYPE_TOKENS or token in {"&", "="}):
+                return opening
+            cursor -= 1
+        return opening
 
     def _method_parameters(self, opening: int) -> bool:
         """Recognize concise method signatures only inside objects/classes.

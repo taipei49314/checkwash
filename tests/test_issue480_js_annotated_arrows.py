@@ -199,8 +199,9 @@ def test_an_annotated_arrow_anywhere_else_keeps_the_old_reading(position):
 # conditional's because a `?` before it still waits: in each, `@` stays the
 # arrow's parameter and `a` is not declared by it. Spelled `assert`, the
 # parameter would otherwise fall to the global and gain Node authority. In
-# the last two the `?` waits too: the consequent's own return-type `:`
-# answers no `?`.
+# the last four the `?` waits too: the consequent's own return-type `:`
+# answers no `?`, also on the right of a compound assignment and after a
+# type parameter list.
 CONDITIONALS = {
     "a parenthesized consequent": "cond ? (a) : @ => @.ok(v)",
     "a call as the consequent": "cond ? f(a) : @ => @.ok(v)",
@@ -209,6 +210,8 @@ CONDITIONALS = {
     "an arrow as the consequent": "c ? () => (a) : @ => @.ok(v)",
     "an annotated arrow as the consequent": "c ? (x): T => (a) : @ => @.ok(v)",
     "an annotated arrow returning an object as the consequent": "c ? (x): T => ({ k: a }) : @ => @.ok(v)",
+    "an annotated arrow after a compound assignment as the consequent": "c ? x ||= (y): T => (a) : @ => @.ok(v)",
+    "a generic annotated arrow as the consequent": "c ? <U>(y): U => (a) : @ => @.ok(v)",
 }
 
 
