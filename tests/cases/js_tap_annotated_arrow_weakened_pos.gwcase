@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 159
+rule: ASSERT_WEAKENED
+issue: 480
+title: tap under t.test(..., (tt): void =>), tt.equal(sum(2, 2), 4) -> tt.ok(sum(2, 2)) weakens, as without the annotation
+origin: issue #480 row N19, reported against v0.8.0 and main f541f74 (pass, zero findings, no_known_gaps): tap's subtest t was read only when named like the file's root
+=== before: tests/sum.test.ts ===
+import t from "tap";
+import { sum } from "../src/sum";
+
+t.test("adds two numbers", (tt): void => {
+  tt.equal(sum(2, 2), 4);
+});
+=== after: tests/sum.test.ts ===
+import t from "tap";
+import { sum } from "../src/sum";
+
+t.test("adds two numbers", (tt): void => {
+  tt.ok(sum(2, 2));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds two numbers"}]
