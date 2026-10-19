@@ -12455,3 +12455,85 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-162 (2026-10-19): the verdict gate's baseline rotates to v0.8.0
+
+Owner ruling 2026-10-19, R56. The owner answered a table of 104 rulings
+with 「裁決總表全部照建議」 ("the whole ruling table as recommended"); the
+reply is the text of an answer the agent suggested, which the owner chose.
+R56 asked whether to open the v0.8.0 rotation PR now, with the
+protected-file dispositions asked in the PR, and adopted "open it now and
+merge it before the sweep freeze". The v0.8.0 one-time authorization
+(`docs/RELEASING.md`, 2026-10-15) already covers this PR: "the
+verdict-baseline rotation PR (step 9), whose protected changes keep the
+maintainer's disposition". The PR is part of the v0.9.0 release
+preparation and has no issue: a tag-push run requires `[baseline]` to be
+the highest other `v*` tag merged into the tagged commit (`check_tag_rule`,
+`tools/verdict_gate.py:1564-1594`), which for a v0.9.0 tag is v0.8.0.
+D-151 to D-161 are assigned to pull requests prepared in parallel, so this
+entry is D-162.
+
+After the rotation, pull requests, `main` and the next tag are compared
+with v0.8.0 instead of v0.7.0.
+
+- **`[baseline]`** in `tests/verdict_gate/baseline.toml` pins tag v0.8.0,
+  version 0.8.0, release commit
+  `f02b5d8a07fa39ee1898881f66c571eb164cb11c` (the merge commit of #458,
+  tag object `1d869062`) and the Release's `checkwash.pyz`: 796,565 bytes,
+  sha256 `87b097cdca4ca34dc43be8be8ddf8ef7f3197894dc6f554fe1bddc1d86e74d0c`,
+  as the GitHub Releases API reports the asset and as the
+  [publication record](docs/releases/v0.8.0-publication-verification.md)
+  lists it. The gate re-checks both on every run, and checks that the
+  archive's `checkwash/*` members equal `src/checkwash` at `f02b5d8`.
+- **`baseline_blocked`** stays 159, sha256 `9993cab6…`. The tag-push
+  verdict run of v0.8.0,
+  [38768985301/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/38768985301)
+  (job 116539533210, v0.7.0 against the tag), logs 185 cases (159 T1,
+  26 T3), zero failures and zero reported, with 159 block -> block and
+  26 pass -> pass. Zero failures means v0.7.0's blocks matched this pin.
+  With no block -> pass and no pass -> block, the candidate there, built
+  from the tag's own source, blocks exactly the same 159 cases; the
+  Release's pyz must hold that same `src/checkwash`. The run proposed
+  nothing: the gate proposes an entry or a pin only where one is missing
+  or has drifted, and that is a failure too (`tools/verdict_gate.py:123-135`).
+- **`[t3.cases]`** is unchanged. `tests/data/javascript_chai_mutations.json`
+  is the same git blob (`4f363109`) at v0.5.0, v0.6.0, v0.7.0 and v0.8.0,
+  so the T3 cases read at `f02b5d8` are those read at `d647a65`, which the
+  tag-push run matched with no drift.
+- **`[canary]`** is not rotated (step 9). The v0.4.2 -> v0.5.0 pair and its
+  71-case `block_to_pass` set stay; the tag-push run reproduced them
+  (canary 71 block -> pass, 45 block -> block, 6 pass -> block and
+  37 pass -> pass).
+- **The acceptance file**, `tests/gates/verdict_gate_accepted.toml`, is
+  maintainer-only, and the agent's commits do not touch it. Its file-level
+  `baseline` must become `v0.8.0`: the gate fails `acceptance-baseline`
+  while it differs from the pin (`tools/verdict_gate.py:1414-1416`). It
+  holds no `[[accept]]` entry, so the rotation removes and adds none, and
+  no case needs one (below). The owner's disposition of this line is asked
+  in the PR.
+
+Nothing else moves. The case files, labels, acceptance file, gate code
+(`tools/verdict_gate.py`, `tools/qualify_assertions.py`) and workflow are
+the same at `main` `0e60832a` as at `f02b5d8`. The main-push verdict run
+[39206619788/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39206619788)
+on `0e60832a` (v0.7.0 against `main`) logs the same counts, with zero
+failures and zero reported. So by reading, `main` judges every case as
+v0.8.0 does: against v0.8.0 it has no block -> pass, needs no entry and
+reports nothing. From this rotation on, a candidate that turns any of
+v0.8.0's 159 blocks into a pass needs an accepted entry. No engine code,
+case input, label, fixture expectation or gate rule changes;
+`tests/verdict_gate/README.md` records the re-pin.
+
+Evidence status. Both runs above are read from their logs
+(`gh run view --log`). Their receipt artifacts, each named
+`verdict-gate-receipt-1` (artifacts 11991306312 and 12165673670, whose
+upload steps log ZIP SHA256s `e5683c9c…` and `0f7b1e92…`), were not
+downloaded, and they are kept for seven days. This PR's own verdict run is
+the rotation run: with the rotated `[baseline]` it re-checks the engine,
+both pins and the T3 map. By reading, it fails on `acceptance-baseline`
+alone until the acceptance line changes, and then passes all 185 cases.
+Its run ID is added here once it exists. Nothing ran on the work machine
+(`NOT_RUN：工作機規則（POLICY work-machine-local），the rotation run is this PR's hosted verdict gate`).
+
+The agent drafted this entry in the rotation PR; the owner approves its
+wording there.
