@@ -609,12 +609,18 @@ annotation is read when it is a simple type: names, type arguments
 (`ns.T`). Under any other return type, such as an object type
 (`(t): { ok: boolean } =>`), a parenthesized one (`(t): (void) =>`), a
 function, conditional or literal type, the callback's body is not read and
-none of its assertions is the test's; each call on its first parameter
-that names one of the runner's assertions is a coverage candidate, so the
-report says `incomplete`. The candidate is `unresolved`, except for a
-parameter named `t` that resolves through node:test's fallback for a `t`
-that nothing declares, or to tap's root `t` where the file names it so:
-those calls are Node's or tap's candidates (see
+none of its assertions is the test's. A call on its first parameter that
+names one of the runner's assertions is then an `unresolved` coverage
+candidate, so the report says `incomplete`, with two exceptions for a
+parameter named `t`, which the binder does not declare there. Where the
+file names tap's root `t`, the parameter resolves to that root, and its
+calls of tap's assertions are tap's candidates. Where node:test's
+fallback for a `t` that nothing declares applies, in a file that names
+node:test or none of node:test, AVA and tap, the parameter is node:test's
+context: its calls through `t.assert` are Node's candidates, and nothing
+else on it is one. So in a file that names node:test beside AVA or tap, AVA's or tap's
+assertions on such a `t` (`t.is`, `t.equal`) are not read at all, and the
+report can still say `no_known_gaps` (see
 [Make unrepresented assertion candidates visible](#make-unrepresented-assertion-candidates-visible)).
 An arrow callback with type parameters (`<T>(t: T): void =>`) keeps the
 old reading: its first parameter is not read, and its calls on it are no
@@ -1067,7 +1073,11 @@ context the binder does not read under a return type it does not step over
 ([above](#ava-and-tap-assertions)) is reported as an `unresolved`
 candidate, or as Node's or tap's where a parameter named `t` resolves
 through node:test's fallback or to tap's root `t`, and the report says
-`incomplete`, not `no_known_gaps`. A
+`incomplete`, not `no_known_gaps`. A `t` that node:test's fallback makes
+node:test's context gives only its calls through `t.assert` as
+candidates, so in a file that names node:test beside AVA or tap, AVA's or
+tap's assertions on it give none, and the report can still say
+`no_known_gaps`. A
 callback with type parameters (`<T>(ctx: T): void =>`) is not read this
 way: its first parameter is not named, so its calls on it are no
 candidates and the report can still say `no_known_gaps`, unless the
