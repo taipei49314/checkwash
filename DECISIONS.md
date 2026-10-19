@@ -15493,15 +15493,17 @@ aside, and the weakened test beside it blocks the stop as a finding, where
 the row asserts #456's size block. It is not changed in this PR; it waits
 for the owner's ruling. Nothing under `tests/gates` changes.
 
-**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 70 collected
+**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 76 collected
 items, counted from its parametrize lists: the prefix against the whole
 side (8) and equality (1); the engine's rows (10 set aside, 9 refusing and
-naming the shebang side, 6 other rules, 1 without a prefix, 1 verdict); the
-provider pass (3); the snapshots, the ceiling and the stream's protocol
-(2, 2, 1, 4); the git processes (3); and the CLI in range, worktree and
-hook mode (19). No `.gwcase` fixture is added: the case format has no
-unread side. By reading, the documented test count becomes 20153
-(20083 + 70); CI's collection checks it.
+naming the shebang side, 6 other rules, 1 without a prefix); no repair
+evidence with prefixes, test_issue415's unread rows and a README (5), and
+beside several set-aside documents (1); the provider pass (3); the
+snapshots, the working-tree read bound, the ceiling and the stream's
+protocol (2, 1, 2, 1, 4); the git processes (3); and the CLI in range,
+worktree and hook mode (19). No `.gwcase` fixture is added: the case
+format has no unread side. By reading, the documented test count becomes
+20159 (20083 + 76); CI's collection checks it.
 
 **Versions.** No rule id, severity or machine-output field changes, so
 `FINDINGS_VERSION` and `IR_VERSION` stay 2, and no fingerprint moves: a
