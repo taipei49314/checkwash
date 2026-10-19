@@ -5,7 +5,9 @@ stand-in pass's 200,000-node limit, so a test file over the old 30,000 nodes
 gives a verdict; its node and byte refusals name the path, the requested side
 and the counts. The stand-in step limits stay, and their refusal names which
 counter fired, the file, the side, the unit and that counter's steps and
-limit. Source bytes are parsed only; the sources here are never executed.
+limit. The pass reads each side's module statements once per file (the
+owner's choice of 2026-10-19), and the last pins show that this changes no
+result. Source bytes are parsed only; the sources here are never executed.
 """
 
 import ast
@@ -18,6 +20,7 @@ from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
 from checkwash.frontends.python import standin_installations as standin
+from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python import subject_replacements as subject
 from checkwash.ir.model import IR, DiffGlobals
 
@@ -227,3 +230,135 @@ def test_the_restructured_patch_proof_is_named_by_its_kind(monkeypatch):
     assert len(result[0].globals.subject_installations) == 1
     assert made == [(TRACED, 0, "<module body>"), (TRACED, 1, "<module body>"),
                     (TRACED, 1, "<restructured patch>")]
+
+
+# The owner's choice of 2026-10-19: the pass reads each side's module
+# statements once per file, and that changes no result.
+
+SCOPES = b"""import os
+def test_a():
+    value = 1
+    assert value == 1
+def test_a():
+    assert 2 == 2
+async def test_b():
+    pass
+class TestC:
+    def test_d(self):
+        pass
+    def test_d(self):
+        return 1
+    class Inner:
+        def test_e(self):
+            pass
+def test_f():
+    def inner():
+        pass
+"""
+
+CAPTURES = PREFIX + (
+    b"alias = total\n"
+    b"def test_direct():\n    assert total([1, 2]) == 3\n"
+    b"def test_capture():\n    value = total([1, 2])\n    assert value == 3\n"
+    b"def test_alias():\n    value = alias([1, 2])\n    assert value == 3\n"
+    b"def test_rebound():\n    value = total([1, 2])\n    total = sum\n    assert value == 3\n"
+    b"class TestGroup:\n    def test_method(self):\n        value = total([1, 2])\n        assert value == 3\n"
+)
+REPLACED = (CAPTURES.replace(b"alias = total\n", b"alias = total\ndef standin(values):\n    return 3\n")
+            .replace(b"value = total(", b"value = standin("))
+
+
+class _Fresh(subject._ModuleReads):
+    """Reads the tree afresh for every question, as the pass did before it kept them."""
+
+    def member(self, scope, name):
+        return next((node for node in scope.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                     and node.name == name), None)
+
+    def star_import(self):
+        return any(isinstance(statement, ast.ImportFrom) and any(alias.name == "*" for alias in statement.names)
+                   for statement in self.tree.body)
+
+    def sites(self):
+        return subject._binding_sites(self.tree.body)
+
+    def values(self):
+        return subject._bindings(self.tree.body)
+
+
+def _dump(node):
+    return None if node is None else ast.dump(node)
+
+
+def test_the_kept_reads_find_the_scope_the_scan_finds():
+    tree = ast.parse(SCOPES)
+    reads = subject._ModuleReads(tree)
+    names = ["test_a", "test_b", "TestC", "TestC.test_d", "TestC.Inner", "TestC.Inner.test_e", "test_f.inner",
+             "test_a.value", "os", "missing", "TestC.missing", "TestC.Inner.test_e.x"]
+    for _ in range(2):
+        for name in names:
+            assert subject._scope(tree, name, reads) is subject._scope(tree, name)
+    # The first definition of a name wins, as the scan's first match does.
+    assert subject._scope(tree, "test_a", reads) is tree.body[1]
+    assert subject._scope(tree, "TestC.test_d", reads) is tree.body[4].body[0]
+    assert subject._scope(tree, "TestC.Inner.test_e", reads) is tree.body[4].body[2].body[0]
+    assert subject._scope(tree, "TestC", reads) is None
+
+
+def test_reads_kept_across_a_files_assertions_project_what_fresh_reads_do():
+    star = CAPTURES.replace(b"alias = total\n", b"alias = total\nfrom providers import *\n")
+    seen = set()
+    for source in (CAPTURES, star):
+        tree = ast.parse(source)
+        reads = subject._ModuleReads(tree)
+        for unit in parse_python(source, collect_tests=True).units:
+            for assertion in unit.side.assertions:
+                for _ in range(2):
+                    kept = subject._subject_call(assertion, tree, unit.qualname, reads)
+                    assert _dump(kept) == _dump(subject._subject_call(assertion, tree, unit.qualname))
+                seen.add((source is star, kept is None))
+    # Both files project some assertions and refuse others.
+    assert seen == {(False, False), (False, True), (True, False), (True, True)}
+
+
+def test_the_pass_reads_each_sides_module_statements_once(monkeypatch):
+    count = 30
+    tests = b"".join(b"def test_%d():\n    value = total([%d])\n    assert value == 3\n" % (n, n) for n in range(count))
+    before = PREFIX + tests
+    after = before + b"def test_added():\n    assert 1 == 1\n"
+    kept, calls, reads = [], [], []
+
+    class Recording(subject._ModuleReads):
+        def __init__(self, tree):
+            super().__init__(tree)
+            kept.append(self)
+
+    def counted(name, original):
+        def read(statements):
+            if any(statements is module.tree.body for module in kept):
+                reads.append(name)
+            return original(statements)
+        return read
+
+    def call(*args, **kwargs):
+        calls.append(args[2])
+        return projection(*args, **kwargs)
+
+    projection = subject._subject_call
+    monkeypatch.setattr(subject, "_ModuleReads", Recording)
+    monkeypatch.setattr(subject, "_binding_sites", counted("sites", subject._binding_sites))
+    monkeypatch.setattr(subject, "_bindings", counted("values", subject._bindings))
+    monkeypatch.setattr(subject, "_subject_call", call)
+    _analyse(before, after)
+    # Each pair asks both sides for its subject call; each side's module is read once.
+    assert len(kept) == 2
+    assert sorted(calls) == sorted(f"test_{n}" for n in range(count) for _ in range(2))
+    assert sorted(reads) == ["sites", "sites", "values", "values"]
+
+
+def test_kept_reads_leave_the_pass_verdicts_as_fresh_reads_give_them(monkeypatch):
+    kept = _analyse(CAPTURES, REPLACED)[1]
+    monkeypatch.setattr(subject, "_ModuleReads", _Fresh)
+    fresh = _analyse(CAPTURES, REPLACED)[1]
+    assert kept == fresh
+    assert "test_capture" in {f.unit for f in kept if f.rule == "TEST_PATCHES_SUBJECT"}
