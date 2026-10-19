@@ -12624,13 +12624,8 @@ Residuals, by kind (D-145 and D-149 name the others), each leaving the call
 resolved as before this entry: an aliased `setattr` (`s = setattr`) and an
 alias more than one hop away, which the issue names; an alias bound other
 than by a plain assignment (a `for` or `with` target, an unpacking) or to
-another value; an alias assigned in a def that declares it `global`
-(`def bind(): global Alias; Alias = TotalTest`), which a computed-name
-`setattr(Alias, NAME, f)` at module level or in a def outside that one
-does not follow, since an alias is keyed by the scope its assignment is
-written in (`:477-480`, `:499-504`), and which works only once that def
-has run (raised by GLM, verified by Claude); a computed-name `setattr` whose
-target is a parameter that holds the class (a `setUpClass`'s `cls`, or
+another value; a computed-name `setattr` whose target is a
+parameter that holds the class (a `setUpClass`'s `cls`, or
 `def install(target)` called with the class); `pop()`, `popitem()` or
 `clear()` on a class body's namespace; and a namespace written through
 `monkeypatch.setitem`, `operator.setitem`, `patch.dict`, an unbound dict
