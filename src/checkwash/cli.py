@@ -996,10 +996,11 @@ def _json_size_refusal(exc: SourceOverLimit) -> int:
     empty: `size_refusal_to_json` writes the findings JSON's `unread` entry
     for the side the refusal names, outside any findings document. stderr
     keeps the one engine-error line `main()` writes for the refusal in every
-    other format. It is reached from `_cmd_check`'s `_analyse` call only, so
-    a root manifest, config, exemption list or task file refused before the
-    analysis (a `GitSourceOverLimit`, a `GitError`), another engine error,
-    term, sarif and `--emit-ir` keep an empty stdout.
+    other format. Term, sarif, `--emit-ir` and other engine errors keep an
+    empty stdout. So does a root manifest, config, exemption list or task
+    file over the limit at the base: it is read inside the guarded `_analyse`
+    call, but refuses as a `GitSourceOverLimit`, a `GitError` and not a
+    `SourceOverLimit`, which the `except SourceOverLimit` clause does not catch.
     """
     _advise(f"checkwash engine error: {type(exc).__name__}: {exc}\n")
     try:
