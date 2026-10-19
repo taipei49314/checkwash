@@ -123,6 +123,48 @@ def _binders(function, name: str) -> list[ast.AST]:
     return found
 
 
+_COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+
+
+def assertion_names(node: ast.AST) -> tuple[frozenset[str], frozenset[str]]:
+    """(read, shadowed): the `Name` ids in `node`, an assertion's expression, by what binds them (#471 Q3).
+
+    An occurrence inside a lambda whose parameters bind its name, or inside
+    a comprehension one of whose targets binds it, is that lambda's or that
+    comprehension's own variable, not the name the test binds. `read` holds
+    each name with an occurrence of neither kind, `shadowed` each name all
+    of whose occurrences are of one. A comprehension is taken whole, its
+    first iterable included, although Python evaluates that one outside it,
+    which only errs toward no evidence; a lambda's defaults are read outside
+    it, as Python reads them. The frontend reads it for `fixture_reads`.
+    """
+    read: set[str] = set()
+    seen: set[str] = set()
+    stack: list[tuple[ast.AST, frozenset[str]]] = [(node, frozenset())]
+    while stack:
+        current, bound = stack.pop()
+        if isinstance(current, ast.Name):
+            seen.add(current.id)
+            if current.id not in bound:
+                read.add(current.id)
+            continue
+        if isinstance(current, ast.Lambda):
+            args = current.args
+            stack.extend((default, bound) for default in (*args.defaults, *args.kw_defaults) if default is not None)
+            stack.append((current.body, bound | {
+                arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg)
+                if arg is not None
+            }))
+            continue
+        if isinstance(current, _COMPREHENSIONS):
+            bound = bound | {
+                target.id for generator in current.generators for target in ast.walk(generator.target)
+                if isinstance(target, ast.Name)
+            }
+        stack.extend((child, bound) for child in ast.iter_child_nodes(current))
+    return frozenset(read), frozenset(seen - read)
+
+
 def _assigned_value(nodes: list[ast.AST], target: ast.AST) -> ast.expr | None:
     """The value a plain assignment with `target` as its only target assigns, or None."""
     for node in nodes:

@@ -22,6 +22,7 @@ from checkwash.frontends.python.conditional_oracles import conditional_oracle_ca
 from checkwash.frontends.python.fixture_producers import (
     ProducerScope,
     _binders as _fixture_binders,
+    assertion_names,
     import_modules,
     unit_producers,
 )
@@ -3231,8 +3232,8 @@ def _collect_unit(
     nested_nodes: set[int] | None = None
     rebound: frozenset[str] = frozenset()
 
-    def fixture_reads(node: ast.AST, names: tuple[str, ...]) -> tuple[str, ...]:
-        """The fixture parameters an assertion of the unit's own body reads (471 Q3).
+    def fixture_reads(node: ast.AST, expression: ast.AST) -> tuple[str, ...]:
+        """The fixture parameters assertion `node` of the unit's own body reads in `expression` (471 Q3).
 
         Directly, or through the unit's own assignments (`_resolve_through`).
         A parameter the body binds again holds another value there, and is
@@ -3240,7 +3241,11 @@ def _collect_unit(
         or walrus), and one bound any other way in the unit's own scope
         (`_fixture_binders`: a `for` or comprehension target, `with ... as`,
         `except ... as`, `del`, an import, `global` or `nonlocal`, a match
-        capture, a nested def or class of that name).
+        capture, a nested def or class of that name). A name inside a lambda
+        or a comprehension of the assertion that binds it is not read, nor
+        followed (`assertion_names`); a parameter all of whose occurrences
+        there are such names is not counted, even when a name the assertion
+        reads leads to it, which errs toward no evidence.
         """
         nonlocal nested_nodes, rebound
         if not fixture_params:
@@ -3256,9 +3261,10 @@ def _collect_unit(
             rebound = frozenset(param for param in fixture_params if _fixture_binders(func, param))
         if id(node) in nested_nodes:
             return ()
+        read, shadowed = assertion_names(expression)
         return tuple(sorted(
-            name for name in _resolve_through(names, bindings)
-            if name in fixture_params and name not in bindings and name not in rebound
+            name for name in _resolve_through(tuple(sorted(read)), bindings)
+            if name in fixture_params and name not in bindings and name not in rebound and name not in shadowed
         ))
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
@@ -3358,7 +3364,7 @@ def _collect_unit(
                     right_depends_on=depends,
                     reaching=reach,
                     reaching_sig=_reaching_sig(reach, direct),
-                    fixture_reads=fixture_reads(node, _referenced_names(node.test)) if fixture_params else (),
+                    fixture_reads=fixture_reads(node, node.test) if fixture_params else (),
                 )
             )
             counter += 1
@@ -3428,7 +3434,7 @@ def _collect_unit(
                         trivial=c.trivial,
                         reaching=reach,
                         reaching_sig=_reaching_sig(reach, direct),
-                        fixture_reads=fixture_reads(node, _referenced_names(node)) if fixture_params else (),
+                        fixture_reads=fixture_reads(node, node) if fixture_params else (),
                     )
                 )
                 counter += 1

@@ -249,6 +249,14 @@ def test_an_autouse_fixture_the_test_also_requests_by_parameter_has_a_producer()
     pytest.param("    fee = ledger.fee\n    assert fee == 5.0\n", [("ledger",)], id="through-an-assignment"),
     pytest.param("    assert total() == 5.0\n", [()], id="not-at-all"),
     pytest.param("    ledger = make()\n    assert ledger.fee == 5.0\n", [()], id="parameter-assigned-again"),
+    pytest.param("    assert (lambda ledger: ledger.fee)(make()) == 5.0\n", [()], id="lambda-parameter-of-that-name"),
+    pytest.param("    assert (lambda ledger: ledger.fee)(ledger) == 5.0\n", [("ledger",)],
+                 id="lambda-of-that-name-applied-to-it"),
+    pytest.param("    assert (lambda row=ledger: row.fee)() == 5.0\n", [("ledger",)], id="lambda-default"),
+    pytest.param("    fee = ledger.fee\n    assert [fee for fee in rows] == [5.0]\n", [()],
+                 id="comprehension-target-shadows-a-local"),
+    pytest.param("    fee = ledger.fee\n    assert (lambda ledger: ledger.fee + fee)(make()) == 5.0\n", [()],
+                 id="lambda-of-that-name-beside-a-read-through-a-local"),
 ])
 def test_an_assertion_records_the_fixture_parameters_it_reads(body, reads):
     side = _side("def test_fee(ledger):\n" + body)
