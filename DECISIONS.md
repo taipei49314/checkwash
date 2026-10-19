@@ -12690,27 +12690,48 @@ parametrize lists; no existing test changed. By reading, the documented
 test count becomes 19553 (19475 + 75 + 3); CI's collection checks it, and
 other open pull requests may change the base.
 
-The agent wrote this entry in #502's fix PR #520. The maintainer approved
-it on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR approval list, all as
-recommended"), in reply to the agent's list asking, for this PR, for
-approval of: the wording of SPEC §3 (75f35ca7, 2e822f1e, c583ab02),
-THREATMODEL row 91 (4cf15200, bd8d3ab8) and this entry (39aad0bc,
-625e5640, f55f6093), with the Release paragraph brought in line with R1
-and the residual lists completed (A44); the three fixtures' labels
-(A45, 09ccc6ba); readings 1 to 5 (A46); reading 7 (A47); reading 6, with
-the asymmetry between a direct and an aliased target kept and
-`x = globals()["C"]` left a residual (A48); and, for `__setattr__`,
-reading the name argument at index 0 of a call with two positional
-arguments and at index 1 of one with three, with this entry's reading
-changed to match (A49). The reply was a button whose text the assistant
-wrote. The changes A44 and A49 ask for were made after the reply: the code
-and its pins (27c42fd2, f6974b13), SPEC §3's residual sentence
-(fa236589), row 91 (a2e968a0) and this entry (a2a6727f, efa57c35). Made
-with them and not yet approved: the same rule for `__delattr__`, with one
-and two arguments; leaving every name unresolved for a dunder setter with
-a starred argument in any position, where the draft looked only at the
-first two, or with a count neither form takes (items 2 and 3; 27c42fd2,
-a2a6727f); and SPEC §3's sentence that reads the name argument by the
-count (9c8c794b). A residual raised after the reply, an alias a def
-assigns under `global` (9b0d8661), is taken out again (b2f0f052) until its
-wording is approved.
+The agent wrote this entry in #502's fix PR #520. On 2026-10-19 the
+maintainer approved items A44 to A49 of the agent's approval list:
+「PR 核可清單全部照建議」 ("the PR approval list, all as recommended").
+Those items approve, for this PR: the wording of SPEC §3 (75f35ca7,
+2e822f1e, c583ab02), THREATMODEL row 91 (4cf15200, bd8d3ab8) and this
+entry (39aad0bc, 625e5640, f55f6093) as committed, with the Release
+paragraph to be brought in line with R1 and the residual lists to be
+completed before merge (A44); the three fixtures' labels (A45, 09ccc6ba);
+readings 1 to 5 (A46); reading 7 (A47); reading 6, with the asymmetry
+between a direct and an aliased target kept and `x = globals()["C"]` left
+a residual (A48); and, for `__setattr__`, reading the name argument at
+index 0 of a call with two positional arguments and at index 1 of one
+with three, with this entry's reading changed to match (A49). The reply
+was a button whose text the assistant wrote. The changes A44 and A49 ask
+for were made after the reply: the code and its pins (27c42fd2,
+f6974b13), SPEC §3's residual sentence (fa236589), row 91 (a2e968a0) and
+this entry (a2a6727f, efa57c35). Made with them, and not covered by those
+items: the same rule for `__delattr__`, with one and two arguments;
+leaving every name unresolved for a dunder setter with a starred argument
+in any position, where the draft looked only at the first two, or with a
+count neither form takes (items 2 and 3; 27c42fd2, a2a6727f); and SPEC
+§3's sentence that reads the name argument by the count (9c8c794b). A
+residual raised after the reply, an alias a def assigns under `global`
+(9b0d8661), was taken out again (b2f0f052) until its wording was approved.
+
+What was written or left open after that reply was approved later the
+same day: 「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"), in reply to the agent's round-2 list (items B1 to B25).
+Item B3 approves, as one, the maintainer text the agent wrote while
+applying approved options; for this entry it names the approval record
+above (1d11fe24, a2dd63aa). Item B7 approves what A49 did not cover: the
+`__delattr__` rule, every name left unresolved for a starred argument or
+another count, SPEC §3's sentence (9c8c794b) and the module docstring as
+changed with them (27c42fd2), and adds a dunder setter with a starred
+argument or an argument count neither form takes to SPEC §3's list of
+writes that leave every name unresolved (27a36315), which the module
+docstring now says too (b34a9c2f, its line count kept). Item B8 approves
+the `global` alias residual in this entry and adds one sentence for it to
+row 91's "Still not read", with SPEC §3 unchanged, so SPEC §3's residual
+sentence does not name it. B8 described the residual as written in this
+entry only, as it had been until b2f0f052, so 9b0d8661's wording is
+restored (6ef73158) and row 91 gains its sentence (1320f3cc). This
+paragraph, and the rewording of the one above to say only what items A44
+to A49 say, were also written after that reply. That reply, too, was a
+button whose text the assistant wrote.
