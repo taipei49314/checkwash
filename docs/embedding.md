@@ -165,8 +165,8 @@ These ship in the next release, which D-146 says cannot be a patch release. A bu
 reports `checkwash_version` `0.8.0`, so a tool cannot tell it from the release
 by that field.
 
-- **The keys and finding fields have not changed.** One escalator label is
-  new (below).
+- **The finding fields have not changed.** One optional top-level key and
+  one escalator label are new (below).
 - **Assertion-level fingerprints (D-146, #421).** ASSERT_WEAKENED,
   ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
   EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED,
@@ -200,5 +200,11 @@ by that field.
   the verdict, when that change's head or worktree side is over the size
   limit, now exits 0 with `decision: block` instead of the non-blocking
   `systemMessage` (D-150, #456).
-- **Not on main yet:** an optional top-level `unread` key that names sides
-  checkwash did not read, absent when there are none (#454).
+- **A new optional top-level key,** `unread` (#454). It lists the changed
+  sides over the 1,000,000-byte source limit that checkwash set aside unread,
+  one object per side with `path`, `side`, `size` and `limit`, and it is
+  omitted when there are none. A change listed there was not analyzed, so a
+  `pass` says nothing about it, and a tool that reads only `findings` will
+  not see it. A validator that rejects unknown keys meets `unread` only on a
+  run that has one. SARIF names each such side in a tool execution
+  notification, not a result. `checkwash_findings_version` stays 2.
