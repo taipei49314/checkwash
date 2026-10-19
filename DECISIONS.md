@@ -12501,12 +12501,17 @@ PR):
   (`_namespaces`, `:462-504`; `_namespace_call`, `:506-537`; `_key`,
   `:539-545`):
   - a call whose last name is `__setattr__` or `__delattr__`
-    (`_DUNDER_SETTERS`, `:125`; `:510-518`), by the first str literal among
-    its first two positional arguments, as #422's `_setter` reads them
-    (`exit_status_controls.py:839-851`). A bound call carries the name at
-    index 0 (`self.__setattr__("_check", f)`, `super().__setattr__(...)`),
-    an unbound one at index 1 (`type.__setattr__(C, "_check", f)`,
-    `object.__setattr__(...)`);
+    (`_DUNDER_SETTERS`, `:125`; `:510-518`), by its name argument. A bound
+    call carries the name at index 0 (`self.__setattr__("_check", f)`,
+    `super().__setattr__(...)`), an unbound one at index 1
+    (`type.__setattr__(C, "_check", f)`, `object.__setattr__(...)`), and
+    the count of positional arguments tells them apart: two bound and three
+    unbound for `__setattr__`, one and two for `__delattr__`, which takes
+    no value. So `self.__setattr__(NAME, "x")` is read by `NAME`, never by
+    its value. The draft read the first str literal among the first two
+    arguments, as #422's `_setter` reads its status names
+    (`exit_status_controls.py:839-851`), and so took that call's `"x"` as
+    the name; raised by GLM, verified by Claude;
   - on `x.__dict__` or `vars(x)` (with an argument), the keywords of
     `update()` and the str-literal keys of a dict literal passed as its one
     positional argument (`:524-532`), and the literal key of `setdefault()`
@@ -12522,11 +12527,12 @@ PR):
   literal, a second positional argument, or a `**` entry or a key that is
   no str literal in the dict literal; a key of `setdefault()`, or of a
   class body's `vars()` or `locals()`, that is no str literal; a
-  `__setattr__` or `__delattr__` with no str literal among its first two
-  positional arguments, or with a starred one there; and a store or del of
-  `x.__dict__` itself, `x.__dict__ = ...` and `x.__dict__ |= ...`, read as
-  `__dict__` in `stored` (`:435-438`), which also takes `del x.__dict__`
-  and a literal-name setattr or patch of `__dict__`.
+  `__setattr__` or `__delattr__` whose name argument is no str literal, or
+  with a starred argument or a count that is neither form's; and a store
+  or del of `x.__dict__` itself, `x.__dict__ = ...` and
+  `x.__dict__ |= ...`, read as `__dict__` in `stored` (`:435-438`), which
+  also takes `del x.__dict__` and a literal-name setattr or patch of
+  `__dict__`.
 - Item 4. A computed-name `setattr` or `delattr` (`_SETATTR`, `:113-114`)
   also records the name `_target` reads from its target (`:230-244`): `x`
   for `x`, `x.attr`, `x.__class__` or `type(x)`, as `_root` reads them. It
