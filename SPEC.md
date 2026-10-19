@@ -1353,9 +1353,11 @@ exits 2: under `--format json`, without `--emit-ir`, stdout is
 stderr line name, which is the base side when both sides of a change are
 over the limit. It is not a findings document: it carries no
 `checkwash_findings_version`, `findings` or `verdict`. Term, sarif and
-`--emit-ir` keep an empty stdout, and so do a root manifest, config,
-exemption list or `--task` file over the limit at the base, which is
-refused before the analysis, and every other engine error (#454).
+`--emit-ir` keep an empty stdout. So do a root manifest, config, exemption
+list or `--task` file over the limit at the base, which is refused before
+the analysis; with a range, a pytest configuration's symlink target over
+the limit that no detector must read, which is refused as it is read
+through the link (above); and every other engine error (#454).
 
 **Which directory a command reads (#416).** `check`, `sweep`, `allow`, `doctor` and the `quality` forms that read a repository (a range, the worktree review, `init`, `doctor`) first ask Git about `--repo` (default `.`) with `git -C <--repo> rev-parse --is-inside-work-tree --show-prefix`. If Git answers `true` with a non-empty prefix, a second query, `git -C <--repo> rev-parse --show-toplevel`, names the root. Its answer must decode as UTF-8, be a single line, be absolute and name an existing directory. The command then uses that root in place of `--repo` for every later Git call and working-tree read. A run from a subdirectory therefore analyses the whole repository. For `check`, `sweep`, `doctor` and the `quality` forms its stdout and exit code are those of the same run at the root; `allow` writes the root ledger and names it under Git's spelling of the root. This is not the behaviour of `git -C <subdirectory>`, under which `ls-tree` and `git grep` stay scoped to the subdirectory. The root is never `--repo` joined with `--show-cdup`.
 
