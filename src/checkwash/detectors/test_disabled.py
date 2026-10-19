@@ -1,6 +1,19 @@
-"""TEST_DISABLED: skip/xfail marker added, or a whole test unit disappeared."""
+"""TEST_DISABLED: skip/xfail marker added, or a whole test unit disappeared.
+
+Every finding's key is content-bound (#512, round 2 of #421):
+`TEST_DISABLED/path/unit/v2:<64hex>`, built as the nine assertion-level rules'
+keys are (`findings.assertion_identity`), over the legacy pre-image unchanged,
+the finding's shape as the event kind, and what that shape changed (`_key`).
+So one approved skip, guard change or parametrize row deletion covers no other
+change to the same unit. Which markers pair, which move and how many findings
+there are do not change: the marker identity alignment pairs on still leaves
+the guard out (D-019, ruling 512.Q1 (a)).
+"""
 
 from __future__ import annotations
+
+import json
+from collections import Counter
 
 from checkwash.compat import removed_skip_guard
 from checkwash.findings import (
@@ -12,7 +25,8 @@ from checkwash.findings import (
     SHAPE_UNIT_REMOVED,
     Evidence,
     Finding,
-    make_fingerprint,
+    identity_text,
+    make_assertion_fingerprint,
 )
 from checkwash.frontends.python.conftest_controls import (
     COLLECTION,
@@ -29,7 +43,7 @@ from checkwash.frontends.python.conftest_controls import (
 from checkwash.frontends.python.hook_guards import HOOK_MARKERS
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.markers import is_guarded_mark, is_helper_skip, is_rebound, is_setup_skip, skip_condition
-from checkwash.ir.model import IR, judged_as_test
+from checkwash.ir.model import IR, judged_as_test, param_tables
 
 # What an added marker of each kind did. Any other kind, or none, is a plain
 # disabling marker.
@@ -55,20 +69,103 @@ _UNFOCUSED = (
 )
 
 
+def _key(path: str, qualname: str, legacy_text: str, shape: str, *, before=None, after=None, context=None) -> str:
+    """A finding's content-bound key (#512 Q2): `TEST_DISABLED/path/unit/v2:<64hex>`.
+
+    `legacy_text` is what the legacy key hashed, so the identity holds that
+    key's pre-image unchanged and every v2 key refines its legacy key. The
+    event kind is the finding's shape. `before` and `after` are texts in
+    `identity_text`'s form, and `context` is what the shape binds beyond
+    them. No span, line, message, severity, file digest or revision label
+    enters it, and there is no position: each shape binds its own texts.
+    """
+    return make_assertion_fingerprint(
+        "TEST_DISABLED", path, qualname, legacy_text, before=before, after=after, kind=shape, context=context,
+    )
+
+
+def _marker_added_key(path: str, qualname: str, name: str, marker, shape: str) -> str:
+    """A marker added: its complete text and the guard it was recorded with, null when none.
+
+    Every shape a marker added reports takes it: a plain disabling marker,
+    a suite-level control and a conftest's `pytestmark`. The guard is the
+    marker's recorded one (`Marker.guard`): an imperative skip's enclosing
+    `if`, and the condition a setup skip, a helper's skip or a later
+    binding runs under. So a guarded skip and an unguarded one of the same
+    name are two keys. Alignment still pairs markers without it (D-019).
+    """
+    text = marker.text if marker is not None else None
+    guard = marker.guard if marker is not None else None
+    return _key(path, qualname, name, shape, after=text, context={"guard": identity_text(guard)})
+
+
+def _guards(name: str, unit, was: str | None, marker) -> tuple[str | None, str | None]:
+    """(guard before, guard after) of a guard made always true, or removed.
+
+    Removed: the base condition the message names, and none after. Made
+    always true: the guard of the base marker `evidence._mark_weakened_guards`
+    compared, under its old name for a skip moved into or out of a helper
+    (#272), and the head marker's. A path gained by an unguarded
+    `collect_ignore` (row 81) has no guard on either side.
+    """
+    if was is not None:
+        return was, None
+    before_by_name = {m.name: m for m in unit.before.markers}
+    moved_from = {after: before for before, after in unit.delta.markers_moved}
+    old = before_by_name.get(name) or before_by_name.get(moved_from.get(name, ""))
+    return (old.guard if old is not None else None), (marker.guard if marker is not None else None)
+
+
+def _row_texts(rows: Counter) -> list[dict]:
+    """Rows as `{"names", "cells"}`, the cells in `identity_text`'s form, sorted by their encoding."""
+    out = [{"names": list(names), "cells": [identity_text(cell) for cell in cells]}
+           for (names, cells) in rows.elements()]
+    return sorted(out, key=lambda row: json.dumps(row, sort_keys=True, ensure_ascii=True))
+
+
+def _rows_gone(before, after) -> tuple[list[dict], list[dict]]:
+    """(rows deleted, rows newly disabled) of a parametrized unit, each a sorted list.
+
+    A row is its table's argnames and its cell texts, read through
+    `param_tables` as `diffalign._rows_lost` reads them, the JS/TS tables of
+    #428 included. Of the rows that ran before, one still written but marked
+    off is newly disabled; one no longer written at all is deleted. An
+    edited row's old text is among the deleted ones, since the rows alone
+    cannot tell an edit from a deletion. A side whose tables cannot be read
+    gives no rows: when it is the before side the key binds the counts alone,
+    and when it is the after side every row that ran before reads as deleted.
+    """
+    def rows(side, disabled: bool) -> Counter:
+        return Counter(
+            (table.names, row)
+            for table in param_tables(side)
+            for row, flag in zip(table.rows, table.disabled)
+            if flag == disabled
+        )
+
+    gone = rows(before, False) - rows(after, False)
+    newly_disabled = gone & rows(after, True)
+    return _row_texts(gone - newly_disabled), _row_texts(newly_disabled)
+
+
 def finding_marker(finding: Finding, unit) -> str | None:
     """The disabling marker a TEST_DISABLED finding reports, or None for one that reports none.
 
-    A marker-added finding is keyed by its marker's name (`detect`). The
+    A marker-added finding is keyed by its marker (`_marker_added_key`). The
     others report no marker of their own: a unit gone, rows removed, a guard
     weakened or removed. D6 judges the marker a finding reports, not the unit
-    it sits on (#208), so this is the one place that reads the name back.
+    it sits on (#208), so this is the one place that reads the name back: it
+    rebuilds the key of each marker the unit added and returns the name whose
+    key is the finding's.
     """
     if finding.rule != "TEST_DISABLED" or finding.shape not in (SHAPE_MARKER_ADDED, SHAPE_COLLECTION_CONTROL):
         return None
-    if unit is None or unit.delta is None:
+    if unit is None or unit.delta is None or unit.after is None:
         return None
+    marker_by_name = {m.name: m for m in unit.after.markers}
     for name in unit.delta.markers_added:
-        if make_fingerprint("TEST_DISABLED", finding.path, unit.qualname, name) == finding.fingerprint:
+        key = _marker_added_key(finding.path, unit.qualname, name, marker_by_name.get(name), finding.shape)
+        if key == finding.fingerprint:
             return name
     return None
 
@@ -80,9 +177,11 @@ def detect(ir: IR) -> list[Finding]:
             continue
         for unit in file.units:
             if unit.before is not None and unit.after is None:
-                # whole unit disappeared. Its identity is what it has always
-                # been: the assertions reached through a helper method stay
-                # out of it, so no fingerprint moves (306 Sub-Q10).
+                # whole unit disappeared. Its legacy pre-image is what its
+                # identity has always been: the assertions reached through a
+                # helper method stay out of it (306 Sub-Q10). The key also
+                # binds the complete texts of those same own assertions, a
+                # JS/TS assertion with its expected value (#512).
                 own = [a for a in unit.before.assertions if a.via is None]
                 text = "\n".join(a.text for a in own) or unit.qualname
                 identity = "\n".join(fingerprint_text(file.path, a) for a in own) or unit.qualname
@@ -95,7 +194,10 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=Evidence(text=text, span=unit.before.span),
                         after=None,
-                        fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, identity),
+                        fingerprint=_key(
+                            file.path, unit.qualname, identity, SHAPE_UNIT_REMOVED,
+                            context={"assertions": [identity_text(a.text) for a in own]},
+                        ),
                         shape=SHAPE_UNIT_REMOVED,
                     )
                 )
@@ -121,7 +223,7 @@ def detect(ir: IR) -> list[Finding]:
                             unit=unit.qualname,
                             before=None,
                             after=Evidence(text=m.text, span=m.span) if m else None,
-                            fingerprint=make_fingerprint("TEST_DISABLED", file.path, unit.qualname, name),
+                            fingerprint=_marker_added_key(file.path, unit.qualname, name, m, shape),
                             shape=shape,
                         )
                     )
@@ -168,6 +270,11 @@ def detect(ir: IR) -> list[Finding]:
                 inert = file.role == "conftest" and marker_kind(name) == SKIP_MARK
                 if inert:
                     message = f"{message}: {_INERT_GUARD}"
+                shape = SHAPE_INERT_MARK if inert else SHAPE_GUARD_WEAKENED
+                # The guard before and after, null when removed: with them in
+                # the key, a guard removed and one made always true are two
+                # keys (#512 Q2; THREATMODEL 54).
+                guard_before, guard_after = _guards(name, unit, was, m)
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",
@@ -177,10 +284,11 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=None,
                         after=Evidence(text=m.text, span=m.span) if m else None,
-                        fingerprint=make_fingerprint(
-                            "TEST_DISABLED", file.path, unit.qualname, f"guard:{name}"
+                        fingerprint=_key(
+                            file.path, unit.qualname, f"guard:{name}", shape,
+                            before=guard_before, after=guard_after,
                         ),
-                        shape=SHAPE_INERT_MARK if inert else SHAPE_GUARD_WEAKENED,
+                        shape=shape,
                     )
                 )
             if unit.delta.param_cases_removed:
@@ -212,6 +320,10 @@ def detect(ir: IR) -> list[Finding]:
                         f"{unit.qualname}: {n} parametrized case(s) deleted "
                         f"({before_n} -> {live_after})"
                     )
+                # Which rows went and how, and the live counts the message
+                # gives, so approving one row's deletion covers no other row
+                # (#512 Q2). A JS/TS table's rows are read the same way.
+                deleted_rows, disabled_rows = _rows_gone(unit.before, unit.after)
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",
@@ -221,8 +333,14 @@ def detect(ir: IR) -> list[Finding]:
                         unit=unit.qualname,
                         before=None,
                         after=Evidence(text=f"parametrize cases: {shown_after}", span=unit.after.span),
-                        fingerprint=make_fingerprint(
-                            "TEST_DISABLED", file.path, unit.qualname, "parametrize"
+                        fingerprint=_key(
+                            file.path, unit.qualname, "parametrize", SHAPE_PARAM_CASES_REMOVED,
+                            context={
+                                "deleted": deleted_rows,
+                                "disabled": disabled_rows,
+                                "live_before": before_n,
+                                "live_after": live_after,
+                            },
                         ),
                         shape=SHAPE_PARAM_CASES_REMOVED,
                     )
@@ -247,7 +365,9 @@ def detect(ir: IR) -> list[Finding]:
                     unit=None,
                     before=None,
                     after=Evidence(text=focus.text, span=focus.span),
-                    fingerprint=make_fingerprint("TEST_DISABLED", file.path, "<file>", focus.name),
+                    # File level: keyed under `<file>`, as the legacy key was,
+                    # and bound to the focus call's text (#512 Q2).
+                    fingerprint=_key(file.path, "<file>", focus.name, SHAPE_MARKER_ADDED, after=focus.text),
                     shape=SHAPE_MARKER_ADDED,
                 )
             )

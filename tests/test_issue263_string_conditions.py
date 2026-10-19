@@ -19,6 +19,7 @@ import datetime
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.compat import MAYBE, _ENV_MATRIX, _eval_condition
 from checkwash.config import Config
@@ -96,9 +97,19 @@ def test_a_string_condition_that_always_holds_or_cannot_be_read_blocks(decorator
     assert outcome(module(decorator, imports, constants)) == BLOCKED
 
 
-def test_the_marker_keeps_the_string_as_written():
+def test_the_marker_keeps_the_string_as_written(monkeypatch):
     """The name, and so the fingerprint, holds the string, not the expression
-    read from it; its whitespace is dropped, as in every marker's name."""
+    read from it; its whitespace is dropped, as in every marker's name. Since
+    #512 the key refines the legacy key of that name."""
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
     decorator = "@pytest.mark.skipif(\"sys.platform == 'win32'\")\n"
     [marker] = [m for unit in parse_python(module(decorator).encode(), collect_tests=True).units
                 for m in unit.side.markers]
@@ -107,7 +118,8 @@ def test_the_marker_keeps_the_string_as_written():
         [FileChange(TEST_PATH, "modified", module().encode(), module(decorator).encode())],
         Config(), Contract(), [], datetime.date(2026, 10, 6),
     )
-    assert [f.fingerprint for f in findings] == [make_fingerprint("TEST_DISABLED", TEST_PATH, "test_add", marker.name)]
+    assert [seen[f.fingerprint] for f in findings] == [make_fingerprint("TEST_DISABLED", TEST_PATH, "test_add", marker.name)]
+    assert findings[0].fingerprint.startswith(f"TEST_DISABLED/{TEST_PATH}/test_add/v2:")
 
 
 # --- 2: the names pytest provides ---------------------------------------------------

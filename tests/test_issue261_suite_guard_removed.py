@@ -21,6 +21,7 @@ import datetime
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
@@ -48,6 +49,24 @@ def analyze_change(before, after, *others):
 
 def removed(was, name):
     return f"<suite>: skip guard removed of the suite-level control (was {was!r}) ({name})"
+
+
+def _refined_legacy_keys(monkeypatch):
+    """The legacy key each content-bound key computed while the test runs refines (#512).
+
+    A v2 key's identity holds the legacy key's pre-image unchanged, so the
+    legacy key it refines is `make_fingerprint` of the same inputs.
+    """
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
 
 
 def collect_ignore(guard, name="collect_ignore", path="test_network.py"):
@@ -107,14 +126,19 @@ EARLY_RETURN = (
     # an `add_marker` skip in a hook is a control of its own
     (modifyitems(ENV, DIRECT), modifyitems(None, DIRECT), [(ENV, MODIFYITEMS), (ENV, ADD_MARKER)]),
 ], ids=["G1", "G1-glob", "G1-import-gate", "G2", "ignore-collect", "early-return", "add-marker"])
-def test_a_removed_guard_is_reported_for_every_suite_level_control(before, after, expected):
+def test_a_removed_guard_is_reported_for_every_suite_level_control(before, after, expected, monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     found, verdict = analyze_change(before, after)
-    assert [(f.message, f.severity, f.shape, f.escalators) for f in found] == [
+    # Findings of one unit sort by key, and content-bound keys do not sort as
+    # the legacy keys did (#512), so the two of "add-marker" are compared in
+    # either order: each with the guard family's legacy key its key refines.
+    assert sorted((f.message, f.severity, f.shape, f.escalators) for f in found) == sorted(
         (removed(was, name), "high", "guard_weakened", ["NO_PROD_CHANGE_IN_DIFF"]) for was, name in expected
-    ]
-    assert [f.fingerprint for f in found] == [
-        make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", f"guard:{name}") for _was, name in expected
-    ]
+    )
+    assert sorted((f.message, legacy[f.fingerprint]) for f in found) == sorted(
+        (removed(was, name), make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", f"guard:{name}"))
+        for was, name in expected
+    )
     assert all(f.after is not None for f in found)
     assert verdict == "block"
 
@@ -189,7 +213,8 @@ def test_a_guard_moved_where_the_hook_reading_does_not_look_reads_as_removed(aft
     # a call to a function the conftest defines is an effect (209.Q2): the
     # same hook added in either form already blocks.
     found, verdict = analyze_change(modifyitems(ENV, DIRECT), after)
-    assert [f.message for f in found] == [removed(ENV, name) for name in names]
+    # In either order: findings of one unit sort by their content-bound key (#512).
+    assert sorted(f.message for f in found) == sorted(removed(ENV, name) for name in names)
     assert verdict == "block"
 
 
@@ -228,12 +253,16 @@ def test_a_guard_that_now_always_fires_keeps_its_message():
     assert [f.message for f in found] == [f"<suite>: skip guard now always fires ('({always})')"]
 
 
-def test_a_removed_guard_shares_the_identity_of_one_that_always_fires():
-    # One fingerprint for the guard family, so an exemption recorded for one
-    # edit covers the other.
+def test_a_removed_guard_shares_the_identity_of_one_that_always_fires(monkeypatch):
+    # One legacy fingerprint for the guard family, which let an exemption
+    # recorded for one edit cover the other. Since #512 each key refines it
+    # and binds the guard before and after, so the two edits are two
+    # approvals.
+    legacy = _refined_legacy_keys(monkeypatch)
     gone, _ = analyze_change(modifyitems(ENV), modifyitems(None))
     always, _ = analyze_change(modifyitems(ENV), modifyitems("sys.version_info >= (3, 0)"))
-    assert [f.fingerprint for f in gone] == [f.fingerprint for f in always]
+    assert [legacy[f.fingerprint] for f in gone] == [legacy[f.fingerprint] for f in always]
+    assert len(gone) == 1 and not {f.fingerprint for f in gone} & {f.fingerprint for f in always}
 
 
 def test_a_removed_guard_and_a_path_gained_are_one_event():
@@ -245,11 +274,14 @@ def test_a_removed_guard_and_a_path_gained_are_one_event():
     assert verdict == "block"
 
 
-def test_a_path_gained_by_an_unguarded_control_is_still_row_81():
+def test_a_path_gained_by_an_unguarded_control_is_still_row_81(monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     after = collect_ignore(None) + 'collect_ignore.append("test_billing.py")\n'
     found, verdict = analyze_change(collect_ignore(None), after)
-    assert [(f.severity, f.shape, f.fingerprint) for f in found] == [(
+    # The key refines the guard family's legacy key (#512).
+    assert [(f.severity, f.shape, legacy[f.fingerprint]) for f in found] == [(
         "high", "guard_weakened", make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", f"guard:{COLLECT_IGNORE}"),
     )]
+    assert found[0].fingerprint.startswith(f"TEST_DISABLED/{CONFTEST}/<suite>/v2:")
     assert "removed" not in found[0].message
     assert verdict == "block"

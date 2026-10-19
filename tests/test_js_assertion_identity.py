@@ -1,7 +1,8 @@
 """Complete JS assertion evidence must preserve established finding keys.
 
-The rules with content-bound keys (#421) keep the established key as the
-legacy pre-image their identity holds, so that is what is pinned for them.
+The rules with content-bound keys (#421, and TEST_DISABLED since #512) keep
+the established key as the legacy pre-image their identity holds, so that is
+what is pinned for them.
 """
 
 import datetime
@@ -84,14 +85,17 @@ def test_legacy_rules_keep_their_key_and_gain_complete_evidence(rule, before, af
         assert finding.after.text == after
 
 
-def test_removed_unit_joins_legacy_keys_but_reports_complete_assertions():
+def test_removed_unit_joins_legacy_keys_but_reports_complete_assertions(monkeypatch):
+    # TEST_DISABLED's key is content-bound since #512: its identity holds the
+    # joined legacy identities as its pre-image.
+    identities = _identities(monkeypatch)
     _ir, findings, _verdict = _analyze(
         _source("expect(first()).toBe(1); expect(second()).toEqual(2);"),
         "// the test was removed\n",
     )
     finding, = [finding for finding in findings if finding.rule == "TEST_DISABLED"]
     assert finding.shape == "unit_removed"
-    assert finding.fingerprint == _key("TEST_DISABLED", "expect(first()).toBe(expect(second()).toEqual(")
+    _refines(finding, identities, "TEST_DISABLED", "expect(first()).toBe(expect(second()).toEqual(")
     assert finding.before.text == "expect(first()).toBe(1)\nexpect(second()).toEqual(2)"
 
 
