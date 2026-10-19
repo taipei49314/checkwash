@@ -645,24 +645,30 @@ class Bindings:
     def _type_parameters(self, opening: int) -> int:
         """The `<` of a type parameter list that ends just before the `(` at
         token `opening`, as in `<U>(x): U =>`, `<K, V extends Map<K, V>>(m): V =>`,
-        `<T = unknown>(x): T =>` or `<F extends (x: A) => B>(f): F =>`;
-        `opening` itself when none stands there.
+        `<T = unknown>(x): T =>`, `<F extends (x: A) => B>(f): F =>` or
+        `<T = A extends B ? 1 : 2>(x): T =>`; `opening` itself when none
+        stands there.
 
-        The read goes back from the `>` over names, string literals,
-        `_RETURN_TYPE_TOKENS`, `&`, `=` and an `=>` right after `)`, with `<`
-        and `>` balanced, and steps over a bracket group by its pair, as
-        `_condition_waits` does, to the `<` that opens the list, which a name
-        must follow. Any other token, `?` and `:` among them, means no list.
-        So outside its bracket groups, which `_condition_waits` steps over by
-        their pairs too, a list holds no `?`, no `:` and no `=>` that
-        `_condition_waits` would step from (`_annotated_opening` finds no
-        head for an `=>` right after `)`). Whether an arrow can start at the
-        `<` is the caller's test: in `c ? a > (y)` the read meets the `?` and
-        finds no list, and in the call `f<T>(y)` the `<` follows an operand.
+        The read goes back from the `>` over names, string and number
+        literals, `_RETURN_TYPE_TOKENS`, `&`, `=`, an `=>` right after `)`,
+        and a conditional type's `:` and `?`, with `<` and `>` balanced and
+        each `?` answering a `:` read after it in the list, and steps over a
+        bracket group by its pair, as `_condition_waits` does, to the `<`
+        that opens the list, which a name must follow and where every `:`
+        has met its `?`. Any other token means no list. So outside its
+        bracket groups, which `_condition_waits` steps over by their pairs
+        too, a list holds no `=>` that `_condition_waits` would step from
+        (`_annotated_opening` finds no head for an `=>` right after `)`), and
+        its `:` and `?` cancel out there without a `?` that waits: stepping
+        over the list skips no `:` and no `?` that `_condition_waits` would
+        count. Whether an arrow can start at the `<` is the caller's test:
+        in `c ? a > (y)` the read meets the `?` with no `:` for it and finds
+        no list, and in the call `f<T>(y)` the `<` follows an operand.
         """
         if self.token(opening - 1) != ">":
             return opening
         depth = 0
+        colons = 0  # a conditional type's `:` whose `?` is not read yet
         cursor = opening - 1
         while cursor >= 0:
             token = self.token(cursor)
@@ -671,13 +677,19 @@ class Bindings:
             elif token == "<":
                 depth -= 1
                 if not depth:
-                    return cursor if _IDENT.fullmatch(self.token(cursor + 1)) else opening
+                    return cursor if not colons and _IDENT.fullmatch(self.token(cursor + 1)) else opening
             elif token in {")", "]", "}"}:
                 if cursor not in self.pairs:
                     return opening
                 cursor = self.pairs[cursor]
+            elif token == ":":
+                colons += 1
+            elif token == "?":
+                if not colons or self.token(cursor - 1) == "?":
+                    return opening
+                colons -= 1
             elif token in {"(", "[", "{"} or not (
-                    _IDENT.fullmatch(token) or token[:1] in {"'", '"'}
+                    _IDENT.fullmatch(token) or token[:1] in {"'", '"'} or token[:1].isdigit()
                     or token in _RETURN_TYPE_TOKENS or token in {"&", "="}
                     or token == "=>" and self.token(cursor - 1) == ")"):
                 return opening
