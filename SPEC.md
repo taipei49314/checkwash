@@ -930,12 +930,18 @@ and that no other de-escalator holds. Evidence exists when:
    `_normalize_for_fingerprint` drops annotations, non-leading string
    statements, value-less annotated assignments and function-local dead
    literal bindings. Any other edit counts, an alpha-rename, `+ 0`, a
-   single-use temporary or a dead branch included (THREATMODEL 93, #419), or
+   single-use temporary or a dead branch included (THREATMODEL 93, #419).
+   For a finding about an assertion that reads the value of a fixture the
+   test requests, the call that fixture returns or yields counts as a symbol
+   the test calls (the fixture's producer, below; #471), or
 2. a symbol the test calls itself calls a changed symbol (one hop — a test
    going through `format_invoice` is legitimately updated when the
-   `compute_total` it calls changes); for a finding about an assertion the
-   test reaches through a helper method (§3), a symbol that method calls
-   counts too, and for no other finding (#306), or
+   `compute_total` it calls changes); a changed symbol that a same-file
+   helper the test invokes calls counts too (a top-level function of the
+   test module that is neither a test nor a fixture; the T1.9 hop), for
+   every oracle finding but `TEST_DISABLED`; for a finding about an
+   assertion the test reaches through a helper method (§3), a symbol that
+   method calls counts too, and for no other finding (#306), or
 3. the diff **modifies** an existing production file checkwash cannot
    analyse: code in another language, a template, a data file, or Python that
    did not parse at base — conservative, see THREATMODEL #4. The inert files
@@ -963,15 +969,51 @@ and that no other de-escalator holds. Evidence exists when:
    `ASSERT_SUBSTITUTED`, `TEST_PATCHES_SUBJECT` and `CONFTEST_PATCHES_PROD`
    (THREATMODEL 130).
 
+**A fixture's producer** (#471). A test that gets its subject from a pytest
+fixture calls nothing that builds it, so clause 1 counts one call of the
+fixture as the test's:
+
+- **The producer** is the call whose value the fixture returns or yields:
+  its only `return <value>`, or in a generator its only `yield <value>`,
+  directly (`return C(...)`, `yield C(...)`) or through one plain local
+  binding (`p = C(...)`, then `yield p`). The other calls in its body, the
+  producer's own arguments included, do not count. The producer is matched
+  as a call of the test is (clause 1, with the D-046 module check), against
+  the modules that the import binding its root names in the fixture's own
+  file, not the test file's imports. A root the fixture binds itself, as a
+  parameter (`return app.test_client()`) or a local, or that no top-level
+  `import` binds in that file, gives no producer.
+- **One level.** Only a fixture the test requests by parameter (an argument
+  without a default, `request` and the instance excepted), resolved as
+  pytest resolves it for that test: the innermost class, then the enclosing
+  classes and the module, then each `conftest.py` above the module, nearest
+  first. A name a `parametrize` supplies directly runs no fixture. A level
+  that binds the name some other way, a star import, an unreadable
+  `conftest.py`, or a class with a base other than `object` or a keyword
+  stops the lookup with no producer. The fixtures a fixture requests,
+  `autouse` fixtures and `usefixtures` marks count nothing.
+- **Only the findings whose before-side assertion reads the fixture's
+  value.** The assertion is the one the finding cites on its before side,
+  or the before half of the pair whose after side it cites
+  (`EXPECTED_VALUE_HARDCODED`). It reads the parameter directly or through
+  the test's own assignments, written in the test's body outside a nested
+  def, class or lambda, and the test does not assign to the parameter. The
+  fixture is resolved and read as the test module and its `conftest.py`
+  files were before the diff. A finding that cites no assertion of the unit
+  (a unit gone, `TEST_PATCHES_SUBJECT`, a tolerance change) takes nothing.
+- **Every oracle rule that takes symbol evidence, except `TEST_DISABLED`**,
+  as for the T1.9 hop. Neither the one-hop route of clause 2 nor a helper
+  hop is followed from a producer, and no package-level credit is added.
+
 `EXPECTED_VALUE_CHANGED` additionally accepts **package-level** evidence
 (`PACKAGE_REPAIR`): the test file imports a package in which the diff changed
 production code. Symbol evidence is built only from files the diff touched,
 so it cannot see through an unchanged intermediate module — a test calling
 `httpx.URL(...)` earns nothing from a fix in `httpx/_urlparse.py` behind an
 unchanged `_urls.py`. That single blind spot was 13 of httpx's 20 blocked
-commits. It is scoped to this one rule deliberately: a test-only diff changes
-no production package at all, so it cannot excuse the cheat the rule exists
-to catch.
+commits. It is scoped deliberately, to this rule and to
+`EXPECTATION_DEFINITION_CHANGED` (§4): a test-only diff changes no production
+package at all, so it cannot excuse the cheat the rule exists to catch.
 
 Evidence is deliberately **not** "some prod file in this diff changed". That
 diff-global test let a single dead constant, a statement reorder, or an edit
