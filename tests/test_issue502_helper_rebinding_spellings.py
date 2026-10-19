@@ -197,8 +197,8 @@ def test_a_literal_write_of_another_name_leaves_it_resolved(source):
     "type.__setattr__(type(self), NAME, print)",
     "super().__delattr__(NAME)",
     "self.__setattr__(*pair)",
-    # a literal value is not the name: the count places the name first when
-    # bound and second when unbound, whatever the target
+    # a literal value is not the name: bound, the name is the first argument
+    # (the draft took the bound call's 'x'); unbound, the second
     "self.__setattr__(NAME, 'x')",
     "object.__setattr__(config, NAME, 'x')",
     # the namespace itself replaced
