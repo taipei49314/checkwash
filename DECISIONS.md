@@ -12478,26 +12478,28 @@ The same tests calling `ElevenLabsProvider()` themselves passed.
 
 Implementation (lines at this PR):
 
-- `frontends/python/fixture_producers.py` (new). `producer` (`:195-248`):
+- `frontends/python/fixture_producers.py` (new). `producer` (`:222-275`):
   the fixture's only `return <value>`, or in a generator its only
   `yield <value>`, outside nested defs, classes and lambdas, and under no
   branch, loop, `match`, or `try` handler, `else` or `finally`
-  (`_unconditional`, `:169-182`); the value is a call with a dotted callee,
+  (`_unconditional`, `:196-209`); the value is a call with a dotted callee,
   or a name, not a parameter, bound exactly once in the fixture's scope by
   a plain `=` or annotated `=` of such a call (`_binders`, `:89-124`;
-  `_assigned_value`, `:185-192`). The callee's root must be resolved by
+  `_assigned_value`, `:212-219`). The callee's root must be resolved by
   `import_modules` (`:53-86`) of the fixture's file and not be bound by the
-  fixture itself. `ProducerScope` (`:251-290`) reads one module or class
-  body as `SetupScope` reads its fixtures; `unit_producers` (`:293-324`)
+  fixture itself. `ProducerScope` (`:278-317`) reads one module or class
+  body as `SetupScope` reads its fixtures; `unit_producers` (`:320-351`)
   resolves each fixture the unit requests by parameter.
 - `setup_skip_controls.ConftestLevel.producers` (`:773-777`), filled in
   `conftest_level` (`:977-980`) through the conftest's own imports.
 - `frontend`: `UnitSide.fixture_producers` per side (`fixture_producers`,
-  `:4204-4229`, passed at `:4389` and `:4477`), and
+  `:4241-4266`, passed at `:4426` and `:4514`), and
   `Assertion.fixture_reads` for the unit's own assertions (`fixture_reads`,
-  `:3228-3268`, used at `:3367` and `:3437`, with
-  `fixture_producers.assertion_names`, `:130-166`). Only a unit that takes
-  a parameter reads any. `ir/model.py:130-137`, `:259-268`.
+  `:3260-3305`, used at `:3404` and `:3474`, with
+  `fixture_producers.assertion_names`, `:130-166`, and
+  `_fixture_read_bindings`, `:1536-1564`, with
+  `fixture_producers.nested_bound_names`, `:169-193`). Only a unit that
+  takes a parameter reads any. `ir/model.py:130-137`, `:259-268`.
 - `gating.py`, in its own commit (da116dd1), as the analysis's §4.5 has
   it; the owner approved it on 2026-10-19, as D-048 and D-141 approved
   policy code:
@@ -12534,7 +12536,7 @@ What the ruling's four answers become:
   cites on its before side (for ASSERT_REMOVED, the removed one), or the
   before half of the pair whose after side it cites. It reads the parameter
   directly or through the unit's own assignments (`_resolve_through`,
-  `frontend.py:1509-1532`, whose unit-level map joins every definition of a
+  `frontend.py:1510-1533`, whose unit-level map joins every definition of a
   name: the analysis's stated residual). The fixture is resolved from the
   module and the conftest chain as they were before the diff
   (`fixture_producer_added_in_diff_pos`), and a unit with no before side
@@ -12590,7 +12592,14 @@ owner approved all four on 2026-10-19:
    that a lambda's parameters or a comprehension's targets bind within the
    assertion is no read, and a parameter all of whose occurrences there are
    such names is not counted, even through a local the assertion reads
-   (`assertion_names`; `lambda-parameter-of-that-name`).
+   (`assertion_names`; `lambda-parameter-of-that-name`). The same held
+   through the unit's own assignments, where
+   `result = (lambda ledger: ledger.fee)(make())` then `assert result == 5`
+   still read `ledger` (found in the round-2 review, fixed under C2): now a
+   name that a lambda's parameters or a comprehension's targets bind within
+   an assigned value is not followed from it, even where it also occurs
+   outside them, erring toward no evidence (`_fixture_read_bindings`;
+   `lambda-parameter-of-that-name-in-an-assignment`).
 4. The finding's assertion is matched by span and text. A finding whose
    evidence is not one of its unit's assertions takes nothing.
 
@@ -12711,10 +12720,11 @@ with no parameter reads nothing new, and the gate's modules have none.
 Evidence status: prepared on a work machine where no pytest, checkwash,
 engine or product code ran; CI runs the tests. Added: 20 `.gwcase`
 fixtures, 19 whose labels the owner approved on 2026-10-19 (A77) and one
-he approved adding the same day (B24), and 96 collected items in
+he approved adding the same day (B24), and 97 collected items in
 `tests/test_issue471_fixture_producers.py`, counted from its parametrize
-lists; no existing test changed. By reading, the documented test count
-becomes 19591 (19475 + 96 + 20); CI's collection checks it.
+lists, one of them the C2 pin; no existing test changed. By reading, the
+documented test count becomes 19592 (19475 + 97 + 20); CI's collection
+checks it.
 
 The agent wrote this entry in #471's fix PR #522. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」, "the whole PR approval list as
