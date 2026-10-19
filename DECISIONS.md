@@ -15378,31 +15378,31 @@ named `t` too.
 Implementation, lines at this PR:
 
 - Q1 A, `frontends/javascript/bindings.py`. The arrow branch of
-  `_functions` (`:507`) first asks `_annotated_parameters` (`:544`). From
+  `_functions` (`:509`) first asks `_annotated_parameters` (`:546`). From
   `=>` it steps back over a simple return type to a `:` and takes the
   paired `(...)` before it, which is accepted only where an arrow can
   start: first in the file, or after one of `_ARROW_STARTS` (`:45`: `(`,
   `,`, `=`, `=>`, `:`, `[`, `{`, `;`, `return`), with an `async` before it
   stepped over and held to the same test. Everywhere else, after `?`, a
   callee, `await` or an operator, the old reading stays. After `:`, `=` or
-  `=>`, `_condition_waits` (`:580`) keeps it too where a `?` before the
+  `=>`, `_condition_waits` (`:593`) keeps it too where a `?` before the
   `(` still waits for its `:` (reading 1).
 - Q2. Names and `_RETURN_TYPE_TOKENS` (`:43`): the set `_callback_body`
   steps over (`frontend.py:1064-1068`, `:1077-1081`) and so does the
   nested-arrow reader in `parse_javascript` (`frontend.py:2841`).
-- Q3. `_test_callbacks` (`:1337`) lists, by name, the first parameter of
+- Q3. `_test_callbacks` (`:1364`) lists, by name, the first parameter of
   each callback passed to a call that `_test_context` gives a context,
-  read from the callback's own tokens by `_callback_parameter` (`:1305`),
+  read from the callback's own tokens by `_callback_parameter` (`:1332`),
   with the argument's span and the runner's kind. The last branch of
-  `candidate` (`:1431`) makes a call whose root resolves to unknown, inside
+  `candidate` (`:1458`) makes a call whose root resolves to unknown, inside
   such a callback and named by its parameter (`_callback_context`,
-  `:1366`), an `unresolved` candidate when its member passes the filter
-  the unresolved families already apply (`:1417-1426`), for that runner:
+  `:1393`), an `unresolved` candidate when its member passes the filter
+  the unresolved families already apply (`:1444-1453`), for that runner:
   `assert` for node:test, `AVA_ASSERTIONS` for AVA, tap's names for tap.
 - Q4. `_t_fallback` (`:368`) reads which of `node:test`, `ava` and `tap`
   the file names. When it names AVA or tap and not node:test, `resolve`'s
-  table gives an undeclared `t` unknown (`:1097`), and
-  `_candidate_families` gives it that runner's family (`:1257`). Every
+  table gives an undeclared `t` unknown (`:1124`), and
+  `_candidate_families` gives it that runner's family (`:1284`). Every
   other file keeps node:test's context, as before.
 - The three readers keep their workarounds (Q2): the nested-arrow reader,
   the catch reader (`exception_handlers.py:50-57`) and module mocks
@@ -15422,10 +15422,19 @@ approval:
    reads back over balanced brackets to the bracket, `;` or `,` that opens
    the expression, or to a line break where JavaScript ends the statement,
    counting each `:` against a `?`; a `?` left waiting keeps the old
-   reading, and `??` is no conditional. It only accepts fewer positions.
-   Its cost is a named miss: an annotated arrow that really is the
-   alternate of a conditional nested in another's consequent
-   (`c0 ? c1 ? y : (a): T => a : z`) keeps the old reading.
+   reading, and `??` is no conditional. The `:` of an annotated arrow's
+   own return type answers no `?`: where the read meets `(...): T =>` at
+   a place an arrow can start or right after a `?`, it steps over that
+   head, as TypeScript reads it, since an annotated arrow in a
+   consequent needs a `:` after it. So `c ? (x): T => (a) : b => b`
+   declares `b`, as main does, where counting that `:` had declared `a`
+   (found in #539's review). It only accepts fewer positions. Its cost
+   is two named misses, each an annotated arrow in a consequent that
+   TypeScript reads as annotated because a `:` follows it: the alternate
+   of a conditional nested in another's consequent
+   (`c0 ? c1 ? y : (a): T => a : z`) and, since the step over a head, the
+   body of an annotated arrow in a consequent
+   (`c ? (p): T => (y): R => y : z`) keep the old reading.
 2. **Generic arrows stay a residual.** `<T>(ctx: T): void =>` puts `>`
    before the `(`, which is no accepted position, so it keeps the old
    reading; the PR does not read the type parameter list. Q3 does not
@@ -15447,11 +15456,13 @@ approval:
    read.
 4. **What "imports or requires" means in Q4.** A string `node:test`, `ava`
    or `tap` after `from` or `import`, or as the only argument of
-   `require(...)` or `import(...)`, anywhere in the file; `import type`
-   counts. Only a `t` that no scope declares changes. A declared `t` with
-   no provenance of its own, such as a helper's parameter, keeps
-   node:test's family in the coverage scan, so row 126's "a `t` passed to
-   a helper ... no coverage candidates" still holds.
+   `require(...)` or `import(...)`, but not of a method so named
+   (`loader.require("tap")`, found in #539's review), anywhere in the
+   file; `import type` counts. Only a `t` that no scope declares
+   changes. A declared `t` with no provenance of its own, such as a
+   helper's parameter, keeps node:test's family in the coverage scan, so
+   row 126's "a `t` passed to a helper ... no coverage candidates" still
+   holds.
 5. **What the change does to an annotated arrow.** At an accepted
    position, the binder now scopes an annotated arrow exactly as the same
    arrow without its annotation: the same parameters and parameter tokens,
@@ -15479,20 +15490,23 @@ Costs, by reading:
 - **Q4.** In an AVA or tap file, a node:test-style `t.assert.*` on a `t`
   that nothing declares loses its authority; it is an `unresolved`
   candidate.
-- **Q3** changes only stderr and the coverage report, which change no
-  verdict, severity or exit code (`docs/assertion-coverage.md`).
+- **Q3** changes only diagnostics: stderr, the terminal report's head on
+  a pass and its `!` lines, SARIF's tool-execution notifications and the
+  coverage report. None of them changes a verdict, severity or exit code
+  (`docs/assertion-coverage.md`).
 
 Residuals, named in THREATMODEL row 159 and `docs/KNOWN-ISSUES-next.md`:
 an object (N22), parenthesized (N23), function, conditional or literal
-return type, whose body is not read and whose context calls are
-`unresolved` candidates only (Q2); the positions the rule does not accept
-(after `?`, `yield`, `export default` or a compound assignment) and those
-reading 1 guards; generic arrows (reading 2); and the disagreement the
-ruling names: the nested-arrow reader steps back with no position test,
-so for `cond ? (a) : b => b` it takes `(a)` as the arrow's parameters
-while the binder declares `b`. Removing the catch reader's and the
-nested-arrow reader's workarounds waits for a run showing that no reading
-moves (Q2).
+return type, whose body is not read and whose context calls are coverage
+candidates only, `unresolved`, or Node's or tap's where a parameter named
+`t` resolves through node:test's fallback or to tap's root `t` (Q2); the
+positions the rule does not accept (for example after `?`, `yield`,
+`export default` or a compound assignment) and those reading 1 guards;
+generic arrows (reading 2); and the disagreement the ruling names: the
+nested-arrow reader steps back with no position test, so for
+`cond ? (a) : b => b` it takes `(a)` as the arrow's parameters while the
+binder declares `b`. Removing the catch reader's and the nested-arrow
+reader's workarounds waits for a run showing that no reading moves (Q2).
 
 **Rule 2.** The ruling approves no change to an existing expectation, and
 by reading none changes. The suite's annotated arrows were each traced:
@@ -15516,14 +15530,14 @@ owner's approval: `js_node_context_annotated_arrow_weakened_pos` (N1),
 `js_node_context_annotated_arrow_expected_rewrite_pos` (N2 with N14's
 edit), `js_ava_annotated_arrow_weakened_pos` (N16) and
 `js_tap_annotated_arrow_weakened_pos` (N19).
-`tests/test_issue480_js_annotated_arrows.py` adds 79 collected items,
+`tests/test_issue480_js_annotated_arrows.py` adds 83 collected items,
 counted from its parametrize lists: the issue's rows N1-N21 and A1 and
-eleven of its controls (33), the accepted positions (12) and the named
+eleven of its controls (33), the accepted positions (13) and the named
 misses (5), the ruling's two conditional controls with the three guards of
-reading 1 (5), whose parameter is a context (5), Q3's candidates (6), the
-nested shadow (1), N22 and N23 through the engine (2), Q4's runners (8) and
-Q4's cost (2). By reading, the documented test count becomes 20167 (20083
-+ 5 + 79); CI's collection checks it.
+reading 1 and two annotated consequents (7), whose parameter is a context
+(5), Q3's candidates (6), the nested shadow (1), N22 and N23 through the
+engine (2), Q4's runners (9) and Q4's cost (2). By reading, the documented
+test count becomes 20171 (20083 + 5 + 83); CI's collection checks it.
 
 **Measurement.** Per R1 and R2 this fix merges before the combined
 sweep's manifest is frozen, and its merge gets its own before/after pair in
