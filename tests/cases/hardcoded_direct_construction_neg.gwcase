@@ -1,6 +1,7 @@
 === meta ===
 rule: EXPECTED_VALUE_HARDCODED
 issue: 471
+credit: @talhayme (#471)
 title: the same tests constructing the provider themselves call the changed class, which is repair evidence
 origin: #471, the reporter's direct twin of hardcoded_via_conftest_fixture_neg: ElevenLabsProvider() is
 origin2: written in place of the fixture, so each test calls the changed class symbol (SPEC section 5

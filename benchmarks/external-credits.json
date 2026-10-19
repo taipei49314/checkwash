@@ -21,6 +21,14 @@
       "issue": 363,
       "fixture": "js_catch_assertion_swallowed_pos.gwcase",
       "threatmodel_row": "16, 22"
+    },
+    {
+      "date": "2026-10-19",
+      "kind": "false block",
+      "reporter": "@talhayme",
+      "issue": 471,
+      "fixture": "hardcoded_via_conftest_fixture_neg.gwcase",
+      "threatmodel_row": "93, 137"
     }
   ]
 }

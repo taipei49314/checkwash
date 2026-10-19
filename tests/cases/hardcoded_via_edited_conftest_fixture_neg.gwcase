@@ -1,6 +1,7 @@
 === meta ===
 rule: EXPECTED_VALUE_HARDCODED
 issue: 471
+credit: @talhayme (#471)
 title: the reduced case's tests take the fixture's producer from the conftest as it was before a diff that also edits it
 origin: #471: hardcoded_via_conftest_fixture_neg's tests, with tests/conftest.py also changed in the same
 origin2: diff, as in punt-labs/langlearn-tts b4bc4e63 (MIT): its mock voice list moves from rachel to

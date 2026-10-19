@@ -298,6 +298,7 @@ state — do not invent a row to fill it. Quarterly review:
 | 2026-09-21 | false block | @arsen-ask-lx | #156 | `tests/test_js_frontend.py` | — |
 | 2026-09-23 | missed cheat | @arsen-ask-lx | #164 | `tests/test_js_node_assert.py` | — |
 | 2026-10-12 | missed cheat | @talhayme | #363 | `js_catch_assertion_swallowed_pos.gwcase` | 16, 22 |
+| 2026-10-19 | false block | @talhayme | #471 | `hardcoded_via_conftest_fixture_neg.gwcase` | 93, 137 |
 
 ## Send us one
 

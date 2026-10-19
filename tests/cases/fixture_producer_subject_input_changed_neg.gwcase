@@ -1,6 +1,7 @@
 === meta ===
 rule: SUBJECT_INPUT_CHANGED
 issue: 471
+credit: @talhayme (#471)
 title: a changed subject input on an assertion that reads the provider fixture takes its producer's evidence
 origin: #471, built from the reporter's description of punt-labs/langlearn-tts b4bc4e63 (MIT): the
 origin2: SUBJECT_INPUT_CHANGED finding of TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none.

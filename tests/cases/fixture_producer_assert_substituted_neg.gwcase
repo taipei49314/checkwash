@@ -1,6 +1,7 @@
 === meta ===
 rule: ASSERT_SUBSTITUTED
 issue: 471
+credit: @talhayme (#471)
 title: two substituted assertions that read the provider fixture take its producer's evidence, beside an edit to the conftest's mock data
 origin: #471, built from the reporter's description of punt-labs/langlearn-tts b4bc4e63 (MIT): the two
 origin2: ASSERT_SUBSTITUTED findings of TestElevenLabsProviderResolveVoice.test_resolve_case_insensitive.

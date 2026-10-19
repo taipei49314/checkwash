@@ -1,6 +1,7 @@
 === meta ===
 rule: EXPECTED_VALUE_HARDCODED
 issue: 471
+credit: @talhayme (#471)
 title: a default changed in production, and the tests that get the provider from a conftest fixture follow it
 origin: #471, reduced from punt-labs/langlearn-tts b4bc4e63 (MIT), "fix: change ElevenLabs default voice
 origin2: from rachel to matilda (#30)". Ruling 471 (Q1 (c), Q2 (a), Q3 (b), Q4 (a)): the call the
