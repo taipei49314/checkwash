@@ -181,6 +181,10 @@ by that field.
 - **Same-named test functions (D-144, #424).** A def that a later one replaces
   is no longer a unit, and the units that remain are renumbered, so findings
   keyed by them get new keys, with no message.
+- **Python tests that never run (D-166, #499).** A def or class under a
+  branch checkwash reads as dead is no longer a unit. A finding keyed by it
+  goes, and a later unit of the same name can take a lower `name#N`, which
+  gives its findings new keys, with no message.
 - **Removed JavaScript tests (D-148, #429).** By reading the code, a removed
   JS/TS test whose callback held an assertion it never reaches now gets a new
   TEST_DISABLED key. D-148 records no key change; D-151 corrects it.
