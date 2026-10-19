@@ -843,8 +843,9 @@ The known case is undici's Web Platform Tests record,
   `skip`;
 - writes the file back from the results it observed.
 
-By reading, that comparison fails no run today. The runner diffs the record
-with jsondiffpatch and keeps only properties named `success`
+By reading, that comparison fails no run today. The runner diffs the
+observed results against the record with jsondiffpatch, keeping only
+properties named `success`
 (`test/web-platform-tests/wpt-runner.mjs:818-825` at undici `5550222761`,
 unchanged at `e8f34234d1`). jsondiffpatch applies that filter at every
 depth, so the top-level directory keys are dropped too, the diff is always
