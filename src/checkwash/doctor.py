@@ -201,6 +201,11 @@ def _regular_bytes(path: Path) -> bytes | None:
             os.close(descriptor)
 
 
+# Seconds each of doctor's Git queries may take. `main()` passes it to the
+# repository-root lookup too, with stdin closed as here (#500).
+QUERY_TIMEOUT = 5
+
+
 def discovery_env() -> dict[str, str]:
     """`_git_query`'s sanitized Git environment without its discovery ceiling.
 
@@ -236,7 +241,7 @@ def _git_query(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | N
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            timeout=5,
+            timeout=QUERY_TIMEOUT,
             check=False,
         )
     except (OSError, subprocess.SubprocessError):

@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **174 bypasses** are documented, of which **58 are not closed**.
+- **175 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (33)
+## Open — no defence at all (34)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -55,6 +55,7 @@ it is known not to.
 | 153 | Weaken a JS/TS assertion inside a test callback the file names rather than writes inline, instead of fixing code: under node:test, `test('x', testOutput)`, where the file declares `testOutput` with `assert.strictEqual(stdout, 'foo\nbar')`, the check -> `assert.ok(stdout)`; or AVA's macro form `test('x', testOutput, ...args)` with `t.is(stdout, expected)` -> `t.truthy(stdout)` (#320) | — |
 | 154 | Stop the suite through a CI edit that warns where its close neighbour blocks, instead of fixing code: delete the last test step (`- run: pytest`) from a workflow that survives, empty a test workflow, or remove a test job from `.gitlab-ci.yml`; or end the runner line with `; exit 0` or `;exit 0`, as `python -m pytest tests -x; exit 0` in a `Justfile` or `run: pytest; exit 0` in a workflow step (#426) | — |
 | 155 | Change an operator of a chained comparison, or a conjunct of a plain `and`, instead of fixing code: `assert 0 < x < 60` -> `assert 0 <= x < 60`, `assert 0 < x != 60` or `assert 0 > x < 60`; `assert 0 < x and x < 4` -> `assert 0 < x` or `assert 0 < x and x < 5`; or `self.assertTrue(0 < x < 4)` -> `self.assertTrue(0 < x)` (#461) | — |
+| 156 | Record a regressed test as an expected failure in a results record the test runner reads, instead of fixing code: in undici's `test/web-platform-tests/expectation.json`, a subtest that now fails recorded as `success: false` or `flaky: true`, or its test file's entry marked `skip: true`. Running the suite and committing the file it rewrites is enough (#468) | — |
 
 ## Narrowed, still open (2)
 
@@ -148,7 +149,7 @@ behind it* unshippable.
 | 36 | An unrelated `except AssertionError: pass` riding on a sibling test's repair evidence | `row36_file_scoped_no_sibling_evidence_pos.gwcase` |
 | 37 | Widen `abs` while leaving `rel` alone | `tolerance_second_kind_pos.gwcase` |
 | 38 | Put the expectation on the left: `assert 3 == calc()` | `expected_on_left_pos.gwcase` |
-| 39 | Hand-edit an exemption past the 180-day cap | `allowlist_future_created_pos.gwcase`, `allowlist_over_cap_pos.gwcase` |
+| 39 | Hand-edit an exemption past the 180-day cap | — |
 | 40 | `__test__ = False` at module or class scope de-collects everything | `test_attr_false_class_pos.gwcase`, `test_attr_false_pos.gwcase` |
 | 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | `param_marks_skip_pos.gwcase` |
 | 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pyproject_addopts_array_opened_with_element_selector_pos.gwcase`, `pyproject_addopts_array_respelled_one_line_neg.gwcase`, `pyproject_addopts_array_selector_after_equals_pos.gwcase`, `pytest_ini_narrowed_pos.gwcase`, `pytest_ini_quoted_addopts_continuation_selector_pos.gwcase`, `pytest_toml_string_then_indented_key_narrowed_pos.gwcase`, `setup_cfg_addopts_continuation_selector_pos.gwcase`, `setup_cfg_quoted_addopts_continuation_selector_pos.gwcase`, `setup_cfg_quoted_addopts_respelled_one_line_neg.gwcase` |

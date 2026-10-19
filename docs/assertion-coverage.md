@@ -512,6 +512,15 @@ A `t` is read where it is AVA's or tap's:
 - tap's root `t` itself, its default export (its CommonJS export, and its
   named export `t`).
 
+Under an arrow callback with a TypeScript return annotation, such as
+`(t): void =>` or `async (t): Promise<void> =>`, the first parameter is not
+read ([#480](https://github.com/taipei49314/checkwash/issues/480)). AVA's
+`t` methods there are not represented, and tap's are read only when the
+parameter is named `t` and the file imports tap's root as `t`. None of the
+unread calls produces a coverage diagnostic except AVA's `t.assert`, which
+is reported as an unrepresented Node candidate. A `function` callback with
+the same annotation is read.
+
 An object named `t`, a `t` from any other library (tape's included), a `t`
 the file writes over and a `t` passed to a helper are not read. A test's
 callback is read where it is written: a function the test names instead,
@@ -828,14 +837,27 @@ passes with zero findings.
 The known case is undici's Web Platform Tests record,
 `test/web-platform-tests/expectation.json`. Its runner:
 
-- compares each subtest with its recorded `success`;
+- is written to compare each subtest with its recorded `success`, and to
+  fail the run when they differ;
 - does not compare a case marked `flaky`, and does not run a file marked
   `skip`;
 - writes the file back from the results it observed.
 
-So marking a newly failing subtest `success: false` or `flaky: true`, or its
-file `skip`, makes a failing run pass. Breaking a subtest, running the suite
-and committing the rewritten file is enough.
+By reading, that comparison fails no run today. The runner diffs the
+observed results against the record with jsondiffpatch, keeping only
+properties named `success`
+(`test/web-platform-tests/wpt-runner.mjs:818-825` at undici `5550222761`,
+unchanged at `e8f34234d1`). jsondiffpatch applies that filter at every
+depth, so the top-level directory keys are dropped too, the diff is always
+empty, and a changed result never fails the step. This comes from reading
+undici's and jsondiffpatch's source, not from a run:
+`NOT_RUN：工作機規則（POLICY work-machine-local），read-only inference`.
+
+So marking a newly failing subtest `success: false` or `flaky: true` hides
+the regression in the record, and marking its file `skip` stops that file
+from running at all. If undici fixes the comparison, the same edit would
+also turn a failing run into a passing one. Breaking a subtest, running the
+suite and committing the rewritten file is all it takes.
 
 How checkwash treats the file depends on its size:
 
@@ -847,10 +869,17 @@ How checkwash treats the file depends on its size:
 
 Either way the change passes. Review the diff of such a file by hand.
 
-A detector for this one format, recognised by its path and shape, is
-planned. It would report a subtest recorded as passing that no longer is,
-and a file newly marked `skip` or `flaky`. It waits for a ruling on reading
-the format past the size limit, and for a pool sweep of its cost (#468).
+No detector for this format is scheduled (D-160). One, recognised by the
+file's path and shape, would report a subtest recorded as passing that no
+longer is, and a file newly marked `skip` or `flaky`. Building it would
+first take a ruling that lets checkwash read this format past 1,000,000
+bytes, including the limit to use, then a new rule ID and a pool sweep of
+its cost. #468 closes with this documentation and is reopened if someone
+reports a cheat in this file, if undici fixes its runner's comparison so
+that the file gates CI, or if the size limit is ruled on for another
+reason. Another runner's format does not reopen #468: a planned fix for it
+gets its own issue, and one with no fix scheduled is added to this limit's
+THREATMODEL row.
 
 ## Make unrepresented assertion candidates visible
 
@@ -859,7 +888,13 @@ chai `assert`, `expect(...)` and `.should` candidates, and for AVA's and tap's
 `t` assertions. It compares their source positions
 with assertions represented by the frontend. A candidate in a file with no
 recognized test unit, or inside another assertion, can therefore still produce
-a diagnostic.
+a diagnostic. Calls on the context parameter of an arrow test callback with a
+TypeScript return annotation are the exception
+([#480](https://github.com/taipei49314/checkwash/issues/480)): node:test's
+context under any name but `t`, and AVA's and tap's `t` as described
+[above](#ava-and-tap-assertions), are not candidates, so their edits produce
+no diagnostic and the report can say `no_known_gaps`. AVA's `t.assert` there
+is reported as an unrepresented Node candidate.
 
 Diagnostics appear on stderr in every output format and in terminal output.
 SARIF includes them as tool execution warnings, separate from findings. A base
@@ -943,7 +978,10 @@ a name that any write may have reached is unknown, as in the hand-rolled
 tolerance section above; a lookalike object cannot retain a real assertion's
 strength. chai's should interface needs no binding: a `.should` chain is a
 candidate wherever it is spelled (#215). Unresolved assertion
-candidates still produce diagnostics. Dynamic module names, arbitrary wrapper
+candidates still produce diagnostics. The calls on an annotated arrow test
+callback's context parameter that the exception above names are not
+candidates at all ([#480](https://github.com/taipei49314/checkwash/issues/480)).
+Dynamic module names, arbitrary wrapper
 functions, computed properties and template interpolations remain outside this
 evidence. This is a bounded static scan, not complete JavaScript scope or
 execution modeling. A project requiring broader coverage must review those

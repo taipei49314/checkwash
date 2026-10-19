@@ -10100,7 +10100,11 @@ status in a place other than `pytest_cmdline_main`.
 
 **Residuals.** 422.Q4's spellings, 422.Q5's recipe combined with a run that
 collects nothing, and interpreter start-up files. The Q4 and Q5 follow-up
-issues had not been filed by 2026-10-15.
+issues had not been filed by 2026-10-15; they were filed on 2026-10-18 as
+#494 and #495. Owner ruling 2026-10-19, R68, narrows #494 to the
+`pytest_cmdline_main`, `pytest_runtestloop` and `pytest_collection`
+short-circuits and clearing `session.items`; the other Q4 spellings stay
+residuals named in THREATMODEL row 127.
 
 **Merge order.** #432's ruling put #432 first. This round was built first,
 and on 2026-10-14 the maintainer accepted it landing first.
@@ -10114,14 +10118,63 @@ real pytest from red to green) and seven fixtures, four positives
 17866 to 17988. `tests/test_conftest_controls.py` gains rows only, under
 422.Q6. Dogfood may warn EXPECTATION_DEFINITION_CHANGED on those rows.
 
-**Sweep.** Not run (D-140): the standard and D-088 sets, a targeted
+**Sweep.** The plan was the standard and D-088 sets, a targeted
 false-positive set (conftests containing `exit`, `quit` or `testsfailed`),
 the tamper positives under real pytest, the refactor and tamper gates, and
-dogfood. Its cost will be recorded after the release.
+dogfood. The v0.8.0 acceptance sweep (D-140) ran after publication. It
+compares v0.7.0 with v0.8.0, so it measures the release, not #450 alone.
+What covers each part (owner rulings 2026-10-18 on #422, and 2026-10-19,
+R3, R5, R8 and R35):
+- **Standard and D-088 sets: run,** in the sweep's standard and d088
+  batches; on the 6,168 commits both versions analysed across all four
+  batches, verdicts and findings are identical, and no result carries a
+  `conftest.runtime.exit.` marker: the new detection never fired. This is
+  the cost the entry was to record after the release: no verdict or
+  finding changed. It is in-sample (D-053), not a false-positive rate.
+- **Refactor and tamper gates:** the pytest suites under `tests/gates/`,
+  which CI's nine test legs run. All nine passed on #450's merge
+  `08b2cfad` (ci run 38695753045), and #450 changed nothing under
+  `tests/gates/`. D-144 cites CI for its gates the same way.
+- **Dogfood:** CI's `dogfood` job passed in the same run.
+- **The tamper positives under real pytest:** five forcing spellings run
+  under real pytest, red to green, with the detector blocking each
+  (`tests/test_issue422_exit_status.py:193-205`), in the same legs. These
+  five are what ran under real pytest; the other forcing spellings are
+  pinned by detector tests only.
+- **The targeted false-positive set, ten histories: run.** D-088's sets
+  hold every commit of the full histories of attrs, click, flask, httpx,
+  rich, starlette, uvicorn, werkzeug, scrapy and requests, as frozen on
+  2026-10-04, that changes a `conftest.py` or a `skip`/`xfail` line in a
+  test file: 895 commits. So every commit of the targeted set in those
+  histories up to that date is among them. The sweep ran the 895, 850 in
+  its d088 batch and 45 in its standard batch; 15 end in exit 2 on both
+  versions and are not measured. The reader never fired on the other 880.
+  How many of them name `exit`, `quit` or `testsfailed` was not counted.
+- **The targeted false-positive set, the rest: queued.** pytest's conftest
+  commits beyond the 368 that D-088 took of its 1,559 conftest or
+  `skip`/`xfail` commits, aiohttp's history, which D-088 did not take, and
+  the ten histories' commits after D-088's freeze. They run in the
+  combined lab-declared sweep as an issue-acceptance batch, on
+  LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546) (R3). The
+  owner approves in two steps (R5): the selection program with this list
+  rule first, then the frozen manifest, with the list's size, and the
+  engine commits. Members are chosen with Git
+  only: the non-merge commits of the twelve histories (the ten, pytest and
+  aiohttp) that add or modify a `conftest.py` whose new content contains
+  `exit`, `quit` or `testsfailed` in any case, less those the v0.8.0 sweep
+  ran. They share one Git-selected list with #432's conftest census
+  (D-137), marked there as this set.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
+  Each block this reader gives there is read from source. A false block
+  reopens #422 (R35) and is fixed through an issue that carries the fix, or
+  recorded here as a known false block with a line in
+  `docs/KNOWN-ISSUES-next.md`. If none fires, this entry says so. The
+  result is added here as #489 added the #421 sweep to D-144 to D-146.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #450's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
+after publication, in the D-131 to D-140 record PR.
 
 ## D-137 (2026-10-15): a conftest that swaps a no-op in for what pytest runs is a runtime control (#432)
 
@@ -10241,7 +10294,8 @@ bodies, async hooks, hooks bound by assignment, class plugins, autouse
 fixtures, call-built or attribute-sourced replacements, computed names,
 `__dict__` writes, subclasses, `sys.modules` lookups, `addTypeEqualityFunc`,
 the 64-path-state cap, and others. The fixture, loop and cross-file follow-up
-issues (432.Q2) had not been filed by 2026-10-15.
+issues (432.Q2) had not been filed by 2026-10-15; they were filed together on
+2026-10-18 as #497.
 
 **Pre-registered fallback** (432.Q4), recorded before the sweep as D-060
 recorded its answer: if the sweep finds an honest block from a callback
@@ -10260,14 +10314,84 @@ matrix cells, honest controls, named residuals and runs of real pytest) and
 additions to `tests/test_issue84_runtime_hooks.py`. The documented count goes
 from 17988 to 18258. No existing expectation or `.gwcase` output changes.
 
-**Sweep.** Not run (D-140): the standard and D-088 sets, conftest-touching
+**Sweep.** The plan was the standard and D-088 sets, conftest-touching
 commits, a conftest census and real-pytest proof of every reporting cell,
-with the gates unchanged (refactor false blocks stay 22/60). Its result, and
-whether the fallback applies, will be recorded after the release.
+with the gates unchanged (refactor false blocks stay 22/60). The v0.8.0
+acceptance sweep (D-140) ran after publication. It compares v0.7.0 with
+v0.8.0, so it measures the release, not #452 alone. What covers each part
+(owner rulings 2026-10-18 on #432, and 2026-10-19, R3, R5, R9, R10, R35
+and R38):
+- **Standard and D-088 sets: run.** For the 6,168 commits both versions
+  analysed, verdicts and findings are identical.
+- **Conftest-touching commits: run, as D-088's sets** (R9). D-088's sets
+  are 1,263 commits: the 895 commits of ten full histories (attrs, click,
+  flask, httpx, rich, starlette, uvicorn, werkzeug, scrapy and requests)
+  that change a `conftest.py` or a `skip`/`xfail` line in a test file, as
+  frozen on 2026-10-04, and 368 of pytest's. The sweep ran 1,218 of them
+  in its d088 batch and the 45 that are also in the standard set in its
+  standard batch. Both versions give identical verdicts and findings. In
+  the 219 shard results, which cover all four batches and both arms, no
+  finding carries the runtime-control message
+  (`suite-level execution/report suppression added`): neither this reader
+  nor #84's fired. 19 commits of the d088 batch end in exit 2 on both
+  versions and are not measured. The plan above lists this set apart from
+  D-088's sets; for the ten histories it is part of them.
+- **What that zero shows.** No conftest in those sets triggered the
+  reader. It does not show that the reading, or the fallback below, holds
+  on real conftests that make these writes: a reader that never fires on a
+  set may only mean the set holds no such write. It is in-sample (D-053),
+  so the false-positive cost on real conftest files that the issue asks for
+  is the census's to measure.
+- **Conftest census: queued** (R10). It runs in the combined lab-declared
+  sweep, and #432 does not wait for it. It replays history rather than
+  scanning the latest conftests: every write in a latest conftest came in
+  through some commit, except one added in a root commit or a merge.
+  Members are the non-merge commits of seven plugin- and unittest-heavy
+  repositories that #432's 2026-10-14 sweep plan names (pytest-asyncio,
+  pytest-django, pytest-timeout, hypothesis, numpy, pandas and twisted),
+  aiohttp, pytest and D-088's ten that change a `conftest.py` whose new
+  content contains `runtest`, `pytest_pyfunc_call`, `TestCase`, or `obj` or
+  `_obj` as a word, less those the v0.8.0 sweep ran. So it covers what the
+  v0.8.0 sweep did not: aiohttp's conftest history, pytest's beyond the
+  368, and the ten histories' commits after D-088's freeze. The list is
+  chosen with Git only and frozen before approval, so its size is known
+  then. D-136's targeted set joins it, with `exit`, `quit` and
+  `testsfailed` added to the same rule. The harness records each member's
+  matching conftest lines, so delegating spellings that never report are
+  seen too. One engine arm that contains #452 is enough. It runs as an
+  issue-acceptance batch on LAPTOP-01AGNPJU under EC POLICY
+  `checkwash-pju-sweep` (T-546), declared by checkwash-lab (R3). The owner
+  approves in two steps (R5): the selection program with the census rule
+  first, then the frozen manifest, with the list's size, and the engine
+  commit. A person judges
+  each new runtime-control finding honest or a cheat, and classes the
+  recorded lines by the delegation spellings they show. Until it runs, the
+  combined sweep's declaration and #497 track it.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
+- **Real pytest** (R38). CI's nine test legs run four reporting shapes
+  (`item.runtest`, class-level `runtest`, `assertEqual` and
+  `_callTestMethod`) and two delegating controls under real pytest
+  (`tests/test_issue432_noop_replacement.py:465-484`). 432.Q7's fixture PR
+  (#508) is to add a fifth: a hollow `item.obj` followed by a delegating
+  `item.runtest`, the case per-attribute keys exist for, so far pinned at
+  the detector by `test_each_attribute_is_its_own_effect`. The other
+  reporting cells of the spelling matrix are pinned by detector tests only;
+  the owner ruled not to prove each under real pytest.
+  `NOT_RUN：工作機規則（POLICY work-machine-local），the other reporting cells under real pytest, waived by the owner (R38)`.
+- **Gates.** The refactor and tamper gates passed in all nine test legs on
+  #452's merge `5b571aa9` (ci run 38709970776), and #452 changed nothing
+  under `tests/gates/`, so their results are unchanged.
+- **The pre-registered fallback** was not triggered in the sets that ran,
+  because no block came from this reader there. Whether it applies is the
+  census's to show. If the census finds an honest block from a callback
+  replacement that calls something, #432 reopens (R35) and the callback
+  proof narrows as registered, through an issue filed then. Any other
+  honest block goes to the owner with the case.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #452's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
+after publication, in the D-131 to D-140 record PR.
 
 ## D-138 (2026-10-15): in JS/TS, a catch assertion proved to always pass is not inspection, refining D-015 (#431)
 
@@ -10339,8 +10463,13 @@ residuals):
   swallowing catch in the same test file, and an old empty catch cannot
   offset a new literal-only one. The cost: adding an always-passing assertion
   to a catch that already swallows reports the new text.
-- **Literal spellings follow #429's always-pass helper,** keyed on the
-  evaluated outcome, never on the TAUTOLOGY strength rating.
+- **The literal, message-argument and self-comparison spellings are
+  #513's** (P2; owner ruling 2026-10-19, R37). 431.Q5 (a') expected them
+  to close through a shared constant-truth helper added by #429. #429 rates
+  the literal ones TAUTOLOGY (D-147) but added no such helper, and no
+  ruling connects its literal-only folder (D-148) to this proof. #513 is
+  to prove them on the evaluated outcome, never on the TAUTOLOGY strength
+  rating; until it lands they keep the exemption.
 
 **Fingerprints.** A BROAD_EXCEPT_ADDED fingerprint is its rule, path and
 evidence text. `catch assertion` is exactly v0.7.0's set, so a finding with
@@ -10356,7 +10485,7 @@ truthiness (`expect(1).toBeTruthy()`); chai BDD, AVA `t.true(true)` and tap
 guarded assertion fails (`expect(e).toBeDefined()`), and assertions on
 unrelated always-true state; equal-count exchange of two sites with the same
 text; and the Python counterpart. The Python issue (431.Q2) had not been
-filed by 2026-10-15.
+filed by 2026-10-15; it was filed on 2026-10-18 as #496.
 
 **Tests.** `tests/test_issue431_js_catch_literal.py` (70 collected items:
 #401's labels without the catalog-bound test, the IR check made relative,
@@ -10367,16 +10496,69 @@ regenerated. The documented count goes from 18258 to 18330. The #363
 controls and the four v0.7.0 `js_catch_*.gwcase` fixtures keep their
 results; no existing expectation changes.
 
-**Sweep.** Not run (D-140): the issue's pair before this change (expected to
+**Sweep.** The plan was the issue's pair before this change (expected to
 pass) and with it (expected to block); the standard and D-088 sets, byte for
 byte; #212's JS/TS replay transitions; a targeted mined set of
 literal-in-catch commits, including the exchange population and the cost of
 literals added to swallowing catches; the refactor benchmark, unchanged; and
-the JS/TS cost delta.
+the JS/TS cost delta. The v0.8.0 acceptance sweep (D-140) ran after
+publication. It compares v0.7.0 with v0.8.0, so it measures the release,
+not #449 alone. Each part is now run, derived as 0 or waived (owner rulings
+2026-10-19, R11, R12 and R36):
+- **Run.** In the sweep: the standard and D-088 sets, and the JS batch,
+  v0.7.0's 1,800-commit JS/TS replay (300 commits from each of six
+  repositories), the nearest run to "#212's JS/TS replay transitions".
+  Findings and verdicts are identical on the commits both versions
+  analysed: 6,168 in all, 1,773 of them in the JS batch, where 25 more went
+  from a v0.7.0 engine error to a v0.8.0 pass and 2 exit 2 on both. The new
+  text appears in no result. The record says identical findings and
+  verdicts, not "byte for byte" as planned: the JSON output names the
+  engine version, so no row's output bytes match across the two versions.
+  In CI on #449's merge `03ebcc1b`: the issue's pair with this change
+  (`js_catch_always_passing_literal_pos.gwcase`, which blocks) and the
+  refactor benchmark (`tests/gates/test_refactor_corpus.py`) passed in all
+  nine test legs (ci run 38714509787), and #449 changed nothing under
+  `tests/gates/`; the verdict gate passed (run 38714509780).
+- **Derived as 0: the JS/TS cost of this change alone** (R12). In the JS
+  batch v0.8.0 analysed 1,798 commits, and neither version reports any
+  BROAD_EXCEPT_ADDED on them. #449 only adds findings with the new text, so
+  its cost on those commits is 0 findings and 0 verdict changes. Against
+  v0.8.0 without #449 this follows exactly; against v0.7.0 with #449 it
+  rests on reading. The other 2 commits are refused on both versions
+  before analysis (a symlink the snapshot refuses), where #449 cannot act.
+  It holds for these 1,798 in-sample commits only (D-053, D-128); a
+  held-out false-positive rate stays #212's. It was derived by reading the
+  code and the harness's result files (POLICY `work-machine-local` item
+  (4)); nothing was run for it. The shard results it rests on are kept on
+  LAPTOP-01AGNPJU; checkwash-lab archives only the batch aggregates, which
+  hold no per-rule counts.
+- **Waived by the owner** (R36, R11; 「裁決總表全部照建議」, "the ruling
+  list, all as recommended"; the reply was a button whose text the
+  assistant wrote):
+  - the issue's pair before this change, expected to pass. That it passed
+    before rests on reading: v0.7.0 exempts a catch that reaches any
+    resolved assertion. The pair with the change is pinned in CI:
+    `test_issue_pair_reports_the_always_passing_text` asks for
+    `catch always-passing assertion`, a text v0.7.0 cannot produce. Main's
+    CI runs the same exemption path on every push for the spellings still
+    exempt (`tests/test_issue431_js_catch_literal.py:110-131`), though not
+    on the issue's pair itself, so row 129's statement that the literal
+    turned #363's block into a pass rests on reading for that pair.
+  - the targeted mined set of literal-in-catch commits, with the exchange
+    population and the cost of literals added to swallowing catches. #449
+    leaves the `catch assertion` set as it was, and the JS batch holds no
+    BROAD_EXCEPT_ADDED on either version, so that sample could not show
+    either spelling. The mined set moves to #513's sweep plan; until then
+    how often the two spellings occur in real history is unknown.
+
+  `NOT_RUN：工作機規則（POLICY work-machine-local），waived by the owner (R36, R11)`.
+  Neither is recorded as passed.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #449's description, the ruling and the merged code; the maintainer approved
-the drafts on 2026-10-15 (「照草稿全部核准」).
+the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record and the
+pointer to #513 were added after publication, in the D-131 to D-140 record
+PR.
 
 ## D-139 (2026-10-15): commands read the repository from its root (#416)
 
@@ -10485,8 +10667,12 @@ their own, and no allowlist entry recorded on v0.7.0 needs re-recording:
 - D-138: BROAD_EXCEPT_ADDED with the evidence text
   `catch always-passing assertion`.
 
-Without the sweep, that no existing fingerprint moved rests on the fixtures
-and each round's tests, not on real history.
+When the release was prepared, that no existing fingerprint moved rested on
+the fixtures and each round's tests. The v0.8.0 acceptance sweep (below)
+now bears it out on real history as well: on the 6,168 commits both
+versions analysed, every finding, fingerprint included, is identical. That
+history is in-sample; elsewhere the claim still rests on the fixtures and
+the tests.
 
 **Other changes a user can see,** none of them a frozen contract:
 - Runs that exited 2 now give a verdict: a stand-in source between 30,000 and
@@ -10515,12 +10701,64 @@ and each round's tests, not on real history.
 - PRs #372 and #375 run the composite Action and the quality Action from a
   private, verified runtime (`action/README.md`).
 
-**Sweeps.** None of this release's sweeps has run:
+**Sweeps.** When the release was prepared, none of its sweeps had run:
 `NOT_RUN：工作機規則（POLICY work-machine-local），the owner chose to release first and run the sweeps on the pool after publication (2026-10-15)`.
-That covers the fixed 1,800-commit sweep against v0.7.0 and each round's
-acceptance sweep (D-131 to D-139). So this entry gives no cost figure against
-v0.7.0. The results, including whether D-137's pre-registered fallback
-applies, will be recorded after publication.
+That covered the fixed 1,800-commit sweep against v0.7.0 and each round's
+acceptance sweep (D-131 to D-139). The v0.8.0 acceptance sweep then ran
+after publication, on LAPTOP-01AGNPJU under EC POLICY
+`checkwash-pju-sweep` (T-546), on 2026-10-15 from 16:34Z to 18:14Z,
+labelled human-authorized local PJU, NOT EC pool. The owner approved its
+manifest (`c5bdcf0b…9ab4`) first. It replays v0.7.0 `d647a65` and v0.8.0
+`f02b5d8` in range mode on 6,354 in-sample commits, in four batches:
+standard (the fixed 1,800-commit set), d088 (1,218 of D-088's 1,263
+commits; the other 45 are in the standard set), targeted (1,536 commits,
+with a 320-commit aiohttp superset) and JS (v0.7.0's 1,800-commit JS/TS
+replay). Its summaries are in checkwash-lab
+`prep/acceptance-sweep-v080-20261016` at `954d802b`, under
+`runs/acceptance-sweep-v080/20261016-pju/`, and the owner ruled on its
+results on 2026-10-16 (「全部照建議」). It compares the release, not any one
+round. D-131 to D-135 and D-139 say their sweeps had not run and point
+here; this paragraph is their record.
+- **Cost against v0.7.0.** On the 6,168 commits both versions analysed,
+  both give 598 block and 5,570 pass, and their findings are identical.
+  The harness compares each finding's rule, severity, path, unit and
+  fingerprint; in the 219 shard results, which are kept on the host, every
+  other field of every finding is identical as well. On the fixed
+  1,800-commit set both block the same 48 commits. Of the 186 commits
+  v0.7.0 refused with exit 2, v0.8.0 analyses 30 and passes them: 27
+  byte-limit refusals now carry the oversized side unread (D-135), and 3
+  aiohttp commits read their symlinked pytest config (D-133). The other
+  156 still exit 2, and v0.8.0 refuses no commit that v0.7.0 analysed. The
+  median time per commit is about 0.2 s slower in each batch (standard
+  3.000 to 3.218 s, d088 4.750 to 4.968 s, targeted 5.563 to 5.781 s, JS
+  2.938 to 3.125 s, with twelve shards in parallel). These are release
+  figures, so they are recorded here and not in any one round's entry.
+- **By round.** The new detections of D-136, D-137 and D-138 never fired.
+  #345's five aiohttp commits still exit 2, and none of the 53 commits
+  v0.7.0 refused at the stand-in node limit is analysed: 39 stop at the
+  subject-replacement pass's own 30,000-node limit and 14 at the step limit
+  (D-131; #345 stays open). #346 and #415 were accepted and closed on these
+  results; #346's own commit, aiohttp `ce32557b72`, still exits 2, now
+  naming `CHANGES/12621.contrib.rst`, a symlink that is not a pytest
+  config. #414 and #416 need worktree or subdirectory runs, which this
+  range-mode replay does not make.
+- **Not run.** No round's change was measured alone. D-131's ruling item 2
+  timings stay as D-131 records them. D-134's real-world rows (Linux
+  `python3 -m venv`, a pnpm workspace, an npm tree over 200,000 files) did
+  not run. For D-136, the targeted set beyond the ten histories of D-088's
+  sets is queued for the combined lab-declared sweep. For D-137, the
+  conftest census is queued there, and real pytest proves only some
+  reporting shapes. For D-138, the issue's pair before the change and the
+  mined literal-in-catch set are waived (the set moves to #513), and the
+  cost of the change alone is derived as 0. For D-139, the subdirectory
+  comparison and the wrong-blob reproduction are queued for the combined
+  sweep (owner ruling 2026-10-19, R14, R15), and #453's own Windows
+  junction and case-checkout legs are not run separately (R39): the
+  case-renamed subdirectory test runs in CI on all three platforms, and a
+  junction, which cannot be committed, ends in the same engine-error
+  branch. D-139's Measurement paragraph, which #416's docs PR writes after
+  the combined sweep (R40), is to record #416's runs and these reasons.
+  Each of D-136 to D-138 gives its own NOT_RUN line.
 
 THREATMODEL: no existing status said "unreleased" for a change since
 v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
@@ -10529,7 +10767,42 @@ v0.7.0. The new rows 7a, 127, 128 and 129 name v0.8.0 (#452's draft said
 
 The agent wrote this entry in the release PR, beside D-131 to D-139. All of
 those but D-134 come from drafts the maintainer approved on 2026-10-15
-(「照草稿全部核准」); the maintainer approves D-134 and this entry there.
+(「照草稿全部核准」); the maintainer approves D-134 and this entry there. The
+Fingerprints sentence and the Sweeps paragraph were rewritten after
+publication, in the D-131 to D-140 record PR (owner ruling 2026-10-19,
+R33).
+
+That record PR is #523. The maintainer approved its maintainer text
+(A4–A7) on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval
+list as recommended"), in reply to the agent's list of the approvals the
+open PRs needed before merging. For this PR: A4 approved, as committed,
+the wording of the seven commits it named: 166e3362 (D-136), 55d0ac80
+(D-137), 22a14c5c (D-138), 07c3409f (this entry), 0f86f0c3 (D-136, D-137
+and this entry), cff623a9 (D-136 and D-137) and faea08da (THREATMODEL row
+129); A5 kept the two commits beyond R33's list, the follow-up issues
+named in the Residuals of D-136 to D-138 (281f7d0d) and R68's narrower
+scope for #494 in D-136 (a34141d4); A6 kept the not-run lines of D-131 to
+D-135 and D-139 as they are, with this entry's Sweeps paragraph as their
+record; A7 accepted the readings: R39 as one sentence here,
+KNOWN-ISSUES-v0.8.0 row 29 also pointing to #496, and the reopen triggers
+combining R35 with R8 and R10.
+
+The agent wrote the paragraph above in 17e33402, after that reply. The
+maintainer approved it later on 2026-10-19 with 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended"), in reply to the agent's
+second list of approvals the open PRs needed. For this PR: B3 approved
+that paragraph with the two corrections it named, made in the commit that
+adds this one: "approved it" became "approved its maintainer text
+(A4–A7)", and A6 names the not-run lines of D-131 to D-135 and D-139,
+since D-139 has no "Not run (D-140)" line. The same commit gives A4's
+scope as the commits A4 named; the paragraph had listed text in them that
+A4's question did not name, the D-138 #513 pointer and this entry's
+Fingerprints sentence among it. B22 approved correcting D-136's
+standard and D-088 bullet to say that those sets ran in the sweep's
+standard and d088 batches, and that only the 6,168 commits both versions
+analysed span all four batches (74153a3b). This paragraph was written
+after that reply. Each reply was a button whose text the agent wrote,
+which the owner chose.
 
 ## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
 
@@ -11030,8 +11303,13 @@ conftest) before units are collected:
   empty, which D6 never holds. The marker's identity is its name alone:
   neither the guard nor the line.
 - Q7 (a), rule 2. The two pins changed exactly as approved (below).
-- Q8 (a). A function-level `test_x.__test__ = False` is not read here. It
-  waits for a reproduction run and its own issue.
+- Q8 (a). A function-level `test_x.__test__ = False` is not read here. A
+  hosted CI run reproduced the gap for the module-function form on
+  2026-10-19 (run 39215282880, draft PR #518, not merged); the
+  class-method spellings were not run. Under ruling-list item R47
+  (2026-10-19) no separate issue is filed until a fix is scheduled: the
+  result is recorded on #424 and #280, and the limit is listed in
+  `docs/KNOWN-ISSUES-next.md`. Row 135's residual (6) says the same.
 - Q9 (a). A def or class that a collected name captured before the
   rebinding (`test_y = test_x`, `TestAlias = TestX`) stays as on main. So
   does a rebound class's method that a same-file subclass, defined while
@@ -11187,6 +11465,24 @@ were rewritten from the 2026-10-17 sweep and its source review in PR #489.
 The maintainer approved that text on 2026-10-18: 「照你建議」, in reply to
 the agent's list asking for approval of the D-146 (977f8bd3), D-145
 (a4fa4550) and D-144 (dfde00e1) drafts.
+
+The Q8 bullet and this paragraph were written in PR #530, after #518's
+hosted run reproduced Q8; the same PR rewrote row 135's residual (6)
+(4b91d361, 3e4647b5). The maintainer approved that text on 2026-10-19:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as recommended"),
+in reply to the agent's second list of approvals the open PRs needed. For
+this PR: B20 approved residual (6) as written in 4b91d361, with "owner
+ruling 2026-10-19, R47" changed to "ruling-list item R47", so that it is
+not read as one of row 135's reproduction labels R1 and R5 (3e4647b5,
+which keeps the date in parentheses); B21 put this record at the end of
+D-144 and had the Q8 bullet say that Q8 was reproduced and, under R47, is
+recorded on #424, #280 and in KNOWN-ISSUES-next, with no separate issue.
+The Q8 bullet's wording and this paragraph were written after the reply,
+so their wording is the agent's. Earlier that day, 「PR 核可清單全部照建議」
+had placed the rewording of residual (6) in this PR with its wording left
+for approval (A20), and recorded the class-method spellings as not run
+(A90). Each reply is the text of an answer the agent wrote, which the
+owner chose.
 
 ## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
 
@@ -11389,7 +11685,25 @@ PJU, NOT EC pool. Its plain before/after compares #424's engine
     still covers it, which checkwash does not model. Two commits fall
     under two of these.
   - The decorator reading and the local-class reading are filed as
-    #487, the helper-skip liveness as #488.
+    #487. The helper-skip liveness is filed as #488, whose ruling
+    (2026-10-18, option (a)) records the block on `fada8be1db` as a
+    known false block, not correct behaviour: by reading the scrapy
+    source, the commit only adds coverage on the test side. D-087's
+    maintainer decision kept this liveness cost for guarded setup skips,
+    but in D-087's and D-111's sweeps it never turned a pass into a block
+    by itself; here it does. It is not the first liveness-only block in
+    DECISIONS: D-116's sweep blocked pytest `4f5d7948`, where a test
+    moves into a file in which it carries a guarded `py.test.skip`, and
+    D-116 does not call that block false. The block stays until a later
+    change removes it, such as #488's per-row liveness (option (b)),
+    which needs its own ruling. Meanwhile an author can exempt the six
+    findings by fingerprint only through an `allow.toml` entry already
+    on the base side (SPEC §5 D3, §6); one added in the blocked change
+    itself shows as `EXEMPTION_ADDED` and does not lift the block. How
+    often this happens is not known. So far it is the only verdict this
+    reading moves in the standard set and D-088's sets, but 19 commits
+    of the d088 batch are not judged (above), and most of the targeted
+    phase did not run (below). Further cases are recorded on #488.
 - **Not measured:** resolution toggled in both directions, and what
   Sub-Q8 (a) and Sub-Q11 (a) would have changed; each needs an engine
   variant that is not a commit on main. Sub-Q7 asks for its cost to be
@@ -11430,6 +11744,34 @@ approved that text on 2026-10-18: 「照你建議」, in reply to the agent's li
 asking for approval of the D-146 (977f8bd3), D-145 (a4fa4550) and D-144
 (dfde00e1) drafts. The follow-up issue numbers (#487, #488) were filled in
 once the issues were filed, as that list said.
+
+The follow-up bullet that ends Cost's source review was rewritten from
+#488's ruling (issuecomment-6248630774, item 1) in PR #510. The
+maintainer approved it on 2026-10-19: 「PR 核可清單全部照建議」, which
+takes every item of the agent's approval list as the agent recommended.
+For #510 that list asked for approval of the bullet's wording (6aaa93ac,
+8ae71cf5; item A13), whether to add a `docs/KNOWN-ISSUES-next.md` row for
+#488 (added in 6abaf2a9; A14), and whether to keep the `fada8be1db`
+sub-bullet's last sentence and add the ruling's D-116 contrast (the
+sentence kept, the contrast added in 570a81fd; A15). The reply is the
+text of an answer button the agent wrote, which the owner chose.
+
+A14 decided that the row is added; the row's text (6abaf2a9, ee4facf4)
+and the paragraph above were written after that approval. The maintainer
+approved them on 2026-10-19: 「第二輪核可全部照建議」, which takes every
+item of the agent's round-2 approval list as the agent recommended. For
+#510 that list asked whether to approve together the text written to
+apply options already approved, the paragraph above and the #488 row
+among it (item B3), and whether the page's first header sentence, which
+said every residual below was found by reading, should also yield to a
+row, with #510 and #521 using one wording (B4). Under B4, 7dc0cd20 ends
+that sentence with "unless a row names another source", the wording
+#521 (775aa3dd, accepted under A22) uses. A read-only claims review of
+#510 found that the row said lost credit always sends the findings to
+high; 8678ed8b says they go to high unless repair evidence or another
+de-escalator holds them at warn (SPEC §5 E1, D1). That correction was
+written after the approval. The reply is the text of an answer button
+the agent wrote, which the owner chose.
 
 ## D-146 (2026-10-17): assertion-level exemptions are content-bound (#421)
 
@@ -12824,7 +13166,7 @@ parameterized-helper tests, that the findings on both kinds of file
 equal those of fresh checks, and that each of two changed files has its
 own kept checks. No
 `.gwcase` fixture is added: the golden runner cannot expect an engine
-error. By reading, the documented test count becomes 19517 (19482 + 35);
+error. By reading, the documented test count becomes 19540 (19505 + 35);
 CI's collection checks it.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source; no test, timing, checkwash run or sweep was run`.
 
@@ -12878,3 +13220,506 @@ that each file has its own kept checks. The timing job keeps its shapes;
 none of them reaches either check, so its numbers time the pass with
 these caches but not the two checks themselves. The text this entry
 gained for them is under B15's review as well.
+
+## D-158 (2026-10-19): at the root, a `--task` path the base tree holds only by another name is an engine error, and `doctor` looks up the root on its own timeout (#500)
+
+Ruling 500 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"). #500 was filed on that
+go-ahead, which adopted the direction the agent's list gave for it: an
+engine error when the base path holds a non-directory, one stderr line
+whenever the fallback is used, the case-mismatched path handled too,
+`doctor` on its own 5-second timeout, a test to confirm whether
+KNOWN-ISSUES row 21 overstates, and P3. The details under the issue's
+"Direction" are the agent's recommendation within that direction, for
+review in this PR. D-151 to D-157 are reserved for other open pull
+requests, so this entry is D-158; the number may change at merge.
+
+#500 reports, from reading the code at `6d78d8dd`, that at the root
+`check --task` reads the contract from the base tree at
+`os.path.relpath(--task, --repo)`, and on a miss opens `--task` from the
+working tree with no word, although the code comment and SPEC §4c said
+the working-tree copy was a fallback only for an untracked file; nothing
+checked that. Git reads no path through a tree entry of mode 120000 and
+matches names byte for byte, so a task path through a committed directory
+symlink, or spelled in another case on a case-insensitive checkout, misses
+the base copy, and the operating system opens the head's. The change
+cannot cause the miss, which depends only on the operator's arguments and
+the base tree, but once a configuration misses, every change supplies its
+own `oracle_freeze` and scope globs (E2, E7). Separately, `doctor` found
+the repository root with the general 60-second Git timeout, two queries
+from a subdirectory, while its own queries use 5 seconds.
+
+Implementation (lines at this PR):
+
+- A, the root fallback. `GitSnapshot.alias` (`gitio/snapshot.py:447-478`)
+  returns a `TreeAlias` (`:39-50`): the first entry of the base tree, by
+  the shortest prefix, that equals a proper prefix of the mapped path when
+  case is ignored and is a file, a symlink or a submodule; or else an
+  entry that equals the mapped path itself only when case is ignored.
+  Both comparisons are on text (`str.casefold`), so the answer is the same
+  on every file system. `base_alias` (`gitio/git.py:181-187`) wraps it as
+  the other base reads are wrapped. In `_analyse` (`cli.py:253-272`), a
+  base miss at the root with such an entry is an engine error naming it
+  (`_task_alias_error`, `cli.py:167-174`): exit 2, or the non-blocking
+  hook-json message (#414), as a base miss from a subdirectory already is.
+  Otherwise the fallback reads the working-tree copy, then writes one
+  stderr line through `_advise` (`cli.py:269-272`), which reaches neither
+  stdout nor the exit code. The comment above the task read (`:219-224`)
+  is corrected. The subdirectory branch is unchanged.
+- B, `doctor`. `_run` (`gitio/git.py:28-45`) and `resolve_repository_root`
+  (`:61-110`) take `timeout` and `stdin` keywords whose defaults, 60
+  seconds and inherited stdin, keep `check`, `sweep`, `allow`, `quality`
+  and the SessionStart hook as they were. `_reroot` (`cli.py:767-781`)
+  passes them through, and `doctor` passes `QUERY_TIMEOUT`
+  (`doctor.py:206`, now also `_git_query`'s, `:244`) and stdin from
+  DEVNULL (`cli.py:897-908`). Doctor's other Git flags are not added. No
+  SPEC change: §9 promises `doctor` the same sanitized environment, not a
+  timeout.
+- KNOWN-ISSUES row 21 (Direction 2). By reading, `--repo` reached through
+  a symlink to the root fails closed on its own: the mapped path is either
+  the right root-relative path or starts with `../`, which Git refuses
+  from the root as outside the repository (`git cat-file` exits non-zero,
+  and the strict snapshot's error is an engine error). A new test pins
+  both ways, and the row now says the route fails closed and names the
+  case route; that correction holds only if CI confirms the test.
+- Priority: P3 for both parts.
+
+Readings within the ruling's text; the owner accepted 1, 2 and 4 to 6,
+and kept 3 a residual (below):
+
+1. A submodule at a proper prefix, compared with case ignored, is refused
+   too. The ruling names "a symlink or a file"; a submodule is neither,
+   nor a directory of this tree. The same prefix spelled exactly is
+   already refused (`opaque_error`, `gitio/snapshot.py:417-419`), and in
+   another case a case-insensitive checkout would open the submodule's
+   working tree.
+2. "Case ignored" is `str.casefold`, Unicode's full case folding. It is
+   no file system's own case table, so it can differ either way: it joins
+   some names file systems keep apart (`ß` and `ss`, for example), and it
+   can miss names a file system joins. U+0131 `ı` has no case folding,
+   while its uppercase is `I`; NTFS compares names through an uppercase
+   table, inferred, not verified, to map `ı` to `I`. If so, `--task
+   cı/TASK.md` for a committed `ci/TASK.md` gives no alias there, and the
+   fallback reads the head's copy.
+3. An entry equal to the mapped path byte for byte is no alias: that is
+   what the base read answers. The only such entry the read misses is a
+   submodule named exactly. Its fallback opens whatever the working tree
+   holds at that path: an engine error (`OSError`) when a directory is
+   checked out there, the submodule's own or the empty one Git leaves for
+   it, but the head's contract when the head replaced the submodule with
+   a regular file. No working configuration names a submodule as
+   `--task`, so this is left as a residual; refusing it would be stricter
+   than the ruling's text.
+4. The stderr line is written after the working-tree copy is read, so an
+   `OSError` from the open gives only the engine error. The session's
+   second leg (#418) stays quiet, as for its other diagnostics; it reads
+   policy from the same commit as the first leg.
+5. The check runs wherever the root fallback ran: a range, the worktree
+   and the managed Stop hook, against the commit policy is read from.
+6. With several entries equal when case is ignored, the error names the
+   first in sorted order.
+
+Not settled by the ruling, and left as residuals (KNOWN-ISSUES-next):
+other spellings a file system treats as the same file are not compared,
+by reading: Unicode normalization (NFC against NFD on macOS), names a
+file system's own case table joins and `str.casefold` keeps apart (`ı`
+against `I`, inferred, reading 2) and, on Windows, trailing dots or
+spaces, 8.3 short names and alternate data streams. A task path that
+names a base submodule exactly still reaches the fallback (reading 3).
+A task file the base does not hold at all is still read from the
+working tree, with the new stderr line, so a CI step that names a task
+file the base never had still lets each change supply its own contract.
+Dropping the root fallback altogether was not proposed: it would revisit
+D-139 and break a generated or untracked task file at the root.
+
+Beyond the ruling's text, these effects are accepted with this entry:
+
+- A run at the root that named the task file through a committed
+  directory symlink, a committed file on the way, or in another case, and
+  read the working-tree copy, now exits 2 (or gives the hook-json
+  message). On a case-sensitive checkout so does an untracked `task.md`
+  beside a committed `TASK.md`, the cost of a result that does not depend
+  on the file system.
+- On the fallback path, one more `git rev-parse` and `git ls-tree -r` run
+  for the alias check, beside the inventory the base read already lists
+  (`gitio/snapshot.py:423`).
+- `doctor`'s root lookup gives up after 5 seconds per query. A timeout of
+  the first query is a plain `GitError`, so the fallback to `--repo` as
+  given is silent (SPEC §9); only a timeout of the second query prints
+  the stderr line. From a subdirectory a silent fallback reports on the
+  subdirectory, which needs a file system on which a 5-second
+  `rev-parse` times out, where doctor's other queries would time out
+  already.
+
+This narrows D-139's root fallback (`DECISIONS.md:10440-10442`) to a task
+file the base tree lacks, with the two engine-error cases and the stderr
+line; SPEC §4c changes with it. The exit codes keep their meaning (2 is
+an engine error, and hook-json reports it as #414 does), so
+`docs/stability.md` does not change. No fingerprint, IR field or key
+changes. The sweep passes an empty `Contract()` (`sweep.py:132`), so it is
+not expected to move. THREATMODEL row 18 ("Closed — contract read
+base-side") is unchanged; the owner kept it so, with the residuals left
+here and in KNOWN-ISSUES-next (below).
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. Every existing `--task` run at
+the root names a task file the base holds as a regular file
+(`tests/test_issue416_subdirectory_root.py:466-488`,
+`tests/e2e/test_allowlist_scope.py:110-138`, and the nine verdict-gate
+cases with `task = "TASK.md"`, each with a base `TASK.md`), so none
+reaches the alias check or the new stderr line. The subdirectory tests
+keep their message (`tests/test_issue416_subdirectory_root.py:491-527`).
+The resolver tests replace `subprocess.run` with functions that take any
+keyword (`:156-194`, `:393-461`), and `tests/test_perf_git.py:155`
+replaces `gitio._run` only around `list_range_changes`, which passes no
+keyword. Nothing under `tests/gates` changed. If CI shows an existing
+expectation moving, the round stops.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: 22 collected items in
+`tests/test_issue500_root_task_path.py`, none under `tests/gates`: a
+committed directory symlink on the task path and a task path in another
+case, each exit 2 and hook-json (4); the fallback's stderr line in a
+range, the worktree and hook-json (3); the `--repo` route both ways (3);
+doctor's and check's lookup keywords (1); and eleven unit cases of
+`GitSnapshot.alias` on owned Git objects. Not pinned: the session's second
+leg, an `OSError` on the open, the residuals above, and a hanging Git. By
+reading, the documented test count becomes 19505 (19483 + 22); CI's
+collection checks it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and from Git's; no test, checkwash run or sweep was run`.
+
+The agent wrote this entry in #500's fix PR #517. On 2026-10-19 the
+maintainer replied 「PR 核可清單全部照建議」, "the whole PR approval list
+as recommended", to the agent's approval list, whose recommended answers
+for this PR were: the SPEC §4c (bd2043cf) and D-158 (02b47bf5, ecebc2b1)
+wording as committed (A35); readings 1, 2 and 4 to 6 accepted (A36);
+reading 3, a task path that names a base submodule exactly, kept a
+residual in KNOWN-ISSUES-next rather than refused (A37); THREATMODEL row
+18 unchanged, with the residual left in KNOWN-ISSUES-next and this entry
+(A38); and both departures accepted, the KNOWN-ISSUES-next #500 row
+(c3ecd099, c85a55f6) and the CLI symlink test's base `ci` entry written
+as a mode-120000 blob through `update-index` (A39). None of them covers
+what the agent wrote afterwards, in 0d8b4e5d: this closing paragraph,
+and the two sentences above that had left a point to the owner, the
+readings heading and the THREATMODEL row 18 sentence, which now say what
+the owner decided. The maintainer approved that text later on 2026-10-19
+with 「第二輪核可全部照建議」, "the round-2 approval list, all as
+recommended", whose item B3 approves together the sentences that write
+an already approved option into the documents or turn a point left to
+the owner into a decided one, this entry's approval record and those two
+sentences among them. Each reply was a button whose text the agent
+wrote, which the owner chose. Neither list covers 2a0de639, which
+corrects the KNOWN-ISSUES-next #500 row's `doctor` sentence to "5
+seconds per query (about 10 seconds from a subdirectory)", as this entry
+says "per query".
+
+## D-160 (2026-10-19): a test runner's expected-failure record is a documented limit, and its detector is not scheduled (#468)
+
+*A recorded limit and a refusal; no code, rule, fixture or frozen text changes.*
+
+Ruling 468 came in two steps. On 2026-10-16 (issuecomment-6230171551,
+「#468、#471 都照建議」, "both as recommended") the owner adopted the
+analysis in issuecomment-6229288226: (c) now, then (b), not (a); undici's
+format only; (c) in the next release, (b) after a ruling on the size limit
+and a pool sweep; "This issue stays open for (b)." On 2026-10-19
+(「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+the reply was a button whose text the agent wrote), R57, R58 and R64
+completed (c), replaced that last sentence and narrowed that ruling's
+item 2 (item 3 below). D-151 is the last entry on
+main, D-153 is unused, and D-152 and D-154 to D-159 are assigned to open
+pull requests, so this entry is D-160.
+
+#468 reports that undici's `test/web-platform-tests/expectation.json`,
+the record its Web Platform Tests runner reads, can mark a regressed
+subtest `success: false` or `flaky: true`, or its test file `skip: true`,
+and no rule reads it. The v0.8.0 acceptance sweep's JavaScript batch set
+the file aside unread in 10 undici commits (on LAPTOP-01AGNPJU, under
+POLICY `checkwash-pju-sweep`, T-546). It is not a v0.8.0 regression.
+
+Decided:
+
+1. (c), a known limit (468.Q1). No rule reads a test runner's
+   expected-failure record. Under 1,000,000 bytes undici's file has the
+   `test` role (#217, SPEC §2), not an opaque production change, and earns
+   no repair evidence; over that size it is set aside unread (#415).
+   Either way the change passes with zero findings. The limit is written
+   in THREATMODEL row 156 (Open, by ruling), in `docs/assertion-coverage.md`
+   ("Expected-failure records a test runner reads", since #475) and in
+   `docs/KNOWN-ISSUES-next.md`, marked Existing, from where it moves to the
+   next release's known-issues page.
+2. Not (a), a default role. The `snapshot` role, or a new must-read role,
+   would turn the 10 sweep passes back into v0.7.0's exit 2 (D-135 ruling
+   1), report about 9 of the 10 commits at warn without telling them
+   apart, and inherit row 132: any JS production edit silences the
+   file-backed rule.
+3. Scope: undici's format only, recognised by path and shape (468.Q2).
+   The 2026-10-16 ruling gave each other expected-failure format its own
+   issue when the corpus shows one. The analysis adopted through R58 and
+   R64 narrowed that: another runner's format gets its own issue when a
+   fix for it is planned; with no fix scheduled, it is added to row 156
+   instead.
+4. (b) is not scheduled (R64). (b) is a detector that compares entries
+   by identity and reports a subtest recorded as passing that no longer
+   is, or a file newly marked `skip` or `flaky`. Building it would need,
+   first, a ruling that lets this format be read past 1,000,000 bytes,
+   with the limit to use (D-135 ruling 1 refuses a file a detector must
+   parse), then a new rule ID in the frozen §4 list, its fingerprint (§6),
+   and a pool sweep of its cost, including parse time on 2 MB sides.
+   #468 is reopened when any of these happens: a cheat in this file is
+   reported; undici fixes its runner's comparison, so that the file gates
+   CI; or the size limit is ruled on for another reason. Another format
+   does not reopen #468 (item 3).
+
+Why (b) is not scheduled, by reading:
+
+- undici's runner fails no run on a changed result. It diffs the record
+  against the observed results with jsondiffpatch and
+  `propertyFilter: (name) => name === 'success'`, and sets
+  `process.exitCode` to 1 only for a non-empty diff
+  (`test/web-platform-tests/wpt-runner.mjs:818-825` at `5550222761`, the
+  same at undici's main `e8f34234d1`). jsondiffpatch's `objectsDiffFilter`
+  (`src/filters/nested.ts`; undici pins `^0.7.3`) applies the filter to
+  every key at every depth, so the top-level directory keys are dropped
+  too and the diff is always empty. The edit hides a regression from the
+  record instead of turning a red run green; `skip` still stops a file
+  from running. The analysis had listed this as undetermined.
+- (b) would report at warn, and in the cheat shape a JS production edit
+  is present, so warn is its ceiling (rows 2 and 131). At the default
+  `fail_on = "high"` it changes no verdict.
+- No commit is known to be a cheat. By reading, 8 of the 10 are honest,
+  `8453a773ae` is not decidable and `5550222761` is undetermined.
+- The size ruling (b) waited for is not being asked: #415 is closed.
+
+The 2026-10-16 ruling's item 3 named only `docs/assertion-coverage.md`
+and the known-issues page for (c). The adopted analysis also named the
+THREATMODEL row and this entry, so they are not a new decision (R58). As
+D-050 shows, an entry may record a refusal that changes no behaviour.
+
+Corrected in `docs/assertion-coverage.md`: it said the runner "compares
+each subtest with its recorded `success`" and that the edit "makes a
+failing run pass". By the reading above that overstated it. The section
+now says the runner is written to compare, that it fails no run today,
+and that a fixed comparison would let the edit turn a failing run into a
+passing one. Its detector paragraph said the detector "is planned"; it
+now says it is not scheduled.
+
+Cost: the gap stays. If undici fixes its runner, the cheat costs nothing:
+undici's `CONTRIBUTING.md:110` asks contributors to mark new failures in
+the file, and the runner rewrites it from a local run. Only the
+documentation points reviewers at the file, and a reopen depends on
+someone noticing one of the conditions. How many other expected-failure
+records the corpus holds is unknown, because the sweep sees such a file
+only when it is over 1 MB.
+
+Rule 2: no existing expectation changes, and no code, fixture or test
+changes. `tests/test_threatmodel_pinned.py` checks only Closed rows, and
+`tests/gates/test_tamper_corpus.py` and `tests/gates/test_recorded_arms.py`
+read only the rows they name. `benchmarks/FAILURES.md` gains row 156 (175
+bypasses, 59 not closed), updated by hand to its generator's output.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. The undici and jsondiffpatch readings come
+from source read for the 2026-10-18 analysis.
+`NOT_RUN：工作機規則（POLICY work-machine-local），read-only inference; nothing was run`.
+
+The agent wrote this entry in #468's docs PR #521. The maintainer approved
+its text as it stood at 97f6816a on 2026-10-19: 「PR 核可清單全部照建議」 ("the PR
+approval list, all as recommended"), in reply to the agent's list asking
+for approval of this PR's SPEC §4 `SUPPRESSION_ADDED` row (b5aac2c6,
+c1a68fa9), THREATMODEL row 156 (f9c6dace, 629baffe) and D-160 (276c44ec,
+97f6816a) text, with the hand edit of `benchmarks/FAILURES.md` (A21), and
+of its departures from the rulings (A22): this entry's record that R58 and
+R64 narrowed the 2026-10-16 ruling's item 2, the quote case in the #421
+row, the #497 spellings in their own sentence, the #480 wording that
+differs from the 2026-10-18 draft, and the introduction of
+`docs/KNOWN-ISSUES-next.md` defining *Existing* rows. The same reply chose
+to correct the v0.8.0 known-issues page's sentence that listed #423, #425,
+#426 and #433 as open (A23), to name #278's gap on that page (A24), and to
+shorten the #468 row's source in `docs/KNOWN-ISSUES-next.md` to "the
+v0.8.0 acceptance sweep (D-140)" while this entry keeps the host and
+policy (A25). Those three edits (ab989698, 38613ccc, eb3d9dcf) and the
+first version of this paragraph (216c4dfe) were written after the reply,
+so their wording is the agent's. Later the same day the maintainer
+approved them as written: 「第二輪核可全部照建議」 ("the round-2 approval list, all as
+recommended"), in reply to the agent's round-2 list, which asked whether
+to approve together the text written to apply options already approved,
+this paragraph and those three edits among it (B3); whether the first
+header sentence of `docs/KNOWN-ISSUES-next.md`, which said every residual
+below was found by reading, should also yield to a row, with #510 and #521
+using one wording (B4); and whether to correct, as under A23, the v0.8.0
+page's sentence that still listed #417, #420, #436 and #437 as open (B5).
+Under B4 this branch keeps the wording it already had, "unless a row names
+another source" (775aa3dd, A22), which #510 now uses too (7dc0cd20). Under
+B5, 42410c38 says that #417, #420 and #437 are deferred until after 1.0
+(#504) and that #436 was closed as completed. f3dd7110 brings this entry's
+numbering sentence up to date with main, which the pull request's claims
+review found stale. Those two edits and this paragraph as it now reads
+were written after the second reply. Both replies were buttons whose text
+the agent wrote, which the owner chose.
+
+## D-162 (2026-10-19): the verdict gate's baseline rotates to v0.8.0
+
+Owner ruling 2026-10-19, R56. The owner answered a table of 104 rulings
+with 「裁決總表全部照建議」 ("the whole ruling table as recommended"); the
+reply is the text of an answer the agent suggested, which the owner chose.
+R56 asked whether to open the v0.8.0 rotation PR now, with the
+protected-file dispositions asked in the PR, and adopted "open it now and
+merge it before the sweep freeze". This PR rests on R56. The v0.8.0
+one-time authorization (`docs/RELEASING.md`, 2026-10-15) listed "the
+verdict-baseline rotation PR (step 9), whose protected changes keep the
+maintainer's disposition" among what it covers, but its publication record
+says the grant "was consumed by publication" and that the rotation remains
+separate, so this entry does not rely on it. R56's recommendation also
+cited that grant as a reason; since the grant is consumed, the PR rests on
+the option R56 adopted and on approval items A31 to A34 (below). The PR is
+part of the v0.9.0 release preparation and has no issue: a tag-push run
+requires `[baseline]` to be the highest other `v*` tag merged into the
+tagged commit (`check_tag_rule`, `tools/verdict_gate.py:1564-1594`), which
+for a v0.9.0 tag is v0.8.0.
+D-151 to D-161 (D-153 is unused) are assigned to pull requests prepared in
+parallel, so this entry is D-162.
+
+After the rotation, pull requests, `main` and the next tag are compared
+with v0.8.0 instead of v0.7.0.
+
+- **`[baseline]`** in `tests/verdict_gate/baseline.toml` pins tag v0.8.0,
+  version 0.8.0, release commit
+  `f02b5d8a07fa39ee1898881f66c571eb164cb11c` (the merge commit of #458,
+  tag object `1d869062`) and the Release's `checkwash.pyz`: 796,565 bytes,
+  sha256 `87b097cdca4ca34dc43be8be8ddf8ef7f3197894dc6f554fe1bddc1d86e74d0c`,
+  as the GitHub Releases API reports the asset and as the
+  [publication record](docs/releases/v0.8.0-publication-verification.md)
+  lists it. The gate re-checks both on every run, and checks that the
+  archive's `checkwash/*` members equal `src/checkwash` at `f02b5d8`.
+- **`baseline_blocked`** stays 159, sha256 `9993cab6…`. The tag-push
+  verdict run of v0.8.0,
+  [38768985301/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/38768985301)
+  (job 116539533210, v0.7.0 against the tag), logs 185 cases (159 T1,
+  26 T3), zero failures and zero reported, with 159 block -> block and
+  26 pass -> pass. Zero failures means v0.7.0's blocks matched this pin.
+  With no block -> pass and no pass -> block, the candidate there, built
+  from the tag's own source, blocks exactly the same 159 cases; the
+  Release's pyz must hold that same `src/checkwash`. The run proposed
+  nothing: the gate proposes an entry or a pin only where one is missing
+  or has drifted, and that is a failure too (`tools/verdict_gate.py:123-135`).
+  The rotation run (below), with v0.8.0 itself as the baseline, observed
+  the same pin and reported no `baseline-blocked-drift`.
+- **`[t3.cases]`** is unchanged. `tests/data/javascript_chai_mutations.json`
+  is the same git blob (`4f363109`) at v0.5.0, v0.6.0, v0.7.0 and v0.8.0,
+  so the T3 cases read at `f02b5d8` are those read at `d647a65`, which the
+  tag-push run matched with no drift. The rotation run, reading them at
+  `f02b5d8`, reported no `t3-drift`.
+- **`[canary]`** is not rotated (step 9). The v0.4.2 -> v0.5.0 pair and its
+  71-case `block_to_pass` set stay; the tag-push run reproduced them
+  (canary 71 block -> pass, 45 block -> block, 6 pass -> block and
+  37 pass -> pass).
+- **The acceptance file**, `tests/gates/verdict_gate_accepted.toml`, is
+  maintainer-only. Its file-level `baseline` becomes `v0.8.0`: the gate
+  fails `acceptance-baseline` while it differs from the pin
+  (`tools/verdict_gate.py:1414-1416`). The owner authorized the agent to
+  change exactly that line and add a dated header comment (below), and
+  nothing else in the file changes. It holds no `[[accept]]` entry, so
+  the rotation removes and adds none, and no case needs one (below).
+
+Nothing else moves. The case files, labels, acceptance file, gate code
+(`tools/verdict_gate.py`, `tools/qualify_assertions.py`) and workflow are
+the same at `main` `0e60832a` as at `f02b5d8`. The main-push verdict run
+[39206619788/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39206619788)
+on `0e60832a` (v0.7.0 against `main`) logs the same counts, with zero
+failures and zero reported. So `main` judges every case as v0.8.0 does,
+and the rotation run below, whose candidate is `main` with this PR's
+engine-neutral changes, observes it directly: against v0.8.0 it has no
+block -> pass, needs no entry and reports nothing. From this rotation on, a candidate that turns any of
+v0.8.0's 159 blocks into a pass needs an accepted entry. No engine code,
+case input, label, fixture expectation or gate rule changes;
+`tests/verdict_gate/README.md` records the re-pin.
+
+The rotation run is the rotation PR's (#516) first verdict run,
+[39214083418/attempt 1](https://github.com/taipei49314/checkwash/actions/runs/39214083418)
+(job 117933789875), on pin head `5490b4e86572dffe347d13ac890e70d69f398316`
+with merge checkout `5c7a93fe` (that head merged into `0e60832a`). It ran
+with the rotated `[baseline]`, checked out `f02b5d8` and the Release's pyz,
+and passed the engine identity check: a sha256, size, member, commit or
+version mismatch is an `engine-identity` failure and stops every case, and
+none was reported. All 185 cases ran (159 T1, 26 T3): 159 block -> block,
+26 pass -> pass, zero reported, and the canary at 71 block -> pass,
+45 block -> block, 6 pass -> block and 37 pass -> pass. Its one failure is
+`acceptance-baseline` ("acceptance file baseline 'v0.7.0' differs from the
+pinned baseline 'v0.8.0'"). With no blocked-pin, T3 or entry failure, it
+proposed no pin and no entry, so `[baseline_blocked]` and `[t3.cases]`
+stay as first committed (`3871d5ac`). This failed run is not the merge
+evidence: the PR's final head, with the acceptance line changed, still
+needs a successful verdict run and the normal required checks before
+merge.
+
+Evidence status. The three runs above are read from their logs
+(`gh run view --log`). Their receipt artifacts, each named
+`verdict-gate-receipt-1`, were downloaded on 2026-10-19 before they
+expired, as the owner approved (below), and each ZIP's SHA256 equals the
+one its upload step logs. Artifact 11991306312 (run 38768985301) is a
+20815-byte ZIP with SHA256
+`e5683c9cd7962de4e459c0bb719b43cc863e8d945b4b8eea58fabda12098bd84`
+holding `verdict-gate.json` (SHA256
+`dd5170b15eec7d4a7f15e3bea4a444ae94f2ea9956c4b249988c50c99f37b90b`) and
+`verdict-gate.md` (SHA256
+`ef35af3b9e1a4beabf999ea3fa6dfe20e05f029a40f85f3b65684a2b5a01e206`);
+artifact 12165673670 (run 39206619788) is a 20781-byte ZIP with SHA256
+`0f7b1e929d583fb3c56d892b0ae3ec8edfb42d1d949286aec6c689a506ac87e7`
+holding them with SHA256s
+`fa25501ef1a46392e36e84b03d86795de6358791c123fba1d4c11a9f23315739` and
+`a7b5aaed66bcdb0f75ba092fb2d2fbcded440c06dabd448fe92a4160b016289d`; and
+artifact 12169571379 (run 39214083418) is a 21003-byte ZIP with SHA256
+`d8e44ab6defeaef452b130c34a21910ac46d87d5f50a8aa1cc766fce979a2139`
+holding them with SHA256s
+`df9fdf1e92a4d4c3c4b777e7b40d09b63baa977953af24d56c142f510450fc53` and
+`69c5564e992452e68b51c08f154dd8f6af13b2e827bb61a8e343e1b4f2cadb9f`.
+The work machine only downloaded and hashed them; no verdict run or test
+ran there
+(`NOT_RUN：工作機規則（POLICY work-machine-local），the verdict runs above are hosted CI runs`).
+
+The agent drafted this entry in the rotation PR #516. The maintainer
+approved it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval
+list as recommended"), in reply to the agent's list of approval items for
+the open pull requests, which takes every item's recommended answer. For
+this PR those are: A31, on who changes the protected file's `baseline`
+line, 「准 agent 改這一行，並加 PR 本文的日期註解」 ("the agent may change
+this line and add the dated comment from the PR body"), so the agent
+changed exactly `baseline = "v0.7.0"` to `baseline = "v0.8.0"` in
+`tests/gates/verdict_gate_accepted.toml` and added the header comment the
+PR body proposed, and nothing else (f9bf2a2c); A32, this entry's wording
+as committed in 308dc412, 5490b4e8 (it rests on R56) and bf655e2d (it
+records the observed rotation run); A33, fetching the three receipt
+artifacts before they expire and recording their SHA256s here in one
+sentence, with no further approval (the sentence that gives each
+artifact's size and SHA256s, 0faaea28); and A34, keeping
+`[baseline_blocked]` at 159 and `[t3.cases]` as carried over, since the
+tag-push run had no failure and its proposal is empty and the rotation run
+observed no drift, while the final head still needs a successful verdict
+run before merge. The reply is the text of a button the agent wrote, which
+the owner chose; the agent also wrote the list and each item's options,
+including A31's.
+
+Some of this entry was written after that approval, and none of A31 to
+A34 names it: in 0faaea28, besides the SHA256 sentence, the
+evidence-status sentence saying the receipts were downloaded on
+2026-10-19 and that each ZIP's SHA256 equals the one its upload step logs
+(it replaced "were not downloaded, and they are kept for seven days") and
+the sentence that the work machine only downloaded and hashed them (it
+replaced "Nothing ran on the work machine"); in 36919754, the
+acceptance-file bullet's "becomes" (it was "must become") and its sentence
+that the owner authorized the agent to change exactly that line, which
+replaced "the agent's commits do not touch it" and "The owner's
+disposition of this line is asked in the PR", and the approval paragraph
+above. The maintainer approved these on 2026-10-19 with 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended"), item B3, option A,
+「一併核可」 ("approve them together"): the sentences that write an
+already approved option into the documents, or turn a pending owner
+decision into a decided one, are approved together rather than one by
+one, and for this PR the approval record names the sentences D-162 gained
+after the approval. That reply, too, is the text of a button the agent
+wrote, which the owner chose; the agent also wrote the round-2 list and
+B3's options. The commit that adds this paragraph also adds, from a
+read-only claims review, the note that D-153 is unused and the sentence
+on R56's cited reason in the first paragraph, and narrows A33's commit
+reference above to its sentence; these correct facts and change no
+decision, and no approval item names them.

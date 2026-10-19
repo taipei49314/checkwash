@@ -58,5 +58,9 @@
 # 37344879525) names all nine stale, and the rotation removes them. No entry
 # remains. The agent wrote this change in the rotation PR; the maintainer
 # approves it there.
+#
+# 2026-10-19: rotated to v0.8.0 (docs/RELEASING.md step 9, D-162). The
+# file holds no entry and the rotation run names none stale, so only the
+# baseline changes.
 
-baseline = "v0.7.0"
+baseline = "v0.8.0"

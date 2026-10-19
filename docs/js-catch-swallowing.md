@@ -94,10 +94,15 @@ Named residuals, which keep the exemption:
 - the Python counterpart (`except Exception: assert True`), which is not
   covered by this rule.
 
-Literal, message-argument and proved self-comparison spellings are expected
-to close through a shared always-pass helper (#429), keyed on the evaluated
-outcome, never on the TAUTOLOGY strength rating. #429's first change rates
-them TAUTOLOGY but adds no such helper, so they stay residuals here. A catch holding only AVA or
+Number and string literal equality, `toEqual(true)`, `toStrictEqual(true)`,
+loose `assert.equal(true, true)`, an unshadowed
+`expect(undefined).toBeUndefined()`, non-boolean literal truthiness, a
+literal message argument and proved self-comparison (one binding under
+`toBe` or `strictEqual`, never two calls with the same text) are to close
+through #513 (431.Q5 (a')), keyed on the evaluated outcome, never on the
+TAUTOLOGY strength rating. #429 rates the literal spellings TAUTOLOGY but
+added no shared always-pass helper for this proof, so they stay residuals
+here until #513 lands. The other spellings above stay named residuals. A catch holding only AVA or
 tap `t.pass()` is already reported, because `t.pass()` is not an assertion.
 Equal-count exchange of two `catch always-passing assertion` sites, like
 that of two `catch assertion` sites, remains a residual of the multiset
