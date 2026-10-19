@@ -2499,25 +2499,64 @@ def _template_rows(text: str, start: int) -> tuple[int | None, tuple[ParamTable,
     return count, (ParamTable(tuple("#" + names[column] for column in order), rows, (False,) * count),), "keyed"
 
 
-def _in_template(text: str, code: bytearray, name: str) -> bool:
-    """Does a template literal mention `name`? A substitution runs, and the token stream does not see it."""
-    for match in re.finditer(r"(?<![\w$])" + re.escape(name) + r"(?![\w$])", text):
-        position = match.start()
-        if code[position]:
-            continue
-        while position > 0 and not code[position - 1]:
-            position -= 1
-        if text[position] == "`":
-            return True
-    return False
+class _ConstReads:
+    """The file-wide reads `_const_rows` makes, each built once per file (#235).
+
+    `_const_rows` runs for every table whose argument is a bare name, and it
+    reads every mention of that name and every template literal. Scanning
+    the whole file again for each such table made the parse quadratic in
+    tables; these indexes are built on the first such table, so a file with
+    none pays nothing.
+    """
+
+    def __init__(self, text: str, code: bytearray, bindings: Bindings,
+                 table_arguments: dict[int, int]) -> None:
+        self.text = text
+        self.code = code
+        self.bindings = bindings
+        # Where each table call's one argument starts -> where it ends.
+        self.table_arguments = table_arguments
+        self._mentions: dict[str, list[int]] | None = None
+        self._template_words: set[str] | None = None
+
+    def mentions(self, name: str) -> list[int]:
+        """The indexes of the tokens spelled `name`, in order."""
+        if self._mentions is None:
+            self._mentions = {}
+            for index, (token, _start, _end) in enumerate(self.bindings.tokens):
+                self._mentions.setdefault(token, []).append(index)
+        return self._mentions.get(name, [])
+
+    def in_template(self, name: str) -> bool:
+        """Does a template literal mention `name`? A substitution runs, and the token stream does not see it.
+
+        A mention is the whole word anywhere in a run of masked text that
+        opens with a backtick: the template, its substitutions, and any
+        comment or literal that follows it unbroken.
+        """
+        if self._template_words is None:
+            text, code = self.text, self.code
+            words: set[str] = set()
+            start = text.find("`")
+            while start >= 0:
+                if code[start] or (start > 0 and not code[start - 1]):
+                    start = text.find("`", start + 1)  # code, or inside a run
+                    continue
+                end = start + 1
+                while end < len(text) and not code[end]:
+                    end += 1
+                words.update(re.findall(r"[\w$]+", text[start:end]))
+                start = text.find("`", end)
+            self._template_words = words
+        return name in self._template_words
 
 
 # Words that continue an expression on the next line, after a literal.
 _CONTINUING_WORDS = frozenset({"in", "instanceof", "as", "satisfies"})
 
 
-def _const_rows(text: str, code: bytearray, bindings: Bindings, name: str, position: int,
-                table_arguments: dict[int, int]) -> int | None:
+def _const_rows(text: str, bindings: Bindings, name: str, position: int,
+                reads: _ConstReads) -> int | None:
     """Where the array literal that a table's argument `name` reads opens, one hop away, or None (428.Q1b (iii)).
 
     `name` must read a `const` this file declares, not exported, bound to an
@@ -2527,13 +2566,15 @@ def _const_rows(text: str, code: bytearray, bindings: Bindings, name: str, posit
     other read could change its rows (`CASES.splice(0)`,
     `CASES.length = 0`, `CASES.push(row)`, `reset(CASES)`), and so could one
     in a template literal's substitution, which the token stream does not
-    see.
+    see. The mentions and the template words come from `reads`, built once
+    per file.
     """
     scope = bindings._declaration_scope(name, position)
     if scope is None or bindings._written((name,), position):
         return None
-    sites = [index for index, (token, _start, _end) in enumerate(bindings.tokens)
-             if token == name and bindings.token(index - 1) == "const" and bindings.scope_at[index - 1] == scope]
+    mentions = reads.mentions(name)
+    sites = [index for index in mentions
+             if bindings.token(index - 1) == "const" and bindings.scope_at[index - 1] == scope]
     if len(sites) != 1 or bindings.token(sites[0] - 2) in {"export", "declare"}:
         return None
     site = sites[0]
@@ -2551,18 +2592,20 @@ def _const_rows(text: str, code: bytearray, bindings: Bindings, name: str, posit
             "\n" in text[bindings.tokens[after - 1][2]:bindings.tokens[after][1]]
             and re.fullmatch(NAME, following) and following not in _CONTINUING_WORDS):
         return None
-    for index, (token, start, _end) in enumerate(bindings.tokens):
-        if token != name or index == site or bindings.token(index - 1) in {".", "?."}:
+    for index in mentions:
+        if index == site or bindings.token(index - 1) in {".", "?."}:
             continue
-        if bindings._declaration_scope(name, start) == scope and table_arguments.get(start) != start + len(name):
+        start = bindings.tokens[index][1]
+        if (bindings._declaration_scope(name, start) == scope
+                and reads.table_arguments.get(start) != start + len(name)):
             return None
-    if _in_template(text, code, name):
+    if reads.in_template(name):
         return None
     return bindings.tokens[opening][1]
 
 
 def _table_rows(text: str, code: bytearray, bindings: Bindings, declaration: _Declaration,
-                table_arguments: dict[int, int]) -> tuple[int | None, tuple[ParamTable, ...], str | None]:
+                reads: _ConstReads) -> tuple[int | None, tuple[ParamTable, ...], str | None]:
     """(row count, row table, column shape) of a `.each`/`.for` table (#428).
 
     The count is None when the rows cannot be counted (428.Q1b (iii)): a
@@ -2578,7 +2621,7 @@ def _table_rows(text: str, code: bytearray, bindings: Bindings, declaration: _De
         return _template_rows(text, span[0])
     start, end = _trim(text, code, span)
     if start < end and re.fullmatch(NAME, text[start:end]):
-        opening = _const_rows(text, code, bindings, text[start:end], start, table_arguments)
+        opening = _const_rows(text, bindings, text[start:end], start, reads)
         if opening is None:
             return None, (), None
         literal = _literal_items(text, code, opening)
@@ -2680,7 +2723,7 @@ def _columns_read(bindings: Bindings, source: str | None, position: int, scope: 
 
 
 def _read_table(text: str, code: bytearray, bindings: Bindings, declaration: _Declaration,
-                side: UnitSide, table_arguments: dict[int, int]) -> None:
+                side: UnitSide, reads: _ConstReads) -> None:
     """A `.each`/`.for` unit's rows, and the columns each of its assertions names (#428).
 
     The rows become `param_cases` and one `ParamTable` (428.Q1 (a)); rows
@@ -2689,7 +2732,7 @@ def _read_table(text: str, code: bytearray, bindings: Bindings, declaration: _De
     operand names directly and in `left_names` those its subject names
     (Q2b (a)), which nothing else in this frontend records.
     """
-    count, tables, shape = _table_rows(text, code, bindings, declaration, table_arguments)
+    count, tables, shape = _table_rows(text, code, bindings, declaration, reads)
     side.param_cases = count
     side.param_rows = tables
     side.param_rows_unknown = count is None
@@ -2732,8 +2775,9 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
     test_body_starts = {d.callback[0] for d in scanned if d.callback is not None}
     # Where each table call's one argument starts and ends, `describe` tables
     # included: the only reads a `const` table may have (`_const_rows`).
-    table_arguments = dict(_trim(text, code, d.rows[1]) for d in declarations
-                           if d.rows is not None and d.rows[0] == "array")
+    const_reads = _ConstReads(text, code, bindings,
+                              dict(_trim(text, code, d.rows[1]) for d in declarations
+                                   if d.rows is not None and d.rows[0] == "array"))
     # What nested units inherit, the file's first focus, and the units that
     # focus stops running.
     ancestors = [d for d in declarations
@@ -2973,7 +3017,7 @@ def parse_javascript(data: bytes, innermost_focus: Callable[[], bool] | None = N
             body_hash=body_hash,
         )
         if declaration.table:
-            _read_table(text, code, bindings, declaration, side, table_arguments)
+            _read_table(text, code, bindings, declaration, side, const_reads)
         units.append(ParsedUnit(qualname=name, span=(declaration.start, unit_end), side=side))
     # A declaration counts with an inline callback, which a runner collects
     # as a test or a suite; a bare `.test(value)` call is a method.
