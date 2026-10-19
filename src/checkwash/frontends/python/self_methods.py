@@ -59,13 +59,13 @@ answer it (ruling 306, 2026-10-14):
   itself (`=`, `|=`, a literal-name setattr), or any of these writes whose
   name is not a literal: a `**` argument or another mapping in `update()`, a
   computed key, a `__setattr__` or `__delattr__` with no literal name, a
-  `setattr` or `delattr` whose target or name is a starred argument
-  (`setattr(*(C, "_check", f))`). A computed-name `setattr`
-  on a plain alias of the receiver or of a class of the order counts as one
-  on it, one hop and only from `x = C`, `x = type(self)` or
-  `x = self.__class__` bound in the call's own scope, a def or lambda around
-  it, or the module; one whose target is reached through a subscript or
-  another call (`globals()["C"]`) counts as one on every class.
+  starred argument or a count neither form takes, or a `setattr` or `delattr`
+  whose target or name is a starred argument (`setattr(*(C, "_check", f))`).
+  A computed-name `setattr` on a plain alias of the receiver or of a class of
+  the order counts as one on it, one hop and only from `x = C`,
+  `x = type(self)` or `x = self.__class__` bound in the call's own scope, a
+  def or lambda around it, or the module; one whose target is reached through
+  a subscript or another call (`globals()["C"]`) counts as one on every class.
 - Sub-Q4: only an undecorated `def` or `async def` resolves, so a
   `staticmethod` or `classmethod` called through the instance does not.
 - Sub-Q6: a name `unittest.TestCase` defines is never followed, in any
