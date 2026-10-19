@@ -170,15 +170,17 @@ either can change the module a test's import resolves to. So do any
 non-generated file under the root `scripts/` directory, read for the pytest
 commands it runs, and any other changed file that large the analysis needs
 as context. A shell shebang gives a file the shape of a runner script, whatever
-its name.
+its name, except a `.py` module or a JS/TS test file.
 From the next minor (unreleased,
 [#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
 the first 200 bytes of a side over the limit to tell, and uses them for
 nothing else; a Git side is streamed and checked against its object id. A
 file that large whose side starts with a shell shebang stops the run, naming
-that side, whatever its suffix, and a file with no extension (a dotfile such
-as `.envrc` counts) without one, such as a `README` or a `LICENSE`, is set
-aside like any document. v0.8.0 reads no byte of such a side, so every file
+that side, whatever its suffix (a `.py` module or a JS/TS test file that
+large stops the run anyway, by its own rule). A file with no extension (a
+dotfile such as `.envrc` counts) without one, such as a `README` or a
+`LICENSE`, is set aside like any document, unless another rule above makes
+it one a detector must read. v0.8.0 reads no byte of such a side, so every file
 with no extension that large stops the run there; on main one still does
 when a Git side is over 64,000,000 bytes, which is not streamed.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
