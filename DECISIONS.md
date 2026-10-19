@@ -12681,8 +12681,8 @@ Evidence status: prepared on a work machine where no pytest, checkwash,
 product or test code ran; CI runs the tests. Added: three `.gwcase` fixtures
 (`self_method_dict_update_rebinding_pos`,
 `self_method_namespace_update_added_pos`,
-`self_method_other_name_update_neg`), labels reviewed before merge, and 72
+`self_method_other_name_update_neg`), labels reviewed before merge, and 75
 collected items in `tests/test_issue502_helper_rebinding_spellings.py`,
 counted from its parametrize lists; no existing test changed. By reading,
-the documented test count becomes 19550 (19475 + 72 + 3); CI's collection
+the documented test count becomes 19553 (19475 + 75 + 3); CI's collection
 checks it, and other open pull requests may change the base.
