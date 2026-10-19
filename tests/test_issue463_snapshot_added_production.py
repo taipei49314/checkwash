@@ -155,7 +155,7 @@ def test_a_new_unrelated_test_silences_only_the_cochange_warning():
     assert findings == [REWRITE]
 
 
-# --- the cost, open for the owner's decision (D-157): a pytest file under golden/ --------
+# --- the cost the owner accepted (D-157): a pytest file under golden/ ---------------------
 
 
 GOLDEN_TEST = "tests/golden/test_x.py"
@@ -180,7 +180,7 @@ def test_a_test_added_for_a_new_module_to_a_pytest_file_under_golden(extra, expe
     # module's symbols silenced the file-scoped form and the new test
     # silenced SNAPSHOT_CODE_COCHANGE, so the first case passed. Pinned as
     # current behaviour, not as a judgement that the edit is dishonest:
-    # whether Q1 (a) accepts this cost is open (D-157, THREATMODEL row 132).
+    # the owner accepted this cost under Q1 (a) (D-157, THREATMODEL row 132).
     ir, findings, verdict = check(GOLDEN_TEST_EDIT, FEATURE, *extra)
     assert [(file.role, file.test_obligations) for file in ir.files if file.path == GOLDEN_TEST] == [
         ("snapshot", True)]
