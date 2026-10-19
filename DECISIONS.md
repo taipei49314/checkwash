@@ -10142,28 +10142,29 @@ R8 and R35):
   hold every commit of the full histories of attrs, click, flask, httpx,
   rich, starlette, uvicorn, werkzeug, scrapy and requests, as frozen on
   2026-10-04, that changes a `conftest.py` or a `skip`/`xfail` line in a
-  test file: 895 commits. So this set's commits in those histories up to
-  that date are among them. The sweep ran the 895, 850 in its d088 batch
-  and 45 in its standard batch; 15 end in exit 2 on both versions and are
-  not measured. The reader never fired on the other 880. How many of them
-  name `exit`, `quit` or `testsfailed` was not counted.
-- **The targeted false-positive set, the rest: queued.** pytest's history
-  beyond the 368 of its 1,559 such commits that D-088 took, aiohttp's
-  history, which D-088 did not take, and the ten histories' commits after
-  D-088's freeze. They run in the combined lab-declared sweep, on the pool
-  or on LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546), with
-  its manifest and engine commits, which the owner approves first. Members
-  are chosen with Git only: the non-merge commits of the twelve histories
-  (the ten, pytest and aiohttp) that add or modify a `conftest.py` whose
-  new content contains `exit`, `quit` or `testsfailed` in any case, less
-  those the v0.8.0 sweep ran. They share one Git-selected list with #432's
-  conftest census (D-137), marked there as this set.
+  test file: 895 commits. So every commit of the targeted set in those
+  histories up to that date is among them. The sweep ran the 895, 850 in
+  its d088 batch and 45 in its standard batch; 15 end in exit 2 on both
+  versions and are not measured. The reader never fired on the other 880.
+  How many of them name `exit`, `quit` or `testsfailed` was not counted.
+- **The targeted false-positive set, the rest: queued.** pytest's conftest
+  commits beyond the 368 that D-088 took of its 1,559 conftest or
+  `skip`/`xfail` commits, aiohttp's history, which D-088 did not take, and
+  the ten histories' commits after D-088's freeze. They run in the
+  combined lab-declared sweep, on the pool or on LAPTOP-01AGNPJU under EC
+  POLICY `checkwash-pju-sweep` (T-546), with its manifest and engine
+  commits, which the owner approves first. Members are chosen with Git
+  only: the non-merge commits of the twelve histories (the ten, pytest and
+  aiohttp) that add or modify a `conftest.py` whose new content contains
+  `exit`, `quit` or `testsfailed` in any case, less those the v0.8.0 sweep
+  ran. They share one Git-selected list with #432's conftest census
+  (D-137), marked there as this set.
   `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
   Each block this reader gives there is read from source. A false block
   reopens #422 (R35) and is fixed through an issue that carries the fix, or
   recorded here as a known false block with a line in
-  `docs/KNOWN-ISSUES-next.md`, as D-145 records #488's. If none fires, this
-  entry says so. The result is added here as #489 added D-144 to D-146's.
+  `docs/KNOWN-ISSUES-next.md`. If none fires, this entry says so. The
+  result is added here as #489 added the #421 sweep to D-144 to D-146.
 
 The agent wrote this entry in the v0.8.0 release PR from the outline in
 #450's description, the ruling and the merged code; the maintainer approved
@@ -10346,18 +10347,18 @@ v0.8.0, so it measures the release, not #452 alone. What covers each part
   content contains `runtest`, `pytest_pyfunc_call`, `TestCase`, or `obj` or
   `_obj` as a word, less those the v0.8.0 sweep ran. So it covers what the
   v0.8.0 sweep did not: aiohttp's conftest history, pytest's beyond the
-  368, and the ten histories' commits after D-088's freeze. The
-  list is chosen with Git only and frozen before approval, so its size is
-  known then; D-136's targeted set shares it (`exit`, `quit`,
-  `testsfailed`). The harness records each member's matching conftest
-  lines, so delegating spellings that never report are seen too. One
-  engine arm that contains #452 is enough. It runs on LAPTOP-01AGNPJU under
-  EC POLICY `checkwash-pju-sweep` (T-546), declared by checkwash-lab, or on
-  the pool when that host is off, with its manifest and engine commit
-  approved by the owner first. A person judges each new runtime-control
-  finding honest or a cheat, and classes the recorded lines by the
-  delegation spellings they show. Until it runs, the combined sweep's
-  declaration and #497 track it.
+  368, and the ten histories' commits after D-088's freeze. The list is
+  chosen with Git only and frozen before approval, so its size is known
+  then. D-136's targeted set joins it, with `exit`, `quit` and
+  `testsfailed` added to the same rule. The harness records each member's
+  matching conftest lines, so delegating spellings that never report are
+  seen too. One engine arm that contains #452 is enough. It runs on
+  LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546), declared
+  by checkwash-lab, or on the pool when that host is off, with its
+  manifest and engine commit approved by the owner first. A person judges
+  each new runtime-control finding honest or a cheat, and classes the
+  recorded lines by the delegation spellings they show. Until it runs, the
+  combined sweep's declaration and #497 track it.
   `NOT_RUN：工作機規則（POLICY work-machine-local），queued for the combined lab-declared sweep, not run yet`.
 - **Real pytest** (R38). CI's nine test legs run four reporting shapes
   (`item.runtest`, class-level `runtest`, `assertEqual` and
@@ -10724,15 +10725,15 @@ here; this paragraph is their record.
   3.000 to 3.218 s, d088 4.750 to 4.968 s, targeted 5.563 to 5.781 s, JS
   2.938 to 3.125 s, with twelve shards in parallel). These are release
   figures, so they are recorded here and not in any one round's entry.
-- **By round.** D-136, D-137 and D-138 never fired. #345's five aiohttp
-  commits still exit 2, and none of the 53 commits v0.7.0 refused at the
-  stand-in node limit is analysed: 39 stop at the subject-replacement
-  pass's own 30,000-node limit and 14 at the step limit (D-131; #345 stays
-  open). #346 and #415 were accepted and closed on these results; #346's
-  own commit, aiohttp `ce32557b72`, still exits 2, now naming
-  `CHANGES/12621.contrib.rst`, a symlink that is not a pytest config. #414
-  and #416 need worktree or subdirectory runs, which this range-mode replay
-  does not make.
+- **By round.** The new detections of D-136, D-137 and D-138 never fired.
+  #345's five aiohttp commits still exit 2, and none of the 53 commits
+  v0.7.0 refused at the stand-in node limit is analysed: 39 stop at the
+  subject-replacement pass's own 30,000-node limit and 14 at the step limit
+  (D-131; #345 stays open). #346 and #415 were accepted and closed on these
+  results; #346's own commit, aiohttp `ce32557b72`, still exits 2, now
+  naming `CHANGES/12621.contrib.rst`, a symlink that is not a pytest
+  config. #414 and #416 need worktree or subdirectory runs, which this
+  range-mode replay does not make.
 - **Not run.** No round's change was measured alone. D-131's ruling item 2
   timings stay as D-131 records them. D-134's real-world rows (Linux
   `python3 -m venv`, a pnpm workspace, an npm tree over 200,000 files) did
