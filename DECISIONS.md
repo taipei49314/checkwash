@@ -10100,7 +10100,8 @@ status in a place other than `pytest_cmdline_main`.
 
 **Residuals.** 422.Q4's spellings, 422.Q5's recipe combined with a run that
 collects nothing, and interpreter start-up files. The Q4 and Q5 follow-up
-issues had not been filed by 2026-10-15.
+issues had not been filed by 2026-10-15; they were filed on 2026-10-18 as
+#494 and #495.
 
 **Merge order.** #432's ruling put #432 first. This round was built first,
 and on 2026-10-14 the maintainer accepted it landing first.
@@ -10287,7 +10288,8 @@ bodies, async hooks, hooks bound by assignment, class plugins, autouse
 fixtures, call-built or attribute-sourced replacements, computed names,
 `__dict__` writes, subclasses, `sys.modules` lookups, `addTypeEqualityFunc`,
 the 64-path-state cap, and others. The fixture, loop and cross-file follow-up
-issues (432.Q2) had not been filed by 2026-10-15.
+issues (432.Q2) had not been filed by 2026-10-15; they were filed together on
+2026-10-18 as #497.
 
 **Pre-registered fallback** (432.Q4), recorded before the sweep as D-060
 recorded its answer: if the sweep finds an honest block from a callback
@@ -10474,7 +10476,7 @@ truthiness (`expect(1).toBeTruthy()`); chai BDD, AVA `t.true(true)` and tap
 guarded assertion fails (`expect(e).toBeDefined()`), and assertions on
 unrelated always-true state; equal-count exchange of two sites with the same
 text; and the Python counterpart. The Python issue (431.Q2) had not been
-filed by 2026-10-15.
+filed by 2026-10-15; it was filed on 2026-10-18 as #496.
 
 **Tests.** `tests/test_issue431_js_catch_literal.py` (70 collected items:
 #401's labels without the catalog-bound test, the IR check made relative,
