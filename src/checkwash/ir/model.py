@@ -131,9 +131,9 @@ class Assertion:
     # producer was read (`UnitSide.fixture_producers`): directly, or through
     # the unit's own assignments (#471). Only an assertion written in the
     # unit's own body, outside a nested def, class or lambda, records any,
-    # and a parameter the body assigns to again is not recorded. Repair
-    # evidence reads the before half's for the finding about it (471 Q3).
-    # Sorted. Optional, so IR_VERSION stays 2.
+    # and a parameter the body binds again, in any form, is not recorded.
+    # Repair evidence reads the before half's for the finding about it
+    # (471 Q3). Sorted. Optional, so IR_VERSION stays 2.
     fixture_reads: tuple[str, ...] = ()
 
 

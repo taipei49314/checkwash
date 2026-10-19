@@ -19,7 +19,12 @@ from types import SimpleNamespace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
-from checkwash.frontends.python.fixture_producers import ProducerScope, import_modules, unit_producers
+from checkwash.frontends.python.fixture_producers import (
+    ProducerScope,
+    _binders as _fixture_binders,
+    import_modules,
+    unit_producers,
+)
 from checkwash.frontends.python.hook_guards import collection_hook_guards, weakest
 from checkwash.frontends.python.own_marks import OwnMarks, reads_marks, resolve as resolve_own_marks
 from checkwash.frontends.python.runtime_controls import runtime_controls
@@ -3224,15 +3229,20 @@ def _collect_unit(
     # scope's: worked out only for a unit that has such a parameter.
     fixture_params = frozenset(param for param, _callee, _modules in producers)
     nested_nodes: set[int] | None = None
+    rebound: frozenset[str] = frozenset()
 
     def fixture_reads(node: ast.AST, names: tuple[str, ...]) -> tuple[str, ...]:
         """The fixture parameters an assertion of the unit's own body reads (471 Q3).
 
         Directly, or through the unit's own assignments (`_resolve_through`).
-        A parameter the body assigns to again holds another value there, and
-        is not counted.
+        A parameter the body binds again holds another value there, and is
+        not counted: one the binding map records (`=`, augmented, annotated
+        or walrus), and one bound any other way in the unit's own scope
+        (`_fixture_binders`: a `for` or comprehension target, `with ... as`,
+        `except ... as`, `del`, an import, `global` or `nonlocal`, a match
+        capture, a nested def or class of that name).
         """
-        nonlocal nested_nodes
+        nonlocal nested_nodes, rebound
         if not fixture_params:
             return ()
         if nested_nodes is None:
@@ -3243,11 +3253,12 @@ def _collect_unit(
                 and isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
                 for inner in ast.walk(scope)
             }
+            rebound = frozenset(param for param in fixture_params if _fixture_binders(func, param))
         if id(node) in nested_nodes:
             return ()
         return tuple(sorted(
             name for name in _resolve_through(names, bindings)
-            if name in fixture_params and name not in bindings
+            if name in fixture_params and name not in bindings and name not in rebound
         ))
 
     # Markers, handlers, calls and patches stay keyed to the unit's own body: a
