@@ -5,8 +5,8 @@ v0.8.0. Nothing on it is released. When the next release is prepared, its
 known-issues page takes these rows over, with what that release measured.
 
 Residuals below were found by reading the code and the pull requests'
-reviews. Unless a row says otherwise, the acceptance sweeps of these
-changes have not run:
+reviews, unless a row names another source. Unless a row says otherwise,
+the acceptance sweeps of these changes have not run:
 `NOT_RUN：工作機規則（POLICY work-machine-local），each sweep runs where the owner approves it`.
 Their false-positive cost is unmeasured.
 
