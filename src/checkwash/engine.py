@@ -105,6 +105,7 @@ from checkwash.roles import (
     _mentions_test_runner,
     _one_hop_runners,
     _runner_shape,
+    _shell_shebang,
     _test_command_manifest,
     _test_commands_changed,
     collectable,
@@ -221,7 +222,24 @@ def _base_unread(change: FileChange) -> UnreadSide | None:
     return next((side for side in change.unread if side.side == "base"), change.unread[0])
 
 
-def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ...],
+def _shebang_side(path: str, sides: tuple[bytes | None, ...],
+                  unread: tuple[UnreadSide, ...]) -> UnreadSide | None:
+    """The first unread side whose prefix gives `path` runner shape (#455).
+
+    `_shell_shebang` reads only the first line within a side's first
+    SHEBANG_PREFIX_BYTES bytes, and an unread side's prefix is those bytes,
+    verified against the blob's object identity for a Git side. So a prefix
+    answers exactly as the whole side would. The path exclusions are
+    `_runner_shape`'s: a Python file, or a JS/TS test file judged on the
+    readable sides, is never a runner by shape. A side whose prefix was not
+    read answers nothing here.
+    """
+    if path.endswith(".py") or is_js_test_file(path, *sides):
+        return None
+    return next((side for side in unread if side.prefix is not None and _shell_shebang(side.prefix)), None)
+
+
+def _detector_must_read(path: str, config: Config, change: FileChange,
                         scope_allow: list[str], listed_setup=None) -> bool:
     """Must a detector read this path's content (#415)?
 
@@ -229,13 +247,16 @@ def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ..
     deletes, renames or edits, whatever its role, because any of them can
     change which provider a test's import resolves to, and every pytest
     configuration at any depth for the search order it sets. It also reads
-    a CI file, a file shaped like a runner script and a file with no
-    extension (for a shebang) as controls that can reorder that search, and
+    a CI file, a file shaped like a runner script and a file with no dot in
+    its name (for a shebang) as controls that can reorder that search, and
     the one-hop scan follows `./build/test.sh` from a changed script into
     whatever it names. None of these skips generated output, so neither does
     this. A runner-shaped file can be promoted to CI by what it says, which
-    an unread side does not show, and a shebang is the only shape a file
-    with no extension has. Collection reads any file under the root
+    an unread side does not show. A shell shebang on an unread side is read
+    from the side's prefix (#455), so it gives runner shape whatever the
+    path's suffix, as it would at any size, and a shebang is the only shape
+    a file with no extension has: such a file refuses only when a side's
+    prefix was not read. Collection reads any file under the root
     `scripts/` directory, unless generated, for the pytest runs a root
     config governs (#196 184.3).
 
@@ -253,15 +274,17 @@ def _detector_must_read(path: str, config: Config, sides: tuple[bytes | None, ..
     base = path.rsplit("/", 1)[-1]
     if path.endswith(".py") or base in _PYTEST_CONFIGS:
         return True
+    sides = (change.before, change.after)
     role = config.role_of(path)
-    if role == "ci" or _runner_shape(path, *sides) or _collection_runner(path):
+    if (role == "ci" or _runner_shape(path, *sides) or _shebang_side(path, sides, change.unread) is not None
+            or _collection_runner(path)):
         return True
     # A shell shebang is the only runner shape an extensionless file has
-    # (`scripts/test`, THREATMODEL 62), and an unread side hides it. A
-    # suffixed file outside the root `scripts/` with a shebang on an unread
-    # side stays set aside: run as `sh x.txt` without the shebang, it was
-    # never a runner either.
-    if "." not in base.lstrip("."):
+    # (`scripts/test`, THREATMODEL 62). Each unread side's prefix answers
+    # that question as the whole side would, so the file is judged like any
+    # other unread path; only a side whose prefix was not read (a Git side
+    # over the stream ceiling) still hides a shebang, and refuses (#455).
+    if "." not in base.lstrip(".") and any(side.prefix is None for side in change.unread):
         return True
     if is_artifact(path):
         return False
@@ -284,9 +307,11 @@ def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: li
 
     A change with a side over the source byte limit holds no bytes for that
     side. If a detector must read either of its paths, the run refuses,
-    naming path, side, size and limit. Otherwise the whole change is set
+    naming path, side, size and limit; a side whose prefix holds the shell
+    shebang is the side named (#455). Otherwise the whole change is set
     aside before any pass: no detector reads it and it earns no repair
-    evidence, neither as an opaque change nor as changed symbols (#419).
+    evidence, neither as an opaque change nor as changed symbols (#419). An
+    unread side's prefix only ever answers the shebang question.
 
     The setup files the base package.json lists are asked last: package.json
     must be read itself, so by then it is readable in the diff or unchanged.
@@ -298,9 +323,8 @@ def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: li
         return sorted({change.path.replace("\\", "/"), (change.old_path or change.path).replace("\\", "/")})
 
     for change in unread:
-        sides = (change.before, change.after)
-        if any(_detector_must_read(path, config, sides, scope_allow) for path in paths(change)):
-            raise change.unread[0].refusal()
+        if any(_detector_must_read(path, config, change, scope_allow) for path in paths(change)):
+            raise _refused_side(change, paths(change)).refusal()
     listed: list[frozenset[str]] = []
 
     def listed_setup() -> frozenset[str]:
@@ -309,10 +333,45 @@ def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: li
         return listed[0]
 
     for change in unread:
-        sides = (change.before, change.after)
-        if any(_detector_must_read(path, config, sides, scope_allow, listed_setup) for path in paths(change)):
-            raise change.unread[0].refusal()
+        if any(_detector_must_read(path, config, change, scope_allow, listed_setup) for path in paths(change)):
+            raise _refused_side(change, paths(change)).refusal()
     return readable, unread
+
+
+def _refused_side(change: FileChange, paths: list[str]) -> UnreadSide:
+    """The side a size refusal of `change` names (#415, #455).
+
+    An unread side whose prefix holds a shell shebang that gives one of the
+    change's paths runner shape, so the side that holds the shebang is
+    named; otherwise the first unread side, as before.
+    """
+    sides = (change.before, change.after)
+    for path in paths:
+        side = _shebang_side(path, sides, change.unread)
+        if side is not None:
+            return side
+    return change.unread[0]
+
+
+def _shebang_free(unread_changes: list[FileChange]) -> frozenset[str]:
+    """The paths of set-aside changes no side of which holds a shell shebang (#455).
+
+    A readable side is known whole and an unread side by its prefix, which
+    answers `_shell_shebang` as the whole side would; a side without a
+    prefix is not known, so its change is left out. The runtime-provider
+    pass skips such a path where it would read a dot-less path for a
+    shebang: none is there, so the path holds no runner invocation on either
+    side, and reading it would refuse, since its head bytes are not its base
+    side.
+    """
+    free: set[str] = set()
+    for change in unread_changes:
+        if any(side.prefix is None or _shell_shebang(side.prefix) for side in change.unread):
+            continue
+        if _shell_shebang(change.before) or _shell_shebang(change.after):
+            continue
+        free.update(path.replace("\\", "/") for path in (change.path, change.old_path) if path)
+    return frozenset(free)
 
 
 def _guard_unread_reads(reader, unread_changes: list[FileChange], *, batch: bool = False):
@@ -684,6 +743,7 @@ def build_ir(
         head_batch_reader=root_batch_reader,
         include_equivalent=True,
         config_evidence=config_evidence,
+        shebang_free=_shebang_free(unread_changes),
     )
     if config_evidence is not None:
         reported_hits = []
