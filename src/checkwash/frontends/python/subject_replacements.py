@@ -642,8 +642,8 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                 or not change.before or not change.after):
             continue
         trees = reads = None
-        # The parameterized-helper checks, and the `math.gcd` import authority
-        # per target and old callee, kept for the file's tests (#469).
+        # The parameterized-helper checks, and the parts of the `math.gcd`
+        # import authority, each kept once for the file's tests (#469).
         parameterized, authorities = {}, {}
         for unit in file.units:
             if unit.before is None or unit.after is None or unit.delta is None:
