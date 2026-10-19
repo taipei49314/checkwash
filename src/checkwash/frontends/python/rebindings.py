@@ -147,6 +147,25 @@ def _is_handler(arm) -> bool:
     return isinstance(arm, tuple) and arm[0] == "handler"
 
 
+def _binds_dunder(stmt: ast.stmt) -> bool:
+    """Does this class-body statement bind a dunder name?
+
+    Creating a class reads some of them from its namespace and raises on a
+    bad value (`__slots__ = 1`, `__qualname__ = 1`, `__classcell__ = 1`, or
+    `__slots__ = "a"` beside `a = 1`), so a body that binds one may raise
+    (#499).
+    """
+    if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        names = [stmt.name]
+    elif isinstance(stmt, ast.Assign):
+        names = [target.id for target in stmt.targets if isinstance(target, ast.Name)]
+    elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+        names = [stmt.target.id]
+    else:
+        return False
+    return any(len(name) > 4 and name.startswith("__") and name.endswith("__") for name in names)
+
+
 def _chain(value: ast.AST) -> tuple[tuple[ast.AST, ...], ast.AST]:
     """`f(g(x))` as its wrappers, outermost first, and the innermost value.
 
@@ -280,9 +299,10 @@ class _Walk:
             notes = [stmt.returns, *(arg.annotation for arg in every if arg is not None)]
             return all(note is None or isinstance(note, ast.Constant) for note in notes)
         if isinstance(stmt, ast.ClassDef):
+            # Creating the class may raise on a dunder name its body binds.
             return (
                 not (stmt.decorator_list or stmt.bases or stmt.keywords or getattr(stmt, "type_params", None))
-                and all(self.quiet(inner) for inner in stmt.body)
+                and all(self.quiet(inner) and not _binds_dunder(inner) for inner in stmt.body)
             )
         if isinstance(stmt, ast.Assign):
             return isinstance(stmt.value, ast.Constant) and all(isinstance(t, ast.Name) for t in stmt.targets)
