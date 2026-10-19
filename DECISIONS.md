@@ -12592,8 +12592,8 @@ owner approved all four on 2026-10-19:
    that a lambda's parameters or a comprehension's targets bind within the
    assertion is no read, and a parameter all of whose occurrences there are
    such names is not counted, even through a local the assertion reads
-   (`assertion_names`; `lambda-parameter-of-that-name`). The same held
-   through the unit's own assignments, where
+   (`assertion_names`; `lambda-parameter-of-that-name`). That fix did not
+   reach the unit's own assignments, where
    `result = (lambda ledger: ledger.fee)(make())` then `assert result == 5`
    still read `ledger` (found in the round-2 review, fixed under C2): now a
    name that a lambda's parameters or a comprehension's targets bind within
