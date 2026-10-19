@@ -15468,8 +15468,16 @@ only its base side is), and a suffixed file whose shell shebang is only on
 an oversized side newly exits 2. For attackers, the second closes the
 base-side gap: an existing `ci/run.txt` that `sh ci/run.txt`
 runs, over the limit, whose head drops the shebang and the test command.
-The first gives an attacker the answer a small file without a shebang gets,
-with less evidence, since a set-aside change earns none. Each streamed Git
+That closure holds for the required range-mode check. In the Stop hook
+(`--format hook-json`), when only such a file's base side is over the
+limit, as when the session shrinks or deletes that `ci/run.txt`, the run
+now gets the non-blocking "not analysed" message (exit 0, no decision; the
+class #456 ruling Q3 keeps for a base side alone, THREATMODEL row 128)
+where the base gave a verdict, so a weakened test beside it no longer
+blocks the stop; when its head or working-tree side is over the limit too,
+#456's size block blocks it. The first gives an attacker the answer a small
+file without a shebang gets, with less evidence, since a set-aside change
+earns none. Each streamed Git
 side is read once in full: in range mode one more `git cat-file --batch`
 for each tree that holds such a side, whatever their number; in worktree
 mode one more for each oversized base side, the same `cat-file --batch`
@@ -15504,7 +15512,7 @@ aside, and the weakened test beside it blocks the stop as a finding, where
 the row asserts #456's size block. It is not changed in this PR; it waits
 for the owner's ruling. Nothing under `tests/gates` changes.
 
-**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 81 collected
+**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 82 collected
 items, counted from its parametrize lists: the prefix against the whole
 side (8) and equality (1); the engine's rows (10 set aside, 9 refusing and
 naming the shebang side, 6 other rules, 1 without a prefix); no repair
@@ -15512,13 +15520,15 @@ evidence with prefixes, test_issue415's unread rows and a README (5), and
 beside several set-aside documents (1); the provider pass (3); the
 snapshots, the working-tree read bound, the ceiling and the stream's
 protocol (2, 1, 2, 1, 4); the git processes (3); and the CLI in range,
-worktree and hook mode (24), where a shell shebang on an unread side
-refuses for every status the issue's acceptance names. By reading, 30 of
-the 81 pin behaviour the base already has, such as the shebang check
+worktree and hook mode (25), where a shell shebang on an unread side
+refuses for every status the issue's acceptance names, and the Stop hook
+keeps the "not analysed" message when only a suffixed runner's base side
+is over the limit. By reading, 30 of the 82 pin behaviour the base
+already has, such as the shebang check
 itself, the other must-read rules and refusals the base names the same
 way; on the base they fail only because the module imports names it
 lacks. No `.gwcase` fixture is added: the case format has no unread
-side. By reading, the documented test count becomes 20164 (20083 + 81);
+side. By reading, the documented test count becomes 20165 (20083 + 82);
 CI's collection checks it.
 
 **Versions.** No rule id, severity or machine-output field changes, so
