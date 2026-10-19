@@ -12538,10 +12538,14 @@ control beside only an inert file says `COLLECTION_CONTROL_UNEXPLAINED`
 (D-066 counts inert files), and a unit finding in the same diff says
 `NO_PROD_CHANGE_IN_DIFF`.
 
-**Existing pins that move, by reading.** None is changed in this PR. CI on
-the PR is the authority, and it may show others. Each moves from
-`NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE`, with its inputs,
-severity and de-escalators unchanged:
+**Existing pins that move.** CI on 4352949c (ci run 39219097422, every
+test job, and docs suite run 39219097558) failed on exactly the 34
+expectations below and on no other, the same set in every job, each
+printing the same finding with only the label changed. The owner approved
+each move by name (below), and this PR re-pins them in one commit
+(353e91d4). Each moves from `NO_PROD_CHANGE_IN_DIFF` to
+`PROD_CHANGE_NOT_EVIDENCE`, with its inputs, severity and de-escalators
+unchanged:
 - A readable Python production edit or deletion that the finding's evidence
   does not reach (19 fixtures, 20 findings): `dead_prod_line_pos`,
   `deleted_prod_unrelated_pos`, `evidence_annotation_neg`,
@@ -12576,7 +12580,8 @@ severity and de-escalators unchanged:
   condition they move. A Git diff does not list an unchanged file, except
   for a mode-only change. In these fixtures' own terms the new sentence is
   false, and the ruling's size estimate expected unchanged paths not to
-  move.
+  move. Their label is an artifact of the fixture harness, not a claim
+  about a real diff, and their moves are approved as such (below).
 - One pytest row:
   `tests/test_test_support_paths.py::test_test_data_moved_into_production_was_not_production_at_base`
   (`src/__tests__/data.json` renamed to `src/data.json`: the new path is
@@ -12599,16 +12604,18 @@ action's `action.yml`; `lockfile`: `requirements.txt`; `guardrail`:
 (`renamed_from_test`; a `.gwcase` cannot express a rename, since
 `cases.case_to_changes` sets no `old_path`).
 
-**Not settled by the ruling; for the owner's decision:**
-- The four byte-identical fixtures. Options: approve their moves as above;
-  or have the engine skip a byte-identical change when it records
-  `prod_files_changed`, which is wider than this ruling, since D-066's label
-  and `SNAPSHOT_CODE_COCHANGE` read the same list and the IR would change.
+**Not settled by the ruling; the owner decided each (below):**
+- The four byte-identical fixtures. Their moves are approved, and their new
+  label is recorded as a harness artifact (above). The engine does not skip
+  a byte-identical change when it records `prod_files_changed`: that
+  option was wider than this ruling, since D-066's label and
+  `SNAPSHOT_CODE_COCHANGE` read the same list and the IR would change.
 - The seven JS setup-file fixtures. By Q2 they take the new label, as Q2
   says a production file that runs the test suite does. Their only
   production-role changes are the carrier the finding reports and, in
   `js_setup_file_added_with_listing_pos`, the `package.json` that lists it,
-  so the sentence points the reader at the stand-in itself.
+  so the sentence points the reader at the stand-in itself. The owner
+  approved their moves by name with the rest.
 
 **Residuals, stated.** The label says that production changed and that no
 evidence the finding may take reached it; it does not say why. A production
@@ -12636,9 +12643,12 @@ release-note line that names the new label; no release is authorized
 four Q4 approves, none with a `bypass:` line:
 - Pin 1, `prod_change_not_evidence_hardcoded_pos`: #471's `pricing`
   example, `EXPECTED_VALUE_HARDCODED` high with the new label beside
-  `EXPECTED_VALUE_CHANGED` warn with `PACKAGE_REPAIR`. If #471's fix lands
-  first with `hardcoded_package_only_pos`, the same shape, this pin is
-  dropped and that fixture's move goes to the stop (Q4).
+  `EXPECTED_VALUE_CHANGED` warn with `PACKAGE_REPAIR`. If #471's fix
+  (#522) merges first and brings `hardcoded_package_only_pos`, the same
+  shape, this pin is dropped (Q4), and that fixture's
+  `EXPECTED_VALUE_HARDCODED` expectation moves from
+  `NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE` without a further
+  stop: the owner approved that move by name in advance (below).
 - Pin 2, `prod_change_not_evidence_unchanged_caller_pos`: #420's
   reproduction with `render` in an unchanged module, `ASSERT_WEAKENED` high
   with the new label.
@@ -12649,7 +12659,7 @@ Pin 3, a JS/TS test weakened beside a Python-only production edit, is not
 added: `js_test_in_expected_dir_weakened_with_prod_edit_pos` already has
 that shape (a `node:test` file weakened beside a Python-only edit to
 `app/util.py`), so by Q4 no duplicate is added and that fixture's move,
-listed above, goes to the stop.
+listed above, went to the stop and was approved by name.
 
 Seven collected items in `tests/test_issue473_e1_label.py` pin the edges: an
 inert file alone (`LICENSE`, `.gitignore`, `CITATION.cff`) keeps the old
@@ -12659,13 +12669,14 @@ change keeps its label beside a readable edit; and an unguarded suite
 control beside only an inert file keeps `COLLECTION_CONTROL_UNEXPLAINED`.
 None is under `tests/gates`. By reading, the documented test count becomes
 19485 (19475 + 10: three fixtures, each one item of
-`tests/test_cases_runner.py::test_case`, and seven items); other open PRs
-move it too, which is resolved at merge time.
+`tests/test_cases_runner.py::test_case`, and seven items), the number CI
+on 4352949c collected; the re-pins add none. Other open PRs move it too,
+which is resolved at merge time.
 
 **Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
 later acceptance sweep that compares escalators reports label-only
 differences as their own class.
-`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run, and the list of moving pins is by reading until CI on the PR shows it`.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and no test, checkwash run or sweep was run on the work machine; the list of moving pins and the collected count are the ones CI on 4352949c showed`.
 
 The agent wrote this entry in #473's fix PR as a draft for the owner's
 approval of the wording, of the two points above and of each existing
