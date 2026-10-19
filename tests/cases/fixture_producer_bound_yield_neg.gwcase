@@ -1,0 +1,40 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+title: a conftest fixture that binds the call to one local and yields it counts through that call
+origin: ruling 471 Q1 (c): `book = Ledger()`, then `yield book`, is one plain local binding of the
+origin2: producer; the teardown call after the yield is not the producer. The test file imports nothing,
+origin3: so the producer is matched against the conftest's own imports (D-046). Before #471 both findings
+origin4: blocked: no call of the test reaches Ledger, and no import gives EXPECTED_VALUE_CHANGED its package credit.
+=== before: billing.py ===
+class Ledger:
+    fee = 5.0
+
+    def close(self):
+        return None
+=== after: billing.py ===
+class Ledger:
+    fee = 7.5
+
+    def close(self):
+        return None
+=== before: tests/test_billing.py ===
+def test_fee(ledger):
+    assert ledger.fee == 5.0
+=== after: tests/test_billing.py ===
+def test_fee(ledger):
+    assert ledger.fee == 7.5
+=== head: tests/conftest.py ===
+import pytest
+
+from billing import Ledger
+
+
+@pytest.fixture
+def ledger():
+    book = Ledger()
+    yield book
+    book.close()
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

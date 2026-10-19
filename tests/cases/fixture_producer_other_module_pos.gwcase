@@ -1,0 +1,41 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+title: a producer imported from one module lends nothing for a same-named class changed in a sibling module
+origin: ruling 471 Q1 (c), the producer resolved through the fixture file's own imports: the conftest
+origin2: imports Provider from shop.a, and the diff changes shop.b.Provider. The changed module is not
+origin3: reachable from shop.a (THREATMODEL row 35's same-package collision, D-046), so both findings
+origin4: block. The test file imports nothing, so EXPECTED_VALUE_CHANGED has no package credit either.
+=== before: shop/b.py ===
+class Provider:
+    @property
+    def default_voice(self):
+        return "rachel"
+=== after: shop/b.py ===
+class Provider:
+    @property
+    def default_voice(self):
+        return "matilda"
+=== before: tests/test_voices.py ===
+def test_default_voice(provider):
+    assert provider.default_voice == "rachel"
+=== after: tests/test_voices.py ===
+def test_default_voice(provider):
+    assert provider.default_voice == "matilda"
+=== head: shop/a.py ===
+class Provider:
+    @property
+    def default_voice(self):
+        return "rachel"
+=== head: tests/conftest.py ===
+import pytest
+
+from shop.a import Provider
+
+
+@pytest.fixture
+def provider():
+    return Provider()
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

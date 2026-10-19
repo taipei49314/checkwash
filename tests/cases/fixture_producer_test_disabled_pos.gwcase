@@ -1,0 +1,43 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 471
+title: a deleted test that requested the fixture takes no evidence from the fixture's producer
+origin: ruling 471 Q4 (a): every oracle rule that takes symbol evidence reads a fixture's producer
+origin2: except TEST_DISABLED, as for the T1.9 helper hop. The deleted test's assertion read `ledger`,
+origin3: whose producer Ledger the diff changes; a deleted test beside a rewritten production body is
+origin4: the local-rewrite escort, not repair (prod_symbol_removed_local_rewrite). Blocks.
+=== before: billing.py ===
+class Ledger:
+    def total(self, items):
+        return sum(items)
+
+    def count(self):
+        return 0
+=== after: billing.py ===
+class Ledger:
+    def total(self, items):
+        return round(sum(items), 2)
+
+    def count(self):
+        return 0
+=== before: tests/test_billing.py ===
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) == 100.0
+
+
+def test_count(ledger):
+    assert ledger.count() == 0
+=== after: tests/test_billing.py ===
+def test_count(ledger):
+    assert ledger.count() == 0
+=== head: tests/conftest.py ===
+import pytest
+
+from billing import Ledger
+
+
+@pytest.fixture
+def ledger():
+    return Ledger()
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]

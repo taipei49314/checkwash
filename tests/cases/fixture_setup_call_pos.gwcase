@@ -1,0 +1,37 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 471
+title: a setup call in a fixture's body is not its producer and lends no evidence
+origin: ruling 471 Q1 (c), the analysis's Q1 cheat: the fixture calls init_db() and returns Ledger(),
+origin2: and the diff keeps a no-op edit in init_db only. Only the producer, Ledger, counts, and it did
+origin3: not change, so the weakened assertion blocks. Under Q1 (b) every call in the fixture's body would
+origin4: have counted. An honest change in a setup call is the stated residual of the same rule.
+=== before: app/db.py ===
+def init_db():
+    return []
+=== after: app/db.py ===
+def init_db():
+    return [] + []
+=== before: tests/test_billing.py ===
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) == 100.0
+=== after: tests/test_billing.py ===
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) > 0
+=== head: app/ledger.py ===
+class Ledger:
+    def total(self, items):
+        return sum(items)
+=== head: tests/conftest.py ===
+import pytest
+
+from app.db import init_db
+from app.ledger import Ledger
+
+
+@pytest.fixture
+def ledger():
+    init_db()
+    return Ledger()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

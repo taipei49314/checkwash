@@ -1,0 +1,100 @@
+=== meta ===
+rule: EXPECTED_VALUE_HARDCODED
+issue: 471
+title: the reduced case's tests take the fixture's producer from the conftest as it was before a diff that also edits it
+origin: #471: hardcoded_via_conftest_fixture_neg's tests, with tests/conftest.py also changed in the same
+origin2: diff, as in punt-labs/langlearn-tts b4bc4e63 (MIT): its mock voice list moves from rachel to
+origin3: matilda. The fixture is read from the before side, where `elevenlabs_provider` returns
+origin4: ElevenLabsProvider(client=...) as it does after. The mock data is fixture data (#425, deferred
+origin5: in #504) and is not read here. All six findings take repair evidence.
+=== before: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "rachel"
+
+    def get_default_voice(self, language: str) -> str:
+        return self.default_voice
+=== after: src/langlearn_tts/providers/elevenlabs.py ===
+class ElevenLabsProvider:
+    def __init__(self, client=None):
+        self.client = client
+
+    @property
+    def default_voice(self) -> str:
+        return "matilda"
+
+    def get_default_voice(self, language: str) -> str:
+        return self.default_voice
+=== before: tests/conftest.py ===
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class FakeClient:
+    voices = ["rachel", "adam"]
+
+
+@pytest.fixture
+def mock_elevenlabs_client():
+    return FakeClient()
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client):
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== after: tests/conftest.py ===
+import pytest
+
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class FakeClient:
+    voices = ["matilda", "adam"]
+
+
+@pytest.fixture
+def mock_elevenlabs_client():
+    return FakeClient()
+
+
+@pytest.fixture
+def elevenlabs_provider(mock_elevenlabs_client):
+    return ElevenLabsProvider(client=mock_elevenlabs_client)
+=== before: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderName:
+    def test_default_voice(self, elevenlabs_provider):
+        assert elevenlabs_provider.default_voice == "rachel"
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_get_default_voice_any_language(self, elevenlabs_provider):
+        assert elevenlabs_provider.get_default_voice("de") == "rachel"
+        assert elevenlabs_provider.get_default_voice("ja") == "rachel"
+=== after: tests/test_elevenlabs_provider.py ===
+from langlearn_tts.providers.elevenlabs import ElevenLabsProvider
+
+
+class TestElevenLabsProviderName:
+    def test_default_voice(self, elevenlabs_provider):
+        assert elevenlabs_provider.default_voice == "matilda"
+
+
+class TestElevenLabsProviderLanguageSupport:
+    def test_get_default_voice_any_language(self, elevenlabs_provider):
+        assert elevenlabs_provider.get_default_voice("de") == "matilda"
+        assert elevenlabs_provider.get_default_voice("ja") == "matilda"
+=== expect ===
+[{"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderName.test_default_voice"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"},
+ {"rule": "EXPECTED_VALUE_HARDCODED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderName.test_default_voice"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"},
+ {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_get_default_voice_any_language"}]

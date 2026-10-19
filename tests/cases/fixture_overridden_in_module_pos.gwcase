@@ -1,0 +1,69 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 471
+title: the module's own fixture overrides the conftest's, so only its producer counts
+origin: ruling 471 Q2 (a), resolved as pytest resolves fixtures: the test module defines `ledger`, which
+origin2: requests the conftest's `ledger` (override and extend) and returns Archive(ledger). The test
+origin3: reaches the module's fixture, whose producer Archive is unchanged; the conftest's producer
+origin4: Ledger, which the diff edits, is a fixture of a fixture and is not followed. Blocks.
+=== before: billing.py ===
+class Ledger:
+    def total(self, items):
+        return sum(items)
+
+
+class Archive:
+    def __init__(self, ledger):
+        self.source = ledger
+
+    def total(self, items):
+        return 0.0
+=== after: billing.py ===
+class Ledger:
+    def total(self, items):
+        return sum(items) + 0
+
+
+class Archive:
+    def __init__(self, ledger):
+        self.source = ledger
+
+    def total(self, items):
+        return 0.0
+=== before: tests/test_billing.py ===
+import pytest
+
+from billing import Archive
+
+
+@pytest.fixture
+def ledger(ledger):
+    return Archive(ledger)
+
+
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) == 100.0
+=== after: tests/test_billing.py ===
+import pytest
+
+from billing import Archive
+
+
+@pytest.fixture
+def ledger(ledger):
+    return Archive(ledger)
+
+
+def test_total(ledger):
+    assert ledger.total([50.0, 50.0]) > 0
+=== head: tests/conftest.py ===
+import pytest
+
+from billing import Ledger
+
+
+@pytest.fixture
+def ledger():
+    return Ledger()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
