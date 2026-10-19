@@ -26,9 +26,11 @@ def detect(ir: IR) -> list[Finding]:
     # (463.Q3 (a)). A Python production file the diff adds is not an
     # implementation change here (463.Q1 (a)): nothing in a brand-new file
     # explains rewriting an existing stored expectation, which is why
-    # repair-evidence clause 3 and PACKAGE_REPAIR refuse new code too. A
-    # comment-only production edit does not qualify either: it changes no
-    # symbol.
+    # repair-evidence clause 3 and PACKAGE_REPAIR refuse new code too. The
+    # cost, open for the owner (D-157): a pytest file kept under a snapshot
+    # directory is a stored expectation too (#219), so a test added there for
+    # a new module now reports this. A comment-only production edit does not
+    # qualify either: it changes no symbol.
     if ir.globals.prod_opaque_change or _existing_prod_symbol_changed(ir.globals):
         return []
     findings = []
