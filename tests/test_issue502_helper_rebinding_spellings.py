@@ -173,6 +173,8 @@ def test_a_dunder_setter_naming_the_method_leaves_it_unresolved(source):
     set_up("self.__setattr__('data', 1)"),
     set_up("object.__setattr__(self, 'data', 1)"),
     module("type.__setattr__(TotalTest, 'data', 1)"),
+    # unbound `__delattr__` takes two arguments, so the name is the second
+    set_up("object.__delattr__(self, 'data')"),
 ])
 def test_a_literal_write_of_another_name_leaves_it_resolved(source):
     assert via(source) == RESOLVED
@@ -195,6 +197,10 @@ def test_a_literal_write_of_another_name_leaves_it_resolved(source):
     "type.__setattr__(type(self), NAME, print)",
     "super().__delattr__(NAME)",
     "self.__setattr__(*pair)",
+    # a literal value is not the name: the count places the name first when
+    # bound and second when unbound, whatever the target
+    "self.__setattr__(NAME, 'x')",
+    "object.__setattr__(config, NAME, 'x')",
     # the namespace itself replaced
     "self.__dict__ = {'data': 1}",
     "self.__dict__ |= {'data': 1}",
