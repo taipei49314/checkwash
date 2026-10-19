@@ -12511,12 +12511,12 @@ with v0.8.0 instead of v0.7.0.
   (canary 71 block -> pass, 45 block -> block, 6 pass -> block and
   37 pass -> pass).
 - **The acceptance file**, `tests/gates/verdict_gate_accepted.toml`, is
-  maintainer-only, and the agent's commits do not touch it. Its file-level
-  `baseline` must become `v0.8.0`: the gate fails `acceptance-baseline`
-  while it differs from the pin (`tools/verdict_gate.py:1414-1416`). It
-  holds no `[[accept]]` entry, so the rotation removes and adds none, and
-  no case needs one (below). The owner's disposition of this line is asked
-  in the PR.
+  maintainer-only. Its file-level `baseline` becomes `v0.8.0`: the gate
+  fails `acceptance-baseline` while it differs from the pin
+  (`tools/verdict_gate.py:1414-1416`). The owner authorized the agent to
+  change exactly that line and add a dated header comment (below), and
+  nothing else in the file changes. It holds no `[[accept]]` entry, so
+  the rotation removes and adds none, and no case needs one (below).
 
 Nothing else moves. The case files, labels, acceptance file, gate code
 (`tools/verdict_gate.py`, `tools/qualify_assertions.py`) and workflow are
@@ -12574,5 +12574,23 @@ The work machine only downloaded and hashed them; no verdict run or test
 ran there
 (`NOT_RUN：工作機規則（POLICY work-machine-local），the verdict runs above are hosted CI runs`).
 
-The agent drafted this entry in the rotation PR; the owner approves its
-wording there.
+The agent drafted this entry in the rotation PR #516. The maintainer
+approved it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval
+list as recommended"), in reply to the agent's list of approval items for
+the open pull requests, which takes every item's recommended answer. For
+this PR those are: A31, on who changes the protected file's `baseline`
+line, 「准 agent 改這一行，並加 PR 本文的日期註解」 ("the agent may change
+this line and add the dated comment from the PR body"), so the agent
+changed exactly `baseline = "v0.7.0"` to `baseline = "v0.8.0"` in
+`tests/gates/verdict_gate_accepted.toml` and added the header comment the
+PR body proposed, and nothing else (f9bf2a2c); A32, this entry's wording
+as committed in 308dc412, 5490b4e8 (it rests on R56) and bf655e2d (it
+records the observed rotation run); A33, fetching the three receipt
+artifacts before they expire and recording their SHA256s here in one
+sentence, with no further approval (0faaea28); and A34, keeping
+`[baseline_blocked]` at 159 and `[t3.cases]` as carried over, since the
+tag-push run had no failure and its proposal is empty and the rotation run
+observed no drift, while the final head still needs a successful verdict
+run before merge. The reply is the text of a button the agent wrote, which
+the owner chose; the agent also wrote the list and each item's options,
+including A31's.
