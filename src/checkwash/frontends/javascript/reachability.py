@@ -28,10 +28,10 @@ token stream misreads as code: a template nested in a substitution, JSX, or
 an Annex B HTML-like comment; the module walk is refused when the file holds
 any of these anywhere. A dead region that holds a function declaration,
 whose hoisted body a call before it may run, refuses the whole walk; a
-function expression there does not (#484, amending D-148 reading 10). A dead
-body that is no block is not killed where its end at a line break is in
-doubt. A `switch` body is not read: the walk steps over it and goes on after
-it.
+function expression there does not, unless it is named and stands where
+`_declares_function` reads a declaration (#484, amending D-148 reading 10). A
+dead body that is no block is not killed where its end at a line break is in
+doubt. A `switch` body is not read: the walk steps over it and goes on after it.
 """
 
 from __future__ import annotations

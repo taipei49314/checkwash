@@ -350,11 +350,13 @@ walk above now also reads, for the declarations they hold:
   declaration or assignment (`const ok = false && it(...)`).
 - A registration inside a function the file never calls, under a `switch`
   case, or in a `for ... of []` loop.
-- A named function expression after a `:` (an object's property value, the
-  `else` of `?:`) reads as a labelled declaration, so a dead region holding
-  one is still refused. So is a dead region holding a function declaration
-  at any depth, one inside the dead test's own callback included, though
-  that body never runs.
+- A dead region holding a named function expression is still refused where
+  the walk reads the expression's position as a declaration's: after a `:`
+  (an object's property value, the `else` of `?:`), read as a label's; after
+  `>`, `>>` or `>>>` (`a > function f() {}`), which the tokens hold as `>`;
+  and after `void`, a prefix `!` or `await` at a line break. So is a dead
+  region holding a function declaration at any depth, one inside the dead
+  test's own callback included, though that body never runs.
 - Wherever the walk stops (above), what follows keeps today's reading; the
   file's own statements are not walked at all when the file holds, anywhere,
   text the token stream misreads.
