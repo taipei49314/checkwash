@@ -11030,8 +11030,13 @@ conftest) before units are collected:
   empty, which D6 never holds. The marker's identity is its name alone:
   neither the guard nor the line.
 - Q7 (a), rule 2. The two pins changed exactly as approved (below).
-- Q8 (a). A function-level `test_x.__test__ = False` is not read here. It
-  waits for a reproduction run and its own issue.
+- Q8 (a). A function-level `test_x.__test__ = False` is not read here. A
+  hosted CI run reproduced the gap for the module-function form on
+  2026-10-19 (run 39215282880, draft PR #518, not merged); the
+  class-method spellings were not run. Under ruling-list item R47
+  (2026-10-19) no separate issue is filed until a fix is scheduled: the
+  result is recorded on #424 and #280, and the limit is listed in
+  `docs/KNOWN-ISSUES-next.md`. Row 135's residual (6) says the same.
 - Q9 (a). A def or class that a collected name captured before the
   rebinding (`test_y = test_x`, `TestAlias = TestX`) stays as on main. So
   does a rebound class's method that a same-file subclass, defined while
@@ -11187,6 +11192,24 @@ were rewritten from the 2026-10-17 sweep and its source review in PR #489.
 The maintainer approved that text on 2026-10-18: 「照你建議」, in reply to
 the agent's list asking for approval of the D-146 (977f8bd3), D-145
 (a4fa4550) and D-144 (dfde00e1) drafts.
+
+The Q8 bullet and this paragraph were written in PR #530, after #518's
+hosted run reproduced Q8; the same PR rewrote row 135's residual (6)
+(4b91d361, 3e4647b5). The maintainer approved that text on 2026-10-19:
+「第二輪核可全部照建議」 ("the round-2 approval list, all as recommended"),
+in reply to the agent's second list of approvals the open PRs needed. For
+this PR: B20 approved residual (6) as written in 4b91d361, with "owner
+ruling 2026-10-19, R47" changed to "ruling-list item R47", so that it is
+not read as one of row 135's reproduction labels R1 and R5 (3e4647b5,
+which keeps the date in parentheses); B21 put this record at the end of
+D-144 and had the Q8 bullet say that Q8 was reproduced and, under R47, is
+recorded on #424, #280 and in KNOWN-ISSUES-next, with no separate issue.
+The Q8 bullet's wording and this paragraph were written after the reply,
+so their wording is the agent's. Earlier that day, 「PR 核可清單全部照建議」
+had placed the rewording of residual (6) in this PR with its wording left
+for approval (A20), and recorded the class-method spellings as not run
+(A90). Each reply is the text of an answer the agent wrote, which the
+owner chose.
 
 ## D-145 (2026-10-17): a helper method a test reaches through `self` is the test's (#306)
 
