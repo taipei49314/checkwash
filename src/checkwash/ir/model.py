@@ -127,6 +127,15 @@ class Assertion:
     # repair evidence from that method's callees only for findings about
     # itself (306 Sub-Q8). Optional, so IR_VERSION stays 2.
     via: str | None = None
+    # The subject a bare local name stands for (#434): when `left` is one
+    # name of the unit, bound only by plain `name = <expr>` statements, and
+    # exactly one of them reaches this assertion, the bound expression as
+    # canonical source (`ast.unparse`) and the reaching keys of the names
+    # that expression reads at that statement (`ir.subjects`). Python only,
+    # an own assertion in the unit's own scope only; None for every other
+    # assertion. The order fallback reads it through
+    # `ir.subjects.same_subject`. Optional, so IR_VERSION stays 2.
+    resolved_subject: tuple[str, str] | None = None
 
 
 @dataclass
