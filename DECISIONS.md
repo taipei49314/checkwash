@@ -12455,3 +12455,158 @@ points the ruling did not settle, filing the Q6 follow-up (filed as #506),
 the (d) deferral and whether to add the unpinned tests (not added). The
 reply is the text of the answer the agent suggested, which the owner
 chose.
+
+## D-158 (2026-10-19): at the root, a `--task` path the base tree holds only by another name is an engine error, and `doctor` looks up the root on its own timeout (#500)
+
+Ruling 500 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included"). #500 was filed on that
+go-ahead, which adopted the direction the agent's list gave for it: an
+engine error when the base path holds a non-directory, one stderr line
+whenever the fallback is used, the case-mismatched path handled too,
+`doctor` on its own 5-second timeout, a test to confirm whether
+KNOWN-ISSUES row 21 overstates, and P3. The details under the issue's
+"Direction" are the agent's recommendation within that direction, for
+review in this PR. D-151 to D-157 are reserved for other open pull
+requests, so this entry is D-158; the number may change at merge.
+
+#500 reports, from reading the code at `6d78d8dd`, that at the root
+`check --task` reads the contract from the base tree at
+`os.path.relpath(--task, --repo)`, and on a miss opens `--task` from the
+working tree with no word, although the code comment and SPEC §4c said
+the working-tree copy was a fallback only for an untracked file; nothing
+checked that. Git reads no path through a tree entry of mode 120000 and
+matches names byte for byte, so a task path through a committed directory
+symlink, or spelled in another case on a case-insensitive checkout, misses
+the base copy, and the operating system opens the head's. The change
+cannot cause the miss, which depends only on the operator's arguments and
+the base tree, but once a configuration misses, every change supplies its
+own `oracle_freeze` and scope globs (E2, E7). Separately, `doctor` found
+the repository root with the general 60-second Git timeout, two queries
+from a subdirectory, while its own queries use 5 seconds.
+
+Implementation (lines at this PR):
+
+- A, the root fallback. `GitSnapshot.alias` (`gitio/snapshot.py:447-474`)
+  returns a `TreeAlias` (`:39-50`): the first entry of the base tree, by
+  the shortest prefix, that equals a proper prefix of the mapped path when
+  case is ignored and is a file, a symlink or a submodule; or else an
+  entry that equals the mapped path itself only when case is ignored.
+  Both comparisons are on text (`str.casefold`), so the answer is the same
+  on every file system. `base_alias` (`gitio/git.py:181-187`) wraps it as
+  the other base reads are wrapped. In `_analyse` (`cli.py:253-272`), a
+  base miss at the root with such an entry is an engine error naming it
+  (`_task_alias_error`, `cli.py:167-174`): exit 2, or the non-blocking
+  hook-json message (#414), as a base miss from a subdirectory already is.
+  Otherwise the fallback reads the working-tree copy, then writes one
+  stderr line through `_advise` (`cli.py:269-272`), which reaches neither
+  stdout nor the exit code. The comment above the task read (`:219-224`)
+  is corrected. The subdirectory branch is unchanged.
+- B, `doctor`. `_run` (`gitio/git.py:28-45`) and `resolve_repository_root`
+  (`:61-110`) take `timeout` and `stdin` keywords whose defaults, 60
+  seconds and inherited stdin, keep `check`, `sweep`, `allow`, `quality`
+  and the SessionStart hook as they were. `_reroot` (`cli.py:767-781`)
+  passes them through, and `doctor` passes `QUERY_TIMEOUT`
+  (`doctor.py:206`, now also `_git_query`'s, `:244`) and stdin from
+  DEVNULL (`cli.py:897-908`). Doctor's other Git flags are not added. No
+  SPEC change: §9 promises `doctor` the same sanitized environment, not a
+  timeout.
+- KNOWN-ISSUES row 21 (Direction 2). By reading, `--repo` reached through
+  a symlink to the root fails closed on its own: the mapped path is either
+  the right root-relative path or starts with `../`, which Git refuses
+  from the root as outside the repository (`git cat-file` exits non-zero,
+  and the strict snapshot's error is an engine error). A new test pins
+  both ways, and the row now says the route fails closed and names the
+  case route; that correction holds only if CI confirms the test.
+- Priority: P3 for both parts.
+
+Readings within the ruling's text, for the owner's approval:
+
+1. A submodule at a proper prefix, compared with case ignored, is refused
+   too. The ruling names "a symlink or a file"; a submodule is neither,
+   nor a directory of this tree. The same prefix spelled exactly is
+   already refused (`opaque_error`, `gitio/snapshot.py:417-419`), and in
+   another case a case-insensitive checkout would open the submodule's
+   working tree.
+2. "Case ignored" is `str.casefold`, which folds more than file systems
+   do (`ß` and `ss`, for example), so it refuses more, never less.
+3. An entry equal to the mapped path byte for byte is no alias: that is
+   what the base read answers. The only such entry the read misses is a
+   submodule named exactly, whose fallback opens a directory and was
+   already an engine error (`OSError`).
+4. The stderr line is written after the working-tree copy is read, so an
+   `OSError` from the open gives only the engine error. The session's
+   second leg (#418) stays quiet, as for its other diagnostics; it reads
+   policy from the same commit as the first leg.
+5. The check runs wherever the root fallback ran: a range, the worktree
+   and the managed Stop hook, against the commit policy is read from.
+6. With several entries equal when case is ignored, the error names the
+   first in sorted order.
+
+Not settled by the ruling, and left as residuals (KNOWN-ISSUES-next):
+other spellings a file system treats as the same file are not compared,
+by reading: Unicode normalization (NFC against NFD on macOS) and, on
+Windows, trailing dots or spaces, 8.3 short names and alternate data
+streams. A task file the base does not hold at all is still read from the
+working tree, with the new stderr line, so a CI step that names a task
+file the base never had still lets each change supply its own contract.
+Dropping the root fallback altogether was not proposed: it would revisit
+D-139 and break a generated or untracked task file at the root.
+
+Beyond the ruling's text, these effects are accepted with this entry:
+
+- A run at the root that named the task file through a committed
+  directory symlink, a committed file on the way, or in another case, and
+  read the working-tree copy, now exits 2 (or gives the hook-json
+  message). On a case-sensitive checkout so does an untracked `task.md`
+  beside a committed `TASK.md`, the cost of a result that does not depend
+  on the file system.
+- On the fallback path, one more `git rev-parse` and `git ls-tree -r` run
+  for the alias check, beside the inventory the base read already lists
+  (`gitio/snapshot.py:423`).
+- `doctor`'s root lookup gives up after 5 seconds per query. A timeout of
+  the first query is a plain `GitError`, so the fallback to `--repo` as
+  given is silent (SPEC §9); only a timeout of the second query prints
+  the stderr line. From a subdirectory a silent fallback reports on the
+  subdirectory, which needs a file system on which a 5-second
+  `rev-parse` times out, where doctor's other queries would time out
+  already.
+
+This narrows D-139's root fallback (`DECISIONS.md:10440-10442`) to a task
+file the base tree lacks, with the two engine-error cases and the stderr
+line; SPEC §4c changes with it. The exit codes keep their meaning (2 is
+an engine error, and hook-json reports it as #414 does), so
+`docs/stability.md` does not change. No fingerprint, IR field or key
+changes. The sweep passes an empty `Contract()` (`sweep.py:132`), so it is
+not expected to move. THREATMODEL row 18 ("Closed — contract read
+base-side") is unchanged; whether it should name the root fallback is
+left to the owner.
+
+Rule 2. The ruling approves no change to an existing expectation: by
+reading none moves, and none was changed. Every existing `--task` run at
+the root names a task file the base holds as a regular file
+(`tests/test_issue416_subdirectory_root.py:466-488`,
+`tests/e2e/test_allowlist_scope.py:110-138`, and the nine verdict-gate
+cases with `task = "TASK.md"`, each with a base `TASK.md`), so none
+reaches the alias check or the new stderr line. The subdirectory tests
+keep their message (`tests/test_issue416_subdirectory_root.py:491-527`).
+The resolver tests replace `subprocess.run` with functions that take any
+keyword (`:156-194`, `:393-461`), and `tests/test_perf_git.py:155`
+replaces `gitio._run` only around `list_range_changes`, which passes no
+keyword. Nothing under `tests/gates` changed. If CI shows an existing
+expectation moving, the round stops.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+Python ran; CI runs the tests. Added: 22 collected items in
+`tests/test_issue500_root_task_path.py`, none under `tests/gates`: a
+committed directory symlink on the task path and a task path in another
+case, each exit 2 and hook-json (4); the fallback's stderr line in a
+range, the worktree and hook-json (3); the `--repo` route both ways (3);
+doctor's and check's lookup keywords (1); and eleven unit cases of
+`GitSnapshot.alias` on owned Git objects. Not pinned: the session's second
+leg, an `OSError` on the open, the residuals above, and a hanging Git. By
+reading, the documented test count becomes 19497 (19475 + 22); CI's
+collection checks it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source and from Git's; no test, checkwash run or sweep was run`.
+
+The agent wrote this entry in #500's fix PR. It awaits the maintainer's
+approval of its wording and of the readings above.
