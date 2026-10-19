@@ -139,9 +139,14 @@ ROWS = {
     "worktree_base_side_alone": (lambda: {"tools/gen.py": blob(LIMIT + 1, "gen")},
                                  lambda: {"tests/test_billing.py": WEAKENED, "tools/gen.py": b"GENERATED = 1\n"},
                                  False, ("tools/gen.py", "base", LIMIT + 1)),
-    "worktree_untracked_extensionless": (lambda: {},
-                                         lambda: {"tests/test_billing.py": WEAKENED, "NOTES": blob(LIMIT + 1, "notes")},
-                                         False, ("NOTES", "worktree", LIMIT + 1)),
+    # An untracked shell script with no extension, one byte past the limit:
+    # refused for having no extension, and for its shell shebang once #455
+    # reads that from the unread side's first bytes.
+    "worktree_untracked_shell_script": (
+        lambda: {},
+        lambda: {"tests/test_billing.py": WEAKENED,
+                 "NOTES": b"#!/bin/sh\n" + blob(LIMIT + 1 - len(b"#!/bin/sh\n"), "notes")},
+        False, ("NOTES", "worktree", LIMIT + 1)),
     "range_base_side_alone": (lambda: {"tools/gen.py": blob(LIMIT + 1, "gen")},
                               lambda: {"tools/gen.py": b"GENERATED = 1\n"},
                               True, ("tools/gen.py", "base", LIMIT + 1)),
