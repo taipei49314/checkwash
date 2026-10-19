@@ -12860,8 +12860,10 @@ an answer the agent wrote, which the owner chose.
 Ruling 469 (owner, 2026-10-18, issuecomment-6248629427, 「19 項全部照建議做
 （價值判斷的題也照你的傾向）」, "all as recommended, value judgements included")
 answered item 4 of the agent's recommendation list and states each decision
-with its reason in the issue. D-151 to D-153 are reserved for #507 and for
-the fix pull requests of #428 and #454, so this entry is D-154.
+with its reason in the issue. D-151 to D-153 were set aside for #507 and
+for the fix pull requests of #428 and #454. D-151 is #507's entry and
+D-152 is #428's; D-153 is unused, since #454's pull request, #509, writes
+no entry. This entry is D-154.
 
 #469 reports that after D-131 the v0.8.0 acceptance sweep still stopped 53
 aiohttp commits with exit 2, at the subject-replacement pass's 30,000-node
