@@ -48,8 +48,10 @@ def size_refusal_to_json(refused: UnreadSide) -> str:
     one entry, the side the refusal and its stderr line name: that side was
     not read, and the run gave no verdict, so the change under review was
     not analysed. It carries no `checkwash_findings_version`, `findings` or
-    `verdict`, so a consumer that requires the version, as docs/embedding.md
-    says to, reads it as the error it is, and none can read a pass from it.
+    `verdict`, so a consumer that checks the exit status, or requires the
+    version as docs/embedding.md says to, reads it as the error it is and
+    cannot read a pass from it. One that does neither and takes a missing
+    `verdict` for no block can, where an empty stdout used to fail to parse.
     """
     payload = {"unread": unread_entries([refused])}
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
