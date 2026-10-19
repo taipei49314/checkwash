@@ -1,7 +1,6 @@
 === meta ===
-bypass: 39
 rule: ASSERT_WEAKENED
-title: A future-dated created anchors the cap at today, not at itself
+title: A weakened assertion stays visible beside an unchanged ledger entry
 origin: audit 2026-08-19 — created = "2030-01-01" / expires = "2030-06-01"
 origin2: is a 151-day window that does not start for years; anchoring the
 origin3: 180-day cap at the ledger's own created honoured it today.

@@ -214,6 +214,30 @@ def test_a_future_created_content_bound_key_is_still_capped():
     assert not again.allowlisted and verdict == "block"
 
 
+def test_a_hand_edited_expiry_past_the_cap_is_not_honoured():
+    """THREATMODEL row 39 in its own spelling: an expiry hand-edited past the cap (#501).
+
+    `created` 2026-03-01 is well before TODAY, and the default `expires`
+    2026-12-01 is 275 days after it but 86 days after TODAY. So the entry
+    would be honoured if the cap were not enforced on read, or if it were
+    anchored at today alone. The same key under the cap is honoured, so the
+    block is the cap's.
+    """
+    reviewed = _test("assert add(2, 3) >= 0")
+    (hit,), _verdict = _hits("ASSERT_WEAKENED", BEFORE, reviewed)
+    (exempt,), _verdict = _hits("ASSERT_WEAKENED", BEFORE, reviewed, [_entry(hit.fingerprint)])
+    assert exempt.allowlisted
+    entry = _entry(hit.fingerprint, created="2026-03-01")
+    assert entry.expires == "2026-12-01"
+    data = (
+        "[[allow]]\n" + "".join(f'{k} = "{v}"\n' for k, v in vars(entry).items())
+    ).encode()
+    summary = summarize_allowlist(data, TODAY)
+    assert (summary.active, summary.over_cap) == (0, 1)
+    (again,), verdict = _hits("ASSERT_WEAKENED", BEFORE, reviewed, [entry])
+    assert not again.allowlisted and verdict == "block"
+
+
 # --- Q3 (b): what the identity holds ---------------------------------------------------
 
 def test_the_identity_holds_the_legacy_pre_image_and_both_texts(monkeypatch):

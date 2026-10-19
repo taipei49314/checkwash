@@ -18,17 +18,17 @@ found by reading the code and the pull requests' reviews; where a row says
 | [#455](https://github.com/taipei49314/checkwash/issues/455) oversized extensionless files | checkwash reads no byte of an oversized side, so it cannot rule out a shell shebang. Every changed file with no extension over the limit, including a `README`, a `LICENSE` or an `.envrc`, stops the run with exit 2 (or the hook-json message). A suffixed file whose shell shebang is only on an oversized side, such as `ci/run.txt`, is set aside unread instead of being judged as a runner script. Inferred: on runs that reach the runtime-provider pass's shebang phase, an unchanged file without a dot in its name over the limit may also refuse. Open for a ruling. |
 | #415 other size residuals | A refusal for a change with two unread sides names the first one, not necessarily the side that must be read. Aggregate budget refusals and `read_config_many` do not name the side yet. A root `pyproject.toml` or `requirements*.txt` over the limit at the base still stops every run with exit 2, naming it. |
 | #416 subdirectory runs | From a subdirectory, a `--task` file that the base tree does not hold at the mapped path is an engine error; name an untracked task file from the root. With `--repo` naming an in-repository directory symlink and `--task` outside it, the mapped path can miss the base file, which from a subdirectory is also an engine error. `allow` names the root ledger under Git's spelling of the root (absolute, forward slashes on Windows). A Cygwin-style Git that prints `/c/...` makes `check` from a subdirectory exit 2; `allow` and `doctor` keep `--repo`. `hook install` still writes under `--repo` as given, so after `hook install --local` in a subdirectory `doctor` reads the root's `.claude/`, does not see those settings and, with nothing else installed, reports "no checkwash installation found". Whether Claude Code runs the Stop hook from the session's directory is unverified. The wrong-blob false pass reported in #416 was not reproduced. |
-| `--task` fallback at the root | Pre-existing and unchanged (#453's merge comment). At the root, when the base tree has no file at the task path, checkwash opens `--task` as given and the operating system follows symlinks. A base-side symlink on the task path, or `--repo` reached through a symlink to the root, can therefore let the working-tree copy, which the change controls, supply the contract. Name a task file committed as a regular file in the base, and pass `--repo` without symlinks. |
+| [#500](https://github.com/taipei49314/checkwash/issues/500) `--task` fallback at the root | Pre-existing and unchanged (#453's merge comment). At the root, when the base tree has no file at the task path, checkwash opens `--task` as given, says nothing, and the operating system resolves the path. Git reads no path through a committed directory symlink and matches names byte for byte. So a task path through such a symlink (`ci/TASK.md` over a committed `ci`), or one spelled in another case than the base file on a case-insensitive checkout (`task.md` for `TASK.md`), misses the base copy, and the working-tree copy, which the change controls, supplies the contract. `--repo` reached through a symlink to the root fails closed: a `--task` named through the other spelling maps outside the repository, and the run exits 2, as a test added on `main` confirms. Name the task file exactly as it is committed, at a path with no symlink on it. |
 | `doctor` root lookup | `doctor` finds the repository root with the general Git timeout of 60 seconds per query, not its own 5-second queries. A Git that hangs can stall `doctor` for that long before it falls back to `--repo` as given. |
 | `doctor` Action pin | v0.8.0's `doctor` accepts only the Action commit built into it, the prior release v0.7.0's `d647a65e`, which has the trust-boundary issue. A release cannot name its own commit, so a workflow pinned to the v0.8.0 Action, as the README will recommend after verification, is reported as "workflow analysis incomplete" with an unsupported SHA. This is a warning, not a failure. |
 | #414 directory symlinks | An untracked, non-ignored directory symlink is still refused by the change-list read, naming it. The importer search still refuses a directory symlink outside hidden, `.venv` and `node_modules` trees. Windows junctions are not treated as symlinks. |
 | #346 pytest configs | Working-tree mode does not read symlinked configs; they are still refused there, and when a root config is touched the collection-inventory pass can still refuse a nested config symlink. In a range check every symlinked config name is resolved up front, so an unsafe link fails closed even when dormant. Other symlinks, including a custom `-c` file name, are not covered. The psf/requests directory-symlink row may still exit 2. |
 | #345 large and deep sources | The subject-replacement pass keeps its own 30,000-node limit. #389 reported that five aiohttp commits still exit 2 (two at the stand-in step guard, two at that node limit, one at a nonregular snapshot). A 1 MB file of ordinary statements took 4.263 s before and 9.788 s after the limit change, whole run to refusal (#389, run 38292837314). Deep string chains are rebuilt only for complete top-level `NAME = STRING (+ STRING)+` lines; any other deep shape still raises `RecursionError` and exits 2. A very deep binary expression used directly as an asserted subject keeps a null semantic result, so its meaning is not compared (#374, #384). |
 | #422 exit-status reader | Read directly and in same-file callees only. Missed spellings include hook parameters with defaults or keyword-only ones, hooks bound by assignment or called through an instance, nested functions published with `global` or `nonlocal`, decorator, context-manager and annotation call routes, aliases of `sys.exit`, `pytest.exit`, `SystemExit` and `pytest.fixture`, `from os import *`, a negative `testsfailed` literal, several namespace-write spellings, and a rebound `os.fork`. A changed value on an existing exit marker adds no finding. Out of scope: `pytest_cmdline_main`, `pytest_runtestloop` and `pytest_collection` short-circuits, other callback registrations, plugin modules, exits in test or production code, `os.exec*`, computed names, `ctypes` and start-up files; the exit-5 recipe combined with a run that collects nothing. |
-| #432 no-op replacement reader | Pinned silent: loops, `with` and `except` bodies, async hooks, hooks bound by assignment, class plugins, autouse fixtures, call-built or attribute-sourced replacements, computed names, `__dict__` writes, subclasses, `sys.modules` lookups and `addTypeEqualityFunc`. Also missed: a hookwrapper that restores `item.runtest` after its `yield`, a builtin callable as the replacement, a write inside a same-file helper, and a no-op `addFailure`. A no-op proof accepts a call, raise or assert that never runs. An unrelated edit to a top-level `if` can re-report an unchanged replacement. |
-| #431 always-passing catch assertions | JS/TS only, and only `true`, `false` and `null` literal operands. Number and string literal equality, `toEqual(true)`, message arguments and self-comparison go to #429. The Python counterpart (`except Exception: assert True`) is open. The always-failing direction is pinned by a test only for Vitest `expect`. |
+| #432 no-op replacement reader | Pinned silent: loops, `with` and `except` bodies, async hooks, hooks bound by assignment, class plugins, autouse fixtures, call-built or attribute-sourced replacements, computed names, `__dict__` writes, subclasses, `sys.modules` lookups and `addTypeEqualityFunc`. Also missed: a hookwrapper that restores `item.runtest` after its `yield`, a builtin callable as the replacement, a write inside a same-file helper, and a no-op `addFailure`. Inferred, and not read as a runtime control: a hook or replacement from another file (a hook the conftest imports, a module it names in `pytest_plugins`, a replacement it imports and assigns), a write followed by a `raise` that a handler catches (`try: raise X` / `except X: pass`), and the same swap written in a test module instead of a conftest. A no-op proof accepts a call, raise or assert that never runs. An unrelated edit to a top-level `if` can re-report an unchanged replacement. |
+| #431 always-passing catch assertions | JS/TS only, and only `true`, `false` and `null` literal operands. Number and string literal equality, `toEqual(true)`, message arguments and self-comparison still keep a swallowing catch's exemption; their fix is #513, not #429, which added no shared always-pass helper. The Python counterpart (`except Exception: assert True`) is open as #496. The always-failing direction is pinned by a test only for Vitest `expect`. |
 | Action boundary | The v0.8.0 Action closes the trust-boundary issue for a clean, dedicated hosted job. The interpreter, shell startup, runner image, PyPI build tooling and setup-python remain trusted, and an earlier step that ran pull-request code can compromise the job. The v0.6.0 and v0.7.0 Actions remain affected; re-pin them. A composite Action cannot stop a caller from choosing weaker inputs; protect the workflow file by review. |
-| Sweeps and cost | Not run, as stated above. The new blocks of #422, #432 and #431, the verdicts that replace v0.7.0's errors, and the engine and Action cost of the release commit are unmeasured. The issues of those rounds stay open until the sweeps and their DECISIONS text land. |
+| Sweeps and cost | The acceptance sweep ran after publication, on 2026-10-15 on LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep` (T-546), labelled human-authorized local PJU, NOT EC pool (DECISIONS D-140). It replays v0.7.0 and v0.8.0 on 6,354 in-sample commits, so it measures the release, not each change, and it gives no false-positive rate. On the 6,168 commits both versions analyse, verdicts and findings are identical, and the new blocks of #422, #432 and #431 never fired. Of the 186 commits v0.7.0 refused with exit 2, v0.8.0 analyses and passes 30, and it refuses none that v0.7.0 analysed. The median engine time per commit is about 0.2 s slower. What each record adds: #422's targeted set ran for the ten repository histories of D-088's sets, and the rest is queued for a later sweep (D-136); #432's conftest-touching commits ran, its conftest census is queued, and only some of its reporting shapes are proved under real pytest (D-137); for #431, the JS/TS cost of the change alone is derived as 0 from this run, and the issue's pair before the change and a mined literal-in-catch set are waived (D-138). The Action's cost is unmeasured. #422 and #431 close when their records merge, and #432 when its fixture pull request has merged as well; a queued run that finds a false block reopens #422 or #432. |
 
 ## Open P1 reports this release does not address
 
@@ -43,22 +43,38 @@ found by reading the code and the pull requests' reviews; where a row says
 | [#429](https://github.com/taipei49314/checkwash/issues/429) | JS/TS `expect(x).toBe(x)`, an assertion under `if (false)`, or a `return;` before it passes with zero findings; Python blocks all three. Ruled, not implemented. |
 | [#212](https://github.com/taipei49314/checkwash/issues/212) | No independently selected JS/TS history replay measures the false-positive cost of the JS/TS rounds. |
 
-Other open reports include [#417](https://github.com/taipei49314/checkwash/issues/417)
-(under Python 3.10 the pyz exits 1, the block code, with a traceback),
-[#434](https://github.com/taipei49314/checkwash/issues/434) and its real-world
-instance [#457](https://github.com/taipei49314/checkwash/issues/457) (a
-precondition before a rewritten `==` blocks as `ASSERT_WEAKENED`),
-[#420](https://github.com/taipei49314/checkwash/issues/420) (one-hop repair
-evidence never applies to a top-level callee),
-[#436](https://github.com/taipei49314/checkwash/issues/436) and
-[#437](https://github.com/taipei49314/checkwash/issues/437) (`doctor`
-reports FAIL right after install; `allow` accepts a past `--expires`), and
-the missed cheats [#423](https://github.com/taipei49314/checkwash/issues/423),
-[#425](https://github.com/taipei49314/checkwash/issues/425),
-[#426](https://github.com/taipei49314/checkwash/issues/426) and
-[#433](https://github.com/taipei49314/checkwash/issues/433). The
+Other open reports include [#434](https://github.com/taipei49314/checkwash/issues/434)
+and its real-world instance
+[#457](https://github.com/taipei49314/checkwash/issues/457) (a precondition
+before a rewritten `==` blocks as `ASSERT_WEAKENED`) and the missed cheat
+[#480](https://github.com/taipei49314/checkwash/issues/480) (a TypeScript
+return annotation on a JS/TS arrow test callback, such as `(ctx): void =>`,
+hides its context's assertions, and the coverage report can still say
+`no_known_gaps`). The
 [issue list](https://github.com/taipei49314/checkwash/issues) has every open
 report.
+
+[#436](https://github.com/taipei49314/checkwash/issues/436) (`doctor`
+reports FAIL right after install) was closed as completed on 2026-10-16;
+#466 fixed that on `main`, after v0.8.0. The missed cheats
+[#423](https://github.com/taipei49314/checkwash/issues/423),
+[#425](https://github.com/taipei49314/checkwash/issues/425),
+[#426](https://github.com/taipei49314/checkwash/issues/426) and
+[#433](https://github.com/taipei49314/checkwash/issues/433) are deferred
+until after 1.0 ([#504](https://github.com/taipei49314/checkwash/issues/504)),
+as are [#417](https://github.com/taipei49314/checkwash/issues/417) (under
+Python 3.10 the pyz exits 1, the block code, with a traceback),
+[#420](https://github.com/taipei49314/checkwash/issues/420) (one-hop repair
+evidence never applies to a top-level callee) and
+[#437](https://github.com/taipei49314/checkwash/issues/437) (`allow` accepts
+a past `--expires`).
+So is [#278](https://github.com/taipei49314/checkwash/issues/278), which
+this page did not list at release: checkwash does not read pytest 9's
+native `[tool.pytest]` table in `pyproject.toml`, so a new `pyproject.toml`
+whose native table narrows collection, or a `-m` selector added to an
+existing native table, passes with only `CI_WORKFLOW_TOUCHED` at warn
+(#278's runs at `6e4f5ef`, before v0.8.0). Review changes to that table by
+hand.
 
 ## Status of the v0.7.0 known issues
 

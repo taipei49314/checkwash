@@ -1,6 +1,6 @@
 # JS/TS history-replay corpus: the selection
 
-**Correction (2026-10-09):** see [the additive correction](correction-2026-10-09.md) for the actual reading chronology, runner-evidence limits, omitted exclusions and the still-unverified held-out qualification; the original record below is preserved.
+**Correction (2026-10-09):** see [the additive correction](correction-2026-10-09.md) for the actual reading chronology, runner-evidence limits, omitted exclusions and the still-unverified held-out qualification; the original record below is preserved, except its last section, which the 2026-10-19 rulings replaced (**Decided**, below).
 
 checkwash measures its Python false-positive cost on a fixed sweep of six
 repositories, 300 non-merge commits each ([`../sweeps/`](../sweeps/README.md)).
@@ -39,14 +39,40 @@ repository has more than 300 such commits.
 already run on is left out. Their histories are in-sample, and the JSON lists
 them.
 
-**Not decided yet.** The corpus gates the release that ships the JS rounds,
-not their merges. Two of #212's questions are asked again when that release is
-prepared:
+**Decided (2026-10-19).** The rulings of 2026-10-06 and 2026-10-08 left two
+of #212's questions for the release that ships the JS rounds: the class and
+the release criterion. The owner ruled them, and what #212 delivers, on 2026-10-19
+(owner ruling 2026-10-19, R27–R30):
 
-- its class, in-sample or held-out (SPEC §10). No engine has run on these
-  windows, so either label is still open;
-- the release criterion.
+- **Class: in-sample** (R28). SPEC §10.1 settles it: findings on the set,
+  among them the two blocks the v0.7.0 candidate added, were read during
+  the v0.7.0 preparation, which registered the set in-sample and nonblind
+  (D-128), and #468 was triaged from undici's results in the v0.8.0
+  acceptance sweep. In-sample is permanent for a repository, so these six
+  can never be held out. They join axios, express and commander
+  ([correction](correction-2026-10-09.md)) on the exclusion list of every
+  future held-out draw. Recording them in `checkwash-corpus`
+  (`records/holdout/spent-elsewhere.json`) is approved (owner ruling
+  2026-10-19, R19). It is written together with #419's polyglot
+  repositories once that sweep has run.
+- **What #212 delivers** (R27): each release compares the previous release
+  with its candidate on these 1,800 commits. The two runs made so far count
+  ([results](results.md)). A new held-out draw is not planned now.
+- **Release criterion** (R29): a standing step of the
+  [release procedure](../../docs/RELEASING.md). Every commit whose outcome
+  moves, except an error that becomes a pass, goes to the owner before the
+  tag. There is no rate threshold.
+- **Row 131** (R30). THREATMODEL row 131 stays with #212. `cf-js131`, a
+  report-only arm-7 variant that #419's combined lab sweep adds, prices it,
+  under a line registered before it runs
+  ([#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6261643029)).
+  #212 stays open for that.
 
-The measurement compares that release's candidate with v0.6.0 on the same
-windows. Its results will be added beside this record, labelled as SPEC
-§10.2 requires.
+Both runs checked each commit with `check`, one CLI run per commit and
+engine, not with `checkwash sweep` as the shape above says
+([method](results.md#method)). The selection JSON is the pre-run record and
+keeps its `class: null`.
+
+A JS/TS round's pull request no longer cites #212 for its false-positive
+cost: the next release's comparison checks it. Statements already in open
+issues stay as written.
