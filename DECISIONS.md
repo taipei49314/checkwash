@@ -10772,22 +10772,37 @@ Fingerprints sentence and the Sweeps paragraph were rewritten after
 publication, in the D-131 to D-140 record PR (owner ruling 2026-10-19,
 R33).
 
-That record PR is #523. The maintainer approved it on 2026-10-19:
-「PR 核可清單全部照建議」 ("the whole PR approval list as recommended"), in
-reply to the agent's list of the approvals the open PRs needed before
-merging. For this PR: A4 approved, as committed, the wording of D-136's
-Sweep paragraph (166e3362, 0f86f0c3, cff623a9), D-137's Sweep paragraph
-(55d0ac80, 0f86f0c3, cff623a9), D-138's Sweep paragraph and #513 pointer
-(22a14c5c), this entry's Fingerprints sentence and Sweeps paragraph
-(07c3409f, 0f86f0c3) and THREATMODEL row 129 (faea08da); A5 kept the two
-commits beyond R33's list, the follow-up issues named in the Residuals of
-D-136 to D-138 (281f7d0d) and R68's narrower scope for #494 in D-136
-(a34141d4); A6 kept the "Not run (D-140)" lines of D-131 to D-135 and
-D-139 as they are, with this entry's Sweeps paragraph as their record; A7
-accepted the readings: R39 as one sentence here, KNOWN-ISSUES-v0.8.0 row
-29 also pointing to #496, and the reopen triggers combining R35 with R8
-and R10. The reply is the text of an answer the agent wrote, which the
-owner chose.
+That record PR is #523. The maintainer approved its maintainer text
+(A4–A7) on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval
+list as recommended"), in reply to the agent's list of the approvals the
+open PRs needed before merging. For this PR: A4 approved, as committed,
+the wording of the seven commits it named: 166e3362 (D-136), 55d0ac80
+(D-137), 22a14c5c (D-138), 07c3409f (this entry), 0f86f0c3 (D-136, D-137
+and this entry), cff623a9 (D-136 and D-137) and faea08da (THREATMODEL row
+129); A5 kept the two commits beyond R33's list, the follow-up issues
+named in the Residuals of D-136 to D-138 (281f7d0d) and R68's narrower
+scope for #494 in D-136 (a34141d4); A6 kept the not-run lines of D-131 to
+D-135 and D-139 as they are, with this entry's Sweeps paragraph as their
+record; A7 accepted the readings: R39 as one sentence here,
+KNOWN-ISSUES-v0.8.0 row 29 also pointing to #496, and the reopen triggers
+combining R35 with R8 and R10.
+
+The agent wrote the paragraph above in 17e33402, after that reply. The
+maintainer approved it later on 2026-10-19 with 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended"), in reply to the agent's
+second list of approvals the open PRs needed. For this PR: B3 approved
+that paragraph with the two corrections it named, made in the commit that
+adds this one: "approved it" became "approved its maintainer text
+(A4–A7)", and A6 names the not-run lines of D-131 to D-135 and D-139,
+since D-139 has no "Not run (D-140)" line. The same commit gives A4's
+scope as the commits A4 named; the paragraph had listed text in them that
+A4's question did not name, the D-138 #513 pointer and this entry's
+Fingerprints sentence among it. B22 approved correcting D-136's
+standard and D-088 bullet to say that those sets ran in the sweep's
+standard and d088 batches, and that only the 6,168 commits both versions
+analysed span all four batches (74153a3b). This paragraph was written
+after that reply. Each reply was a button whose text the agent wrote,
+which the owner chose.
 
 ## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
 
