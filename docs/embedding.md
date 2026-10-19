@@ -26,9 +26,10 @@ commits that landed on the base branch meanwhile are not in the diff.
 Exit 2 does not mean "no findings". With `--emit-ir`, exit 0 comes with the
 IR instead. Treat standard output that does not parse, or that does not carry
 `checkwash_findings_version` 2, as an error whatever the exit status. On exit
-2 standard output is empty, except that from the next release a size refusal
-prints `{"unread": [...]}`, naming the side over the limit that stopped the
-run ([unreleased changes](#unreleased-changes-on-main)).
+2 standard output is empty, except that from the next release most size
+refusals print `{"unread": [...]}`, naming the side over the limit that
+stopped the run (the [unreleased changes](#unreleased-changes-on-main) list
+the exceptions).
 
 - Standard output is UTF-8 bytes whatever the locale (SPEC §8). Decode it as
   UTF-8. Python's `subprocess.run(..., text=True)` decodes with the locale's
