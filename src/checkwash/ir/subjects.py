@@ -5,7 +5,7 @@ strength in span order. A precondition written above a rewritten oracle then
 took the oracle's place: `assert area(4, 5) == 20.0` rewritten as
 `result = area(4, 5)`, `assert isinstance(result, float)`, `assert result ==
 20.0` paired the old `==` with the `isinstance` and blocked as a weakening,
-while the same two lines in the other order passed (#434 A1, #457). The
+while the same two lines in the other order passed (#434 A1). The
 ruling (2026-10-16, A.4) has an old assertion first take a leftover that
 checks the same subject.
 
