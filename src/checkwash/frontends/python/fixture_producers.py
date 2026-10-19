@@ -25,8 +25,9 @@ the findings whose before-side assertion reads the fixture's value:
   runs no fixture. A level that binds the name in a way this reading does
   not follow (`SetupScope.opaque`), a star import, an unreadable conftest,
   or a class with a base or keyword this reading does not follow, stops the
-  lookup, with no producer. Fixtures of fixtures, `autouse` and
-  `usefixtures` do not count.
+  lookup, with no producer. Fixtures of fixtures do not count, nor do an
+  `autouse` fixture and a `usefixtures` mark the test does not also request
+  by parameter.
 
 Which findings take the producer (Q3 (b)) and which rules (Q4 (a)) is
 gating's call; this module only reads it.
@@ -90,7 +91,8 @@ def _binders(function, name: str) -> list[ast.AST]:
     A store or delete, an import alias, an `except ... as` or match capture,
     a `global` or `nonlocal` declaration, and a nested def or class of that
     name. Nested bodies and lambdas are not entered; a comprehension's
-    target counts, which only errs toward no producer.
+    target counts, which only errs toward no evidence. The frontend also
+    reads it for a fixture parameter the unit binds again (#471 Q3).
     """
     found: list[ast.AST] = []
     stack: list[ast.AST] = list(function.body)
