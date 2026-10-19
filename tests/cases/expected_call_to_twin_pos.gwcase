@@ -36,4 +36,4 @@ def twin_total(items, tax_rate=0.05):
 def twin_total(items, tax_rate=0.05):
     return round(sum(items), 2)
 === expect ===
-[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

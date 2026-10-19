@@ -29,4 +29,4 @@ from billing import invoice_total
 def test_total():
     assert invoice_total([50.0, 50.0], 0.05) == 100.0
 === expect ===
-[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]

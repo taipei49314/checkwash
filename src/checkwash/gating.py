@@ -21,6 +21,7 @@ from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_f
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
 from checkwash.ir.model import IR, Unit, judged_as_test, normalize_text
+from checkwash.roles import _is_inert
 ORACLE_RULES = {
     "ASSERT_REMOVED",
     # A different assertion in a deleted one's slot. The lattice reports it
@@ -539,6 +540,17 @@ def apply_gates(
     file_constants = {f.path: f.constants for f in ir.files}
     restructured = _file_restructured(ir, file_constants)
     split_renamed = _split_or_renamed(ir, file_constants)
+    # Did the diff change a production-role file that can change runtime
+    # behaviour? Only E1's label reads it (#473). The engine records each
+    # production-role path of the diff (relocated test bytes aside) before
+    # it decides whether to read symbols from the file, so a file that stops
+    # parsing, a non-Python file added, deleted or renamed, and one whose
+    # content runs the test suite are all in `prod_files_changed`. The inert
+    # files (`roles._is_inert`: type stubs, docs-site and docs-build config,
+    # repository metadata) change no runtime behaviour by the engine's own
+    # list, so they do not count here. Generated artifacts and changes set
+    # aside unread never reach `prod_files_changed` (#415).
+    prod_changed = any(not _is_inert(path) for path in ir.globals.prod_files_changed)
 
     for f in findings:
         if f.fingerprint in active_allows:
@@ -909,10 +921,28 @@ def apply_gates(
             # never sets `prod_opaque_change`. A suite control keeps its own
             # label, which it always reaches first here: an opaque change is
             # a production file in `prod_files_changed`.
+            #
+            # Every other finding here is the same class of claim (#473,
+            # ruling Q2 and Q3, 2026-10-18). If the diff changed a
+            # production-role file that is not inert (`prod_changed`, above),
+            # production did change, and no evidence this finding may take
+            # reached that change: no symbol it calls, no caller of one, no
+            # helper hop, and no package or opaque credit where the rule
+            # takes one. The usual cause is a reach checkwash does not
+            # follow, such as an unchanged module between the test and the
+            # change. `NO_PROD_CHANGE_IN_DIFF` is kept for a diff that changes
+            # no production-role file, or only inert ones. Still E1: severity
+            # is set above and the label is outside the fingerprint, so only
+            # the sentence changes. Both labels before this one keep their
+            # conditions and come first: a suite control keeps D-066's test,
+            # inert files included, and a refused opaque change keeps its own
+            # label.
             if suite_control and (has_evidence or ir.globals.prod_files_changed):
                 reason = "COLLECTION_CONTROL_UNEXPLAINED"
             elif refuses_opaque and ir.globals.prod_opaque_change:
                 reason = "OPAQUE_PROD_CHANGE_NOT_EVIDENCE"
+            elif prod_changed:
+                reason = "PROD_CHANGE_NOT_EVIDENCE"
             else:
                 reason = "NO_PROD_CHANGE_IN_DIFF"
             f.escalators.append(reason)

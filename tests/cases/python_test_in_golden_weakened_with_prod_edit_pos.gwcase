@@ -35,4 +35,4 @@ def f():
 def f():
     return 2
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_total"}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "unit": "test_total"}]

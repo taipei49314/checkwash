@@ -29,4 +29,4 @@ class Billing(unittest.TestCase):
 === before: app/__init__.py ===
 === after: app/__init__.py ===
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"]}]
