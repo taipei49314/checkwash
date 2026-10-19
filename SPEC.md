@@ -379,19 +379,19 @@ static `import` declaration whose end it proves (`export`, TypeScript's
 callback of every `describe`, `suite` and `context` declaration, their `x`
 and `f` forms included, and the callback of a test that registers a named
 test or a block of its own (node:test's and tap's `t.test`), even one with
-no assertions. A declaration that starts where the walk proves no
-statement runs is no unit, and neither is any declaration inside it. Its loss is a disappearance, its
-skip, focus and options apply to nothing, and it earns no D2, D5 or D10
-credit. An expression statement of `&&` or `||` whose literal operand decides
-it skips a declaration call that is its last operand, as it skips an
-assertion. A dead region that holds a function declaration, which a call
-before it may run, refuses the walk; a function expression there does not,
-except a named one in a position the walk reads conservatively as a
+no assertions. A declaration that starts where the walk proves no statement
+runs is no unit, and neither is any declaration inside it. Its loss is a
+disappearance, its skip, focus and options apply to nothing, and it earns no
+D2, D5 or D10 credit. An expression statement of `&&` or `||` whose literal
+operand decides it skips a declaration call that is its last operand, as it
+skips an assertion. A dead region that holds a function declaration, which a
+call before it may run, refuses the walk; a function expression there does
+not, except a named one in a position the walk reads conservatively as a
 declaration's, such as an object property's value after `:` (D-165 reading
-6; THREATMODEL 159, residual 6), which refuses it too.
-A condition the folder cannot decide (`if (process.env.CI)`) leaves the
-registration live. Its assertions still reach the catch evidence, and a file
-whose only tests are registered in dead code still declares tests.
+6; THREATMODEL 159, residual 6), which refuses it too. A condition the
+folder cannot decide (`if (process.env.CI)`) leaves the registration live.
+Its assertions still reach the catch evidence, and a file whose only tests
+are registered in dead code still declares tests.
 
 A JS/TS table on `test` or `it` (`test.each`, `it.each`, `test.for`, with
 chained modifiers such as `test.concurrent.each`, in the call and the
