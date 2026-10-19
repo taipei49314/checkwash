@@ -12501,3 +12501,18 @@ copy under `tests/gates`.
 
 Evidence status: prepared on a work machine where no pytest or checkwash
 ran; CI ran the tests.
+
+The agent wrote this entry in #364's PR #507. The maintainer approved it
+on 2026-10-19: 「裁決總表全部照建議」 ("the whole ruling table as
+recommended"), in reply to the agent's table of 104 decisions. For this
+PR: R59 approved the `docs/stability.md` text (the fingerprint row, the
+`config_errors` row, the paragraph on unknown keys, the do-not-bump list
+and the "Fingerprint stability" subsection); R61 kept the schema, with
+#507 as the answer to #364; R62 approved this entry with its correction to
+D-148; R63 left shipping the schema as package data, a jsonschema
+cross-check and moving the frozen copy undecided. The reply is the text of
+an answer the agent wrote, which the owner chose.
+
+Since a recorded exemption now keeps matching within a minor line, the
+release that carries D-144's renumbering is a minor, which D-144 left to
+the owner; D-146 had already ruled out a patch for the next release.
