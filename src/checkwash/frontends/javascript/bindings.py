@@ -557,8 +557,27 @@ class Bindings:
         conditional's: in `cond ? f(a) : b => b` the arrow is `b => b`, and
         its parameter is `b`, as before. After `:`, `=` or `=>` a `?` that has
         not met its `:` makes the colon after `)` a conditional's too:
-        `c0 ? c1 ? y : (a) : b => b`, `c ? x = (a) : b => b` and
-        `c ? () => (a) : b => b` all keep `b` (`_condition_waits`).
+        `c0 ? c1 ? y : (a) : b => b`, `c ? x = (a) : b => b`,
+        `c ? () => (a) : b => b` and `c ? (x): T => (a) : b => b` all keep
+        `b` (`_condition_waits`).
+        """
+        opening = self._annotated_opening(arrow)
+        if opening is None:
+            return None
+        before = opening - 1
+        if self.token(before) == "async":
+            before -= 1
+        if before >= 0 and self.token(before) not in _ARROW_STARTS:
+            return None
+        if self.token(before) in {":", "=", "=>"} and self._condition_waits(before):
+            return None
+        return opening + 1, self.pairs[opening]
+
+    def _annotated_opening(self, arrow: int) -> int | None:
+        """The `(` of `(...): T =>` whose simple return type (names and
+        `_RETURN_TYPE_TOKENS`) ends at the `=>` at token `arrow`; None when
+        no `:` after a paired `)` stands there. Whether an arrow can start at
+        that `(` is the caller's test.
         """
         cursor = arrow - 1
         while cursor >= 0 and (self.token(cursor) in _RETURN_TYPE_TOKENS or _IDENT.fullmatch(self.token(cursor))):
@@ -567,15 +586,7 @@ class Bindings:
         if (cursor == arrow - 1 or self.token(cursor) != ":"
                 or self.token(closing) != ")" or closing not in self.pairs):
             return None
-        opening = self.pairs[closing]
-        before = opening - 1
-        if self.token(before) == "async":
-            before -= 1
-        if before >= 0 and self.token(before) not in _ARROW_STARTS:
-            return None
-        if self.token(before) in {":", "=", "=>"} and self._condition_waits(before):
-            return None
-        return opening + 1, closing
+        return self.pairs[closing]
 
     def _condition_waits(self, last: int) -> bool:
         """Does a `?` before token `last`, in the expression that holds it,
@@ -584,7 +595,13 @@ class Bindings:
         The read goes back over balanced brackets, to the bracket, `;` or `,`
         that opens the expression, or to a line break where JavaScript ends
         the statement (`_expression_end`'s rule). Each `:` on the way answers
-        one `?`; `??` is no conditional.
+        one `?`; `??` is no conditional. The `:` of an annotated arrow's
+        return type answers none: where the read meets the `=>` of an arrow
+        written `(...): T =>` at a place an arrow can start or right after a
+        `?`, it steps over that head. So in `c ? (x): T => (a) : b => b` the
+        `?` still waits, and `b => b` is the alternate, as TypeScript reads
+        it: an annotated arrow in a consequent needs a `:` after it. Stepping
+        over a head only lets fewer arrows be read as annotated.
         """
         colons = 0
         j = last
@@ -596,6 +613,14 @@ class Bindings:
                 j = self.pairs[j]
             elif token in {"(", "[", "{", ";", ","}:
                 return False
+            elif token == "=>":
+                opening = self._annotated_opening(j)
+                if opening is not None:
+                    head = opening - 1 - (self.token(opening - 1) == "async")
+                    question = self.token(head) == "?" and not (  # not the second `?` of `??`
+                        self.token(head - 1) == "?" and self.tokens[head - 1][2] == self.tokens[head][1])
+                    if head < 0 or self.token(head) in _ARROW_STARTS or question:
+                        j = opening
             elif token == ":":
                 colons += 1
             elif token == "?":

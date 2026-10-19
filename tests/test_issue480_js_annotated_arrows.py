@@ -162,6 +162,8 @@ POSITIONS = {
     "after an arrow": "const curry = (x) => (assert): void => assert.ok(v);\n",
     "after a property's colon": "const checks = { check: (assert): A | B => assert.ok(v) };\n",
     "after a conditional's colon": "const check = c ? y : (assert): ns.T => assert.ok(v);\n",
+    "after a conditional's colon, past an annotated consequent":
+        "const check = c ? (y): T => y : (assert): R => assert.ok(v);\n",
     "after a bracket": "const checks = [(assert): void => assert.ok(v)];\n",
     "after a brace": "{\n  (assert): void => assert.ok(v);\n}\n",
     "after a semicolon": "run();\n(assert): void => assert.ok(v);\n",
@@ -196,13 +198,17 @@ def test_an_annotated_arrow_anywhere_else_keeps_the_old_reading(position):
 # The ruling's two controls, and the conditionals whose `:` after `)` is a
 # conditional's because a `?` before it still waits: in each, `@` stays the
 # arrow's parameter and `a` is not declared by it. Spelled `assert`, the
-# parameter would otherwise fall to the global and gain Node authority.
+# parameter would otherwise fall to the global and gain Node authority. In
+# the last two the `?` waits too: the consequent's own return-type `:`
+# answers no `?`.
 CONDITIONALS = {
     "a parenthesized consequent": "cond ? (a) : @ => @.ok(v)",
     "a call as the consequent": "cond ? f(a) : @ => @.ok(v)",
     "a nested conditional": "c0 ? c1 ? y : (a) : @ => @.ok(v)",
     "an assignment as the consequent": "c ? x = (a) : @ => @.ok(v)",
     "an arrow as the consequent": "c ? () => (a) : @ => @.ok(v)",
+    "an annotated arrow as the consequent": "c ? (x): T => (a) : @ => @.ok(v)",
+    "an annotated arrow returning an object as the consequent": "c ? (x): T => ({ k: a }) : @ => @.ok(v)",
 }
 
 
