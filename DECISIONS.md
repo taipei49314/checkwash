@@ -12536,14 +12536,20 @@ Readings within the ruling's text:
 
 Not settled by the ruling, for the owner's decision:
 
-- The E1 label. The newly raised finding is labelled
+- The E1 label. At this PR the newly raised finding is labelled
   `NO_PROD_CHANGE_IN_DIFF` over a diff that adds a production file. SPEC
   §5 gives that label to every E1 finding outside its two named cases, and
   an oracle finding beside an unrelated production change already reads
   the same way; but as a sentence it is untrue of this diff, the class
-  `docs/integrations.md` §6 describes. The label is escalation policy in
-  `gating.py`, which this PR does not touch; renaming it would need its own
-  ruling.
+  `docs/integrations.md` §6 describes. #473 settles it, so it needs no
+  ruling of its own: under ruling 473 Q2 a diff that changes a
+  production-role file that is not inert, an added one included
+  (`prod_files_changed`), changed production, and Q3 names the label for
+  it. Once #473's PR #528 (D-161) merges, this finding, when it escalates
+  through E1, is labelled `PROD_CHANGE_NOT_EVIDENCE`. The label is
+  escalation policy in `gating.py`, which this PR does not touch; neither
+  this PR's fixtures and tests nor #528's assert this finding's label, so
+  the order the two merge in moves no pin.
 - The honest cost of Q1 (a). A pytest file kept under `golden/`,
   `expected/` or `__snapshots__/` has the snapshot role and test
   obligations (#219), so the file-scoped form reads any edit to it as a
