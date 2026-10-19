@@ -12759,8 +12759,12 @@ read limit` (`:1123`). They are not in this round. The time at 200,000
 nodes and D-131 item 2's stand-in time are not measured. By reading, two
 checks still read the module once per test: for a pair whose new callee
 is a `math.gcd` helper, `math_import_authority` iterates the module's
-statements and the check of the module's other functions is made for
-each pair, since its proof reads the pair's bindings; and for a test that
+statements (`literal_stdlib_standins.py:81`) and the check of the
+module's other functions is made for each pair, since its proof reads the
+pair's bindings, though only after `pure_imported_calls` (`:94`) has
+admitted the test source, which it refuses over 65,536 bytes or 4,096
+nodes (`oracle_purity.py:150-157`), so for a larger file only the
+statement loop is made for each pair; and for a test that
 calls a module helper whose assertion compares with a parameter,
 `parameterized_abs_event` checks both modules for each such test.
 Which step counter fires on the 17 commits is unknown; finding out needs
