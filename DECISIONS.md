@@ -12530,11 +12530,11 @@ Readings within the ruling's text:
   the existing file it was. A rename onto a `.py` production path from a
   docs or lockfile path whose base side parses as Python still counts its
   changed symbols. That costs no less than residual (1) below, so it is
-  left as it is.
+  left as it is; the owner approved this reading (below).
 - A symbol is counted per entry, not per name: the multiset difference
   above.
 
-Not settled by the ruling, for the owner's decision:
+Not settled by the ruling; the owner settled each as follows (below):
 
 - The E1 label. At this PR the newly raised finding is labelled
   `NO_PROD_CHANGE_IN_DIFF` over a diff that adds a production file. SPEC
@@ -12633,8 +12633,8 @@ snapshot-role file. How many there are is unknown.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run or sweep was run`.
 
 Evidence status: prepared on a work machine where no pytest, checkwash or
-Python ran; CI runs the tests. Added: seven `.gwcase` fixtures, labels
-reviewed before merge (`snapshot_new_prod_module_pos` and
+Python ran; CI runs the tests. Added: seven `.gwcase` fixtures with
+owner-approved labels (`snapshot_new_prod_module_pos` and
 `snapshot_new_prod_module_new_test_pos`, which carry `bypass: 132`;
 `snapshot_new_prod_module_with_caller_neg`,
 `snapshot_deleted_prod_module_neg`, `snapshot_unrelated_symbol_edit_neg`,
@@ -12648,6 +12648,18 @@ and other open pull requests move it too. `benchmarks/FAILURES.md` was
 edited by hand to what `benchmarks/make_failures.py` produces, by reading
 the generator.
 
-The agent wrote this entry in #463's fix PR. It is a draft for the owner's
-approval of its wording, of the rule-2 recommendation and of the open
-points above.
+The agent wrote this entry in #463's fix PR #524. The maintainer approved
+it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval list as
+recommended"), in reply to the agent's approval list, whose items for this
+PR asked for: the one rule-2 move, re-pinning and renaming the test above
+as recommended (A55); accepting the cost of Q1 (a), to be named in the
+release notes and `docs/KNOWN-ISSUES-next.md` as drafted (A56); the
+labels of the seven fixtures (A57); the wording of SPEC §4 (59d13e77,
+78e330e6), THREATMODEL row 132 as Partly closed (9666da66, 93b07116) and
+this entry (24c1e6a0, dff4d5ff, 827bc03c), with the E1 label point
+changed to name #473 instead of asking for a ruling (A58); and the
+reading above of "a production file the diff adds" (A59). The reply was a
+button whose text the agent wrote, which the owner chose. Commits
+6f6ad594 (the move), 6fac1f98, 9a6615ff, 7c8e41b2, b598accd and e02b3f20
+(the accepted cost) and 8c6492ad (the E1 label point) apply those
+answers.
