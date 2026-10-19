@@ -169,7 +169,8 @@ configuration file (`pytest.ini`, `.pytest.ini`, `pytest.toml`,
 either can change the module a test's import resolves to. So do any
 non-generated file under the root `scripts/` directory, read for the pytest
 commands it runs, and any other changed file that large the analysis needs
-as context. A shell shebang makes a file a runner script whatever its name.
+as context. A shell shebang gives a file the shape of a runner script, whatever
+its name.
 From the next minor (unreleased,
 [#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
 the first 200 bytes of a side over the limit to tell, and uses them for
