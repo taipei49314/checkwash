@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+from collections import ChainMap
 
 from checkwash.change import EngineError
 from checkwash.frontends.python.oracle_purity import pure_imported_calls
@@ -43,9 +44,10 @@ def literal_math_gcd_standin(function, call, bindings):
         return False
     expression = function.body[0].value
     names = {arg.arg for arg in parameters}
+    # The parameters lie over the bindings, which are not copied (#469).
     return (isinstance(expression, ast.Call) and len(expression.args) == 2 and not expression.keywords
             and all(isinstance(value, ast.Name) and value.id in names for value in expression.args)
-            and _resolve(expression.func, {**bindings, **{name: None for name in names}}) == "math.gcd")
+            and _resolve(expression.func, ChainMap({name: None for name in names}, bindings)) == "math.gcd")
 
 
 def math_is_unshadowed(context, path):
