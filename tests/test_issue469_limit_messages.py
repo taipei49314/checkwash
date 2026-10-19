@@ -652,27 +652,35 @@ def _context(after):
 
 
 def test_a_kept_math_gcd_authority_answers_as_a_fresh_check_does():
+    # Each case asks one kept dict for (target, old call) pairs, and says how
+    # many answers of `pure_imported_calls` the dict keeps.
+    total, other = "app.billing.total", "app.billing.other"
     cases = [
-        (GCD_AFTER, "app.billing.total", ["total(12, 8)", "total(4, 6)"]),
-        (GCD_AFTER, "app.billing.total", ["other(12, 8)", "total(12, 8)"]),
-        (GCD_AFTER, "app.billing.other", ["total(12, 8)"]),
-        (GCD_AFTER.replace(b"import math\n", b"import math\nimport os\n"), "app.billing.total", ["total(12, 8)"]),
+        (GCD_AFTER, [(total, "total(12, 8)"), (total, "total(4, 6)")], 1),
+        (GCD_AFTER, [(total, "other(12, 8)"), (total, "total(12, 8)")], 1),
+        (GCD_AFTER, [(other, "total(12, 8)"), (total, "total(12, 8)")], 1),
+        # Two names of one imported function share its answer.
+        (GCD_AFTER.replace(PREFIX, b"from app.billing import total, total as alias\n"),
+         [(total, "total(12, 8)"), (total, "alias(12, 8)")], 1),
+        # The source imports no callee, so it is refused for every target
+        # without asking `pure_imported_calls`.
+        (GCD_AFTER.replace(PREFIX, b""), [(total, "total(12, 8)"), (other, "other(12, 8)")], 0),
+        (GCD_AFTER.replace(b"import math\n", b"import math\nimport os\n"), [(total, "total(12, 8)")], 0),
         # Over 65,536 bytes, `pure_imported_calls` refuses the test source.
-        (GCD_AFTER + b"pass\n" * 20_000, "app.billing.total", ["total(12, 8)"]),
+        (GCD_AFTER + b"pass\n" * 20_000, [(total, "total(12, 8)")], 0),
     ]
     seen = set()
-    for source, target, calls in cases:
+    for source, asks, answers in cases:
         tree = ast.parse(source)
         context, search = _context(source)
         kept = {}
-        for text in calls:
+        for target, text in asks:
             call = parse_expr(text)
             for _ in range(2):
                 answer = literal_stdlib.math_import_authority(source, tree, call, target, PATH, context, search, kept)
                 assert answer == literal_stdlib.math_import_authority(source, tree, call, target, PATH, *_context(source))
-            seen.add(answer)
-        # Calls of one callee share one kept answer.
-        assert len(kept) == len({parse_expr(text).func.id for text in calls})
+                seen.add(answer)
+        assert len(kept.get("sources", {})) == answers
     # The check admits some sources and calls and refuses others.
     assert seen == {True, False}
 
@@ -750,3 +758,33 @@ def test_kept_checks_leave_math_gcd_and_parameterized_verdicts_as_fresh_checks_g
     assert kept == fresh
     for (_, _, expected), findings in zip(cases, kept):
         assert any(f.rule == "TEST_PATCHES_SUBJECT" for f in findings) is expected
+
+
+def _analyse_files(files):
+    """`analyze` on several changed files, each path mapped to its two sides."""
+    changes = [FileChange(path, "modified", before, after) for path, (before, after) in files.items()]
+    sources = {**PRODUCTION, **{path: after for path, (_, after) in files.items()}}
+    return analyze(changes, Config(), Contract(), [], datetime.date(2026, 10, 19),
+                   root_reader=sources.get, root_path_lister=lambda: sorted(sources),
+                   root_batch_reader=lambda paths: {p: sources.get(p) for p in paths})
+
+
+def test_each_file_has_its_own_kept_checks(monkeypatch):
+    # The kept dicts' keys name neither the file nor its source, so only
+    # making them for each file keeps one file's answers out of another's.
+    other = "tests/test_other.py"
+    asks = []
+    for name, path_at in (("math_import_authority", 4), ("parameterized_abs_event", 2)):
+        def ask(*args, check=getattr(subject, name), name=name, path_at=path_at):
+            asks.append((name, args[path_at], args[7]))
+            return check(*args)
+
+        monkeypatch.setattr(subject, name, ask)
+    for name, rows in (("math_import_authority", _gcd_rows(2)), ("parameterized_abs_event", _abs_rows(2))):
+        asks.clear()
+        _analyse_files({PATH: rows, other: rows})
+        dicts = [[kept for asked, path, kept in asks if asked == name and path == file] for file in (PATH, other)]
+        # Both tests of each file ask, with the file's one dict.
+        assert [len(found) for found in dicts] == [2, 2]
+        assert all(kept is found[0] for found in dicts for kept in found)
+        assert dicts[0][0] is not dicts[1][0]
