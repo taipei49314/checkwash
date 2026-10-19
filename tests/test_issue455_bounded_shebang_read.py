@@ -660,6 +660,10 @@ def test_a_range_beside_an_oversized_document_gives_a_verdict(tmp_path, row):
     _assert_verdict(*_check(repo, "HEAD~1..HEAD", "--format", "json"), named)
 
 
+# An existing runner the suite runs as `sh ci/run.txt`: its suffix and name
+# are not runner-shaped, so only the shebang gives it the shape.
+RUNNER = b"#!/bin/sh\nset -e\npython -m pytest\n"
+
 RANGE_REFUSALS = {
     # name: (base extra files, head edit, the side named)
     "extensionless_added": (lambda: {},
@@ -672,11 +676,18 @@ RANGE_REFUSALS = {
                                   described("bin/deploy", "head")),
     # The issue's base-side gap: `sh ci/run.txt` ran the suite, and the head
     # drops the shebang and the test command, both sides over the limit.
-    "suffixed_runner_base_side": (lambda: {"ci/run.txt": headed(b"#!/bin/sh\nset -e\npython -m pytest\n",
-                                                                LIMIT + 1, "runner")},
+    "suffixed_runner_base_side": (lambda: {"ci/run.txt": headed(RUNNER, LIMIT + 1, "runner")},
                                   lambda repo: _write(repo, {"ci/run.txt": headed(b"set -e\necho skipped\n",
                                                                                   LIMIT + 1, "runner-head")}),
                                   described("ci/run.txt", "base")),
+    # The same runner deleted, or renamed: only its base side holds the
+    # shebang the streamed prefix shows.
+    "suffixed_runner_deleted": (lambda: {"ci/run.txt": headed(RUNNER, LIMIT + 1, "runner")},
+                                lambda repo: (repo / "ci" / "run.txt").unlink(),
+                                described("ci/run.txt", "base")),
+    "suffixed_runner_renamed": (lambda: {"ci/run.txt": headed(RUNNER, LIMIT + 1, "runner")},
+                                lambda repo: git(repo, "mv", "ci/run.txt", "ci/run-all.txt"),
+                                described("ci/run.txt", "base")),
 }
 
 
@@ -715,12 +726,32 @@ def test_the_worktree_beside_an_oversized_document_gives_a_verdict(tmp_path, row
     _assert_verdict(*_check(repo, "--format", "json"), named)
 
 
-def test_the_worktree_with_a_shell_shebang_on_its_side_exits_2_naming_it(tmp_path):
-    repo = _repo(tmp_path, _base_files())
-    _write(repo, {"tests/test_billing.py": WEAKENED, "tools/run-tests": headed(b"#!/bin/sh\n", LIMIT + 1, "run")})
+WORKTREE_REFUSALS = {
+    # name: (base extra files, working-tree edit, the side named)
+    "extensionless_untracked": (lambda: {},
+                                lambda repo: _write(repo, {"tools/run-tests": headed(b"#!/bin/sh\n", LIMIT + 1,
+                                                                                     "run")}),
+                                described("tools/run-tests", "worktree")),
+    # The base side's prefix is streamed from Git, one path at a time.
+    "suffixed_runner_base_side": (lambda: {"ci/run.txt": headed(RUNNER, LIMIT + 1, "runner")},
+                                  lambda repo: _write(repo, {"ci/run.txt": headed(b"set -e\necho skipped\n",
+                                                                                  LIMIT + 1, "runner-worktree")}),
+                                  described("ci/run.txt", "base")),
+    "suffixed_runner_deleted": (lambda: {"ci/run.txt": headed(RUNNER, LIMIT + 1, "runner")},
+                                lambda repo: (repo / "ci" / "run.txt").unlink(),
+                                described("ci/run.txt", "base")),
+}
+
+
+@pytest.mark.parametrize("row", sorted(WORKTREE_REFUSALS))
+def test_the_worktree_with_a_shell_shebang_on_an_unread_side_exits_2_naming_it(tmp_path, row):
+    base, edit, named = WORKTREE_REFUSALS[row]
+    repo = _repo(tmp_path, _base_files(base()))
+    edit(repo)
+    _write(repo, {"tests/test_billing.py": WEAKENED})
     code, _stdout, stderr = _check(repo, "--format", "json")
     assert code == 2
-    assert f"SourceOverLimit: {REFUSAL}: {described('tools/run-tests', 'worktree')}" in stderr
+    assert f"SourceOverLimit: {REFUSAL}: {named}" in stderr
 
 
 @pytest.mark.parametrize("shebang", [False, True], ids=["document", "shell_script"])
@@ -761,7 +792,8 @@ def test_the_prefix_reaches_no_output(tmp_path, args):
         assert "README" in stdout
 
 
-def test_a_range_that_reaches_the_provider_pass_gives_a_verdict_beside_a_set_aside_readme(tmp_path):
+@pytest.mark.parametrize("mode", ["range", "worktree"])
+def test_a_run_that_reaches_the_provider_pass_gives_a_verdict_beside_a_set_aside_readme(tmp_path, mode):
     # A new provider beside an existing import takes the provider pass to its
     # first read phase, which reads every dot-less path for a shebang. The
     # README changed and is set aside, so the pass skips it.
@@ -769,9 +801,14 @@ def test_a_range_that_reaches_the_provider_pass_gives_a_verdict_beside_a_set_asi
     repo = _repo(tmp_path, {**sources, "README": headed(DOCUMENT, LIMIT + 1, "readme")})
     _write(repo, {"tests/src/billing.py": PROVIDERS["tests/src/billing.py"],
                   "README": headed(DOCUMENT, LIMIT + 2, "readme-head")})
-    _commit(repo)
-    code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+    if mode == "range":
+        _commit(repo)
+        code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
+        side = "head"
+    else:
+        code, stdout, stderr = _check(repo, "--format", "json")
+        side = "worktree"
     assert "engine error" not in stderr, stderr
     assert code in (0, 1)
     assert sorted(_entry(item) for item in json.loads(stdout)["unread"]) == [
-        described("README", "base"), described("README", "head", LIMIT + 2)]
+        described("README", "base"), described("README", side, LIMIT + 2)]
