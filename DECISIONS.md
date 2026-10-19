@@ -15341,3 +15341,222 @@ readings' heading and the negatives' sentence, which had said they
 awaited it, added the sentence after the fallback saying the owner
 accepted it, retitled the paragraph on the first approvals, and wrote
 this paragraph.
+
+## D-165 (2026-10-19): a JS/TS test registered where no code runs is no unit (#484)
+
+Ruling 484 (owner, 2026-10-18, 「19 項全部照建議（價值判斷的題也照你的傾向）」,
+"all 19 as recommended, value judgements included"; #484
+issuecomment-6248630321, which states each decision in full): Q1 (a), Q2
+(no new rule text), Q3 (the fixtures), and the Python twin filed as #499.
+The owner's consolidated ruling of 2026-10-19 (「裁決總表全部照建議」, #484
+issuecomment-6261651400) added R2 (this fix, merged before the combined
+sweep's manifest is frozen, gets its own pair of arms in that sweep), R99
+(#499 follows this ruling), R100 (this PR's THREATMODEL row lists the
+Python form as open, and that half is Closed when #499's fix merges) and
+R101 (#499 is P2 and lands in the same round, v0.9.0). D-164 to D-169 were
+assigned to six pull requests prepared in parallel; this entry is D-165.
+
+#484 reports that `parse_javascript` read every declaration
+`_DECLARATION_RE` finds as live. A unit's liveness came from its modifiers,
+options and enclosing declarations, never from whether the declaration
+call is reached, and #429's walker (D-148) read only the callback of a unit
+with assertions and cut only assertions. So a test moved under
+`if (false)`, after `return;` in a `describe` callback, under a module-level
+`if (false)`, behind `false &&`, or a node:test `t.test(...)` after
+`return;` in its parent test, passed with zero findings, and a test pasted
+under `if (false)` was a live unit with no markers, so it lent a deleted
+test the D2 move credit.
+
+Implementation, lines at this PR:
+
+- Q1 (a), the walk reads more. `_dead_code`
+  (`frontends/javascript/frontend.py:1412`) walks the module's own
+  statements (`Reachability.module_unreachable`, `reachability.py:428`),
+  the block callback of every `describe`, `suite` and `context`
+  declaration, their `x`/`f` forms, modifiers and tables included, and the
+  callback of a test that registers a test of its own, even one with no
+  assertions. `parse_javascript` (`:2827`) parks every declaration that
+  starts in a span those walks prove dead. A parked declaration is no
+  unit, and neither is any declaration inside it, since a dead span covers
+  whole statements. The file's focus, the ancestors a unit inherits skips
+  from and `_focus_stops` read only the live declarations, so a dead
+  `.only` stops no other test. A parked test is still scanned (`:3057`):
+  its assertions reach `swallowing_handlers`, so the catch evidence does
+  not change, and they are recorded as never reached. Its callback stays
+  among the test bodies, so the test around a parked subtest does not gain
+  the subtest's assertions.
+- Q1 (a), `&&` and `||`. #429 Q3's reading drops a declaration as it drops
+  an assertion: the walks of this round pass the declarations' call spans
+  as the operands it may drop (`unreachable` and `module_unreachable` now
+  take a map of spans), so `false && it(...);` parks the test.
+- Q1 (a), the finding. No detector changes. A parked unit is absent on its
+  side, so its loss is what a deletion reports: TEST_DISABLED "test unit
+  disappeared", under the deletion's key (`detectors/test_disabled.py:82-101`),
+  at high in a test-only change. No `ParsedFile` field is added, so the
+  message does not say the code is still in the diff.
+- D-148 reading 7, amended as the ruling approves. It now reads: "A
+  boundary is proved only where the text between two tokens is whitespace
+  and comments. A `;` after an operand the tokens omit (a template or
+  regular expression) still ends a statement. A function declaration with a
+  TypeScript return type, `import`, `export` and `with` stop the walk,
+  except that the walk of a file's own statements steps over a static
+  `import` declaration whose end it proves (#484); `export`, TypeScript's
+  `import x = require(...)`, an import with attributes and any other
+  `import` still stop it." (`Reachability._import`, `reachability.py:780`.)
+- D-148 reading 10, amended as the ruling approves. Its clause "a dead
+  region holding a `function` (a call before it may run the hoisted body,
+  which the binder does not always scope: `function f<T>()`)" now reads "a
+  dead region holding a function declaration, a labelled one
+  (`l: function f() {}`) included (a call before it may run the hoisted
+  body, which the binder does not always scope: `function f<T>()`); a
+  function expression hoists nothing, so a dead region that holds one is
+  read" (`_declares_function`, `reachability.py:516`). The walker is
+  shared, so the narrowing moves #429's cuts too: an assertion parked in a
+  dead region that also holds a function expression, silent before because
+  the whole callback was refused, now reports ASSERT_REMOVED, and an edit
+  to an assertion already in such a region, reported before, is now
+  silent. Reading 10's other refusals cover the text from the file's start,
+  so they refuse a `describe` walk as they refuse a callback walk, and they
+  refuse the module walk wherever that text occurs in the file.
+- Q2, no new rule text. A parked unit is never a live added unit, so it
+  earns no D2 move credit (`engine.py:1661`, `:1675`), adds no oracle mass
+  to D5's restructure check and no split/rename budget (`gating.py:480`,
+  `:506`). D10's survivor search reads Python files only (`engine.py:1719`,
+  with `def name(` needles), so no JS/TS unit was ever a survivor; SPEC's
+  D10 row now says so, which records what the code does and changes no
+  rule.
+- Q3, the fixtures, each keeping a live test beside the parked one. The
+  eleven blocking shapes: `js_dead_registration_if_false_pos` (the issue's
+  shape), `js_dead_registration_after_return_pos`,
+  `js_dead_registration_module_if_false_pos` (the import step-over),
+  `js_dead_registration_literal_and_pos`,
+  `js_dead_registration_node_subtest_pos`,
+  `js_dead_registration_describe_pos`,
+  `js_dead_registration_mocha_function_pos` (the amended reading 10),
+  `js_dead_registration_pasted_other_file_pos`,
+  `js_dead_registration_assertion_moved_pos`,
+  `js_dead_registration_equal_mass_pos` and
+  `js_dead_registration_focus_pos`. The controls:
+  `js_registration_if_true_neg`, `js_registration_else_of_if_false_neg`,
+  `js_registration_after_iterator_return_neg`,
+  `js_registration_unwrapped_from_if_false_neg` and
+  `js_registration_after_unproved_end_neg`. The named residual pins:
+  `js_dead_registration_env_condition_residual_neg` and
+  `js_dead_registration_const_condition_residual_neg`. The new reading:
+  `js_dead_registration_weakened_both_sides_neg`. The unit pins the ruling
+  lists, and the walk's other readings, are in
+  `tests/test_issue484_js_dead_registration.py`.
+- THREATMODEL: a new row 159, Closed in part (JS/TS closed, the Python
+  form open as #499), and a clause on row 9 for its `if (false)` absorber;
+  the eleven blocking fixtures cite row 159, and the two absorber fixtures
+  row 9 as well. `benchmarks/FAILURES.md` is edited by hand to what
+  `make_failures.py` would write, which was not run. Row 159 is renumbered
+  mechanically if it collides at merge (A98).
+- Docs: `docs/js-reachability.md` gains a section on registrations and
+  follows the amended readings 7 and 10, and `docs/KNOWN-ISSUES-next.md`
+  gains a #484 row, with the #429 row's "outside this change" sentence
+  replaced. The dead `t.skip()` residual (D-148 reading 9) is unchanged
+  and stays listed.
+
+Readings the ruling leaves to the implementation, for the owner's approval:
+
+1. **A test callback that registers subtests** is one whose body holds the
+   start of a declaration the frontend reads as a named test or a block:
+   node:test's and tap's `t.test(...)`, and any other `test`, `it` or
+   `describe` call there. A bare `.test(value)` call, which the frontend
+   reads as a declaration with no name, does not make the callback walked.
+2. **The operand for Q3** is the declaration's call from its callee to its
+   `)`, the callee including a receiver of dotted names (`t.test`). So
+   `false && await t.test(...)` is not decided, and neither is a
+   declaration whose callee follows a call (`make().test(...)`) or one held
+   by a declaration or assignment (`const ok = false && it(...)`), as for
+   an assertion.
+3. **Declares tests** (the question the ruling leaves to this draft). A
+   parked declaration still makes a file declare tests, as before
+   (`frontend.py:3095`), so E7's role reading of a JS/TS test path does not
+   move.
+4. **A parked test's assertions** are all recorded as never reached: one
+   with a strength in `unreachable_assertion_spans`, one without in
+   `unreachable_unjudged_assertion_spans`. The coverage inventory reads the
+   first as read and keeps the second's "recorded with no strength"
+   reason, as D-148 does for a cut.
+5. **A parked table** (`test.each(CASES)(...)` under `if (false)`) still
+   counts as a table-argument read of its same-file `const` (D-152 reading
+   5), so a live table that shares the `const` keeps its rows counted.
+6. **Statement position** for the amended reading 10 is read
+   conservatively, from the token before the `function`: a `function` with
+   no name after it never declares; one after `.`, `?.` or `#`, an opening
+   bracket, a comma, a spread or an operator that waits for its operand
+   begins an expression, and so does one after `return`, `throw`, `yield`,
+   `await`, `void` or a prefix `!` on the same line; anything else, `)`,
+   `]`, `}`, an operand at a line break and `:` included, reads as a
+   declaration. So a named function expression after a `:`, such as an
+   object property's value, in a dead region still refuses the walk (row
+   159, residual 6).
+7. **The import step-over** reads `import "m"`, and `import` followed by
+   names, `*`, `as`, commas and one braced list of names, strings and
+   commas, then `from` and a string; TypeScript's `import type` is such a
+   form. It ends at a `;`, at a line break before any token but `with` or
+   `assert`, or at the file's end, and only where the text between its
+   tokens is whitespace and comments. A default import named `from`
+   (`import from from "m"`) stops the walk. The module walk is refused when
+   text the tokens omit stands before the file's first token.
+8. **A module-level `return` or `throw`** cuts the rest of the file, as in
+   a block. CommonJS runs a top-level `return`, and an ES module that holds
+   one does not load, so either way nothing after it registers.
+9. **What is not walked.** The callback of a declaration that a dead span
+   already holds, all of which is dead; and a declaration whose call was
+   recovered, as D-148 does not walk a recovered test callback.
+
+**A note on the fixtures.** JS/TS units carry no shingles, so two unpaired
+units of one file pair in span order (SPEC §7). On the base, the dead test
+of `js_dead_registration_equal_mass_pos` is a live unit, and the deleted
+test pairs with it rather than reaching D5. After the fix nothing pairs
+with it, and the deletion is TEST_DISABLED at high, as the ruling expects.
+D5 credits a JS/TS file only where its alignment is degraded (row 157,
+residual 9). The fixture pins the reading the ruling names.
+
+Rule 2. The ruling approves no change to an existing expectation, and none
+was changed. By reading, no existing expected output moves: no fixture or
+test registers a declaration in dead code; no existing fixture or test
+source holds a `return`, a `throw` or a branch the folder decides at module
+level or in a `describe` callback (searched); none holds a function
+expression in a dead region; and the one refusal pin for reading 10,
+`test_a_cut_holding_a_function_declaration_is_refused`
+(`tests/test_issue429_js_reachability.py:217`), uses the declaration form,
+which stays refused. Nothing under `tests/gates` changed. If CI shows an
+existing expectation moving, the round stops and asks the owner.
+
+**Fingerprints and IR.** No fingerprint scheme changes. A parked test's
+finding has the key its deletion has, since the key reads the before side
+(pinned). TEST_DISABLED's keys move in #512, separately. No IR or
+`ParsedFile` field is added; IR_VERSION and FINDINGS_VERSION stay.
+
+**Costs, by reading; the sweep counts them.** New blocks: a change that
+moves a test where no code runs, which is what the ruling asks for, and
+the moved #429 cuts above. A misreading no refusal notices (#490) now
+reaches declarations: where a change adds one, every test after it in that
+statement list can read as "test unit disappeared" at high, a false block,
+and where both sides hold one, those tests are read on neither side, so
+edits to them are not judged. D-148's refusals (JSX, nested templates, `\`)
+cover the text from the file's start, so where they apply these walks keep
+today's reading.
+
+**Measurement.** Not measured. Per R2 this fix's merge gets its own pair of
+arms in the combined sweep, which measures it as D-148's evidence status
+records for #429: the standard set, the D-088 sets and the JS batch, with
+the refactor, tamper, decoy, recorded and perf gates. That run also prices
+the moved #429 cuts and the #490 cost named above.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run, sweep or runner was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; CI runs the tests. Added: nineteen `.gwcase` fixtures
+(eleven pinning row 159, two of them row 9 as well; five controls; two
+named residual pins; one new reading), whose labels await the owner's
+approval, and 78 collected items in
+`tests/test_issue484_js_dead_registration.py`, counted from its
+parametrize lists. By reading, the documented test count becomes 20180
+(20083 + 78 + 19); CI's collection checks it.
+
+The agent wrote this entry in #484's fix PR. Its wording, the readings
+above and the fixtures' labels await the owner's approval.
