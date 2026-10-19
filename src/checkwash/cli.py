@@ -901,8 +901,8 @@ def main(argv: list[str] | None = None) -> int:
 
             # Doctor's own sanitized Git environment, or the caller's GIT_DIR
             # could name a repository its later queries never see (#416). Its
-            # own timeout and no stdin too, so a Git that hangs stalls the
-            # lookup no longer than one of its later queries (#500).
+            # own timeout and no stdin too, so a Git that hangs stalls the lookup
+            # 5 seconds per query (about 10 seconds from a subdirectory) (#500).
             _reroot(args, required=False, env=discovery_env(), timeout=QUERY_TIMEOUT,
                     stdin=subprocess.DEVNULL)
             return run_doctor(args.repo)
