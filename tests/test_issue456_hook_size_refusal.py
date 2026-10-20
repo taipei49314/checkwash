@@ -130,8 +130,11 @@ WORKTREE_ROWS = {
     # The padding need not touch the test: any new must-read file will do.
     "untracked_py": (lambda: {}, lambda: {"tests/test_billing.py": WEAKENED, "scratch.py": blob(LIMIT + 1, "scratch")},
                      described("scratch.py", "worktree"), lambda repo: (repo / "scratch.py").unlink()),
+    # A shell shebang gives a file with no extension its runner shape at any
+    # size (#455); without one, it is judged like any other unread path.
     "untracked_extensionless": (lambda: {},
-                                lambda: {"tests/test_billing.py": WEAKENED, "NOTES": blob(LIMIT + 1, "notes")},
+                                lambda: {"tests/test_billing.py": WEAKENED,
+                                         "NOTES": b"#!/bin/sh\n" + blob(LIMIT + 1 - len(b"#!/bin/sh\n"), "notes")},
                                 described("NOTES", "worktree"), lambda repo: (repo / "NOTES").unlink()),
     # Both sides over the limit: the refusal names the base side, the first
     # unread one; the block names the side the session wrote.
