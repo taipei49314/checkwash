@@ -14172,6 +14172,12 @@ with no new issue: one sentence in the KNOWN-ISSUES-next #469 row
 that time, for example of the stand-in pass (D-131 item 2), goes to the
 pool after the release. This paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+text written after the round-4 and round-6 replies. This sentence was
+written after the reply.
+
 ## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
 
 Ruling 471 (owner, 2026-10-16, issuecomment-6230178131, 「#468、#471
@@ -14553,6 +14559,12 @@ batch 3, makes it 2026-10-20 in `benchmarks/external-credits.json` and
 in the External credits table of `benchmarks/FAILURES.md`. This
 paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+text written after the round-4 and round-6 replies. This sentence was
+written after the reply.
+
 ## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
 
 Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
@@ -14831,6 +14843,12 @@ rule, severity and unit, and the two `TEST_DISABLED` warns, are
 unchanged. Item A68 had approved the fixture's label with the old one.
 The same item approves fourteen such moves in #522's fixtures and tests
 (D-155). This paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+text written after the round-4 and round-6 replies. This sentence was
+written after the reply.
 
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
@@ -15630,6 +15648,12 @@ comment approved under A54, naming #522's fixture-producer evidence; it
 changes the comment only (4a87d143, in integration batch 3). This
 paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+text written after the round-4 and round-6 replies. This sentence was
+written after the reply.
+
 ## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
 
 Ruling 496 (owner, 2026-10-19, 「裁決總表全部照建議」, "the consolidated
@@ -16158,6 +16182,12 @@ readings' heading were rewritten to the facts at merge under the C1/D3
 precedent the same round approved (f42441d0, in integration batch 4). This
 paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the text written after the round-4 and round-6 replies.
+This sentence was written after the reply.
+
 ## D-165 (2026-10-19): a JS/TS test registered where no code runs is no unit (#484)
 
 Ruling 484 (owner, 2026-10-18, 「19 項全部照建議（價值判斷的題也照你的傾向）」,
@@ -16425,6 +16455,14 @@ sentence were rewritten to the facts at merge under the C1/D3 precedent the
 same round approved (f42441d0): A98 kept row 159's number, and R100's edit
 made the row Closed at #535's merge (02c5b34f). This paragraph was written
 after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the text written after the round-4 and round-6 replies,
+among it the `docs/js-reachability.md` bullet fd11786d rewrote and SPEC
+§4's `TEST_DISABLED` row, where this entry's clause stands beside #499's.
+This sentence was written after the reply.
 
 ## D-166 (2026-10-19): a Python def or class whose own statement never runs is no unit (#499)
 
@@ -16707,6 +16745,15 @@ sentences, the R100 paragraph and the closing sentence were rewritten to the
 facts at merge under the C1/D3 precedent the same round approved (f42441d0).
 This paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the text written after the round-4 and round-6 replies,
+among it SPEC §4's `TEST_DISABLED` row, where this entry's clause stands
+beside #484's. Its item H3 adds this entry's `name#N` move to the finding
+fingerprints row of `docs/stability.md`, which lists the moves of the next
+minor. This sentence was written after the reply.
+
 ## D-167 (2026-10-19): an arrow test callback's simple return annotation no longer hides its parameters (#480)
 
 Ruling 480 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
@@ -16973,6 +17020,12 @@ readings' heading, the labels' sentence and the closing sentences were
 rewritten to the facts at merge under the C1/D3 precedent the same round
 approved (f42441d0). This paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the text written after the round-4 and round-6 replies.
+This sentence was written after the reply.
+
 ## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
 
 #456's first ruling (issuecomment-6248011888, 2026-10-18, 「照建議」, "as
@@ -17168,6 +17221,14 @@ self-check exemptions for the E3 pin in #542, concerns no text here. The
 numbering sentence, the readings' heading, the F11 clause and the closing
 sentence were rewritten to the facts at merge under the C1/D3 precedent the
 same round approved (f42441d0). This paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the text written after the round-4 and round-6 replies,
+among it README's two `--format json` sentences that b8798a8c anchored to
+the stop and the KNOWN-ISSUES-next #454 row's F6 half-sentence (4079e353).
+This sentence was written after the reply.
 
 ## D-169 (2026-10-19): TEST_DISABLED exemptions are content-bound, amending D-019 (#512)
 
@@ -17486,6 +17547,12 @@ closing sentences were rewritten to the facts at merge under the C1/D3
 precedent the same round approved (f42441d0). This paragraph was written
 after the reply.
 
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the text written after the round-4 and round-6 replies.
+This sentence was written after the reply.
+
 ## D-170 (2026-10-20): the perf gate's budgets widen to 3.5 s and 1.5 s
 
 **What failed.** `tests/gates/test_perf.py::test_many_files_within_budget`
@@ -17595,6 +17662,11 @@ steps are differences of the artifacts' values, rounded to two places),
 and this PR's CI is the first run of the new budgets.
 `NOT_RUN：工作機規則（POLICY work-machine-local），the widened budgets run first in this PR's CI`.
 
-The agent wrote this entry. Its wording awaits the owner's approval in
-the next approval round, as round 2's B3 covered the maintainer text
-written while applying earlier approvals.
+The agent wrote this entry. On 2026-10-20 the owner approved its wording
+as #543 merged it, with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5,
+all as recommended"), a button whose text the assistant wrote. Its item
+H1 also approves `tests/gates/README.md`, where only the numbers changed
+(3.5 s and 1.5 s), and keeps the two budget checks skipped on macOS,
+whose runners vary the most, until they are revisited before 1.0. This
+paragraph was rewritten after the reply; before it, it said the wording
+awaited the next approval round.
