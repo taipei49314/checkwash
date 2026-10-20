@@ -350,3 +350,187 @@ reason = "PR #477 (#421 round 1): this pin checked a legacy assertion key with =
 author = "taipei49314"
 created = "2026-10-17"
 expires = "2026-11-16"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue456_hook_size_refusal.py/test_a_context_read_outside_the_diff_keeps_the_note/2e239ded82e7"
+rule = "ASSERT_WEAKENED"
+reason = "PR #534 (#454 (d)): this pin (tests/test_issue456_hook_size_refusal.py:209 on main) asserted an empty stdout on a size refusal's exit 2; --format json now prints the refused side as an unread document, still exit 2, so it checks that document instead; owner-approved as round-5 item E3, which names this pin, and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue456_hook_size_refusal.py/test_a_context_read_outside_the_diff_keeps_the_note/v2:97107348e2e860262c0eba7a24b5e6abd7337e89bb60392431fc2c6ec36cc8c5"
+rule = "ASSERT_WEAKENED"
+reason = "PR #534 (#454 (d)): this pin (tests/test_issue456_hook_size_refusal.py:209 on main) asserted an empty stdout on a size refusal's exit 2; --format json now prints the refused side as an unread document, still exit 2, so it checks that document instead; owner-approved as round-5 item E3, which names this pin, and in round-6 G1 on 2026-10-20; v2 key for the engine #534 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_guard_removal.py/test_the_finding_shares_the_guard_familys_identity/335efa2cfdca"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_guard_removal.py/test_the_finding_shares_the_guard_familys_identity/22fdb768dcec"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin asserted that a removed guard and a guard made always true share one TEST_DISABLED key; under #512 Q2 each key binds the guard before and after, so the two events get two keys over one legacy pre-image and the pin asserts that the keys differ; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_setup_guards.py/test_a_removed_setup_guard_is_reported_with_the_guard_family_identity/41c0da46151b"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_setup_guards.py/test_a_setup_guard_that_now_always_holds_is_reported/7c2fc63f2c26"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue209_effects_pytestmark.py/test_the_fingerprint_is_the_marker_name_s/9346a3c5b84c"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue223_conftest_request_side.py/test_the_fingerprint_is_the_setup_markers/a014619ef7ec"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin asserted that the module's skip fixture with the reason x and the conftest's skip share one TEST_DISABLED key; under #512 Q2 the key binds the skip's text, so they get two keys over one legacy pre-image, and the same skip in either place is still one key; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3), confirmed for this pin in round-6 F26, and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue260_pytestmark_spellings.py/test_a_conftest_pytestmark_s_guard_guards_nothing_either/57b40e4f8e4a"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue260_pytestmark_spellings.py/test_a_guard_made_always_true_or_removed_is_reported/19eb6bcd96a4"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_removed_unit_joins_legacy_keys_but_reports_complete_assertions/6408d6450ebc"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue261_suite_guard_removed.py/test_a_guard_moved_where_the_hook_reading_does_not_look_reads_as_removed/f9b131761658"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #537 (#512, round 2 of #421): findings of one unit sort by key (Finding.sort_key), and content-bound TEST_DISABLED keys (#512 Q2) do not sort as the legacy keys did, so this pin compares the same messages in either order; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0); the engine #537 builds held this finding at warn and printed no key for it"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue261_suite_guard_removed.py/test_a_removed_guard_is_reported_for_every_suite_level_control/b6065175a8ec"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #537 (#512, round 2 of #421): this pin compared the findings' legacy TEST_DISABLED keys in order; the keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks each finding's message with the legacy key its v2 key refines, in either order, because findings of one unit sort by key; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0); the engine #537 builds held this finding at warn and printed no key for it"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue261_suite_guard_removed.py/test_a_removed_guard_is_reported_for_every_suite_level_control/d2ae507fa505"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #537 (#512, round 2 of #421): findings of one unit sort by key (Finding.sort_key), and content-bound TEST_DISABLED keys (#512 Q2) do not sort as the legacy keys did, so this pin compares the same message, severity, shape and escalators in either order; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; legacy key for the published engine (v0.8.0); the engine #537 builds held this finding at warn and printed no key for it"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_guard_removal.py/test_the_finding_shares_the_guard_familys_identity/v2:a18fa41973e2a386b74329eac51c380dded5679fc9a1710a18d2f9ea74c42b53"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_guard_removal.py/test_the_finding_shares_the_guard_familys_identity/v2:cdc116ac3f8596a9d485b41ddcf81f4df9ac991fa952e2c3da2e75ab38a8f79f"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin asserted that a removed guard and a guard made always true share one TEST_DISABLED key; under #512 Q2 each key binds the guard before and after, so the two events get two keys over one legacy pre-image and the pin asserts that the keys differ; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_setup_guards.py/test_a_removed_setup_guard_is_reported_with_the_guard_family_identity/v2:51df67676b70ebc92e086aaaab711ecc8e0e77d91c0e3d4f00d64190503cff4f"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue196_setup_guards.py/test_a_setup_guard_that_now_always_holds_is_reported/v2:6794362ce47f34a53f780788b0c03f265fc6027169ae94399444062b29cf4467"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue209_effects_pytestmark.py/test_the_fingerprint_is_the_marker_name_s/v2:e05047b75a44dbad79b968c2a3e36c2958e917d8df22fd4d24b3f1c50e3160b0"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue223_conftest_request_side.py/test_the_fingerprint_is_the_setup_markers/v2:d056d0efac759a36e608c025b86317a6230ae6e3600861731122ac5dc343a1ef"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin asserted that the module's skip fixture with the reason x and the conftest's skip share one TEST_DISABLED key; under #512 Q2 the key binds the skip's text, so they get two keys over one legacy pre-image, and the same skip in either place is still one key; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3), confirmed for this pin in round-6 F26, and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue260_pytestmark_spellings.py/test_a_conftest_pytestmark_s_guard_guards_nothing_either/v2:c09de0f41d9d3e032427e1f7ca5f350b305eb65f235af627f6d237927f3f96d8"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_issue260_pytestmark_spellings.py/test_a_guard_made_always_true_or_removed_is_reported/v2:ada3c13c8996f99afa9993c88d62d0e47b45006ddf1e228a1422c9f0a68533f1"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_js_assertion_identity.py/test_removed_unit_joins_legacy_keys_but_reports_complete_assertions/v2:6db85e4cfab13345e40a81c1c52048587b02ce0f9ac594f4425454aa18bca33b"
+rule = "ASSERT_WEAKENED"
+reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABLED key with ==; TEST_DISABLED keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks that the v2 key's identity holds the same legacy pre-image instead; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
