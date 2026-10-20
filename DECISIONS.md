@@ -15504,13 +15504,22 @@ has no oversized side, so its budget does not move.
 **Rule 2.** The ruling approves no change to an existing fixture's expected
 output. Every comparison of a snapshot's `UnreadSide` with one built without
 a prefix holds, because the prefix takes no part in equality, and every
-case built without a prefix keeps today's answer. By reading, one existing
-expectation no longer holds: the `untracked_extensionless` row of
-`tests/test_issue456_hook_size_refusal.py` (`:133-135`). Its untracked
-`NOTES` is 1,000,001 bytes of hex text with no shebang, so it is now set
-aside, and the weakened test beside it blocks the stop as a finding, where
-the row asserts #456's size block. It is not changed in this PR; it waits
-for the owner's ruling. Nothing under `tests/gates` changes.
+case built without a prefix keeps today's answer. One existing expectation no longer held
+with its input as it was: the `untracked_extensionless` row of
+`tests/test_issue456_hook_size_refusal.py` (`:135-138`). Its untracked
+`NOTES` was 1,000,001 bytes of hex text with no shebang, so it was set
+aside, and the weakened test beside it blocked the stop as a finding, where
+the row asserts #456's size block; CI failed on that row on every leg at
+2a6ee2f9. In round 6 the owner approved option (a) (G1, 2026-10-20,
+「第六輪 G1～G6 全部照建議」, "round 6, G1 to G6, all as recommended"; the
+reply was a button whose text the assistant wrote). The row's `NOTES` input
+now starts with `#!/bin/sh` and keeps its size, 1,000,001 bytes, so the run
+refuses and names `NOTES` on its worktree side, and the row's asserted
+output is unchanged; its id and its undo are unchanged too. On the base the
+same input refuses by the extensionless rule, naming the same side. The
+untracked file with no shebang is pinned by this PR's
+`test_the_stop_hook_beside_an_untracked_oversized_extensionless_file[document]`.
+Nothing under `tests/gates` changes.
 
 **Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 82 collected
 items, counted from its parametrize lists: the prefix against the whole
