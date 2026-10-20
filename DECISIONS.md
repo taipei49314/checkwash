@@ -14175,8 +14175,9 @@ pool after the release. This paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above with
 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
 button whose text the assistant wrote: its item H2 approves together the
-text written after the round-4 and round-6 replies. This sentence was
-written after the reply.
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
 
 ## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
 
@@ -14562,8 +14563,9 @@ paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above with
 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
 button whose text the assistant wrote: its item H2 approves together the
-text written after the round-4 and round-6 replies. This sentence was
-written after the reply.
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
 
 ## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
 
@@ -14847,8 +14849,9 @@ The same item approves fourteen such moves in #522's fixtures and tests
 On 2026-10-20 the owner approved the paragraph above with
 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
 button whose text the assistant wrote: its item H2 approves together the
-text written after the round-4 and round-6 replies. This sentence was
-written after the reply.
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
 
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
@@ -15651,8 +15654,9 @@ paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above with
 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
 button whose text the assistant wrote: its item H2 approves together the
-text written after the round-4 and round-6 replies. This sentence was
-written after the reply.
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
 
 ## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
 
@@ -16185,8 +16189,9 @@ paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above and the rewrites it
 names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
 recommended"), a button whose text the assistant wrote: its item H2
-approves together the text written after the round-4 and round-6 replies.
-This sentence was written after the reply.
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists. This sentence
+was written after the reply.
 
 ## D-165 (2026-10-19): a JS/TS test registered where no code runs is no unit (#484)
 
@@ -16459,10 +16464,11 @@ after the reply.
 On 2026-10-20 the owner approved the paragraph above and the rewrites it
 names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
 recommended"), a button whose text the assistant wrote: its item H2
-approves together the text written after the round-4 and round-6 replies,
-among it the `docs/js-reachability.md` bullet fd11786d rewrote and SPEC
-§4's `TEST_DISABLED` row, where this entry's clause stands beside #499's.
-This sentence was written after the reply.
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists, among them the
+`docs/js-reachability.md` bullet fd11786d rewrote and SPEC §4's
+`TEST_DISABLED` row, where this entry's clause stands beside #499's (the
+list called it §5). This sentence was written after the reply.
 
 ## D-166 (2026-10-19): a Python def or class whose own statement never runs is no unit (#499)
 
@@ -16748,11 +16754,13 @@ This paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above and the rewrites it
 names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
 recommended"), a button whose text the assistant wrote: its item H2
-approves together the text written after the round-4 and round-6 replies,
-among it SPEC §4's `TEST_DISABLED` row, where this entry's clause stands
-beside #484's. Its item H3 adds this entry's `name#N` move to the finding
-fingerprints row of `docs/stability.md`, which lists the moves of the next
-minor. This sentence was written after the reply.
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists, among them
+SPEC §4's `TEST_DISABLED` row, where this entry's clause stands beside
+#484's (the list called it §5). Its item H3 adds this entry's `name#N`
+move to the finding fingerprints row of `docs/stability.md`, which lists
+the moves of the next minor. These sentences were written after the
+reply.
 
 ## D-167 (2026-10-19): an arrow test callback's simple return annotation no longer hides its parameters (#480)
 
@@ -17023,8 +17031,9 @@ approved (f42441d0). This paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above and the rewrites it
 names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
 recommended"), a button whose text the assistant wrote: its item H2
-approves together the text written after the round-4 and round-6 replies.
-This sentence was written after the reply.
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists. This sentence
+was written after the reply.
 
 ## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
 
@@ -17225,10 +17234,11 @@ same round approved (f42441d0). This paragraph was written after the reply.
 On 2026-10-20 the owner approved the paragraph above and the rewrites it
 names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
 recommended"), a button whose text the assistant wrote: its item H2
-approves together the text written after the round-4 and round-6 replies,
-among it README's two `--format json` sentences that b8798a8c anchored to
-the stop and the KNOWN-ISSUES-next #454 row's F6 half-sentence (4079e353).
-This sentence was written after the reply.
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists, among them
+README's two `--format json` sentences that b8798a8c anchored to the stop
+and the KNOWN-ISSUES-next #454 row's F6 half-sentence (4079e353). This
+sentence was written after the reply.
 
 ## D-169 (2026-10-19): TEST_DISABLED exemptions are content-bound, amending D-019 (#512)
 
@@ -17550,8 +17560,9 @@ after the reply.
 On 2026-10-20 the owner approved the paragraph above and the rewrites it
 names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
 recommended"), a button whose text the assistant wrote: its item H2
-approves together the text written after the round-4 and round-6 replies.
-This sentence was written after the reply.
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists. This sentence
+was written after the reply.
 
 ## D-170 (2026-10-20): the perf gate's budgets widen to 3.5 s and 1.5 s
 
@@ -17665,8 +17676,10 @@ and this PR's CI is the first run of the new budgets.
 The agent wrote this entry. On 2026-10-20 the owner approved its wording
 as #543 merged it, with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5,
 all as recommended"), a button whose text the assistant wrote. Its item
-H1 also approves `tests/gates/README.md`, where only the numbers changed
-(3.5 s and 1.5 s), and keeps the two budget checks skipped on macOS,
-whose runners vary the most, until they are revisited before 1.0. This
-paragraph was rewritten after the reply; before it, it said the wording
-awaited the next approval round.
+H1 also approves #543's change to `tests/gates/README.md`, which the list
+described as the numbers only: 1.5 s and 3.5 s, with a parenthesis that
+names the old budgets, the date and this entry. It keeps the two budget
+checks skipped on macOS, whose runners vary the most, until they are
+revisited before 1.0. H1 does not name #543's edit to
+`docs/enterprise.md`. This paragraph was rewritten after the reply;
+before it, it said the wording awaited the next approval round.
