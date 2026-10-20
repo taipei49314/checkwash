@@ -591,3 +591,12 @@ GitHub README and retain the old release's actual status in the launch notes.
 - If the round changed detector behaviour, the corpus sweep is not optional.
   If it changed only I/O or documentation, say which targeted checks stood in
   for it, in `DECISIONS.md`, by name.
+- Cut the decision log (owner ruling 2026-10-20, round 7 H5). At the
+  release's publication, or as soon as `DECISIONS.md` passes 800,000 bytes,
+  whichever comes first, the entries up to and including the newest release
+  entry move to the next archive, `DECISIONS-archive-<k>.md`: a prefix of the
+  file, line 1 retitled and line 2 one unwrapped line, nothing else changed, so
+  every line keeps its number. `DECISIONS.md`'s pointer paragraph gains one
+  sentence for it. Under the size trigger the owner names the boundary.
+  Archived entries are not edited again; a correction is a new entry that
+  cites the old one. `DECISIONS-archive-1.md` holds D-001 to D-140.

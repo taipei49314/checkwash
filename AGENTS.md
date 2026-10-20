@@ -7,7 +7,7 @@ The judge is immutable; the player runs free.
 - Frontend syntax-coverage work, adapters, report rendering, packaging.
 
 ## Agent-READ-ONLY (changes only by the human maintainer)
-- `SPEC.md`, `THREATMODEL.md`, `DECISIONS.md`
+- `SPEC.md`, `THREATMODEL.md`, `DECISIONS.md` and its archives (`DECISIONS-archive-*.md`)
 - `tests/gates/**`
 - Escalation policy (`gating.py` severity table), strength lattice
   (`ir/strength.py` values), alignment parameters.
