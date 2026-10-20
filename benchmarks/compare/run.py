@@ -31,6 +31,10 @@ def greenwash_blocks(py: str, repo: str) -> tuple[bool, list[str]]:
         d = json.loads(p.stdout.decode("utf-8"))
     except json.JSONDecodeError:
         return False, ["<engine-error>"]
+    # Exit 2 is an engine error whatever stdout holds: a size refusal prints
+    # `{"unread": [...]}`, which has no verdict (#454, D-168).
+    if p.returncode == 2 or not isinstance(d, dict) or "verdict" not in d:
+        return False, ["<engine-error>"]
     return d["verdict"] == "block", sorted({f["rule"] for f in d["findings"]})
 
 

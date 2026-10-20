@@ -935,7 +935,7 @@ Matching is **path-segment anchored**, never substring. Bare substrings made
 `build/` match `mybuild/` and `dist/` match `redist/`, which silently deleted
 real source trees from the analysis and made a directory rename a bypass.
 
-A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration. One bounded read answers the runner-shape question of §2 for an unread side: its first 200 bytes, the only bytes the shell-shebang test reads, kept from the working-tree read or streamed from Git and checked against the blob's object id. A side whose bytes start with a shell shebang makes its path runner-shaped, as §2 reads a shebang, whatever its suffix, and the refusal names that side; as in §2, a Python module or a JS/TS test path is never runner-shaped, and refuses by its own rule. A file with no extension no longer refuses for the shebang it may hold, except when a side's bytes were not read, as for a Git side over 64,000,000 bytes, which is not streamed; another rule above can still make it a path a detector must read. Those bytes answer nothing else: they reach no parser, no runner-content check and no repair evidence, and no output carries them. The run also refuses in the same way when the analysis reads the path as context; the runtime-provider pass does not read a dropped path for a shebang its bytes have ruled out. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
+A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `--format json` prints then, and what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration. One bounded read answers the runner-shape question of §2 for an unread side: its first 200 bytes, the only bytes the shell-shebang test reads, kept from the working-tree read or streamed from Git and checked against the blob's object id. A side whose bytes start with a shell shebang makes its path runner-shaped, as §2 reads a shebang, whatever its suffix, and the refusal names that side; as in §2, a Python module or a JS/TS test path is never runner-shaped, and refuses by its own rule. A file with no extension no longer refuses for the shebang it may hold, except when a side's bytes were not read, as for a Git side over 64,000,000 bytes, which is not streamed; another rule above can still make it a path a detector must read. Those bytes answer nothing else: they reach no parser, no runner-content check and no repair evidence, and no output carries them. The run also refuses in the same way when the analysis reads the path as context; the runtime-provider pass does not read a dropped path for a shebang its bytes have ruled out. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
 
 ## 4c. The task contract is base-side too
 
@@ -1402,6 +1402,20 @@ optional `unread` key in the JSON payload (omitted when empty), a SARIF tool
 execution notification and a `!` line of the term report, whose head then
 reads "analysis incomplete" when there is no finding, allowlisted or not;
 `check --format hook-json` and `--emit-ir` do not name it (#454).
+
+A size refusal (§4b) names its side on stdout too, though the run still
+exits 2: under `--format json`, without `--emit-ir`, stdout is
+`{"unread": [<entry>]}`, one such entry for the side the refusal and its
+stderr line name, which is the base side when both sides of a change are
+over the limit, unless a side's first 200 bytes hold a shell shebang
+(#455), which is then the side named. It is not a findings document: it
+carries no `checkwash_findings_version`, `findings` or `verdict`. Term,
+sarif and `--emit-ir` keep an empty stdout. So do a root manifest, config,
+exemption list or `--task` file over the limit at the base, which is
+refused before the analysis; with a range, a pytest configuration's
+symlink target over the limit that no detector must read, which is
+refused as it is read through the link (above); and every other engine
+error (#454).
 
 **Which directory a command reads (#416).** `check`, `sweep`, `allow`, `doctor` and the `quality` forms that read a repository (a range, the worktree review, `init`, `doctor`) first ask Git about `--repo` (default `.`) with `git -C <--repo> rev-parse --is-inside-work-tree --show-prefix`. If Git answers `true` with a non-empty prefix, a second query, `git -C <--repo> rev-parse --show-toplevel`, names the root. Its answer must decode as UTF-8, be a single line, be absolute and name an existing directory. The command then uses that root in place of `--repo` for every later Git call and working-tree read. A run from a subdirectory therefore analyses the whole repository. For `check`, `sweep`, `doctor` and the `quality` forms its stdout and exit code are those of the same run at the root; `allow` writes the root ledger and names it under Git's spelling of the root. This is not the behaviour of `git -C <subdirectory>`, under which `ls-tree` and `git grep` stay scoped to the subdirectory. The root is never `--repo` joined with `--show-cdup`.
 

@@ -25,7 +25,11 @@ commits that landed on the base branch meanwhile are not in the diff.
 
 Exit 2 does not mean "no findings". With `--emit-ir`, exit 0 comes with the
 IR instead. Treat standard output that does not parse, or that does not carry
-`checkwash_findings_version` 2, as an error whatever the exit status.
+`checkwash_findings_version` 2, as an error whatever the exit status. On exit
+2 standard output is empty, except that from the next release most size
+refusals print `{"unread": [...]}`, naming the side over the limit that
+stopped the run (the [unreleased changes](#unreleased-changes-on-main) list
+the exceptions).
 
 - Standard output is UTF-8 bytes whatever the locale (SPEC §8). Decode it as
   UTF-8. Python's `subprocess.run(..., text=True)` decodes with the locale's
@@ -207,6 +211,15 @@ by that field.
   the verdict, when that change's head or worktree side is over the size
   limit, now exits 0 with `decision: block` instead of the non-blocking
   `systemMessage` (D-150, #456).
+- **A size refusal names its side on standard output** (D-168, #454). It
+  still exits 2, but `--format json` now prints `{"unread": [...]}` instead of
+  nothing: one entry, with the `path`, `side`, `size` and `limit` of the side
+  the refusal names, as below. It is not a findings document: it has no
+  `checkwash_findings_version`, `findings` or `verdict`, so the version check
+  above treats it as the error it is. A root manifest, config, exemption list
+  or task file over the limit at the base, with a range a symlinked pytest
+  configuration's target over the limit that no detector must read, and every
+  other engine error still print nothing; so do `--emit-ir`, term and SARIF.
 - **A new optional top-level key,** `unread` (#454). It lists the changed
   sides over the 1,000,000-byte source limit that checkwash set aside unread,
   one object per side with `path`, `side`, `size` and `limit`, and it is

@@ -634,5 +634,7 @@ def test_an_oversized_test_file_still_exits_2_naming_it(tmp_path, mode):
         code, stdout, stderr = _check(repo, "--format", "json")
         side = "worktree"
     assert code == 2
-    assert stdout == ""
+    # #454 (d): stdout names the refused side, outside any findings document.
+    assert json.loads(stdout) == {"unread": [{"limit": LIMIT, "path": "tests/test_huge.py", "side": side,
+                                              "size": LIMIT + 1}]}
     assert f"{REFUSAL}: {described('tests/test_huge.py', side)}" in stderr

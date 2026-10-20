@@ -187,6 +187,11 @@ a Git side over 64,000,000 bytes is not streamed, so its first bytes are not
 known: a file with no extension still stops the run when one of its Git sides
 is that large, and a suffixed file whose shebang is only on such a side is
 still set aside.
+From the next minor (unreleased), `--format json` then prints
+`{"unread": [...]}` on stdout instead of nothing: one `unread` entry, for
+the side the run refused. It is not a findings document, and term and SARIF
+output stay empty. With a range, json output stays empty too when that file
+is a symlinked pytest configuration's target that no detector must read.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension whose
@@ -195,8 +200,10 @@ shebang is not known. A root
 stderr, and the skip is not listed under `unread`; when the diff also changes
 that lockfile, the change's sides over the limit are listed like any other. A
 root `pyproject.toml` or `requirements*.txt` that large at the base stops
-every run with exit 2, naming it. The Claude Code Stop hook (`--format
-hook-json`) reports an engine error as a non-blocking "not analysed" message.
+every run, naming it: term, json and SARIF output exit 2 and name it on
+stderr only. The Claude Code Stop hook (`--format hook-json`) reports an
+engine error, this one included, as a non-blocking "not analysed" message
+on stdout that quotes the error, and exits 0.
 From the next minor (unreleased), when the run stops on a file the hook's diff
 changes and that file's working-tree side is over the limit, the hook blocks
 the stop instead, naming the file and asking to shrink, split or revert it
@@ -342,5 +349,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 20247 tests in the current source tree.
+Alpha pre-release. 22 detectors, 20257 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

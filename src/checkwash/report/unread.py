@@ -6,7 +6,9 @@ Its stderr note used to be the only trace, so a consumer of the machine
 output could not tell a pass that never read a file from one that read
 every file. The json, sarif and term writers now name each such side with
 the four facts of that note: path, side, size and limit. hook-json and
-`--emit-ir` do not (#454 ruling, item 6).
+`--emit-ir` do not (#454 ruling, item 6). A run a size refusal stops exits
+2; in `--format json` it then names the refused side in the same entry,
+outside any findings document (option (d)).
 """
 
 from __future__ import annotations
@@ -31,9 +33,9 @@ def unread_entry(side: UnreadSide) -> dict[str, object]:
     An explicit projection, never `to_jsonable(side)`, which would write
     every dataclass field: the bounded prefix #455 stores on the side must
     stay out of machine output. The four keys are the stderr note's, so
-    entries and notes match one to one. Option (d), which moved from #456
-    to #454, can reuse this entry for the side an exit-2 run refused;
-    nothing here emits it for a refusal.
+    entries and notes match one to one. `--format json` also writes it for
+    the side a size refusal names, on its own (`size_refusal_to_json`,
+    option (d), which moved from #456 to #454).
     """
     return {"path": side.path, "side": side.side, "size": side.size, "limit": side.limit}
 
