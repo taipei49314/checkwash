@@ -12,7 +12,8 @@ unchanged `README` over the limit exits 2 where the same file changed gets a
 verdict (D-164, residual 2). The changed case is pinned in
 test_issue455_bounded_shebang_read.py
 (`test_a_run_that_reaches_the_provider_pass_gives_a_verdict_beside_a_set_aside_readme`);
-the rows here use the same fixture with the README left unchanged.
+the over-limit rows reuse that fixture with the README left unchanged, and
+the control keeps the same README beside test_issue415's weakened test.
 
 Ruling (owner, 2026-10-18, question 4, issuecomment-6248628575): an
 unchanged dot-less file over the limit that the provider pass reads is first
@@ -72,8 +73,8 @@ def headed(head, size, seed):
     return head + blob(size - len(head), seed)
 
 
-# The same unchanged document in every row: test_issue455's README, with no
-# shell shebang, one byte over the limit.
+# The same unchanged document in the over-limit rows and the control:
+# test_issue455's README, with no shell shebang, one byte over the limit.
 README = headed(DOCUMENT, LIMIT + 1, "readme")
 
 
@@ -182,7 +183,7 @@ def test_an_unchanged_dot_less_symlink_still_refuses(tmp_path, mode):
     # The residual for a symlink, which the strict batch reader never reads.
     if mode == "range":
         # A root licence committed as a link to `py/LICENSE`: the shape of the
-        # pytest commits #455's acceptance sweep saw exit 2 (ruling, question 4).
+        # pytest commits #415's acceptance sweep saw exit 2 (ruling, question 4).
         link = "LICENSE"
         repo = _repo(tmp_path, {**SOURCES, "py/LICENSE": b"Licence terms\n"}, links={link: b"py/LICENSE"})
         _write(repo, NEW_PROVIDER)
