@@ -54,6 +54,10 @@ E2E_PINNED = {
     # Issue #421: the golden runner passes no ledger, so a .gwcase cannot hold
     # the exemption whose reuse this row is about.
     "136": "test_the_reviewed_rewrite_is_exempt_and_another_still_blocks",
+    # Issue #455: a .gwcase has no unread side, so only a real repository
+    # holding a blob over the source byte limit reaches the streamed prefix.
+    # Its suffixed_runner_* rows are this row's shape.
+    "161": "test_a_range_with_a_shell_shebang_on_an_unread_side_exits_2_naming_it",
 }
 
 
