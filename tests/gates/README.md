@@ -16,10 +16,10 @@ coding agents may run them, never edit them (AGENTS.md).
 
 ## M1 gates (current)
 
-5. Perf (`tests/gates/test_perf.py`): 3000-line test diff under 1 s,
-   500 changed files under 2.5 s, pathological single-expression files must
-   degrade rather than hang. These caught a real 4.1 s regression the day
-   they were written.
+5. Perf (`tests/gates/test_perf.py`): 3000-line test diff under 1.5 s,
+   500 changed files under 3.5 s (widened from 1 s and 2.5 s on 2026-10-20,
+   D-170), pathological single-expression files must degrade rather than
+   hang. These caught a real 4.1 s regression the day they were written.
 6. Every registered detector ships pos and neg `.gwcase` fixtures
    (`tests/test_detector_coverage.py`).
 
