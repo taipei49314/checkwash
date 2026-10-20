@@ -15399,7 +15399,7 @@ Read from these:
   +0.09 on ubuntu 3.12 and +0.07 on windows 3.13. On windows 3.12 no step
   in that shape exceeds +0.03, within that runner's larger A/A gap
   (0.04). In the 3000-line shape the largest step is #531's on ubuntu
-  3.12 (+0.07, where the first pair's gap is 0.10) and windows 3.13
+  3.12 (+0.06, where the first pair's gap is 0.10) and windows 3.13
   (+0.04), and #525's on windows 3.12 (+0.04).
 - The six wave-4 heads (#534 to #539, on batch 2's tip `9c19c344`, whose
   `src/` tree is main's) add little: none is more than 0.05 above main in
