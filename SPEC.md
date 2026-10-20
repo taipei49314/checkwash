@@ -1438,9 +1438,9 @@ A size refusal (§4b) names its side on stdout too, though the run still
 exits 2: under `--format json`, without `--emit-ir`, stdout is
 `{"unread": [<entry>]}`, one such entry for the side the refusal and its
 stderr line name, which is the base side when both sides of a change are
-over the limit, unless a side's first 200 bytes hold a shell shebang
-(#455), which is then the side named. It is not a findings document: it
-carries no `checkwash_findings_version`, `findings` or `verdict`. Term,
+over the limit, except where #455 names the side that holds the shebang.
+It is not a findings document: it carries no
+`checkwash_findings_version`, `findings` or `verdict`. Term,
 sarif and `--emit-ir` keep an empty stdout. So do a root manifest, config,
 exemption list or `--task` file over the limit at the base, which is
 refused before the analysis; with a range, a pytest configuration's

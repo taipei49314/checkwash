@@ -17040,11 +17040,10 @@ written (below):
 3. **Which side.** Exactly the side the refusal names, one entry, so entry
    and stderr line match one to one. When both sides of a change are over
    the limit that is the base side (`engine.py:303`, `:314`; a #448
-   residual), unless a side's first 200 bytes hold a shell shebang (#455),
-   which is then the side named; the hook block names the head or worktree
-   side instead (D-150). Other unread sides of the same change, and other
-   changes in the diff that were set aside, are not listed: the run
-   stopped before their stderr notes.
+   residual), except where #455 names the side that holds the shebang; the
+   hook block names the head or worktree side instead (D-150). Other unread
+   sides of the same change, and other changes in the diff that were set
+   aside, are not listed: the run stopped before their stderr notes.
 4. **Which refusals.** Every `SourceOverLimit` that reaches `_cmd_check`.
    By reading, it is raised for a must-read change (`engine.py:303`,
    `:314`); a guarded read of a set-aside path (`engine.py:341`); the unread
@@ -17150,17 +17149,17 @@ assistant wrote, which the owner chose. Its items for this entry, at #534's
 head 87f5b887: G2 (F6) approves the wording of this entry (9e25ece5,
 f9e4cefa, 05aac9c6, d36f504d, 4199598a) and of SPEC §9 and its §4b pointer
 (042988ec, d6071249), with F6's half-sentence, added in integration batch 4
-after #536 (#455) merged (332f26c7): where reading 3 and SPEC §9 say the
-refusal names the base side when both sides are over the limit, they add
-"unless a side's first 200 bytes hold a shell shebang (#455), which is then
-the side named". G4 (F7) approves readings 1 to 5: only `--format json`
-prints the document; it holds only the `unread` key; it names exactly the
-side the refusal names; it covers every `SourceOverLimit` that reaches
-`_cmd_check`; `--emit-ir` keeps an empty stdout. G5 records as residuals,
-with no issue, an unchanged pytest configuration over the limit in a range,
-as reading 4 states it, not traced and not pinned (F8), and, with
-`sys.stdout` closed, a second engine-error line from `main()` while exit
-stays 2 (the second review's F4). G6: THREATMODEL gains one note for a
+after #536 (#455) merged (332f26c7, reworded to the approved text in a later
+commit of the batch): where reading 3 and SPEC §9 say the refusal names the
+base side when both sides are over the limit, they add "except where #455
+names the side that holds the shebang". G4 (F7) approves readings 1 to 5:
+only `--format json` prints the document; it holds only the `unread` key; it
+names exactly the side the refusal names; it covers every `SourceOverLimit`
+that reaches `_cmd_check`; `--emit-ir` keeps an empty stdout. G5 records as
+residuals, with no issue, an unchanged pytest configuration over the limit
+in a range, as reading 4 states it, not traced and not pinned (F8), and,
+with `sys.stdout` closed, a second engine-error line from `main()` while
+exit stays 2 (the second review's F4). G6: THREATMODEL gains one note for a
 consumer that reads neither the exit status nor the version, with no code
 change and its wording for a later round (F9); `docs/stability.md` does not
 change (F10); and the benchmark fix stays in #534 (93bf2315), with the
