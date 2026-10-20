@@ -1,5 +1,5 @@
 # Decision log, archive 1: D-001 to D-140 (through v0.8.0)
-Moved unchanged from [DECISIONS.md](DECISIONS.md) on 2026-10-20 (F40; owner ruling 2026-10-20, round 7 H5). Every line keeps the number it had there. Entries here are not edited again; new entries and corrections go to DECISIONS.md.
+Moved unchanged from [DECISIONS.md](DECISIONS.md) on 2026-10-20 (F40). Every line keeps the number it had there; new entries go to DECISIONS.md.
 ## D-001 (2026-07-29): stdlib `ast` frontend for v0.1, not tree-sitter
 
 The design doc picked py-tree-sitter + pinned grammar wheels. At M0 kickoff

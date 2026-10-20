@@ -595,7 +595,7 @@ GitHub README and retain the old release's actual status in the launch notes.
   release's publication, or as soon as `DECISIONS.md` passes 800,000 bytes,
   whichever comes first, the entries up to and including the newest release
   entry move to the next archive, `DECISIONS-archive-<k>.md`: a prefix of the
-  file, line 1 retitled and line 2 one sentence, nothing else changed, so
+  file, line 1 retitled and line 2 one unwrapped line, nothing else changed, so
   every line keeps its number. `DECISIONS.md`'s pointer paragraph gains one
   sentence for it. Under the size trigger the owner names the boundary.
   Archived entries are not edited again; a correction is a new entry that

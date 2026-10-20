@@ -4,17 +4,11 @@ Entries D-001 to D-140, everything up to and including the v0.8.0 release
 entry, are in [DECISIONS-archive-1.md](DECISIONS-archive-1.md). They moved
 there unchanged on 2026-10-20, when this file had passed 1,000,000 bytes,
 checkwash's source byte limit, above which it sets a documentation file
-aside unread (F40; owner ruling 2026-10-20, round 7 H5). The archive keeps
-the line numbers they had here: read against `94953c83`, where this file
-was last whole, a reference `DECISIONS.md:N` with N up to 10833 is
-`DECISIONS-archive-1.md:N`. Any other line reference written before the
-move reads against that commit. Entry numbers do not change, and new
-entries are added here. An archived entry is not edited again: a
-correction is a new entry here that cites the old one. At each release's
-publication, or as soon as this file passes 800,000 bytes, whichever comes
-first, the entries up to and including the newest release entry move to
-the next archive, `DECISIONS-archive-<k>.md`, cut the same way; under the
-size trigger the owner names the boundary.
+aside unread (F40). The archive keeps the line numbers they had here: read
+against `94953c83`, the last commit before the move, a reference
+`DECISIONS.md:N` with N up to 10833 is `DECISIONS-archive-1.md:N`. Any
+other line reference written before the move reads against that commit.
+Entry numbers do not change, and new entries are added here.
 
 ## D-141 (2026-10-16): opaque-change evidence no longer holds a weakened oracle in a Python test (#419)
 
@@ -1963,7 +1957,7 @@ Not settled by the ruling; the owner approved each as written (below):
   this one included, and so does the required CI check.
 
 This amends D-134 item 2 (`DECISIONS-archive-1.md:9790-9793`) for that one class, and
-narrows D-142 item 6 (`DECISIONS.md:316-318`) as above; the exit-code
+narrows D-142 item 6 (`DECISIONS.md:310-312`) as above; the exit-code
 row, SPEC §4b and §9 and THREATMODEL row 128 change with it. It
 takes an entry and a minor, as D-134 and D-140 did, though there the code
 itself changed, from 2 to 0. The next release is a minor anyway because of
@@ -4632,7 +4626,7 @@ The new label comes after both existing ones, which keep their conditions:
 and `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` is unchanged, so no pin of either
 moves. Nothing outside `gating.py` changes, and the IR does not change.
 
-**This amends and settles.** It amends 419.Q5 (`DECISIONS.md:54-57`),
+**This amends and settles.** It amends 419.Q5 (`DECISIONS.md:48-51`),
 "`NO_PROD_CHANGE_IN_DIFF` is unchanged otherwise": that label is now kept
 only for a diff that changes no production-role file, or only inert ones.
 It settles the unit-level wording that D-066 left "not decided here"
@@ -4742,7 +4736,7 @@ before gating runs, and none of `make_fingerprint`,
 (`findings.py:162-166`, `:367-369`, `:396-413`). So severity, verdict,
 de-escalators and fingerprints do not move. No `FINDINGS_VERSION` or
 `IR_VERSION` bump: the label is a new value in the existing `escalators`
-list, as in D-066 and D-141 (`DECISIONS.md:245-248`), and
+list, as in D-066 and D-141 (`DECISIONS.md:239-242`), and
 `docs/stability.md` does not freeze escalator strings. Nothing newly blocks
 or passes. The change ships in the next authorized release, with one
 release-note line that names the new label; no release is authorized
