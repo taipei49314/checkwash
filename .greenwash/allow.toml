@@ -534,3 +534,35 @@ reason = "PR #537 (#512, round 2 of #421): this pin checked a legacy TEST_DISABL
 author = "taipei49314"
 created = "2026-10-20"
 expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/gates/test_perf.py/test_large_single_diff_within_budget/76f5f97ea3b9"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #543 (D-170): the perf gate's budgets widen, BUDGET_MANY_FILES_S 2.5 -> 3.5 and BUDGET_LARGE_DIFF_S 1.0 -> 1.5, so the gate test's expectation constant reads as defined differently; the owner chose this on 2026-10-20 (option \"放寬預算 (Recommended)\", written by the assistant) and approved recording the keys this blocks on the same day (option \"照實際補齊 (Recommended)\", written by the assistant); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/gates/test_perf.py/test_large_single_diff_within_budget/v2:09c64327a878b34ef19e3b5f7a0c6ded877a2b0985d83d95f8ecfad71008253b"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #543 (D-170): the perf gate's budgets widen, BUDGET_MANY_FILES_S 2.5 -> 3.5 and BUDGET_LARGE_DIFF_S 1.0 -> 1.5, so the gate test's expectation constant reads as defined differently; the owner chose this on 2026-10-20 (option \"放寬預算 (Recommended)\", written by the assistant) and approved recording the keys this blocks on the same day (option \"照實際補齊 (Recommended)\", written by the assistant); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/gates/test_perf.py/test_many_files_within_budget/b926feaecfa4"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #543 (D-170): the perf gate's budgets widen, BUDGET_MANY_FILES_S 2.5 -> 3.5 and BUDGET_LARGE_DIFF_S 1.0 -> 1.5, so the gate test's expectation constant reads as defined differently; the owner chose this on 2026-10-20 (option \"放寬預算 (Recommended)\", written by the assistant) and approved recording the keys this blocks on the same day (option \"照實際補齊 (Recommended)\", written by the assistant); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/gates/test_perf.py/test_many_files_within_budget/v2:e3787e30ad6f8c14bc4894886dd109cc12f84837c2dd62d759408bb3eea6276d"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #543 (D-170): the perf gate's budgets widen, BUDGET_MANY_FILES_S 2.5 -> 3.5 and BUDGET_LARGE_DIFF_S 1.0 -> 1.5, so the gate test's expectation constant reads as defined differently; the owner chose this on 2026-10-20 (option \"放寬預算 (Recommended)\", written by the assistant) and approved recording the keys this blocks on the same day (option \"照實際補齊 (Recommended)\", written by the assistant); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
