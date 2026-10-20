@@ -16128,6 +16128,36 @@ on main, in number order after D-163. This entry is D-164. The agent
 wrote it in #455's fix PR; the owner approved its wording, readings 1 to
 5 and the Rule 2 item in round 6 (below).
 
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #536's
+head c104ee4b: G1 (F1, option (a)) approves the Rule 2 change above: the
+`NOTES` input of the `untracked_extensionless` row of
+`test_a_worktree_side_over_the_limit_blocks_the_stop`
+(`tests/test_issue456_hook_size_refusal.py:133-135` on main) becomes
+`b"#!/bin/sh\n" + blob(LIMIT + 1 - len(b"#!/bin/sh\n"), "notes")`, still
+`LIMIT + 1` bytes (0d1ed936), with its id, undo and asserted values
+unchanged. G2 (F16) approves the wording of this entry (f006f365, 89cb0ae9,
+e3aaf6bb, 2a6ee2f9) and of SPEC §4b (012129aa, c62d3143), and the Rule 2
+paragraph rewritten to that decision, as F16 asked (c104ee4b). G4 (F17, F18)
+approves readings 1 to 5: one stream ceiling per side and no per-tree total,
+so neither the bytes streamed nor a tree's deadline has a total bound, and
+the sweep measures them; the refusal names the side whose prefix holds the
+shebang; `_runner_shape`'s exclusions hold for a prefix; the skip set is
+computed from the sides; the working-tree side has no ceiling. G5 records as
+a residual, as #456 ruling Q3 rules, the Stop hook's "not analysed" message
+when only the base side of a suffixed runner such as `ci/run.txt` is over
+the limit (Costs). G6 (F19, F20) puts a THREATMODEL row for the base-side
+gap this entry closes, Closed and pinned in `E2E_PINNED`, in a separate docs
+pull request whose wording comes to the owner in a later round, and has
+Claude open, after this fix merges, a test-only pull request with question
+4's reproduction test (the second residual), in range and worktree mode, and
+file the issue once CI reproduces it. The numbering sentence and the
+readings' heading were rewritten to the facts at merge under the C1/D3
+precedent the same round approved (f42441d0, in integration batch 4). This
+paragraph was written after the reply.
+
 ## D-165 (2026-10-19): a JS/TS test registered where no code runs is no unit (#484)
 
 Ruling 484 (owner, 2026-10-18, 「19 項全部照建議（價值判斷的題也照你的傾向）」,
@@ -16367,6 +16397,34 @@ parametrize lists. By reading, the documented test count becomes 20356
 
 The agent wrote this entry in #484's fix PR. The owner approved its
 wording, the readings above and the fixtures' labels in round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #538's
+head fd00ec12: G2 (F27) approves the wording of this entry (a7f9bb6c, the
+DECISIONS hunk of 6687e5fb, f96f07f5, 9a2014f6, 3534ddd1), of THREATMODEL
+rows 159 and 9 (031a67d5, with its hand edit of `benchmarks/FAILURES.md`,
+the THREATMODEL hunks of 3f1d9847 and 6687e5fb, 3742b3cb, 74c069d0,
+5d55818f) and of SPEC (85e971bb, 4061d4cf, 96e446e2, feb2796a, a3175cb6).
+That includes 4061d4cf's general form of the qualification F27 asked for in
+SPEC §2b (a named function expression still refuses where the walk reads a
+declaration's position), reading 6's notes on `{`, `>` and the spread,
+reading 7's "braced lists", and residual (3)'s dynamic `import(...)`,
+`import.meta` and `import from from "m"`. G3 (F28) approves the 19 fixtures'
+labels: 11 blocking, 5 controls, 2 named residuals and 1 new reading. G4
+approves reading 3 (F29: a parked declaration still makes a file declare
+tests, so E7 does not move); reading 6's conservative positions, recorded as
+row 159 residual (6), the three that also refused before the fix and a
+function declaration at any depth of a dead region included (F30); and
+readings 1, 2, 4, 5, 7, 8 and 9 (F31). G5 keeps the shapes row 159 names as
+residuals documented, with no issue. G6 (F32): D-148 gets no pointer line,
+and the amended readings 7 and 10 stay in this entry only. The numbering
+sentence, the readings' heading, the labels' sentences and the row-number
+sentence were rewritten to the facts at merge under the C1/D3 precedent the
+same round approved (f42441d0): A98 kept row 159's number, and R100's edit
+made the row Closed at #535's merge (02c5b34f). This paragraph was written
+after the reply.
 
 ## D-166 (2026-10-19): a Python def or class whose own statement never runs is no unit (#499)
 
@@ -16610,6 +16668,45 @@ The agent wrote this entry in #499's fix PR. The owner approved its
 wording, readings 1 to 3, the fixture labels and the THREATMODEL edit in
 round 6 (below).
 
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #535's
+head d673d5bc: G2 (F12) approves the wording of this entry (6c8624b2,
+c625d240, 580cf542, 8c1c239a, d673d5bc), including the `resolve()` residual
+and the fourth edit that now passes (also in the KNOWN-ISSUES-next #499 row,
+94334aaa); of SPEC §2b and the `TEST_DISABLED` row (9caf293d), whose
+sentence that a handler is dead when its try body cannot raise stays as
+written; and of the THREATMODEL draft in #535's body, which calls
+`dead_def_weakened_on_both_sides_neg` the new reading, not a control. Under
+R100 that draft was applied at #535's merge after #538's, in integration
+batch 4 (02c5b34f), with `bypass: 159` on the ten positives and
+`benchmarks/FAILURES.md` edited by hand to match. G3 approves the 16
+fixtures' labels, F13's 14 and the two added after review,
+`dead_def_handler_of_raising_class_pos` and
+`dead_def_handler_of_raising_annotation_pos` (both `ASSERT_WEAKENED` high,
+as on main), and the parametrize row
+`handler-of-a-try-whose-annotation-may-raise`. G4 (F14 and the review
+narrowings) approves readings 1 to 3: the dead arms are those `entry` reads
+as dead, with "cannot raise" as `_Walk.quiet` reads it; a dead class is no
+Q9 subclass; a dead def takes no `name#N` place. It approves reading 1's two
+narrowings too, a base-less class whose body binds any dunder name
+(2b40842a) and an annotated name in a module that binds, deletes or spells
+`__annotations__` (2fae0948), and their effect on D-144's readings of such a
+try, such a class as the later binding in a try body included. G5 records as
+residuals, with no issue, a dead class statement that a later module-level
+`Cls.attr = ...`, `del Cls.attr`, `setattr` or `delattr` still names, as on
+main, and the quadratic `quiet` work on a very long try body (the second
+review's F4). Item F15, left out of the short list, was asked separately the
+same day; the owner chose 「加 (Recommended)」 ("add"), an option the assistant
+wrote. It approves THREATMODEL row 9's Python clause, the draft in item 4 of
+#535's body, its wording under G2, and `bypass: 9` for
+`dead_def_pasted_copy_no_move_credit_pos`; both were applied at the same
+merge (02c5b34f). The readings' heading, the labels' and `bypass:`
+sentences, the R100 paragraph and the closing sentence were rewritten to the
+facts at merge under the C1/D3 precedent the same round approved (f42441d0).
+This paragraph was written after the reply.
+
 ## D-167 (2026-10-19): an arrow test callback's simple return annotation no longer hides its parameters (#480)
 
 Ruling 480 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
@@ -16844,6 +16941,38 @@ F39, below). The agent wrote this entry in #480's fix PR. The owner
 approved its wording, readings 1 to 5 and the five fixtures' labels in
 round 6 (below).
 
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #539's
+head 6a75ca59: G2 (F33) approves the wording of this entry (0ec2c898,
+40c04b57, daf949c1, 8cc20bd1), of its THREATMODEL row and row 126's pointer
+(77abbfdc, 8069f5e0, 41d3dbe5, 8ce1652d), with 77abbfdc's hand edit of
+`benchmarks/FAILURES.md`, and of the #480 sentence of the released page
+`docs/KNOWN-ISSUES-v0.8.0.md` (a4a7f027). That row was drafted as row 159;
+under A98 it became row 160 at #539's merge into integration batch 4
+(c21a8646), with row 126's pointer, its five fixtures and this entry's two
+mentions. G3 (F34) approves the five fixtures' labels, N1, N12, N2 with
+N14's edit, N16 and N19: `ASSERT_WEAKENED`, `ASSERT_REMOVED` and
+`EXPECTED_VALUE_CHANGED`, all high. G4 approves the departure in reading 1
+as decision 3 of #539's body states it (F35): the guard also reaches `=`,
+`=>`, compound assignments and type parameter lists, keeps two named misses
+at main's reading, and reads one exception differently from main, a type
+parameter list holding a template literal type or a negative number. It
+approves readings 3 to 5 (F37), and the ruling's two control "fixtures"
+pinned as the `CONDITIONALS` pytest rows rather than as `.gwcase` negatives
+(decision 4). G5 accepts as residuals, with no follow-up: generic arrows
+stay unread (reading 2, F36); the costs found by reading, (a) to (e), and
+Q3's diagnostic-only outputs as (f) lists them, which the combined sweep's
+pair and #212's JS/TS replay measure (F38); and, disclosed only, that in a
+file that names node:test beside AVA or tap, AVA's or tap's assertions on an
+unread `t` are no candidates, as on main (decision 7). G6 (F39): #480 closes
+once the combined sweep's before/after pair is read, and #212's replay stays
+a release precondition, recorded on #212. The numbering sentence, the
+readings' heading, the labels' sentence and the closing sentences were
+rewritten to the facts at merge under the C1/D3 precedent the same round
+approved (f42441d0). This paragraph was written after the reply.
+
 ## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
 
 #456's first ruling (issuecomment-6248011888, 2026-10-18, 「照建議」, "as
@@ -17013,6 +17142,33 @@ this PR's CI is the first run.
 
 The agent wrote this entry in #454's pull request for (d). The owner
 approved its wording and readings 1 to 5 in round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #534's
+head 87f5b887: G2 (F6) approves the wording of this entry (9e25ece5,
+f9e4cefa, 05aac9c6, d36f504d, 4199598a) and of SPEC §9 and its §4b pointer
+(042988ec, d6071249), with F6's half-sentence, added in integration batch 4
+after #536 (#455) merged (332f26c7): where reading 3 and SPEC §9 say the
+refusal names the base side when both sides are over the limit, they add
+"unless a side's first 200 bytes hold a shell shebang (#455), which is then
+the side named". G4 (F7) approves readings 1 to 5: only `--format json`
+prints the document; it holds only the `unread` key; it names exactly the
+side the refusal names; it covers every `SourceOverLimit` that reaches
+`_cmd_check`; `--emit-ir` keeps an empty stdout. G5 records as residuals,
+with no issue, an unchanged pytest configuration over the limit in a range,
+as reading 4 states it, not traced and not pinned (F8), and, with
+`sys.stdout` closed, a second engine-error line from `main()` while exit
+stays 2 (the second review's F4). G6: THREATMODEL gains one note for a
+consumer that reads neither the exit status nor the version, with no code
+change and its wording for a later round (F9); `docs/stability.md` does not
+change (F10); and the benchmark fix stays in #534 (93bf2315), with the
+consumer paragraph's sentence on it (d36f504d; F11). G1's item for #534, the
+self-check exemptions for the E3 pin in #542, concerns no text here. The
+numbering sentence, the readings' heading, the F11 clause and the closing
+sentence were rewritten to the facts at merge under the C1/D3 precedent the
+same round approved (f42441d0). This paragraph was written after the reply.
 
 ## D-169 (2026-10-19): TEST_DISABLED exemptions are content-bound, amending D-019 (#512)
 
@@ -17300,3 +17456,33 @@ a set where the detector subtracts multisets, and that the evidence can
 show another marker than the key binds; reading 6 and the residuals were
 revised again. The owner approved the wording as it then stood in round
 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #537's
+head 41f12c0d: G2 (F21) approves the wording of this entry (8b93952f,
+59860313, df64856e, 41f12c0d), of SPEC §6 (07fa73a7, ed8fa0f0, 691726ca,
+f1084628, b406e155), of THREATMODEL rows 54 and 136 (231b2202, bc1be4b9,
+122ab38c, 8d7640cd, 37a15d1d), with `benchmarks/FAILURES.md` row 136's shape
+cell, and of the KNOWN-ISSUES-next #512 row; F21's change to row 136's shape
+("then add another of a different spelling", 122ab38c) stays. G4 approves
+the focus key binding the recorded spelling, not the title, a departure kept
+as a residual (F22); reading 1, which binds every recorded guard: setup,
+helper, #424 and `pytestmark` (F23); reading 2, in which the two guard
+events share `guard_weakened` and are told apart by the guard after, and
+each key also binds the conditions every marker of its name ran under on
+each side (`skip_condition`), within Q2 and E2 (F24); `test_issue223`'s
+setup-marker pin moving to two keys, as E2 (F26); and reading 6, with the
+stricter fallback that binds every marker of the unit on both sides
+(decision 9). G5 keeps as residuals, with no issue (F25 and the reviews'
+F2): a JS/TS imperative skip (`ctx.skip()`, `t.skip()`, `this.skip()`)
+records no guard; an unreadable table binds only its counts; an unguarded
+`collect_ignore` binds no path; row 59 binds the guard, not the constant; a
+file-level focus binds its spelling; and a marker-added finding's evidence
+can show another marker of its name than the one its key binds, with no
+follow-up and the evidence as on main (decision 10). G1's item for #537, the
+self-check exemptions in #542, concerns no text here. The numbering and
+closing sentences were rewritten to the facts at merge under the C1/D3
+precedent the same round approved (f42441d0). This paragraph was written
+after the reply.
