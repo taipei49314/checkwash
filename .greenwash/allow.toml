@@ -590,3 +590,11 @@ reason = "PR #537 (#512, round 2 of #421): findings of one unit sort by key (Fin
 author = "taipei49314"
 created = "2026-10-20"
 expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "GUARDRAIL_TOUCHED/AGENTS.md/-/v2:3306fa4a3edbbf56c9fd84f1f302a4c7e10b2dd83014cdc5ad458334ab3dfc18"
+rule = "GUARDRAIL_TOUCHED"
+reason = "PR #549 (round 7 H5): AGENTS.md's Agent-READ-ONLY list adds the decision log's archives (DECISIONS-archive-*.md) after #548 moved D-001 to D-140 there; content-bound v2 fingerprint covers only this before/after pair; owner-approved 2026-10-20"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
