@@ -15909,3 +15909,116 @@ readings' heading and the negatives' sentence, which had said they
 awaited it, added the sentence after the fallback saying the owner
 accepted it, retitled the paragraph on the first approvals, and wrote
 this paragraph.
+
+## D-170 (2026-10-20): the perf gate's budgets widen to 3.5 s and 1.5 s
+
+**What failed.** `tests/gates/test_perf.py::test_many_files_within_budget`
+(500 changed files, budget 2.5 s, median of three) failed main's push run
+at `adea2350` (integration batch 2, #533) on windows-latest 3.12 and 3.13,
+at 2.54 s and 3.08 s (run 39284516868, attempt 1). The same `src/` tree
+(`27aa68e1`) passed both Windows legs on its pull-request run 39261842873
+(head `c7cd4f57`), and on run 39267059803 (head `9c19c344`, the same tree)
+it failed windows-latest 3.12 at 2.68 s in attempt 1 and passed in
+attempt 2. A whole-run rerun of 39284516868 (attempt 2) passed every leg.
+The gate also failed on pull-request heads, between 2.51 and 3.03 s:
+
+- run 39282092543, #536 at `e3aaf6bb`: ubuntu-latest 3.12, 2.51 s;
+- run 39292624506, #536 at `2a6ee2f9`: windows-latest 3.13, 2.54 s;
+- run 39292929666, #534 at `87f5b887`: windows-latest 3.13, 2.84 s;
+- run 39296882259, #535 at `d673d5bc`: ubuntu-latest 3.12, 2.53 s, and
+  windows-latest 3.12, 2.78 s;
+- run 39299206598, #539 at `6a75ca59`: ubuntu-latest 3.13, 2.89 s, and
+  windows-latest 3.11, 2.66 s;
+- run 39290428941, #540 (integration batch 3) at `d271b87c`:
+  windows-latest 3.12, 2.65 s in attempt 1 and 3.03 s in attempt 2, where
+  `test_large_single_diff_within_budget` (3000-line diff, budget 1.0 s)
+  also failed, at 1.01 s.
+
+The runs of #537 and #538 at their heads (39298901010, 39293460730) had
+no perf failure.
+
+**What #541 measured.** The temporary diagnostic #541 (closed unmerged;
+run 39304315238, artifacts `perf-diag-*`) took `src/` and the gate from 20
+commits and timed `analyze` on the gate's two inputs with the gate's own
+helpers, in one fresh, idle process per commit, after one untimed
+warm-up, in five interleaved rounds, on ubuntu-latest 3.12 and
+windows-latest 3.12 and 3.13. Each value below is a commit's median
+per-round ratio to batch 1 (`0eff0e52`), for the 500-file shape and then
+the 3000-line diff. Two A/A pairs have identical `src/` trees (main at
+#507 `1714d293` and at #526 `f324eb2c`; batch 2 after #531 `737f13b8`
+and main `adea2350`); their gap is the noise floor.
+
+| Commit | ubuntu 3.12 | windows 3.12 | windows 3.13 |
+|---|---|---|---|
+| v0.8.0 `f02b5d8a` | 0.97 / 0.96 | 0.94 / 0.97 | 0.97 / 0.96 |
+| batch 1 `0eff0e52` | 1.00 / 1.00 | 1.00 / 1.00 | 1.00 / 1.00 |
+| batch 2 through #525 `3767b7dd` | 0.99 / 0.97 | 1.04 / 1.06 | 1.01 / 1.01 |
+| batch 2 through #527 `3e37a701` | 1.08 / 0.98 | 1.05 / 1.08 | 1.08 / 1.03 |
+| main `adea2350` | 1.08 / 1.08 | 1.10 / 1.09 | 1.10 / 1.06 |
+| #540 `d271b87c` | 1.05 / 1.03 | 1.06 / 1.08 | 1.09 / 1.14 |
+| A/A gap, #507 and #526 | 0.02 / 0.10 | 0.02 / 0.02 | 0.00 / 0.00 |
+| A/A gap, +#531 and main | 0.02 / 0.00 | 0.04 / 0.04 | 0.01 / 0.03 |
+
+Read from these:
+
+- Integration batch 2 made the engine about 5 to 10 percent slower on
+  these shapes: 1.06 to 1.10 at main, 1.05 to 1.11 at its A/A partner.
+- The largest single step is #527 (#434, D-156) in the 500-file shape,
+  +0.09 on ubuntu 3.12 and +0.07 on windows 3.13. On windows 3.12 no step
+  in that shape exceeds +0.03, within that runner's larger A/A gap
+  (0.04). In the 3000-line shape the largest step is #531's on ubuntu
+  3.12 (+0.06, where the first pair's gap is 0.10) and windows 3.13
+  (+0.04), and #525's on windows 3.12 (+0.04).
+- The six wave-4 heads (#534 to #539, on batch 2's tip `9c19c344`, whose
+  `src/` tree is main's) add little: none is more than 0.05 above main in
+  either shape on any runner, except #536 in the 500-file shape (1.18
+  against 1.10) and #534 in the 3000-line shape (1.21 against 1.06), both
+  on windows 3.13 only.
+- The absolute seconds (one engine in an idle process; about 1.1 to 2.1 s
+  for 500 files) are not comparable to the budgets, which the gate meets
+  inside `pytest -n 2`, beside a second worker.
+
+**Decision.** On 2026-10-20 the agent asked the owner how to handle the
+perf gate, saying that batch 2 had made the engine about 5 to 10 percent
+slower and that the gate had no margin left in CI and failed even on
+ubuntu, and offering three options the agent wrote. The owner chose
+「放寬預算 (Recommended)」 ("widen the budgets"), whose description, also
+written by the agent, read: 「500 檔 2.5→3.5 秒、單一大 diff 1.0→1.5
+秒，DECISIONS 記下 #541 的量測。gate 原意是抓數量級的退步，不是 10%。先合這個
+PR，其他的再合。」 ("500 files 2.5 to 3.5 s, one large diff 1.0 to 1.5 s;
+DECISIONS records #541's measurements. The gate is meant to catch an
+order-of-magnitude regression, not 10%. Merge this PR first, the others
+after.") The other two options kept the budgets: one looked into #527
+first, the other reran the whole run whenever it was red.
+
+`BUDGET_MANY_FILES_S` is now 3.5 and `BUDGET_LARGE_DIFF_S` 1.5.
+
+**Why.** The gate's docstring says its thresholds are "generous enough
+not to be flaky on a loaded laptop while still catching an
+order-of-magnitude regression". After batch 2 the 2.5 s budget no longer
+had that margin on the hosted runners: one `src/` tree passed and failed
+it from run to run. 3.5 s and 1.5 s sit above the highest medians these
+runs recorded (3.08 s and 1.01 s), and an order-of-magnitude regression
+is still far over both. A drift of 5 to 10 percent is not what the gate
+exists to stop.
+
+**Not changed.** The median of three runs (2026-09-01); the macOS skip
+of the two budget checks (2026-10-01), which this entry does not end or
+extend; the assertion messages; and `test_pathological_file_does_not_hang`
+with its 10 s bound. No test is added or removed. `tests/gates/README.md`
+and `docs/enterprise.md` state the new budgets; older records keep the
+old ones.
+
+**Follow-up, named and not opened.** What #527 costs in the 500-file
+shape could be looked at later. No issue is opened, following the
+owner's practice of opening fewer issues.
+
+Evidence status: prepared on a work machine where nothing ran; every
+number above is read from CI job logs or #541's artifacts (the gaps and
+steps are differences of the artifacts' values, rounded to two places),
+and this PR's CI is the first run of the new budgets.
+`NOT_RUN：工作機規則（POLICY work-machine-local），the widened budgets run first in this PR's CI`.
+
+The agent wrote this entry. Its wording awaits the owner's approval in
+the next approval round, as round 2's B3 covered the maintainer text
+written while applying earlier approvals.
