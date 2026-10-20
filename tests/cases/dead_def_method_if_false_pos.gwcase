@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+title: a test method moved under `if False:` in its class body is never defined, so its unit disappears
+origin: #499, ruling R99 (Q1, as #484 rules JS/TS) - a def whose own statement never runs is no unit; by reading, main reported nothing
+=== before: tests/test_total.py ===
+from app import total
+
+
+class TestTotal:
+    def test_adds(self):
+        assert total([1, 2]) == 3
+
+    def test_empty(self):
+        assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+class TestTotal:
+    if False:
+        def test_adds(self):
+            assert total([1, 2]) == 3
+
+    def test_empty(self):
+        assert total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "TestTotal.test_adds"}]

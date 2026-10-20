@@ -10,14 +10,23 @@ from dataclasses import dataclass
 from bisect import bisect_left
 from pathlib import Path
 import subprocess
+import threading
 
-from checkwash.change import EngineError, UnreadSide
+from checkwash.change import SHEBANG_PREFIX_BYTES, EngineError, UnreadSide
 from checkwash.opaque import SymlinkedDirectory, opaque_error, opaque_owner
 
 MAX_SOURCE_BYTES = 1_000_000
 MAX_SEARCH_HITS = 64
 MAX_INVENTORY_PATHS = 200_000
 MAX_BATCH_BYTES = 64_000_000
+# The ceiling on one Git side streamed for its prefix (#455): a blob over
+# MAX_SOURCE_BYTES and at most this size is streamed and verified; a larger
+# one keeps no prefix, so it is answered as it was before the prefix existed.
+MAX_PREFIX_STREAM_BYTES = MAX_BATCH_BYTES
+# A streamed blob passes through memory in pieces of at most this size.
+_STREAM_CHUNK = 65_536
+# Each streamed object gets the time `_run` gives one process.
+_STREAM_TIMEOUT_S = 60
 _SKIP = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "venv", ".tox", ".nox", ".eggs", "htmlcov"}
 
 
@@ -103,13 +112,115 @@ def _batch_over_limit(path, side, total):
                        f"({side}, {total} > {MAX_BATCH_BYTES} bytes)")
 
 
-def _verify_blob(oid, data):
+def _blob_digest(oid, size):
+    """The object hash for `oid`, fed the blob header for `size` bytes.
+
+    Fed the blob's bytes, whole or in pieces, its hex digest is `oid` exactly
+    when they are the blob's content (#455 streams them in pieces).
+    """
     algorithm = "sha1" if len(oid) == 40 else "sha256" if len(oid) == 64 else None
     if algorithm is None or not re.fullmatch(b"[0-9a-f]+", oid):
         raise EngineError("strict snapshot returned an invalid object identity")
-    actual = hashlib.new(algorithm, b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest().encode("ascii")
-    if actual != oid:
+    return hashlib.new(algorithm, b"blob " + str(size).encode("ascii") + b"\0")
+
+
+def _verify_blob(oid, data):
+    digest = _blob_digest(oid, len(data))
+    digest.update(data)
+    if digest.hexdigest().encode("ascii") != oid:
         raise EngineError("strict snapshot blob content does not match its object identity")
+
+
+def _stream_record(stdout, oid, size):
+    """The first SHEBANG_PREFIX_BYTES bytes of one `cat-file --batch` record (#455).
+
+    The record must be what `_read_objects` requires: the header `<oid> blob
+    <size>`, exactly `size` bytes and a newline. Past the prefix, the bytes
+    are read in pieces of at most _STREAM_CHUNK, hashed and dropped, so no
+    oversized blob is held whole, and the whole is checked against `oid` as
+    `_verify_blob` checks a full read: a blob whose bytes do not hash to its
+    object identity refuses with the same message.
+    """
+    digest = _blob_digest(oid, size)
+    expected = oid + b" blob " + str(size).encode("ascii") + b"\n"
+    if stdout.readline(len(expected)) != expected:
+        raise EngineError("strict snapshot batch returned an invalid blob header")
+    prefix = b""
+    remaining = size
+    while remaining:
+        chunk = stdout.read(min(remaining, _STREAM_CHUNK))
+        if not chunk:
+            raise EngineError("strict snapshot batch returned incomplete source")
+        if len(prefix) < SHEBANG_PREFIX_BYTES:
+            prefix += chunk[:SHEBANG_PREFIX_BYTES - len(prefix)]
+        digest.update(chunk)
+        remaining -= len(chunk)
+    if stdout.read(1) != b"\n":
+        raise EngineError("strict snapshot batch returned incomplete source")
+    if digest.hexdigest().encode("ascii") != oid:
+        raise EngineError("strict snapshot blob content does not match its object identity")
+    return prefix
+
+
+def _kill(process):
+    if process.poll() is None:
+        try:
+            process.kill()
+        except OSError:
+            pass
+
+
+def _stream_prefixes(repo, objects):
+    """{oid: prefix} for (oid, size) pairs, through one `cat-file --batch` (#455).
+
+    The objects are asked one at a time, each record read whole before the
+    next is asked, so neither pipe can fill while the other waits. Each
+    object adds the time `_run` gives one process to the deadline. A process
+    that fails, times out or answers out of protocol refuses, as `_run` and
+    `_read_objects` do.
+    """
+    if not objects:
+        return {}
+    try:
+        process = subprocess.Popen(["git", "-C", str(repo), "cat-file", "--batch"],
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as exc:
+        raise EngineError("strict snapshot git read could not complete") from exc
+    expired = threading.Event()
+
+    def expire():
+        expired.set()
+        _kill(process)
+
+    timer = threading.Timer(_STREAM_TIMEOUT_S * (len(objects) + 1), expire)
+    timer.daemon = True
+    timer.start()
+    prefixes = {}
+    try:
+        for oid, size in objects:
+            process.stdin.write(oid + b"\n")
+            process.stdin.flush()
+            prefixes[oid] = _stream_record(process.stdout, oid, size)
+        process.stdin.close()
+        if process.stdout.read(1):
+            raise EngineError("strict snapshot batch returned trailing bytes")
+        error = process.stderr.read()
+        if process.wait() != 0:
+            raise EngineError("strict snapshot git read failed: " + error.decode("utf-8", errors="replace").strip())
+    except (OSError, EngineError) as exc:
+        if expired.is_set() or not isinstance(exc, EngineError):
+            raise EngineError("strict snapshot git read could not complete") from exc
+        raise
+    finally:
+        timer.cancel()
+        _kill(process)
+        process.wait()
+        for stream in (process.stdin, process.stdout, process.stderr):
+            try:
+                stream.close()
+            except OSError:
+                pass
+    return prefixes
 
 
 class GitSnapshot:
@@ -175,12 +286,15 @@ class GitSnapshot:
     def _side(self):
         return self.side or str(self.revision)
 
-    def read_many(self, paths, *, unread_oversized=False):
+    def read_many(self, paths, *, unread_oversized=False, stream_prefix=True):
         """Read selected regular blobs in bounded batches from one frozen tree.
 
         A blob over MAX_SOURCE_BYTES refuses, naming path, side, size and
         limit; with `unread_oversized` it comes back as an `UnreadSide`
-        instead, and costs the batch nothing (#415).
+        instead, and costs the batch nothing (#415). Unless `stream_prefix`
+        is false, such a side up to MAX_PREFIX_STREAM_BYTES keeps its
+        verified prefix, all of them streamed through one more `cat-file
+        --batch` for this tree (#455).
         """
         self.list_paths()
         selected = sorted(set(paths))
@@ -188,6 +302,7 @@ class GitSnapshot:
             raise EngineError("strict snapshot batch exceeds the path limit")
         result = {}
         present = []
+        streamed = []
         size_total = 0
         for path in selected:
             if any(c in path for c in "\r\n\0"):
@@ -207,12 +322,18 @@ class GitSnapshot:
                 if not unread_oversized:
                     raise unread.refusal()
                 result[path] = unread
+                if stream_prefix and size <= MAX_PREFIX_STREAM_BYTES:
+                    streamed.append((path, oid, size))
                 continue
             size_total += size
             if size_total > MAX_BATCH_BYTES:
                 raise _batch_over_limit(path, self._side(), size_total)
             present.append((path, oid, size))
         result.update(self._read_objects(present))
+        # Two paths that hold one blob stream it once.
+        prefixes = _stream_prefixes(self.repo, sorted({(oid, size) for _path, oid, size in streamed}))
+        for path, oid, size in streamed:
+            result[path] = UnreadSide(path, self._side(), size, MAX_SOURCE_BYTES, prefix=prefixes[oid])
         return result
 
     def _read_objects(self, present):
@@ -402,8 +523,12 @@ class GitSnapshot:
             self._resolved = raw.decode("ascii").strip()
         return self._resolved
 
-    def read(self, path, *, unread_oversized=False):
-        """One blob, None when absent; over the limit as `read_many` (#415)."""
+    def read(self, path, *, unread_oversized=False, stream_prefix=True):
+        """One blob, None when absent; over the limit as `read_many` (#415).
+
+        The prefix of a side over the limit is streamed through one more
+        `cat-file --batch`, the one a blob under the limit costs (#455).
+        """
         if any(c in path for c in "\r\n\0"):
             raise EngineError("strict snapshot path cannot be represented in the batch protocol")
         spec = f"{self._rev()}:{path}".encode("utf-8")
@@ -436,6 +561,9 @@ class GitSnapshot:
         if entry is None or entry[0] not in {b"100644", b"100755"} or entry[1:] != (parts[0], size):
             raise EngineError("strict snapshot blob header does not match its regular tree entry")
         if unread is not None:
+            if stream_prefix and size <= MAX_PREFIX_STREAM_BYTES:
+                prefix = _stream_prefixes(self.repo, [(parts[0], size)])[parts[0]]
+                return UnreadSide(path, self._side(), size, MAX_SOURCE_BYTES, prefix=prefix)
             return unread
         raw = _run(self.repo, ["cat-file", "--batch"], data=spec + b"\n")
         actual_header, separator, body = raw.partition(b"\n")
@@ -627,7 +755,9 @@ class WorkingTreeSnapshot:
             unread = UnreadSide(path, self.side, size, MAX_SOURCE_BYTES)
             if not unread_oversized:
                 raise unread.refusal()
-            return unread
+            # Its first bytes are in memory already: keep the prefix, with no
+            # read added and the 1,000,001-byte bound unchanged (#455).
+            return UnreadSide(path, self.side, size, MAX_SOURCE_BYTES, prefix=data[:SHEBANG_PREFIX_BYTES])
         return data
 
     def search(self, needles):

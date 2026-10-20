@@ -27,7 +27,7 @@ from collections.abc import Mapping as _MappingABC
 from dataclasses import dataclass, replace
 from fnmatch import fnmatchcase
 from types import MappingProxyType
-from typing import Callable, Iterable, Mapping, Sequence
+from typing import Callable, Collection, Iterable, Mapping, Sequence
 
 from checkwash.change import EngineError, FileChange
 from checkwash.ir.astutil import stable_dump
@@ -2320,8 +2320,14 @@ def find_runtime_subject_shadows(
     | None = None,
     include_equivalent: bool = False,
     config_evidence=None,
+    shebang_free: Collection[str] = frozenset(),
 ) -> list[SubjectShadow]:
-    """Return provider changes for existing first-party test imports."""
+    """Return provider changes for existing first-party test imports.
+
+    `shebang_free` names changed paths the engine set aside unread whose
+    sides it found to hold no shell shebang (#455). Phase one does not read
+    such a path for a shebang.
+    """
 
     if (head_path_lister is None) != (head_batch_reader is None):
         raise EngineError("runtime-shadow inventory requires both path and byte readers")
@@ -2435,6 +2441,11 @@ def find_runtime_subject_shadows(
         and not _is_conftest_path((change.old_path or path).replace("\\", "/"))
         and any(_runner_invocation_sides(path, change, config))
     )
+    # A dot-less path is read for a shebang, its only runner shape. A path
+    # set aside unread (#415) has no bytes here but the head's, which are not
+    # its base side, so reading it refuses. One whose sides hold no shell
+    # shebang (#455) is no runner on either side, which the read would only
+    # confirm: it is skipped, so it adds no invocation, as a read would not.
     runner_snapshot_paths = sorted(
         path
         for path in before_paths | after_paths
@@ -2443,7 +2454,7 @@ def find_runtime_subject_shadows(
         and (
             config.role_of(path) == "ci"
             or _runner_shape(path, None, None)
-            or _could_be_extensionless_runner(path)
+            or (_could_be_extensionless_runner(path) and path not in shebang_free)
         )
     )
 

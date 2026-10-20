@@ -14,7 +14,9 @@ Exit codes (SPEC §9): 0 pass, 1 block, 2 engine error. `check --format
 hook-json` exits 0 on a verdict and on an engine error: its JSON carries a
 block, or the engine error as a non-blocking `systemMessage` (#414). One
 engine error blocks there instead: a size refusal of a path in the verdict
-diff whose head or worktree side is over the limit (#456). With
+diff whose head or worktree side is over the limit (#456). `--format json`
+keeps exit 2 on a size refusal of the analysis, and its stdout names the
+refused side in an `unread` entry, outside any findings document (#454). With
 `--hook-input stdin` (the managed Stop hook) it also reads the session's start
 from what `hook session-start` (the managed SessionStart hook) recorded, which
 prints nothing and always exits 0 (#418).
@@ -57,7 +59,7 @@ from checkwash.gitio import (
 )
 from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
 from checkwash.gitio.pytest_configs import PairedPytestConfigs
-from checkwash.report.jsonout import findings_to_json, ir_to_json
+from checkwash.report.jsonout import findings_to_json, ir_to_json, size_refusal_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
 from checkwash.report.coverage import coverage_to_json
@@ -422,14 +424,17 @@ def _cmd_check(args: argparse.Namespace) -> int:
         run = _analyse(args, changes, config_side, base_label=base_label, head_label=head_label, **readers)
     except SourceOverLimit as exc:
         # Only a head or worktree side of the verdict diff blocks the stop
-        # (#456); the session-commits analysis keeps its note. Any other size
+        # (#456); the session-commits analysis keeps its note. Json keeps
+        # exit 2 and names the refused side (#454 (d)). Any other size
         # refusal reaches main()'s #414 path, as every other engine error does.
         side = _verdict_side_over_limit(changes, exc.unread) if _hook_json(args) else None
-        if side is None:
-            raise
-        # The stderr line every format writes; never on stdout ahead of the JSON.
-        _advise(f"checkwash engine error: {type(exc).__name__}: {exc}\n")
-        return _hook_size_block(side)
+        if side is not None:
+            # The stderr line every format writes; never on stdout ahead of the JSON.
+            _advise(f"checkwash engine error: {type(exc).__name__}: {exc}\n")
+            return _hook_size_block(side)
+        if args.format == "json" and not args.emit_ir:
+            return _json_size_refusal(exc)
+        raise
     if isinstance(run, int):
         return run
     ir, findings, verdict, config = run.ir, run.findings, run.verdict, run.config
@@ -981,6 +986,28 @@ def _verdict_side_over_limit(changes: list, refused: UnreadSide) -> UnreadSide |
         if refused in change.unread:
             return next((side for side in change.unread if side.side in ("head", "worktree")), None)
     return None
+
+
+def _json_size_refusal(exc: SourceOverLimit) -> int:
+    """`--format json` on a size refusal of the analysis: exit 2, naming the side (#454 (d)).
+
+    The run stopped before any finding or verdict, so the change under
+    review was not analysed. Stdout says so explicitly instead of staying
+    empty: `size_refusal_to_json` writes the findings JSON's `unread` entry
+    for the side the refusal names, outside any findings document. stderr
+    keeps the one engine-error line `main()` writes for the refusal in every
+    other format. Term, sarif, `--emit-ir` and other engine errors keep an
+    empty stdout. So does a root manifest, config, exemption list or task
+    file over the limit at the base: it is read inside the guarded `_analyse`
+    call, but refuses as a `GitSourceOverLimit`, a `GitError` and not a
+    `SourceOverLimit`, which the `except SourceOverLimit` clause does not catch.
+    """
+    _advise(f"checkwash engine error: {type(exc).__name__}: {exc}\n")
+    try:
+        _write_machine(size_refusal_to_json(exc.unread))
+    except (OSError, ValueError):
+        pass
+    return 2
 
 
 def _hook_size_block(side: UnreadSide) -> int:

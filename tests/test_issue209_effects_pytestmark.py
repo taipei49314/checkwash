@@ -16,6 +16,7 @@ import datetime
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
@@ -65,6 +66,24 @@ def analyze_change(*changes):
 
 def conftest_added(source):
     return analyze_change(FileChange(CONFTEST, "modified", HEAD.encode(), source.encode()))
+
+
+def _refined_legacy_keys(monkeypatch):
+    """The legacy key each content-bound key computed while the test runs refines (#512).
+
+    A v2 key's identity holds the legacy key's pre-image unchanged, so the
+    legacy key it refines is `make_fingerprint` of the same inputs.
+    """
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
 
 
 # --- 209.Q2: a reorder or a labelling mark is no effect -------------------------
@@ -274,11 +293,14 @@ def test_d6_reads_a_pytestmark_condition(assignment, outcome):
     assert verdict == outcome[2]
 
 
-def test_the_fingerprint_is_the_marker_name_s():
+def test_the_fingerprint_is_the_marker_name_s(monkeypatch):
+    # The key refines the legacy key of the marker's name (#512).
+    legacy = _refined_legacy_keys(monkeypatch)
     after = with_pytestmark('pytestmark = pytest.mark.skipif(sys.platform == "win32")')
     found, _verdict = analyze_change(FileChange(TEST_PATH, "modified", BEFORE.encode(), after.encode()))
     (finding,) = found
-    assert finding.fingerprint == make_fingerprint(
+    assert finding.fingerprint.startswith(f"TEST_DISABLED/{TEST_PATH}/test_add/v2:")
+    assert legacy[finding.fingerprint] == make_fingerprint(
         "TEST_DISABLED", TEST_PATH, "test_add", 'pytest.mark.skipif(sys.platform=="win32")')
     assert finding.after.text == 'pytest.mark.skipif(sys.platform == "win32")'
 
@@ -301,11 +323,16 @@ def inert(found):
     ("pytestmark = [pytest.mark.slow, pytest.mark.skip, pytest.mark.xfail(strict=True)]",
      ["pytest.mark.skip", "pytest.mark.xfail"]),
 ])
-def test_a_conftest_pytestmark_is_reported_at_info(assignment, names):
+def test_a_conftest_pytestmark_is_reported_at_info(assignment, names, monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     found, verdict = conftest_added(HEAD + assignment + "\n")
     assert inert(found) == [("<suite>", "info", [], [], "inert_mark")] * len(names)
-    assert [f.message for f in found] == [f"<suite>: {INERT} ({name})" for name in names]
-    assert [f.fingerprint for f in found] == [make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", n) for n in names]
+    # Findings of one unit sort by key, and content-bound keys do not sort as
+    # their markers' legacy keys did (#512): each message with the legacy key
+    # its key refines.
+    assert sorted((f.message, legacy[f.fingerprint]) for f in found) == sorted(
+        (f"<suite>: {INERT} ({n})", make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", n)) for n in names
+    )
     assert verdict == "pass"
 
 

@@ -6,7 +6,9 @@ assertion parked under a constant-false branch, and a `return` before the
 assertion. Each assertion stayed in the unit at its original strength, so no
 rule fired. This page states what the JS/TS frontend now reads in their
 place, and what it still does not. THREATMODEL rows 8, 10, 29 and 48 point
-here for their JS/TS clauses.
+here for their JS/TS clauses. The same walk reads where a test is
+registered (#484): a test registered in code that never runs is no unit
+(THREATMODEL row 159, [below](#tests-registered-where-no-code-runs)).
 
 The ruling (issue #429, 2026-10-14) splits the work into two changes. The
 first rates an assertion that can never fail at SPEC §3's TAUTOLOGY rung. The
@@ -223,8 +225,10 @@ after the stop keeps its reading:
   as a `/` in a substitution, stops the walk too), JSX (`<p>...</p>`, after a
   block too, or a TypeScript `<T>x` assertion), a token outside a string that
   is not ASCII (a non-ASCII name, U+FEFF, which JavaScript reads as a space),
-  a dead region holding a `function`, whose hoisted body a call before it
-  may run, a `/` the mask reads as a
+  a dead region holding a function declaration, labelled or not, whose
+  hoisted body a call before it may run (a function expression there, such
+  as Mocha's `it("x", function () {})`, hoists nothing and is cut; #484), a
+  `/` the mask reads as a
   division where JavaScript starts a regular expression (after a block, a
   statement head, an update or an operator, or at a line's start), a
   regular expression it reads where JavaScript may divide (after anything
@@ -250,7 +254,11 @@ after the stop keeps its reading:
   line break rather than on a `;` or its own `}`: TypeScript may read past
   that line break (`v is` then `false`), so it is not decided;
 - a `with` statement, `import` and `export`, and a TypeScript-typed or
-  generic function declaration (`function f(): T {}`);
+  generic function declaration (`function f(): T {}`); the walk of a file's
+  own statements steps over a static `import` declaration whose end it
+  proves, but `export`, TypeScript's `import x = require(...)`, an import
+  with attributes (`with { type: "json" }`) and a dynamic `import(...)`
+  still stop it (#484);
 - an expression-bodied callback (`() => expect(x).toBe(1)`), which has no
   statements;
 - every callback in a file with a `\` outside a string: an identifier escape
@@ -272,9 +280,9 @@ after the stop keeps its reading:
   a declaration or assignment (`const ok = false && expect(x)`), an
   assertion in parentheses (`false && (expect(x))`), and the ternary, `??`
   and comma forms keep their assertions.
-- A test registered in dead code (`if (false) { it(...) }`) is outside this
-  change (#429 Q9), and so is an imperative skip (`t.skip()`) in dead code,
-  which still marks the test.
+- An imperative skip (`t.skip()`) in dead code still marks the test (D-148
+  reading 9). A test registered in dead code was outside #429 (Q9) and is
+  read since #484 (below).
 
 What the cut leaves alone:
 
@@ -283,11 +291,87 @@ What the cut leaves alone:
 - The coverage inventory reads a cut assertion as represented, not missed;
   one recorded with no strength keeps its reason.
 
+## Tests registered where no code runs
+
+A runner registers only the tests the file's code runs. Before #484 the
+frontend read every `test`, `it` and `describe` declaration it found as
+live, so moving a test under `if (false)` passed with zero findings. The
+walk above now also reads, for the declarations they hold:
+
+- the file's own statements, stepping over a static `import` declaration
+  whose end it proves (`import x from "m"`, `import { a } from "m"`,
+  `import * as m from "m"`, `import "m"`, TypeScript's `import type`), and
+  stopping at `export` and at any other `import` (see above);
+- the callback of every `describe`, `suite` and `context` declaration, their
+  `x` and `f` forms, modifiers and tables included;
+- the callback of a test that registers a test or a block of its own, such
+  as node:test's and tap's `t.test(...)`, even when that test asserts
+  nothing.
+
+### What it changes
+
+- A declaration that starts where the walk proves no statement runs is no
+  unit, and neither is any declaration inside it: `if (false) { it(...) }`,
+  `return;` before `it(...)` in a `describe` callback, a module-level
+  `if (false) { test(...) }`, `false && it(...);`, `t.test(...)` after
+  `return;` in its parent test, and a whole `describe` under `if (false)`.
+- Its loss is a disappearance: `TEST_DISABLED`, "test unit disappeared",
+  under the key its deletion has. There is no new marker, and the message
+  does not say the code is still in the diff.
+- Its skip, focus and options apply to nothing, so a dead `it.only` stops no
+  other test.
+- It earns no credit. A test pasted under `if (false)`, in the same file or
+  another, gives a deleted one no move credit (`ASSERTION_MOVED`), and an
+  assertion moved into it is removed. It adds no oracle mass for
+  `RESTRUCTURED` and no split-or-rename budget. `DUPLICATE_REMAINS` reads
+  Python survivors only, so it never credited a JS/TS unit.
+- An assertion in a test that is dead on both sides is not judged: code that
+  never runs reports nothing.
+- Its assertions still reach the catch evidence of #363, so a catch in it
+  reports as before, and they are recorded as never reached, so the coverage
+  inventory reads them as read.
+- A dead region holding a function expression is now cut, in a test callback
+  too, where the whole callback used to be refused. So an assertion parked
+  in such a region now reports `ASSERT_REMOVED`, and an edit to an assertion
+  that was already there now reports nothing.
+- A file whose only tests are registered in dead code still declares tests,
+  as it did before, so the role it is judged in does not move.
+
+### Not read
+
+- A condition the folder cannot decide keeps the registration live:
+  `if (process.env.CI) { it(...) }` drops the test from any run where the
+  variable is unset, as `it.runIf(process.env.CI)` would, and that spelling
+  reports an added `test.skipIf(!(...))`; this one reports nothing. A
+  `const` binding (`const enabled = false; if (enabled)`) is the folder's own
+  residual.
+- `false && await t.test(...)`, and any `&&` or `||` statement whose last
+  operand is more than the declaration's call, keep the test; so does a
+  declaration or assignment (`const ok = false && it(...)`).
+- A registration inside a function the file never calls, under a `switch`
+  case, or in a `for ... of []` loop.
+- A dead region holding a named function expression is still refused where
+  the walk reads the expression's position as a declaration's: after a `:`
+  (an object's property value, the `else` of `?:`), read as a label's; after
+  `>`, `>>` or `>>>` (`a > function f() {}`), which the tokens hold as `>`;
+  and after `void`, a prefix `!` or `await` at a line break. So is a dead
+  region holding a function declaration at any depth, one inside the dead
+  test's own callback included, though that body never runs.
+- Wherever the walk stops (above), what follows keeps today's reading; the
+  file's own statements are not walked at all when the file holds, anywhere,
+  text the token stream misreads.
+- A misreading no refusal notices (#490) now reaches registrations: where a
+  change adds one, every test after it in that list can read as gone, a false
+  block; where both sides hold one, those tests are read on neither side.
+- The Python form, a `def test_x` under `if False:`, is outside this walk;
+  since #499 (D-166) it is no unit either.
+
 ## Evidence
 
 Prepared on a work machine, where no test or checkwash ran; CI runs the
-tests. The acceptance sweeps the ruling asks for have not run:
+tests. The acceptance sweeps the rulings of #429 and #484 ask for have not
+run:
 `NOT_RUN：工作機規則（POLICY work-machine-local），the sweep runs where the owner approves it`.
-Its false-positive cost is unmeasured.
+Their false-positive cost is unmeasured.
 
 [Catch boundary](js-catch-swallowing.md) · [Known issues on main](KNOWN-ISSUES-next.md)

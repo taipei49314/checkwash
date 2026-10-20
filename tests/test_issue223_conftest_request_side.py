@@ -21,6 +21,7 @@ import datetime
 import pytest
 
 import checkwash.engine as engine
+import checkwash.findings as findings_module
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
@@ -310,17 +311,35 @@ def test_moving_the_skip_fixture_from_the_module_to_conftest_keeps_the_unit():
     assert [unit for unit, _message, _severity in rows] == ["<suite>"]
 
 
-def test_the_fingerprint_is_the_setup_markers():
-    """A skip fixture in the module or in a conftest is one marker: an exemption covers both."""
+def test_the_fingerprint_is_the_setup_markers(monkeypatch):
+    """A skip fixture in the module or in a conftest is one marker: an exemption covers both.
+
+    Since #512 the key also binds the skip's text. The same skip in the
+    module or in a conftest is still one key, but the module's skip with
+    another reason ("x") is another key. All of them refine the marker's one
+    legacy key.
+    """
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    def same_file(reason):
+        _ir, findings, _verdict = analyze(
+            [FileChange(TEST, "modified", BEFORE.encode(), module(
+                "def test_total(needs_network):",
+                prelude=f'\n\n@pytest.fixture\ndef needs_network():\n    pytest.skip("{reason}")').encode())],
+            Config(), Contract(), [], TODAY,
+        )
+        return [f.fingerprint for f in findings if f.rule == "TEST_DISABLED"]
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
     rows, _verdict = run(module("def test_total(needs_network):"))
     assert rows
-    _ir, findings, _verdict = analyze(
-        [FileChange(TEST, "modified", BEFORE.encode(), module(
-            "def test_total(needs_network):",
-            prelude='\n\n@pytest.fixture\ndef needs_network():\n    pytest.skip("x")').encode())],
-        Config(), Contract(), [], TODAY,
-    )
-    same_file = [f.fingerprint for f in findings if f.rule == "TEST_DISABLED"]
+    other_reason, same_reason = same_file("x"), same_file("network tests are disabled")
     snapshot = {**APP, "tests/conftest.py": SKIP.encode()}
     _ir, findings, _verdict = analyze(
         [FileChange(TEST, "modified", BEFORE.encode(), module("def test_total(needs_network):").encode())],
@@ -328,7 +347,10 @@ def test_the_fingerprint_is_the_setup_markers():
     )
     conftest = [f.fingerprint for f in findings if f.rule == "TEST_DISABLED"]
     expected = make_fingerprint("TEST_DISABLED", TEST, "test_total", "setup.needs_network.skip")
-    assert same_file == conftest == [expected]
+    assert same_reason == conftest and len(conftest) == 1 and len(other_reason) == 1
+    assert other_reason != conftest
+    for key in (*other_reason, *conftest):
+        assert key.startswith(f"TEST_DISABLED/{TEST}/test_total/v2:") and seen[key] == expected
 
 
 def test_the_report_locates_the_conftest_line():

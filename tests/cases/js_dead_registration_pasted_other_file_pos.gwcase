@@ -1,0 +1,47 @@
+=== meta ===
+bypass: 9,159
+rule: TEST_DISABLED
+issue: 484
+title: a deleted test pasted under `if (false)` in another test file earns no move credit
+origin: issue #484, ruling Q2 and Q3 blocking 8; on main the pasted copy was a live unit, so the deletion read as moved, at info
+=== before: tests/total.test.ts ===
+import { expect, it } from "vitest";
+import { total } from "../src/total";
+
+it("adds", () => {
+  expect(total([1, 2])).toBe(3);
+});
+
+it("is zero when empty", () => {
+  expect(total([])).toBe(0);
+});
+=== after: tests/total.test.ts ===
+import { expect, it } from "vitest";
+import { total } from "../src/total";
+
+it("is zero when empty", () => {
+  expect(total([])).toBe(0);
+});
+=== before: tests/sum.test.ts ===
+import { expect, it } from "vitest";
+import { sum } from "../src/sum";
+
+it("sums", () => {
+  expect(sum(2, 3)).toBe(5);
+});
+=== after: tests/sum.test.ts ===
+import { expect, it } from "vitest";
+import { sum } from "../src/sum";
+import { total } from "../src/total";
+
+it("sums", () => {
+  expect(sum(2, 3)).toBe(5);
+});
+
+if (false) {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+}
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/total.test.ts", "unit": "adds"}]

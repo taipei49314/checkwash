@@ -81,8 +81,9 @@ unchanged. [v0.6.0 evidence and limits](https://github.com/taipei49314/checkwash
 ([#421](https://github.com/taipei49314/checkwash/issues/421)).** Through
 v0.8.0, an exemption for one rewrite of an assertion also allowed every later
 rewrite of the same line. Nine assertion-level rules now key a finding by the
-old and the new assertion as well, and their old keys stop matching: re-review
-and re-record those entries. [Assertion-level notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md#assertion-level-rules-next-minor-421)
+old and the new assertion as well, TEST_DISABLED keys one by what the change
+disabled ([#512](https://github.com/taipei49314/checkwash/issues/512)), and
+their old keys stop matching: re-review and re-record those entries. [Assertion-level notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md#assertion-level-rules-next-minor-421)
 
 ## Try it
 
@@ -168,18 +169,42 @@ configuration file (`pytest.ini`, `.pytest.ini`, `pytest.toml`,
 `.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`) at any depth:
 either can change the module a test's import resolves to. So do any
 non-generated file under the root `scripts/` directory, read for the pytest
-commands it runs, a file with no extension (a dotfile such as `.envrc`
-counts), since a shebang the run cannot see could make it a runner script,
-and any other changed file that large the analysis needs as context.
+commands it runs, and any other changed file that large the analysis needs
+as context. A shell shebang gives a file the shape of a runner script, whatever
+its name, except a `.py` module or a JS/TS test file.
+From the next minor (unreleased,
+[#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
+the first 200 bytes of a side over the limit to tell, and uses them for
+nothing else; a Git side is streamed and checked against its object id.
+Where those bytes are read, a file that large whose side starts with a shell
+shebang stops the run, naming that side, whatever its suffix (a `.py` module
+or a JS/TS test file that large stops the run anyway, by its own rule). A
+file with no extension (a dotfile such as `.envrc` counts) without one, such
+as a `README` or a `LICENSE`, is set aside like any document, unless another
+rule above makes it one a detector must read. v0.8.0 reads no byte of such a
+side, so every file with no extension that large stops the run there. On main
+a Git side over 64,000,000 bytes is not streamed, so its first bytes are not
+known: a file with no extension still stops the run when one of its Git sides
+is that large, and a suffixed file whose shebang is only on such a side is
+still set aside.
+When a file that large stops the run, from the next minor (unreleased)
+`--format json` prints `{"unread": [...]}` on stdout instead of nothing: one
+`unread` entry, for the side the run refused. It is not a findings document,
+and term and SARIF output stay empty. With a range, json output stays empty
+too when the refused file is a symlinked pytest configuration's target that
+no detector must read.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
-configuration, a CI file, a runner script or a file with no extension. A root
+configuration, a CI file, a runner script or a file with no extension whose
+shebang is not known. A root
 `poetry.lock` or `uv.lock` that large at the base is skipped with a note on
 stderr, and the skip is not listed under `unread`; when the diff also changes
 that lockfile, the change's sides over the limit are listed like any other. A
 root `pyproject.toml` or `requirements*.txt` that large at the base stops
-every run with exit 2, naming it. The Claude Code Stop hook (`--format
-hook-json`) reports an engine error as a non-blocking "not analysed" message.
+every run, naming it: term, json and SARIF output exit 2 and name it on
+stderr only. The Claude Code Stop hook (`--format hook-json`) reports an
+engine error, this one included, as a non-blocking "not analysed" message
+on stdout that quotes the error, and exits 0.
 From the next minor (unreleased), when the run stops on a file the hook's diff
 changes and that file's working-tree side is over the limit, the hook blocks
 the stop instead, naming the file and asking to shrink, split or revert it
@@ -325,5 +350,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 20126 tests in the current source tree.
+Alpha pre-release. 22 detectors, 20500 tests in the current source tree.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

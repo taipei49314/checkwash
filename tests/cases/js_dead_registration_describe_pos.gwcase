@@ -1,0 +1,49 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: a describe moved under `if (false)` takes both of its tests with it
+origin: issue #484, ruling Q3 blocking 6; a declaration inside a dead declaration is no unit either
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  describe("adds", () => {
+    it("two numbers", () => {
+      expect(total([1, 2])).toBe(3);
+    });
+
+    it("three numbers", () => {
+      expect(total([1, 2, 3])).toBe(6);
+    });
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  if (false) {
+    describe("adds", () => {
+      it("two numbers", () => {
+        expect(total([1, 2])).toBe(3);
+      });
+
+      it("three numbers", () => {
+        expect(total([1, 2, 3])).toBe(6);
+      });
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "two numbers"},
+ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "three numbers"}]

@@ -1,0 +1,36 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: a `return;` in a describe callback stops every test registered after it
+origin: issue #484, ruling Q3 blocking 2; main read the test after the return as live (pass, zero findings)
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+
+  return;
+
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

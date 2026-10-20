@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 484
+title: removing `if (false)` from around a test registers it again, and reports nothing
+origin: issue #484, ruling Q3 control; a test that starts running is an added unit, as on main
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  if (false) {
+    it("adds", () => {
+      expect(total([1, 2])).toBe(3);
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[]

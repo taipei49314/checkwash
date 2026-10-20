@@ -14172,6 +14172,13 @@ with no new issue: one sentence in the KNOWN-ISSUES-next #469 row
 that time, for example of the stand-in pass (D-131 item 2), goes to the
 pool after the release. This paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
+
 ## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
 
 Ruling 471 (owner, 2026-10-16, issuecomment-6230178131, 「#468、#471
@@ -14553,6 +14560,13 @@ batch 3, makes it 2026-10-20 in `benchmarks/external-credits.json` and
 in the External credits table of `benchmarks/FAILURES.md`. This
 paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
+
 ## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
 
 Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
@@ -14831,6 +14845,13 @@ rule, severity and unit, and the two `TEST_DISABLED` warns, are
 unchanged. Item A68 had approved the fixture's label with the old one.
 The same item approves fourteen such moves in #522's fixtures and tests
 (D-155). This paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
 
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
@@ -15630,6 +15651,13 @@ comment approved under A54, naming #522's fixture-producer evidence; it
 changes the comment only (4a87d143, in integration batch 3). This
 paragraph was written after the reply.
 
+On 2026-10-20 the owner approved the paragraph above with
+「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as recommended"), a
+button whose text the assistant wrote: its item H2 approves together the
+round-4 and round-6 approval records, the C1/D3 rewrites at merge and the
+batch-4 merge sentences it lists. This sentence was written after the
+reply.
+
 ## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
 
 Ruling 496 (owner, 2026-10-19, 「裁決總表全部照建議」, "the consolidated
@@ -15910,6 +15938,1632 @@ awaited it, added the sentence after the fallback saying the owner
 accepted it, retitled the paragraph on the first approvals, and wrote
 this paragraph.
 
+## D-164 (2026-10-19): a verified 200-byte read of an oversized side answers the shell-shebang check (#455)
+
+Ruling 455 (owner, 2026-10-18, 「照建議」, "as recommended",
+issuecomment-6248011708) adopted the issue's Recommendation: option (b),
+variant (b1), applied to extensionless and suffixed paths alike and
+including the runtime-provider pass skip (questions 1 and 2); (c) only if
+HIDDEN_UNICODE is widened beyond `.py` (question 5); (e) rejected, so no
+partial parse, and a partial read gives no evidence and clears no finding
+(question 6); and the limit on any bounded read as the Recommendation
+states it, under which a bounded read may remove the extensionless refusal,
+because that refusal stood for exactly the shebang question (question 3).
+The owner's second ruling that day (「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included", issuecomment-6248628575)
+settled the two questions the first left open: an unchanged dot-less file
+over the limit that the provider pass reads is first confirmed by a test and
+then filed as its own issue, not fixed here (question 4), and HIDDEN_UNICODE
+is to be widened to JS/TS in its own issue, #498, adopted only if a
+false-positive sweep stays inside a line fixed in advance (question 5).
+On 2026-10-19 (「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+the reply was a button whose text the assistant wrote;
+issuecomment-6261648853) R96 fixed #498's false-positive line and R98
+scheduled #498 after v0.9.0, with (c) behind it; neither changes this PR.
+R1 (A), recorded on #419, put #455 in v0.9.0's scope.
+
+**The limit on a bounded read** (question 3). It may answer only a question
+that the bytes read fully decide. It never feeds a parser, never grants
+evidence and never clears a finding. It may add a refusal. It may remove a
+refusal only when that refusal stood for exactly the question the read
+answers.
+
+**The decision.** An unread side keeps its first 200 bytes, the bytes
+`_shell_shebang` reads, and they answer whether the side starts with a shell
+shebang, as the whole side would. A shell shebang there gives the path
+runner shape whatever its suffix, as at any size, so the run refuses and
+names that side. A file with no extension no longer refuses for the shebang
+it may hold once every unread side has its bytes: without one it is judged
+like any other unread path. This supersedes D-135's sentence "Python
+modules, pytest configuration and extensionless files refuse, because the
+runtime-provider pass and the runner shape read them" for extensionless
+files, and closes two of its residuals, "A suffixed file with a shell
+shebang only on an unread side stays set aside (for example `ci/run.txt`)"
+and "Fail-closed side effect: an extensionless file over the limit now exits
+2 even when it is a document, such as `README`, `LICENSE` or `.envrc`",
+except past the stream ceiling (reading 1). Its residual "A refusal for a
+change with two unread sides names the first unread side" is narrowed by
+reading 2.
+
+**As implemented** (lines at this PR):
+- `change.py:9`, `:33`. `UnreadSide.prefix` holds the first
+  `SHEBANG_PREFIX_BYTES` (200) bytes, or None when they were not read. It is
+  `field(compare=False, repr=False)`, so it takes no part in equality,
+  hashing or the repr, and a side without a prefix keeps today's answer.
+  #454's writers project the note's four keys explicitly
+  (`report/unread.py`, `report/sarif.py`), so it reaches no output.
+  `roles.py:318` reads `data[:SHEBANG_PREFIX_BYTES]`, the same 200 bytes as
+  before.
+- (b1), `gitio/snapshot.py:134-223`. An oversized Git blob of at most
+  `MAX_PREFIX_STREAM_BYTES` (`:25`, equal to `MAX_BATCH_BYTES`, 64,000,000)
+  is streamed through `cat-file --batch`. The header is checked as
+  `_read_objects` checks one; the first 200 bytes are kept; the rest is
+  read in pieces of at most 65,536 bytes, hashed and dropped, so no
+  oversized blob is held whole; and the whole is checked against the object
+  id with the full read's message (`_blob_digest`, `:115`, which
+  `_verify_blob` now uses too). The objects are asked one at a time, and
+  each adds the 60 seconds `_run` gives one process to the deadline.
+  `GitSnapshot.read_many` (`:289`) streams every such side of its tree
+  through one more process; `GitSnapshot.read` (`:526`) streams its side in
+  place of the full read an under-limit side costs. The working-tree side
+  keeps the first 200 of the 1,000,001 bytes it already reads (`:760`), so
+  no read is added there. The session presence check
+  (`gitio/git.py:366`) asks only whether HEAD holds a path and streams
+  nothing.
+- `engine.py:225-301`. `_shebang_side` finds the first unread side whose
+  prefix is a shell shebang, with `_runner_shape`'s exclusions (a `.py`
+  path; a JS/TS test file, judged on the readable sides), and
+  `_detector_must_read` takes it as runner shape. The extensionless rule
+  (`:287`) refuses only when some unread side has no prefix.
+  `_refused_side` (`:341`) names the side.
+- The skip, `engine.py:356` and `shadow.py:2457`. `_shebang_free` lists the
+  paths of set-aside changes whose every side is known, readable sides
+  whole and unread sides by prefix, and holds no shell shebang. The
+  provider pass's phase one does not request such a path where it requests
+  a dot-less path for a shebang; with no CI role, runner suffix or
+  `Makefile` name, it adds no runner invocation, as the read would not. The
+  read-time guard (`_guard_unread_reads`, `engine.py:377`) is unchanged, so
+  any other reader that reaches a set-aside path still refuses.
+
+**Readings where the ruling is silent**; the owner approved each as
+written (below):
+1. The ceiling is per side: a Git side over 64,000,000 bytes, the
+   candidate (b1) names, keeps no prefix and today's answer. It is not a
+   total per tree. A total would let other oversized sides the same commit
+   changes, earlier in path order, use it up before a later one, which
+   would reopen the base-side gap in a repository that already holds many
+   large files. Per side, the extra read grows with the oversized bytes the
+   diff changes, and the deadline grows with the number of objects. So
+   neither has a total bound: a commit that changes N oversized Git sides
+   of up to 64,000,000 bytes each streams and hashes them all, where
+   before #455 they cost no read, and a tree's deadline is 60 x (N + 1)
+   seconds. An alternative not taken here is a total per tree past which
+   the run refuses, naming the side: it bounds the time without reopening
+   the gap, but a suffixed side past it would refuse where (b1) says a
+   side above the ceiling keeps today's answer.
+2. A refusal names the first unread side whose prefix holds a shell
+   shebang that gives one of the change's paths runner shape, also when
+   another must-read rule applies to the path; otherwise the first unread
+   side, as before. #456's Stop-hook match is by change
+   (`_verdict_side_over_limit`), so no hook outcome moves with the name.
+3. The exclusions are `_runner_shape`'s, so a prefix gives a `.py` path or
+   a JS/TS test file no runner shape. Each refuses by its own rule anyway.
+4. The skip is computed from the sides, not from the fact that the change
+   was set aside, and only the dot-less clause of the pass's runner paths
+   takes it. A CI-role or runner-named path is read as before; such a path
+   refuses at set-aside anyway.
+5. A working-tree side has no ceiling, since its bytes come from the read
+   already made. Its prefix is not checked against an object id; no
+   working-tree read is, since none has one.
+
+**Costs,** by reading, not measured. For honest repositories, an oversized
+changed `README`, `LICENSE`, `ChangeLog`, `.envrc` or other file with no
+extension and no shell shebang gets a verdict instead of exit 2 (under
+`--format hook-json`, instead of #456's size block when its head or
+working-tree side is over the limit, or the "not analysed" message when
+only its base side is), and a suffixed file whose shell shebang is only on
+an oversized side newly exits 2. For attackers, the second closes the
+base-side gap: an existing `ci/run.txt` that `sh ci/run.txt`
+runs, over the limit, whose head drops the shebang and the test command.
+That closure holds for the required range-mode check. In the Stop hook
+(`--format hook-json`), when only such a file's base side is over the
+limit, as when the session shrinks or deletes that `ci/run.txt`, the run
+now gets the non-blocking "not analysed" message (exit 0, no decision; the
+class #456 ruling Q3 keeps for a base side alone, THREATMODEL row 128)
+where the base gave a verdict, so a weakened test beside it no longer
+blocks the stop; when its head or working-tree side is over the limit too,
+#456's size block blocks it. The first gives an attacker the answer a small
+file without a shebang gets, with less evidence, since a set-aside change
+earns none. Each streamed Git
+side is read once in full: in range mode one more `git cat-file --batch`
+for each tree that holds such a side, whatever their number; in worktree
+mode one more for each oversized base side, the same `cat-file --batch`
+an under-limit base side already costs, where before #455 such a side
+cost none. The gitio gate (`tests/test_perf_git.py`)
+has no oversized side, so its budget does not move.
+
+**Residuals.**
+- A file with no extension whose Git side is over 64,000,000 bytes still
+  refuses, and a suffixed one with a shebang only on such a side is still
+  set aside (reading 1).
+- An unchanged file with no dot in its name over the limit still refuses
+  on a run that reaches the provider pass's first read phase, which reads
+  it as an unchanged file through the strict reader; so do a symlink and a
+  batch over the byte budget there. So a changed oversized document gets a
+  verdict while the same file unchanged can still refuse. Question 4 orders
+  a reproduction test first, in range and worktree mode, and then its own
+  issue; neither is in this PR.
+- HIDDEN_UNICODE, BROAD_EXCEPT_ADDED and SUPPRESSION_ADDED still read no
+  set-aside path (#498, then (c)).
+- An oversized file with a shell shebang on its head or working-tree side
+  still refuses, and #456 blocks the Stop hook on it.
+
+**Rule 2.** The ruling approves no change to an existing fixture's expected
+output. Every comparison of a snapshot's `UnreadSide` with one built without
+a prefix holds, because the prefix takes no part in equality, and every
+case built without a prefix keeps today's answer. One existing expectation no longer held
+with its input as it was: the `untracked_extensionless` row of
+`tests/test_issue456_hook_size_refusal.py` (`:135-138`). Its untracked
+`NOTES` was 1,000,001 bytes of hex text with no shebang, so it was set
+aside, and the weakened test beside it blocked the stop as a finding, where
+the row asserts #456's size block; CI failed on that row on every leg at
+2a6ee2f9. In round 6 the owner approved option (a) (G1, 2026-10-20,
+「第六輪 G1～G6 全部照建議」, "round 6, G1 to G6, all as recommended"; the
+reply was a button whose text the assistant wrote). The row's `NOTES` input
+now starts with `#!/bin/sh` and keeps its size, 1,000,001 bytes, so the run
+refuses and names `NOTES` on its worktree side, and the row's asserted
+output is unchanged; its id and its undo are unchanged too. On the base the
+same input refuses by the extensionless rule, naming the same side. The
+untracked file with no shebang is pinned by this PR's
+`test_the_stop_hook_beside_an_untracked_oversized_extensionless_file[document]`.
+Nothing under `tests/gates` changes.
+
+**Tests.** `tests/test_issue455_bounded_shebang_read.py` adds 82 collected
+items, counted from its parametrize lists: the prefix against the whole
+side (8) and equality (1); the engine's rows (10 set aside, 9 refusing and
+naming the shebang side, 6 other rules, 1 without a prefix); no repair
+evidence with prefixes, test_issue415's unread rows and a README (5), and
+beside several set-aside documents (1); the provider pass (3); the
+snapshots, the working-tree read bound, the ceiling and the stream's
+protocol (2, 1, 2, 1, 4); the git processes (3); and the CLI in range,
+worktree and hook mode (25), where a shell shebang on an unread side
+refuses for every status the issue's acceptance names, and the Stop hook
+keeps the "not analysed" message when only a suffixed runner's base side
+is over the limit. By reading, 30 of the 82 pin behaviour the base
+already has, such as the shebang check
+itself, the other must-read rules and refusals the base names the same
+way; on the base they fail only because the module imports names it
+lacks. No `.gwcase` fixture is added: the case format has no unread
+side. By reading, the documented test count becomes 20247 (20165 + 82);
+CI's collection checks it.
+
+**Versions.** No rule id, severity or machine-output field changes, so
+`FINDINGS_VERSION` and `IR_VERSION` stay 2, and no fingerprint moves: a
+set-aside change gives no finding.
+
+**Sweep.** The issue asks the sweep to measure the change on the standard
+set. Under R1 and R2 this fix joins the combined sweep, where its merge gets
+its own before/after pair, and its report lists every commit whose outcome
+moves between exit 2 and a verdict. `NOT_RUN：工作機規則（POLICY work-machine-local），the standard-set measurement waits for the combined sweep; nothing ran on the work machine`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code, and
+this PR's CI is the first run.
+
+D-164 to D-169 were assigned to the pull requests of the fourth wave,
+prepared in parallel. When integration batch 4 merged, all of them were
+on main, in number order after D-163. This entry is D-164. The agent
+wrote it in #455's fix PR; the owner approved its wording, readings 1 to
+5 and the Rule 2 item in round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #536's
+head c104ee4b: G1 (F1, option (a)) approves the Rule 2 change above: the
+`NOTES` input of the `untracked_extensionless` row of
+`test_a_worktree_side_over_the_limit_blocks_the_stop`
+(`tests/test_issue456_hook_size_refusal.py:133-135` on main) becomes
+`b"#!/bin/sh\n" + blob(LIMIT + 1 - len(b"#!/bin/sh\n"), "notes")`, still
+`LIMIT + 1` bytes (0d1ed936), with its id, undo and asserted values
+unchanged. G2 (F16) approves the wording of this entry (f006f365, 89cb0ae9,
+e3aaf6bb, 2a6ee2f9) and of SPEC §4b (012129aa, c62d3143), and the Rule 2
+paragraph rewritten to that decision, as F16 asked (c104ee4b). G4 (F17, F18)
+approves readings 1 to 5: one stream ceiling per side and no per-tree total,
+so neither the bytes streamed nor a tree's deadline has a total bound, and
+the sweep measures them; the refusal names the side whose prefix holds the
+shebang; `_runner_shape`'s exclusions hold for a prefix; the skip set is
+computed from the sides; the working-tree side has no ceiling. G5 records as
+a residual, as #456 ruling Q3 rules, the Stop hook's "not analysed" message
+when only the base side of a suffixed runner such as `ci/run.txt` is over
+the limit (Costs). G6 (F19, F20) puts a THREATMODEL row for the base-side
+gap this entry closes, Closed and pinned in `E2E_PINNED`, in a separate docs
+pull request whose wording comes to the owner in a later round, and has
+Claude open, after this fix merges, a test-only pull request with question
+4's reproduction test (the second residual), in range and worktree mode, and
+file the issue once CI reproduces it. The numbering sentence and the
+readings' heading were rewritten to the facts at merge under the C1/D3
+precedent the same round approved (f42441d0, in integration batch 4). This
+paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists. This sentence
+was written after the reply.
+
+## D-165 (2026-10-19): a JS/TS test registered where no code runs is no unit (#484)
+
+Ruling 484 (owner, 2026-10-18, 「19 項全部照建議（價值判斷的題也照你的傾向）」,
+"all 19 as recommended, value judgements included"; #484
+issuecomment-6248630321, which states each decision in full): Q1 (a), Q2
+(no new rule text), Q3 (the fixtures), and the Python twin filed as #499.
+The owner's consolidated ruling of 2026-10-19 (「裁決總表全部照建議」, #484
+issuecomment-6261651400) added R2 (this fix, merged before the combined
+sweep's manifest is frozen, gets its own pair of arms in that sweep), R99
+(#499 follows this ruling), R100 (this PR's THREATMODEL row lists the
+Python form as open, and that half is Closed when #499's fix merges) and
+R101 (#499 is P2 and lands in the same round, v0.9.0). D-164 to D-169 were
+assigned to six pull requests prepared in parallel. When integration
+batch 4 merged, all of them were on main. This entry is D-165.
+
+#484 reports that `parse_javascript` read every declaration
+`_DECLARATION_RE` finds as live. A unit's liveness came from its modifiers,
+options and enclosing declarations, never from whether the declaration
+call is reached, and #429's walker (D-148) read only the callback of a unit
+with assertions and cut only assertions. So a test moved under
+`if (false)`, after `return;` in a `describe` callback, under a module-level
+`if (false)`, behind `false &&`, or a node:test `t.test(...)` after
+`return;` in its parent test, passed with zero findings, and a test pasted
+under `if (false)` was a live unit with no markers, so it lent a deleted
+test the D2 move credit.
+
+Implementation, lines at this PR:
+
+- Q1 (a), the walk reads more. `_dead_code`
+  (`frontends/javascript/frontend.py:1412`) walks the module's own
+  statements (`Reachability.module_unreachable`, `reachability.py:428`),
+  the block callback of every `describe`, `suite` and `context`
+  declaration, their `x`/`f` forms, modifiers and tables included, and the
+  callback of a test that registers a named test or a block of its own, even
+  one with no assertions. `parse_javascript` (`:2827`) parks every
+  declaration that starts in a span those walks prove dead. A parked
+  declaration is no unit, and neither is any declaration inside it, since a
+  dead span covers whole statements. The file's focus, the ancestors a unit
+  inherits skips from and `_focus_stops` read only the live declarations, so
+  a dead `.only` stops no other test. A parked test is still scanned
+  (`:3057`): its assertions reach `swallowing_handlers`, so the catch
+  evidence does not change, and they are recorded as never reached. Its
+  callback stays among the test bodies, so the test around a parked subtest
+  does not gain the subtest's assertions.
+- Q1 (a), `&&` and `||`. #429 Q3's reading drops a declaration as it drops
+  an assertion: the walks of this round pass the declarations' call spans
+  as the operands it may drop (`unreachable` and `module_unreachable` now
+  take a map of spans), so `false && it(...);` parks the test.
+- Q1 (a), the finding. No detector changes. A parked unit is absent on its
+  side, so its loss is what a deletion reports: TEST_DISABLED "test unit
+  disappeared", under the deletion's key (`detectors/test_disabled.py:82-101`),
+  at high in a test-only change. No `ParsedFile` field is added, so the
+  message does not say the code is still in the diff.
+- D-148 reading 7, amended as the ruling approves. It now reads: "A
+  boundary is proved only where the text between two tokens is whitespace
+  and comments. A `;` after an operand the tokens omit (a template or
+  regular expression) still ends a statement. A function declaration with a
+  TypeScript return type, `import`, `export` and `with` stop the walk,
+  except that the walk of a file's own statements steps over a static
+  `import` declaration whose end it proves (#484); `export`, TypeScript's
+  `import x = require(...)`, an import with attributes and any other
+  `import` still stop it." (`Reachability._import`, `reachability.py:799`.)
+- D-148 reading 10, amended as the ruling approves. Its clause "a dead
+  region holding a `function` (a call before it may run the hoisted body,
+  which the binder does not always scope: `function f<T>()`)" now reads "a
+  dead region holding a function declaration, a labelled one
+  (`l: function f() {}`) included (a call before it may run the hoisted
+  body, which the binder does not always scope: `function f<T>()`); a
+  function expression hoists nothing, so a dead region that holds one is
+  read, except a named one in a position the walk reads conservatively as
+  a declaration's, such as an object property's value after `:`, which
+  refuses it too (D-165 reading 6; THREATMODEL row 159, residual 6)"
+  (`_declares_function`, `reachability.py:516`). The walker is
+  shared, so the narrowing moves #429's cuts too: an assertion parked in a
+  dead region that also holds a function expression, silent before because
+  the whole callback was refused, now reports ASSERT_REMOVED, and an edit
+  to an assertion already in such a region, reported before, is now
+  silent. Reading 10's other refusals cover the text from the file's start,
+  so they refuse a `describe` walk as they refuse a callback walk, and they
+  refuse the module walk wherever that text occurs in the file.
+- Q2, no new rule text. A parked unit is never a live added unit, so it
+  earns no D2 move credit (`engine.py:1661`, `:1675`), adds no oracle mass
+  to D5's restructure check and no split/rename budget (`gating.py:480`,
+  `:506`). D10's survivor search reads Python files only (`engine.py:1719`,
+  with `def name(` needles), so no JS/TS unit was ever a survivor; SPEC's
+  D10 row now says so, which records what the code does and changes no
+  rule.
+- Q3, the fixtures, each keeping a live test beside the parked one. The
+  eleven blocking shapes: `js_dead_registration_if_false_pos` (the issue's
+  shape), `js_dead_registration_after_return_pos`,
+  `js_dead_registration_module_if_false_pos` (the import step-over),
+  `js_dead_registration_literal_and_pos`,
+  `js_dead_registration_node_subtest_pos`,
+  `js_dead_registration_describe_pos`,
+  `js_dead_registration_mocha_function_pos` (the amended reading 10),
+  `js_dead_registration_pasted_other_file_pos`,
+  `js_dead_registration_assertion_moved_pos`,
+  `js_dead_registration_equal_mass_pos` and
+  `js_dead_registration_focus_pos`. The controls:
+  `js_registration_if_true_neg`, `js_registration_else_of_if_false_neg`,
+  `js_registration_after_iterator_return_neg`,
+  `js_registration_unwrapped_from_if_false_neg` and
+  `js_registration_after_unproved_end_neg`. The named residual pins:
+  `js_dead_registration_env_condition_residual_neg` and
+  `js_dead_registration_const_condition_residual_neg`. The new reading:
+  `js_dead_registration_weakened_both_sides_neg`. The unit pins the ruling
+  lists, and the walk's other readings, are in
+  `tests/test_issue484_js_dead_registration.py`.
+- THREATMODEL: a new row 159, Closed in part (JS/TS closed, the Python
+  form open as #499), and a clause on row 9 for its `if (false)` absorber;
+  the eleven blocking fixtures cite row 159, and the two absorber fixtures
+  row 9 as well. `benchmarks/FAILURES.md` is edited by hand to what
+  `make_failures.py` would write, which was not run. When integration
+  batch 4 merged, row 159 kept its number and #480's row, which had taken
+  the same number, became row 160 (A98); #499's merge in that batch made
+  row 159 Closed for its Python half as well (R100, D-166).
+- Docs: `docs/js-reachability.md` gains a section on registrations and
+  follows the amended readings 7 and 10, and `docs/KNOWN-ISSUES-next.md`
+  gains a #484 row, with the #429 row's "outside this change" sentence
+  replaced. The dead `t.skip()` residual (D-148 reading 9) is unchanged
+  and stays listed.
+
+Readings the ruling leaves to the implementation; the owner approved each
+as written (below):
+
+1. **A test callback that registers subtests** is one whose body holds the
+   start of a declaration the frontend reads as a named test or a block:
+   node:test's and tap's `t.test(...)`, and any other `test`, `it` or
+   `describe` call there. A bare `.test(value)` call, which the frontend
+   reads as a declaration with no name, does not make the callback walked.
+2. **The operand for Q3** is the declaration's call from its callee to its
+   `)`, the callee including a receiver of dotted names (`t.test`). So
+   `false && await t.test(...)` is not decided, and neither is a
+   declaration whose callee follows a call (`make().test(...)`) or one held
+   by a declaration or assignment (`const ok = false && it(...)`), as for
+   an assertion.
+3. **Declares tests** (the question the ruling leaves to this draft). A
+   parked declaration still makes a file declare tests, as before
+   (`frontend.py:3095`), so E7's role reading of a JS/TS test path does not
+   move.
+4. **A parked test's assertions** are all recorded as never reached: one
+   with a strength in `unreachable_assertion_spans`, one without in
+   `unreachable_unjudged_assertion_spans`. The coverage inventory reads the
+   first as read and keeps the second's "recorded with no strength"
+   reason, as D-148 does for a cut.
+5. **A parked table** (`test.each(CASES)(...)` under `if (false)`) still
+   counts as a table-argument read of its same-file `const` (D-152 reading
+   5), so a live table that shares the `const` keeps its rows counted.
+6. **Statement position** for the amended reading 10 is read
+   conservatively, from the token before the `function`: a `function` with
+   no name after it never declares; one after `.`, `?.` or `#` (a spread
+   included, whose `...` the tokens hold as three `.`), `(` or `[`, a
+   comma or an operator that waits for its operand begins an expression,
+   and so does one after `return`, `throw`, `yield`, `await`, `void` or a
+   prefix `!` on the same line; anything else, `{`, `)`, `]`, `}`, `>`, an
+   operand at a line break and `:` included, reads as a declaration. `>`
+   may close a TypeScript type, after which a statement may start, and the
+   tokens hold `>>` and `>>>` as `>` tokens, so a `function` after either
+   reads as a declaration too. The token stream omits templates and
+   regular expressions, so where one stands before the `function` (or its
+   `async`), the token before it is not the one JavaScript reads, and the
+   `function` reads as a declaration (`` const note = `x` `` then
+   `function f() {}` on the next line, which a line break makes one); so
+   does one after a `.` that ends a number (`x = 1.` then a declaration on
+   the next line), the word right before the `.` starting with a digit. So
+   a named function expression in a dead region still refuses the walk
+   after a `:`, such as an object property's value, after `>`, `>>` or
+   `>>>` (`a > function f() {}`), and after `void`, a prefix `!` or
+   `await` at a line break (row 159, residual 6). Every `function` in the
+   dead region is read, at any depth, so a function declaration inside a
+   dead test's own callback refuses the walk too, though that body never
+   runs.
+7. **The import step-over** reads `import "m"`, and `import` followed by
+   names, `*`, `as`, commas and braced lists of names, strings and
+   commas, then `from` and a string; TypeScript's `import type` is such a
+   form. It ends at a `;`, at a line break before any token but `with` or
+   `assert`, or at the file's end, and only where the text between its
+   tokens is whitespace and comments. A default import named `from`
+   (`import from from "m"`) stops the walk. The module walk is refused when
+   text the tokens omit stands before the file's first token.
+8. **A module-level `return` or `throw`** cuts the rest of the file, as in
+   a block. CommonJS runs a top-level `return`, and an ES module that holds
+   one does not load, so either way nothing after it registers.
+9. **What is not walked.** The callback of a declaration that a dead span
+   already holds, all of which is dead; and a declaration whose call was
+   recovered, as D-148 does not walk a recovered test callback.
+
+**A note on the fixtures.** JS/TS units carry no shingles, so two unpaired
+units of one file pair in span order (SPEC §7). On the base, the dead test
+of `js_dead_registration_equal_mass_pos` is a live unit, and the deleted
+test pairs with it rather than reaching D5. After the fix nothing pairs
+with it, and the deletion is TEST_DISABLED at high, as the ruling expects.
+D5 credits a JS/TS file only where its alignment is degraded (row 157,
+residual 9). The fixture pins the reading the ruling names.
+
+Rule 2. The ruling approves no change to an existing expectation, and none
+was changed. By reading, no existing expected output moves: no fixture or
+test registers a declaration in dead code; no existing fixture or test
+source holds a `return`, a `throw` or a branch the folder decides at module
+level or in a `describe` callback (searched); none holds a function
+expression in a dead region; and the one refusal pin for reading 10,
+`test_a_cut_holding_a_function_declaration_is_refused`
+(`tests/test_issue429_js_reachability.py:217`), uses the declaration form,
+which stays refused. Nothing under `tests/gates` changed. If CI shows an
+existing expectation moving, the round stops and asks the owner.
+
+**Fingerprints and IR.** No fingerprint scheme changes. A parked test's
+finding has the key its deletion has, since the key reads the before side
+(pinned). TEST_DISABLED's keys move in #512, separately. No IR or
+`ParsedFile` field is added; IR_VERSION and FINDINGS_VERSION stay.
+
+**Costs, by reading; the sweep counts them.** New blocks: a change that
+moves a test where no code runs, which is what the ruling asks for, and
+the moved #429 cuts above. A misreading no refusal notices (#490) now
+reaches declarations: where a change adds one, every test after it in that
+statement list can read as "test unit disappeared" at high, a false block,
+and where both sides hold one, those tests are read on neither side, so
+edits to them are not judged. D-148's refusals (JSX, nested templates, `\`)
+cover the text from the file's start, so where they apply these walks keep
+today's reading.
+
+**Measurement.** Not measured. Per R2 this fix's merge gets its own pair of
+arms in the combined sweep, which measures it as D-148's evidence status
+records for #429: the standard set, the D-088 sets and the JS batch, with
+the refactor, tamper, decoy, recorded and perf gates. That run also prices
+the moved #429 cuts and the #490 cost named above.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every effect above is read from source; no test, checkwash run, sweep or runner was run`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; CI runs the tests. Added: nineteen `.gwcase` fixtures
+(eleven pinning row 159, two of them row 9 as well; five controls; two
+named residual pins; one new reading), whose labels the owner approved
+(below), and 80 collected items in
+`tests/test_issue484_js_dead_registration.py`, counted from its
+parametrize lists. By reading, the documented test count becomes 20356
+(20257 + 80 + 19); CI's collection checks it.
+
+The agent wrote this entry in #484's fix PR. The owner approved its
+wording, the readings above and the fixtures' labels in round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #538's
+head fd00ec12: G2 (F27) approves the wording of this entry (a7f9bb6c, the
+DECISIONS hunk of 6687e5fb, f96f07f5, 9a2014f6, 3534ddd1), of THREATMODEL
+rows 159 and 9 (031a67d5, with its hand edit of `benchmarks/FAILURES.md`,
+the THREATMODEL hunks of 3f1d9847 and 6687e5fb, 3742b3cb, 74c069d0,
+5d55818f) and of SPEC (85e971bb, 4061d4cf, 96e446e2, feb2796a, a3175cb6).
+That includes 4061d4cf's general form of the qualification F27 asked for in
+SPEC §2b (a named function expression still refuses where the walk reads a
+declaration's position), reading 6's notes on `{`, `>` and the spread,
+reading 7's "braced lists", and residual (3)'s dynamic `import(...)`,
+`import.meta` and `import from from "m"`. G3 (F28) approves the 19 fixtures'
+labels: 11 blocking, 5 controls, 2 named residuals and 1 new reading. G4
+approves reading 3 (F29: a parked declaration still makes a file declare
+tests, so E7 does not move); reading 6's conservative positions, recorded as
+row 159 residual (6), the three that also refused before the fix and a
+function declaration at any depth of a dead region included (F30); and
+readings 1, 2, 4, 5, 7, 8 and 9 (F31). G5 keeps the shapes row 159 names as
+residuals documented, with no issue. G6 (F32): D-148 gets no pointer line,
+and the amended readings 7 and 10 stay in this entry only. The numbering
+sentence, the readings' heading, the labels' sentences and the row-number
+sentence were rewritten to the facts at merge under the C1/D3 precedent the
+same round approved (f42441d0): A98 kept row 159's number, and R100's edit
+made the row Closed at #535's merge (02c5b34f). This paragraph was written
+after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists, among them the
+`docs/js-reachability.md` bullet fd11786d rewrote and SPEC §4's
+`TEST_DISABLED` row, where this entry's clause stands beside #499's (the
+list called it §5). This sentence was written after the reply.
+
+## D-166 (2026-10-19): a Python def or class whose own statement never runs is no unit (#499)
+
+Rulings R99, R100 and R101 (owner, 2026-10-19, 「裁決總表全部照建議」, "the
+consolidated ruling list, all as recommended", in reply to the agent's list
+of 104 decisions; the reply was a button whose text the assistant wrote;
+#499 issuecomment-6261653646 states each in full). R99 answers #499's Q1 to
+Q4 the way #484's ruling (issuecomment-6248630321) answers them for JS/TS,
+R100 answers Q5, and R101 makes #499 P2 and puts it in the same round as
+#484, which R1 (recorded on #419) makes v0.9.0. The round assigned #499
+the number D-166.
+
+#499 reports that pytest collects a module's or a class's tests from its
+`__dict__` once that scope has run, so a `def test_*` under a module-level
+`if False:` is never bound and never collected, while the Python frontend
+read it as a live unit with its assertions. Moving a test there passed with
+zero findings, and so did the same in a class body, a test class moved
+there with its methods, and the other arms the folder already decides for
+assertions (`if not True:`, `if 1 == 2:`, `for _ in []:`, a `match` no case
+can meet). The dead copy also earned the D2 move credit, the D5 restructure
+mass and the D10 survivor credit.
+
+How each answer is implemented, in `frontends/python/rebindings.py` (lines
+at this PR):
+
+- Q2, where the reading lives. `_Judge.never_runs` (`:739-746`) asks
+  whether an arm on the def's or class's own path is one `entry`
+  (`:640`) reads as `_DEAD`: the arms where a later binding already binds
+  nothing (D-144 Q6 (a)). So one folder decides what a binding does to a
+  def and whether the def itself runs, and the frontend reads both through
+  the `dropped` flag it already reads for #424 (`frontend.py:4789`,
+  `:4820`).
+- Q1, the unit model. `drop_dead` (`:748-768`) marks such a def or class
+  `dropped`: it is no unit, and a class takes its units with it, since
+  every def and class in its body has the dead arm on its path and the
+  frontend collects nothing in a dropped class. Its loss is a
+  disappearance, `TEST_DISABLED` "test unit disappeared", with no marker
+  and under the key a deletion has. `run` (`:806-815`) does not judge a
+  dead def as one a later binding replaces. `final_bindings` used to stop
+  when no name was bound twice; it now also reads a module in which a def
+  or class sits under an `if`, a loop, a `try` or a `match`
+  (`_ARMED`, `:86`; `:996-1000`), the only places a dead arm can be.
+- Q3, credits. No rule text changes: D2's move credits read live added
+  units (`engine.py:1650-1680`), D5's restructure mass and split/rename
+  budget read the units of the file (`gating.py:480-567`), and D10's
+  survivor search parses the untouched file with `parse_python`
+  (`engine.py:1699-1738`), so a dead def earns none of them.
+- Q4, pins: below.
+
+**Readings where the ruling is silent**; the owner approved each as
+written (below):
+
+1. The arms are every arm `entry` reads as `_DEAD`, so besides the shapes
+   #499 names they include the `else` of an `if` whose condition folds to
+   true, `if False and x:`, the body of a `while` whose condition folds to
+   false, and the handlers of a `try` whose body cannot raise, as
+   `_Walk.quiet` (`:327-364`) reads it: `pass`, a constant expression
+   statement (a docstring among them), a constant assigned to plain names,
+   an annotated name with no value or a constant one whose annotation is a
+   constant or not evaluated, in a module that does not bind, delete or
+   spell `__annotations__`, an undecorated def whose defaults and
+   annotations are constants (or not evaluated), and an undecorated class
+   with no bases or keywords whose body is made of these and binds no
+   dunder name. That is D-144's strict list, two shapes its text does not
+   name, the constant expression statement and the annotated name, which
+   the code has read since D-144, and two narrowings this PR adds after
+   review. First, creating a class reads some dunder names from its
+   namespace and raises on a bad value: `__slots__ = 1` and
+   `__qualname__ = 1` raise `TypeError`, so does `__classcell__ = 1`, and
+   `__slots__ = "a"` beside `a = 1` raises `ValueError`. So a class whose
+   body binds any dunder name, by an assignment, an annotation, a def or a
+   class statement (`_binds_dunder`, `:160-176`), is read as one that may
+   raise. Second, up to Python 3.13, and under
+   `from __future__ import annotations`, an annotated name at module or
+   class level stores its annotation into `__annotations__` after it binds
+   the name, so after `__annotations__ = None`, `flag: "bool" = True`
+   raises `TypeError`. So in a module that binds or deletes
+   `__annotations__` anywhere (by a name or attribute target, a def,
+   class, import, `except ... as`, match capture, keyword, parameter,
+   `global` or `nonlocal`) or spells it in a string
+   (`_rebinds_annotations`, `:179-204`), an annotated name is read as one
+   that may raise, whether the rebinding is in the try body or before it.
+   A plain `__annotations__ = None` stays quiet: the assignment itself
+   cannot raise. Both narrowings apply wherever D-144 asks whether a
+   try-body statement can raise: such a statement after a try-body def no
+   longer makes a handler def of that name exclusive with it; a rebinding
+   in that try's handler is judged under the handler's guard rather than
+   as binding nothing; one in its `else`, or later in its body, is
+   undecided rather than certain; and a class read as one that may raise,
+   when it is itself the later binding in a try body, is read as one that
+   may not bind, so what it replaces keeps its units, with a
+   `collection.rebound` marker whose guard D6 never holds (None), instead
+   of being certainly replaced. An annotated name that is itself the later
+   binding still binds, since the name is bound before the store raises.
+   By reading, no expectation on main moves (Rule 2, below).
+   `dead_def_handler_of_raising_class_pos` and
+   `dead_def_handler_of_raising_annotation_pos` pin a test in such a
+   handler as live. A loop's `else`, a `with`
+   body, a `try` body, `else` and `finally`, and a `match` on a subject
+   that is not a literal stay live. The folder is `_static_truth` with no
+   fixture or class-attribute resolution, as D-144 reads module and class
+   bodies.
+2. A dead class is also `gone`. Under 424.Q9 a rebound class's method stays
+   when a collected same-file subclass still runs it; a subclass that
+   never runs is now no such subclass, so `del Base` beside a `Test*`
+   subclass under `if False:` drops `Base`'s units, where main kept them.
+3. In a file that keeps two defs of one name, a dead one takes no
+   `name#N` place, so the units after it can be renumbered (below).
+
+**R100, THREATMODEL.** #484's fix PR added a row for a test registered in
+code that never runs, row 159, and listed this Python form as open in it.
+That half became Closed with this fix, which merged after #484's, in
+integration batch 4. This PR's base did not hold the row, so the PR did
+not edit `THREATMODEL.md`: the edit, worded in the PR body and approved
+by the owner in round 6 (below), was applied at that merge (02c5b34f),
+together with `bypass: 159` on the ten positives below and the matching
+edit of `benchmarks/FAILURES.md`, where row 159 moved from "Closed in
+part" to "Closed". The same merge gave row 9 its Python clause and
+`dead_def_pasted_copy_no_move_credit_pos` `bypass: 9` as well (F15,
+below).
+
+**Residuals**, which keep main's reading: a def under a condition the
+folder cannot decide (`if os.environ.get("X"):`, `if TYPE_CHECKING:`), a
+live unit with no marker, as #484 keeps `if (process.env.X)` (R99 Q4); its
+assertion-level form is #433, now listed in #504; a name bound to a
+constant (`ENABLED = False`, then `if ENABLED:`); a def after a
+module-level `raise` (row 135's residual) or `sys.exit()`;
+under 424.Q9, a dead class statement of a base's name, between that base
+and its subclass, which still counts as the name's binding when the
+subclass's bases are resolved, as on main; and a dead class statement
+that `_Walk.resolve` (`:614-625`) still takes as the class a module-level
+`Cls.attr = ...`, `del Cls.attr`, `setattr` or `delattr` names, when it
+is the latest class statement of that name before it, as on main.
+`resolve` runs before any deadness is read. So a dead
+`class TestTotal: pass` placed between a live `TestTotal` and
+`TestTotal.test_adds = None` takes that binding, and the live class's
+unit stays, with zero findings, where without it row 135's shape blocks.
+The module docstring names both class forms.
+
+**Unchanged.** The file-level reading of broad handlers
+(`BROAD_EXCEPT_ADDED`, `broad_handlers` and `swallowing_handlers`) still
+walks the whole module, dead code included, as #484's ruling keeps the
+JS/TS catch evidence; only units move.
+
+**Cost.** Four edits that main reported now pass, because code that
+never runs is not judged, as #484's ruling reads it for JS/TS: an edit to a
+test that is dead on both sides; deleting a test that never ran (main read
+it as a live test disappearing, at high); an edit made while a test is
+taken out of a dead arm, which reads as a new test, so its assertions are
+compared with nothing (main paired the two sides by name and reported the
+edit); and, by reading 2, an edit to a base class's test method that a
+later `del` of the base removes, when the only subclass that still ran it
+on main is dead (main kept the method as a unit and reported the edit;
+pytest collects it on neither side). A test moved under a dead arm on
+purpose, a disable whatever the reason, now blocks.
+
+**Rule 2.** The ruling approves no change to an existing expectation. A
+read-only scan of `tests/`, `benchmarks/refactors`, `benchmarks/tamper`,
+`benchmarks/decoy`, `examples` and `src/checkwash/demo_cases` (the
+`.gwcase` sections, the Python string constants in `tests/*.py` and the
+diffs the JSON files hold, parsed with the standard library's `ast` and
+never run) found no def or class at module or class level under a dead
+arm whose reading this changes. `tests/test_issue424_rebinding.py`'s
+handler cases use a `try` body that can raise, and
+`tests/test_issue344_walk_once.py`'s are docstring checks that collect no
+unit. By reading, none moves, and none was changed. For reading 1's
+dunder narrowing, a read-only grep of `tests/` (fixtures, test sources,
+`gates`, `data`, `e2e`), `benchmarks/`, `examples` and
+`src/checkwash/demo_cases` found no source on main with a `try` whose
+body holds a class with no bases that binds a dunder name: the `try`
+statements in the test sources' strings sit in function bodies, which the
+reading never enters, or hold no class, or only classes with bases. For
+its annotated-name narrowing, a read-only `git grep` of the whole tree
+for `__annotations__` finds one mention outside Markdown, an attribute
+load in a product source string (`tests/test_inert_test_return_metadata.py:55`),
+which `_rebinds_annotations` does not count, so no source on main is read
+differently.
+Sources built at run time are not all covered by the scan; this PR's CI
+is the check, and if an existing expectation moves, the round stops and
+asks the owner.
+
+**Tests.** Sixteen new `.gwcase` fixtures, whose labels the owner
+approved (below). Positives, `TEST_DISABLED` high with
+`NO_PROD_CHANGE_IN_DIFF`:
+`dead_def_if_false_pos` (the issue's reproduction),
+`dead_def_method_if_false_pos`, `dead_def_class_if_false_pos` (two
+units), `dead_def_if_not_true_pos`, `dead_def_if_compare_pos`,
+`dead_def_empty_for_pos`, `dead_def_dead_match_pos`, and for Q3
+`dead_def_pasted_copy_no_move_credit_pos` (D2),
+`dead_def_survivor_no_duplicate_credit_pos` (D10) and
+`dead_def_no_restructure_mass_pos` (D5). Controls, zero findings:
+`dead_def_if_true_neg` and `dead_def_taken_out_of_if_false_neg`. The named
+residual, zero findings: `dead_def_environment_condition_residual_neg`.
+The new reading, zero findings: `dead_def_weakened_on_both_sides_neg`.
+Guards on reading 1's narrowings, `ASSERT_WEAKENED` high with
+`NO_PROD_CHANGE_IN_DIFF`: `dead_def_handler_of_raising_class_pos`, an
+assertion weakened in a test in the handler of a `try` whose body
+creates a class with `__slots__ = 1`, and
+`dead_def_handler_of_raising_annotation_pos`, the same in the handler of
+a `try` whose body sets `__annotations__ = None` and then annotates a
+name. Each `TEST_DISABLED` positive keeps
+a live test beside the dead one. No fixture carried `bypass:` in this PR;
+the ten positives gained it at merge (R100, above).
+`tests/test_issue499_dead_defs.py` adds 38 collected items, counted from
+its parametrize lists: 13 dead arms and an async def, 11 live or
+undecided arms (one a handler whose
+annotated name may raise because `__annotations__` is rebound before the
+`try`), 3 class-body arms, 2 dead
+classes, two pins on what a dead def binds (an earlier def keeps its unit,
+and a dead subclass keeps no deleted base running), a control (a later def
+is the unit, as on main), and five engine pins (the key a deletion has,
+the first three quiet edits under **Cost**, and an assertion moved into a
+dead def, which stays `ASSERT_REMOVED` at high; the fourth quiet edit
+follows from the dead-subclass pin). By reading, the live and undecided arms, the
+control, three of the negative fixtures (all but
+`dead_def_weakened_on_both_sides_neg`) and the two handler guards pass
+on main as well; they guard the fix's edges. Together this adds 54
+collected items (16 + 38): merged in integration batch 4 after #537,
+#536, #534 and #538, the documented test count goes from 20356 to 20410;
+CI's collection checks it. Nothing under `tests/gates`
+changes.
+
+**Fingerprints.** A finding keyed by a dead def's unit goes. In a file
+with same-named defs, a dead def no longer takes a `name#N` place, so a
+later unit of that name can take a lower number, and its findings new
+keys (`docs/embedding.md`). No fingerprint scheme changes.
+
+**Measurement** (R2, R101). Not measured. The fix merges in #484's round,
+before the combined sweep's manifest is frozen, and shares #484's pair of
+arms there: the standard and D-088 sets, compared between this fix's
+parent commit and its merge commit, with every verdict change read. It runs
+on LAPTOP-01AGNPJU only under EC POLICY `checkwash-pju-sweep` (T-546),
+otherwise on the pool, after the owner approves the frozen manifest and the
+engine commits. `NOT_RUN：工作機規則（POLICY work-machine-local），the sweep waits for the combined round; nothing ran on the work machine`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code,
+and this PR's CI is the first run.
+
+The agent wrote this entry in #499's fix PR. The owner approved its
+wording, readings 1 to 3, the fixture labels and the THREATMODEL edit in
+round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #535's
+head d673d5bc: G2 (F12) approves the wording of this entry (6c8624b2,
+c625d240, 580cf542, 8c1c239a, d673d5bc), including the `resolve()` residual
+and the fourth edit that now passes (also in the KNOWN-ISSUES-next #499 row,
+94334aaa); of SPEC §2b and the `TEST_DISABLED` row (9caf293d), whose
+sentence that a handler is dead when its try body cannot raise stays as
+written; and of the THREATMODEL draft in #535's body, which calls
+`dead_def_weakened_on_both_sides_neg` the new reading, not a control. Under
+R100 that draft was applied at #535's merge after #538's, in integration
+batch 4 (02c5b34f), with `bypass: 159` on the ten positives and
+`benchmarks/FAILURES.md` edited by hand to match. G3 approves the 16
+fixtures' labels, F13's 14 and the two added after review,
+`dead_def_handler_of_raising_class_pos` and
+`dead_def_handler_of_raising_annotation_pos` (both `ASSERT_WEAKENED` high,
+as on main), and the parametrize row
+`handler-of-a-try-whose-annotation-may-raise`. G4 (F14 and the review
+narrowings) approves readings 1 to 3: the dead arms are those `entry` reads
+as dead, with "cannot raise" as `_Walk.quiet` reads it; a dead class is no
+Q9 subclass; a dead def takes no `name#N` place. It approves reading 1's two
+narrowings too, a base-less class whose body binds any dunder name
+(2b40842a) and an annotated name in a module that binds, deletes or spells
+`__annotations__` (2fae0948), and their effect on D-144's readings of such a
+try, such a class as the later binding in a try body included. G5 records as
+residuals, with no issue, a dead class statement that a later module-level
+`Cls.attr = ...`, `del Cls.attr`, `setattr` or `delattr` still names, as on
+main, and the quadratic `quiet` work on a very long try body (the second
+review's F4). Item F15, left out of the short list, was asked separately the
+same day; the owner chose 「加 (Recommended)」 ("add"), an option the assistant
+wrote. It approves THREATMODEL row 9's Python clause, the draft in item 4 of
+#535's body, its wording under G2, and `bypass: 9` for
+`dead_def_pasted_copy_no_move_credit_pos`; both were applied at the same
+merge (02c5b34f). The readings' heading, the labels' and `bypass:`
+sentences, the R100 paragraph and the closing sentence were rewritten to the
+facts at merge under the C1/D3 precedent the same round approved (f42441d0).
+This paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists, among them
+SPEC §4's `TEST_DISABLED` row, where this entry's clause stands beside
+#484's (the list called it §5). Its item H3 adds this entry's `name#N`
+move to the finding fingerprints row of `docs/stability.md`, which lists
+the moves of the next minor. These sentences were written after the
+reply.
+
+## D-167 (2026-10-19): an arrow test callback's simple return annotation no longer hides its parameters (#480)
+
+Ruling 480 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included", in reply to the agent's
+recommendation list; #480 issuecomment-6248630129 states each decision in
+full): Q1 A, in the binder, with a narrowed step-back; Q2, the simple set
+only; Q3, yes; Q4, the file's runner, for visibility only; Q5, a docs-only
+PR first, which #521 was. The consolidated ruling of 2026-10-19
+(「裁決總表全部照建議」, #480 issuecomment-6261651041) set #480 to P2 (R95)
+and amended the released known-issues page (R34, R85); the reply was a
+button whose text the assistant wrote. R1 (#419) lists
+#480 among the ruled fixes that merge before the combined sweep's freeze,
+while R95's option scheduled the fix after v0.9.0; E8 of the PR approval
+list of 2026-10-19 (「PR 核可清單全部照建議」; this reply too was a button
+whose text the assistant wrote) settled that in R1's favour, so this fix
+merges before the freeze and R95 keeps the priority and the
+docs' form. D-164 to D-169 were assigned to the pull requests of the
+fourth wave. When integration batch 4 merged, all of them were on main.
+This entry is D-167.
+
+#480 reports that an arrow test callback with a TypeScript return
+annotation, `(ctx): void =>`, is still a test unit, but the binder took
+the arrow's parameters from the token just before `=>` (`bindings.py:468`
+at 6d78d8dd). Under `(ctx): void =>` that token is `void`, which it
+declared as the callback's context; `ctx` was never declared. Under
+`Promise<void>` the token is `>`, and nothing was declared. So no assertion
+on the context was read on either side, and the coverage scan dropped the
+calls: weakening, deleting or rewriting one passed with zero findings and
+`no_known_gaps`, in v0.8.0 and on main, for node:test (N1-N15, N22, N23),
+AVA (N16-N18) and tap (N19-N21). node:test's `t` was read only through the
+fallback for an undeclared `t` (C4, C5), AVA's `t` resolved to node:test's
+context, and tap's subtest `t` was read only where the file's root was
+named `t` too.
+
+Implementation, lines at this PR:
+
+- Q1 A, `frontends/javascript/bindings.py`. The arrow branch of
+  `_functions` (`:509`) first asks `_annotated_parameters` (`:546`). From
+  `=>` it steps back over a simple return type to a `:` and takes the
+  paired `(...)` before it, which is accepted only where an arrow can
+  start: first in the file, or after one of `_ARROW_STARTS` (`:45`: `(`,
+  `,`, `=`, `=>`, `:`, `[`, `{`, `;`, `return`), with an `async` before it
+  stepped over and held to the same test. Everywhere else, after `?`, a
+  callee, `await` or an operator, the old reading stays. After `:`, `=` or
+  `=>`, `_condition_waits` (`:593`) keeps it too where a `?` before the
+  `(` still waits for its `:` (reading 1).
+- Q2. Names and `_RETURN_TYPE_TOKENS` (`:43`): the set `_callback_body`
+  steps over (`frontend.py:1064-1068`, `:1077-1081`) and so does the
+  nested-arrow reader in `parse_javascript` (`frontend.py:2841`).
+- Q3. `_test_callbacks` (`:1423`) lists, by name, the first parameter of
+  each callback passed to a call that `_test_context` gives a context,
+  read from the callback's own tokens by `_callback_parameter` (`:1391`),
+  with the argument's span and the runner's kind. The last branch of
+  `candidate` (`:1517`) makes a call whose root resolves to unknown, inside
+  such a callback and named by its parameter (`_callback_context`,
+  `:1452`), an `unresolved` candidate when its member passes the filter
+  the unresolved families already apply (`:1503-1512`), for that runner:
+  `assert` for node:test, `AVA_ASSERTIONS` for AVA, tap's names for tap.
+- Q4. `_t_fallback` (`:368`) reads which of `node:test`, `ava` and `tap`
+  the file names. When it names AVA or tap and not node:test, `resolve`'s
+  table gives an undeclared `t` unknown (`:1183`), and
+  `_candidate_families` gives it that runner's family (`:1343`). Every
+  other file keeps node:test's context, as before.
+- The three readers keep their workarounds (Q2): the nested-arrow reader,
+  the catch reader (`exception_handlers.py:50-57`) and module mocks
+  (`_annotated_bodies`). Their comments now say what the binder reads.
+
+Readings the ruling leaves to the implementation; the owner approved each
+as written (below):
+
+1. **The guard reaches `=` and `=>`, not only `:`.** The ruling names one
+   accepted position that still misreads, the inner `:` of a nested
+   conditional (`c0 ? c1 ? y : (a) : b => b`), as a residual unless the PR
+   guards it. By reading, the same misread happens after `=` and `=>`,
+   where a conditional's consequent is an assignment or an arrow:
+   `c ? x = (a) : b => b` and `c ? () => (a) : b => b` would declare `a`
+   and leave `b` undeclared, which spelled `assert` would gain Node
+   authority. One rule guards the three: after `:`, `=` or `=>`, the binder
+   reads back over balanced brackets to the bracket, `;` or `,` that opens
+   the expression, or to a line break where JavaScript ends the statement,
+   counting each `:` against a `?`; a `?` left waiting keeps the old
+   reading, and `??` is no conditional. The `:` of an annotated arrow's
+   own return type answers no `?`: where the read meets `(...): T =>`, or
+   `<U>(...): T =>` with a type parameter list, at a place an arrow can
+   start, after any assignment operator (`_ASSIGNMENTS`, `:27`) or right
+   after a `?`, it steps over that head, as TypeScript reads it, since an
+   annotated arrow in a consequent, on the right of an assignment there
+   included, needs a `:` after it. `_type_parameters` (`:645`) reads the
+   list back over names, string and number literals, the simple set, `&`,
+   `=`, an `=>` right after `)`, a conditional type's balanced `:` and
+   `?`, and bracket groups by their pairs. So `c ? (x): T => (a) : b => b`
+   declares `b`, as main does, where counting that `:` had declared `a`
+   (found in #539's review), and so do `c ? x ||= (y): T => (a) : b => b`
+   and `c ? <U>(y): U => (a) : b => b` (found in its third review). A
+   type parameter list holding any other token, such as a template
+   literal type or a negative number, is not stepped over; there the
+   head's `:` still answers the `?`, and the alternate arrow's parameter
+   is left undeclared where main declares it. The guard, steps
+   included, only accepts fewer positions than the step-back alone. Its
+   cost is two named misses, each an annotated arrow in a
+   consequent that TypeScript reads as annotated because a `:` follows
+   it: the alternate of a conditional nested in another's consequent
+   (`c0 ? c1 ? y : (a): T => a : z`) and, since the step over a head, the
+   body of an annotated arrow in a consequent
+   (`c ? (p): T => (y): R => y : z`, and the same after an assignment
+   operator or a type parameter list, as in
+   `c ? x ||= (p): T => (y): R => y : z`) keep the old reading.
+2. **Generic arrows stay a residual.** `<T>(ctx: T): void =>` puts `>`
+   before the `(`, which is no accepted position, so it keeps the old
+   reading; the binder does not take a generic arrow's parameters, and
+   only reading 1's guard steps over the type parameter list. Q3 does not
+   name such a test callback's first parameter either, since
+   `_callback_receivers`, whose reading Q3 follows, does not: its context
+   calls are no coverage candidates, and the report can still say
+   `no_known_gaps`, unless the parameter is `t`, which follows the reading
+   of a `t` that nothing declares (Q4).
+3. **Whose parameter Q3 reads.** A callback passed directly to a call,
+   first after `(` or `,`. Wrapping parentheses and `async` are stepped
+   over; then `function` with its name, a parameter list followed by `=>`
+   or by a return annotation's `:`, or one name followed by `=>`. Its first
+   parameter is a plain name followed by `)`, `,`, `:`, `=` or `=>`, not
+   `this`, as `_callback_receivers` reads it. A call is rooted at it when
+   its root has that name, inside the callback's argument, and no
+   declaration in a scope nested inside the callback, below the callback's
+   own scope, declares the name again. Mocha's `this` and the callbacks of
+   `.each`/`.for` tables, to which `_test_context` gives no context, are not
+   read.
+4. **What "imports or requires" means in Q4.** A string `node:test`, `ava`
+   or `tap` after `from` or `import`, or as the only argument of
+   `require(...)` or `import(...)`, but not of a method so named
+   (`loader.require("tap")`, found in #539's review), anywhere in the
+   file; `import type` counts. Only a `t` that no scope declares
+   changes. A declared `t` with no provenance of its own, such as a
+   helper's parameter, keeps node:test's family in the coverage scan, so
+   row 126's "a `t` passed to a helper ... no coverage candidates" still
+   holds.
+5. **What the change does to an annotated arrow.** At an accepted
+   position, the binder now scopes an annotated arrow exactly as the same
+   arrow without its annotation: the same parameters and parameter tokens,
+   the same body scope and the same position for `_test_context`. The
+   costs below are what the unannotated spelling already has.
+
+Costs, by reading:
+
+- **Every annotated arrow is scoped by its parameters** (the ruling's
+  cost of A). Its parameters shadow outer names in its body. A default in
+  its list is a parameter token, so it is no longer recorded as a write to
+  the name before its `=`, which had made that name unknown wherever an
+  outer binding of it was read. Its body is a function scope where a
+  `Promise<void>` or `number[]` return type left none: a `var` there stays
+  there, a write there counts as a write from another function
+  (`_written`), the catch reader's owner of a concise body's tokens is the
+  arrow, and a module replacement written in a test callback so annotated
+  belongs to that test (`module_mocks.py:564`, `:898`), where it was read
+  as the enclosing function's: a `jest.mock(...)` in such a test at a
+  file's top level is no longer read as a hoisted module mock.
+- **Fingerprints.** A removed annotated-arrow test whose context
+  assertions are read for the first time gets a TEST_DISABLED key built
+  from its assertions instead of its qualname, as D-117 notes for #311; an
+  exemption for such a finding needs renewing. No fixture pins one.
+- **Q4.** In an AVA or tap file, a node:test-style `t.assert.*` on a `t`
+  that nothing declares loses its authority; it is an `unresolved`
+  candidate.
+- **Q3** changes only diagnostics: stderr, the terminal report's head on
+  a pass and its `!` lines, SARIF's tool-execution notifications and the
+  coverage report. None of them changes a verdict, severity or exit code
+  (`docs/assertion-coverage.md`).
+
+Residuals, named in THREATMODEL row 160 and `docs/KNOWN-ISSUES-next.md`:
+an object (N22), parenthesized (N23), function, conditional or literal
+return type, whose body is not read and whose context calls are coverage
+candidates only, `unresolved`, or Node's or tap's where a parameter named
+`t` resolves through node:test's fallback or to tap's root `t` (Q2), and
+a `t` that the fallback makes node:test's context gives only its calls
+through `t.assert`, so in a file that names node:test beside AVA or tap,
+AVA's or tap's assertions on it are no candidates and the report can say
+`no_known_gaps` (found in #539's third review); the
+positions the rule does not accept (for example after `?`, `yield`,
+`export default` or a compound assignment) and those reading 1 guards;
+generic arrows (reading 2); and the disagreement the ruling names: the
+nested-arrow reader steps back with no position test, so for
+`cond ? (a) : b => b` it takes `(a)` as the arrow's parameters while the
+binder declares `b`. Removing the catch reader's and the nested-arrow
+reader's workarounds waits for a run showing that no reading moves (Q2).
+
+**Rule 2.** The ruling approves no change to an existing expectation, and
+by reading none changes. The suite's annotated arrows were each traced:
+`tests/test_js_foundation.py:110-111`, `:123-124` and `:189`,
+`tests/test_js_parse_linear.py:112-113`,
+`tests/test_issue363_js_catch.py:267`,
+`tests/test_js_inline_call_index.py:28` and `:120`, and
+`tests/test_issue196_188_5_merged_sources.py:194` and `:198` (a generic
+arrow, unchanged). No `.gwcase` fixture and nothing under `tests/gates`
+holds one. Every AVA or tap source in the suite declares its `t`
+(`tests/test_issue233_ava_tap.py`, `tests/test_issue363_js_catch.py`,
+`tests/test_issue429_js_tautology.py` and the eleven existing `js_ava_*`
+and `js_tap*` fixtures), so Q4 moves none, and no test source has a test
+callback whose first parameter the binder leaves undeclared, so Q3 adds no
+candidate to any existing expectation. If CI shows an existing expectation
+moving, the round stops and asks the owner.
+
+**Tests.** Five new `.gwcase` fixtures pin row 160, with labels the owner
+approved (below): `js_node_context_annotated_arrow_weakened_pos` (N1),
+`js_node_context_annotated_arrow_deleted_pos` (N12),
+`js_node_context_annotated_arrow_expected_rewrite_pos` (N2 with N14's
+edit), `js_ava_annotated_arrow_weakened_pos` (N16) and
+`js_tap_annotated_arrow_weakened_pos` (N19).
+`tests/test_issue480_js_annotated_arrows.py` adds 85 collected items,
+counted from its parametrize lists: the issue's rows N1-N21 and A1 and
+eleven of its controls (33), the accepted positions (13) and the named
+misses (5), the ruling's two conditional controls with the three guards of
+reading 1 and four annotated consequents (9), whose parameter is a context
+(5), Q3's candidates (6), the nested shadow (1), N22 and N23 through the
+engine (2), Q4's runners (9) and Q4's cost (2). By reading, the documented
+test count becomes 20500 (20410 + 5 + 85); CI's collection checks it.
+
+**Measurement.** Per R1 and R2 this fix merges before the combined
+sweep's manifest is frozen, and its merge gets its own before/after pair in
+that run, which R3 places. The ruling asks that #212's JS/TS replay
+measure the cost before a release ships the fix. The issue's scratch trial
+of A predates #483's merge and names no host; if it ran on a work machine
+after 2026-09-22 it is 未驗收 under EC POLICY `work-machine-local`, and
+this PR's CI is separate, new evidence that does not clear it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），the sweep pair and the JS/TS replay wait for the combined sweep and the pool; nothing ran on the work machine`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code,
+and this PR's CI is the first run.
+
+#480 closes once the combined sweep's before/after pair is read (round 6,
+F39, below). The agent wrote this entry in #480's fix PR. The owner
+approved its wording, readings 1 to 5 and the five fixtures' labels in
+round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #539's
+head 6a75ca59: G2 (F33) approves the wording of this entry (0ec2c898,
+40c04b57, daf949c1, 8cc20bd1), of its THREATMODEL row and row 126's pointer
+(77abbfdc, 8069f5e0, 41d3dbe5, 8ce1652d), with 77abbfdc's hand edit of
+`benchmarks/FAILURES.md`, and of the #480 sentence of the released page
+`docs/KNOWN-ISSUES-v0.8.0.md` (a4a7f027). That row was drafted as row 159;
+under A98 it became row 160 at #539's merge into integration batch 4
+(c21a8646), with row 126's pointer, its five fixtures and this entry's two
+mentions. G3 (F34) approves the five fixtures' labels, N1, N12, N2 with
+N14's edit, N16 and N19: `ASSERT_WEAKENED`, `ASSERT_REMOVED` and
+`EXPECTED_VALUE_CHANGED`, all high. G4 approves the departure in reading 1
+as decision 3 of #539's body states it (F35): the guard also reaches `=`,
+`=>`, compound assignments and type parameter lists, keeps two named misses
+at main's reading, and reads one exception differently from main, a type
+parameter list holding a template literal type or a negative number. It
+approves readings 3 to 5 (F37), and the ruling's two control "fixtures"
+pinned as the `CONDITIONALS` pytest rows rather than as `.gwcase` negatives
+(decision 4). G5 accepts as residuals, with no follow-up: generic arrows
+stay unread (reading 2, F36); the costs found by reading, (a) to (e), and
+Q3's diagnostic-only outputs as (f) lists them, which the combined sweep's
+pair and #212's JS/TS replay measure (F38); and, disclosed only, that in a
+file that names node:test beside AVA or tap, AVA's or tap's assertions on an
+unread `t` are no candidates, as on main (decision 7). G6 (F39): #480 closes
+once the combined sweep's before/after pair is read, and #212's replay stays
+a release precondition, recorded on #212. The numbering sentence, the
+readings' heading, the labels' sentence and the closing sentences were
+rewritten to the facts at merge under the C1/D3 precedent the same round
+approved (f42441d0). This paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists. This sentence
+was written after the reply.
+
+## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
+
+#456's first ruling (issuecomment-6248011888, 2026-10-18, 「照建議」, "as
+recommended") adopted Q1 (b) "with (d) added once the UNKNOWN follow-up is
+ruled": keep exit 2 and add the explicit UNKNOWN entry #454 proposed.
+#454's ruling of the same day (issuecomment-6248628332, item 6) left any
+reuse of its question 3 entry, the `unread` entry of the findings JSON,
+for an exit-2 run, and the test changes that needs, to #456. On
+2026-10-19 R48 (issuecomment-6261648480 on #454 and 6261649184 on #456,
+「裁決總表全部照建議」, "the consolidated ruling list, all as recommended";
+the reply was a button whose text the assistant wrote) moved (d) to #454,
+closed #456 as completed and said (d) still needs its own rule-2 approval.
+The owner gave it the same day, typing 「q1 a ／ 核可」 in answer to the
+round-5 approval list: item E3, option A (issuecomment-6270049974): "an
+exit-2 run reuses this issue's `unread` entry to say explicitly that the
+change was not analysed (UNKNOWN)", the three pins below may change to the
+new output, and any other expectation that moves stops the round. D-164 to
+D-169 were assigned to the pull requests of this round, prepared in
+parallel. When integration batch 4 merged, all of them were on main. This
+entry is D-168.
+
+A changed path a detector must read, or a file the analysis reads as
+context, refuses the run when a side is over the 1,000,000-byte source limit
+(D-135): exit 2 and one stderr line naming path, side, size and limit, and
+until now nothing on stdout. In hook-json, D-150 blocks the stop for the
+change's own head or worktree side and keeps the #414 note otherwise.
+
+Implementation (lines at this PR):
+
+- `_cmd_check` (`cli.py:425-437`) catches `SourceOverLimit` from `_analyse`
+  on the verdict diff. The hook-json block comes first, unchanged. Then,
+  under `--format json` without `--emit-ir`, `_json_size_refusal`
+  (`cli.py:991-1010`) writes the stderr line `main()` writes for the
+  refusal in every other format (`cli.py:929-933`, `:936-939`), then
+  `size_refusal_to_json` (`report/jsonout.py:43-57`), and returns 2.
+  Otherwise the exception reaches `main()` as before.
+- The document is `{"unread": [<entry>]}`. Its one entry is
+  `unread_entry` (`report/unread.py:30-40`) of the side the refusal names,
+  the four-key projection #454 writes for an unread side, so a field the
+  side may carry (#455's prefix) stays out of it. It is written as the
+  findings JSON is: sorted keys, two-space indent, UTF-8, one final LF.
+- It is not a findings document: it carries no
+  `checkwash_findings_version`, `run`, `findings`, `summary` or `verdict`.
+  A consumer that checks the exit status, or requires the version as
+  `docs/embedding.md` says to, reads it as the error it is and cannot read
+  a pass from it. One that does neither and takes a missing `verdict` for
+  no block can, where an empty stdout used to fail to parse (Contract,
+  below).
+
+**Readings where the ruling is silent**; the owner approved each as
+written (below):
+
+1. **Formats.** Only `--format json`. The ruling reuses "the question 3
+   entry", which is the findings JSON's `unread` entry. Term and sarif keep
+   an empty stdout on exit 2. A SARIF log with no result, uploaded to code
+   scanning, may close open alerts, where an empty file fails the upload
+   (GitHub behaviour, not checked from this repository); a term line would
+   repeat the stderr line, which already names the four facts.
+2. **Keys.** Only `unread`. A `run` object, the version, an `error` text or
+   a `verdict` such as `null` or `"unknown"` would each be a new contract,
+   and a `verdict` key would let a consumer that compares it with
+   `"block"` read a pass. Without one, the capture classifier of
+   `tools/r1_cost_capture.py` keeps such a run as `PRODUCT_ERROR_EXIT`
+   (`:240-241`), as it did for an empty stdout.
+3. **Which side.** Exactly the side the refusal names, one entry, so entry
+   and stderr line match one to one. When both sides of a change are over
+   the limit that is the base side (`engine.py:303`, `:314`; a #448
+   residual), except where #455 names the side that holds the shebang; the
+   hook block names the head or worktree side instead (D-150). Other unread
+   sides of the same change, and other changes in the diff that were set
+   aside, are not listed: the run stopped before their stderr notes.
+4. **Which refusals.** Every `SourceOverLimit` that reaches `_cmd_check`.
+   By reading, it is raised for a must-read change (`engine.py:303`,
+   `:314`); a guarded read of a set-aside path (`engine.py:341`); the unread
+   base side of a set-aside root `package.json` or `tsconfig.json`
+   (`_base_root_file`, `engine.py:200`); and a context read through a
+   snapshot reader, the working tree's (`gitio/snapshot.py:629`) or, with a
+   range, the head snapshot's (`GitSnapshot.read`, `:433`, and `read_many`,
+   `:208`), whose side may be one no change holds. These are the raise
+   sites found by reading; the rule is the exception type. Not
+   a root manifest, config, exemption list or `--task` file over the limit
+   at the base, which `_analyse` reads before the analysis and which
+   refuses as a `GitSourceOverLimit`, a `GitError` (`gitio/git.py:152-163`):
+   `tests/test_issue415_oversized_sources.py:620` asserts an empty stdout
+   for it and is not among the approved pins. Not the range-mode pytest
+   configuration symlink target that D-150 lists, which refuses as a plain
+   `EngineError` (`gitio/snapshot.py:322`), nor any other engine error.
+   By reading, `read_config_many`'s check of a configuration's own size
+   (`gitio/snapshot.py:281`) is a plain `EngineError` too. With a range, the
+   collection-inventory and runtime-shadow consumers reach it for a pytest
+   configuration the diff does not change (`collection_inventory.py:473`,
+   `shadow.py:2694`). Whether another reader refuses such a file first, as
+   a `SourceOverLimit`, was not traced, so such a run may print the document
+   or nothing.
+5. **`--emit-ir`** keeps an empty stdout: #454 item 6 keeps the IR free of
+   unread sides, and a refused run has no IR.
+
+**Contract.** The exit codes do not change, and neither does the frozen
+exit-code row's text: term, json and sarif keep exit 2 for every engine
+error. The findings document does not change, so `FINDINGS_VERSION` stays
+2 and `docs/findings.schema.json` and `docs/stability.md` are unchanged:
+the rules for moving the number (`docs/stability.md`, "When the number
+moves") are about that document, and the new output is not one. It is a
+new output on exit 2, where there was none. A consumer that ignores the
+exit status and reads `verdict` with a default now parses a document where
+it used to fail to parse; `docs/embedding.md` asks for the version check
+that refuses it, and now describes the output. The next release is a minor
+anyway (R54). No release is authorized (AGENTS.md rule 5).
+
+Consumers read in this repository: the Action's check step runs term
+(`action/secure.py:240-243`), and its comment step skips a run whose exit
+code is not 0 or 1 (`:274-276`), so neither changes.
+`tools/verdict_gate.py`'s `observe` already records exit 2 as an error; it
+now names the missing keys instead of an invalid report. Two benchmark
+scripts read `verdict` without checking the exit code (at the base,
+`benchmarks/compare/run.py:34` and `benchmarks/decoy/harvest.py:130`), so
+on a size refusal they would raise `KeyError` where they recorded an
+engine error. Each now records exit 2, or a parsed document without
+`verdict`, as an engine error, as it did unparsable stdout
+(`benchmarks/compare/run.py:36`, `benchmarks/decoy/harvest.py:123`; round-6
+item F11, prepared before the owner's answer, which approved it). CI never
+reaches either read: `tests/test_compare_harness.py` stops `run.py` at its
+argument checks. Outside this repository, by
+reading checkwash-lab's combined-sweep harness at `6c8adef5`: exit 2 is
+`PRODUCT_ERROR_EXIT` whatever stdout holds
+(`workloads/acceptance_sweep/common.py:560`), but a pair counts rows whose
+stdout bytes differ (`aggregate.py:245`), so a size-refusal row compared
+between v0.8.0 and this code counts there.
+
+D-150 says "#456 stays open for (d)". That no longer holds: R48 moved (d)
+to #454, #456 is closed as completed, and this entry records (d). D-150
+stays as written, as R48 says.
+
+**Rule 2.** Three existing expectations change, as E3 approved, each from
+an empty stdout to `{"unread": [entry]}` with exit 2 (test lines at this
+PR's base, `9c19c344`):
+`tests/test_issue415_oversized_sources.py:637` (a must-read test file, in a
+range and in the working tree), `tests/test_issue456_hook_size_refusal.py:209`
+(its json case, a context read) and `:255` (its json case only; term, sarif
+and hook-json with `--emit-ir` keep `(2, "")`, and its single-stderr-line
+assertion is unchanged). By reading no other moves: the base manifest pin
+(`tests/test_issue415_oversized_sources.py:620`), the hook-json tests
+(`tests/test_issue456_hook_size_refusal.py`, `tests/test_hook_runtime.py`,
+`tests/test_issue414_worktree_directory_symlinks.py`) and the exit-2 tests
+for other engine errors (`tests/test_standin_source_limits.py:170-171`,
+`tests/test_config_snapshot.py:523`, `:534`,
+`tests/test_issue500_root_task_path.py`, `tests/test_issue416_subdirectory_root.py`)
+do not reach the new branch. Nothing under `tests/gates` changes. If CI
+shows another expectation moving, the round stops for the owner.
+
+**Tests.** `tests/test_issue454_size_refusal_output.py` adds 10 collected
+items: the writer, byte for byte, also for a side with a #455-style field
+(2); the CLI under `--format json` for both sides over the limit, a base
+side alone in the working tree and in a range, and an untracked shell
+script with no extension, each with exit 2, the document and only the
+refusal's stderr line (4); `--format json --emit-ir` (1); a batch-limit
+`EngineError` and a `RecursionError` keeping an empty stdout (2); and a
+refusal for a side no change holds (1). By reading, the documented test
+count becomes 20257 (20247 + 10); CI's collection checks it. The sweep
+command calls `analyze` directly (`sweep.py:131-142`), so it does not move.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code, and
+this PR's CI is the first run.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run`.
+
+The agent wrote this entry in #454's pull request for (d). The owner
+approved its wording and readings 1 to 5 in round 6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #534's
+head 87f5b887: G2 (F6) approves the wording of this entry (9e25ece5,
+f9e4cefa, 05aac9c6, d36f504d, 4199598a) and of SPEC §9 and its §4b pointer
+(042988ec, d6071249), with F6's half-sentence, added in integration batch 4
+after #536 (#455) merged (332f26c7, reworded to the approved text in a later
+commit of the batch): where reading 3 and SPEC §9 say the refusal names the
+base side when both sides are over the limit, they add "except where #455
+names the side that holds the shebang". G4 (F7) approves readings 1 to 5:
+only `--format json` prints the document; it holds only the `unread` key; it
+names exactly the side the refusal names; it covers every `SourceOverLimit`
+that reaches `_cmd_check`; `--emit-ir` keeps an empty stdout. G5 records as
+residuals, with no issue, an unchanged pytest configuration over the limit
+in a range, as reading 4 states it, not traced and not pinned (F8), and,
+with `sys.stdout` closed, a second engine-error line from `main()` while
+exit stays 2 (the second review's F4). G6: THREATMODEL gains one note for a
+consumer that reads neither the exit status nor the version, with no code
+change and its wording for a later round (F9); `docs/stability.md` does not
+change (F10); and the benchmark fix stays in #534 (93bf2315), with the
+consumer paragraph's sentence on it (d36f504d; F11). G1's item for #534, the
+self-check exemptions for the E3 pin in #542, concerns no text here. The
+numbering sentence, the readings' heading, the F11 clause and the closing
+sentence were rewritten to the facts at merge under the C1/D3 precedent the
+same round approved (f42441d0). This paragraph was written after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists, among them
+README's two `--format json` sentences that b8798a8c anchored to the stop
+and the KNOWN-ISSUES-next #454 row's F6 half-sentence (4079e353). This
+sentence was written after the reply.
+
+## D-169 (2026-10-19): TEST_DISABLED exemptions are content-bound, amending D-019 (#512)
+
+Ruling 512 (owner, 2026-10-19, 「q1 a ／ 核可」, typed by the owner in reply
+to the agent's round-5 approval list; #512 issuecomment-6270046393 reads it
+as Q1 (a) and the rest of the list as recommended, and states each item)
+answered the four questions of issuecomment-6263347530: Q1 (a), Q2 as
+recommended, Q3 (a), and Q4 as already decided by R2. The same reply
+approved round-5 item E2: existing pins that change only because of Q2 and
+Q3 may change, and this PR lists each one. Ruling-list items R42, R43 and
+R46 (owner, 2026-10-19, 「裁決總表全部照建議」, "the consolidated ruling
+list, all as recommended"; the reply was a button whose text the assistant
+wrote) had made this round of #421 its own P1 issue in the frozen list,
+kept it in the same minor as round 1 (D-146), and put #421's missing JS
+sibling test in this PR. D-164 to D-168 are the entries of the same round's
+other pull requests (#455, #484, #499, #480 and #454's (d)). When
+integration batch 4 merged, all six were on main.
+
+#512 reports that TEST_DISABLED kept the legacy key, and an exemption
+matches the whole key. A marker added was keyed by the marker's name, which
+for an imperative `pytest.skip()` leaves out its guard, so after a guarded
+skip was approved an unguarded one added to the same unit on a base that
+lacks it also passed. A guard made always true and a guard removed shared
+one `guard:<name>` key. A parametrize row deletion was keyed by the fixed
+text `parametrize`, so after one row's deletion was approved any later row
+deletion in the unit passed, and #428's JS/TS table rows take the same key.
+A removed unit was keyed by its assertions' legacy text, a JS/TS one only
+through the matcher's `(`, and a focus added to a file by one name.
+
+**D-019, amended.** D-019 froze that `Marker.guard` is "deliberately *not*
+part of marker identity: identity feeds fingerprints, fingerprints feed
+recorded allowlists, and a doc-level refactor must not invalidate reviewed
+exemptions", and kept its cost, THREATMODEL row 54, open "until there is an
+allowlist migration story". D-146's route, retiring the old keys in a minor
+release and re-reviewing once, is that story. Under Q1 (a) the sentence
+still holds for the marker identity alignment pairs markers on, and so for
+pairing, move detection and the findings a diff gives; it no longer holds
+for the exemption key, which binds the guard. Q1 (b), the guard in the
+marker identity as well, would have changed which markers pair and so which
+findings appear.
+
+How each answer is implemented (lines at this PR):
+
+- Q2, the keys. `detectors/test_disabled.py` builds every key with `_key`
+  (`:72-84`), which is `make_assertion_fingerprint` under the rule
+  TEST_DISABLED: D-146's `assertion_identity` and `assertion_key`, under the
+  scheme name `checkwash/assertion-fingerprint/v2`, giving
+  `TEST_DISABLED/path/unit/v2:<64hex>`. The identity holds the legacy
+  pre-image exactly as `make_fingerprint` built the key, the finding's
+  `shape` as its kind, and no position. A marker added (`_marker_added_key`,
+  `:97-109`; the shapes `marker_added`, `collection_control` and, for a
+  conftest's `pytestmark`, `inert_mark`): the marker's text as the after
+  text and its recorded guard as the context, null when none.
+  `_marker_added_keys` (`:128-170`) finds which marker each finding added
+  (reading 6), and when the added markers of a name cannot be told apart,
+  `_unit_markers_key` (`:112-125`) binds every marker of the unit on both
+  sides instead. A guard made always true or removed (`_guards`,
+  `:180-196`): the guards before and after as the two texts, the after null
+  when removed, and as the context what every marker of the name ran under
+  on each side (`_conditions`, `:173-177`; reading 2). Parametrized cases
+  removed (`_rows_gone`, `:215-237`): the rows deleted and the rows newly
+  disabled, each a sorted list of argnames and cells, and the live counts
+  before and after. A unit removed: the complete texts of its own
+  assertions. A focus added to a file: the focus as the JS frontend
+  records it, under the qualname `<file>` (reading 5). The texts are in
+  `identity_text`'s form, so reformatting outside string literals keeps a
+  key; spans, lines, messages, severities, file digests and revision labels
+  stay out.
+- `finding_marker` (`:240-258`) finds the marker D6 judges by rebuilding the
+  key of each marker the unit added through `_marker_added_keys`, as
+  `detect` builds them, since the key no longer is its name's.
+- Q3 (a). `findings.py` adds `TEST_DISABLED_FINGERPRINT_RULES` (`:26-31`), a
+  set of its own, so `ASSERTION_FINGERPRINT_RULES` stays the nine rules
+  #421 ruled on. `fingerprint_state` reads a TEST_DISABLED key as it reads
+  theirs (`:47-65`): a legacy one is retired, parsed and counted, never
+  eligible. `fingerprint_issue` (`:106-113`) gives `allow` (exit 2),
+  `doctor` and `check` a message that names #512, and
+  `is_content_bound_fingerprint` labels the new keys `checkwash/v2` in
+  SARIF. Nothing is migrated. checkwash's own ledger holds five
+  TEST_DISABLED entries, all for merged pull requests and expiring between
+  2026-10-31 and 2026-11-05; they become ignored records, and no current
+  verdict changes.
+- Q4 (R2). This fix's merge gets its own before/after pair in the combined
+  lab-declared sweep. As for D-146, the replayed repositories hold no
+  ledger, so the pair can confirm that nothing but keys changes; it cannot
+  measure the new blocks or the re-review.
+
+**Readings the ruling leaves to the implementation:**
+
+1. **Which guard a marker added binds.** The recommendation names "for an
+   imperative skip, its recorded guard". The key binds `Marker.guard` for
+   every marker that records one: an imperative skip's enclosing `if`, and
+   the condition a setup skip, a helper's skip, a later binding of the
+   test's name or a `pytestmark` binding runs under, which the Python
+   frontend records the same way. A decorator records none; its condition is
+   in its name, which the legacy pre-image already holds. A JS/TS imperative
+   skip (`ctx.skip()`, `t.skip()`, Mocha's `this.skip()`) records none
+   either: the JS frontend does not record the condition it runs under, so
+   a guarded one and an unguarded one of the same name get one key (a
+   residual below). That is within the ruling's "its recorded guard";
+   binding the condition would need the engine to record it.
+2. **The two guard events.** Both have the shape `guard_weakened`
+   (`inert_mark` in a conftest), so the event kind alone does not tell them
+   apart, as the recommendation's sentence "with the event kind in the
+   identity, the two events no longer share a key" reads. The guard after
+   does: null when the guard was removed, the guard's text when it now
+   always fires. For a guard made always true, the guard before is that of
+   the base marker `evidence._mark_weakened_guards` compared, under its old
+   name for a skip moved into or out of a helper (#272); for one removed, it
+   is the base condition the message names, an `except` block's first line
+   included. The guard after of a guard made always true is that of the
+   first head marker of the name, the one the message names. Several
+   markers can share a name, and these two texts come from one marker on
+   each side: with base `if A: pytest.skip("1")` and `if B:
+   pytest.skip("2")`, removing either `if` names `A` as the removed guard.
+   So the key also binds, as its context, what every marker of the name ran
+   under on each side, read as the removed-guard check reads it
+   (`skip_condition`: its guard, or the first line of the `except` block it
+   sits in, null when neither), each side sorted. Removing one of two
+   guards of a name and removing the other are then two keys, and a guard
+   made always true binds its own guards before and after among them. A
+   third event has the same shape: a path gained by an unguarded
+   `collect_ignore` (row 81). It has no guard on either side, so both texts
+   are null and no path is bound (a residual below).
+3. **Which rows.** A row is its table's argnames and its cell texts, read
+   through `param_tables` as `diffalign._rows_lost` reads them, so a JS/TS
+   `.each`/`.for` table's rows (#428) are read the same way. "Deleted" holds
+   every row that ran before and is no longer written, an edited row's old
+   text among them, since rows alone cannot tell an edit from a deletion;
+   "disabled" holds the rows still written but newly marked off. Each list
+   keeps its multiplicity and is sorted by its encoding. The live counts are
+   those the message gives: a plain JS/TS test paired with a table counts
+   1, and an uncounted table `unknown`. A side whose tables cannot be read
+   gives no rows.
+4. **A unit's assertions** are its own, in the side's order, not sorted;
+   those reached through a helper method stay out, as they do of the legacy
+   pre-image (306 Sub-Q10). A unit with no assertion binds an empty list.
+5. **The focus key** keeps the legacy key's qualname `<file>`; the
+   finding's `unit` stays null. Q2 says "the focus call's complete text".
+   The key binds the text the JS frontend records for the focus, which is
+   also the finding's evidence and message: the callee as written
+   (`describe.only`, `fdescribe`), or the property text of an `only`
+   option. The frontend does not record the title or the other arguments,
+   so they are not bound, and binding them would need the engine to record
+   more of the call. So an approval covers another focus of the same
+   spelling added to the file (a residual below). A file-level focus is
+   reported only when no unit of its own file reports being stopped by it,
+   so wherever it sits the finding reports the same effect: under a runner
+   that applies focus suite-wide, every test outside the file stops.
+6. **No position, and several markers of one name.** The nine rules'
+   ordinal and count tell identical copies of one assertion apart; each
+   TEST_DISABLED shape binds its own texts instead. A unit can hold several
+   markers of one name, one per imperative skip call, and alignment pairs a
+   skip on its name alone and records only the names it leaves unpaired. So
+   the marker it leaves unpaired is not always the one the diff added: a
+   skip inserted above another of its name pairs with that one and leaves
+   it unpaired. An earlier draft read the last head marker of the name, as
+   the base read the marker's evidence. Then two skips added together
+   shared the later one's key, so an approval of a guarded skip covered a
+   diff that also added an unguarded one above it, and an inserted skip was
+   keyed on the one already there. The markers a name added are read by content
+   instead, as a multiset difference: each base marker of that name cancels
+   one head marker of that name with the same text and guard, and the head
+   markers left over, in the head side's order, are the ones added. So when
+   the head holds more copies of a marker than the base, each copy beyond
+   the base's is added. When there are as many as the name has findings,
+   each finding binds one of them, in that order. Two different skips added
+   together are then two keys, and an inserted skip gets the key it would
+   have if it were added alone. When
+   there are not (a marker of that name was also edited, one moved in from
+   a helper, or alignment paired one with a marker of another name, as it
+   pairs a decorator whose condition is spelled another way), no finding
+   can be given its own, and each finding of that name binds every marker
+   of the unit on both sides, each its name, text and guard, each side
+   sorted: a stricter key, since any other marker change in the unit moves
+   it. A finding's evidence is still the last head marker of its name, as
+   on the base; only its key moves. So with several markers of one name the
+   evidence can show another marker than the one the key binds, a residual:
+   taking the evidence from the bound marker could move existing pins on
+   the evidence text or span, so it is left for a follow-up the owner
+   decides. UnitDelta gains no field for this:
+   `--emit-ir` serializes it and tests rebuild it from that JSON, so the
+   detector reads both sides' markers instead.
+7. **Order.** Findings of one rule in one unit sort by key
+   (`Finding.sort_key`), so the order of TEST_DISABLED findings in one unit
+   can change. Gating spends no credit across them, so no severity depends
+   on that order.
+
+**Residuals** (row 136): a JS/TS imperative skip records no guard (reading
+1), so an approval of a guarded one covers an unguarded one of the same
+name; the rows of a table checkwash cannot read are bound only by their
+counts (and when it is the head side's, every base row reads as deleted, a
+stricter key); a path added to an unguarded `collect_ignore`
+(row 81) binds no path, so an approval covers another path added to the
+same control; a constant edited behind an unchanged guard (row 59) is bound
+by the guard's text, so an approval covers another edit that makes the same
+guard always true; a focus added to a file is bound by its spelling
+(reading 5), so an approval covers another focus of that spelling in the
+file; a marker-added finding's evidence is still the last head marker of
+its name (reading 6), so when a unit holds several markers of one name it
+can show another marker than the one the finding's key binds, and an
+approval given from the evidence alone can exempt a marker the evidence
+does not show; and an approval still covers the identical reviewed change
+on a later diff, as D-055 intends.
+
+**Fingerprints.** Every TEST_DISABLED finding has a new key, so every
+recorded TEST_DISABLED exemption stops matching, and the reviewed change
+must be re-run and approved again, in the same minor as the nine rules'
+(R43), so users re-review once. Other rules keep their keys. SARIF
+`partialFingerprints` for TEST_DISABLED move from `checkwash/v1` to
+`checkwash/v2`. FINDINGS_VERSION and IR_VERSION stay 2: no IR field is
+added. `docs/stability.md`'s fingerprint row lets a minor release move them;
+this ships in the next minor (R54), never a patch.
+
+**Pinned tests (rule 2, E2).** Changed only because of Q2 and Q3:
+`test_issue196_guard_removal.py::test_the_finding_shares_the_guard_familys_identity`
+(the legacy key, and `always.fingerprint == finding.fingerprint`, which
+becomes one legacy key and two keys);
+`test_issue196_setup_guards.py::test_a_removed_setup_guard_is_reported_with_the_guard_family_identity`
+and `::test_a_setup_guard_that_now_always_holds_is_reported`;
+`test_issue209_effects_pytestmark.py::test_the_fingerprint_is_the_marker_name_s`
+and `::test_a_conftest_pytestmark_is_reported_at_info`;
+`test_issue223_conftest_request_side.py::test_the_fingerprint_is_the_setup_markers`
+(the module's skip fixture with the reason "x" and the conftest's, which
+shared one key, now give two keys that refine one legacy key, since the key
+binds the skip's text; the test also checks that the same skip in either
+place is still one key);
+`test_issue260_pytestmark_spellings.py::test_a_guard_made_always_true_or_removed_is_reported`,
+`::test_a11_is_reported_under_its_mark_s_name` and
+`::test_a_conftest_pytestmark_s_guard_guards_nothing_either`;
+`test_issue261_suite_guard_removed.py::test_a_removed_guard_is_reported_for_every_suite_level_control`,
+`::test_a_guard_moved_where_the_hook_reading_does_not_look_reads_as_removed`,
+`::test_a_removed_guard_shares_the_identity_of_one_that_always_fires` (one
+legacy key, two keys) and `::test_a_path_gained_by_an_unguarded_control_is_still_row_81`;
+`test_issue263_string_conditions.py::test_the_marker_keeps_the_string_as_written`;
+and `test_js_assertion_identity.py::test_removed_unit_joins_legacy_keys_but_reports_complete_assertions`.
+Each legacy-key pin now checks that the v2 key's identity holds that legacy
+key's pre-image, as D-146's `_refines` does. Three comparisons of two
+findings in one unit (209's two-mark case, and 261's "add-marker" and
+"module-level-if" cases) no longer depend on their order, which the key
+decides. Test names that speak of one shared identity are left as they
+are, as D-146 left `test_snapshot_expectations.py`'s. No `.gwcase`
+expectation changes, and nothing under `tests/gates` changes. Another pin
+that CI shows moving is listed for the owner before it is changed. By
+reading, what readings 2 and 6 bind for several markers of one name moves
+none of these pins again and no other: these pins compare legacy keys and
+key inequality, not v2 digests.
+
+**Cost.**
+- **New blocks:** a TEST_DISABLED change under an exemption recorded for
+  another change to the same unit.
+- **Re-review:** every recorded TEST_DISABLED exemption.
+- **Measured:** not yet; the combined sweep (Q4).
+
+Rows 54 and 136 record the change.
+
+Evidence status: when the change was prepared, no pytest, checkwash or
+Python product code ran on the work machine; this PR's CI is the first
+run. `NOT_RUN：工作機規則（POLICY work-machine-local），the tests and the sweep pair run in CI and in the combined sweep; nothing ran on the work machine`.
+
+- Tests were added: 38 collected items in
+  `tests/test_issue512_test_disabled_keys.py`, the issue's reproduction
+  among them (ten pairs of changes that shared a legacy key, each keyed
+  apart, and each second change left at high under an exemption recorded
+  for the first; two of the pairs are a skip inserted above another of its
+  name and one of two guards of a name removed, then the other), the
+  several-markers cases of reading 6 and reading 2 (a guarded and an
+  unguarded skip added together, an inserted skip's own identity, every
+  condition of a guard event's name, and markers that cannot be told
+  apart), and one in `tests/test_js_assertion_identity.py`, #421's JS
+  sibling `toBe(1)` and `toBe(2)` (R46). None is under `tests/gates`. By
+  reading, 37 of the 39 fail on this PR's base. Two pass there too: the
+  R46 test, because #477 already binds the after text, so it pins a case
+  #421 closed without a test; and the control that reformatting and moving
+  keep a key.
+- The documented test count is 20165 (20126 on integration batch 3,
+  before this PR merged in integration batch 4, + 39).
+
+The agent wrote this entry in #512's fix PR as a draft for the owner's
+approval of its wording. Readings 1, 2 and 6, the residuals and the
+tests were revised after a second review of the PR found that several
+markers of one name were keyed on one of them and that a JS/TS imperative
+skip records no guard. A third review then found that reading 6 described
+a set where the detector subtracts multisets, and that the evidence can
+show another marker than the key binds; reading 6 and the residuals were
+revised again. The owner approved the wording as it then stood in round
+6 (below).
+
+The maintainer approved this entry on 2026-10-20: 「第六輪 G1～G6 全部照建議」 ("round
+6, G1 to G6, all as recommended"), in reply to the agent's round-6 list for
+the fourth wave, #534 to #539. The reply was a button whose text the
+assistant wrote, which the owner chose. Its items for this entry, at #537's
+head 41f12c0d: G2 (F21) approves the wording of this entry (8b93952f,
+59860313, df64856e, 41f12c0d), of SPEC §6 (07fa73a7, ed8fa0f0, 691726ca,
+f1084628, b406e155), of THREATMODEL rows 54 and 136 (231b2202, bc1be4b9,
+122ab38c, 8d7640cd, 37a15d1d), with `benchmarks/FAILURES.md` row 136's shape
+cell, and of the KNOWN-ISSUES-next #512 row; F21's change to row 136's shape
+("then add another of a different spelling", 122ab38c) stays. G4 approves
+the focus key binding the recorded spelling, not the title, a departure kept
+as a residual (F22); reading 1, which binds every recorded guard: setup,
+helper, #424 and `pytestmark` (F23); reading 2, in which the two guard
+events share `guard_weakened` and are told apart by the guard after, and
+each key also binds the conditions every marker of its name ran under on
+each side (`skip_condition`), within Q2 and E2 (F24); `test_issue223`'s
+setup-marker pin moving to two keys, as E2 (F26); and reading 6, with the
+stricter fallback that binds every marker of the unit on both sides
+(decision 9). G5 keeps as residuals, with no issue (F25 and the reviews'
+F2): a JS/TS imperative skip (`ctx.skip()`, `t.skip()`, `this.skip()`)
+records no guard; an unreadable table binds only its counts; an unguarded
+`collect_ignore` binds no path; row 59 binds the guard, not the constant; a
+file-level focus binds its spelling; and a marker-added finding's evidence
+can show another marker of its name than the one its key binds, with no
+follow-up and the evidence as on main (decision 10). G1's item for #537, the
+self-check exemptions in #542, concerns no text here. The numbering and
+closing sentences were rewritten to the facts at merge under the C1/D3
+precedent the same round approved (f42441d0). This paragraph was written
+after the reply.
+
+On 2026-10-20 the owner approved the paragraph above and the rewrites it
+names with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5, all as
+recommended"), a button whose text the assistant wrote: its item H2
+approves together the round-4 and round-6 approval records, the C1/D3
+rewrites at merge and the batch-4 merge sentences it lists. This sentence
+was written after the reply.
+
 ## D-170 (2026-10-20): the perf gate's budgets widen to 3.5 s and 1.5 s
 
 **What failed.** `tests/gates/test_perf.py::test_many_files_within_budget`
@@ -16019,6 +17673,13 @@ steps are differences of the artifacts' values, rounded to two places),
 and this PR's CI is the first run of the new budgets.
 `NOT_RUN：工作機規則（POLICY work-machine-local），the widened budgets run first in this PR's CI`.
 
-The agent wrote this entry. Its wording awaits the owner's approval in
-the next approval round, as round 2's B3 covered the maintainer text
-written while applying earlier approvals.
+The agent wrote this entry. On 2026-10-20 the owner approved its wording
+as #543 merged it, with 「第七輪 H1～H5 全部照建議」 ("round 7, H1 to H5,
+all as recommended"), a button whose text the assistant wrote. Its item
+H1 also approves #543's change to `tests/gates/README.md`, which the list
+described as the numbers only: 1.5 s and 3.5 s, with a parenthesis that
+names the old budgets, the date and this entry. It keeps the two budget
+checks skipped on macOS, whose runners vary the most, until they are
+revisited before 1.0. H1 does not name #543's edit to
+`docs/enterprise.md`. This paragraph was rewritten after the reply;
+before it, it said the wording awaited the next approval round.

@@ -1,0 +1,23 @@
+=== meta ===
+bypass: 160
+rule: ASSERT_REMOVED
+issue: 480
+title: under (ctx): void =>, deleting ctx.assert.ok(sum(1, 1)) beside a kept strictEqual is a removal, as without the annotation
+origin: issue #480 row N12, reported against v0.8.0 and main f541f74 (pass, zero findings, no_known_gaps): the binder declared `void`, not `ctx`
+=== before: tests/sum.test.ts ===
+import { test } from "node:test";
+import { sum } from "../src/sum";
+
+test("adds two numbers", (ctx): void => {
+  ctx.assert.strictEqual(sum(2, 2), 4);
+  ctx.assert.ok(sum(1, 1));
+});
+=== after: tests/sum.test.ts ===
+import { test } from "node:test";
+import { sum } from "../src/sum";
+
+test("adds two numbers", (ctx): void => {
+  ctx.assert.strictEqual(sum(2, 2), 4);
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds two numbers"}]

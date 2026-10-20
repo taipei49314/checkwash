@@ -306,7 +306,9 @@ def _annotated_bodies(masked: str, first: int, last: int) -> list[tuple[int, int
     TypeScript return annotation keeps out of the bindings' function scopes,
     which take a body only right after the parameters: a method's block
     (`fetch(url: URL): Promise<ArrayBuffer> { ... }`), or an arrow's block or
-    expression (`(o): Wrapped => ({ ...o })`) (#196 188.5)."""
+    expression (`(o): Wrapped => ({ ...o })`) (#196 188.5). Since #480 the
+    bindings scope such an arrow where one can start, so a span here can
+    repeat one of theirs."""
     spans = []
     for match in _RETURN_TYPE.finditer(masked, first, last):
         body = match.end()

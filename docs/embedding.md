@@ -25,7 +25,11 @@ commits that landed on the base branch meanwhile are not in the diff.
 
 Exit 2 does not mean "no findings". With `--emit-ir`, exit 0 comes with the
 IR instead. Treat standard output that does not parse, or that does not carry
-`checkwash_findings_version` 2, as an error whatever the exit status.
+`checkwash_findings_version` 2, as an error whatever the exit status. On exit
+2 standard output is empty, except that from the next release most size
+refusals print `{"unread": [...]}`, naming the side over the limit that
+stopped the run (the [unreleased changes](#unreleased-changes-on-main) list
+the exceptions).
 
 - Standard output is UTF-8 bytes whatever the locale (SPEC §8). Decode it as
   UTF-8. Python's `subprocess.run(..., text=True)` decodes with the locale's
@@ -176,11 +180,20 @@ by that field.
   get content-bound keys, `rule/path/unit/v2:` and a 64-character digest.
   Their old keys are retired. Findings of one rule in one unit now sort by key,
   so their order can change, and SARIF `partialFingerprints` for these rules
-  move from `checkwash/v1` to `checkwash/v2`. Every other rule keeps its key
-  format; TEST_DISABLED is due to move in a later round.
+  move from `checkwash/v1` to `checkwash/v2`.
+- **TEST_DISABLED fingerprints (D-169, #512).** Every TEST_DISABLED finding
+  gets a content-bound key of the same form, `TEST_DISABLED/path/unit/v2:`
+  and a 64-character digest, a file-level focus under the unit `<file>`. Its
+  old keys are retired, its findings in one unit now sort by key, and its
+  SARIF `partialFingerprints` move to `checkwash/v2`. Every rule other than
+  these ten keeps its key format.
 - **Same-named test functions (D-144, #424).** A def that a later one replaces
   is no longer a unit, and the units that remain are renumbered, so findings
   keyed by them get new keys, with no message.
+- **Python tests that never run (D-166, #499).** A def or class under a
+  branch checkwash reads as dead is no longer a unit. A finding keyed by it
+  goes, and a later unit of the same name can take a lower `name#N`, which
+  gives its findings new keys, with no message.
 - **Removed JavaScript tests (D-148, #429).** By reading the code, a removed
   JS/TS test whose callback held an assertion it never reaches now gets a new
   TEST_DISABLED key. D-148 records no key change; D-151 corrects it.
@@ -202,6 +215,15 @@ by that field.
   the verdict, when that change's head or worktree side is over the size
   limit, now exits 0 with `decision: block` instead of the non-blocking
   `systemMessage` (D-150, #456).
+- **A size refusal names its side on standard output** (D-168, #454). It
+  still exits 2, but `--format json` now prints `{"unread": [...]}` instead of
+  nothing: one entry, with the `path`, `side`, `size` and `limit` of the side
+  the refusal names, as below. It is not a findings document: it has no
+  `checkwash_findings_version`, `findings` or `verdict`, so the version check
+  above treats it as the error it is. A root manifest, config, exemption list
+  or task file over the limit at the base, with a range a symlinked pytest
+  configuration's target over the limit that no detector must read, and every
+  other engine error still print nothing; so do `--emit-ir`, term and SARIF.
 - **A new optional top-level key,** `unread` (#454). It lists the changed
   sides over the 1,000,000-byte source limit that checkwash set aside unread,
   one object per side with `path`, `side`, `size` and `limit`, and it is

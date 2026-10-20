@@ -1,0 +1,34 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a test in the handler of a try whose class body raises when the class is created still runs, so an assertion weakened in it is reported
+origin: #499, review of PR #535 - creating a class validates `__slots__`, so `__slots__ = 1` raises TypeError and the handler runs; a class body that binds a dunder name is not read as one that cannot raise, and the handler stays live, as on main
+=== before: tests/test_total.py ===
+from app import total
+
+
+try:
+    class _Probe:
+        __slots__ = 1
+except TypeError:
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+try:
+    class _Probe:
+        __slots__ = 1
+except TypeError:
+    def test_adds():
+        assert total([1, 2]) >= 0
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_adds"}]

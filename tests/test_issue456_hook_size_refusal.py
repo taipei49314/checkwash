@@ -60,6 +60,11 @@ def described(path, name, size=LIMIT + 1):
     return f"{path} ({name}, {size} > {LIMIT} bytes)"
 
 
+def _entry(path, name, size=LIMIT + 1):
+    """The `unread` entry `--format json` writes for a refused side (#454 (d))."""
+    return {"limit": LIMIT, "path": path, "side": name, "size": size}
+
+
 def git(repo, *args):
     return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, check=True).stdout
 
@@ -130,8 +135,11 @@ WORKTREE_ROWS = {
     # The padding need not touch the test: any new must-read file will do.
     "untracked_py": (lambda: {}, lambda: {"tests/test_billing.py": WEAKENED, "scratch.py": blob(LIMIT + 1, "scratch")},
                      described("scratch.py", "worktree"), lambda repo: (repo / "scratch.py").unlink()),
+    # A shell shebang gives a file with no extension its runner shape at any
+    # size (#455); without one, it is judged like any other unread path.
     "untracked_extensionless": (lambda: {},
-                                lambda: {"tests/test_billing.py": WEAKENED, "NOTES": blob(LIMIT + 1, "notes")},
+                                lambda: {"tests/test_billing.py": WEAKENED,
+                                         "NOTES": b"#!/bin/sh\n" + blob(LIMIT + 1 - len(b"#!/bin/sh\n"), "notes")},
                                 described("NOTES", "worktree"), lambda repo: (repo / "NOTES").unlink()),
     # Both sides over the limit: the refusal names the base side, the first
     # unread one; the block names the side the session wrote.
@@ -206,7 +214,9 @@ def test_a_context_read_outside_the_diff_keeps_the_note(tmp_path, fmt):
     named = described("flags.py", "worktree")
     if fmt == "json":
         code, stdout, stderr = _run(repo, "check", "--format", "json")
-        assert (code, stdout) == (2, ""), stderr
+        # #454 (d): exit 2, and stdout names the refused side, outside any
+        # findings document.
+        assert (code, json.loads(stdout)) == (2, {"unread": [_entry("flags.py", "worktree")]}), stderr
         assert f"{REFUSAL}: {named}" in stderr
     else:
         payload, stderr = _hook(repo)
@@ -252,7 +262,12 @@ def test_every_other_mode_keeps_exit_2(tmp_path, args):
     repo = _repo(tmp_path)
     _write(repo, {"tests/test_billing.py": PADDED})
     code, stdout, stderr = _run(repo, "check", *args)
-    assert (code, stdout) == (2, ""), stderr
+    if args == ("--format", "json"):
+        # #454 (d): json also names the refused side, outside any findings
+        # document; the other modes keep an empty stdout.
+        assert (code, json.loads(stdout)) == (2, {"unread": [_entry("tests/test_billing.py", "worktree")]}), stderr
+    else:
+        assert (code, stdout) == (2, ""), stderr
     assert stderr.splitlines() == [
         f"checkwash engine error: SourceOverLimit: {REFUSAL}: {described('tests/test_billing.py', 'worktree')}"]
 

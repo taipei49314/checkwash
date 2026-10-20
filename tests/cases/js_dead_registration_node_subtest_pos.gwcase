@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: a node:test subtest `t.test(...)` after `return;` in a parent test that asserts nothing is never registered
+origin: issue #484, ruling Q3 blocking 5; the walker reads a test callback that registers subtests, even one with no assertions
+=== before: tests/total.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { total } from "../src/total.js";
+
+test("total", async (t) => {
+  await t.test("adds", () => {
+    assert.strictEqual(total([1, 2]), 3);
+  });
+
+  await t.test("is zero when empty", () => {
+    assert.strictEqual(total([]), 0);
+  });
+});
+=== after: tests/total.test.js ===
+import { test } from "node:test";
+import assert from "node:assert";
+import { total } from "../src/total.js";
+
+test("total", async (t) => {
+  await t.test("adds", () => {
+    assert.strictEqual(total([1, 2]), 3);
+  });
+
+  return;
+
+  await t.test("is zero when empty", () => {
+    assert.strictEqual(total([]), 0);
+  });
+});
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "is zero when empty"}]

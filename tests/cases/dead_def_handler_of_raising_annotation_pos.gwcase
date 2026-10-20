@@ -1,0 +1,34 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a test in the handler of a try whose annotated name raises once `__annotations__` is rebound still runs, so an assertion weakened in it is reported
+origin: #499, third review of PR #535 - up to Python 3.13 an annotated name at module level stores its annotation into `__annotations__`, so after `__annotations__ = None` the annotation raises TypeError and the handler runs; an annotated name in a module that binds `__annotations__` is not read as one that cannot raise, and the handler stays live, as on main
+=== before: tests/test_total.py ===
+from app import total
+
+
+try:
+    __annotations__ = None
+    flag: "bool" = True
+except TypeError:
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+try:
+    __annotations__ = None
+    flag: "bool" = True
+except TypeError:
+    def test_adds():
+        assert total([1, 2]) >= 0
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_adds"}]

@@ -36,6 +36,16 @@ _OPERATOR_WORDS = frozenset({
 _CONTINUING_WORDS = frozenset({"in", "instanceof", "as", "satisfies"})
 # Identifier-shaped words after which `[` opens an array, not a member access.
 _STATEMENT_WORDS = _OPERATOR_WORDS | {"const", "let", "var"}
+# The tokens of a simple TypeScript return type besides names (#480 Q2):
+# `Promise<void>`, `number[]`, `A | B`, `ns.T`, `Map<K, V>`. The frontend's
+# callback reader (`_callback_body`) and its nested-arrow reader step over
+# the same set.
+_RETURN_TYPE_TOKENS = frozenset({"<", ">", "[", "]", ",", "|", "."})
+# The tokens after which an arrow's parameter list can open (#480 Q1).
+_ARROW_STARTS = frozenset({"(", ",", "=", "=>", ":", "[", "{", ";", "return"})
+# The runners whose import or require decides what an undeclared `t` is
+# (#480 Q4), and the provenance family each gives it.
+_T_RUNNERS = {"node:test": "context", "ava": "AVA", "tap": "tap"}
 
 
 @dataclass(frozen=True)
@@ -163,6 +173,8 @@ class Bindings:
         self.function_declarations: set[tuple[int, str]] = set()
         self.parameter_tokens: set[int] = set()
         self.context_parameters: list[tuple[int, str, int]] = []
+        # Test callbacks' first parameters by name, read on first use (#480 Q3).
+        self._callbacks: dict[str, list[tuple[int, int, str]]] | None = None
         stack: list[int] = []
         scopes = [0]
         for i, (token, start, end) in enumerate(self.tokens):
@@ -183,6 +195,7 @@ class Bindings:
                 if token == "}":
                     self.scopes[scopes.pop()].end = start
         self.loops = self._loops()
+        self._undeclared_t, self._undeclared_t_families = self._t_fallback()
         self._imports(code)
         self._functions()
         self._variables()
@@ -352,6 +365,32 @@ class Bindings:
                         self._declare(scope, local, self.member(module, exported))
                         self.import_sources[(scope, local)] = (specifier, exported)
 
+    def _t_fallback(self) -> tuple[Value, frozenset[str]]:
+        """What an undeclared `t` resolves to, and its provenance family (#480 Q4).
+
+        node:test's context, as before, unless the file imports or requires
+        AVA or tap and not node:test. There an undeclared `t` gets no
+        node:test authority: it is unknown, and its family is that runner's,
+        so a call of one of the runner's assertions on it is an `unresolved`
+        coverage candidate instead of being dropped. It gets no AVA or tap
+        authority by its name either, which would go beyond D-118 reading 3.
+        A specifier counts after `from` or `import`, and as the only argument
+        of `require(...)` or `import(...)`, but not of a method so named
+        (`loader.require("tap")`, `this.#import("ava")`).
+        """
+        runners = set()
+        for i, (token, _start, _end) in enumerate(self.tokens):
+            if token[:1] not in {"'", '"'} or token[1:-1] not in _T_RUNNERS:
+                continue
+            before = self.token(i - 1)
+            if before in {"from", "import"} or (
+                    before == "(" and self.token(i - 2) in {"require", "import"} and self.token(i + 1) == ")"
+                    and self.token(i - 3) not in {".", "?.", "#"}):
+                runners.add(_T_RUNNERS[token[1:-1]])
+        if not runners or "context" in runners:
+            return Value("context"), frozenset({"context"})
+        return UNKNOWN, frozenset(runners)
+
     def _expression_end(self, start: int, limit: int | None = None) -> int:
         """Index of the token that ends the expression starting at `start`.
 
@@ -467,7 +506,10 @@ class Bindings:
                     self._parameters(cursor + 1, closing, scope, cursor)
             elif token == "=>":
                 previous = i - 1
-                if self.token(previous) == ")" and previous in self.pairs:
+                annotated = self._annotated_parameters(i)
+                if annotated is not None:
+                    first, last = annotated  # `(ctx): void =>` (#480)
+                elif self.token(previous) == ")" and previous in self.pairs:
                     first, last = self.pairs[previous] + 1, previous
                 elif _IDENT.fullmatch(self.token(previous)):
                     first, last = previous, previous + 1
@@ -500,6 +542,159 @@ class Bindings:
             elif token == "(" and i in self.pairs and self._method_parameters(i):
                 closing = self.pairs[i]
                 self._parameters(i + 1, closing, self.body_scopes[closing + 1])
+
+    def _annotated_parameters(self, arrow: int) -> tuple[int, int] | None:
+        """The parameter list of an arrow whose TypeScript return annotation
+        stands before its `=>` at token `arrow`, as (first, last) tokens inside
+        its parentheses; None when there is no such list (#480 Q1).
+
+        `(ctx): void =>` and `async (t): Promise<void> =>` put the return type
+        just before `=>`, where the arrow branch of `_functions` reads its
+        parameters. So from `=>` this steps back over a simple return type
+        (names and `_RETURN_TYPE_TOKENS`, 480.Q2) to a `:` and takes the
+        paired `(...)` before it. That `(` is taken only where an arrow can
+        start: first in the file, or after a token in `_ARROW_STARTS`, with an
+        `async` before it stepped over and held to the same test. Anywhere
+        else, after `?`, a callee or `await`, the `:` is more likely a
+        conditional's: in `cond ? f(a) : b => b` the arrow is `b => b`, and
+        its parameter is `b`, as before. After `:`, `=` or `=>` a `?` that has
+        not met its `:` makes the colon after `)` a conditional's too:
+        `c0 ? c1 ? y : (a) : b => b`, `c ? x = (a) : b => b`,
+        `c ? () => (a) : b => b` and `c ? (x): T => (a) : b => b` all keep
+        `b` (`_condition_waits`).
+        """
+        opening = self._annotated_opening(arrow)
+        if opening is None:
+            return None
+        before = opening - 1
+        if self.token(before) == "async":
+            before -= 1
+        if before >= 0 and self.token(before) not in _ARROW_STARTS:
+            return None
+        if self.token(before) in {":", "=", "=>"} and self._condition_waits(before):
+            return None
+        return opening + 1, self.pairs[opening]
+
+    def _annotated_opening(self, arrow: int) -> int | None:
+        """The `(` of `(...): T =>` whose simple return type (names and
+        `_RETURN_TYPE_TOKENS`) ends at the `=>` at token `arrow`; None when
+        no `:` after a paired `)` stands there. Whether an arrow can start at
+        that `(` is the caller's test.
+        """
+        cursor = arrow - 1
+        while cursor >= 0 and (self.token(cursor) in _RETURN_TYPE_TOKENS or _IDENT.fullmatch(self.token(cursor))):
+            cursor -= 1
+        closing = cursor - 1
+        if (cursor == arrow - 1 or self.token(cursor) != ":"
+                or self.token(closing) != ")" or closing not in self.pairs):
+            return None
+        return self.pairs[closing]
+
+    def _condition_waits(self, last: int) -> bool:
+        """Does a `?` before token `last`, in the expression that holds it,
+        still wait for its `:`? Token `last` itself counts when it is a `:`.
+
+        The read goes back over balanced brackets, to the bracket, `;` or `,`
+        that opens the expression, or to a line break where JavaScript ends
+        the statement (`_expression_end`'s rule). Each `:` on the way answers
+        one `?`; `??` is no conditional. The `:` of an annotated arrow's
+        return type answers none: where the read meets the `=>` of an arrow
+        written `(...): T =>`, or `<U>(...): T =>` with a type parameter list
+        (`_type_parameters`), at a place an arrow can start, after any
+        assignment operator or right after a `?`, it steps over that head.
+        So in `c ? (x): T => (a) : b => b`, `c ? x ||= (y): T => (a) : b => b`
+        and `c ? <U>(y): U => (a) : b => b` the `?` still waits, and
+        `b => b` is the alternate, as TypeScript reads it: an annotated arrow
+        in a consequent, on the right of an assignment there included, needs
+        a `:` after it. Stepping over a head only lets fewer arrows be read
+        as annotated.
+        """
+        colons = 0
+        j = last
+        while j >= 0:
+            token = self.token(j)
+            if token in {")", "]", "}"}:
+                if j not in self.pairs:
+                    return False
+                j = self.pairs[j]
+            elif token in {"(", "[", "{", ";", ","}:
+                return False
+            elif token == "=>":
+                opening = self._annotated_opening(j)
+                if opening is not None:
+                    start = self._type_parameters(opening)
+                    head = start - 1 - (self.token(start - 1) == "async")
+                    question = self.token(head) == "?" and not (  # not the second `?` of `??`
+                        self.token(head - 1) == "?" and self.tokens[head - 1][2] == self.tokens[head][1])
+                    if head < 0 or self.token(head) in _ARROW_STARTS or self.token(head) in _ASSIGNMENTS or question:
+                        j = start
+            elif token == ":":
+                colons += 1
+            elif token == "?":
+                if self.token(j - 1) == "?" and self.tokens[j - 1][2] == self.tokens[j][1]:
+                    j -= 1  # `a ?? b`
+                elif colons:
+                    colons -= 1
+                else:
+                    return True
+            if j > 0 and self._line_break(j) and self._completes(j - 1) and not self._continues(j):
+                return False
+            j -= 1
+        return False
+
+    def _type_parameters(self, opening: int) -> int:
+        """The `<` of a type parameter list that ends just before the `(` at
+        token `opening`, as in `<U>(x): U =>`, `<K, V extends Map<K, V>>(m): V =>`,
+        `<T = unknown>(x): T =>`, `<F extends (x: A) => B>(f): F =>` or
+        `<T = A extends B ? 1 : 2>(x): T =>`; `opening` itself when none
+        stands there.
+
+        The read goes back from the `>` over names, string and number
+        literals, `_RETURN_TYPE_TOKENS`, `&`, `=`, an `=>` right after `)`,
+        and a conditional type's `:` and `?`, with `<` and `>` balanced and
+        each `?` answering a `:` read after it in the list, and steps over a
+        bracket group by its pair, as `_condition_waits` does, to the `<`
+        that opens the list, which a name must follow and where every `:`
+        has met its `?`. Any other token means no list. So outside its
+        bracket groups, which `_condition_waits` steps over by their pairs
+        too, a list holds no `=>` that `_condition_waits` would step from
+        (`_annotated_opening` finds no head for an `=>` right after `)`), and
+        its `:` and `?` cancel out there without a `?` that waits: stepping
+        over the list skips no `:` and no `?` that `_condition_waits` would
+        count. Whether an arrow can start at the `<` is the caller's test:
+        in `c ? a > (y)` the read meets the `?` with no `:` for it and finds
+        no list, and in the call `f<T>(y)` the `<` follows an operand.
+        """
+        if self.token(opening - 1) != ">":
+            return opening
+        depth = 0
+        colons = 0  # a conditional type's `:` whose `?` is not read yet
+        cursor = opening - 1
+        while cursor >= 0:
+            token = self.token(cursor)
+            if token == ">":
+                depth += 1
+            elif token == "<":
+                depth -= 1
+                if not depth:
+                    return cursor if not colons and _IDENT.fullmatch(self.token(cursor + 1)) else opening
+            elif token in {")", "]", "}"}:
+                if cursor not in self.pairs:
+                    return opening
+                cursor = self.pairs[cursor]
+            elif token == ":":
+                colons += 1
+            elif token == "?":
+                if not colons or self.token(cursor - 1) == "?":
+                    return opening
+                colons -= 1
+            elif token in {"(", "[", "{"} or not (
+                    _IDENT.fullmatch(token) or token[:1] in {"'", '"'} or token[:1].isdigit()
+                    or token in _RETURN_TYPE_TOKENS or token in {"&", "="}
+                    or token == "=>" and self.token(cursor - 1) == ")"):
+                return opening
+            cursor -= 1
+        return opening
 
     def _method_parameters(self, opening: int) -> bool:
         """Recognize concise method signatures only inside objects/classes.
@@ -983,8 +1178,9 @@ class Bindings:
         # An undeclared `should` is the global `chai/register-should` sets to
         # `chai.should()`'s object (#215), and an undeclared `chai` is chai's
         # module: karma-chai's adapter and chai's own suite set the global
-        # (#311).
-        return {"assert": Value("node"), "expect": Value("expect"), "t": Value("context"),
+        # (#311). An undeclared `t` is node:test's context unless the file
+        # names only AVA or tap (#480 Q4, `_t_fallback`).
+        return {"assert": Value("node"), "expect": Value("expect"), "t": self._undeclared_t,
                 "test": Value("runner"), "it": Value("runner"), "require": Value("require"),
                 "should": Value("chai_should"), "chai": Value("chai")}.get(name, UNKNOWN)
 
@@ -1123,11 +1319,15 @@ class Bindings:
 
         A shadowed assertion still warrants a warning, but another scope's
         unrelated variable with the same spelling is not assertion evidence.
+        A `t` no scope declares has the family `_t_fallback` gives it (#480
+        Q4); a declared one with no family of its own keeps node:test's.
         """
         scope = self.scope(position)
+        declared = False
         while True:
             declaration = self.scopes[scope].declarations.get(name)
             if declaration is not None:
+                declared = True
                 ready, value = declaration
                 key = (scope, name)
                 if key in seen or len(seen) > 12:
@@ -1140,6 +1340,8 @@ class Bindings:
             if parent is None:
                 break
             scope = parent
+        if name == "t" and not declared:
+            return self._undeclared_t_families
         return {"assert": frozenset({"Node"}), "expect": frozenset({"expect"}),
                 "t": frozenset({"context"})}.get(name, frozenset())
 
@@ -1186,6 +1388,83 @@ class Bindings:
             rest = rest[2:]
         return families
 
+    def _callback_parameter(self, first: int) -> str | None:
+        """The first simple parameter of the inline callback whose argument
+        starts at token `first`, read from its own tokens as the frontend's
+        `_callback_receivers` reads it; None when the argument is no callback.
+
+        Wrapping parentheses and `async` are stepped over; then `function`
+        with its name and parameter list, a parameter list followed by `=>` or
+        by a return annotation's `:`, or one name followed by `=>`.
+        """
+        while (self.token(first) == "(" and first in self.pairs
+               and self.token(self.pairs[first] + 1) in {",", ")"}):
+            first += 1
+        if self.token(first) == "async":
+            first += 1
+        if self.token(first) == "function":
+            first += 1
+            if _IDENT.fullmatch(self.token(first)):
+                first += 1
+            if self.token(first) != "(":
+                return None
+        elif self.token(first) == "(" and first in self.pairs:
+            if self.token(self.pairs[first] + 1) not in {"=>", ":"}:
+                return None
+        elif _IDENT.fullmatch(self.token(first)) and self.token(first + 1) == "=>":
+            return self.token(first)
+        else:
+            return None
+        name = self.token(first + 1)
+        if not _IDENT.fullmatch(name) or name == "this" or self.token(first + 2) not in {")", ",", ":", "=", "=>"}:
+            return None
+        return name
+
+    def _test_callbacks(self) -> dict[str, list[tuple[int, int, str]]]:
+        """Each inline callback passed to a call that declares a test, by its
+        first parameter: (start, end, kind) of the argument (#480 Q3).
+
+        The parameter is read from the callback's own tokens
+        (`_callback_parameter`), so it is named even where the arrow branch of
+        `_functions` did not declare it, as under a return type it does not
+        step over (`(ctx): { ok: boolean } =>`). `kind` is what
+        `_test_context` gives the declaring call: node:test's `context`,
+        `ava_context` or `tap_context`. Read once, on first use.
+        """
+        if self._callbacks is None:
+            found: dict[str, list[tuple[int, int, str]]] = {}
+            for first in range(1, len(self.tokens)):
+                opening = self.enclosing[first]
+                if opening is None or self.token(opening) != "(" or self.token(first - 1) not in {"(", ","}:
+                    continue
+                name = self._callback_parameter(first)
+                if name is None:
+                    continue
+                kind = self._test_context(first)
+                if kind is None:
+                    continue
+                ending = self._expression_end(first, self.pairs.get(opening, len(self.tokens)))
+                end = self.tokens[ending][1] if ending < len(self.tokens) else len(self.text)
+                found.setdefault(name, []).append((self.tokens[first][1], end, kind))
+            self._callbacks = found
+        return self._callbacks
+
+    def _callback_context(self, name: str, position: int) -> str | None:
+        """The kind of the test callback whose first parameter `name` names at
+        `position`: the innermost one holding it, unless a declaration nested
+        inside that callback, not its own scope, shadows the parameter."""
+        holding = [(start, kind) for start, end, kind in self._test_callbacks().get(name, ())
+                   if start <= position < end]
+        if not holding:
+            return None
+        start, kind = max(holding)
+        scope = self._declaration_scope(name, position)
+        if scope is not None:
+            parent = self.scopes[scope].parent
+            if start <= self.scopes[scope].start and parent is not None and start <= self.scopes[parent].start:
+                return None
+        return kind
+
     def candidate(self, spelling: str, position: int) -> str | None:
         root = re.split(r"[.\[?]", spelling, maxsplit=1)[0].strip()
         value = self.resolve(root, position)
@@ -1231,4 +1510,14 @@ class Bindings:
                     member(name) for name in (AVA_ASSERTIONS if family == "AVA" else _TAP_NAMES)):
                 continue
             return "unresolved"
+        # A call on a test callback's first parameter, read from the
+        # callback's own tokens, that does not resolve, as when the binder
+        # did not declare the parameter (`(ctx): { ok: boolean } =>`): the
+        # same filter, for the runner of the declaring call (#480 Q3).
+        if value.kind == "unknown":
+            family = {"context": "context", "ava_context": "AVA", "tap_context": "tap"}.get(
+                self._callback_context(root, position) or "")
+            if family == "context" and member("assert") or family in {"AVA", "tap"} and any(
+                    member(name) for name in (AVA_ASSERTIONS if family == "AVA" else _TAP_NAMES)):
+                return "unresolved"
         return None

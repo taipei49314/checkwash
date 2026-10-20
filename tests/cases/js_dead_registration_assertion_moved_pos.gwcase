@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 9,159
+rule: ASSERT_REMOVED
+issue: 484
+title: an assertion moved out of a live test into a test registered under `if (false)` is removed, with no move credit
+origin: issue #484, ruling Q2 and Q3 blocking 9; on main the dead test was a live unit, so the assertion read as moved, at info
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  it("adds", () => {
+    expect(total([1, 2])).toBe(3);
+  });
+
+  if (false) {
+    it("is zero when empty", () => {
+      expect(total([])).toBe(0);
+    });
+  }
+});
+=== expect ===
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]

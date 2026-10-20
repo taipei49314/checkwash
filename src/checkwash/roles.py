@@ -6,7 +6,7 @@ import re
 import tomllib
 from collections import Counter
 
-from checkwash.change import FileChange
+from checkwash.change import SHEBANG_PREFIX_BYTES, FileChange
 from checkwash.config import Config
 
 
@@ -312,8 +312,10 @@ def _shell_shebang(data: bytes | None) -> bool:
     if not data or not data.startswith(b"#!"):
         return False
     # First 200 bytes only: a shebang is short, and an unsplit binary blob
-    # should not be decoded whole to answer this (perf gate, SPEC §10).
-    words = data[:200].split(b"\n", 1)[0].decode("utf-8", errors="replace")[2:].strip().split()
+    # should not be decoded whole to answer this (perf gate, SPEC §10). So a
+    # side's first 200 bytes answer as the whole side does, which is the
+    # prefix an oversized side keeps (#455).
+    words = data[:SHEBANG_PREFIX_BYTES].split(b"\n", 1)[0].decode("utf-8", errors="replace")[2:].strip().split()
     if not words:
         return False
     interp = words[0].rsplit("/", 1)[-1]

@@ -1,0 +1,34 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+title: a deleted test whose only other copy sits under `if False:` in an untouched test file earns no survivor credit
+origin: #499, ruling R99 (Q3) - D10's survivor search reads the units the frontend returns, and a dead def is none; by reading, main held the deletion at info as DUPLICATE_REMAINS
+=== head: tests/test_copy.py ===
+from app import total
+
+
+def test_single():
+    assert total([5]) == 5
+
+
+if False:
+    def test_adds():
+        assert total([1, 2]) == 3
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_adds"}]

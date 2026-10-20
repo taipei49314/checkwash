@@ -159,7 +159,17 @@ between the two is a laundering route (all confirmed by reproduction):
   **constant-folded**, not pattern-matched: `if False:`, `if not True:`,
   `if 1 == 2:`, `if False and x:`, `for _ in []:` and a `match` on a literal
   that no case can meet are all dead. Assertions there are not collected
-  (their loss reads as removal)
+  (their loss reads as removal). A def or class at module or class level
+  under a dead arm never runs either, so it binds nothing and is no unit, and
+  a class takes its units with it: its loss reads as a disappearance, as a
+  deleted test's does, and it earns no move, restructure or survivor credit
+  (#499). The arms are the ones the reading of later bindings above decides
+  dead: the arm of an `if` that a folded condition rules out, the body of a
+  `while` whose condition folds to false and of a `for` over a
+  constant-empty iterable, every case of a `match` that no case can meet,
+  and the handlers of a `try` whose body cannot raise. A def under a
+  condition the folder cannot decide, such as `if os.environ.get("X"):`,
+  stays a live unit with no marker, a named residual
 - `__test__ = False` at module or class scope removes it from collection —
   pytest checks it before anything else
 - `@pytest.mark.parametrize` rows are test items: deleting rows deletes units,
@@ -371,6 +381,27 @@ boundary the walk proved. Where the walk cannot prove a statement's end,
 it stops reading that statement list, and the assertions after keep their
 reading. The catch evidence of `BROAD_EXCEPT_ADDED` (#363) still reads every
 assertion a callback spells. `docs/js-reachability.md` names the residuals.
+
+A JS/TS test or block registered where no run of the file reaches is no unit
+(#484). The same walk reads the module's own statements, stepping over a
+static `import` declaration whose end it proves (`export`, TypeScript's
+`import x = require(...)` and an import with attributes stop it), the block
+callback of every `describe`, `suite` and `context` declaration, their `x`
+and `f` forms included, and the callback of a test that registers a named
+test or a block of its own (node:test's and tap's `t.test`), even one with
+no assertions. A declaration that starts where the walk proves no statement
+runs is no unit, and neither is any declaration inside it. Its loss is a
+disappearance, its skip, focus and options apply to nothing, and it earns no
+D2, D5 or D10 credit. An expression statement of `&&` or `||` whose literal
+operand decides it skips a declaration call that is its last operand, as it
+skips an assertion. A dead region that holds a function declaration, which a
+call before it may run, refuses the walk; a function expression there does
+not, except a named one in a position the walk reads conservatively as a
+declaration's, such as an object property's value after `:` (D-165 reading
+6; THREATMODEL 159, residual 6), which refuses it too. A condition the
+folder cannot decide (`if (process.env.CI)`) leaves the registration live.
+Its assertions still reach the catch evidence, and a file whose only tests
+are registered in dead code still declares tests.
 
 A JS/TS table on `test` or `it` (`test.each`, `it.each`, `test.for`, with
 chained modifiers such as `test.concurrent.each`, in the call and the
@@ -743,7 +774,7 @@ detectors can only be disabled whole.
 |---|---|
 | `ASSERT_REMOVED` | an assertion disappeared from a surviving test unit |
 | `ASSERT_WEAKENED` | aligned assertion strength decreased, **or** its polarity flipped with the subject unchanged (`==`→`!=`, `is`→`is not`, `assertTrue`→`assertFalse`, `assertIs`→`assertIsNot`) — same form and strength, opposite meaning. Polarity is whether the assertion asserts its predicate or that predicate's negation, not whether it is spelled negated: `toBeDefined()` asserts `!== undefined`, the negation of `toBeUndefined()`. When the subject changed too it is reported as a rewrite, not as an inversion: greenwash cannot verify the replacement is equivalent, and saying "proves the opposite" would be a claim it has not established. When both assertions carry a predicate key (§3), the predicates decide instead of the lattice: a same or stronger predicate is not reported; the same key with its polarity flipped is the inversion above; a predicate change that no old value survives **contradicts** the old assertion, and a bound whose direction reversed (`<`→`>`) is reported as **bound direction reversed**; an old predicate that implies the new one is a **predicate widened**, graded by its lattice drop; any other predicate change is an **unverifiable replacement** (greenwash cannot verify the replacement is equivalent), and so is a known tolerance replaced, on the same subject, by one the frontend cannot read (a JS `closeTo` delta, `toBeCloseTo` precision or hand-rolled bound that the frontend cannot read, or that a write may have changed, is unknown, not unchanged; so is a Python tolerance call's pair that is torch's dtype default or comes through `*args` or `**kwargs`, #222). Only the inversion says the test proves the opposite. An operand change within one key belongs to `EXPECTED_VALUE_CHANGED` or `TOLERANCE_LOOSENED` |
-| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, a `pytestmark` its class or module binds in any spelling, under the name a decorator would mint (#260), a native skip or xfail the test body calls or raises (`pytest.skip`, `pytest.xfail`, `pytest.importorskip`, `self.skipTest`, `raise unittest.SkipTest`, `raise pytest.skip.Exception`), read through the module's imports, each object under one name (trial's `SkipTest` is unittest's, and the py library's `py.test` is pytest, #310), so `pt.skip()` and a bare `skip()` imported from pytest count, a raised one is a skip rather than removed assertions, and a skip respelled through another name of its object is not a new one (#220), or a conftest suite control, or a skip/xfail in the setup a unit runs (a requested or autouse fixture, in the test module or in a `conftest.py` above it, resolved as pytest resolves it for the test (#223); xunit setup): unconditional, or under the guard that setup reaches it under, judged as a body skip's guard is (#196 183.2); a conftest fixture's value names are closed over that conftest first, with the namespace and closure limits in D-127), or a skip/xfail that a helper the test or its setup calls ends in, either a same-file one (a function the module defines, one nested in the caller, or a name bound to a lambda or to `partial` of one, called by its plain name, at most four calls deep, as assertions are followed) or, since #272's second stage, one a top-level `from M import f` binds, followed into M when M is the test or conftest module an imported assertion helper resolves to, where only an outcome every call of it reaches is kept: read as a setup callback is, under the conditions its call and every call on the way run under, judged as a body skip's guard is, and reported as added to a helper this test calls (`helper.<function>.<effect>`, #272), or that a helper method the test or its setup calls through its instance ends in, resolved as §3 resolves it and read under the running class's attributes, reported the same way (`helper.<method>.<effect>`, #306), a later binding of the test's name that may replace it, under the condition that binding runs under and judged as a body skip's guard is (`collection.rebound`, §2b, #424), a whole test unit disappeared (including out of collection, per §2b; a later binding of its name that certainly replaces it is one, #424), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too when its expected value survives. Replacing disappeared live rows with new input/answer pairs has a separate EXPECTATION_DEFINITION_CHANGED owner below (THREATMODEL 102, 102a). Row marks include statically true skipif conditions; false and unknown conditions do not disable a row. In a JS/TS test file, a unit that focus (`.only`, `fit`, `fdescribe`, `{ only: true }`) stops is reported as no longer running, with the runner condition stated (node:test honours focus only under `--test-only` or `--test-isolation=none`; #196 187.1). Which units a focus stops follows the runner (187.2): Jest's rule, under which a focused block keeps the units inside it unless a unit placed directly beside them is focused, unless the file's imports or the base root `package.json` name only Vitest, Mocha, Jasmine or node:test, whose innermost rule applies: a focused block that holds a focused declaration keeps only that declaration. Focus that the diff adds to a file that had none, while no unit of the file is reported as no longer running, is reported once for the file: Mocha and Jasmine apply focus to the whole suite, so every test outside the file stops. It is not reported when the runner is proven to keep focus in the file, by a `vitest`, `@jest/globals` or `ava` import or a base-side root `package.json` naming Jest, Vitest or AVA and no other runner (AVA runs each file in a worker of its own, #233); a node:test import is no such proof (#196 187.4) |
+| `TEST_DISABLED` | skip/xfail marker added (on the function, its class, a `pytestmark` its class or module binds in any spelling, under the name a decorator would mint (#260), a native skip or xfail the test body calls or raises (`pytest.skip`, `pytest.xfail`, `pytest.importorskip`, `self.skipTest`, `raise unittest.SkipTest`, `raise pytest.skip.Exception`), read through the module's imports, each object under one name (trial's `SkipTest` is unittest's, and the py library's `py.test` is pytest, #310), so `pt.skip()` and a bare `skip()` imported from pytest count, a raised one is a skip rather than removed assertions, and a skip respelled through another name of its object is not a new one (#220), or a conftest suite control, or a skip/xfail in the setup a unit runs (a requested or autouse fixture, in the test module or in a `conftest.py` above it, resolved as pytest resolves it for the test (#223); xunit setup): unconditional, or under the guard that setup reaches it under, judged as a body skip's guard is (#196 183.2); a conftest fixture's value names are closed over that conftest first, with the namespace and closure limits in D-127), or a skip/xfail that a helper the test or its setup calls ends in, either a same-file one (a function the module defines, one nested in the caller, or a name bound to a lambda or to `partial` of one, called by its plain name, at most four calls deep, as assertions are followed) or, since #272's second stage, one a top-level `from M import f` binds, followed into M when M is the test or conftest module an imported assertion helper resolves to, where only an outcome every call of it reaches is kept: read as a setup callback is, under the conditions its call and every call on the way run under, judged as a body skip's guard is, and reported as added to a helper this test calls (`helper.<function>.<effect>`, #272), or that a helper method the test or its setup calls through its instance ends in, resolved as §3 resolves it and read under the running class's attributes, reported the same way (`helper.<method>.<effect>`, #306), a later binding of the test's name that may replace it, under the condition that binding runs under and judged as a body skip's guard is (`collection.rebound`, §2b, #424), a whole test unit disappeared (including out of collection, per §2b; a later binding of its name that certainly replaces it is one, #424, and so is a JS/TS test registered where §2b's walk proves no statement runs, #484, and so is a def or class moved under a branch that never runs, #499), or parametrized cases deleted or disabled — since v0.3.0 counted by row identity (cell texts read through `pytest.param(...)`, one table per decorator, stacked decorators a cross product of items), so a marked-off row is reported however many rows are appended beside it, and the finding says how many items are marks rather than deletions; a vanished unmarked row is left to the count (`vanished − arrived`), which is why an edited input stays silent and a deletion beside an appended row does too when its expected value survives. Replacing disappeared live rows with new input/answer pairs has a separate EXPECTATION_DEFINITION_CHANGED owner below (THREATMODEL 102, 102a). Row marks include statically true skipif conditions; false and unknown conditions do not disable a row. In a JS/TS test file, a unit that focus (`.only`, `fit`, `fdescribe`, `{ only: true }`) stops is reported as no longer running, with the runner condition stated (node:test honours focus only under `--test-only` or `--test-isolation=none`; #196 187.1). Which units a focus stops follows the runner (187.2): Jest's rule, under which a focused block keeps the units inside it unless a unit placed directly beside them is focused, unless the file's imports or the base root `package.json` name only Vitest, Mocha, Jasmine or node:test, whose innermost rule applies: a focused block that holds a focused declaration keeps only that declaration. Focus that the diff adds to a file that had none, while no unit of the file is reported as no longer running, is reported once for the file: Mocha and Jasmine apply focus to the whole suite, so every test outside the file stops. It is not reported when the runner is proven to keep focus in the file, by a `vitest`, `@jest/globals` or `ava` import or a base-side root `package.json` naming Jest, Vitest or AVA and no other runner (AVA runs each file in a worker of its own, #233); a node:test import is no such proof (#196 187.4) |
 | `TOLERANCE_LOOSENED` | any individual tolerance on the call got wider. Tolerances are compared as absolute bounds where a conversion is defined (places p -> 10^-p/2; numpy's decimal d -> 1.5x10^-d, #222), otherwise per kind, via Decimal: `abs`, unittest's `delta`, decimal places (`assertAlmostEqual`'s `places`, `toBeCloseTo`'s precision) and numpy's `decimal` each state an absolute bound, and `rel` or several tolerances at once are compared kind by kind (#196 190.3); two assertions aligned by span order alone are not compared when both halves moved, the subject and the expected literal alike, a substitution that `EXPECTED_VALUE_CHANGED` reports (#196 189.2). A negated approximate comparison (`assertNotAlmostEqual`, `!=` or `not` around `pytest.approx`, a negated tolerance call or JavaScript matcher) passes when the values are far apart, so its tolerance orders the other way: it records no tolerance and is not compared (#284) |
 | `SNAPSHOT_CODE_COCHANGE` | snapshot files and prod files changed in the same diff without test-logic change |
 | `ASSERT_SUBSTITUTED` | an aligned pair produced by the **order fallback** — position, not text or subject — where both halves moved: the subject differs structurally and so does the expectation. The old assertion is gone and a different one holds its slot, while `strength_change` reads 0 and `assertions_removed` is empty. Requires a subject on both sides, so folding an excinfo assert into `pytest.raises(match=)` is untouched; a *wrapped* subject is `SUBJECT_NORMALIZED`'s, and a rename that keeps the expectation is neither |
@@ -935,7 +966,7 @@ Matching is **path-segment anchored**, never substring. Bare substrings made
 `build/` match `mybuild/` and `dist/` match `redist/`, which silently deleted
 real source trees from the analysis and made a directory rename a bypass.
 
-A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration, and any file with no extension. The run also refuses in the same way when the analysis reads the path as context. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
+A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `--format json` prints then, and what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration. One bounded read answers the runner-shape question of §2 for an unread side: its first 200 bytes, the only bytes the shell-shebang test reads, kept from the working-tree read or streamed from Git and checked against the blob's object id. A side whose bytes start with a shell shebang makes its path runner-shaped, as §2 reads a shebang, whatever its suffix, and the refusal names that side; as in §2, a Python module or a JS/TS test path is never runner-shaped, and refuses by its own rule. A file with no extension no longer refuses for the shebang it may hold, except when a side's bytes were not read, as for a Git side over 64,000,000 bytes, which is not streamed; another rule above can still make it a path a detector must read. Those bytes answer nothing else: they reach no parser, no runner-content check and no repair evidence, and no output carries them. The run also refuses in the same way when the analysis reads the path as context; the runtime-provider pass does not read a dropped path for a shebang its bytes have ruled out. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note.
 
 ## 4c. The task contract is base-side too
 
@@ -969,7 +1000,7 @@ From a subdirectory (§9), the task path is mapped lexically: `--task` is taken 
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D5 `SAME_UNIT_REWRITE` (extended) | an `ASSERT_SUBSTITUTED` in a unit that also **deleted** an assertion and **wrote a new strong one** — the private-API-to-public-API rewrite cluster. Crediting the removal at warn while blocking the substitution at high described one edit two ways. A pure substitution removes nothing, so the shape this rule exists for is untouched | hold at warn |
 | D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED`, an `ASSERT_SUBSTITUTED` or an `EXPECTATION_DEFINITION_CHANGED` — those three only; `PACKAGE_REPAIR` (below) takes the first and the third — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and all three credited rules require unweakened strength (an `EXPECTATION_DEFINITION_CHANGED` assertion's text is unchanged) | hold at warn |
-| D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. A survivor is parsed with the conftest files above it at head, as a changed test module is (#223), so a skip in a conftest fixture it reaches counts as its own (#266). Not spent: one survivor covers any number of identical deletions, because it keeps running either way | → info |
+| D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. A survivor is parsed with the conftest files above it at head, as a changed test module is (#223), so a skip in a conftest fixture it reaches counts as its own (#266). Not spent: one survivor covers any number of identical deletions, because it keeps running either way. The search reads Python files only (`.py` paths, `def name(` needles), so no JS/TS unit is ever a survivor (#484) | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
 (`benchmarks/triage-2026-07-30.json`). D8–D10 came from the second
@@ -1149,10 +1180,10 @@ Except for the content-bound forms described below, fingerprint remains
 `sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
 prefixed `rule/path/qualname/` for readability. That legacy normalization
 strips whitespace outside string literals and preserves whitespace within
-them; line numbers are excluded. Since #421 this legacy form is the key of
-TEST_DISABLED, EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD,
-TEST_PATCHES_SUBJECT and the rules that are not oracle rules; for those,
-one approval still covers any after state of the same before text.
+them; line numbers are excluded. Since #421 and #512 this legacy form is the
+key of EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT
+and the rules that are not oracle rules; for those, one approval still covers
+any after state of the same before text.
 
 ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
 EXPECTED_VALUE_CHANGED (assertion level), EXPECTED_VALUE_DERIVED,
@@ -1195,6 +1226,61 @@ identity never raises: an input that cannot be read is null, and so is a
 context that cannot be encoded. A different after on
 the same before, another copy of the same assertion, or a different relevant
 context requires a different approval.
+
+TEST_DISABLED uses the same form since #512, `TEST_DISABLED/path/qualname/v2:<64hex>`,
+a focus a diff adds to a file under the qualname `<file>`, with the same
+scheme name and encoding. Its identity holds the legacy pre-image unchanged
+(the text the legacy key hashed: the marker's name, `guard:<marker>`,
+`parametrize`, a removed unit's own assertions in the legacy text form or
+its name when it has none, or the focus marker's name), the finding's
+`shape` as the event kind, no ordinal or count, and what that shape
+changed:
+
+- a marker added (`marker_added`, `collection_control`, and `inert_mark` for
+  a conftest's `pytestmark`): the marker's complete text as the after text,
+  and its recorded guard as the context, null when it has none, so where the
+  frontend records the guard, as the Python frontend does, a guarded skip
+  and an unguarded one of the same name are two approvals; a JS/TS
+  imperative skip (`ctx.skip()`, `t.skip()`, `this.skip()`) records none, so
+  for it they are one. Alignment records only the names of the markers it
+  leaves unpaired, so the markers a name added are read by content: each
+  base marker of that name cancels one head marker of that name with the
+  same text and guard, and the head markers left over, in the head side's
+  order, are the ones added. When there are as many of them as the name has
+  findings, each finding binds one of them, in that order. Otherwise (a
+  marker of that name also edited, one moved in from a helper, or one paired
+  with a marker of another name) each finding of the name binds, as the
+  context, every marker of the unit on both sides, each a name, text and
+  guard, each side sorted;
+- a guard made always true or removed (`guard_weakened`, or `inert_mark` in a
+  conftest): the guard before and the guard after as the before and after
+  texts, the after null when the guard was removed, so the two events are
+  two approvals, and as the context what every marker of that name ran
+  under on each side (its guard, or the first line of the `except` block it
+  sits in, null when neither), each side sorted, so removing one of two
+  guards of a name and removing the other are two approvals; a path gained
+  by an unguarded `collect_ignore` (THREATMODEL row 81), reported in the same
+  shape, has no guard on either side, so both texts are null and no path is
+  bound;
+- parametrized cases deleted or disabled (`param_cases_removed`): as the
+  context, the rows that ran before and are no longer written (an edited
+  row's old text among them) and the rows still written but newly disabled,
+  each a sorted list of rows, a row being its table's argnames and cell texts
+  (a JS/TS `.each`/`.for` table's included), and the live counts before and
+  after, so approving one row's deletion covers no other row; a side whose
+  rows cannot be read gives none, so for an unread base table only the
+  counts are bound;
+- a unit removed (`unit_removed`): the complete texts of its own assertions,
+  in its order, a JS/TS assertion with its expected value;
+- a focus added to a file (`marker_added`, file level): the focus as the
+  frontend records it, its callee as written (`describe.only`, `fdescribe`)
+  or its `only` option's text, as the after text; its title and arguments
+  are not bound.
+
+Texts are in the normal form above. The guard stays out of the marker
+identity that alignment pairs markers on (§2b), so pairing, move detection
+and the findings a diff gives are unchanged; only the key binds it (D-169,
+which amends D-019). SARIF labels these keys `checkwash/v2`.
 
 GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED, TEST_FILE_UNPARSEABLE, SCOPE_DRIFT,
 and SNAPSHOT_CODE_COCHANGE use content-bound v2 fingerprints. Their identity
@@ -1254,12 +1340,13 @@ after on the same before, or a different relevant event context, requires a
 different approval. An identical reviewed content pair can survive rebasing
 when its paths and relevant context are unchanged.
 
-Legacy keys in these five namespaces, and since #421 in the nine
-assertion-level namespaces above, are retired even if their expiry has
-not passed. They remain parsed records so ledger deletions/rewrites remain
-detectable, but are excluded from eligibility; the writer rejects new legacy
-keys, and `doctor` and `check` report them. An entry's rule label cannot
-disguise a retired fingerprint namespace.
+Legacy keys in these five namespaces, since #421 in the nine
+assertion-level namespaces above, and since #512 TEST_DISABLED's, are
+retired even if their expiry has not passed. They remain parsed records so
+ledger deletions/rewrites remain detectable, but are excluded from
+eligibility; the writer rejects new legacy keys, and `doctor` and `check`
+report them. An entry's rule label cannot disguise a retired fingerprint
+namespace.
 Other namespaces keep their existing matching compatibility. Old reasons do
 not contain enough evidence for automatic migration; re-review the intended
 diff and record its complete v2 identity. Expiry and base-side loading policy
@@ -1346,6 +1433,20 @@ optional `unread` key in the JSON payload (omitted when empty), a SARIF tool
 execution notification and a `!` line of the term report, whose head then
 reads "analysis incomplete" when there is no finding, allowlisted or not;
 `check --format hook-json` and `--emit-ir` do not name it (#454).
+
+A size refusal (§4b) names its side on stdout too, though the run still
+exits 2: under `--format json`, without `--emit-ir`, stdout is
+`{"unread": [<entry>]}`, one such entry for the side the refusal and its
+stderr line name, which is the base side when both sides of a change are
+over the limit, except where #455 names the side that holds the shebang.
+It is not a findings document: it carries no
+`checkwash_findings_version`, `findings` or `verdict`. Term,
+sarif and `--emit-ir` keep an empty stdout. So do a root manifest, config,
+exemption list or `--task` file over the limit at the base, which is
+refused before the analysis; with a range, a pytest configuration's
+symlink target over the limit that no detector must read, which is
+refused as it is read through the link (above); and every other engine
+error (#454).
 
 **Which directory a command reads (#416).** `check`, `sweep`, `allow`, `doctor` and the `quality` forms that read a repository (a range, the worktree review, `init`, `doctor`) first ask Git about `--repo` (default `.`) with `git -C <--repo> rev-parse --is-inside-work-tree --show-prefix`. If Git answers `true` with a non-empty prefix, a second query, `git -C <--repo> rev-parse --show-toplevel`, names the root. Its answer must decode as UTF-8, be a single line, be absolute and name an existing directory. The command then uses that root in place of `--repo` for every later Git call and working-tree read. A run from a subdirectory therefore analyses the whole repository. For `check`, `sweep`, `doctor` and the `quality` forms its stdout and exit code are those of the same run at the root; `allow` writes the root ledger and names it under Git's spelling of the root. This is not the behaviour of `git -C <subdirectory>`, under which `ls-tree` and `git grep` stay scoped to the subdirectory. The root is never `--repo` joined with `--show-cdup`.
 

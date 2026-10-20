@@ -165,9 +165,10 @@ def _git_error(exc: EngineError) -> GitError:
 
 
 def _read_blob(repo: str, rev: str, path: str, *, side: str | None = None,
-               unread_oversized: bool = False) -> bytes | UnreadSide | None:
+               unread_oversized: bool = False, stream_prefix: bool = True) -> bytes | UnreadSide | None:
     try:
-        return GitSnapshot(repo, rev, side=side).read(path, unread_oversized=unread_oversized)
+        return GitSnapshot(repo, rev, side=side).read(path, unread_oversized=unread_oversized,
+                                                      stream_prefix=stream_prefix)
     except EngineError as exc:
         raise _git_error(exc) from exc
 
@@ -360,7 +361,9 @@ def list_session_changes(repo: str, since: str) -> list[FileChange]:
     for path in committed:
         if path not in listed:
             # Clean in the working tree, so it holds HEAD's version or nothing.
-            items.append((path, _read_blob(repo, head, path, side="head", unread_oversized=True) is None))
+            # Only presence is asked, so no prefix is streamed (#455).
+            items.append((path, _read_blob(repo, head, path, side="head", unread_oversized=True,
+                                           stream_prefix=False) is None))
     return _worktree_changes(repo, since, sorted(items))
 
 

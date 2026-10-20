@@ -30,6 +30,25 @@ the path it runs on (ruling 424, 2026-10-14):
   Only when same-file C3 resolution proves that no collected class runs the
   method does it go as above (Q9 (a)).
 
+A def or class whose own statement never runs binds nothing, so pytest never
+collects it: it is no unit, and a class takes its units with it (#499, ruling
+R99, which follows #484's for JS/TS). It never runs when an arm on its path is
+one this reading decides dead, the arm a later binding in it would bind
+nothing from (Q6 (a)): the `if` or `else` arm a folded condition rules out,
+the body of a `while` whose condition folds to false and of a `for` over a
+constant-empty iterable, the cases of a `match` no case can meet, and the
+handlers of a `try` whose body cannot raise, as `_Walk.quiet` reads it. There
+a class whose body binds a dunder name may raise when it is created, and an
+annotated name, which stores into `__annotations__`, may raise in a module
+that binds, deletes or spells that name. A condition the folder cannot
+decide (`if os.environ.get("X"):`) leaves the def a live unit with no marker,
+a named residual, as #484's ruling leaves its JS/TS form. Two readings still
+take a dead class statement as its name's binding, as on main, both named
+residuals: `_Walk.resolve` gives a module-level `Cls.attr = ...`,
+`del Cls.attr`, `setattr` or `delattr` to the latest class statement of that
+name before it, dead or not, and Q9's `_Judge.current` resolves a subclass's
+base the same way.
+
 Not read, and named as residuals by THREATMODEL row 135: computed names,
 `exec`, star imports, `sys.modules` replacement, `global` in a function that
 runs at import, metaclasses, `__init_subclass__`, class decorators, wrappers
@@ -41,6 +60,7 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass, field, replace
+from functools import cached_property
 
 from checkwash.frontends.python.setup_skip_controls import _conjunction
 from checkwash.ir.astutil import dotted_name
@@ -62,7 +82,10 @@ _UNKNOWN = object()  # it may not run, under no condition D6 can read
 _NAMESPACES = {"globals", "vars", "locals"}
 _TRY = (ast.Try, ast.TryStar)
 _LOOPS = (ast.For, ast.AsyncFor, ast.While)
+# The compound statements with an arm `_Judge.entry` can read as dead (#499).
+_ARMED = (ast.If, *_LOOPS, *_TRY, ast.Match)
 _TYPE_ALIAS = getattr(ast, "TypeAlias", ())
+_ANNOTATIONS = "__annotations__"
 
 
 @dataclass
@@ -73,7 +96,8 @@ class Status:
     decoration markers its units carry. For a class, `gone` and `rebound` are
     what its own rebinding does to a unit collected through it that its body
     does not define (`inherited_test_methods`); its body's units carry that
-    already.
+    already. A def or class whose own statement never runs is `dropped`, and
+    such a class is `gone` too (#499).
     """
 
     dropped: bool = False
@@ -131,6 +155,53 @@ def _is_try_body(frame) -> bool:
 
 def _is_handler(arm) -> bool:
     return isinstance(arm, tuple) and arm[0] == "handler"
+
+
+def _binds_dunder(stmt: ast.stmt) -> bool:
+    """Does this class-body statement bind a dunder name?
+
+    Creating a class reads some of them from its namespace and raises on a
+    bad value (`__slots__ = 1`, `__qualname__ = 1`, `__classcell__ = 1`, or
+    `__slots__ = "a"` beside `a = 1`), so a body that binds one may raise
+    (#499).
+    """
+    if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        names = [stmt.name]
+    elif isinstance(stmt, ast.Assign):
+        names = [target.id for target in stmt.targets if isinstance(target, ast.Name)]
+    elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+        names = [stmt.target.id]
+    else:
+        return False
+    return any(len(name) > 4 and name.startswith("__") and name.endswith("__") for name in names)
+
+
+def _rebinds_annotations(tree: ast.Module) -> bool:
+    """May this module bind or delete an `__annotations__` (#499)?
+
+    Up to Python 3.13, and under `from __future__ import annotations`, an
+    annotated name at module or class level stores its annotation into
+    `__annotations__` once it has bound the name, so it raises when that is
+    None, deleted or another object: `__annotations__ = None`, then
+    `flag: "bool" = True`, raises TypeError. Read wide: a binding or deletion
+    of the name in any scope, an attribute store or deletion of it, and any
+    string that spells it (`globals()["__annotations__"]`, `setattr`).
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Name, ast.Attribute)):
+            name = node.id if isinstance(node, ast.Name) else node.attr
+            if name == _ANNOTATIONS and not isinstance(node.ctx, ast.Load):
+                return True
+        elif isinstance(node, ast.Constant):
+            if _literal(node) == _ANNOTATIONS:
+                return True
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            if _ANNOTATIONS in node.names:
+                return True
+        elif _ANNOTATIONS in (getattr(node, attr, None) for attr in ("name", "asname", "rest", "arg")):
+            # A def, class, import, `except ... as`, match capture, keyword or parameter.
+            return True
+    return False
 
 
 def _chain(value: ast.AST) -> tuple[tuple[ast.AST, ...], ast.AST]:
@@ -234,6 +305,7 @@ class _Walk:
     def __init__(self, tree: ast.Module, reader: Reader, expressions: bool) -> None:
         self.reader = reader
         self.expressions = expressions
+        self.tree = tree
         self.module = _Scope(tree)
         self.classes: dict[int, _Scope] = {}
         self.attributes: list[tuple[list[str], str, _Event]] = []
@@ -246,9 +318,16 @@ class _Walk:
 
     # -- what may raise -----------------------------------------------------
 
+    @cached_property
+    def annotations_rebound(self) -> bool:
+        """May an annotated name here store into a rebound `__annotations__`?
+        Read once, and only when `quiet` meets an annotated name."""
+        return _rebinds_annotations(self.tree)
+
     def quiet(self, stmt: ast.stmt) -> bool:
         """Can this statement never raise? Strict: a handler's def is exclusive with a
-        try-body def only when nothing after the latter can raise (Q6)."""
+        try-body def only when nothing after the latter can raise (Q6), and a
+        try's handlers are dead only when nothing in its body can (#499)."""
         if isinstance(stmt, ast.Pass):
             return True
         if isinstance(stmt, ast.Expr):
@@ -266,17 +345,21 @@ class _Walk:
             notes = [stmt.returns, *(arg.annotation for arg in every if arg is not None)]
             return all(note is None or isinstance(note, ast.Constant) for note in notes)
         if isinstance(stmt, ast.ClassDef):
+            # Creating the class may raise on a dunder name its body binds.
             return (
                 not (stmt.decorator_list or stmt.bases or stmt.keywords or getattr(stmt, "type_params", None))
-                and all(self.quiet(inner) for inner in stmt.body)
+                and all(self.quiet(inner) and not _binds_dunder(inner) for inner in stmt.body)
             )
         if isinstance(stmt, ast.Assign):
             return isinstance(stmt.value, ast.Constant) and all(isinstance(t, ast.Name) for t in stmt.targets)
         if isinstance(stmt, ast.AnnAssign):
+            # The annotation is stored into `__annotations__`, which raises
+            # in a module that may rebind or delete it (#499).
             return (
                 isinstance(stmt.target, ast.Name)
                 and (stmt.value is None or isinstance(stmt.value, ast.Constant))
                 and (self.lazy or isinstance(stmt.annotation, ast.Constant))
+                and not self.annotations_rebound
             )
         return False
 
@@ -653,6 +736,37 @@ class _Judge:
 
     # -- one def or class -----------------------------------------------------
 
+    def never_runs(self, d: _Event) -> bool:
+        """Is an arm on this def's or class's own path dead (#499)?
+
+        The arms are the ones `entry` reads as _DEAD, where a later binding
+        binds nothing (Q6 (a)), so one folder decides both what a binding
+        does to a def and whether the def itself ever runs.
+        """
+        return any(isinstance(frame[0], _ARMED) and self.entry(frame, False, d) is _DEAD for frame in d.path)
+
+    def drop_dead(self) -> set[int]:
+        """The defs and classes whose own statement never runs: no unit (#499).
+
+        A class takes its units with it: each def and class in its body has
+        the dead arm on its path too, and the frontend collects nothing in a
+        dropped class. It is `gone` as well, so it is no collected subclass
+        that still runs a rebound base's method (Q9).
+        """
+        dead: set[int] = set()
+        for scope in (self.walk.module, *self.walk.classes.values()):
+            for events in scope.events.values():
+                for d in events:
+                    if d.kind != DEF or id(d.node) in dead or not self.never_runs(d):
+                        continue
+                    dead.add(id(d.node))
+                    status = self.status.setdefault(id(d.node), Status())
+                    status.dropped = True
+                    if isinstance(d.node, ast.ClassDef):
+                        status.gone = True
+                        self.gone.add(id(d.node))
+        return dead
+
     def survives(self, scope: _Scope, name: str, bound: _Event) -> bool:
         """Does no later binding certainly replace this binding of `name`?"""
         return not any(
@@ -690,12 +804,15 @@ class _Judge:
         return False, rebound, marks, captured
 
     def run(self) -> dict[int, Status]:
+        # A def or class that never runs is no unit whatever binds its name
+        # later, so it is not judged as one that a later binding replaces.
+        dead = self.drop_dead()
         for scope in (self.walk.module, *self.walk.classes.values()):
             for name, events in scope.events.items():
                 if len(events) < 2:
                     continue
                 for d in events:
-                    if d.kind != DEF:
+                    if d.kind != DEF or id(d.node) in dead:
                         continue
                     gone, rebound, marks, captured = self.judge(scope, name, d)
                     status = self.status.setdefault(id(d.node), Status())
@@ -860,7 +977,8 @@ class _Judge:
 
 
 def final_bindings(tree: ast.Module, reader: Reader, *, expressions: bool) -> dict[int, Status]:
-    """id(def or class node) -> what its later bindings do to it, for those they change.
+    """id(def or class node) -> what its later bindings do to it, for those they change,
+    and the defs and classes that never run (#499).
 
     `expressions` reads walrus targets and literal-name `setattr`, `delattr`
     and namespace calls inside expressions; a module that spells none of
@@ -872,6 +990,13 @@ def final_bindings(tree: ast.Module, reader: Reader, *, expressions: bool) -> di
         if scope is not None:
             scope.add(attribute, event)
             scope.external = True
-    if not any(len(events) > 1 for scope in (walk.module, *walk.classes.values()) for events in scope.events.values()):
+    scopes = (walk.module, *walk.classes.values())
+    rebinds = any(len(events) > 1 for scope in scopes for events in scope.events.values())
+    # Only a def or class under an arm can be under a dead one.
+    armed = any(
+        e.kind == DEF and any(isinstance(frame[0], _ARMED) for frame in e.path)
+        for scope in scopes for events in scope.events.values() for e in events
+    )
+    if not (rebinds or armed):
         return {}
     return _Judge(walk, reader, tree).run()

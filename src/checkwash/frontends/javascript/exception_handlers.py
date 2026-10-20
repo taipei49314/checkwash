@@ -48,7 +48,8 @@ class HandlerReader:
         self.tokens = bindings.tokens
         self.pairs = bindings.pairs
         boundaries = {index for index, scope in enumerate(bindings.scopes) if scope.function}
-        # A TS return annotation can hide an arrow from the bounded binder.
+        # A TS return annotation can hide an arrow from the bounded binder,
+        # which reads a simple one only where an arrow can start (#480).
         for index, (token, _start, _end) in enumerate(self.tokens):
             if token == "=>" and bindings.token(index + 1) == "{":
                 scope = bindings.body_scopes.get(index + 1)
