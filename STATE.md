@@ -1,6 +1,21 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-16 (v0.8.0 published and verified; sweeps running on LAPTOP-01AGNPJU)
+Updated: 2026-10-21 (v0.9.0 candidate preparation; v0.8.0 remains the verified public release)
+
+## 2026-10-21: v0.9.0 candidate preparation
+
+The maintainer delegated this session's planning and execution through
+v0.9.0 publication, then explicitly authorized necessary local Docker
+verification. [RELEASING](docs/RELEASING.md#v090-session-publication-authorization-2026-10-21)
+records his words and scope.
+
+The candidate starts from main `641efdec1a17cbb3c7291491b5db90a1fb469d22`.
+This preparation changes version metadata and records authorization.
+The #428 selection, combined acceptance sweep, pre-tag fixed-corpus
+comparison, final release guide and exact candidate qualification are
+not complete. No v0.9.0 tag, Release or public artifact is claimed here.
+The public CLI, README install commands and Action recommendation remain
+at verified v0.8.0. Earlier dated entries below remain historical records.
 
 ## 2026-10-16: v0.8.0 published and verified
 
@@ -2753,7 +2768,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.8.0 |
+| version | v0.9.0 |
 | last published CLI | v0.8.0 |
 | last published CLI commit | f02b5d8a07fa39ee1898881f66c571eb164cb11c |
 | detectors | 22 |

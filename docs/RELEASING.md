@@ -204,6 +204,44 @@ changes only through the maintainer.
 The v0.7.0 entry below, the grants under "The release slot", `STATE.md` and
 `docs/releases/` describe the ruleset as it was then and stay unchanged.
 
+## v0.9.0 session publication authorization (2026-10-21)
+
+In Codex session `01a15963-80bd-7053-95a2-ad67abb88fd1`, the maintainer
+Nelson instructed:
+
+> 這個session你有完整授權 完整計畫權 只設定這個session 發布0.9.0
+
+After hosted LAB test jobs did not start because of GitHub billing, he
+said 「job可以跑pool吧」. He then paused to clarify local Docker permission
+and explicitly resumed:
+
+> 繼續，用本機 Docker 跑必要驗證，一路做到 0.9.0 發布。
+
+This is the one-time, session-scoped authorization for v0.9.0 preparation,
+necessary validation and repairs, normal checked PR integration, one
+annotated public tag, GitHub Release, publication verification and the
+follow-up that advertises the verified version. Necessary Linux tests,
+builds, qualification and fixed-corpus comparison may run in local Docker
+on LAPTOP-01AGNPJU for this release; native Windows tests use the EC pool.
+This explicit instruction supersedes the pool-only location in the
+general pre-tag comparison procedure for this session's work. It does not
+edit standing EC policy or grant another version.
+
+The executor records each actual source, runtime, command and outcome.
+Local Docker evidence remains local Docker evidence, and does not stand
+for native Windows/macOS coverage, a GitHub event or a required check.
+Missing and failed evidence is preserved. The fixed-corpus comparison
+and its source review are not waived. Delegated review identifies the
+actual agent reviewer; it does not assert that the maintainer personally
+read results that have not been presented to him.
+The existing required checks and real `pypi` environment approval remain.
+
+The candidate starts from main `641efdec1a17cbb3c7291491b5db90a1fb469d22`,
+with v0.8.0 as the previous published release and verdict baseline.
+Selection, acceptance results, the pre-tag comparison, final qualification,
+exact release commit, tag and public bytes will be recorded as they occur.
+This entry is authorization and preparation, not a success receipt.
+
 ## v0.8.0 one-time publication authorization (2026-10-15)
 
 On 2026-10-15 the maintainer instructed **「這版要先發了」** (release this
