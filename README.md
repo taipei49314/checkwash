@@ -187,11 +187,12 @@ a Git side over 64,000,000 bytes is not streamed, so its first bytes are not
 known: a file with no extension still stops the run when one of its Git sides
 is that large, and a suffixed file whose shebang is only on such a side is
 still set aside.
-From the next minor (unreleased), `--format json` then prints
-`{"unread": [...]}` on stdout instead of nothing: one `unread` entry, for
-the side the run refused. It is not a findings document, and term and SARIF
-output stay empty. With a range, json output stays empty too when that file
-is a symlinked pytest configuration's target that no detector must read.
+When a file that large stops the run, from the next minor (unreleased)
+`--format json` prints `{"unread": [...]}` on stdout instead of nothing: one
+`unread` entry, for the side the run refused. It is not a findings document,
+and term and SARIF output stay empty. With a range, json output stays empty
+too when the refused file is a symlinked pytest configuration's target that
+no detector must read.
 Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
 aside like a production source unless it is a Python module, a pytest
 configuration, a CI file, a runner script or a file with no extension whose
