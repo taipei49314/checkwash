@@ -30,9 +30,12 @@ TODAY = datetime.date(2026, 1, 1)
 
 # Measured ~0.2s and ~0.7s on the dev laptop after the O(1) source-segment
 # and symbol-fingerprint fixes; budgets leave headroom for loaded CI without
-# letting an order-of-magnitude regression back in.
-BUDGET_LARGE_DIFF_S = 1.0  # 3000-line test diff
-BUDGET_MANY_FILES_S = 2.5  # 500 changed files
+# letting an order-of-magnitude regression back in. Widened from 1.0 s and
+# 2.5 s by maintainer decision on 2026-10-20, after the hosted runners had
+# measured medians of 1.01 s and 3.08 s inside `pytest -n 2` (DECISIONS.md
+# D-170).
+BUDGET_LARGE_DIFF_S = 1.5  # 3000-line test diff
+BUDGET_MANY_FILES_S = 3.5  # 500 changed files
 
 # Maintainer decision 2026-10-01: the two budget checks are skipped on macOS
 # until the budgets are revisited. That day four pull-request runs missed the
