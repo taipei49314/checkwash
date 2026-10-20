@@ -15997,7 +15997,8 @@ reading 2.
   read-time guard (`_guard_unread_reads`, `engine.py:377`) is unchanged, so
   any other reader that reaches a set-aside path still refuses.
 
-**Readings where the ruling is silent,** for the owner's approval:
+**Readings where the ruling is silent**; the owner approved each as
+written (below):
 1. The ceiling is per side: a Git side over 64,000,000 bytes, the
    candidate (b1) names, keeps no prefix and today's answer. It is not a
    total per tree. A total would let other oversized sides the same commit
@@ -16122,9 +16123,10 @@ product code ran; every expected result was traced by reading the code, and
 this PR's CI is the first run.
 
 D-164 to D-169 were assigned to the pull requests of the fourth wave,
-prepared in parallel; this entry is D-164, placed after D-163. The agent
-wrote it in #455's fix PR; its wording, readings 1 to 5 and the Rule 2 item
-await the owner's approval.
+prepared in parallel. When integration batch 4 merged, all of them were
+on main, in number order after D-163. This entry is D-164. The agent
+wrote it in #455's fix PR; the owner approved its wording, readings 1 to
+5 and the Rule 2 item in round 6 (below).
 
 ## D-165 (2026-10-19): a JS/TS test registered where no code runs is no unit (#484)
 
@@ -16138,7 +16140,8 @@ sweep's manifest is frozen, gets its own pair of arms in that sweep), R99
 (#499 follows this ruling), R100 (this PR's THREATMODEL row lists the
 Python form as open, and that half is Closed when #499's fix merges) and
 R101 (#499 is P2 and lands in the same round, v0.9.0). D-164 to D-169 were
-assigned to six pull requests prepared in parallel; this entry is D-165.
+assigned to six pull requests prepared in parallel. When integration
+batch 4 merged, all of them were on main. This entry is D-165.
 
 #484 reports that `parse_javascript` read every declaration
 `_DECLARATION_RE` finds as live. A unit's liveness came from its modifiers,
@@ -16237,15 +16240,18 @@ Implementation, lines at this PR:
   form open as #499), and a clause on row 9 for its `if (false)` absorber;
   the eleven blocking fixtures cite row 159, and the two absorber fixtures
   row 9 as well. `benchmarks/FAILURES.md` is edited by hand to what
-  `make_failures.py` would write, which was not run. Row 159 is renumbered
-  mechanically if it collides at merge (A98).
+  `make_failures.py` would write, which was not run. When integration
+  batch 4 merged, row 159 kept its number and #480's row, which had taken
+  the same number, became row 160 (A98); #499's merge in that batch made
+  row 159 Closed for its Python half as well (R100, D-166).
 - Docs: `docs/js-reachability.md` gains a section on registrations and
   follows the amended readings 7 and 10, and `docs/KNOWN-ISSUES-next.md`
   gains a #484 row, with the #429 row's "outside this change" sentence
   replaced. The dead `t.skip()` residual (D-148 reading 9) is unchanged
   and stays listed.
 
-Readings the ruling leaves to the implementation, for the owner's approval:
+Readings the ruling leaves to the implementation; the owner approved each
+as written (below):
 
 1. **A test callback that registers subtests** is one whose body holds the
    start of a declaration the frontend reads as a named test or a block:
@@ -16353,14 +16359,14 @@ the moved #429 cuts and the #490 cost named above.
 Evidence status: prepared on a work machine where no pytest, checkwash or
 product code ran; CI runs the tests. Added: nineteen `.gwcase` fixtures
 (eleven pinning row 159, two of them row 9 as well; five controls; two
-named residual pins; one new reading), whose labels await the owner's
-approval, and 80 collected items in
+named residual pins; one new reading), whose labels the owner approved
+(below), and 80 collected items in
 `tests/test_issue484_js_dead_registration.py`, counted from its
 parametrize lists. By reading, the documented test count becomes 20356
 (20257 + 80 + 19); CI's collection checks it.
 
-The agent wrote this entry in #484's fix PR. Its wording, the readings
-above and the fixtures' labels await the owner's approval.
+The agent wrote this entry in #484's fix PR. The owner approved its
+wording, the readings above and the fixtures' labels in round 6 (below).
 
 ## D-166 (2026-10-19): a Python def or class whose own statement never runs is no unit (#499)
 
@@ -16410,7 +16416,8 @@ at this PR):
   (`engine.py:1699-1738`), so a dead def earns none of them.
 - Q4, pins: below.
 
-**Readings where the ruling is silent**, for the owner's approval:
+**Readings where the ruling is silent**; the owner approved each as
+written (below):
 
 1. The arms are every arm `entry` reads as `_DEAD`, so besides the shapes
    #499 names they include the `else` of an `if` whose condition folds to
@@ -16469,13 +16476,17 @@ at this PR):
 3. In a file that keeps two defs of one name, a dead one takes no
    `name#N` place, so the units after it can be renumbered (below).
 
-**R100, THREATMODEL.** #484's fix PR adds a row for a test registered in
-code that never runs, and lists this Python form as open in it. That half
-becomes Closed with this fix, which merges after #484's. This PR's base
-does not hold the row, so the PR does not edit `THREATMODEL.md`: the edit,
-worded in the PR body for the owner's approval, is applied at merge,
-together with the `bypass:` labels of the ten positives below and the
-matching edit of `benchmarks/FAILURES.md`.
+**R100, THREATMODEL.** #484's fix PR added a row for a test registered in
+code that never runs, row 159, and listed this Python form as open in it.
+That half became Closed with this fix, which merged after #484's, in
+integration batch 4. This PR's base did not hold the row, so the PR did
+not edit `THREATMODEL.md`: the edit, worded in the PR body and approved
+by the owner in round 6 (below), was applied at that merge (02c5b34f),
+together with `bypass: 159` on the ten positives below and the matching
+edit of `benchmarks/FAILURES.md`, where row 159 moved from "Closed in
+part" to "Closed". The same merge gave row 9 its Python clause and
+`dead_def_pasted_copy_no_move_credit_pos` `bypass: 9` as well (F15,
+below).
 
 **Residuals**, which keep main's reading: a def under a condition the
 folder cannot decide (`if os.environ.get("X"):`, `if TYPE_CHECKING:`), a
@@ -16537,8 +16548,9 @@ Sources built at run time are not all covered by the scan; this PR's CI
 is the check, and if an existing expectation moves, the round stops and
 asks the owner.
 
-**Tests.** Sixteen new `.gwcase` fixtures, whose labels are listed for the
-owner. Positives, `TEST_DISABLED` high with `NO_PROD_CHANGE_IN_DIFF`:
+**Tests.** Sixteen new `.gwcase` fixtures, whose labels the owner
+approved (below). Positives, `TEST_DISABLED` high with
+`NO_PROD_CHANGE_IN_DIFF`:
 `dead_def_if_false_pos` (the issue's reproduction),
 `dead_def_method_if_false_pos`, `dead_def_class_if_false_pos` (two
 units), `dead_def_if_not_true_pos`, `dead_def_if_compare_pos`,
@@ -16556,10 +16568,11 @@ creates a class with `__slots__ = 1`, and
 `dead_def_handler_of_raising_annotation_pos`, the same in the handler of
 a `try` whose body sets `__annotations__ = None` and then annotates a
 name. Each `TEST_DISABLED` positive keeps
-a live test beside the dead one. Not one fixture carries
-`bypass:` in this PR (R100, above). `tests/test_issue499_dead_defs.py`
-adds 38 collected items, counted from its parametrize lists: 13 dead arms
-and an async def, 11 live or undecided arms (one a handler whose
+a live test beside the dead one. No fixture carried `bypass:` in this PR;
+the ten positives gained it at merge (R100, above).
+`tests/test_issue499_dead_defs.py` adds 38 collected items, counted from
+its parametrize lists: 13 dead arms and an async def, 11 live or
+undecided arms (one a handler whose
 annotated name may raise because `__annotations__` is rebound before the
 `try`), 3 class-body arms, 2 dead
 classes, two pins on what a dead def binds (an earlier def keeps its unit,
@@ -16593,8 +16606,9 @@ Evidence status: prepared on a work machine where no pytest, checkwash or
 product code ran; every expected result was traced by reading the code,
 and this PR's CI is the first run.
 
-The agent wrote this entry in #499's fix PR. Its wording, readings 1 to 3,
-the fixture labels and the THREATMODEL edit await the owner's approval.
+The agent wrote this entry in #499's fix PR. The owner approved its
+wording, readings 1 to 3, the fixture labels and the THREATMODEL edit in
+round 6 (below).
 
 ## D-167 (2026-10-19): an arrow test callback's simple return annotation no longer hides its parameters (#480)
 
@@ -16613,7 +16627,8 @@ list of 2026-10-19 (「PR 核可清單全部照建議」; this reply too was a b
 whose text the assistant wrote) settled that in R1's favour, so this fix
 merges before the freeze and R95 keeps the priority and the
 docs' form. D-164 to D-169 were assigned to the pull requests of the
-fourth wave; this entry is D-167.
+fourth wave. When integration batch 4 merged, all of them were on main.
+This entry is D-167.
 
 #480 reports that an arrow test callback with a TypeScript return
 annotation, `(ctx): void =>`, is still a test unit, but the binder took
@@ -16662,8 +16677,8 @@ Implementation, lines at this PR:
   the catch reader (`exception_handlers.py:50-57`) and module mocks
   (`_annotated_bodies`). Their comments now say what the binder reads.
 
-Readings the ruling leaves to the implementation, for the owner's
-approval:
+Readings the ruling leaves to the implementation; the owner approved each
+as written (below):
 
 1. **The guard reaches `=` and `=>`, not only `:`.** The ruling names one
    accepted position that still misreads, the inner `:` of a nested
@@ -16796,8 +16811,8 @@ callback whose first parameter the binder leaves undeclared, so Q3 adds no
 candidate to any existing expectation. If CI shows an existing expectation
 moving, the round stops and asks the owner.
 
-**Tests.** Five new `.gwcase` fixtures pin row 160; their labels await the
-owner's approval: `js_node_context_annotated_arrow_weakened_pos` (N1),
+**Tests.** Five new `.gwcase` fixtures pin row 160, with labels the owner
+approved (below): `js_node_context_annotated_arrow_weakened_pos` (N1),
 `js_node_context_annotated_arrow_deleted_pos` (N12),
 `js_node_context_annotated_arrow_expected_rewrite_pos` (N2 with N14's
 edit), `js_ava_annotated_arrow_weakened_pos` (N16) and
@@ -16824,9 +16839,10 @@ Evidence status: prepared on a work machine where no pytest, checkwash or
 product code ran; every expected result was traced by reading the code,
 and this PR's CI is the first run.
 
-When #480 closes is not ruled; that is the owner's. The agent wrote this
-entry in #480's fix PR. It awaits the owner's approval of its wording, of
-readings 1 to 5 and of the five fixtures' labels.
+#480 closes once the combined sweep's before/after pair is read (round 6,
+F39, below). The agent wrote this entry in #480's fix PR. The owner
+approved its wording, readings 1 to 5 and the five fixtures' labels in
+round 6 (below).
 
 ## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
 
@@ -16846,7 +16862,8 @@ exit-2 run reuses this issue's `unread` entry to say explicitly that the
 change was not analysed (UNKNOWN)", the three pins below may change to the
 new output, and any other expectation that moves stops the round. D-164 to
 D-169 were assigned to the pull requests of this round, prepared in
-parallel; this entry is D-168.
+parallel. When integration batch 4 merged, all of them were on main. This
+entry is D-168.
 
 A changed path a detector must read, or a file the analysis reads as
 context, refuses the run when a side is over the 1,000,000-byte source limit
@@ -16876,7 +16893,8 @@ Implementation (lines at this PR):
   no block can, where an empty stdout used to fail to parse (Contract,
   below).
 
-**Readings where the ruling is silent**, for the owner's approval:
+**Readings where the ruling is silent**; the owner approved each as
+written (below):
 
 1. **Formats.** Only `--format json`. The ruling reuses "the question 3
    entry", which is the findings JSON's `unread` entry. Term and sarif keep
@@ -16947,9 +16965,9 @@ on a size refusal they would raise `KeyError` where they recorded an
 engine error. Each now records exit 2, or a parsed document without
 `verdict`, as an engine error, as it did unparsable stdout
 (`benchmarks/compare/run.py:36`, `benchmarks/decoy/harvest.py:123`; round-6
-item F11, prepared before the owner's answer). CI never reaches either
-read: `tests/test_compare_harness.py` stops `run.py` at its argument
-checks. Outside this repository, by
+item F11, prepared before the owner's answer, which approved it). CI never
+reaches either read: `tests/test_compare_harness.py` stops `run.py` at its
+argument checks. Outside this repository, by
 reading checkwash-lab's combined-sweep harness at `6c8adef5`: exit 2 is
 `PRODUCT_ERROR_EXIT` whatever stdout holds
 (`workloads/acceptance_sweep/common.py:560`), but a pair counts rows whose
@@ -16993,8 +17011,8 @@ product code ran; every expected result was traced by reading the code, and
 this PR's CI is the first run.
 `NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour above is read from source; no test, checkwash run or sweep was run`.
 
-The agent wrote this entry in #454's pull request for (d). Its wording, and
-readings 1 to 5, await the owner's approval.
+The agent wrote this entry in #454's pull request for (d). The owner
+approved its wording and readings 1 to 5 in round 6 (below).
 
 ## D-169 (2026-10-19): TEST_DISABLED exemptions are content-bound, amending D-019 (#512)
 
@@ -17010,7 +17028,8 @@ list, all as recommended"; the reply was a button whose text the assistant
 wrote) had made this round of #421 its own P1 issue in the frozen list,
 kept it in the same minor as round 1 (D-146), and put #421's missing JS
 sibling test in this PR. D-164 to D-168 are the entries of the same round's
-other pull requests (#455, #484, #499, #480 and #454's (d)).
+other pull requests (#455, #484, #499, #480 and #454's (d)). When
+integration batch 4 merged, all six were on main.
 
 #512 reports that TEST_DISABLED kept the legacy key, and an exemption
 matches the whole key. A marker added was keyed by the marker's name, which
@@ -17272,11 +17291,12 @@ run. `NOT_RUN：工作機規則（POLICY work-machine-local），the tests and t
 - The documented test count is 20165 (20126 on integration batch 3,
   before this PR merged in integration batch 4, + 39).
 
-The agent wrote this entry in #512's fix PR. It is a draft for the
-owner's approval of its wording. Readings 1, 2 and 6, the residuals and the
+The agent wrote this entry in #512's fix PR as a draft for the owner's
+approval of its wording. Readings 1, 2 and 6, the residuals and the
 tests were revised after a second review of the PR found that several
 markers of one name were keyed on one of them and that a JS/TS imperative
 skip records no guard. A third review then found that reading 6 described
 a set where the detector subtracts multisets, and that the evidence can
 show another marker than the key binds; reading 6 and the residuals were
-revised again.
+revised again. The owner approved the wording as it then stood in round
+6 (below).
