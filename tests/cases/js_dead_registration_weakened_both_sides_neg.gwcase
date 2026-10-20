@@ -1,0 +1,37 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 484
+title: an assertion weakened in a test registered under `if (false)` on both sides is not judged
+origin: issue #484, ruling Q3 new reading; code that never runs is not judged (main reports ASSERT_WEAKENED here)
+=== before: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  if (false) {
+    it("adds", () => {
+      expect(total([1, 2])).toBe(3);
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== after: tests/total.test.ts ===
+import { describe, expect, it } from "vitest";
+import { total } from "../src/total";
+
+describe("total", () => {
+  if (false) {
+    it("adds", () => {
+      expect(total([1, 2])).toBeTruthy();
+    });
+  }
+
+  it("is zero when empty", () => {
+    expect(total([])).toBe(0);
+  });
+});
+=== expect ===
+[]

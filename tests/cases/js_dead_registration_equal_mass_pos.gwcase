@@ -1,0 +1,32 @@
+=== meta ===
+bypass: 159
+rule: TEST_DISABLED
+issue: 484
+title: a deleted test beside a new test of equal oracle mass registered under `if (false)` is not restructured
+origin: issue #484, ruling Q2 and Q3 blocking 10; a dead registration adds no oracle mass to D5 and no split/rename budget
+=== before: tests/math.test.ts ===
+import { expect, it } from "vitest";
+import { sum, total } from "../src/math";
+
+it("adds", () => {
+  expect(total([1, 2])).toBe(3);
+});
+
+it("is zero when empty", () => {
+  expect(total([])).toBe(0);
+});
+=== after: tests/math.test.ts ===
+import { expect, it } from "vitest";
+import { sum, total } from "../src/math";
+
+it("is zero when empty", () => {
+  expect(total([])).toBe(0);
+});
+
+if (false) {
+  it("sums two numbers", () => {
+    expect(sum(1, 2)).toBe(3);
+  });
+}
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds"}]
