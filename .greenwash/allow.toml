@@ -566,3 +566,27 @@ reason = "PR #543 (D-170): the perf gate's budgets widen, BUDGET_MANY_FILES_S 2.
 author = "taipei49314"
 created = "2026-10-20"
 expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue261_suite_guard_removed.py/test_a_guard_moved_where_the_hook_reading_does_not_look_reads_as_removed/v2:69e272688e3a1359e993ea61a35c5cd214041234ecc6fc6299bc42b2ec8055c9"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #537 (#512, round 2 of #421): findings of one unit sort by key (Finding.sort_key), and content-bound TEST_DISABLED keys (#512 Q2) do not sort as the legacy keys did, so this pin compares the same messages in either order; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds, the follow-up entry #542's legacy entry for this pin called for: printed by dogfood on integration batch 4 (#544, head 3e3368af) over current base 35fd9df9 and recorded under the owner's 2026-10-20 approval to record such keys as CI prints them"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue261_suite_guard_removed.py/test_a_removed_guard_is_reported_for_every_suite_level_control/v2:bc6a313e7ea6f92cd4e21fab3a7de079865a480d6821024bc75635aa89cbe277"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #537 (#512, round 2 of #421): this pin compared the findings' legacy TEST_DISABLED keys in order; the keys are now content-bound v2 keys (#512 Q2) and legacy ones are retired (Q3), so it checks each finding's message with the legacy key its v2 key refines, in either order, because findings of one unit sort by key; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds, the follow-up entry #542's legacy entry for this pin called for: printed by dogfood on integration batch 4 (#544, head 3e3368af) over current base 35fd9df9 and recorded under the owner's 2026-10-20 approval to record such keys as CI prints them"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue261_suite_guard_removed.py/test_a_removed_guard_is_reported_for_every_suite_level_control/v2:6897d5b7c451504cfa8a268b61ce5c1cebdf544774fe5f77eac7d14a8e1b2e5b"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #537 (#512, round 2 of #421): findings of one unit sort by key (Finding.sort_key), and content-bound TEST_DISABLED keys (#512 Q2) do not sort as the legacy keys did, so this pin compares the same message, severity, shape and escalators in either order; owner-approved as round-5 item E2 (pins that change only because of #512 Q2 and Q3) and in round-6 G1 on 2026-10-20; v2 key for the engine #537 builds, the follow-up entry #542's legacy entry for this pin called for: printed by dogfood on integration batch 4 (#544, head 3e3368af) over current base 35fd9df9 and recorded under the owner's 2026-10-20 approval to record such keys as CI prints them"
+author = "taipei49314"
+created = "2026-10-20"
+expires = "2026-11-19"
