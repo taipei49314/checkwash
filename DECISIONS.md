@@ -16596,6 +16596,238 @@ and this PR's CI is the first run.
 The agent wrote this entry in #499's fix PR. Its wording, readings 1 to 3,
 the fixture labels and the THREATMODEL edit await the owner's approval.
 
+## D-167 (2026-10-19): an arrow test callback's simple return annotation no longer hides its parameters (#480)
+
+Ruling 480 (owner, 2026-10-18, 「19 項全部照建議做（價值判斷的題也照你的傾向）」,
+"all as recommended, value judgements included", in reply to the agent's
+recommendation list; #480 issuecomment-6248630129 states each decision in
+full): Q1 A, in the binder, with a narrowed step-back; Q2, the simple set
+only; Q3, yes; Q4, the file's runner, for visibility only; Q5, a docs-only
+PR first, which #521 was. The consolidated ruling of 2026-10-19
+(「裁決總表全部照建議」, #480 issuecomment-6261651041) set #480 to P2 (R95)
+and amended the released known-issues page (R34, R85); the reply was a
+button whose text the assistant wrote. R1 (#419) lists
+#480 among the ruled fixes that merge before the combined sweep's freeze,
+while R95's option scheduled the fix after v0.9.0; E8 of the PR approval
+list of 2026-10-19 (「PR 核可清單全部照建議」; this reply too was a button
+whose text the assistant wrote) settled that in R1's favour, so this fix
+merges before the freeze and R95 keeps the priority and the
+docs' form. D-164 to D-169 were assigned to the pull requests of the
+fourth wave; this entry is D-167.
+
+#480 reports that an arrow test callback with a TypeScript return
+annotation, `(ctx): void =>`, is still a test unit, but the binder took
+the arrow's parameters from the token just before `=>` (`bindings.py:468`
+at 6d78d8dd). Under `(ctx): void =>` that token is `void`, which it
+declared as the callback's context; `ctx` was never declared. Under
+`Promise<void>` the token is `>`, and nothing was declared. So no assertion
+on the context was read on either side, and the coverage scan dropped the
+calls: weakening, deleting or rewriting one passed with zero findings and
+`no_known_gaps`, in v0.8.0 and on main, for node:test (N1-N15, N22, N23),
+AVA (N16-N18) and tap (N19-N21). node:test's `t` was read only through the
+fallback for an undeclared `t` (C4, C5), AVA's `t` resolved to node:test's
+context, and tap's subtest `t` was read only where the file's root was
+named `t` too.
+
+Implementation, lines at this PR:
+
+- Q1 A, `frontends/javascript/bindings.py`. The arrow branch of
+  `_functions` (`:509`) first asks `_annotated_parameters` (`:546`). From
+  `=>` it steps back over a simple return type to a `:` and takes the
+  paired `(...)` before it, which is accepted only where an arrow can
+  start: first in the file, or after one of `_ARROW_STARTS` (`:45`: `(`,
+  `,`, `=`, `=>`, `:`, `[`, `{`, `;`, `return`), with an `async` before it
+  stepped over and held to the same test. Everywhere else, after `?`, a
+  callee, `await` or an operator, the old reading stays. After `:`, `=` or
+  `=>`, `_condition_waits` (`:593`) keeps it too where a `?` before the
+  `(` still waits for its `:` (reading 1).
+- Q2. Names and `_RETURN_TYPE_TOKENS` (`:43`): the set `_callback_body`
+  steps over (`frontend.py:1064-1068`, `:1077-1081`) and so does the
+  nested-arrow reader in `parse_javascript` (`frontend.py:2841`).
+- Q3. `_test_callbacks` (`:1423`) lists, by name, the first parameter of
+  each callback passed to a call that `_test_context` gives a context,
+  read from the callback's own tokens by `_callback_parameter` (`:1391`),
+  with the argument's span and the runner's kind. The last branch of
+  `candidate` (`:1517`) makes a call whose root resolves to unknown, inside
+  such a callback and named by its parameter (`_callback_context`,
+  `:1452`), an `unresolved` candidate when its member passes the filter
+  the unresolved families already apply (`:1503-1512`), for that runner:
+  `assert` for node:test, `AVA_ASSERTIONS` for AVA, tap's names for tap.
+- Q4. `_t_fallback` (`:368`) reads which of `node:test`, `ava` and `tap`
+  the file names. When it names AVA or tap and not node:test, `resolve`'s
+  table gives an undeclared `t` unknown (`:1183`), and
+  `_candidate_families` gives it that runner's family (`:1343`). Every
+  other file keeps node:test's context, as before.
+- The three readers keep their workarounds (Q2): the nested-arrow reader,
+  the catch reader (`exception_handlers.py:50-57`) and module mocks
+  (`_annotated_bodies`). Their comments now say what the binder reads.
+
+Readings the ruling leaves to the implementation, for the owner's
+approval:
+
+1. **The guard reaches `=` and `=>`, not only `:`.** The ruling names one
+   accepted position that still misreads, the inner `:` of a nested
+   conditional (`c0 ? c1 ? y : (a) : b => b`), as a residual unless the PR
+   guards it. By reading, the same misread happens after `=` and `=>`,
+   where a conditional's consequent is an assignment or an arrow:
+   `c ? x = (a) : b => b` and `c ? () => (a) : b => b` would declare `a`
+   and leave `b` undeclared, which spelled `assert` would gain Node
+   authority. One rule guards the three: after `:`, `=` or `=>`, the binder
+   reads back over balanced brackets to the bracket, `;` or `,` that opens
+   the expression, or to a line break where JavaScript ends the statement,
+   counting each `:` against a `?`; a `?` left waiting keeps the old
+   reading, and `??` is no conditional. The `:` of an annotated arrow's
+   own return type answers no `?`: where the read meets `(...): T =>`, or
+   `<U>(...): T =>` with a type parameter list, at a place an arrow can
+   start, after any assignment operator (`_ASSIGNMENTS`, `:27`) or right
+   after a `?`, it steps over that head, as TypeScript reads it, since an
+   annotated arrow in a consequent, on the right of an assignment there
+   included, needs a `:` after it. `_type_parameters` (`:645`) reads the
+   list back over names, string and number literals, the simple set, `&`,
+   `=`, an `=>` right after `)`, a conditional type's balanced `:` and
+   `?`, and bracket groups by their pairs. So `c ? (x): T => (a) : b => b`
+   declares `b`, as main does, where counting that `:` had declared `a`
+   (found in #539's review), and so do `c ? x ||= (y): T => (a) : b => b`
+   and `c ? <U>(y): U => (a) : b => b` (found in its third review). A
+   type parameter list holding any other token, such as a template
+   literal type or a negative number, is not stepped over; there the
+   head's `:` still answers the `?`, and the alternate arrow's parameter
+   is left undeclared where main declares it. The guard, steps
+   included, only accepts fewer positions than the step-back alone. Its
+   cost is two named misses, each an annotated arrow in a
+   consequent that TypeScript reads as annotated because a `:` follows
+   it: the alternate of a conditional nested in another's consequent
+   (`c0 ? c1 ? y : (a): T => a : z`) and, since the step over a head, the
+   body of an annotated arrow in a consequent
+   (`c ? (p): T => (y): R => y : z`, and the same after an assignment
+   operator or a type parameter list, as in
+   `c ? x ||= (p): T => (y): R => y : z`) keep the old reading.
+2. **Generic arrows stay a residual.** `<T>(ctx: T): void =>` puts `>`
+   before the `(`, which is no accepted position, so it keeps the old
+   reading; the binder does not take a generic arrow's parameters, and
+   only reading 1's guard steps over the type parameter list. Q3 does not
+   name such a test callback's first parameter either, since
+   `_callback_receivers`, whose reading Q3 follows, does not: its context
+   calls are no coverage candidates, and the report can still say
+   `no_known_gaps`, unless the parameter is `t`, which follows the reading
+   of a `t` that nothing declares (Q4).
+3. **Whose parameter Q3 reads.** A callback passed directly to a call,
+   first after `(` or `,`. Wrapping parentheses and `async` are stepped
+   over; then `function` with its name, a parameter list followed by `=>`
+   or by a return annotation's `:`, or one name followed by `=>`. Its first
+   parameter is a plain name followed by `)`, `,`, `:`, `=` or `=>`, not
+   `this`, as `_callback_receivers` reads it. A call is rooted at it when
+   its root has that name, inside the callback's argument, and no
+   declaration in a scope nested inside the callback, below the callback's
+   own scope, declares the name again. Mocha's `this` and the callbacks of
+   `.each`/`.for` tables, to which `_test_context` gives no context, are not
+   read.
+4. **What "imports or requires" means in Q4.** A string `node:test`, `ava`
+   or `tap` after `from` or `import`, or as the only argument of
+   `require(...)` or `import(...)`, but not of a method so named
+   (`loader.require("tap")`, found in #539's review), anywhere in the
+   file; `import type` counts. Only a `t` that no scope declares
+   changes. A declared `t` with no provenance of its own, such as a
+   helper's parameter, keeps node:test's family in the coverage scan, so
+   row 126's "a `t` passed to a helper ... no coverage candidates" still
+   holds.
+5. **What the change does to an annotated arrow.** At an accepted
+   position, the binder now scopes an annotated arrow exactly as the same
+   arrow without its annotation: the same parameters and parameter tokens,
+   the same body scope and the same position for `_test_context`. The
+   costs below are what the unannotated spelling already has.
+
+Costs, by reading:
+
+- **Every annotated arrow is scoped by its parameters** (the ruling's
+  cost of A). Its parameters shadow outer names in its body. A default in
+  its list is a parameter token, so it is no longer recorded as a write to
+  the name before its `=`, which had made that name unknown wherever an
+  outer binding of it was read. Its body is a function scope where a
+  `Promise<void>` or `number[]` return type left none: a `var` there stays
+  there, a write there counts as a write from another function
+  (`_written`), the catch reader's owner of a concise body's tokens is the
+  arrow, and a module replacement written in a test callback so annotated
+  belongs to that test (`module_mocks.py:564`, `:898`), where it was read
+  as the enclosing function's: a `jest.mock(...)` in such a test at a
+  file's top level is no longer read as a hoisted module mock.
+- **Fingerprints.** A removed annotated-arrow test whose context
+  assertions are read for the first time gets a TEST_DISABLED key built
+  from its assertions instead of its qualname, as D-117 notes for #311; an
+  exemption for such a finding needs renewing. No fixture pins one.
+- **Q4.** In an AVA or tap file, a node:test-style `t.assert.*` on a `t`
+  that nothing declares loses its authority; it is an `unresolved`
+  candidate.
+- **Q3** changes only diagnostics: stderr, the terminal report's head on
+  a pass and its `!` lines, SARIF's tool-execution notifications and the
+  coverage report. None of them changes a verdict, severity or exit code
+  (`docs/assertion-coverage.md`).
+
+Residuals, named in THREATMODEL row 160 and `docs/KNOWN-ISSUES-next.md`:
+an object (N22), parenthesized (N23), function, conditional or literal
+return type, whose body is not read and whose context calls are coverage
+candidates only, `unresolved`, or Node's or tap's where a parameter named
+`t` resolves through node:test's fallback or to tap's root `t` (Q2), and
+a `t` that the fallback makes node:test's context gives only its calls
+through `t.assert`, so in a file that names node:test beside AVA or tap,
+AVA's or tap's assertions on it are no candidates and the report can say
+`no_known_gaps` (found in #539's third review); the
+positions the rule does not accept (for example after `?`, `yield`,
+`export default` or a compound assignment) and those reading 1 guards;
+generic arrows (reading 2); and the disagreement the ruling names: the
+nested-arrow reader steps back with no position test, so for
+`cond ? (a) : b => b` it takes `(a)` as the arrow's parameters while the
+binder declares `b`. Removing the catch reader's and the nested-arrow
+reader's workarounds waits for a run showing that no reading moves (Q2).
+
+**Rule 2.** The ruling approves no change to an existing expectation, and
+by reading none changes. The suite's annotated arrows were each traced:
+`tests/test_js_foundation.py:110-111`, `:123-124` and `:189`,
+`tests/test_js_parse_linear.py:112-113`,
+`tests/test_issue363_js_catch.py:267`,
+`tests/test_js_inline_call_index.py:28` and `:120`, and
+`tests/test_issue196_188_5_merged_sources.py:194` and `:198` (a generic
+arrow, unchanged). No `.gwcase` fixture and nothing under `tests/gates`
+holds one. Every AVA or tap source in the suite declares its `t`
+(`tests/test_issue233_ava_tap.py`, `tests/test_issue363_js_catch.py`,
+`tests/test_issue429_js_tautology.py` and the eleven existing `js_ava_*`
+and `js_tap*` fixtures), so Q4 moves none, and no test source has a test
+callback whose first parameter the binder leaves undeclared, so Q3 adds no
+candidate to any existing expectation. If CI shows an existing expectation
+moving, the round stops and asks the owner.
+
+**Tests.** Five new `.gwcase` fixtures pin row 160; their labels await the
+owner's approval: `js_node_context_annotated_arrow_weakened_pos` (N1),
+`js_node_context_annotated_arrow_deleted_pos` (N12),
+`js_node_context_annotated_arrow_expected_rewrite_pos` (N2 with N14's
+edit), `js_ava_annotated_arrow_weakened_pos` (N16) and
+`js_tap_annotated_arrow_weakened_pos` (N19).
+`tests/test_issue480_js_annotated_arrows.py` adds 85 collected items,
+counted from its parametrize lists: the issue's rows N1-N21 and A1 and
+eleven of its controls (33), the accepted positions (13) and the named
+misses (5), the ruling's two conditional controls with the three guards of
+reading 1 and four annotated consequents (9), whose parameter is a context
+(5), Q3's candidates (6), the nested shadow (1), N22 and N23 through the
+engine (2), Q4's runners (9) and Q4's cost (2). By reading, the documented
+test count becomes 20500 (20410 + 5 + 85); CI's collection checks it.
+
+**Measurement.** Per R1 and R2 this fix merges before the combined
+sweep's manifest is frozen, and its merge gets its own before/after pair in
+that run, which R3 places. The ruling asks that #212's JS/TS replay
+measure the cost before a release ships the fix. The issue's scratch trial
+of A predates #483's merge and names no host; if it ran on a work machine
+after 2026-09-22 it is 未驗收 under EC POLICY `work-machine-local`, and
+this PR's CI is separate, new evidence that does not clear it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），the sweep pair and the JS/TS replay wait for the combined sweep and the pool; nothing ran on the work machine`.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+product code ran; every expected result was traced by reading the code,
+and this PR's CI is the first run.
+
+When #480 closes is not ruled; that is the owner's. The agent wrote this
+entry in #480's fix PR. It awaits the owner's approval of its wording, of
+readings 1 to 5 and of the five fixtures' labels.
+
 ## D-168 (2026-10-19): a size refusal names the side it refused in `--format json`, still exit 2 (#454 (d))
 
 #456's first ruling (issuecomment-6248011888, 2026-10-18, 「照建議」, "as

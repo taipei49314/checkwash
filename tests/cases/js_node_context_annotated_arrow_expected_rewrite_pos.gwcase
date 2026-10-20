@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 160
+rule: EXPECTED_VALUE_CHANGED
+issue: 480
+title: under async (ctx): Promise<void> =>, strictEqual(sum(2, 2), 4) -> strictEqual(sum(2, 2), 5) rewrites the expected value
+origin: issue #480 rows N2 and N14, reported against v0.8.0 and main f541f74 (pass, zero findings, no_known_gaps): under Promise<void> the binder declared no parameter
+=== before: tests/sum.test.ts ===
+import { test } from "node:test";
+import { sum } from "../src/sum";
+
+test("adds two numbers", async (ctx): Promise<void> => {
+  ctx.assert.strictEqual(sum(2, 2), 4);
+});
+=== after: tests/sum.test.ts ===
+import { test } from "node:test";
+import { sum } from "../src/sum";
+
+test("adds two numbers", async (ctx): Promise<void> => {
+  ctx.assert.strictEqual(sum(2, 2), 5);
+});
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "path": "tests/sum.test.ts", "unit": "adds two numbers"}]

@@ -1,0 +1,22 @@
+=== meta ===
+bypass: 160
+rule: ASSERT_WEAKENED
+issue: 480
+title: under (ctx): void =>, ctx.assert.strictEqual(sum(2, 2), 4) -> ctx.assert.ok(sum(2, 2)) weakens, as without the annotation
+origin: issue #480 row N1, reported against v0.8.0 and main f541f74 (pass, zero findings, no_known_gaps): the binder declared `void`, not `ctx`
+=== before: tests/sum.test.ts ===
+import { test } from "node:test";
+import { sum } from "../src/sum";
+
+test("adds two numbers", (ctx): void => {
+  ctx.assert.strictEqual(sum(2, 2), 4);
+});
+=== after: tests/sum.test.ts ===
+import { test } from "node:test";
+import { sum } from "../src/sum";
+
+test("adds two numbers", (ctx): void => {
+  ctx.assert.ok(sum(2, 2));
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "adds two numbers"}]
