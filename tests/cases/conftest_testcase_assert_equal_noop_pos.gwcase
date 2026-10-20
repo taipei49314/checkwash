@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 7a
+rule: TEST_DISABLED
+issue: 432
+title: a new conftest that replaces unittest.TestCase.assertEqual with a no-op
+origin: issue #432 shape (b), ruling 432.Q2: a native TestCase method written at module
+origin2: scope. tests/test_issue432_noop_replacement.py runs this conftest under real
+origin3: pytest, where a failing assertEqual passes (testcase-assertEqual).
+=== head: app.py ===
+def value():
+    return 0
+=== head: tests/test_value.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), 1)
+=== after: tests/conftest.py ===
+import unittest
+
+unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "<suite>"}]

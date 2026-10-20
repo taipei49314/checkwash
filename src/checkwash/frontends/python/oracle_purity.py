@@ -260,16 +260,27 @@ def _unambiguous_import_parents(module, roots, selected_root, read):
     return True
 
 
-def pure_imported_calls(source, calls, *, path, read, result_proof=None):
-    """Require a unique local `from package.module import function` source."""
+def imported_from(source):
+    """The table `pure_imported_calls` reads a call's callee in: each name a
+    top-level absolute `from module import name` binds, to (module, name).
+    None when `_tree` refuses the source: not bytes, not parsed, or over
+    65,536 bytes or 4,096 nodes (#469)."""
     tree = _tree(source)
     if tree is None:
-        return False
+        return None
     imports = {}
     for node in tree.body:
         if isinstance(node, ast.ImportFrom) and node.module and not node.level:
             for alias in node.names:
                 imports[alias.asname or alias.name] = (node.module, alias.name)
+    return imports
+
+
+def pure_imported_calls(source, calls, *, path, read, result_proof=None):
+    """Require a unique local `from package.module import function` source."""
+    imports = imported_from(source)
+    if imports is None:
+        return False
     parts = PurePosixPath(path.replace('\\', '/')).parts
     roots = {'', 'src', *('/'.join(parts[:depth]) for depth in range(1, len(parts)))}
     for call in calls:

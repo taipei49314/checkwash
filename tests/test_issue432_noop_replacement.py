@@ -482,3 +482,18 @@ def test_real_pytest_delegating_replacement_still_fails_and_detector_is_silent(t
     after = run_pytest(tmp_path, test_source, conftest)
     assert after.returncode == 1, after.stdout + after.stderr
     assert_silent(conftest)
+
+
+# Ruling R38 on #432 (2026-10-19): one more reporting cell runs under real
+# pytest, the one the 2026-10-14 sweep plan named as one that must report.
+# It is the source test_each_attribute_is_its_own_effect judges.
+EMPTY_OBJ_DELEGATING_RUNTEST = call_hook("item.obj = lambda *args, **kwargs: None", "original = item.runtest",
+                                         "item.runtest = lambda: original()")
+
+
+def test_real_pytest_empty_obj_behind_a_delegating_runtest_turns_green_and_detector_blocks(tmp_path):
+    """Function.runtest calls item.obj through pytest_pyfunc_call, so the delegating runtest runs the empty obj."""
+    after = run_pytest(tmp_path, PYTEST_TEST, EMPTY_OBJ_DELEGATING_RUNTEST)
+    assert after.returncode == 0, after.stdout + after.stderr
+    assert effects(EMPTY_OBJ_DELEGATING_RUNTEST) == ["item-obj-replaced"]
+    assert_reports(EMPTY_OBJ_DELEGATING_RUNTEST)

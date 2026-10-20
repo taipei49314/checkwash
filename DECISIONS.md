@@ -10302,17 +10302,29 @@ recorded its answer: if the sweep finds an honest block from a callback
 replacement that calls something, the callback proof narrows to call-free
 bodies and that spelling is listed as a residual.
 
-**Not yet on main.** 432.Q7's fixtures and the regenerated
-`benchmarks/FAILURES.md` come after row 7a, which must land before any
-fixture that claims `bypass: 7a`; #432 stays open for them and for the Q2
-follow-up issues. 432.Q7 put this round before #422; on 2026-10-14 the
-maintainer accepted #450 landing first. #432's ruling also asks the next
-release guide to name #432's new blocks.
+**On main through #508.** 432.Q7's fixtures came after row 7a, which landed
+before any fixture that claims `bypass: 7a`. They are on main through PR
+#508: four positives that claim `bypass: 7a`, one for each of the four
+reporting shapes named under Real pytest below
+(`conftest_item_runtest_noop_pos`,
+`conftest_item_class_runtest_noop_pos`,
+`conftest_testcase_assert_equal_noop_pos` and
+`conftest_testcase_call_test_method_noop_pos`), and three delegating
+negatives that claim no row (`conftest_item_runtest_delegating_neg`,
+`conftest_item_class_runtest_delegating_neg` and
+`conftest_testcase_assert_equal_forwarding_neg`). `benchmarks/FAILURES.md`
+row 7a lists the four positives beside #84's
+`conftest_gate_lends_to_report_hook_pos`. The Q2 follow-up issues were filed
+on 2026-10-18 as #497. Under R35, #432 is closed once #508 merges; the
+D-131 to D-140 record PR #523 merged before it. 432.Q7 put this round
+before #422; on 2026-10-14 the maintainer accepted #450 landing first.
+#432's ruling also asks the next release guide to name #432's new blocks.
 
-**Tests.** `tests/test_issue432_noop_replacement.py` (265 collected items:
-matrix cells, honest controls, named residuals and runs of real pytest) and
-additions to `tests/test_issue84_runtime_hooks.py`. The documented count goes
-from 17988 to 18258. No existing expectation or `.gwcase` output changes.
+**Tests.** `tests/test_issue432_noop_replacement.py` (266 collected items:
+matrix cells, honest controls, named residuals and runs of real pytest;
+#452 added 265 and #508 the fifth real-pytest run) and additions to
+`tests/test_issue84_runtime_hooks.py`. #452 took the documented count from
+17988 to 18258. No existing expectation or `.gwcase` output changes.
 
 **Sweep.** The plan was the standard and D-088 sets, conftest-touching
 commits, a conftest census and real-pytest proof of every reporting cell,
@@ -10372,11 +10384,13 @@ and R38):
   (`item.runtest`, class-level `runtest`, `assertEqual` and
   `_callTestMethod`) and two delegating controls under real pytest
   (`tests/test_issue432_noop_replacement.py:465-484`). 432.Q7's fixture PR
-  (#508) is to add a fifth: a hollow `item.obj` followed by a delegating
-  `item.runtest`, the case per-attribute keys exist for, so far pinned at
-  the detector by `test_each_attribute_is_its_own_effect`. The other
-  reporting cells of the spelling matrix are pinned by detector tests only;
-  the owner ruled not to prove each under real pytest.
+  (#508) added a fifth,
+  `test_real_pytest_empty_obj_behind_a_delegating_runtest_turns_green_and_detector_blocks`
+  (`:490-499`): a hollow `item.obj` followed by a delegating
+  `item.runtest`, the case per-attribute keys exist for, which until then
+  only `test_each_attribute_is_its_own_effect` pinned, at the detector.
+  The other reporting cells of the spelling matrix are pinned by detector
+  tests only; the owner ruled not to prove each under real pytest.
   `NOT_RUN：工作機規則（POLICY work-machine-local），the other reporting cells under real pytest, waived by the owner (R38)`.
 - **Gates.** The refactor and tamper gates passed in all nine test legs on
   #452's merge `5b571aa9` (ci run 38709970776), and #452 changed nothing
@@ -10392,6 +10406,19 @@ The agent wrote this entry in the v0.8.0 release PR from the outline in
 #452's description, the ruling and the merged code; the maintainer approved
 the drafts on 2026-10-15 (「照草稿全部核准」). The sweep record was added
 after publication, in the D-131 to D-140 record PR.
+
+The "On main through #508" paragraph, the count in Tests and the past
+tense in the Real pytest bullet were written in the fixture PR #508, after
+#523 merged. On 2026-10-19 the maintainer replied 「第二輪核可全部照建議」
+("the round-2 approval list, all as recommended") to the agent's second
+list of approvals the open PRs needed. For this PR: B11 approved changing
+THREATMODEL row 7a's "four real-pytest red-to-green runs" to "five", a
+fact correction once R38's test was added; B12 authorized this PR, once
+#523 merged, to update those three places in this entry to the facts with
+no further approval of their wording. This replaced the plan under R33, by
+which the paragraph's draft would have gone to the owner for approval. So
+their wording is the agent's. The reply is the text of an answer button the
+agent wrote, which the owner chose.
 
 ## D-138 (2026-10-15): in JS/TS, a catch assertion proved to always pass is not inspection, refining D-015 (#431)
 
@@ -13680,6 +13707,471 @@ R29's lists to count (A65); and keeping the TypeScript
 A64 approved; its two added sentences, on the report's date and on
 v0.8.0, were not in the list the owner answered.
 
+## D-154 (2026-10-19): subject replacement shares the 200,000-node limit, and the stand-in limit refusals name what fired (#469)
+
+Ruling 469 (owner, 2026-10-18, issuecomment-6248629427, 「19 項全部照建議做
+（價值判斷的題也照你的傾向）」, "all as recommended, value judgements included")
+answered item 4 of the agent's recommendation list and states each decision
+with its reason in the issue. D-151 to D-153 were set aside for #507 and
+for the fix pull requests of #428 and #454. D-151 is #507's entry and
+D-152 is #428's; D-153 is unused, since #454's pull request, #509, writes
+no entry. This entry is D-154.
+
+#469 reports that after D-131 the v0.8.0 acceptance sweep still stopped 53
+aiohttp commits with exit 2, at the subject-replacement pass's 30,000-node
+limit or at the stand-in step limits, and that neither message named a
+file. The ruling comment's corrections, counted from the recorded sweep
+values, put 43 commits at the node limit and 17 at the step limit (14 of
+#469's, aiohttp `0258e4de7d` and `129ef25e0f`, and scrapy `c44b8df6c7`);
+#345's watch commit `5a8ebdfcae` stops at a nonregular source instead.
+
+**Ruling.**
+1. Q1 (a). `subject_replacements._parse` raises its node limit from 30,000
+   to 200,000 by reading the stand-in pass's `_MAX_SOURCE_NODES`, so the two
+   passes share one constant. Above it the run still exits 2, naming the
+   file. Not (b): the pass feeds `TEST_PATCHES_SUBJECT`, an oracle rule, and
+   D-135 ruling 1 keeps a file a detector must parse failing closed
+   (`DECISIONS.md:9884-9888`). Not (c): the 43 commits would stay at exit 2.
+   Condition: the pass has no step budget, so its time at 200,000 nodes is
+   measured on the fix in CI or the pool and recorded here (one run can also
+   meet D-131 item 2); if it grows faster than linearly the agent reports it
+   on the issue, and a work budget that fails closed needs its own ruling.
+2. Q2 (c). Both step limits stay, 20,000 steps per proof and 1,000,000 for
+   the analysis, and still exit 2. The refusal names which counter fired,
+   the file, the side, the unit and the step count. Raising either limit or
+   restructuring the conftest fan-out is a separate ruling, after an
+   approved run (a checkwash-lab run with its frozen manifest and engine
+   commit approved beforehand, or a pool run) records which counter fires,
+   and at what count, on the 17 commits. This ruling approves no run.
+3. Q3. The three refusals take D-131's `key=value` form, with the current
+   text as the prefix, and a test pins each:
+   - `subject replacement source exceeds the syntax node limit: path=...,
+     requested_side=..., bytes=..., nodes=..., limit=...`;
+   - `subject replacement source exceeds the byte limit: path=...,
+     requested_side=..., bytes=..., limit=...`, which by reading `check`
+     cannot reach (a changed `.py` side over 1,000,000 bytes refuses
+     earlier), so its test calls `_parse` directly;
+   - `stand-in execution proof exceeds the source step limit:
+     counter=proof|analysis, path=..., requested_side=..., unit=...,
+     steps=..., limit=...`, with the fired counter's steps and limit. A
+     proof that belongs to no test (the module-body seed traces, the
+     restructured-patch proof) names its kind as the unit. When the shared
+     budget fires, the message says the unit is where it ran out, not
+     necessarily its cause.
+   The subject-replacement refusals fall under D-135 ruling 3 ("Every
+   remaining size refusal names path, side, size and limit"); the step
+   guard is not a size refusal, so naming it is new and is ruled here. The
+   lab aggregator keys errors by the text before the first `:` or `(`, so
+   old and new rows still match.
+
+Implementation (lines at this PR):
+
+- `subject_replacements.py:22` imports `_MAX_SOURCE_NODES` from
+  `standin_installations.py:35`. `_parse` (`:37-66`) refuses over it with
+  the node message and over `_MAX_BYTES` (`:34`, 1,000,000, this pass's own
+  byte limit as before) with the byte message. Its `path` and `side`
+  default to `'<unknown>'` for direct calls, as the stand-in pass's
+  `_syntax` does. `_trees` (`:69-74`) parses both sides of a changed test
+  for the pass, the base side first, and names a rename's base side by its
+  old path, as `engine.py:1173` reads it.
+- The module-read cache (the owner's choice, A83, below). `_ModuleReads`
+  (`subject_replacements.py:172-231`) holds one tree's four module-level
+  reads: the first function or class of each name in a body, which `_scope`
+  (`:286-297`) looks up there instead of scanning the body; the star-import
+  check; and `_binding_sites(tree.body)` and `_bindings(tree.body)`. Each is
+  made at most once, when first asked. The pass makes one per side when it
+  first needs a file's trees (`:672`) and passes it to `_subject_call`
+  (`:677-678`), which asks it for all four (`:345-350`, `:379`, `:381`); a
+  direct call without one reads the tree afresh. Every answer is the one
+  the uncached read gives, and `_subject_call` only reads the kept sites and
+  values, so no result changes. Under the owner's second choice (B13,
+  below) `_assertion_scope`, `_scoped_bindings` and the literal-string
+  helper check take the same object (`:673-674`, `:685-686`, `:695`), and
+  it also keeps, each made once when first asked (`:233-283`), whether the
+  module is inert, which nodes are its statements, one walk of the whole
+  tree for the writes those checks refuse, and, per replacement, whether
+  every other function of the module is a closed literal test of it.
+  `_scoped_bindings` lays a test's names,
+  and the stand-in checks their parameters, over the kept bindings in a
+  `ChainMap` instead of copying them. Under the owner's third choice (C5,
+  below) the pass also keeps, in two dicts per file (`:645-647`,
+  `:656-657`, `:698-699`), the parts of `math_import_authority`
+  (`literal_stdlib_standins.py:72-151`), each made once when first asked:
+  the file's top-level imports, with which each target is compared; the
+  answer of `pure_imported_calls` for each function an old callee's name
+  imports, the only part of the old call it reads (the table it reads is
+  `oracle_purity.py:263-276`); and the startup check, which reads neither.
+  It also keeps the answer of the checks of `parameterized_abs_event`
+  (`parameterized_subject_replacements.py:39-139`), of which only which
+  call is a test's first depends on the test. As both read the repository
+  only through the context, which keeps every source it reads, and the
+  inventory, for a snapshot that does not change during the run each kept
+  answer is the one a fresh check gives. Only the `math.gcd` helper's
+  check of the module's other functions is still made once per pair
+  (Residuals).
+- `standin_installations.py:38` names the per-proof limit
+  `_MAX_PROOF_STEPS`, the 20,000 `_step` compared inline. `_step`
+  (`:434-438`) keeps its two comparisons; only a refusal calls
+  `_step_refusal` (`:440-458`) to build the message. `_Trace` takes `path`
+  and `unit` as keyword arguments (`:408-409`), `'<unknown>'` by default,
+  and `requested_side` is `before` or `after` from the trace's side index. A
+  test's proof passes its test path and qualname (`:939`); a module-body
+  seed passes the module it traces, a conftest or the test file, and
+  `'<module body>'` (`:1187`); the restructured-patch proof passes the test
+  path and `'<restructured patch>'` (`mock_testcase_replacements.py:146`).
+- `docs/subject-integrity.md` now gives the stand-in pass 200,000 nodes, says
+  the subject-replacement pass shares the limit, and says what each refusal
+  names. `docs/KNOWN-ISSUES-next.md` gains a #469 row. The #345 row of
+  `docs/KNOWN-ISSUES-v0.8.0.md` stays as the v0.8.0 record.
+
+Readings within the ruling's text; the owner approved each as written
+(below):
+
+- When both counters fire on the same step, the message names
+  `counter=proof`, the counter `_step` compares first, with its steps and
+  limit.
+- The kinds of proof are spelled `'<module body>'` and
+  `'<restructured patch>'`; angle brackets keep them apart from any
+  qualname. A seed's `path` is the module whose body it traces.
+- The shared-budget sentence follows the fields: `; the unit is where the
+  shared analysis budget ran out, not necessarily its cause`.
+- A rename's base side is named by its old path.
+- Only the node limit is shared. The byte limit stays this pass's own
+  1,000,000, the same value as the stand-in pass's `_MAX_SOURCE_BYTES`.
+
+Effects by reading:
+
+- In a run with a source reader, as `check` gives, the stand-in pass
+  (`engine.py:1735`) runs before
+  this pass (`:1743`) and parses both sides of every changed test-role `.py`
+  file (`standin_installations.py:1060-1063`) against the same 200,000
+  nodes. For such a file the stand-in node refusal therefore comes first,
+  naming the file, and this pass's node refusal is reached only for a file
+  judged as a test that the stand-in pass does not read (a collectable
+  Python file holding another role, or one under a test-support directory,
+  `engine.py:1149`, `:1158-1159`), or through a direct call.
+- The 43 commits' `tests/test_client_functional.py` sides are 176,658 to
+  211,924 bytes, about 30,000 to 36,000 nodes at D-131's 170 nodes per
+  kilobyte, so neither pass's node limit stops them now. Whether they give a
+  verdict is unknown. The 17 step-limit commits still exit 2, now naming the
+  counter.
+- **Time, before the cache** (lines at 26209d9d). For each eligible
+  assertion pair, a positive `==` with the same literal on both sides,
+  changed or not, `_subject_call` (`subject_replacements.py:209`) ran on
+  both sides. For a name asserted at the top level of a straight-line test
+  (`value = f(1)`, then `assert value == 2`) it scanned the module's
+  top-level statements: `_scope` (`:221`) and the star-import check
+  (`:224-225`) iterated them, `_binding_sites(tree.body)` (`:254`) visited
+  them without entering function or class bodies, and `_bindings(tree.body)`
+  (`:256`) iterated them. The pass's time therefore grew with the number of
+  such pairs times the number of the module's top-level statements, about
+  one per test in a file of small tests: faster than linearly for a file
+  made of many small tests of that shape. At about 15 nodes per test, a
+  200,000-node file of them holds about 13,000 tests, and the scanning is
+  about (200,000 / 30,000)², some 44 times, the most a file under the old
+  limit could cause. The whole-tree walks the ruling cites (`:412`, `:465`)
+  are reached only for an inherited helper assertion that passes the caller
+  checks, and for a pair whose callee changed. The owner chose to remove
+  this factor now with the cache above and to time the cached pass in CI
+  (A82, A83, below).
+- **Time with the cache, by reading.** The work left per pair in
+  `_subject_call` is bounded by the test's own body: its statements, their
+  binding sites and the assignments before the assertion. For the
+  straight-line shape the pass's time therefore grows linearly with the
+  pairs whose callee is unchanged; a pair whose callee changed read the
+  module again until the second cache (next item). The cache adds, per
+  file with an eligible pair, two small objects, and one name index for
+  each body `_scope` looks up, built over the whole body where the scan
+  stopped at the first match. On the files of about 20 nodes in
+  `tests/test_perf_git.py` that is a few dictionary entries per file, so
+  the performance gates below still cannot move.
+- **Read once per pair until the second cache, by reading** (lines at
+  d79ba699). The first cache covered the four reads `_subject_call` made,
+  the code the owner's choice points to (`subject_replacements.py:168-256`
+  at 26209d9d). For an inherited assertion, `_assertion_scope` (`:439`)
+  read the module on both sides for every such pair:
+  `_helper_module_inert(tree)` (`:450`) iterated its top-level statements,
+  and for a caller that passed its checks a walk of the whole tree (`:469`)
+  and `_binding_sites(tree.body)` (`:471`) followed. So a file of many
+  small tests that each begin by calling one module helper holding a
+  literal assertion (`def check(): assert f(1) == 2`, then
+  `def test_1(): check()`, six nodes per test) cost about the pairs times
+  the module's nodes: at 200,000 nodes, some 33,000 tests, each walking all
+  200,000 nodes on both sides. That is faster than linearly, and more than
+  the straight-line shape cost before the cache. For a pair whose callee
+  changed with the same arguments, the replacement the pass looks for,
+  `_scoped_bindings` read the module's bindings again on both sides
+  (`:373`), since it extends them, and scanned the module for the test
+  (`:374`); when the new callee reached the literal-string helper check,
+  `_literal_helper_replacement` also checked every other function of the
+  module (`:500-520`) and could walk the whole tree (`:522`). The owner
+  chose to keep these reads too, with no budget that fails closed (B13,
+  below), and this reading goes on #469 with the numbers (A84).
+- The performance gate cannot move. `tests/gates/test_perf.py` calls
+  `analyze` without a `root_reader`, and both passes return no events
+  without one (`standin_installations.py:1038`,
+  `subject_replacements.py:627`), so the gate reaches neither changed path;
+  its pathological file is a production file (`app/generated.py`) that
+  neither pass reads. `tests/test_perf_git.py` runs both passes through the
+  CLI on 150 test files of about 20 nodes each, far under both limits and no
+  stand-in candidates, so their work is unchanged. A run that refuses
+  nothing gains only constant work per call: per `_parse` call, two keyword
+  arguments and two module-global lookups where the limits were literals;
+  per parsed change, one `_trees` call with two path normalisations; per
+  `_Trace`, two keyword arguments and two attribute stores; and per step,
+  one module-global lookup in `_step`, where the per-proof limit was a
+  literal (up to 1,000,000 steps per analysis).
+
+**Timing (CI run 39253512334, job 118062910969).** The temporary
+`timing-469` job (A82) ran once, on GitHub's hosted ubuntu-latest runner
+(image ubuntu-24.04, version 20261012.334.1) with Python 3.12.15, at
+`dac1a476`, the merge of this pull request's head `4c5e631d` into main
+`0eff0e52`. This is one run on a shared hosted machine, not a benchmark,
+and its times move with the machine. The job built synthetic test files of
+exactly 30,000, 100,000 and 200,000 syntax nodes per side in four shapes:
+the straight-line tests above (15 nodes each, three runs per size); one
+such test among module-level assignments (statements); the helper-call
+tests above (six nodes each, also at 10,000 nodes); and, under B13, tests
+whose callee changed with the same arguments (ten nodes each),
+`assert f("a") == "a"` on the base side and `assert g("a") == "a"` on the
+head side with a literal-string helper `def g(s): return s.lower()`, so
+that every pair reaches `_scoped_bindings` and the literal-string helper
+check. In the first three shapes the sides differ only in their module
+docstring, so every pair keeps its callee and the pass moves on at
+`subject_replacements.py:681`. Each measurement ran in its own process
+with a 300-second budget within a 35-minute deadline; every one exited 0,
+and none overran its budget or was skipped. For each, the job printed the
+time `analyze` took before `subject_replacement_events` began
+(`to_pass_s`), the pass's own time, its parse of both sides included
+(`pass_s`), the pass's events, and its `_subject_call`, `_assertion_scope`
+and `_scoped_bindings` calls. In seconds, with the three straight-line
+runs in run order and their median:
+
+| Shape | Nodes per side | `pass_s` | `to_pass_s` | Events | `_subject_call` | `_assertion_scope` | `_scoped_bindings` |
+|---|---:|---|---|---:|---:|---:|---:|
+| straight | 30,000 | 0.375, 0.392, 0.401; median 0.392 | 1.312, 1.357, 1.368; median 1.357 | 0 | 3,998 | 3,998 | 0 |
+| straight | 100,000 | 1.532, 1.541, 1.615; median 1.541 | 6.743, 6.798, 6.903; median 6.798 | 0 | 13,332 | 13,332 | 0 |
+| straight | 200,000 | 3.229, 3.336, 3.309; median 3.309 | 17.581, 17.822, 17.616; median 17.616 | 0 | 26,666 | 26,666 | 0 |
+| statements | 30,000 | 0.13 | 0.839 | 0 | 2 | 2 | 0 |
+| statements | 100,000 | 0.565 | 3.18 | 0 | 2 | 2 | 0 |
+| statements | 200,000 | 1.125 | 6.635 | 0 | 2 | 2 | 0 |
+| helper | 10,000 | 0.245 | 0.694 | 0 | 3,328 | 3,328 | 0 |
+| helper | 30,000 | 0.814 | 2.882 | 0 | 9,994 | 9,994 | 0 |
+| helper | 100,000 | 2.832 | 16.722 | 0 | 33,328 | 33,328 | 0 |
+| helper | 200,000 | 6.021 | 53.499 | 0 | 66,660 | 66,660 | 0 |
+| callee | 30,000 | 0.378 | 1.854 | 2,998 | 5,996 | 5,996 | 5,996 |
+| callee | 100,000 | 1.283 | 9.441 | 9,998 | 19,996 | 19,996 | 19,996 |
+| callee | 200,000 | 3.267 | 27.846 | 19,998 | 39,996 | 39,996 | 39,996 |
+
+At 200,000 nodes the sides were 538,955 to 855,598 bytes. Only the callee
+shape gave events or reached `_scoped_bindings`.
+
+Linear growth multiplies a time by 3.3 from 30,000 to 100,000 nodes, by 2
+from 100,000 to 200,000 and by 6.7 from 30,000 to 200,000. The pass's own
+time grew by 3.9, 2.1 and 8.4 for the straight-line shape (medians), 4.3,
+2.0 and 8.7 for statements, 3.5, 2.1 and 7.4 for the helper shape (and
+3.3 from 10,000 to 30,000, where linear is 3), and 3.4, 2.5 and 8.6 for
+the callee shape. Per node at 30,000, 100,000 and 200,000 nodes, that is
+13.1, 15.4 and 16.5 microseconds for the straight-line shape, 4.3, 5.7 and
+5.6 for statements, 27.1, 28.3 and 30.1 for the helper shape (24.5 at
+10,000) and 12.6, 12.8 and 16.3 for the callee shape.
+
+Against ruling item 1's condition: this is the time at 200,000 nodes it
+asks for, measured on the fix in CI. There the pass's own time was 1.1 s
+for statements, 3.3 s for the straight-line shape (median of three) and
+for the callee shape, and 6.0 s for the helper shape, the slowest. With
+the caches its growth is close to linear: from 30,000 to 200,000 nodes it
+grew 7.4 to 8.7 times where linear is 6.7, so its time per node rose by
+11 to 30 per cent across the range, where the straight-line shape before
+the cache was read as growing with the square of the file, some 44 times
+(above). The largest step over linear is the callee shape's 2.5 times from
+100,000 to 200,000 nodes; one run cannot tell whether that excess comes
+from the code or the machine, and the job does not look for its cause.
+The agent does not read this as the faster-than-linear growth the
+condition names, so it proposes no work budget; the owner's review of
+this paragraph (B15) settles that reading.
+
+The time before the pass is outside the condition, and in this run it grew
+faster than linearly in three shapes. From 30,000 to 200,000 nodes it grew
+13.0 times for the straight-line shape (medians, 1.357 to 17.616 s), 18.6
+times for the helper shape (2.882 to 53.499 s; 5.8 times from 30,000 to
+100,000 alone) and 15.0 times for the callee shape (1.854 to 27.846 s),
+against 7.9 times for statements (0.839 to 6.635 s). At 200,000 nodes it
+is most of the time to the end of the pass: 53.5 s of the helper shape's
+59.5 s. It covers every step `analyze` takes before this pass, the
+frontend's parse of both sides and the stand-in pass (`engine.py:1735`)
+among them, and the job does not split it, so which step grows is unknown,
+and D-131 item 2's stand-in time is still not taken. No ruling covers this
+growth (Residuals).
+
+The same run's other jobs, at the same checkout: the nine test jobs
+(ubuntu-latest, macos-latest and windows-latest, each with Python 3.11,
+3.12 and 3.13), install-from-tag, dogfood and byte-compare passed, and
+published-source was skipped. Dogfood's verdict was pass, with three WARN
+findings: CI_WORKFLOW_TOUCHED for this job's change to
+`.github/workflows/ci.yml`, and IMPORT_UNRESOLVED for each of
+`tests/test_issue469_limit_messages.py`'s imports of
+`test_mock_testcase_replacements` and `test_standin_installations_main`,
+sibling modules in `tests/`. b77240d5 then removed the job, which returns
+`.github/workflows/ci.yml` to main's bytes; the runs after it are this
+pull request's later CI.
+
+**The Stop hook.** These refusals are engine errors. Under D-134 item 2 a
+hook-json engine error exits 0 with the "not analysed" `systemMessage` and
+no `decision` (`DECISIONS.md:9790-9793`), so in the Stop hook they do not
+block the stop: the class of #456 (D-134 residuals,
+`DECISIONS.md:9849-9855`). By reading an agent could provoke one on purpose,
+for example with a test-module body that runs past 20,000 steps. The
+required CI check runs in range mode and still exits 2. D-150 blocks in
+hook-json only on a size refusal of the verdict diff; its Q6 sent the other
+limit refusals to #506, which these join now that they name path and side.
+They stay non-blocking until #506 is ruled. THREATMODEL row 128 already
+lists them as still open, so it does not change.
+
+D-131 recorded that "`subject_replacements._parse` keeps its own
+30,000-node limit" (`DECISIONS.md:9588-9589`) and repeated it under Open
+(`:9605-9606`). That no longer holds.
+
+Residuals. Two more stand-in limit refusals name nothing:
+`stand-in strict inventory is invalid or exceeds the path limit`
+(`standin_installations.py:1084`) and `stand-in context exceeds the source
+read limit` (`:1123`). They are not in this round. D-131 item 2's
+stand-in time is not measured, and which step makes the time before this
+pass grow faster than linearly in the Timing run is unknown. By reading, one
+check still reads the module once per pair: for a pair whose new callee
+is a `math.gcd` helper, the check of the module's other functions
+(`subject_replacements.py:612`) is made for each pair, since its proof
+reads the pair's bindings. It follows `math_import_authority`, which
+admits only a test source of at most 65,536 bytes and 4,096 nodes
+(`oracle_purity.py:150-157`), so it is made only in a file that small.
+Which step counter fires on the 17 commits is unknown; finding out needs
+the approved run of ruling item 2. #345 stays open and is judged again when this lands and the
+sweep re-runs its commits (the owner's decision of 2026-10-16); for that
+re-sweep's manifest, which the owner approves before it runs, the agent
+proposes the 60 commits plus `5a8ebdfcae`.
+
+Rule 2. The ruling approves one change to an existing expectation, as
+D-134 did (`DECISIONS.md:9834-9841`), and it is the only one made:
+`tests/test_standin_expression_iteration.py:190` pinned
+`^stand-in execution proof exceeds the source step limit$`. Its pattern now
+keeps that text as the prefix and also matches the new fields, with
+`counter=proof` for the row at `:177` and `counter=analysis` for the row at
+`:179`. The four rows at `:176-179`, which of them refuse, and the charge
+counts asserted after them do not change. By `git grep` at this PR's base,
+no other test or fixture pins any of the three messages or the 30,000
+value. If this PR's own checkwash run flags the test change, an exemption
+in `.greenwash/allow.toml` like #451's goes in the PR for the owner's
+approval. If CI moves any other expectation, the round stops and asks.
+
+Evidence status: prepared on a work machine where no pytest, checkwash or
+code of this repository ran; CI runs the tests. Added: 35 collected items in
+`tests/test_issue469_limit_messages.py`, none under `tests/gates`: the
+shared constant; trees of 30,001 and 200,000 nodes; a test file of about
+35,000 nodes giving its `TEST_PATCHES_SUBJECT` verdict; the node and byte
+refusals and their defaults; the refused side of a changed test and a
+rename's old path through `analyze`; each step counter, both at once, the
+defaults and an escaped path; each proof named where it stops through
+`installation_events`; the path, side and unit each trace carries; and,
+for the cache, that its scope index finds what the scan finds, that kept
+reads project what fresh reads do across one file's assertions, that
+through `analyze` each side's module is read once for a file of 30 tests,
+and that the findings equal those of reads made afresh; and, for the
+second cache, that its inert, statement, write and helper answers equal
+fresh reads, that `_assertion_scope` locates the helper fresh reads
+locate, that `_scoped_bindings` reads as the copy it made before, that
+through `analyze` each side's module is read once for a file of 30
+helper-call tests and one of 30 changed-callee tests, and that the
+findings on helper, changed-callee, literal-string and `math.gcd` files
+equal those of fresh reads; and, for the answers kept under C5, that a
+kept `math_import_authority` answer equals a fresh check's for several
+targets, old callees and two names of one imported function, that through
+`analyze` the authority is checked once for a file of 30 `math.gcd`
+tests and the parameterized-helper checks are made once for a file of 30
+parameterized-helper tests, that the findings on both kinds of file
+equal those of fresh checks, and that each of two changed files has its
+own kept checks. No
+`.gwcase` fixture is added: the golden runner cannot expect an engine
+error. By reading, the documented test count becomes 20126 (20091 + 35);
+CI's collection checks it.
+`NOT_RUN：工作機規則（POLICY work-machine-local），every behaviour and count above is read from source, except the Timing numbers, which are read from CI's job log; no test, timing, checkwash run or sweep was run on the work machine`.
+
+The agent wrote this entry in #469's fix PR #511. On 2026-10-19 the
+maintainer replied 「PR 核可清單全部照建議」 ("the PR approval list, all as
+recommended") to the agent's approval list, whose items for this PR asked
+how to take the time at 200,000 nodes
+(A82: a temporary CI timing step at 30,000, 100,000 and 200,000 nodes,
+removed once its numbers are written here), whether to add the cache now
+(A83: yes, and time the cached pass), when to report the superlinear
+reading on #469 (A84: once, with the numbers), the wording of this entry
+as of 86788e34 and 20f5f1a7 (A85: approved, leaving only the paragraphs
+added for the timing, CI and dogfood results to review), and its five
+readings (A86: approved as written). The reply is the text of a button the
+agent wrote, which the owner chose. The text added or changed in 11e370d2
+(the cache, the Time paragraph recast for the code before it, the two new
+effects, the timing placeholder, the residual sentence, one line reference
+and the evidence status), with the review corrections to it after
+d4ed8b3e, is not covered by this approval and still needs the owner's
+review, as the timing paragraph will once its numbers are filled.
+
+Later that day the maintainer replied 「第二輪核可全部照建議」 ("the round-2
+approval list, all as recommended") to the agent's second list. The reply
+is the text of a button the agent wrote, which the owner chose. Its items
+for this PR: B13, keep the reads of the two paths that still read the
+module once per pair, the inherited helper assertion and the pair whose
+callee changed, without changing any result, add a callee-changed shape
+to the timing job, and rule no budget that fails closed; B14, keep the
+timing job's measurements beyond A82 (the helper shape, its 10,000-node
+size and three runs per size of the straight-line shape); and B15, review
+the text added or changed in 11e370d2, with its later corrections,
+together with the Timing paragraph once its numbers are filled. Under
+B13, 8e99cb6b keeps the reads, 92f861ea pins that no result changes and
+6a51d208 adds the callee-changed shape. The text this entry gained for
+them is under B15's review as well.
+
+Later that day the maintainer replied 「第三輪核可 C1～C6 全部照建議」 ("the
+round-3 approval list C1–C6, all as recommended") to the agent's third
+list. The reply is the text of a button the agent wrote, which the owner
+chose. Its item for this PR, C5: keep, without changing any result, the
+reads of the two checks B13 left reading the module once per test, the
+`math.gcd` helper branch for a changed callee and
+`parameterized_abs_event`, instead of leaving them as residuals, and let
+the timing job measure the version with these caches. Under C5, 90f6a70d
+keeps their answers for each file and 81084439 pins that no result
+changes. A read-only review of these commits found that 90f6a70d kept the
+authority's answer per target and old callee, so a file whose tests call
+distinct old callees still read its module once per test; 88a95270 keeps
+the authority's parts once per file instead, and 81f7b949 pins that and
+that each file has its own kept checks. The timing job kept its shapes;
+none of them reached either check, so its numbers time the pass with
+these caches but not the two checks themselves. The text this entry
+gained for them is under B15's review as well.
+
+After these approvals the Timing paragraph was filled from the log of run
+39253512334, and b77240d5 removed the timing job. That paragraph, and the
+Residuals and evidence-status sentences changed with it, are under B15's
+review.
+
+The maintainer approved that text on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its items
+for this entry: D3 approves the numbering sentence above as c7efced8
+rewrote it to the facts at merge, which extends C1 to this entry. D7
+approves, under B15, the paragraphs this entry gained after A85: the
+cache paragraphs, the Timing paragraph filled from run 39253512334
+(b4b15328; the list quoted it in full as at c7efced8), the Residuals and
+evidence-status sentences changed with it, and the approval records;
+with them, the KNOWN-ISSUES-next #469 row's measured range (3a86ef11)
+and the timing job's removal (b77240d5). Approving the Timing paragraph
+accepts its reading of ruling item 1: with the caches the pass grows
+close to linearly, so no work budget is set. D9 records the
+faster-than-linear growth of the time before the pass as a residual,
+with no new issue: one sentence in the KNOWN-ISSUES-next #469 row
+(fe319152, in integration batch 3), beside the timing comment on #469
+(issuecomment-6269941656) that reports it; a measurement that splits
+that time, for example of the stand-in pass (D-131 item 2), goes to the
+pool after the release. This paragraph was written after the reply.
+
 ## D-155 (2026-10-19): a fixture's producer is repair evidence for the assertion that reads it (#471)
 
 Ruling 471 (owner, 2026-10-16, issuecomment-6230178131, 「#468、#471
@@ -14032,6 +14524,35 @@ fa0086dd and 4e2b6d16 have the docstrings cite reading 3, not the list's
 label. Reading 3's sentence on these shapes was also written after the
 approval.
 
+The maintainer approved further changes on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its item
+D1 approves by name fourteen moves of this PR's expectations, made in
+integration batch 2 (#533) at this PR's merge (65282aa8), after #528
+(D-161) had merged before it and changed E1's label: ten expectations in
+nine new `.gwcase` fixtures (`fixture_autouse_pos`,
+`fixture_of_fixture_pos`, `fixture_overridden_in_module_pos`,
+`fixture_producer_added_in_diff_pos`, `fixture_producer_other_module_pos`
+with two, `fixture_producer_test_disabled_pos`,
+`fixture_producer_unread_pos`, `fixture_requested_after_only_pos` and
+`fixture_setup_call_pos`) and four in three items of
+`tests/test_issue471_fixture_producers.py`. Each moves from
+`NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE`, with rule,
+severity and unit unchanged, because the diff also changes a
+production-role Python file that is not inert and neither earlier label
+applies. A77 had approved those fixtures' labels with the old one. The
+same item approves the one such move in #527's #457 pin (D-156). A
+fifteenth move at that merge, the `EXPECTED_VALUE_HARDCODED` expectation
+of `hardcoded_package_only_pos`, is not D1's: A52 had approved it by name
+in advance, whichever PR merged first (D-161). Its item D6 applies C4 to
+the credit row: #533 merged at 2026-10-19T16:19:11Z, which is 2026-10-20
+in the owner's time zone (its merge commit adea2350 is dated +0800), and
+the date was not changed at that merge, so aa8dfae0, in integration
+batch 3, makes it 2026-10-20 in `benchmarks/external-credits.json` and
+in the External credits table of `benchmarks/FAILURES.md`. This
+paragraph was written after the reply.
+
 ## D-156 (2026-10-19): the order fallback pairs by subject first, and `match=` added to a bare raises is no removal (#434, #457)
 
 Ruling 434 (owner, 2026-10-16, 「全部照建議」, "all as recommended";
@@ -14293,6 +14814,24 @@ paragraph that cites R3, as D-155 does; it was written after that reply
 only what items A67 to A71 say, were also written after that reply. That
 reply, too, was a button whose text the assistant wrote.
 
+The maintainer approved a further change on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its item
+D1 approves by name one move of this PR's expectations, made in
+integration batch 2 (#533) at this PR's merge (3e37a701), after #528
+(D-161) had merged before it and changed E1's label: in #457's pin,
+`subject_pairing_other_subject_known_limit_pos`, the `ASSERT_WEAKENED`
+high finding on `test_get_locks_from_targets_with_device_id` is expected
+with `PROD_CHANGE_NOT_EVIDENCE` instead of `NO_PROD_CHANGE_IN_DIFF`,
+because the diff also changes
+`custom_components/lock_code_manager/__init__.py`, a production-role
+Python file that is not inert, and neither earlier label applies. Its
+rule, severity and unit, and the two `TEST_DISABLED` warns, are
+unchanged. Item A68 had approved the fixture's label with the old one.
+The same item approves fourteen such moves in #522's fixtures and tests
+(D-155). This paragraph was written after the reply.
+
 ## D-157 (2026-10-19): a production file the diff adds does not explain a rewritten stored expectation (#463)
 
 Ruling 463 (owner, 2026-10-18, issuecomment-6248011246, 「照建議」, "as
@@ -14487,10 +15026,11 @@ owner-approved labels (`snapshot_new_prod_module_pos` and
 `tests/test_issue463_snapshot_added_production.py`. Not pinned: the E1
 label of the new finding, the rename reading, `DEPENDENCY_DRIFT` beside an
 added module, and the plugin-discovery shape. By reading, the documented
-test count becomes 19650 (19619 + 24 + 7); CI's collection checks it,
-and other open pull requests move it too. `benchmarks/FAILURES.md` was
-edited by hand to what `benchmarks/make_failures.py` produces, by reading
-the generator.
+test count becomes 19650 (19619 + 24 + 7); CI's collection checks it.
+When integration batch 2 merged, the four pull requests merged after this
+one in it (#525, #527, #522 and #531) had taken it to 20083.
+`benchmarks/FAILURES.md` was edited by hand to what
+`benchmarks/make_failures.py` produces, by reading the generator.
 
 The agent wrote this entry in #463's fix PR #524. The maintainer approved
 it on 2026-10-19: 「PR 核可清單全部照建議」 ("the whole PR approval list as
@@ -14761,8 +15301,11 @@ product or test code ran; CI runs the tests. Added: three `.gwcase` fixtures
 (below), and 75 collected items in
 `tests/test_issue502_helper_rebinding_spellings.py`, counted from its
 parametrize lists; no existing test changed. By reading, the documented
-test count becomes 19609 (19531 + 75 + 3); CI's collection checks it, and
-other open pull requests may change the base.
+test count becomes 19609 (19531 + 75 + 3); CI's collection checks it.
+The base, 19531, is main's 19505 and the 26 items of #509, which merged
+before this pull request in integration batch 2. When that batch merged,
+the six pull requests merged after this one in it (#528, #524, #525, #527,
+#522 and #531) had taken the count to 20083.
 
 The agent wrote this entry in #502's fix PR #520. On 2026-10-19 the
 maintainer approved items A44 to A49 of the agent's approval list:
@@ -15034,7 +15577,8 @@ None is under `tests/gates`. By reading, the documented test count becomes
 19619 (19609 + 10: three fixtures, each one item of
 `tests/test_cases_runner.py::test_case`, and seven items); the re-pins add
 none. On this PR's own base, CI on 4352949c collected 19485 (19475 + 10).
-Other open PRs move it too, which is resolved at merge time.
+When integration batch 2 merged, the five pull requests merged after this
+one in it (#524, #525, #527, #522 and #531) had taken the count to 20083.
 
 **Sweep.** None for the label alone, as ruled: CI on the PR is the check. A
 later acceptance sweep that compares escalators reports label-only
@@ -15061,6 +15605,30 @@ this paragraph record it. Their sentences in this entry (the CI result,
 the harness-artifact sentence, the order clauses for #522, the "Settled
 by Q2" paragraph, the pin 3 and test-count sentences and this paragraph)
 were written after the reply and were not on the list.
+
+The maintainer approved further text and changes on 2026-10-19:
+「第四輪 D1～D10 全部照建議」 ("the round-4 list D1–D10, all as
+recommended"), in reply to the agent's round-4 list. The reply was a
+button whose text the assistant wrote, which the owner chose. Its items
+for this entry: D1 approves by name the fifteen moves this PR's label
+caused in integration batch 2 (#533), after this PR merged, in the new
+fixtures and tests of later pull requests, beyond the moves A50 and A52
+named: eleven expectations in ten `.gwcase` fixtures (#527's
+`subject_pairing_other_subject_known_limit_pos` and nine of #522's) and
+four in three items of `tests/test_issue471_fixture_producers.py`, each
+from `NO_PROD_CHANGE_IN_DIFF` to `PROD_CHANGE_NOT_EVIDENCE` with rule,
+severity and unit unchanged (D-155, D-156). D2 approves the count
+sentences above as 9c19c344 rewrote them, once the merge-order
+renumbering had made the old clause false, with the NOT_RUN reason's
+"the count collected on this PR's own base"; the sentence after them was
+rewritten under D3 in integration batch 3 (cecba56e). D4 keeps pin 1,
+`prod_change_not_evidence_hardcoded_pos`, beside
+`hardcoded_package_only_pos`, the same shape: this PR merged before
+#522, and A52 drops pin 1 only if #522 merges first, so pin 1's bullet
+above stands as written. D5 adds one sentence to the `gating.py` E1
+comment approved under A54, naming #522's fixture-producer evidence; it
+changes the comment only (4a87d143, in integration batch 3). This
+paragraph was written after the reply.
 
 ## D-163 (2026-10-19): in Python, a handler assertion proved to always pass is not inspection, refining D-015 (#496)
 

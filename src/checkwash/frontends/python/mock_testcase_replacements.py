@@ -143,7 +143,7 @@ def restructured_patch_event(path, modules, live, context, deny, budget, search=
                 modules={'unittest', 'unittest.mock'},
                 symbols={'unittest': {'TestCase', 'main', 'mock'}, 'unittest.mock': {'patch'}}):
             return None
-    trace = _Trace(modules[1], context, 1, deny, budget, search)
+    trace = _Trace(modules[1], context, 1, deny, budget, search, path=path, unit="<restructured patch>")
     item = ast.withitem(context_expr=decorator, optional_vars=ast.Name(id=mock_name, ctx=ast.Store()))
     # The first row alone proves consumption. The complete literal sequence
     # above additionally prevents an unrelated or weakened inventory match.

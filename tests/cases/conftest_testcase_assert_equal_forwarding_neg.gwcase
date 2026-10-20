@@ -1,0 +1,32 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 432
+title: an assertEqual wrapper that forwards to the captured original still asserts
+origin: issue #432's second control, ruling 432.Q4: a TestCase replacement with a call in
+origin2: it is not a no-op. tests/test_issue432_noop_replacement.py runs this conftest
+origin3: under real pytest, where the failing assertEqual still fails (testcase-forwarding).
+=== head: app.py ===
+def value():
+    return 0
+=== head: tests/test_value.py ===
+import unittest
+
+from app import value
+
+
+class TestValue(unittest.TestCase):
+    def test_value(self):
+        self.assertEqual(value(), 1)
+=== after: tests/conftest.py ===
+import unittest
+
+_original = unittest.TestCase.assertEqual
+
+
+def _assert_equal(self, first, second, msg=None):
+    return _original(self, first, second, msg)
+
+
+unittest.TestCase.assertEqual = _assert_equal
+=== expect ===
+[]

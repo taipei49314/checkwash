@@ -67,7 +67,7 @@ it is known not to.
 
 | # | shape | pinned by |
 |---|---|---|
-| 7a | conftest runtime control: an execution/report hook (#84), or a no-op swapped in for `item.runtest`/`obj`/`_obj`, an item class's `runtest` or a native `unittest.TestCase` method — `report.outcome = 'passed'` in `pytest_runtest_makereport`, `item.runtest = lambda: None` in a hook, `pytest.Function.runtest = lambda self: None` or `unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None` at module scope | `conftest_gate_lends_to_report_hook_pos.gwcase` |
+| 7a | conftest runtime control: an execution/report hook (#84), or a no-op swapped in for `item.runtest`/`obj`/`_obj`, an item class's `runtest` or a native `unittest.TestCase` method — `report.outcome = 'passed'` in `pytest_runtest_makereport`, `item.runtest = lambda: None` in a hook, `pytest.Function.runtest = lambda self: None` or `unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None` at module scope | `conftest_gate_lends_to_report_hook_pos.gwcase`, `conftest_item_class_runtest_noop_pos.gwcase`, `conftest_item_runtest_noop_pos.gwcase`, `conftest_testcase_assert_equal_noop_pos.gwcase`, `conftest_testcase_call_test_method_noop_pos.gwcase` |
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 | 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | `subject_argument_wrap_pos.gwcase`, `subject_hoisted_wrap_pos.gwcase` |
 | 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | `expectation_derived_inline_pos.gwcase`, `expectation_derived_pos.gwcase` |
@@ -320,7 +320,7 @@ state — do not invent a row to fill it. Quarterly review:
 | 2026-09-23 | missed cheat | @arsen-ask-lx | #164 | `tests/test_js_node_assert.py` | — |
 | 2026-10-12 | missed cheat | @talhayme | #363 | `js_catch_assertion_swallowed_pos.gwcase` | 16, 22 |
 | 2026-10-19 | false block | @talhayme | #457 | `subject_pairing_other_subject_known_limit_pos.gwcase` | 84b |
-| 2026-10-19 | false block | @talhayme | #471 | `hardcoded_via_conftest_fixture_neg.gwcase` | 93, 158 |
+| 2026-10-20 | false block | @talhayme | #471 | `hardcoded_via_conftest_fixture_neg.gwcase` | 93, 158 |
 
 ## Send us one
 

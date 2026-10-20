@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 432
+title: an item-class runtest replacement that calls the captured original still runs the test
+origin: ruling 432.Q4: a class-level replacement delegates when a call in it mentions a
+origin2: carrier of the original. The same source is the capture-and-call control of
+origin3: test_delegating_item_class_runtest_stays_silent.
+=== head: app.py ===
+def value():
+    return 0
+=== head: tests/test_value.py ===
+from app import value
+
+
+def test_value():
+    assert value() == 1
+=== after: tests/conftest.py ===
+import pytest
+
+_original = pytest.Function.runtest
+pytest.Function.runtest = lambda self: _original(self)
+=== expect ===
+[]
