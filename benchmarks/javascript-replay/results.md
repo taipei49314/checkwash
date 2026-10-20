@@ -9,12 +9,12 @@ Each release compares the previous release with its candidate on these
 1,800 commits before its tag, and every commit whose outcome moves, except
 an error that becomes a pass, goes to the owner first
 ([release procedure](../../docs/RELEASING.md#before-the-tag-the-fixed-corpus-comparison)).
-The two runs below were made before that step existed. Both count as its
+The first two runs below were made before that step existed. Both count as its
 results (owner ruling 2026-10-19, R27).
 
 ## Method
 
-Both runs used a checkwash-lab harness that calls the CLI once per commit
+The first two runs used a checkwash-lab harness that calls the CLI once per commit
 and engine, `check <parent>..<commit> --repo <clone> --format json`, with
 the commit's first parent, and records each call's exit, verdict, findings
 and stderr. Neither used `checkwash sweep`, the method the 2026-10-06 shape
@@ -91,6 +91,34 @@ commits both versions analysed.
 - **Error → error, 2.** Both versions refuse a symlinked source before any
   analysis: apollo-client `8a51ea63` (`.agents/skills/apollo-client`) and
   undici `0f1f8903` (`docs/README.md`).
+
+## Run 3: v0.8.0 against the v0.9.0 candidate
+
+This release comparison ran on 2026-10-20, 17:33:41Z to 18:55:19Z,
+alongside the Python standard set. It used the same first-parent CLI
+method with v0.8.0 `f02b5d8a07fa39ee1898881f66c571eb164cb11c` and candidate
+`7d173fe8f26fb84362aa0a2adb69b4e8cb564622`, source tree
+`17c3dd82bf597daa12e1257052e3b71f3323ca95`. The venue was human-authorized
+local Linux Docker, **not EC pool**, under the explicit
+[0.9.0 session grant](../../docs/RELEASING.md#v090-session-publication-authorization-2026-10-21);
+Python 3.11.16. The source-bound
+[record](../release-comparison/v0.9.0.json) names the manifest, raw-evidence
+archive and verification hashes.
+
+| v0.8.0 -> candidate | Commits |
+|---|---:|
+| pass -> pass | 1,759 |
+| block -> block | 39 |
+| error -> error | 2 |
+| **total** | **1,800** |
+
+No mandatory movement-review item was found across either set. Codex
+recorded the complete comparison disposition under the session delegation;
+it is not a claim of personal maintainer review. Both symlink refusals
+listed in Run 2 remain errors with identical stderr in the two engines.
+The 39 blocks remain unadjudicated. This is an in-sample comparison, not
+a false-positive rate, and it does not replace the combined acceptance
+sweep or other release gates.
 
 ## What these runs do not show
 

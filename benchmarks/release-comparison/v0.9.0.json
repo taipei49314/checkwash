@@ -1,0 +1,74 @@
+{
+  "status": "R29_FIXED_CORPUS_GATE_SATISFIED_FOR_TESTED_SRC_TREE",
+  "reviewer": {
+    "kind": "delegated_agent",
+    "name": "Codex",
+    "session": "01a15963-80bd-7053-95a2-ad67abb88fd1"
+  },
+  "reviewed_utc": "2026-10-20T18:58:14.344928+00:00",
+  "authority": "Nelson's session-scoped complete planning/execution/release grant; docs/RELEASING.md@7d173fe8f26fb84362aa0a2adb69b4e8cb564622",
+  "rule_source": "docs/RELEASING.md@7d173fe8f26fb84362aa0a2adb69b4e8cb564622:125-172,207-243",
+  "source": {
+    "candidate": {
+      "sha": "7d173fe8f26fb84362aa0a2adb69b4e8cb564622",
+      "src_tree": "17c3dd82bf597daa12e1257052e3b71f3323ca95",
+      "tree": "aead085dffc81ebe566d0f80a4d11b0854701e20",
+      "version": "0.9.0"
+    },
+    "previous": {
+      "sha": "f02b5d8a07fa39ee1898881f66c571eb164cb11c",
+      "src_tree": "d7b1f2e71b075d5d37c5b95799167f9aa9698acb",
+      "tree": "ada5d81cfa12cbabb6298715d67ebc7f67e9b27e",
+      "version": "0.8.0"
+    }
+  },
+  "manifest_sha256": "f96322eb0616c08b8f30a87de9f8ea554b57260a17a9007a918511baed0e254f",
+  "receipt_sha256": "a4f1a5217d8f021171312243c3d90449ae3fc958492c8425b5f3e881da7e4db7",
+  "comparison_sha256": "f917319e7a364a0abfab7f65f96dade62f5b455708b2bb02eb73688024e170ff",
+  "verification_sha256": "3902813c196f01011cd9033e74ad63853fc5839cbf7d797bbeb6b1e56be6757b",
+  "members": 3600,
+  "cli_calls": 7200,
+  "counts": {
+    "standard": {
+      "ANALYZED_PASS -> ANALYZED_PASS": 1752,
+      "ANALYZED_BLOCK -> ANALYZED_BLOCK": 48
+    },
+    "javascript": {
+      "ANALYZED_PASS -> ANALYZED_PASS": 1759,
+      "ANALYZED_BLOCK -> ANALYZED_BLOCK": 39,
+      "PRODUCT_ERROR_EXIT -> PRODUCT_ERROR_EXIT": 2
+    }
+  },
+  "mandatory_movement_reviews": [],
+  "recorded_unchanged_errors": [
+    {
+      "repository": "apollographql/apollo-client",
+      "commit": "8a51ea636600dbe4b48477d32f30469b7d36b152",
+      "parent": "46a45c3bcef2d21cb16a75d34d366a0807240d4e",
+      "disposition": "RECORDED_UNCHANGED_ERROR",
+      "previous_stderr_sha256": "faababe0ab749bf970d94e382af6f1b698082a857d1f3a8c72e0f4a96d5721b0",
+      "candidate_stderr_sha256": "faababe0ab749bf970d94e382af6f1b698082a857d1f3a8c72e0f4a96d5721b0",
+      "message": "checkwash engine error: strict snapshot batch cannot inspect nonregular source .agents/skills/apollo-client (a symlink)"
+    },
+    {
+      "repository": "nodejs/undici",
+      "commit": "0f1f8903189d2353fd42be35e7bbc0aa9fb4b26f",
+      "parent": "445522ba1bc22bcef2971bfdc30c883531e84e84",
+      "disposition": "RECORDED_UNCHANGED_ERROR",
+      "previous_stderr_sha256": "641fcd21b780682ea4f6b4365f7f6ca0fe450945e519a6abd770f647d2f0c1be",
+      "candidate_stderr_sha256": "641fcd21b780682ea4f6b4365f7f6ca0fe450945e519a6abd770f647d2f0c1be",
+      "message": "checkwash engine error: strict snapshot batch cannot inspect nonregular source docs/README.md (a symlink)"
+    }
+  ],
+  "disposition": "No pass/block movement, analysed-to-error or previously-unanalysed new block exists in the complete 3600-member comparison. The mandatory review list is empty. Both unchanged symlink errors remain errors, not passes. No block was adjudicated true or false. Counts are in-sample, not a false-positive rate.",
+  "scope": "This R29 comparison only. Combined acceptance sweep, /clear, final-head checks, public tag, GitHub Release, human PyPI approval and public bytes remain separate gates.",
+  "final_source_requirement": "Final src tree must equal candidate src tree, except the allowed version-string-only change in src/checkwash/__init__.py.",
+  "archive": {
+    "archive": "完整原始證據.zip",
+    "bytes": 37047280,
+    "sha256": "ef6cdf68489ac2f723c560a8046a9d5235c7998e7cdd397468128972d4de2c73",
+    "raw_files": 40896
+  },
+  "original_evidence_preserved": true,
+  "human_personal_review_claimed": false
+}

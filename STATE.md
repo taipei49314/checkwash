@@ -11,9 +11,15 @@ records his words and scope.
 
 The candidate starts from main `641efdec1a17cbb3c7291491b5db90a1fb469d22`.
 This preparation changes version metadata and records authorization.
-The #428 selection, combined acceptance sweep, pre-tag fixed-corpus
-comparison, final release guide and exact candidate qualification are
-not complete. No v0.9.0 tag, Release or public artifact is claimed here.
+The pre-tag fixed-corpus comparison has completed: the Python set has
+1,752 unchanged passes and 48 unchanged blocks; JS/TS has 1,759 unchanged
+passes, 39 unchanged blocks and two unchanged errors. Its mandatory review
+list is empty; the [R29 record](docs/RELEASING.md#completed-r29-comparison-2026-10-20-utc)
+identifies the tested source and actual delegated reviewer. These are
+in-sample counts, not a false-positive rate.
+The #428 selection, combined acceptance sweep, `/clear`, final release guide
+and final-head checks are not complete. No v0.9.0 tag, Release or public
+artifact is claimed here.
 The public CLI, README install commands and Action recommendation remain
 at verified v0.8.0. Earlier dated entries below remain historical records.
 

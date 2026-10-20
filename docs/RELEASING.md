@@ -242,6 +242,38 @@ Selection, acceptance results, the pre-tag comparison, final qualification,
 exact release commit, tag and public bytes will be recorded as they occur.
 This entry is authorization and preparation, not a success receipt.
 
+### Completed R29 comparison, 2026-10-20 UTC
+
+The fixed comparison ran from 17:33:41Z to 18:55:19Z under this session's
+explicit local Docker authority: Python 3.11.16, image
+`sha256:a640d42096d21ace335b6029f1c3334146f6c9dc7dec6077cc99f4b99927c5a5`.
+It compared v0.8.0 `f02b5d8a07fa39ee1898881f66c571eb164cb11c` with candidate
+`7d173fe8f26fb84362aa0a2adb69b4e8cb564622`, whose `src/` tree is
+`17c3dd82bf597daa12e1257052e3b71f3323ca95`. All 3,600 fixed commits and
+7,200 real CLI records were verified against their raw bytes, source pins,
+commands, original members, Git labels and terminal/container receipts.
+The owned container was removed and its absence verified.
+
+| In-sample set | pass -> pass | block -> block | error -> error | Total |
+|---|---:|---:|---:|---:|
+| Python standard | 1,752 | 48 | 0 | 1,800 |
+| JS/TS | 1,759 | 39 | 2 | 1,800 |
+
+There are no mandatory movement-review items and no unresolved calls.
+Codex, acting under the recorded session delegation, reviewed the complete
+comparison and retained the two unchanged symlink refusals as errors.
+No block was adjudicated true or false, and these counts are not a
+false-positive rate. This records the actual agent reviewer; it does not
+claim Nelson personally examined each result. The
+[source-bound record](../benchmarks/release-comparison/v0.9.0.json) includes
+the exact manifest, comparison, verification and retained evidence-archive
+hashes. The [JS/TS record](../benchmarks/javascript-replay/results.md#run-3-v080-against-the-v090-candidate)
+records the same result beside the earlier runs.
+
+This satisfies this comparison step for the tested source tree, subject
+to the final-source rule above. It does not complete the combined sweep,
+`/clear`, final release checks, publication or the human PyPI approval.
+
 ## v0.8.0 one-time publication authorization (2026-10-15)
 
 On 2026-10-15 the maintainer instructed **「這版要先發了」** (release this
