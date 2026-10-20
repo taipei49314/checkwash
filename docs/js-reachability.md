@@ -363,7 +363,8 @@ walk above now also reads, for the declarations they hold:
 - A misreading no refusal notices (#490) now reaches registrations: where a
   change adds one, every test after it in that list can read as gone, a false
   block; where both sides hold one, those tests are read on neither side.
-- The Python form, a `def test_x` under `if False:`, is #499.
+- The Python form, a `def test_x` under `if False:`, is outside this walk;
+  since #499 (D-166) it is no unit either.
 
 ## Evidence
 
