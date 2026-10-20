@@ -18,6 +18,7 @@ import datetime
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
@@ -58,6 +59,24 @@ def analyze_change(before, after, path=TEST_PATH):
 def outcome(before, after, path=TEST_PATH):
     found, verdict = analyze_change(before, after, path)
     return [(f.unit, f.severity, f.deescalators) for f in found], verdict
+
+
+def _refined_legacy_keys(monkeypatch):
+    """The legacy key each content-bound key computed while the test runs refines (#512).
+
+    A v2 key's identity holds the legacy key's pre-image unchanged, so the
+    legacy key it refines is `make_fingerprint` of the same inputs.
+    """
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
 
 
 # --- 260.Q1: every binding of `pytestmark` in a module ---------------------------
@@ -357,10 +376,14 @@ GUARDED = module('if sys.platform == "win32":\n    pytestmark = pytest.mark.skip
     (module('pytestmark = pytest.mark.skip(reason="posix only")'),
      "test_add: skip guard removed (was 'sys.platform == \"win32\"') (pytestmark: pytest.mark.skip)"),
 ])
-def test_a_guard_made_always_true_or_removed_is_reported(after, message):
+def test_a_guard_made_always_true_or_removed_is_reported(after, message, monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     found, verdict = analyze_change(GUARDED, after)
     assert [(f.message, f.severity, f.shape) for f in found] == [(message, "high", "guard_weakened")]
-    assert found[0].fingerprint == make_fingerprint("TEST_DISABLED", TEST_PATH, "test_add", "guard:pytest.mark.skip")
+    # The key refines the guard family's legacy key (#512).
+    assert found[0].fingerprint.startswith(f"TEST_DISABLED/{TEST_PATH}/test_add/v2:")
+    assert legacy[found[0].fingerprint] == make_fingerprint(
+        "TEST_DISABLED", TEST_PATH, "test_add", "guard:pytest.mark.skip")
     assert verdict == "block"
 
 
@@ -397,12 +420,15 @@ def test_moving_a_mark_from_the_test_into_pytestmark_is_no_event():
     assert outcome(decorated, module(f"pytestmark = {SKIP}")) == ([], "pass")
 
 
-def test_a11_is_reported_under_its_mark_s_name():
+def test_a11_is_reported_under_its_mark_s_name(monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     found, _verdict = analyze_change(BEFORE, module(f"SKIP = {SKIP}\npytestmark = SKIP"))
-    assert [(f.message, f.fingerprint) for f in found] == [(
+    # The key refines the legacy key of the mark's name (#512).
+    assert [(f.message, legacy[f.fingerprint]) for f in found] == [(
         "test_add: disabling marker added (pytest.mark.skip)",
         make_fingerprint("TEST_DISABLED", TEST_PATH, "test_add", "pytest.mark.skip"),
     )]
+    assert found[0].fingerprint.startswith(f"TEST_DISABLED/{TEST_PATH}/test_add/v2:")
     assert found[0].after.text == SKIP
 
 
@@ -427,12 +453,15 @@ CONFTEST_GUARDED = HEAD + '\nif sys.platform == "win32":\n    pytestmark = pytes
     (HEAD + '\npytestmark = pytest.mark.skip(reason="posix only")\n',
      "skip guard removed (was 'sys.platform == \"win32\"')"),
 ])
-def test_a_conftest_pytestmark_s_guard_guards_nothing_either(after, said):
+def test_a_conftest_pytestmark_s_guard_guards_nothing_either(after, said, monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     found, verdict = analyze_change(CONFTEST_GUARDED, after, path=CONFTEST)
     assert [(f.message, f.severity, f.shape) for f in found] == [(
         f"<suite>: {said} (pytestmark: pytest.mark.skip): pytest does not collect conftest.py "
         "as a test module, so this pytestmark disables nothing",
         "info", "inert_mark",
     )]
-    assert found[0].fingerprint == make_fingerprint("TEST_DISABLED", CONFTEST, "<suite>", "guard:pytest.mark.skip")
+    assert found[0].fingerprint.startswith(f"TEST_DISABLED/{CONFTEST}/<suite>/v2:")
+    assert legacy[found[0].fingerprint] == make_fingerprint(
+        "TEST_DISABLED", CONFTEST, "<suite>", "guard:pytest.mark.skip")
     assert verdict == "pass"

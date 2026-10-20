@@ -1149,10 +1149,10 @@ Except for the content-bound forms described below, fingerprint remains
 `sha256(rule + "/" + path + "/" + qualname + "/" + normalize(before_text))[:12]`,
 prefixed `rule/path/qualname/` for readability. That legacy normalization
 strips whitespace outside string literals and preserves whitespace within
-them; line numbers are excluded. Since #421 this legacy form is the key of
-TEST_DISABLED, EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD,
-TEST_PATCHES_SUBJECT and the rules that are not oracle rules; for those,
-one approval still covers any after state of the same before text.
+them; line numbers are excluded. Since #421 and #512 this legacy form is the
+key of EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT
+and the rules that are not oracle rules; for those, one approval still covers
+any after state of the same before text.
 
 ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED,
 EXPECTED_VALUE_CHANGED (assertion level), EXPECTED_VALUE_DERIVED,
@@ -1195,6 +1195,61 @@ identity never raises: an input that cannot be read is null, and so is a
 context that cannot be encoded. A different after on
 the same before, another copy of the same assertion, or a different relevant
 context requires a different approval.
+
+TEST_DISABLED uses the same form since #512, `TEST_DISABLED/path/qualname/v2:<64hex>`,
+a focus a diff adds to a file under the qualname `<file>`, with the same
+scheme name and encoding. Its identity holds the legacy pre-image unchanged
+(the text the legacy key hashed: the marker's name, `guard:<marker>`,
+`parametrize`, a removed unit's own assertions in the legacy text form or
+its name when it has none, or the focus marker's name), the finding's
+`shape` as the event kind, no ordinal or count, and what that shape
+changed:
+
+- a marker added (`marker_added`, `collection_control`, and `inert_mark` for
+  a conftest's `pytestmark`): the marker's complete text as the after text,
+  and its recorded guard as the context, null when it has none, so where the
+  frontend records the guard, as the Python frontend does, a guarded skip
+  and an unguarded one of the same name are two approvals; a JS/TS
+  imperative skip (`ctx.skip()`, `t.skip()`, `this.skip()`) records none, so
+  for it they are one. Alignment records only the names of the markers it
+  leaves unpaired, so the markers a name added are read by content: each
+  base marker of that name cancels one head marker of that name with the
+  same text and guard, and the head markers left over, in the head side's
+  order, are the ones added. When there are as many of them as the name has
+  findings, each finding binds one of them, in that order. Otherwise (a
+  marker of that name also edited, one moved in from a helper, or one paired
+  with a marker of another name) each finding of the name binds, as the
+  context, every marker of the unit on both sides, each a name, text and
+  guard, each side sorted;
+- a guard made always true or removed (`guard_weakened`, or `inert_mark` in a
+  conftest): the guard before and the guard after as the before and after
+  texts, the after null when the guard was removed, so the two events are
+  two approvals, and as the context what every marker of that name ran
+  under on each side (its guard, or the first line of the `except` block it
+  sits in, null when neither), each side sorted, so removing one of two
+  guards of a name and removing the other are two approvals; a path gained
+  by an unguarded `collect_ignore` (THREATMODEL row 81), reported in the same
+  shape, has no guard on either side, so both texts are null and no path is
+  bound;
+- parametrized cases deleted or disabled (`param_cases_removed`): as the
+  context, the rows that ran before and are no longer written (an edited
+  row's old text among them) and the rows still written but newly disabled,
+  each a sorted list of rows, a row being its table's argnames and cell texts
+  (a JS/TS `.each`/`.for` table's included), and the live counts before and
+  after, so approving one row's deletion covers no other row; a side whose
+  rows cannot be read gives none, so for an unread base table only the
+  counts are bound;
+- a unit removed (`unit_removed`): the complete texts of its own assertions,
+  in its order, a JS/TS assertion with its expected value;
+- a focus added to a file (`marker_added`, file level): the focus as the
+  frontend records it, its callee as written (`describe.only`, `fdescribe`)
+  or its `only` option's text, as the after text; its title and arguments
+  are not bound.
+
+Texts are in the normal form above. The guard stays out of the marker
+identity that alignment pairs markers on (§2b), so pairing, move detection
+and the findings a diff gives are unchanged; only the key binds it (D-169,
+which amends D-019). SARIF labels these keys `checkwash/v2`.
 
 GUARDRAIL_TOUCHED, CI_WORKFLOW_TOUCHED, TEST_FILE_UNPARSEABLE, SCOPE_DRIFT,
 and SNAPSHOT_CODE_COCHANGE use content-bound v2 fingerprints. Their identity
@@ -1254,12 +1309,13 @@ after on the same before, or a different relevant event context, requires a
 different approval. An identical reviewed content pair can survive rebasing
 when its paths and relevant context are unchanged.
 
-Legacy keys in these five namespaces, and since #421 in the nine
-assertion-level namespaces above, are retired even if their expiry has
-not passed. They remain parsed records so ledger deletions/rewrites remain
-detectable, but are excluded from eligibility; the writer rejects new legacy
-keys, and `doctor` and `check` report them. An entry's rule label cannot
-disguise a retired fingerprint namespace.
+Legacy keys in these five namespaces, since #421 in the nine
+assertion-level namespaces above, and since #512 TEST_DISABLED's, are
+retired even if their expiry has not passed. They remain parsed records so
+ledger deletions/rewrites remain detectable, but are excluded from
+eligibility; the writer rejects new legacy keys, and `doctor` and `check`
+report them. An entry's rule label cannot disguise a retired fingerprint
+namespace.
 Other namespaces keep their existing matching compatibility. Old reasons do
 not contain enough evidence for automatic migration; re-review the intended
 diff and record its complete v2 identity. Expiry and base-side loading policy

@@ -176,8 +176,13 @@ by that field.
   get content-bound keys, `rule/path/unit/v2:` and a 64-character digest.
   Their old keys are retired. Findings of one rule in one unit now sort by key,
   so their order can change, and SARIF `partialFingerprints` for these rules
-  move from `checkwash/v1` to `checkwash/v2`. Every other rule keeps its key
-  format; TEST_DISABLED is due to move in a later round.
+  move from `checkwash/v1` to `checkwash/v2`.
+- **TEST_DISABLED fingerprints (D-169, #512).** Every TEST_DISABLED finding
+  gets a content-bound key of the same form, `TEST_DISABLED/path/unit/v2:`
+  and a 64-character digest, a file-level focus under the unit `<file>`. Its
+  old keys are retired, its findings in one unit now sort by key, and its
+  SARIF `partialFingerprints` move to `checkwash/v2`. Every rule other than
+  these ten keeps its key format.
 - **Same-named test functions (D-144, #424).** A def that a later one replaces
   is no longer a unit, and the units that remain are renumbered, so findings
   keyed by them get new keys, with no message.

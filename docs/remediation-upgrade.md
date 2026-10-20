@@ -82,9 +82,37 @@ Reformatting outside string literals and moving the line keep the key.
 Legacy keys of these rules are retired as the five above were: kept as
 records, never honoured, refused by `allow`, and reported by doctor and check.
 To keep an approval, re-run the reviewed change with the new version and record
-its new key with the four steps above. TEST_DISABLED, EXPECTED_VALUE_HARDCODED,
-CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep their legacy keys for now.
-IR_VERSION and FINDINGS_VERSION stay 2.
+its new key with the four steps above. TEST_DISABLED moves in the same minor
+(below). EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and
+TEST_PATCHES_SUBJECT keep their legacy keys for now. IR_VERSION and
+FINDINGS_VERSION stay 2.
+
+### TEST_DISABLED (next minor, #512)
+
+Through v0.8.0, TEST_DISABLED keyed a finding by its rule, path, unit and a
+fixed text: the marker's name, which for an imperative `pytest.skip()` leaves
+out its `if` guard; `guard:<marker>` for a guard made always true and for one
+removed alike; `parametrize` whatever rows went; a removed unit's assertions,
+a JS/TS one only through its matcher's `(`; and one name for any focus added
+to a file. So an exemption recorded for one skip, guard change or deleted row
+also allowed later, different changes to the same unit: an unguarded skip
+after a guarded one was approved, the other guard event, or the deletion of
+any other row.
+
+The next minor gives TEST_DISABLED the same key form, `rule/path/unit/v2:`
+and the complete 64-character digest (a file-level focus under the unit
+`<file>`). The key binds what kind of change it is and what changed: an
+added marker's text and its guard, the guard before and after, which rows
+were deleted or newly disabled and the live counts, a removed unit's
+complete assertions, or a file-level focus's spelling (`describe.only`,
+`fdescribe` or an `only` option, not the block it is on). Reformatting
+outside string literals and moving the lines keep the key. Which markers
+pair, and how many findings a change gives, do not change.
+
+Legacy TEST_DISABLED keys are retired the same way: kept as records, never
+honoured, refused by `allow` (exit 2, naming #512), and reported by doctor
+and check. Re-run each reviewed change with the new version and record its
+new key with the four steps above.
 
 ## Machine interfaces and SARIF
 
@@ -110,7 +138,8 @@ repinning their in-process engine.
 
 SARIF remains 2.1.0. Migrated identities use `partialFingerprints.checkwash/v2`;
 other identities retain `checkwash/v1`. From the next minor (#421), the nine
-assertion-level rules above are migrated identities too. Source location comes from the analyzed
+assertion-level rules above are migrated identities too, and so is
+TEST_DISABLED (#512). Source location comes from the analyzed
 head snapshot, including an inherited assertion's helper file. When no precise
 head location exists, the result is file-level with evidence text and side in
 properties. A projected root-helper assertion instead points to its concrete

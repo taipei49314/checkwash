@@ -16,14 +16,19 @@ CHANGE_FINGERPRINT_RULES = frozenset({
 })
 # The assertion-level oracle namespaces with content-bound v2 identities
 # (#421, ruling Q2 (b)): a different after state on the same before needs a
-# different approval. TEST_DISABLED is round 2 under its own ruling;
-# EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD, TEST_PATCHES_SUBJECT and
-# the non-oracle rules keep their legacy keys.
+# different approval. EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD,
+# TEST_PATCHES_SUBJECT and the non-oracle rules keep their legacy keys.
 ASSERTION_FINGERPRINT_RULES = frozenset({
     "ASSERT_WEAKENED", "ASSERT_SUBSTITUTED", "TOLERANCE_LOOSENED", "EXPECTED_VALUE_CHANGED",
     "EXPECTED_VALUE_DERIVED", "EXPECTATION_DEFINITION_CHANGED", "SUBJECT_NORMALIZED",
     "SUBJECT_INPUT_CHANGED", "ASSERT_REMOVED",
 })
+# Round 2 of #421, under its own ruling (#512, Q2 and Q3 (a)): every
+# TEST_DISABLED shape has a key of the same form, `rule/path/unit/v2:<64hex>`,
+# built as the nine rules' keys are, and its legacy keys are retired the same
+# way. A set of its own, so the nine rules' set stays the one #421 ruled.
+TEST_DISABLED_FINGERPRINT_RULES = frozenset({"TEST_DISABLED"})
+_UNIT_FINGERPRINT_RULES = ASSERTION_FINGERPRINT_RULES | TEST_DISABLED_FINGERPRINT_RULES
 _CHANGE_DIGEST = re.compile(r"v2:[0-9a-f]{64}\Z")
 _CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -39,12 +44,14 @@ def fingerprint_state(fingerprint: str, rule: str | None = None) -> str:
         and fingerprint.rsplit("/", 1)[-1].startswith("v2:")
         and len(parts) == 3 and parts[1] == "-"
     )
-    if key_rule in ASSERTION_FINGERPRINT_RULES and not stored_expectation:
+    if key_rule in _UNIT_FINGERPRINT_RULES and not stored_expectation:
         # Assertion-level: `rule/path/unit/v2:<64hex>`. A JS unit is the raw
         # test title, which may hold `/` anywhere, even last (`it("GET /")`),
         # so only the last segment is read as the digest, after a non-empty
         # path and unit. A legacy before-only key is retired: still parsed,
-        # never eligible (#421 Q4 (a)).
+        # never eligible (#421 Q4 (a)). TEST_DISABLED's keys have the same
+        # form, its file-level focus under the unit `<file>`, and its legacy
+        # keys are retired the same way (#512 Q3 (a)).
         middle, _, last = (fingerprint.split("/", 1)[1] if "/" in fingerprint else "").rpartition("/")
         path, _, unit = middle.partition("/")
         if not path or not unit:
@@ -72,7 +79,7 @@ def is_content_bound_fingerprint(fingerprint: str, rule: str | None = None) -> b
     """Recognize supported v2 identities, including stored-expectation variants."""
     key_rule = fingerprint.split("/", 1)[0]
     return (
-        key_rule in CHANGE_FINGERPRINT_RULES | ASSERTION_FINGERPRINT_RULES
+        key_rule in CHANGE_FINGERPRINT_RULES | _UNIT_FINGERPRINT_RULES
         and bool(_CHANGE_DIGEST.fullmatch(fingerprint.rsplit("/", 1)[-1]))
         and fingerprint_state(fingerprint, rule) == "supported"
     )
@@ -95,6 +102,14 @@ def fingerprint_issue(fingerprint: str, rule: str | None = None) -> str | None:
             "exemptions are retired, because they also covered every other rewrite "
             "of the same line (#421). Re-run the reviewed diff with this version and "
             "review its new fingerprint before recording an exemption"
+        )
+    if state == "retired" and key_rule in TEST_DISABLED_FINGERPRINT_RULES:
+        return (
+            f"{key_rule} requires a content-bound v2 fingerprint; legacy exemptions are "
+            "retired, because one approved skip, guard change or parametrize row deletion "
+            "also covered later, different changes to the same unit (#512). Re-run the "
+            "reviewed diff with this version and review its new fingerprint before "
+            "recording an exemption"
         )
     if state == "retired":
         return (
@@ -308,7 +323,10 @@ def assertion_identity(
     every v2 key refines its legacy key, plus the complete before and after
     texts, the event kind, the before side's ordinal and count of that text,
     and the rule's context. Spans, line numbers, messages, strengths,
-    severities, file digests and revision labels stay out.
+    severities, file digests and revision labels stay out. TEST_DISABLED
+    builds its keys with it too (#512): its texts are a marker's or a
+    guard's, its kind is the finding's shape, and it records no position
+    (`detectors/test_disabled.py`).
     """
     ordinal, count = position
     return {
@@ -365,7 +383,7 @@ def assertion_key(identity: dict) -> str:
 
 
 def make_assertion_fingerprint(rule: str, path: str, qualname: str | None, legacy_text: str, **evidence) -> str:
-    """The content-bound key of an assertion-level finding (#421): `assertion_identity`, hashed."""
+    """The content-bound key of an assertion-level or TEST_DISABLED finding (#421, #512): `assertion_identity`, hashed."""
     return assertion_key(assertion_identity(rule, path, qualname, legacy_text, **evidence))
 
 

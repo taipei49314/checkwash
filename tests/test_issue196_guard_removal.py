@@ -6,12 +6,15 @@ T1.8, because the edited guard can be evaluated. Removing the `if` instead
 left nothing to evaluate: the call keeps its name, so no marker is added, and
 the verdict passed. A skip that ran only under an `if` guard, or inside an
 `except` block, and now runs under neither is reported as TEST_DISABLED with
-the guard family's identity, so no recorded fingerprint moves.
+the guard family's identity. Since #512 its key refines that legacy key and
+binds the guard before and after, so it is not the key of a guard made always
+true.
 """
 import datetime
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
@@ -78,6 +81,24 @@ def removed(before, after):
     return found[0]
 
 
+def _refined_legacy_keys(monkeypatch):
+    """The legacy key each content-bound key computed while the test runs refines (#512).
+
+    A v2 key's identity holds the legacy key's pre-image unchanged, so the
+    legacy key it refines is `make_fingerprint` of the same inputs.
+    """
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
+
+
 @pytest.mark.parametrize("before, after, was", [
     (GUARDED, BARE, "sys.version_info < (3, 9)"),
     (GUARDED.replace('pytest.skip("needs 3.9")', 'pytest.xfail("needs 3.9")'),
@@ -115,12 +136,18 @@ def test_a_removed_guard_is_reported(before, after, was):
     assert finding.message.endswith(f": skip guard removed (was {was!r})")
 
 
-def test_the_finding_shares_the_guard_familys_identity():
+def test_the_finding_shares_the_guard_familys_identity(monkeypatch):
+    # The guard family's legacy key, which one exemption shared for both
+    # events; since #512 each key refines it and binds the guard before and
+    # after, so the two events are two approvals.
+    legacy = _refined_legacy_keys(monkeypatch)
     finding = removed(GUARDED, BARE)
     assert finding.unit == "test_total"
-    assert finding.fingerprint == make_fingerprint("TEST_DISABLED", PATH, "test_total", "guard:pytest.skip")
+    assert finding.fingerprint.startswith(f"TEST_DISABLED/{PATH}/test_total/v2:")
+    assert legacy[finding.fingerprint] == make_fingerprint("TEST_DISABLED", PATH, "test_total", "guard:pytest.skip")
     always = removed(GUARDED, GUARDED.replace("if sys.version_info < (3, 9):", "if True:"))
-    assert always.fingerprint == finding.fingerprint
+    assert legacy[always.fingerprint] == legacy[finding.fingerprint]
+    assert always.fingerprint != finding.fingerprint
     assert always.message.endswith(": skip guard now always fires ('True')")
     assert finding.after is not None and finding.after.text == 'pytest.skip("needs 3.9")'
 

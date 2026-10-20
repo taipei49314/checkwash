@@ -16,6 +16,7 @@ import datetime
 
 import pytest
 
+import checkwash.findings as findings_module
 from checkwash.change import FileChange
 from checkwash.compat import unit_is_live
 from checkwash.config import Config
@@ -67,6 +68,24 @@ def one(before, after, *extra):
     found, verdict = analyze_test(before, after, *extra)
     assert len(found) == 1, found
     return found[0], verdict
+
+
+def _refined_legacy_keys(monkeypatch):
+    """The legacy key each content-bound key computed while the test runs refines (#512).
+
+    A v2 key's identity holds the legacy key's pre-image unchanged, so the
+    legacy key it refines is `make_fingerprint` of the same inputs.
+    """
+    seen = {}
+    real = findings_module.assertion_identity
+
+    def record(rule, path, qualname, legacy_text, **evidence):
+        identity = real(rule, path, qualname, legacy_text, **evidence)
+        seen[findings_module.assertion_key(identity)] = make_fingerprint(rule, path, qualname, legacy_text)
+        return identity
+
+    monkeypatch.setattr(findings_module, "assertion_identity", record)
+    return seen
 
 
 # --- what is recorded -------------------------------------------------------
@@ -235,7 +254,8 @@ def test_a_guarded_skip_added_to_a_requested_fixture_is_judged_by_its_guard(body
         "test_total: skip/xfail added to the setup this test runs (setup.gate.skip)", severity)
 
 
-def test_a_removed_setup_guard_is_reported_with_the_guard_family_identity():
+def test_a_removed_setup_guard_is_reported_with_the_guard_family_identity(monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     finding, verdict = one(module(PLATFORM), module(BARE))
     assert verdict == "block"
     assert finding.severity == "high"
@@ -243,7 +263,9 @@ def test_a_removed_setup_guard_is_reported_with_the_guard_family_identity():
         "test_total: skip guard removed in the setup this test runs "
         "(was \"sys.platform == 'win32'\") (setup.gate.skip)"
     )
-    assert finding.fingerprint == make_fingerprint("TEST_DISABLED", PATH, "test_total", "guard:setup.gate.skip")
+    # Its key refines the guard family's legacy key (#512).
+    assert finding.fingerprint.startswith(f"TEST_DISABLED/{PATH}/test_total/v2:")
+    assert legacy[finding.fingerprint] == make_fingerprint("TEST_DISABLED", PATH, "test_total", "guard:setup.gate.skip")
     assert finding.after.text == "pytest.skip('posix only')"
 
 
@@ -261,13 +283,15 @@ def test_a_setup_skip_moved_out_of_its_except_block_is_a_removed_guard():
     ("if not STRICT:\n    pytest.skip('lenient')\nyield", "if not STRICT:\n    pytest.skip('lenient')\nyield",
      HEADER.replace("STRICT = True", "STRICT = False"), "not STRICT"),
 ])
-def test_a_setup_guard_that_now_always_holds_is_reported(before, after, header_after, shown):
+def test_a_setup_guard_that_now_always_holds_is_reported(before, after, header_after, shown, monkeypatch):
+    legacy = _refined_legacy_keys(monkeypatch)
     finding, verdict = one(module(before), module(after, header=header_after))
     assert verdict == "block"
     assert finding.message == (
         f"test_total: skip guard in the setup this test runs now always fires ({shown!r}) (setup.gate.skip)"
     )
-    assert finding.fingerprint == make_fingerprint("TEST_DISABLED", PATH, "test_total", "guard:setup.gate.skip")
+    assert finding.fingerprint.startswith(f"TEST_DISABLED/{PATH}/test_total/v2:")
+    assert legacy[finding.fingerprint] == make_fingerprint("TEST_DISABLED", PATH, "test_total", "guard:setup.gate.skip")
 
 
 def test_two_branches_that_cover_every_run_earn_no_gate():

@@ -47,9 +47,9 @@ def _mark_weakened_guards(file) -> None:
                 continue
             # Same-text path is THREATMODEL 59 (constant behind the guard).
             # Different-text path is THREATMODEL 54 (if X: skip → if True: skip).
-            # Guard text is not in the fingerprint; only the meaning change
-            # is an event, so recorded allowlists survive a rewrite of a
-            # still-discriminating condition.
+            # Only the meaning change is an event, so a rewrite of a
+            # still-discriminating condition reports nothing. The event's
+            # key binds both guards (#512).
             if guard_always_skips(m.guard, file.constants) and not guard_always_skips(
                 old.guard, file.constants_before
             ):

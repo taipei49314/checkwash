@@ -66,8 +66,12 @@ SUBJECT_INPUT_CHANGED) were keyed on the old assertion only: one exemption
 allowed every later rewrite of that line. From the next minor (#421) their key
 also binds the new assertion, the kind of change, which identical copy changed
 and the rule's context, and their old keys are retired the same way. Each
-reviewed rewrite needs its own entry. TEST_DISABLED, EXPECTED_VALUE_HARDCODED,
-CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep before-only keys for now.
+reviewed rewrite needs its own entry. In the same minor (#512), TEST_DISABLED's
+key binds what each disabling changed (an added skip's text and guard, the
+guard before and after, which parametrize rows went, a removed test's complete
+assertions, a file-level focus's spelling), and its old keys are retired too.
+EXPECTED_VALUE_HARDCODED, CONFTEST_PATCHES_PROD and TEST_PATCHES_SUBJECT keep
+before-only keys for now.
 
 ```bash
 checkwash allow "ASSERT_WEAKENED/tests/test_x.py/test_x/v2:<the full 64-hex digest from the report>" \

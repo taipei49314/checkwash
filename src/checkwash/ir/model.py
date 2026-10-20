@@ -158,8 +158,9 @@ class Marker:
     # an unconditional kill. For a skip in the setup a unit runs
     # (`setup.<provider>.<effect>`): the condition its setup callback reaches
     # it under, None when every call does (#196 183.2). Deliberately NOT part
-    # of the marker's identity: fingerprints (and therefore recorded allowlist
-    # entries) must not change.
+    # of the marker identity alignment pairs markers on (D-019): a guard
+    # rewritten is no marker removed and another added. The TEST_DISABLED
+    # exemption key does bind it, for a marker added (#512 Q1 (a), D-169).
     guard: str | None = None
 
 
