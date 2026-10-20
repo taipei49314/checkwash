@@ -4783,7 +4783,8 @@ def _parse_python(
                     symbol_calls[qual] = _callees(child)
                 # pytest collects the last binding of a name (#424): a def a
                 # later binding certainly replaces is no unit, and one it may
-                # replace carries that binding as a marker.
+                # replace carries that binding as a marker. A def whose own
+                # statement never runs is no unit either (#499).
                 bound = rebound.get(id(child))
                 if collect_tests and collectible and _is_test_name(child.name) and not (bound and bound.dropped):
                     unit = _collect_unit(
@@ -4842,7 +4843,8 @@ def _parse_python(
                                scopes, aliases, None, classes))
 
     # What later bindings of each name do to the defs and classes they rebind
-    # (#424): read once per test module, before any unit is collected.
+    # (#424), and which defs and classes never run (#499): read once per test
+    # module, before any unit is collected.
     rebound: dict[int, BindingStatus] = {}
     if collect_tests and not conftest:
         rebound = final_bindings(

@@ -1,0 +1,40 @@
+=== meta ===
+bypass: 9,159
+rule: TEST_DISABLED
+title: a test deleted from one file and pasted under `if False:` in another earns no move credit
+origin: #499, ruling R99 (Q3) - a dead def is no live added unit, so D2 credits nothing; by reading, main held the deletion at info as ASSERTION_MOVED
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+def test_empty():
+    assert total([]) == 0
+=== before: tests/test_legacy.py ===
+from app import total
+
+
+def test_single():
+    assert total([5]) == 5
+=== after: tests/test_legacy.py ===
+from app import total
+
+
+def test_single():
+    assert total([5]) == 5
+
+
+if False:
+    def test_adds():
+        assert total([1, 2]) == 3
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "path": "tests/test_total.py", "unit": "test_adds"}]

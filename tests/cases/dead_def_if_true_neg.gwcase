@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test wrapped in `if True:` is still defined and still runs, so nothing is reported
+origin: #499, ruling R99 (Q4) - control: an arm the folder reads as always taken
+=== before: tests/test_total.py ===
+from app import total
+
+
+def test_adds():
+    assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+if True:
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[]

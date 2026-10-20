@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: an assertion weakened in a test that is dead on both sides is not judged, because that code never runs
+origin: #499, ruling R99 (Q1, as #484 reads a test dead on both sides) - neither side has the unit; by reading, main read it as a weakened assertion of a live test
+=== before: tests/test_total.py ===
+from app import total
+
+
+if False:
+    def test_adds():
+        assert total([1, 2]) == 3
+
+
+def test_empty():
+    assert total([]) == 0
+=== after: tests/test_total.py ===
+from app import total
+
+
+if False:
+    def test_adds():
+        assert total([1, 2]) >= 0
+
+
+def test_empty():
+    assert total([]) == 0
+=== expect ===
+[]

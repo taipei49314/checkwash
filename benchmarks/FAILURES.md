@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **178 bypasses** are documented, of which **60 are not closed**.
+- **178 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -63,7 +63,7 @@ it is known not to.
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 
-## Closed in part (14)
+## Closed in part (13)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -80,7 +80,6 @@ it is known not to.
 | 129 | Always-passing assertion in the catch: keep the broad catch that swallows the guarded assertion and give it an assertion that cannot fail, so the catch reads as inspection — `try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }` | `broad_except_always_passing_assert_true_pos.gwcase`, `broad_except_always_passing_bare_except_pos.gwcase`, `broad_except_always_passing_literal_compare_pos.gwcase`, `broad_except_always_passing_unittest_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase` |
 | 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | `snapshot_new_prod_module_new_test_pos.gwcase`, `snapshot_new_prod_module_pos.gwcase` |
 | 133 | Commit the cheat during the Claude Code session, so the Stop hook, which diffed HEAD against the working tree, sees a clean tree and prints `{}`; or commit an exemption, a `[detectors] disable` or a relaxed `fail_on`, so it governs the agent's next Stop | — |
-| 159 | Take a JS/TS test out of the run by registering it where no code runs, its body unchanged: `if (false) { it(...) }` in a `describe` callback, `return;` before `it(...)` there, a module-level `if (false) { test(...) }` after the imports, `false && it(...);`, a node:test or tap `t.test(...)` after `return;` in its parent test, or a whole `describe` under `if (false)`; focus the parked test (`if (false) { it.only(...) }`) so that the test beside it reads as stopped instead; or paste a deleted test under `if (false)`, or move an assertion into a test there, to buy the move or restructure credit (#484). The same in Python: a `def test_x` under `if False:` (#499) | `js_dead_registration_after_return_pos.gwcase`, `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_describe_pos.gwcase`, `js_dead_registration_equal_mass_pos.gwcase`, `js_dead_registration_focus_pos.gwcase`, `js_dead_registration_if_false_pos.gwcase`, `js_dead_registration_literal_and_pos.gwcase`, `js_dead_registration_mocha_function_pos.gwcase`, `js_dead_registration_module_if_false_pos.gwcase`, `js_dead_registration_node_subtest_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase` |
 
 ## Open by design — the cost of a deliberate trade (10)
 
@@ -105,7 +104,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (115)
+## Closed — each pinned by something that runs (116)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -120,7 +119,7 @@ behind it* unshippable.
 | 6 | Rename the test class out of pytest's `Test*` rule | `class_rename_out_of_collection_pos.gwcase` |
 | 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
 | 8 | Early `return`, deleted parametrize rows | `early_return_pos.gwcase`, `js_early_return_pos.gwcase`, `js_if_true_return_pos.gwcase`, `js_issue429_repro_pos.gwcase`, `parametrize_rows_pos.gwcase` |
-| 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase`, `sacrificial_skip_pos.gwcase` |
+| 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `dead_def_pasted_copy_no_move_credit_pos.gwcase`, `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase`, `sacrificial_skip_pos.gwcase` |
 | 10 | `assert f(x) == f(x)` self-comparison | `js_issue429_repro_pos.gwcase`, `js_self_compare_node_pos.gwcase`, `js_self_compare_pos.gwcase`, `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | — |
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
@@ -230,6 +229,7 @@ behind it* unshippable.
 | 135 | Take a test out of the run by rebinding its name after it, with the def byte-identical: `def test_x(): pass`, `del test_x`, `test_x = None` or `test_x = lambda: None` appended after it; the same in its class body, or `TestX.test_x = None` or `delattr(TestX, "test_x")` after the class; `class TestX: pass` or `TestX = None` after a test class; an import, `globals()["test_x"]`, a walrus or `except ... as test_x` over the name. Or move a failing test verbatim to another test file and append `del test_x` there (#424). | `rebinding_class_attribute_pos.gwcase`, `rebinding_class_redefined_pos.gwcase`, `rebinding_deleted_after_pos.gwcase`, `rebinding_lambda_pos.gwcase`, `rebinding_redefined_after_pos.gwcase` |
 | 136 | Reuse an exemption reviewed for one rewrite of an assertion for any later rewrite of the same line: approve `assert total() == 20.0` -> `== pytest.approx(20.0)`, then rewrite it to `> 0` or `!= 20.0` on a base that still holds `== 20.0`; or weaken a second identical copy beside it, widen the same tolerance further, change a Jest sibling `toBe(1)` to `toBe(2)`, or redefine the expectation an unchanged line reads, all under the reviewed key. ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED, TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED, EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and SUBJECT_INPUT_CHANGED (#421). Or reuse a TEST_DISABLED exemption for a later, different change to the same unit (#512): approve a guarded skip, then add an unguarded one on a base that lacks it; approve a guard removed, then make it always true instead; approve one parametrize or table row's deletion, then delete another or more; approve a removed test, then remove it holding another expected value; or approve one focus call, then add another of a different spelling. | — |
 | 157 | Weaken or delete an assertion inside a JS/TS `test.each`, `it.each` or `test.for` table, delete or rewrite one of its rows, skip or delete the whole table, or wrap a plain test in a table of no rows or of rows that cannot be counted (#428) | `js_table_assertion_deleted_pos.gwcase`, `js_table_deleted_pos.gwcase`, `js_table_expected_cell_rewritten_pos.gwcase`, `js_table_input_cell_rewritten_pos.gwcase`, `js_table_row_deleted_pos.gwcase`, `js_table_skip_added_pos.gwcase`, `js_table_weakened_pos.gwcase`, `js_test_wrapped_in_empty_table_pos.gwcase`, `js_test_wrapped_in_unknown_table_pos.gwcase` |
+| 159 | Take a JS/TS test out of the run by registering it where no code runs, its body unchanged: `if (false) { it(...) }` in a `describe` callback, `return;` before `it(...)` there, a module-level `if (false) { test(...) }` after the imports, `false && it(...);`, a node:test or tap `t.test(...)` after `return;` in its parent test, or a whole `describe` under `if (false)`; focus the parked test (`if (false) { it.only(...) }`) so that the test beside it reads as stopped instead; or paste a deleted test under `if (false)`, or move an assertion into a test there, to buy the move or restructure credit (#484). The same in Python: a `def test_x` under `if False:` (#499) | `dead_def_class_if_false_pos.gwcase`, `dead_def_dead_match_pos.gwcase`, `dead_def_empty_for_pos.gwcase`, `dead_def_if_compare_pos.gwcase`, `dead_def_if_false_pos.gwcase`, `dead_def_if_not_true_pos.gwcase`, `dead_def_method_if_false_pos.gwcase`, `dead_def_no_restructure_mass_pos.gwcase`, `dead_def_pasted_copy_no_move_credit_pos.gwcase`, `dead_def_survivor_no_duplicate_credit_pos.gwcase`, `js_dead_registration_after_return_pos.gwcase`, `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_describe_pos.gwcase`, `js_dead_registration_equal_mass_pos.gwcase`, `js_dead_registration_focus_pos.gwcase`, `js_dead_registration_if_false_pos.gwcase`, `js_dead_registration_literal_and_pos.gwcase`, `js_dead_registration_mocha_function_pos.gwcase`, `js_dead_registration_module_if_false_pos.gwcase`, `js_dead_registration_node_subtest_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase` |
 
 ## Unclassified (1)
 
