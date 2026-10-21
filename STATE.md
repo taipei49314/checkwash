@@ -17,9 +17,19 @@ passes, 39 unchanged blocks and two unchanged errors. Its mandatory review
 list is empty; the [R29 record](docs/RELEASING.md#completed-r29-comparison-2026-10-20-utc)
 identifies the tested source and actual delegated reviewer. These are
 in-sample counts, not a false-positive rate.
-The #428 selection, combined acceptance sweep, `/clear`, final release guide
-and final-head checks are not complete. No v0.9.0 tag, Release or public
-artifact is claimed here.
+The combined acceptance sweep, `/clear`, final release guide and final-head
+checks are not complete. No v0.9.0 tag, Release or public artifact is
+claimed here.
+
+Later on 2026-10-21 Nelson stopped the Codex sessions and gave four decisions
+to a Claude Code session; [RELEASING](docs/RELEASING.md#v090-owner-decisions-after-the-codex-sessions-2026-10-21)
+records them. In short:
+
+- The sweep runs before the release, on LAPTOP-01AGNPJU.
+- R29 is accepted in writing.
+- The Codex-added gates are removed: harness tests, the EC pool chain and
+  the fresh baselines.
+- The #428 table selection is NOT_RUN for v0.9.0.
 The public CLI, README install commands and Action recommendation remain
 at verified v0.8.0. Earlier dated entries below remain historical records.
 

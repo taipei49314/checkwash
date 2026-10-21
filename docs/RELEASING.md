@@ -204,7 +204,83 @@ changes only through the maintainer.
 The v0.7.0 entry below, the grants under "The release slot", `STATE.md` and
 `docs/releases/` describe the ruleset as it was then and stay unchanged.
 
+## v0.9.0 owner decisions after the Codex sessions (2026-10-21)
+
+On 2026-10-21 Nelson interrupted Codex session
+`01a15c24-d064-7523-b3e6-23810a2c57c2`; its last turn was aborted at
+08:53:11Z. He handed the release to a Claude Code session
+(`53462dc3-538b-4702-a2bc-160f81f030d6`) on LAPTOP-16NUA5I8:
+
+> codex那邊停下 你幫我收拾這個爛攤子 到0.9.0 pypi發版前叫我
+
+He then answered four questions. Each answer was a button whose text the
+assistant wrote. EC records the exact questions and option texts in
+`evidence/requests/6df8ab76-6ed4-4f58-8754-fe19259409d1/human-decision.md`
+at EC commit `1978e87d1e6713d6722ddc304a048aeee0f55f4a`.
+
+1. **Sweep before release (「先 sweep 再發」).** The combined acceptance sweep
+   runs before the tag, as D-141 C1 and R2 require. A stop blocks this
+   release. It runs on LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep`
+   (T-546), which also covers the `/clear` receipt that D-142 and R24 require
+   before the release.
+2. **R29 accepted in writing (「明文採認」).** Nelson accepts the comparison
+   recorded under "Completed R29 comparison" below as v0.9.0's fixed-corpus
+   comparison:
+   - previous release v0.8.0 `f02b5d8a`;
+   - candidate `7d173fe8`, `src/` tree
+     `17c3dd82bf597daa12e1257052e3b71f3323ca95`;
+   - 3,600 commits, run on 2026-10-20 in local Docker on LAPTOP-01AGNPJU;
+   - evidence archive `完整原始證據.zip`, sha256
+     `ef6cdf68489ac2f723c560a8046a9d5235c7998e7cdd397468128972d4de2c73`.
+
+   The acceptance uses the last clause of EC POLICY `work-machine-local`,
+   which lets the human accept a work-machine result in writing. The option
+   he chose stated the list: no pass→block, no block→pass and no
+   analysed→error move. With it he confirmed that he has seen the list, which
+   is the owner's review this step and R55 require.
+
+   It also covers #212's v0.8.0→RC JS/TS replay, which is the same 1,800-commit
+   set.
+
+   For v0.9.0 only, it sets aside the "Where" rule of the comparison step and
+   R3's pool venue. It is not a standing exception. If `src/` changes beyond
+   the version string, the comparison runs again, and its venue is decided
+   then.
+3. **Codex-added gates removed (「全部拿掉」).**
+   - **No harness tests.** No native-Windows or WSL harness tests run (R7
+     option B: read-only review plus three determinism checks). The WSL run
+     `23d146c8` at LAB `9099e88c`, which Nelson accepted, stays on record as
+     supporting evidence only.
+   - **No EC pool chain.** EC T-577 is CANCELLED and EC PR #219 is closed.
+   - **No fresh baseline reproduction.** LAB PR #18 is closed. Its
+     LAPTOP-16NUA5I8 results stay unaccepted, and nothing is deleted.
+   - **Nothing more runs on LAPTOP-16NUA5I8 for v0.9.0.**
+   - **What the session may do.** It may push preparation commits to this
+     release branch and edit PR #552's description. It does not merge, tag
+     or publish a Release.
+4. **tables428 not run for v0.9.0 (「這版不做」).** Two D-152 items are
+   NOT_RUN for v0.9.0:
+   - the #428 JS target set over the 13 histories;
+   - the Jest, Vitest and Bun empty-table runs.
+
+   #428 is judged by its own `b428`/`a428` pair in the standard, d088 and
+   javascript phases. This sets aside that part of D-152 for v0.9.0 only.
+
+**What this does not authorize.** Taking #552 out of draft, merging it,
+tagging, publishing the GitHub Release and the PyPI upload all still need
+v0.9.0's one-time authorization. `AGENTS.md` rule 5 and R55 require it. It is
+requested together with the sweep's step-2 package, and recorded here when
+given.
+
+The two Codex entries below stay as history. Their authority was scoped to
+their own Codex sessions and ended with them; no later session uses it. Their
+sentence "This explicit instruction supersedes the pool-only location …" was
+not adopted as a standing rule. R29 stands on decision 2 above.
+
 ## v0.9.0 continuation authorization (2026-10-21)
+
+*Historical: ended with Codex session 01a15c24 on 2026-10-21. See "v0.9.0
+owner decisions after the Codex sessions" above.*
 
 In Codex session `01a15c24-d064-7523-b3e6-23810a2c57c2`, Nelson set the
 active goal:
@@ -231,6 +307,10 @@ or publication. Evidence for that starting head is not relabelled as
 evidence for later documentation commits.
 
 ## v0.9.0 session publication authorization (2026-10-21)
+
+*Historical: scoped to Codex session 01a15963 and ended with it. See "v0.9.0
+owner decisions after the Codex sessions" above. R29's acceptance there
+replaces this entry's claim about the pool-only location.*
 
 In Codex session `01a15963-80bd-7053-95a2-ad67abb88fd1`, the maintainer
 Nelson instructed:
