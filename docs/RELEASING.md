@@ -269,8 +269,53 @@ at EC commit `1978e87d1e6713d6722ddc304a048aeee0f55f4a`.
 **What this does not authorize.** Taking #552 out of draft, merging it,
 tagging, publishing the GitHub Release and the PyPI upload all still need
 v0.9.0's one-time authorization. `AGENTS.md` rule 5 and R55 require it. It is
-requested together with the sweep's step-2 package, and recorded here when
-given.
+requested together with the sweep's step-2 package; the next section records
+it.
+
+## v0.9.0 one-time publication authorization (2026-10-21)
+
+On 2026-10-21, Nelson answered the combined sweep's step-2 package with
+**「第二步核可包 G1～G4 全部照建議」** ("the step-2 package, G1 to G4, all as
+recommended"). The Claude Code coordinator on LAPTOP-01AGNPJU wrote the
+package. His reply matches the text of a button the assistant wrote. G4 of
+that package is this release's one-time authorization (R55). It holds only
+under conditions. checkwash-lab
+`evidence/pju-inventory-20261021:evidence/v090-step2-approval-20261021.md`
+records the whole approval.
+
+The conditions:
+- The combined sweep ends with no #419 stop (D-141 C1). The sweep is lab
+  `6d49fb600b62db2f62167b780f6a251f9b540a37`, manifest sha256
+  `52a451cf62e5ca9ddfbf24288299b64d97346a5b5bdf6d6bc3865b7a19332520`.
+- Its three determinism checks pass, or Nelson rules on them.
+- The `/clear` lifecycle receipt passes (D-142, R24).
+- No stop-the-round move is left unruled.
+- Nelson has approved the wording of the DECISIONS v0.9.0 entry (R54), the
+  release guide and `KNOWN-ISSUES-v0.9.0.md`.
+
+Once they hold, it covers:
+- the maintainer-owned commit that carries that approved text;
+- taking #552 out of draft;
+- merging it with a merge commit, so that the RC `141accee` stays
+  reachable, once the hosted checks of its final exact head have passed;
+- once the exact merge commit's `main` push checks pass, pushing the
+  annotated tag `v0.9.0` on it;
+- once the tag's own checks pass, creating and publishing the GitHub Release
+  with `gh`;
+- the publication checks (step 8), and the follow-up that advances
+  `release/advertised.toml`, the README CLI pins and the README Action pin to
+  v0.9.0;
+- the verdict-baseline rotation PR (step 9), whose protected changes keep
+  his disposition.
+
+It stops when the release workflow's `pypi` job is waiting. Nelson approves
+that deployment himself; no agent session can.
+
+It does not authorize another version, or the downstream re-pins of
+checkwash-corpus and smallestlie. It does not authorize running anything on a
+work machine beyond the combined sweep and the `/clear` receipt under EC
+POLICY `checkwash-pju-sweep` (T-546). Publication and artifact verification
+consume this grant.
 
 The two Codex entries below stay as history. Their authority was scoped to
 their own Codex sessions and ended with them; no later session uses it. Their
