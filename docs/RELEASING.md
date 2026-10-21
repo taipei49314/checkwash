@@ -204,6 +204,32 @@ changes only through the maintainer.
 The v0.7.0 entry below, the grants under "The release slot", `STATE.md` and
 `docs/releases/` describe the ruleset as it was then and stay unchanged.
 
+## v0.9.0 continuation authorization (2026-10-21)
+
+In Codex session `01a15c24-d064-7523-b3e6-23810a2c57c2`, Nelson set the
+active goal:
+
+> 全部準備好 發布0.9.0
+
+This authorizes this session to complete the preparation and checked
+publication of v0.9.0, including necessary fixes, release integration,
+the annotated tag, GitHub Release, public artifact verification and the
+follow-up advertising the verified release. It is a separate authorization
+from the session below; its existing evidence and failed attempts remain
+attributed to their original sources and execution identities.
+
+All source, acceptance, PR/main/tag and public-install gates still apply.
+The `pypi` deployment retains its real maintainer review. The earlier
+session's PJU-only local Docker exception is not reused on this session's
+LAPTOP-16NUA5I8 host. EC task ownership, admission and execution contracts
+remain separate prerequisites for pool work.
+
+The continuation starts from release PR #552 at
+`359af75b74d1b25938436141d6fcd73ffb68e142`, with the published v0.8.0
+baseline unchanged. This records authorization, not completed acceptance
+or publication. Evidence for that starting head is not relabelled as
+evidence for later documentation commits.
+
 ## v0.9.0 session publication authorization (2026-10-21)
 
 In Codex session `01a15963-80bd-7053-95a2-ad67abb88fd1`, the maintainer
