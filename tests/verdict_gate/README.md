@@ -61,6 +61,14 @@ on every CI leg (no git, no engine).
 
 ## Reading a run
 
+The v0.9.0 post-publication rotation (D-173) pins release commit `d6eda4f6`
+and its actual 914407-byte pyz (`7319152c…`). The tag verdict saw no movement
+against v0.8.0, so the proposed 159 blocked pin and 26-case T3 map stay;
+the v0.4.2 to v0.5.0 canary stays too. The protected acceptance list is empty,
+so its baseline header changes without adding or retiring a case. The
+rotation requires a fresh hosted verdict against the public v0.9.0 baseline;
+the earlier tag verdict does not establish rotation completion.
+
 The job summary and the `verdict-gate-receipt-<attempt>` artifact hold the
 receipt: engine identities (sha256, size, version, commit, controls), one row
 per case (`baseline -> candidate` transition, canary transition, label,
