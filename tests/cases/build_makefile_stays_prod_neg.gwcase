@@ -1,13 +1,9 @@
 === meta ===
-rule: EXPECTED_VALUE_CHANGED
-issue: 419
-title: a Makefile that builds is production, and its edit still explains a rewritten expected value
+rule: ASSERT_WEAKENED
+title: a Makefile that builds is production; a Makefile that runs the suite is not
 origin: the discriminator is content, not the filename — a C build recipe is
-origin2: real repair evidence for an expectation that changed with it, and demoting it
+origin2: real repair evidence for a test that changed with it, and demoting it
 origin3: to ci would have invented false positives in every extension project.
-origin4: Kept under this name by the #419 ruling (issuecomment-6170353038: Q6 (a), rule 2) for the
-origin5: expectation family; the weakened assertion it pinned until then moved, same inputs, to
-origin6: build_makefile_stays_prod_pos. The exact count forbids CI_WORKFLOW_TOUCHED here too.
 === before: Makefile ===
 CFLAGS = -O1
 
@@ -29,6 +25,6 @@ from app import fast_add
 
 
 def test_fast_add():
-    assert fast_add(3, 4) == 8
+    assert fast_add(3, 4) > 0
 === expect ===
-[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

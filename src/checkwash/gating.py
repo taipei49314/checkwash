@@ -67,23 +67,14 @@ ORACLE_RULES = {
     "EXPECTATION_DEFINITION_CHANGED",
 }
 
-# The weakening class: an oracle got weaker, went away, stopped running, or
-# had its failure swallowed. In a Python test or conftest these refuse the
-# opaque-change credit (#419, ruling Q1 (b), 2026-10-14; see apply_gates).
-# What stays out is deliberate: the expectation family (EXPECTED_VALUE_*,
-# EXPECTATION_DEFINITION_CHANGED, SUBJECT_*) is the shape an honest
-# template or native change produces, and ASSERT_SUBSTITUTED and the
-# *_PATCHES_* rules are residuals with report-only counterfactual arms
-# (ruling Q8), not oversights. BROAD_EXCEPT_ADDED is not in ORACLE_RULES; it
-# is an oracle rule only in a test or conftest file, which is the only place
-# this set is consulted.
-OPAQUE_REFUSED_RULES = frozenset({
-    "ASSERT_REMOVED",
-    "ASSERT_WEAKENED",
-    "TEST_DISABLED",
-    "TOLERANCE_LOOSENED",
-    "BROAD_EXCEPT_ADDED",
-})
+# The rules whose finding in a Python test or conftest refuses the
+# opaque-change credit (see apply_gates). Empty: no finding refuses it, so
+# every rule takes the credit as it did before #464, except an unguarded
+# suite control (D-028). #419's refusal (ruling Q1 (b), 2026-10-14:
+# ASSERT_REMOVED, ASSERT_WEAKENED, TEST_DISABLED, TOLERANCE_LOOSENED and
+# BROAD_EXCEPT_ADDED) fired its pre-registered stop in the v0.9.0 combined
+# sweep and is turned off (D-171). #419 stays open for a redesign.
+OPAQUE_REFUSED_RULES: frozenset[str] = frozenset()
 
 # Report order: most severe rule classes first within a path.
 RULE_ORDER = [
@@ -807,6 +798,11 @@ def apply_gates(
         ):
             compensation = "PROD_SYMBOL_REMOVED"
 
+        # Off (D-171): OPAQUE_REFUSED_RULES is empty, so `refuses_opaque` is
+        # always false and every finding takes the opaque-change credit as it
+        # did before #464. The rest of this comment is #419's ruled design,
+        # kept for its redesign; it is not what runs.
+        #
         # A weakening-class finding in a Python test or conftest does not
         # take the opaque-change credit (#419, ruling Q1 (b), 2026-10-14).
         # Python test code reaches its subject through Python, and a Python
@@ -865,7 +861,7 @@ def apply_gates(
         # weakens a Python test beside an edit it was making anyway. One that
         # has read this rule moves to a rule that keeps the credit, or to a
         # kept no-op edit in a called function (Route A, THREATMODEL 93 as
-        # widened by #419 Q3; maintainer text pending in the fix PR).
+        # widened by #419 Q3).
         refuses_opaque = (
             f.rule in OPAQUE_REFUSED_RULES
             and f.path in python_files
@@ -990,7 +986,8 @@ def apply_gates(
             # that word for a side that is never read at all, and such a side
             # never sets `prod_opaque_change`. A suite control keeps its own
             # label, which it always reaches first here: an opaque change is
-            # a production file in `prod_files_changed`.
+            # a production file in `prod_files_changed`. While
+            # OPAQUE_REFUSED_RULES is empty (D-171) this label is never printed.
             #
             # Every other finding here is the same class of claim (#473,
             # ruling Q2 and Q3, 2026-10-18). If the diff changed a

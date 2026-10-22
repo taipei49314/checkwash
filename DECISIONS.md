@@ -259,6 +259,10 @@ run, and no number in this entry was measured in this round. The results and
 every new block's adjudication are recorded in this entry when the sweep has
 run.
 
+**Result** (2026-10-22). The stop fired in call 1 of the v0.9.0 combined
+sweep: three pass → block moves in arms 2 and 3. The refusal is turned off
+for v0.9.0; D-171 records the moves and the decision.
+
 ## D-142 (2026-10-16): the Claude Code Stop hook reads its window from the session's start (#418)
 
 Ruling 418 (owner, 2026-10-14, 「P1 全部照建議」) answered its seven questions
@@ -6862,3 +6866,95 @@ checks skipped on macOS, whose runners vary the most, until they are
 revisited before 1.0. H1 does not name #543's edit to
 `docs/enterprise.md`. This paragraph was rewritten after the reply;
 before it, it said the wording awaited the next approval round.
+
+## D-171 (2026-10-22): #419's opaque refusal is turned off for v0.9.0 after its pre-registered stop (#419)
+
+**What stopped.** Call 1 of the combined sweep ran on LAPTOP-01AGNPJU under
+EC POLICY `checkwash-pju-sweep` (T-546): lab `prep/v090-freeze-20261021` at
+`6d49fb60`, manifest sha256
+`52a451cf62e5ca9ddfbf24288299b64d97346a5b5bdf6d6bc3865b7a19332520`, finished
+2026-10-21 20:30Z, human-authorized local PJU, NOT EC pool. `419-arm2` and
+`419-arm3` each show three pass → block moves on the same three d088
+commits; `419-arm1` shows none. The commits are:
+
+- httpx `0296c2bbb9885bbe1b1e3210d9e3efa7a817038d` (`ASSERT_WEAKENED`,
+  `tests/client/test_proxies.py`, beside `scripts/check`);
+- starlette `e396f079a5b9a9610ad7d241f17f2e34fd4283ad` (`TEST_DISABLED`,
+  `tests/test_schemas.py`);
+- werkzeug `ab6150fa49afc61b0c5eed6d9545d03d1958e384` (`ASSERT_WEAKENED`,
+  `tests/test_wsgi.py`).
+
+Each move is a predicted P1 move (warn → high, `REPAIR_EVIDENCE` dropped,
+`OPAQUE_PROD_CHANGE_NOT_EVIDENCE` added; #419 issuecomment-6329503938). None
+has a native-extension source, so option (d) does not apply. The commits are
+not adjudicated.
+
+**Decision** (owner, 2026-10-22, 「K1～K3 全部照建議」, "K1 to K3, all as
+recommended"; the reply was a button whose text the assistant wrote):
+
+- K1 (A): v0.9.0 ships without the refusal, by D-141 C1's revert route. A
+  plain revert conflicts with later changes (#306, #463, #471, #473), so
+  #553 turns the refusal off. The candidate is rebuilt on that `main`, R29
+  is settled for it, the sweep pairs that use the candidate run again on it,
+  and `/clear` uses it.
+- K2 (A): calls 2-4 continue, and `opaque419` and `polyglot419` do not run.
+- K3 (A): the stop is recorded on #419.
+
+**Follow-up decisions** (owner, 2026-10-22, 「L1～L11 全部照建議」, "L1 to
+L11, all as recommended"; a button whose text the assistant wrote). They
+approve:
+
+- #553's approach and text (L1) and the expectation moves below (L2);
+- the allow keys (L3, #554);
+- this wording (L5).
+
+L7 settles R29 for the new candidate without a new run. It composes the
+accepted R29 (v0.8.0 → `141accee`, no moves) with the sweep supplement
+(`141accee` → the new candidate, whose only accepted moves are #419's
+inverse P1/P2 moves), under EC POLICY `work-machine-local`'s last clause.
+That holds only if the supplement holds its acceptance line.
+
+**What changes.** #553 empties `gating.OPAQUE_REFUSED_RULES`. Clause 3's
+opaque-change evidence again reaches every oracle finding except an
+unguarded suite control (D-028), Python tests and conftests included, as in
+v0.8.0. `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` is not printed. Its code stays,
+unreachable, for the redesign. D-161's chain keeps its order. Expectation
+moves under rule 2, each approved by name on 2026-10-22:
+
+- the seven `_neg` cases and `conftest_hook_guard_opaque_prod_neg` back to
+  their pre-#464 bytes;
+- the seven `_pos` successors, the six `opaque_refused_*` cases and
+  `tests/test_issue419_opaque_refusal.py` deleted (their inputs remain at
+  4f884070);
+- the `data_read` and `data_edited_at_the_limit` rows back to warn and pass,
+  reversing the second ruling of 2026-10-16;
+- `test_issue208_209`'s tuple back to `REPAIR_EVIDENCE`;
+- #473's
+  `test_a_refused_opaque_change_keeps_its_label_beside_a_readable_edit`
+  deleted.
+
+Documented count 20508 → 20488.
+
+**This supersedes,** for v0.9.0 and on `main` from #553:
+
+- 419.Q1 (b), 419.Q5 (b) and the second ruling's two #448 rows;
+- D-141's amendment of 209.Q4's reading, so a guarded conftest control takes
+  opaque evidence again.
+
+These stand: 419.Q3 (row 93, clause 1), the E3 correction, 419.Q7 (row 132,
+#463) and 419.Q8 (row 130).
+
+**Residuals.** Route B is open again in Python tests and conftests
+(THREATMODEL item 4, row 2), and Route A is unchanged (row 93). #419 stays
+open with the three commits as data.
+
+**Contracts.** No fingerprint moves, and there is no `FINDINGS_VERSION` or
+`IR_VERSION` bump (severity and escalators are outside `make_fingerprint`).
+R29, settled for the new candidate as above (L7), checks that v0.9.0 has no
+verdict move against v0.8.0.
+
+Evidence status: `NOT_RUN：工作機規則（POLICY work-machine-local），#553's checks run in its CI and R29 is settled again for the new candidate`.
+
+The agent wrote this entry; the owner approved its wording on 2026-10-22
+(L5). It was then aligned with the owner's L7 decision on R29 and with the
+full list of conflicting changes.

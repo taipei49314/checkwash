@@ -1512,10 +1512,6 @@ def build_ir(
                 # Other-language code, templates, data files, or a Python
                 # parse failure: checkwash cannot tell repair from decoy
                 # here, so it conservatively suppresses E1 (THREATMODEL #4).
-                # The flag records the fact for the whole diff; which
-                # findings may take it as evidence is gating's call, and a
-                # weakening-class finding in a Python test or conftest may
-                # not (#419).
                 #
                 # But it must be a *change to something that was already
                 # production*. Told to defeat this tool and handed its source,
