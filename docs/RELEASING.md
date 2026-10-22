@@ -729,6 +729,25 @@ step 5b) and the tag-push run 37337702973 (attempt 1, step 8a). The tag
 `v0.6.0` and the GitHub Release were published on 2026-10-05, and the
 rotation PR (#270, D-094) merged the same day: the grant is consumed.
 
+## v0.9.0 checked publication and pin promotion (2026-10-23)
+
+The G4/L9 conditions were satisfied and #552 merged as
+`d6eda4f695fabb8e7d138f7a87b099d2028f0294`. Its exact main and tag checks
+completed successfully before GitHub Release 420967755 was created.
+Release run [39817071157/1](https://github.com/taipei49314/checkwash/actions/runs/39817071157)
+then completed source/build/assets and, after Nelson's own deployment approval,
+PyPI. Nelson explicitly continued: 「PyPI 已核准，照既有 G4 繼續，把 v0.9.0 的公開產物驗證、pins 更新和 baseline rotation 做完。」
+
+[Hosted public verification 39821892775/1](https://github.com/taipei49314/checkwash/actions/runs/39821892775)
+passed real GitHub/PyPI downloads and fresh visitors against the fixed public
+tag/commit. The [publication record](releases/v0.9.0-publication-verification.md)
+retains native identity, digests, the earlier failed helper probe and limits.
+This reviewed follow-up promotes the manifest/README/doctor/self-audit pin.
+The required release-time archive moves D-141 through D-172 unchanged into
+`DECISIONS-archive-2.md` with the prescribed first-two-line change; baseline
+rotation remains a separate reviewed PR. No downstream re-pin or other version
+is authorized, and no ended-session local workload grant is reused.
+
 ## Release responsibility checks
 
 - README CLI tag, pipx version and download URL match the explicit advertised
