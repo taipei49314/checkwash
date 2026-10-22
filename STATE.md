@@ -1,13 +1,28 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-22 (post-run dispositions and wording approved; exact final-head/main/tag checks and publication remain; v0.8.0 remains the verified public release)
+Updated: 2026-10-23 (v0.9.0 published and public bytes/visitors verified; advertised pins advance in this follow-up; baseline rotation remains separate)
+
+## 2026-10-23: verified public v0.9.0
+
+The [publication record](docs/releases/v0.9.0-publication-verification.md)
+binds v0.9.0 to release commit
+`d6eda4f695fabb8e7d138f7a87b099d2028f0294` and annotated tag object
+`60bdd18f7038d6d908ef584fedda1960815e520f`. Release run `39817071157/1`
+completed all four jobs after Nelson approved PyPI. Hosted public verification
+`39821892775/1` downloaded GitHub's three assets and PyPI's wheel/sdist,
+compared actual bytes and exercised fresh public installations. All passed.
+This follow-up advances advertised/README/doctor Action pins; the public tag
+and released source stay fixed. Baseline rotation is a separate reviewed PR.
+The in-sample scope, #419 refusal-off residual, retained engine errors and
+census limits below are unchanged; publication is not new detector evidence.
 
 ## 2026-10-22: rcprime results and wording accepted; final checks precede publication
 
 The candidate is `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, `src/` tree
 `4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`. It includes #553's off switch
 for #419's opaque refusal, with #554 and #555. `141accee` stays reachable.
-**v0.9.0 is not published; v0.8.0 remains the verified public release.**
+**At this 2026-10-22 checkpoint, v0.9.0 was not published and v0.8.0 was
+the verified public release.** The later publication record is linked above.
 
 Calls 1–4 and the supplement finished on LAPTOP-01AGNPJU under the frozen
 T-546 declarations: human-authorized local PJU, NOT EC pool. All 710
@@ -2927,8 +2942,8 @@ how the measurements moved; their original dates and values remain history.
 | authoritative number | value |
 |---|---|
 | version | v0.9.0 |
-| last published CLI | v0.8.0 |
-| last published CLI commit | f02b5d8a07fa39ee1898881f66c571eb164cb11c |
+| last published CLI | v0.9.0 |
+| last published CLI commit | d6eda4f695fabb8e7d138f7a87b099d2028f0294 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

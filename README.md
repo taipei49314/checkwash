@@ -1,13 +1,19 @@
 # checkwash
 
-**v0.8.0's Action no longer runs code from the pull request it judges; commands
-run from a subdirectory read the repository from its root; and oversized files
-that no detector reads are carried unread instead of stopping the run.**
-[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/v0.8.0/docs/releases/v0.8.0-public-launch.md).
+**v0.9.0 adds the Claude Code session-start commit window, content-bound
+TEST_DISABLED exemptions, broader Python and JS/TS assertion readings, and
+clearer handling of oversized or unreadable input.**
+[Publication evidence](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-publication-verification.md) ·
+[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-public-launch.md).
 A pass does not prove correctness; retain exit 2 and diagnostics as analysis
 errors. With `--format hook-json` (the Claude Code Stop hook) an engine error
 now exits 0 with a "not analysed" message. The recommended Action is pinned to
-the same v0.8.0 release.
+the same v0.9.0 release.
+
+The #419 opaque-change refusal is turned off for this release. A no-op opaque
+production edit can still leave affected oracle findings at warn; #419 remains
+open. Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/v0.9.0/docs/KNOWN-ISSUES-v0.9.0.md)
+before relying on a pass.
 
 **Development snapshots:** the source in this checkout may be newer than the
 published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
@@ -77,7 +83,7 @@ reach the detectors. Some existing findings now carry a different fingerprint,
 so allowlist entries for those shapes must be re-recorded; the JSON shape is
 unchanged. [v0.6.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.6.0-public-launch.md)
 
-**The next minor (unreleased) makes assertion-level exemptions content-bound
+**v0.9.0 makes assertion-level exemptions content-bound
 ([#421](https://github.com/taipei49314/checkwash/issues/421)).** Through
 v0.8.0, an exemption for one rewrite of an assertion also allowed every later
 rewrite of the same line. Nine assertion-level rules now key a finding by the
@@ -92,7 +98,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.8.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.9.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -101,7 +107,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.8.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.9.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -113,7 +119,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.8.0/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.9.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -133,17 +139,17 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/v0.8.0/docs/releases/v0.8.0-public-launch.md#use-it-and-preserve-the-result).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-public-launch.md#use-it-and-preserve-the-result).
 
 ## Know the limits
 
-**v0.8.0 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.9.0 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
 In v0.8.0, JS/TS `test.each`, `it.each` and `test.for` tables are not
 scanned: an assertion weakened or deleted in one, an edited row or a deleted
-table passes. From the next minor (unreleased), each such table is a test
+table passes. In v0.9.0, each such table is a test
 unit, and its rows are read when they can be counted (an inline array or a
 tagged template, or a same-file `const` read only as a table). The rows of a
 `describe.each` table stay unread, and a table with a computed title is not a
@@ -156,8 +162,8 @@ errors remain. These are selected examples, not a general false-positive rate.
 
 A changed file over 1,000,000 bytes is not read. An image, data file,
 lockfile, document or non-Python production source that large is reported on
-stderr and earns no repair evidence. From the next minor (unreleased,
-[#454](https://github.com/taipei49314/checkwash/issues/454)), `--format json`
+stderr and earns no repair evidence. Since v0.9.0
+([#454](https://github.com/taipei49314/checkwash/issues/454)), `--format json`
 also lists it under `unread`, SARIF names it in a tool execution
 notification, and the term report adds a `!` line and, when there is no
 finding, opens with "analysis incomplete"; the Stop hook's JSON and
@@ -172,8 +178,8 @@ non-generated file under the root `scripts/` directory, read for the pytest
 commands it runs, and any other changed file that large the analysis needs
 as context. A shell shebang gives a file the shape of a runner script, whatever
 its name, except a `.py` module or a JS/TS test file.
-From the next minor (unreleased,
-[#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
+Since v0.9.0
+([#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
 the first 200 bytes of a side over the limit to tell, and uses them for
 nothing else; a Git side is streamed and checked against its object id.
 Where those bytes are read, a file that large whose side starts with a shell
@@ -182,12 +188,12 @@ or a JS/TS test file that large stops the run anyway, by its own rule). A
 file with no extension (a dotfile such as `.envrc` counts) without one, such
 as a `README` or a `LICENSE`, is set aside like any document, unless another
 rule above makes it one a detector must read. v0.8.0 reads no byte of such a
-side, so every file with no extension that large stops the run there. On main
+side, so every file with no extension that large stops the run there. In v0.9.0
 a Git side over 64,000,000 bytes is not streamed, so its first bytes are not
 known: a file with no extension still stops the run when one of its Git sides
 is that large, and a suffixed file whose shebang is only on such a side is
 still set aside.
-When a file that large stops the run, from the next minor (unreleased)
+When a file that large stops the run, since v0.9.0
 `--format json` prints `{"unread": [...]}` on stdout instead of nothing: one
 `unread` entry, for the side the run refused. It is not a findings document,
 and term and SARIF output stay empty. With a range, json output stays empty
@@ -205,7 +211,7 @@ every run, naming it: term, json and SARIF output exit 2 and name it on
 stderr only. The Claude Code Stop hook (`--format hook-json`) reports an
 engine error, this one included, as a non-blocking "not analysed" message
 on stdout that quotes the error, and exits 0.
-From the next minor (unreleased), when the run stops on a file the hook's diff
+Since v0.9.0, when the run stops on a file the hook's diff
 changes and that file's working-tree side is over the limit, the hook blocks
 the stop instead, naming the file and asking to shrink, split or revert it
 ([#456](https://github.com/taipei49314/checkwash/issues/456)). A file whose
@@ -222,7 +228,7 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action and the CLI above are both **v0.8.0**.
+The recommended Action and the CLI above are both **v0.9.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 **Advisory: Action trust boundary.** Every published Action release up to and
@@ -232,7 +238,7 @@ example a top-level `pip` package) can replace the installer and then the
 checker, and the pull request can tamper with the result it is judged by. Under
 checkwash's threat model that applies to every pull request it judges. v0.8.0
 fixes it ([#372](https://github.com/taipei49314/checkwash/pull/372)); pin the
-v0.8.0 Action below. If you stay on v0.7.0 or earlier, treat a pass as
+v0.9.0 Action below. If you stay on v0.7.0 or earlier, treat a pass as
 advisory, review the pull request before merging and keep `comment-pr` off.
 [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
 
@@ -260,7 +266,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@f02b5d8a07fa39ee1898881f66c571eb164cb11c # v0.8.0
+      - uses: taipei49314/checkwash/action@d6eda4f695fabb8e7d138f7a87b099d2028f0294 # v0.9.0
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -279,8 +285,8 @@ can inspect the local workflow, but cannot verify live branch protection.
 **Why is the pin added after the release?** A release
 cannot embed its own commit SHA, so a release commit carries the prior
 release's pin; once a release's publication is verified, a follow-up on main
-recommends that release's own peeled commit. The recommended v0.8.0 Action includes the engine
-published on 2026-10-15. A CLI upgrade does not update an existing Action. To verify another trusted release, use
+recommends that release's own peeled commit. The recommended v0.9.0 Action includes the engine
+published on 2026-10-23 Asia/Taipei. A CLI upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
@@ -295,9 +301,9 @@ published on 2026-10-15. A CLI upgrade does not update an existing Action. To ve
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.8.0
+pipx install checkwash==0.9.0
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.8.0
+pipx install git+https://github.com/taipei49314/checkwash@v0.9.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -335,7 +341,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.8.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md) |
+| Installation checks, versions and first use | [v0.9.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
