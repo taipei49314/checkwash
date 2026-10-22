@@ -598,3 +598,163 @@ reason = "PR #549 (round 7 H5): AGENTS.md's Agent-READ-ONLY list adds the decisi
 author = "taipei49314"
 created = "2026-10-20"
 expires = "2026-11-19"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue415_oversized_sources.py/test_a_range_beside_an_oversized_file_gives_a_verdict/a48fb2b3fbc0"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue415_oversized_sources.py::test_a_range_beside_an_oversized_file_gives_a_verdict returns to its pre-#464 expectation: data_edited_at_the_limit passes again and the blocking rows' check is the NO_PROD_CHANGE_IN_DIFF literal; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P2 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "ASSERT_SUBSTITUTED/tests/test_issue415_oversized_sources.py/test_a_range_beside_an_oversized_file_gives_a_verdict/v2:e486809f1aee57fc800c4fc74d1457ecb111599667480cd3100a8c42c01599db"
+rule = "ASSERT_SUBSTITUTED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue415_oversized_sources.py::test_a_range_beside_an_oversized_file_gives_a_verdict returns to its pre-#464 expectation: data_edited_at_the_limit passes again and the blocking rows' check is the NO_PROD_CHANGE_IN_DIFF literal; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P2 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue208_209_suite_guards.py/test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one/06f88dc0a41a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue208_209_suite_guards.py::test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one returns to its pre-#464 expectation: the guarded hook takes REPAIR_EVIDENCE again, not COMPAT_GATE; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P3 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue208_209_suite_guards.py/test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one/v2:fa6b885fc37744264ccd1f199c233c7ac76465dad9a39334029a1fae1a08c824"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue208_209_suite_guards.py::test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one returns to its pre-#464 expectation: the guarded hook takes REPAIR_EVIDENCE again, not COMPAT_GATE; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P3 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue415_oversized_sources.py/test_an_unread_side_earns_no_repair_evidence/3acd84ebcf70"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue415_oversized_sources.py::test_an_unread_side_earns_no_repair_evidence returns to its pre-#464 expectation: data_read is warn again and the blocking rows' reason is the NO_PROD_CHANGE_IN_DIFF literal; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P1 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue415_oversized_sources.py/test_an_unread_side_earns_no_repair_evidence/v2:007697e24a211ec3da1dd9f584bca09c0a2bd2e98a583275b75114f59f403d8f"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue415_oversized_sources.py::test_an_unread_side_earns_no_repair_evidence returns to its pre-#464 expectation: data_read is warn again and the blocking rows' reason is the NO_PROD_CHANGE_IN_DIFF literal; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P1 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_a_broad_except_in_a_python_test_had_no_other_route/44a686f5cb20"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_a_broad_except_in_a_python_test_had_no_other_route is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_a_broad_except_in_a_python_test_had_no_other_route/v2:0182d6bb28c7c4797ab84ffe1e2c0b28d226cd427d449aaa8dbfa9591cf7c5bf"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_a_broad_except_in_a_python_test_had_no_other_route is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_a_python_weakening_beside_an_opaque_change_blocks_and_says_why/d973c712c270"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_a_python_weakening_beside_an_opaque_change_blocks_and_says_why is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_a_python_weakening_beside_an_opaque_change_blocks_and_says_why/v2:19befbef92b8f94eda3d9d754811d615a02939ca7c2d9389e3afef38b4413264"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_a_python_weakening_beside_an_opaque_change_blocks_and_says_why is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_broad_except_is_the_one_member_outside_oracle_rules/ca0e2b42e91f"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_broad_except_is_the_one_member_outside_oracle_rules is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_broad_except_is_the_one_member_outside_oracle_rules/v2:06a81c5e0ff626e8819ce146255f1e3b96490ea8bb4bcd902179ed09afdf57cc"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_broad_except_is_the_one_member_outside_oracle_rules is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_membership_is_frozen_here/1bf78baf4e7e"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_membership_is_frozen_here is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_membership_is_frozen_here/v2:b2677b5988db5c623984bb63743b824a9e6891dc9ca27362d80f099f6ab1f42a"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_membership_is_frozen_here is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_symbol_evidence_still_holds_it_beside_the_same_opaque_change/bd66e7cf26a0"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_symbol_evidence_still_holds_it_beside_the_same_opaque_change is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_symbol_evidence_still_holds_it_beside_the_same_opaque_change/v2:cb56d7d11ab227c08c4842284760d5b9b10ec3cde5543d879bd7f4f9de716581"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_symbol_evidence_still_holds_it_beside_the_same_opaque_change is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_with_no_production_change_the_old_wording_stays/332e30fbb95d"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_with_no_production_change_the_old_wording_stays is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_opaque_refusal.py/test_with_no_production_change_the_old_wording_stays/v2:11d82f112111696ecd15f5c6d1a504597e6847d8c55af5808143e86bc25800db"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue419_opaque_refusal.py::test_with_no_production_change_the_old_wording_stays is deleted with the other tests that only #464's refusal made true; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item X14 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue473_e1_label.py/test_a_refused_opaque_change_keeps_its_label_beside_a_readable_edit/f6157ec02214"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue473_e1_label.py::test_a_refused_opaque_change_keeps_its_label_beside_a_readable_edit is deleted: it pinned OPAQUE_PROD_CHANGE_NOT_EVIDENCE beside a readable edit, a label no longer printed; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P4 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); legacy key for v0.8.0 (the required checkwash job and install-from-tag)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue473_e1_label.py/test_a_refused_opaque_change_keeps_its_label_beside_a_readable_edit/v2:5d8ad45c14aaa6d68c0ac17027705ef0b772e3b43f5ea35e3ec861b9d2776f98"
+rule = "TEST_DISABLED"
+reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2026-10-22 K1 A under D-141 C1): tests/test_issue473_e1_label.py::test_a_refused_opaque_change_keeps_its_label_beside_a_readable_edit is deleted: it pinned OPAQUE_PROD_CHANGE_NOT_EVIDENCE beside a readable edit, a label no longer printed; owner-approved under AGENTS.md rule 2 on 2026-10-22 as item P4 (\"L1～L11 全部照建議\", option text written by the assistant), and recorded as #553's CI printed it over base 641efdec (L3); v2 key for the engine on main (dogfood)"
+author = "taipei49314"
+created = "2026-10-22"
+expires = "2026-11-21"
