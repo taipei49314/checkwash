@@ -72,12 +72,11 @@ fix generalises.
 > eleven measured cases now block; the two over-reach guards
 > (`runner_build_makefile_neg`, `runner_opaque_native_neg`) stay green.
 >
-> **Since #419** a build Makefile and a native source are still production,
-> but their edit no longer holds a weakened assertion in a Python test at
-> warn, so the "full repair-evidence weight" below is no longer full. The two
-> guards' original inputs block as `runner_build_makefile_pos` and
-> `runner_opaque_native_pos`; the `_neg` names now pin an expected value
-> rewritten beside the same edit, which still takes the evidence.
+> **#419 (D-141, D-171).** #464 made a build Makefile's or a native source's
+> edit stop holding a weakened assertion in a Python test at warn. That
+> refusal is turned off for v0.9.0 after the combined sweep's pre-registered
+> stop, so such an edit again carries the full repair-evidence weight below.
+> #419 stays open.
 
 
 Widening the list is the obvious move and it is the weaker half. The list will
@@ -581,15 +580,13 @@ subject).
 
 ### B1. The opaque blanket, per-relationship instead of diff-global (P1)
 
-> **Narrowed by rule and language instead (#419).** The design below was not
-> built. Opaque-change evidence stays diff-global, but a weakened, removed,
-> skipped or loosened oracle, and an added broad `except`, in a Python test
-> or conftest no longer take it: Python test code reaches its subject through
-> Python, which checkwash reads. JS/TS tests keep it until #212 prices the
-> change, and so do the expectation family, `ASSERT_SUBSTITUTED` and the
-> `*_PATCHES_*` rules. It catches an agent that weakens a Python test beside
-> a template, JS or native edit it was making anyway, not one that has read
-> this rule. The first paragraph below describes the blanket before #419.
+> **#419 (D-141, D-171).** The design below was not built. #464 narrowed the
+> blanket by rule and language instead: a weakened, removed, skipped or
+> loosened oracle, or an added broad `except`, in a Python test or conftest
+> refused opaque-change evidence. The combined acceptance sweep's
+> pre-registered stop fired on it (three pass → block moves on D-088
+> members), so it is turned off for v0.9.0, and the blanket below is again
+> the behaviour (Route B). #419 stays open for redesign.
 
 One unreadable production file suppresses E1 for **every** oracle finding in
 the diff. This is the largest structural hole on the *attack surface*.

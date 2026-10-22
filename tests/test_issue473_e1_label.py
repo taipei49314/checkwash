@@ -5,7 +5,7 @@ A blocking E1 finding printed NO_PROD_CHANGE_IN_DIFF whenever its own
 evidence did not reach a production change, even when the diff changed
 production. It now prints PROD_CHANGE_NOT_EVIDENCE when the diff changes a
 production-role file that is not inert (`roles._is_inert`), after the
-suite-control and refused-opaque labels, which keep their conditions. Only
+suite-control label, which keeps its condition. Only
 the sentence changes: severity, verdict and fingerprint are what they were.
 
 The .gwcase fixtures carry the shapes the ruling names:
@@ -36,13 +36,6 @@ WEAKENED = FileChange(TEST_PATH, "modified", TEST,
 # and nothing the test calls is it or calls it.
 UNRELATED = FileChange("app/util.py", "modified", b"def f():\n    return 1\n", b"def f():\n    return 2\n")
 LICENSE = FileChange("LICENSE", "modified", b"MIT\n", b"MIT License\n")
-# A comment edited in an existing template, as tests/test_issue419_opaque_refusal.py
-# uses: an opaque change a weakened Python assertion may not take (#419).
-TEMPLATE = FileChange(
-    "app/templates/invoice.html", "modified",
-    b"<!-- invoice summary -->\n<p>Total: {{ total }}</p>",
-    b"<!-- invoice summary, two decimals -->\n<p>Total: {{ total }}</p>",
-)
 
 
 def _run(*changes, root_reader=None):
@@ -81,13 +74,6 @@ def test_a_production_file_whose_content_runs_the_suite_is_a_production_change()
     assert ir.globals.prod_opaque_change is False
     assert ir.globals.prod_files_changed == ["config/settings.json"]
     assert findings == [("ASSERT_WEAKENED", "high", ["PROD_CHANGE_NOT_EVIDENCE"], [])]
-    assert verdict == "block"
-
-
-def test_a_refused_opaque_change_keeps_its_label_beside_a_readable_edit():
-    ir, findings, verdict = _run(WEAKENED, TEMPLATE, UNRELATED)
-    assert ir.globals.prod_opaque_change is True
-    assert findings == [("ASSERT_WEAKENED", "high", ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"], [])]
     assert verdict == "block"
 
 
