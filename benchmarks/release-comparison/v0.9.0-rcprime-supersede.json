@@ -1,0 +1,52 @@
+{
+  "status": "DRAFT_AWAITING_MAINTAINER_WRITTEN_ACCEPTANCE",
+  "purpose": "Proposed additional supersede record for L7; original v0.9.0.json must remain unchanged.",
+  "previous_record": {
+    "path": "benchmarks/release-comparison/v0.9.0.json",
+    "sha256": "9ecd6398fa96574bc783399c5010b0d9ced06c84cd854a1afbc87476d1ae6526",
+    "source_ref": "4cfa1e9ea19b9c6afb9881cb6d99f1785705dd52",
+    "tested_candidate": "7d173fe8f26fb84362aa0a2adb69b4e8cb564622",
+    "tested_src_tree": "17c3dd82bf597daa12e1257052e3b71f3323ca95"
+  },
+  "candidate": {
+    "sha": "36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa",
+    "src_tree": "4baaee4c89dc3e7a4c6f3d069595a5ef8576025f"
+  },
+  "composition": {
+    "previous_release": "f02b5d8a07fa39ee1898881f66c571eb164cb11c",
+    "accepted_comparison": "v0.8.0 -> 7d173fe8; rc 141accee has the same src tree",
+    "supplement": "141accee -> 36280924",
+    "members": 3600,
+    "composed_mandatory_movement_reviews": [],
+    "basis": "Existing lab evidence at 92d771e2bfb41b1109b57cce55f3df2a0e99726d; no new R29 execution in this chat."
+  },
+  "evidence": {
+    "repository": "taipei49314/checkwash-lab",
+    "ref": "92d771e2bfb41b1109b57cce55f3df2a0e99726d",
+    "paths": [
+      "evidence/v090-sweep-results-20261022.md",
+      "evidence/v090-supplement-acceptance-20261022.json",
+      "evidence/v090-supplement-freeze-approval-20261022.md"
+    ],
+    "supplement_lab": "eebbd323345b878acbab9ca2cceb8e9f383a183a",
+    "manifest_sha256": "e98708c597bef407781a6c3a4e9d4938b9ef5ae6a3d55845846c8deb3671588a"
+  },
+  "source_review": {
+    "status": "COMPLETED_SOURCE_SCOPE_REVIEW_NOT_MAINTAINER_ACCEPTANCE",
+    "lab_ref": "faae48d408254421ba1cbe622f1b3e13c2b89cc3",
+    "path": "evidence/v090-closeout-20261022-codex/source-review-M4-M5.md",
+    "scope": "All 726 predicted finding moves / 55 repository-commit-path groups were read as Python tests or conftests; this is not semantic adjudication of every finding."
+  },
+  "residuals": [
+    "S6: no per-row join between Docker R29 values and PJU supplement rc values; composition assumes same outcomes for identical tested src tree.",
+    "No stderr-note comparison.",
+    "In-sample counts; not a held-out or adjudicated false-positive rate.",
+    "This draft is not Nelson's written acceptance and does not activate G4."
+  ],
+  "maintainer_acceptance": {
+    "state": "PENDING",
+    "quote": null,
+    "evidence_ref": null
+  },
+  "final_source_requirement": "Final src must match 4baaee4c89dc3e7a4c6f3d069595a5ef8576025f; any further source change requires review under the current release procedure."
+}

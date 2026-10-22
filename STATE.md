@@ -1,6 +1,94 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-22 (v0.9.0 candidate moved to 36280924 after #419's stop; v0.8.0 remains the verified public release)
+Updated: 2026-10-22 (sweep, /clear and historical #416 reproduction recorded; maintainer dispositions pending; v0.8.0 remains the verified public release)
+
+## 2026-10-22: sweep finished; rcprime dispositions and publication gates remain open
+
+The candidate is `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, `src/` tree
+`4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`. It includes #553's off switch
+for #419's opaque refusal, with #554 and #555. `141accee` stays reachable.
+**v0.9.0 is not published; v0.8.0 remains the verified public release.**
+
+Calls 1–4 and the supplement finished on LAPTOP-01AGNPJU under the frozen
+T-546 declarations: human-authorized local PJU, NOT EC pool. All 710
+shards exited 0; this does not mean every CLI call passed. Lab evidence
+[`92d771e2`](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md)
+records blocks, retained errors and the census timeouts. K2 omitted call 5;
+C2.6 stopped the named Q4 and related counterfactual arms. The original
+combined receipt remains `complete=false`; the supplement is complete,
+and both sets of required determinism checks passed.
+
+The supplement reverses exactly the eleven #419 stop commits, rc block →
+rcprime pass, and leaves JS/TS identical. Its stdout count and three
+positive controls hold. Source review has covered all 726 predicted
+finding moves in 55 repository/commit/path rows, including the 17 moves
+under doc/example or a package directory: all affected files are Python
+tests or conftests. That scope review does not adjudicate each finding.
+
+On R29's 3,600 members the supplement has no verdict move, so L7's
+composed v0.8.0 → rcprime mandatory review list is empty. Nelson's
+post-run written acceptance is **pending (M1)**. The original R29 JSON
+remains immutable; its proposed supersede is not an acceptance receipt.
+The additional eight #419 stops still need the K1 disposition confirmation
+(M2); #419 stays open.
+
+For fix469, 43/370 formerly errored calls in the limits345 subset become
+analysed (40 pass, 3 block) on a496 → a469; the joined pair has 3,388
+members, including other standard/D-088 rows. Source review proposes two FP dispositions;
+aiohttp `02558d38` remains UNKNOWN because 64 MiB inputs shrink to 2 MiB.
+M5 awaits Nelson. The 470-member original-rc census has 276 pass,
+107 block, 83 product errors and 4 timeouts. M6's source reading of all
+1,150 recorded matching-line entries is complete: no new runtime-control
+marker occurs in the written findings. The 87 unanalysed rows and 15
+conftest parse-warning rows remain limits; no human personal review or
+zero false-positive rate is claimed. S7 leaves these
+measurements on their declared engines. `cfjs131` stays on `141accee`
+under L11; its 55 pass → block commits are redesign evidence.
+
+Separately, the frozen #416 wrong-blob reproduction completed eight CLI
+calls on 2026-10-22: both v0.7.0 and pre-#453 main block at the root
+(exit 1) and pass from the subdirectory (exit 0), in range and worktree
+modes. All four comparisons reproduce the historical false pass.
+`C:\Users\nelson\dev\checkwash-sweeps\20261022-wrongblob-416\receipt.json`
+binds the old engines, manifest and runtime. R40's maintainer text and
+documentation disposition remain pending; #416 is not closed. This
+historical reproduction does not replace the separate 1,800-row
+subdirectory comparison or validate rcprime afresh.
+
+Still before ready/merge/tag/Release:
+
+- Nelson's M1/M2/M5 dispositions;
+- approved D-172, versioned known issues, final guide and #416 wording;
+  M6's completed source reading and retained limits are part of this wording,
+  not an additional human publication gate;
+- claims review and new exact-final-head CI/qualification, followed by
+  the exact main commit's and tag's checks under RELEASING.
+
+The human-typed rcprime `/clear` lifecycle completed at lab `223598f9`,
+manifest `33b55dba…`: collection on 2026-10-22 at 13:50:56Z records
+**c1–c8 PASS**, using Claude Code 2.1.260 and Haiku. Session A's Stop named
+the committed weakening without a blocking decision; `/clear` created
+session B at the weakening commit, and B's Stop printed `{}` without
+naming it. This is the declared #418 receipt, human-authorized local
+PJU, NOT EC pool. A real blocking Stop was not exercised. Nelson then
+confirmed removal of the temporary global `skipDangerousModePermissionPrompt`
+key; the read-only presence check at 13:52:42Z found it absent. The original
+receipt retains its as-of-collect `bypass_key_after=true`; it was neither
+rewritten nor recollected.
+
+The G4 grant remains conditional. Nelson alone approves the `pypi`
+deployment. Public artifact verification precedes advertised/README
+pin updates, and baseline rotation remains a separate PR. #554's expiry
+does not require rushing these conditions: standard release self-checks
+do not replay #553's old diff. Earlier dated entries below remain history.
+
+The combined sweep also reproduces the already recorded #424/#306/#487
+movements. D-144 treats pytest `242fb7852b`'s block → pass and rich
+`a13b2a9d75`'s pass → block as correct. D-145 records scrapy
+`c8aa429c9b` and `e058a05763` as false blocks and `fada8be1db` as the
+known false block retained under #488. D-149's #487 fix returns the first
+two to pass while the other affected commits remain blocked. These are
+existing recorded dispositions, not new unruled stop conditions.
 
 ## 2026-10-22: #419's refusal is turned off; the candidate moves
 
