@@ -131,7 +131,8 @@ def main() -> int:
             require(public.read_bytes() == (out / "github" / name).read_bytes(), "GitHub/PyPI bytes differ")
         installed_probe = (
             "import importlib.metadata,json,pathlib,sys;d=importlib.metadata.distribution('checkwash');"
-            "assert d.version=='0.9.0';assert not d.requires;"
+            "assert d.version=='0.9.0';"
+            "assert {p.metadata['Name'].lower() for p in importlib.metadata.distributions()} <= {'pip','setuptools','checkwash'};"
             "r={'version':d.version,'requires':d.requires,'direct_url':json.loads(d.read_text('direct_url.json'))};"
             "pathlib.Path(sys.argv[1]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')"
         )
@@ -149,6 +150,9 @@ def main() -> int:
                     "--report", str(out / (channel + "-pip.json")), target])
             installed = out / (channel + "-installed.json")
             command(channel + "-identity", [python, "-I", "-B", "-c", installed_probe, str(installed)])
+            # Evaluate active requirement markers; metadata also lists the
+            # unselected dev extra, which is not a runtime dependency.
+            command(channel + "-dependencies", [python, "-I", "-B", "-m", "pip", "check"])
             identity = json.loads(installed.read_bytes())
             if channel == "public-tag":
                 require(identity["direct_url"]["vcs_info"]["commit_id"] == COMMIT, "installed tag commit mismatch")
