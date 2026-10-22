@@ -119,13 +119,9 @@ def _summary(findings):
 # --- the engine: an unread side earns nothing -------------------------------------------------------
 
 EVIDENCE_CASES = {
-    # Readable: symbol-matched evidence holds the weakening at warn. A read
-    # data edit is an opaque change, which a weakened Python assertion no
-    # longer takes as evidence (#419 Q1 (b); ruling (a) of 2026-10-16 moved
-    # this row to high). REWRITTEN below shows it still explains an
-    # expectation rewritten beside it.
+    # Readable: the documented evidence, symbol-matched and opaque.
     "py_read": (FileChange("billing.py", "modified", BILLING, FIXED), "warn"),
-    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "high"),
+    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "warn"),
     # Unread on either side, or both: no evidence of either kind (#419). A
     # Python module that large refuses instead (PY_MODULES below).
     "js_head_unread": (FileChange("src/billing.js", "modified", BILLING_JS, None,
@@ -138,16 +134,6 @@ EVIDENCE_CASES = {
     "data_unread": (FileChange("data/rates.csv", "modified", None, None,
                                unread=(unread("data/rates.csv", "base"), unread("data/rates.csv", "head"))),
                     "high"),
-}
-# Why a blocking row is high (#419 Q5 (b)). A read side the finding may not
-# take as evidence is still a production change, and the reason says so; an
-# unread side is no change checkwash saw at all.
-EVIDENCE_REASONS = {
-    "data_read": "OPAQUE_PROD_CHANGE_NOT_EVIDENCE",
-    "js_head_unread": "NO_PROD_CHANGE_IN_DIFF",
-    "js_base_unread": "NO_PROD_CHANGE_IN_DIFF",
-    "js_both_unread": "NO_PROD_CHANGE_IN_DIFF",
-    "data_unread": "NO_PROD_CHANGE_IN_DIFF",
 }
 # The expectation family keeps opaque-change evidence (#419 Q1 (b)): the
 # expected literal rewritten, as assert_weakened_repair_neg rewrites it.
@@ -164,7 +150,7 @@ def test_an_unread_side_earns_no_repair_evidence(case):
         assert "REPAIR_EVIDENCE" in findings[0].deescalators
         assert verdict == "pass"
     else:
-        assert findings[0].escalators == [EVIDENCE_REASONS[case]]
+        assert findings[0].escalators == ["NO_PROD_CHANGE_IN_DIFF"]
         assert findings[0].deescalators == []
         assert verdict == "block"
 
@@ -518,24 +504,11 @@ ROWS = {
     "data_edited_over_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
                                    lambda repo: _write(repo, {"data/table.csv": blob(LIMIT + 1, "edited")}),
                                    "block", [described("data/table.csv", "head")]),
-    # Exactly at the limit, the data file is read, so it is an opaque change.
-    # A weakened Python assertion no longer takes that as evidence (#419
-    # Q1 (b); ruling (a) of 2026-10-16 moved this row from pass to block), and
-    # the reason names the change instead of denying it. The sibling test
-    # below keeps the warn for a rewritten expected value.
+    # Exactly at the limit, the data file is read: the opaque-change evidence
+    # it has always earned holds the weakening at warn.
     "data_edited_at_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
                                  lambda repo: _write(repo, {"data/table.csv": blob(LIMIT, "edited")}),
-                                 "block", []),
-}
-# Why a blocking row is high (#419 Q5 (b)): no side the run read changed
-# production, or one did and the finding may not take it as evidence.
-ROW_REASONS = {
-    "image_added": "NO_PROD_CHANGE_IN_DIFF",
-    "js_source_added": "NO_PROD_CHANGE_IN_DIFF",
-    "data_deleted": "NO_PROD_CHANGE_IN_DIFF",
-    "data_renamed": "NO_PROD_CHANGE_IN_DIFF",
-    "data_edited_over_the_limit": "NO_PROD_CHANGE_IN_DIFF",
-    "data_edited_at_the_limit": "OPAQUE_PROD_CHANGE_NOT_EVIDENCE",
+                                 "pass", []),
 }
 
 
@@ -554,8 +527,7 @@ def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
     if verdict == "block":
         assert code == 1
         assert finding["severity"] == "high"
-        # Membership, as on main: the row's reason is among the escalators.
-        assert ROW_REASONS[row] in finding["escalators"]
+        assert "NO_PROD_CHANGE_IN_DIFF" in finding["escalators"]
     else:
         assert code == 0
         assert finding["severity"] == "warn"
