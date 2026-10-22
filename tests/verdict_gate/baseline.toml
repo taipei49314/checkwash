@@ -80,12 +80,18 @@ schema_version = 1
 # ran all 185 cases with v0.8.0 as the baseline: 159 block -> block, 26 pass
 # -> pass and zero reported. Its only failure was the acceptance-baseline
 # mismatch; it saw no blocked-pin or T3 drift, so it proposed no pin.
+# 2026-10-23: post-publication v0.9.0 rotation under G4 and Nelson's
+# explicit instruction after his PyPI deployment approval. Pin the actual
+# release run 39817071157/1 pyz. Tag verdict 39811579829/1 observed the same
+# 159 blocked and 26 passing cases with no proposed movement; the chai
+# input file is unchanged. A fresh rotation PR verdict must confirm these
+# retained baseline_blocked/T3 pins. The canary pair is not rotated.
 [baseline]
-tag = "v0.8.0"
-version = "0.8.0"
-commit = "f02b5d8a07fa39ee1898881f66c571eb164cb11c"
-sha256 = "87b097cdca4ca34dc43be8be8ddf8ef7f3197894dc6f554fe1bddc1d86e74d0c"
-size = 796565
+tag = "v0.9.0"
+version = "0.9.0"
+commit = "d6eda4f695fabb8e7d138f7a87b099d2028f0294"
+sha256 = "7319152cdf4889df4d58b454dc63072bb2e923823e1b2ce09677e4381dbccd5c"
+size = 914407
 
 [baseline_blocked]
 count = 159

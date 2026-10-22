@@ -63,4 +63,8 @@
 # file holds no entry and the rotation run names none stale, so only the
 # baseline changes.
 
-baseline = "v0.8.0"
+# 2026-10-23: G4 post-publication rotation, continued by Nelson's explicit
+# instruction after he approved the v0.9.0 PyPI deployment. Only this
+# baseline header changes: there are no accept entries to retire or add.
+# Fresh hosted rotation results are recorded in the rotation PR.
+baseline = "v0.9.0"
