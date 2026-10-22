@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **180 bypasses** are documented, of which **59 are not closed**.
+- **181 bypasses** are documented, of which **59 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -105,7 +105,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (118)
+## Closed — each pinned by something that runs (119)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -233,6 +233,7 @@ behind it* unshippable.
 | 159 | Take a JS/TS test out of the run by registering it where no code runs, its body unchanged: `if (false) { it(...) }` in a `describe` callback, `return;` before `it(...)` there, a module-level `if (false) { test(...) }` after the imports, `false && it(...);`, a node:test or tap `t.test(...)` after `return;` in its parent test, or a whole `describe` under `if (false)`; focus the parked test (`if (false) { it.only(...) }`) so that the test beside it reads as stopped instead; or paste a deleted test under `if (false)`, or move an assertion into a test there, to buy the move or restructure credit (#484). The same in Python: a `def test_x` under `if False:` (#499) | `dead_def_class_if_false_pos.gwcase`, `dead_def_dead_match_pos.gwcase`, `dead_def_empty_for_pos.gwcase`, `dead_def_if_compare_pos.gwcase`, `dead_def_if_false_pos.gwcase`, `dead_def_if_not_true_pos.gwcase`, `dead_def_method_if_false_pos.gwcase`, `dead_def_no_restructure_mass_pos.gwcase`, `dead_def_pasted_copy_no_move_credit_pos.gwcase`, `dead_def_survivor_no_duplicate_credit_pos.gwcase`, `js_dead_registration_after_return_pos.gwcase`, `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_describe_pos.gwcase`, `js_dead_registration_equal_mass_pos.gwcase`, `js_dead_registration_focus_pos.gwcase`, `js_dead_registration_if_false_pos.gwcase`, `js_dead_registration_literal_and_pos.gwcase`, `js_dead_registration_mocha_function_pos.gwcase`, `js_dead_registration_module_if_false_pos.gwcase`, `js_dead_registration_node_subtest_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase` |
 | 160 | Weaken, delete or rewrite an assertion on the test context of a JS/TS arrow test callback that carries a TypeScript return annotation, instead of fixing code: under node:test, `test("s", (ctx): void => { ctx.assert.strictEqual(sum(2, 2), 4) })` -> `ctx.assert.ok(sum(2, 2))`, the assertion deleted or its expected value rewritten, also under `async (ctx): Promise<void> =>`; AVA's `(t): void =>` with `t.is(...)` -> `t.truthy(...)`; tap's `t.test("s", (tt): void => ...)` with `tt.equal(...)` -> `tt.ok(...)` (#480) | `js_ava_annotated_arrow_weakened_pos.gwcase`, `js_node_context_annotated_arrow_deleted_pos.gwcase`, `js_node_context_annotated_arrow_expected_rewrite_pos.gwcase`, `js_node_context_annotated_arrow_weakened_pos.gwcase`, `js_tap_annotated_arrow_weakened_pos.gwcase` |
 | 161 | Stop the suite through a runner script whose only runner shape is a shell shebang on a side over the 1,000,000-byte source limit, instead of fixing code: CI runs the suite as `sh ci/run.txt`, an existing file over the limit at the base whose suffix and name are not runner-shaped, and the head, over the limit or not, drops `#!/bin/sh` and the `python -m pytest` line (#455) | — |
+| 162 | Start `check` in a repository subdirectory that holds an unchanged copy of a test with the same root-relative path, while weakening the root copy. Mixed Git path bases let the unchanged subdirectory blob stand in for the changed root blob, so the run returns pass with no findings where the same run at the repository root blocks (#416). | — |
 
 ## False positives on human-written commits
 

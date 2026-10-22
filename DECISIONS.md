@@ -6958,3 +6958,225 @@ Evidence status: `NOT_RUN：工作機規則（POLICY work-machine-local），#55
 The agent wrote this entry; the owner approved its wording on 2026-10-22
 (L5). It was then aligned with the owner's L7 decision on R29 and with the
 full list of conflicting changes.
+
+## D-172 (2026-10-22): v0.9.0 sweep completion, the rcprime comparison and the remaining publication conditions
+
+**Maintainer-approved record.** After the runs and source readings,
+Nelson answered the A/B/C acceptance and wording package with
+「全部照建議核可，依既有 G4 授權續作」 on 2026-10-22. The reply is the exact
+text of an assistant-written option. The [approval and complete package](https://github.com/taipei49314/checkwash-lab/blob/b5e0a4dfcc63ef9411a2399cf343098370bc52ea/evidence/v090-closeout-20261022-codex/maintainer-approval-A-B-C.md)
+record its question, concrete wording and scope. Final-head, main and tag
+checks remain required; this record does not claim publication.
+
+**Candidate.** `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, tree
+`c8647638af170a4bbbd0af5d654cfbc689e6b924`, `src/` tree
+`4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`. L10 brought main `47c74172`
+into the release branch with a merge commit, retaining `141accee`.
+Its source differs from rc's `17c3dd82` by #553, not only by the version
+string. #419's refusal is off; its implementation stays unreachable for
+redesign. #419 remains open.
+
+**Authority and amendments.** Nelson's 2026-10-21 reply
+「第二步核可包 G1～G4 全部照建議」 approved the frozen combined sweep and
+the conditional v0.9.0 grant. His 2026-10-22 replies 「K1～K3 全部照建議」
+and 「L1～L11 全部照建議」 selected D-141 C1's revert route, calls 2–4's
+continuation, omission of call 5, #553/#554/#555 and their named protected
+expectation/text changes. These were assistant-written button texts, as
+the evidence records. D-171 retains the first stop and those decisions.
+
+This entry makes two later details explicit:
+
+- **L6 replaces a full rerun of every candidate arm with the frozen
+  rc → rcprime supplement on six window-1 batches**, under its specified
+  acceptance line. It does not turn an omitted arm into a clean result.
+- **L11 leaves `cfjs131` on `141accee`**; it is not rebuilt or relabelled as
+  a measurement of rcprime.
+
+Nelson's supplement-freeze reply 「全部照建議」 approved S1–S9. S1 permits
+the earlier freeze with its pre-dispatch checks; S2/S3 freeze members and
+shards; S4/S5 set C3 and its acceptance line; S6 preserves written
+post-run R29 acceptance and the unjoined-outcome residual; S7 names the
+arms not rerun; S8 keeps the three original positive controls; S9 pins
+rcprime, lab `eebbd323`, the supplement manifest and the rcprime `/clear`
+manifest. These approvals preceded the runs and do not assert their
+results or provide M1's later written acceptance.
+
+**Executed evidence.** Lab
+[`92d771e2bfb41b1109b57cce55f3df2a0e99726d`](https://github.com/taipei49314/checkwash-lab/commit/92d771e2bfb41b1109b57cce55f3df2a0e99726d)
+records calls 1–4 and the supplement on LAPTOP-01AGNPJU, human-authorized
+local PJU, NOT EC pool. The combined lab is
+`6d49fb600b62db2f62167b780f6a251f9b540a37`, manifest sha256
+`52a451cf62e5ca9ddfbf24288299b64d97346a5b5bdf6d6bc3865b7a19332520`;
+the supplement lab is `eebbd323345b878acbab9ca2cceb8e9f383a183a`, manifest
+sha256 `e98708c597bef407781a6c3a4e9d4938b9ef5ae6a3d55845846c8deb3671588a`.
+
+All 710 shards exited 0 (100 + 104 + 76 + 280 + 150). This is harness
+completion, not a claim that every product CLI invocation passed. The
+combined sweep's three determinism checks and the supplement's three
+checks passed. The original combined manifest remains incomplete because
+call 5 did not run; the supplement's `combined.json` is complete.
+C2.6 stopped `cfq2b`, `cfq2c`, `cfq8s`, `cfq8p`, `q4warn`, `q4freeze`,
+`rcq4warn` and `rcq4freeze`. No complete RC Q4 numbers are supplied under
+R22. `419-arm4` has no compared row and is not called clean.
+
+**#419 stops and supplement.** Eleven distinct commits stopped: d088's
+httpx `0296c2bb`, starlette `e396f079`, werkzeug `ab6150fa`; d088sc's
+scrapy `d0dabbc0`, `d1bd8eb4`; d088x's pytest `158e1608`, `4d49ba65`,
+`4ee3831a`, `cf5b544d`, `ef732fc5`, `f6caf230`. All are predicted P1
+pass → block moves. The supplement reverses exactly those eleven
+verdicts, rc block → rcprime pass, each on a row with a P1 finding move.
+No unpredicted finding move is recorded. The three original positive
+controls hold; all 18 stdout-differing rows match the declared lists;
+JS/TS is identical on 1,800 members. Errors remain identical: d088 4,
+d088x 4, d088sc 11, JS/TS 2.
+
+M4's read-only source review is complete: 726 predicted finding moves in
+55 repository/commit/path rows, all Python test source or conftests. The
+16 pytest doc/example moves and one scrapy package move were read by
+source, not classified by path alone. This proves neither historical
+runner collection nor semantic truth of every TEST_DISABLED finding.
+
+**R29 and supersede (M1 accepted).** Compose the accepted
+v0.8.0 `f02b5d8a` → candidate `7d173fe8` comparison (`src/` tree
+`17c3dd82`, shared by `141accee`) with the supplement. No verdict moves
+on R29's 3,600 members, so the composed mandatory review list is `[]`.
+The original R29's counts remain 1,752 Python pass → pass, 48 block →
+block, 1,759 JS/TS pass → pass, 39 block → block and two error → error.
+Those are in-sample outcome counts, not adjudicated TP/FP counts.
+
+The original `benchmarks/release-comparison/v0.9.0.json` stays unchanged,
+sha256 `9ecd6398fa96574bc783399c5010b0d9ced06c84cd854a1afbc87476d1ae6526`.
+A new supersede record identifies rcprime's source, the empty list,
+the supplement and Nelson's actual acceptance. There is no per-row join
+between the original Docker outcomes and supplement rc outcomes; same
+outcomes for the identical source tree are assumed (S6). Stderr notes
+were not compared. L7/L9 permit this route only if its acceptance line
+holds and Nelson reviews and accepts the composed list in writing before
+the tag. **Nelson gave that post-run written acceptance in package A.**
+
+**M2 accepted; M3 not posted.** The additional two scrapy and six pytest stops
+have the same predicted P1/inverse pattern as call 1. Nelson confirmed
+their disposition in K1's refusal-off route in package A.
+K3's existing issue comment covers call
+1; a new #419 comment for all eleven and the supplement is optional and
+requires his instruction. No new comment is claimed here.
+
+**fix469 (M5 disposed of).** This pair is a496 `737f13b8` → a469 `64462ff9`,
+not rc → rcprime. The joined pair has 3,388 members, including other
+standard/D-088 rows; in its limits345 subset of 370, 43 move from product
+error to analysis: 40 pass and 3 block. In package B Nelson accepted FP for aiohttp
+`247b3238`'s high ASSERT_REMOVED (the exact Unicode BasicAuth header
+remains in an independent UTF-8 test using the unchanged default) and
+`c74d7e98`'s high EXPECTED_VALUE_CHANGED (one generated port supplies the
+requested local address and the exact resulting sockname).
+
+Nelson accepted aiohttp `02558d38` as a justified test-data-size reduction:
+three compression tests reduce input
+from 64 MiB to 2 MiB, and `received == payload_size` scales with the
+input. The larger stress case is genuinely removed; unchanged test
+intent and a retained equality oracle do not prove equivalent coverage.
+The real stress-coverage reduction remains disclosed; it is not called
+coverage-equivalent or a third proven FP. No final rcprime
+rerun of the three commits is claimed.
+
+**Census/d136 (M6 source reading complete; account approved).** The full list has 470 unique original-rc
+members, with overlapping 422 census432 and 97 d136 phase memberships:
+276 ANALYZED_PASS, 107 ANALYZED_BLOCK, 83 PRODUCT_ERROR_EXIT and four
+TIMEOUT. The timeouts are pandas `6102c724`, `bb613588`, `c55a7399`,
+`d01561fb`. These are retained original outcomes, not new block/error
+transitions. The source reading covers all 1,150 recorded matching-line
+entries: async test delegation, hookwrapper yield, unittest adapters,
+custom collector/fixture examples, conditional skips and lexical false
+matches. No new `conftest.runtime.*` marker occurs in the written findings,
+so no new runtime finding is supplied for human TP/FP adjudication. The
+87 unanalysed rows and 15 analysed pytest rows with conftest parse warnings
+remain limitations, not implicit passes or a zero false-positive rate.
+S7 does not rerun them on rcprime. Nelson's personal per-row reading is
+not claimed by this agent source review.
+
+The [committed closeout evidence](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/README.md)
+retains the M4/M5 and M6 source readings, indexes, actual #416 and /clear
+receipts, and the separate bypass-key housekeeping record.
+
+**Other lines.** `419-arm1` has no changes on 1,800 standard/standardx
+members; `419-arm5` is clean; census `419-arm3` has no verdict move on
+49 rows. `418` zero holds; `subdir416` holds on 1,800 rows; `rcend`,
+`rcendjs` and the two-member `462-kw` line show no changes. S7 leaves
+their engines and scope as frozen. `cfjs131` records 55 JS/TS pass →
+block commits at `141accee` (rule incidences 12 ASSERT_REMOVED,
+10 ASSERT_WEAKENED, 36 TEST_DISABLED, overlapping); this is report-only
+redesign evidence, not a refusal shipped by rcprime.
+
+The combined `multi421` and `487` movements also match the cases whose
+source dispositions are already recorded: D-144's correct pytest
+`242fb7852b` block → pass and rich `a13b2a9d75` pass → block; D-145's
+false scrapy `c8aa429c9b`/`e058a05763` blocks and known `fada8be1db`
+false block retained under #488; and D-149's #487 fix, which returns
+`c8aa429c9b` and `e058a05763` to pass while the other affected commits
+remain blocked on existing findings. These retain their existing
+dispositions and do not require a new stop-level ruling. This does not
+extend those judgments to M5 or the full census.
+
+**#416 historical reproduction; R40 documentation in this PR.** On 2026-10-22
+the frozen wrong-blob declaration at lab `6d49fb60`, manifest sha256
+`c553cf8251b2af241b486d55d3513ea637de69b2e70559dc4216791e7b99bc86`,
+ran eight CLI processes on LAPTOP-01AGNPJU, Python 3.11.9, human-authorized
+local PJU, NOT EC pool. Both v0.7.0 `d647a65e` and pre-#453 main
+`ea563500` block at the root (exit 1) and falsely pass from the
+subdirectory (exit 0) in range and worktree modes: all four comparisons
+reproduce the historical bug. The receipt is
+`C:\Users\nelson\dev\checkwash-sweeps\20261022-wrongblob-416\receipt.json`.
+
+This supersedes the current-evidence claim in D-139's original paragraph
+that it had not been reproduced on main, and the corresponding dated
+v0.8.0 known-issues sentence. Those historical texts keep their original
+record. Package C approves THREATMODEL row 162 naming the historical
+wrong-blob route as closed by #416/#453 for the declared shape, its
+additive mapping to the existing named end-to-end test and the derived
+FAILURES synchronization. This PR carries that documentation. The
+reproduction tests the two old engines; it is not new fixed-candidate
+validation and does not by itself close #416 before the documentation merges.
+
+**#418 human lifecycle completed.** Nelson performed the human-typed
+`/clear` session; collection at 2026-10-22T13:50:56Z records **c1–c8 PASS**
+with Claude Code 2.1.260 and Haiku (`claude-haiku-4-5-20251001`). Session A
+records the base; its Stop names the committed weakening without a blocking
+decision. `/clear` starts distinct session B, whose record is at the
+weakening commit and whose Stop prints `{}` without naming it. Exactly
+the declared two session records are present. The approved rcprime manifest is at lab
+`223598f9a431d4c5cecaaa9a95503ed2442a9fed`, sha256
+`33b55dba63aae14c23165985858a250ed0b4a7256f678c118c40f7bf9a48b082`;
+the receipt is
+`C:\Users\nelson\dev\checkwash-sweeps\20261022-lifecycle-418-clear-pju\receipt.json`.
+This is human-authorized local PJU, NOT EC pool. A real blocking Stop is
+explicitly NOT_RUN. The temporary global bypass key was absent before
+prepare and present at collect. Nelson then replied 「已刪」; the read-only
+presence check at 2026-10-22T13:52:42Z found it absent. That housekeeping
+receipt is separate: the original lifecycle receipt retains its
+as-of-collect `bypass_key_after=true`, without rewriting or recollection.
+
+**Publication sequence.** Nelson resolved M1/M2/M5 and approved this
+entry, the guide, known issues and the #416 maintainer wording in A/B/C.
+The /clear gate and declared housekeeping are complete. M6's source
+reading is complete and its retained limits belong in that wording;
+it adds no separate human publication gate. Exact final-head
+qualification and PR/main/tag checks still apply. The v0.8.0 verdict
+baseline stays pinned until the separate post-publication rotation PR.
+
+Only after G4/L9's conditions hold does the grant permit ready, a merge
+commit, an annotated v0.9.0 tag on the qualified main merge commit and a
+GitHub Release after its tag checks. The real PyPI deployment waits for
+Nelson's approval. Public artifact verification precedes advertised and
+README pin advancement. No publication has occurred in this record.
+Other versions and downstream re-pins are not authorized.
+
+#554's 20 keys expire after engine date 2026-11-21; the normal release
+self-check ranges start after #553 is already on main, so this does not
+create a release deadline or require renewal. A changed range or old-diff
+rerun needs its own check. Expiry does not waive a release condition.
+
+**Evidence status.** The sweep, supplement and wrong-blob executions keep
+their exact local PJU provenance. This drafting pass ran no product,
+tests, build, lint or qualification. The `/clear` receipt is the separately
+collected lifecycle evidence; final-source qualification and public-install
+receipts are not manufactured from the existing shard exits.

@@ -204,6 +204,344 @@ changes only through the maintainer.
 The v0.7.0 entry below, the grants under "The release slot", `STATE.md` and
 `docs/releases/` describe the ruleset as it was then and stay unchanged.
 
+## v0.9.0 owner decisions after the Codex sessions (2026-10-21)
+
+On 2026-10-21 Nelson interrupted Codex session
+`01a15c24-d064-7523-b3e6-23810a2c57c2`; its last turn was aborted at
+08:53:11Z. He handed the release to a Claude Code session
+(`53462dc3-538b-4702-a2bc-160f81f030d6`) on LAPTOP-16NUA5I8:
+
+> codex那邊停下 你幫我收拾這個爛攤子 到0.9.0 pypi發版前叫我
+
+He then answered four questions. Each answer was a button whose text the
+assistant wrote. EC records the exact questions and option texts in
+`evidence/requests/6df8ab76-6ed4-4f58-8754-fe19259409d1/human-decision.md`
+at EC commit `1978e87d1e6713d6722ddc304a048aeee0f55f4a`.
+
+1. **Sweep before release (「先 sweep 再發」).** The combined acceptance sweep
+   runs before the tag, as D-141 C1 and R2 require. A stop blocks this
+   release. It runs on LAPTOP-01AGNPJU under EC POLICY `checkwash-pju-sweep`
+   (T-546), which also covers the `/clear` receipt that D-142 and R24 require
+   before the release.
+2. **R29 accepted in writing (「明文採認」).** Nelson accepts the comparison
+   recorded under "Completed R29 comparison" below as v0.9.0's fixed-corpus
+   comparison:
+   - previous release v0.8.0 `f02b5d8a`;
+   - candidate `7d173fe8`, `src/` tree
+     `17c3dd82bf597daa12e1257052e3b71f3323ca95`;
+   - 3,600 commits, run on 2026-10-20 in local Docker on LAPTOP-01AGNPJU;
+   - evidence archive `完整原始證據.zip`, sha256
+     `ef6cdf68489ac2f723c560a8046a9d5235c7998e7cdd397468128972d4de2c73`.
+
+   The acceptance uses the last clause of EC POLICY `work-machine-local`,
+   which lets the human accept a work-machine result in writing. The option
+   he chose stated the list: no pass→block, no block→pass and no
+   analysed→error move. With it he confirmed that he has seen the list, which
+   is the owner's review this step and R55 require.
+
+   It also covers #212's v0.8.0→RC JS/TS replay, which is the same 1,800-commit
+   set.
+
+   For v0.9.0 only, it sets aside the "Where" rule of the comparison step and
+   R3's pool venue. It is not a standing exception. If `src/` changes beyond
+   the version string, the comparison runs again, and its venue is decided
+   then.
+3. **Codex-added gates removed (「全部拿掉」).**
+   - **No harness tests.** No native-Windows or WSL harness tests run (R7
+     option B: read-only review plus three determinism checks). The WSL run
+     `23d146c8` at LAB `9099e88c`, which Nelson accepted, stays on record as
+     supporting evidence only.
+   - **No EC pool chain.** EC T-577 is CANCELLED and EC PR #219 is closed.
+   - **No fresh baseline reproduction.** LAB PR #18 is closed. Its
+     LAPTOP-16NUA5I8 results stay unaccepted, and nothing is deleted.
+   - **Nothing more runs on LAPTOP-16NUA5I8 for v0.9.0.**
+   - **What the session may do.** It may push preparation commits to this
+     release branch and edit PR #552's description. It does not merge, tag
+     or publish a Release.
+4. **tables428 not run for v0.9.0 (「這版不做」).** Two D-152 items are
+   NOT_RUN for v0.9.0:
+   - the #428 JS target set over the 13 histories;
+   - the Jest, Vitest and Bun empty-table runs.
+
+   #428 is judged by its own `b428`/`a428` pair in the standard, d088 and
+   javascript phases. This sets aside that part of D-152 for v0.9.0 only.
+
+**What this does not authorize.** Taking #552 out of draft, merging it,
+tagging, publishing the GitHub Release and the PyPI upload all still need
+v0.9.0's one-time authorization. `AGENTS.md` rule 5 and R55 require it. It is
+requested together with the sweep's step-2 package; the next section records
+it.
+
+## v0.9.0 one-time publication authorization (2026-10-21)
+
+On 2026-10-21, Nelson answered the combined sweep's step-2 package with
+**「第二步核可包 G1～G4 全部照建議」** ("the step-2 package, G1 to G4, all as
+recommended"). The Claude Code coordinator on LAPTOP-01AGNPJU wrote the
+package. His reply matches the text of a button the assistant wrote. G4 of
+that package is this release's one-time authorization (R55). It holds only
+under conditions. checkwash-lab
+`evidence/pju-inventory-20261021:evidence/v090-step2-approval-20261021.md`
+records the whole approval.
+
+The conditions:
+- The combined sweep ends with no #419 stop (D-141 C1). The sweep is lab
+  `6d49fb600b62db2f62167b780f6a251f9b540a37`, manifest sha256
+  `52a451cf62e5ca9ddfbf24288299b64d97346a5b5bdf6d6bc3865b7a19332520`.
+- Its three determinism checks pass, or Nelson rules on them.
+- The `/clear` lifecycle receipt passes (D-142, R24).
+- No stop-the-round move is left unruled.
+- Nelson has approved the wording of the DECISIONS v0.9.0 entry (R54), the
+  release guide and `KNOWN-ISSUES-v0.9.0.md`.
+
+Once they hold, it covers:
+- the maintainer-owned commit that carries that approved text;
+- taking #552 out of draft;
+- merging it with a merge commit, so that the RC `141accee` stays
+  reachable, once the hosted checks of its final exact head have passed;
+- once the exact merge commit's `main` push checks pass, pushing the
+  annotated tag `v0.9.0` on it;
+- once the tag's own checks pass, creating and publishing the GitHub Release
+  with `gh`;
+- the publication checks (step 8), and the follow-up that advances
+  `release/advertised.toml`, the README CLI pins and the README Action pin to
+  v0.9.0;
+- the verdict-baseline rotation PR (step 9), whose protected changes keep
+  his disposition.
+
+It stops when the release workflow's `pypi` job is waiting. Nelson approves
+that deployment himself; no agent session can.
+
+It does not authorize another version, or the downstream re-pins of
+checkwash-corpus and smallestlie. It does not authorize running anything on a
+work machine beyond the combined sweep and the `/clear` receipt under EC
+POLICY `checkwash-pju-sweep` (T-546). Publication and artifact verification
+consume this grant.
+
+The two Codex entries below stay as history. Their authority was scoped to
+their own Codex sessions and ended with them; no later session uses it. Their
+sentence "This explicit instruction supersedes the pool-only location …" was
+not adopted as a standing rule. R29 stands on decision 2 above.
+
+### Amendment after the #419 stop (2026-10-22)
+
+Call 1 of the combined sweep fired #419's pre-registered stop: three pass →
+block moves on D-088 members
+([#419 comment](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6329503938)).
+The first condition above cannot hold as written. On 2026-10-22 Nelson
+answered two decision lists. Each reply was a button whose text the assistant
+wrote.
+- 「K1～K3 全部照建議」: v0.9.0 ships without #419's refusal, by D-141 C1's
+  revert route. Calls 2 to 4 of the sweep continue; call 5 does not run (K2).
+- 「L1～L11 全部照建議」: approves the change that turns the refusal off
+  (#553), its allow keys (#554) and its maintainer text (#555, D-171). It also
+  approves L6, L7, L9 and L10:
+  - **L10: the new candidate.** `main` (`47c74172`, with #553, #554 and #555)
+    is merged into this branch with a merge commit, with no rebase or
+    force-push, so that `141accee` stays reachable for the sweep. That merge
+    commit, `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa` (src tree
+    `4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`), is the new candidate.
+    `git diff 141accee 36280924 -- src/` equals the `src/` diff of #553's
+    merge, so its src differs from `17c3dd82` only by #553.
+  - **L6: the sweep supplement.** It compares `141accee` with the new
+    candidate on the six window-1 batches. Its acceptance line:
+    - Python verdict moves are only block → pass, caused by inverse #419 P1/P2
+      finding moves;
+    - httpx `0296c2bb`, starlette `e396f079` and werkzeug `ab6150fa`, the
+      three stop commits, must each show that move;
+    - javascript must be identical;
+    - anything else stops for Nelson.
+
+    Nelson approves the supplement's freeze (lab commit, manifest sha256, the
+    candidate's commit) before it runs.
+  - **L9: the first condition now reads:**
+    - The #419 stop is answered by D-141 C1's revert route: #553 is merged on
+      `main` and in the candidate.
+    - The sweep supplement holds its acceptance line (L6).
+    - R29 is settled as in L7.
+    - The sweep this grant names is lab `6d49fb60` (manifest `52a451cf`)
+      together with that supplement. The `/clear` receipt is on the new
+      candidate.
+
+    Every other condition stands. In them, "its three determinism checks" are
+    the checks of lab `6d49fb60`; the supplement's own checks fall under its
+    acceptance line. In the list of what the grant covers, "the RC `141accee`
+    stays reachable" now also means the new candidate.
+  - **L7: R29 for the new candidate is settled without a new run.** The
+    accepted comparison (decision 2 above: v0.8.0 → `7d173fe8`, whose src
+    tree `17c3dd82` is also `141accee`'s, no moves) is composed with the
+    supplement (`141accee` → the new candidate).
+    - For v0.9.0 this replaces the reruns that decision 2 and the comparison
+      step's **Candidate** bullet call for when `src/` changes after the
+      comparison.
+    - A verdict move from `141accee` to the new candidate on one of R29's
+      3,600 members would be a v0.8.0 → candidate move once composed. As the
+      comparison section above requires, it goes to Nelson before the tag.
+      None is expected.
+    - After the supplement runs, Nelson reviews the composed list of moves and
+      accepts R29 for the new candidate in writing before the tag.
+    - This rests on Nelson's written acceptance under EC POLICY
+      `work-machine-local` (「要當依據須在 pool 重做，或由人類明文接受」), as
+      decision 2 did. The supplement runs under EC POLICY
+      `checkwash-pju-sweep` (T-546) as acceptance for #419; that row does not
+      cover release verification, so the release relies on it only through L9
+      and L7. It holds only if the supplement holds its acceptance line.
+
+The release guide (`docs/releases/v0.9.0-public-launch.md`) and the R29
+record (`benchmarks/release-comparison/v0.9.0.json`) still describe
+`141accee` and `7d173fe8`. They are brought up to date for the new candidate
+in the text Nelson approves under G4's last condition.
+
+checkwash-lab
+`evidence/pju-inventory-20261021:evidence/v090-419-off-approvals-20261022.md`
+records these approvals.
+
+### Post-sweep acceptance and wording approval (2026-10-22)
+
+After the sweep, supplement and source readings, Nelson answered the final
+A/B/C package with **「全部照建議核可，依既有 G4 授權續作」**. The answer
+was an assistant-written option. The [fixed approval and complete package](https://github.com/taipei49314/checkwash-lab/blob/b5e0a4dfcc63ef9411a2399cf343098370bc52ea/evidence/v090-closeout-20261022-codex/maintainer-approval-A-B-C.md)
+preserve the question, his reply, the source dispositions and the exact
+wording proposals. This continuation does not reuse the ended Codex
+session grants below.
+
+- **M1:** he accepts the composed v0.8.0 → rcprime `36280924` R29 list
+  `[]` on 3,600 members in writing after the supplement, retaining S6's
+  unjoined-outcome assumption and lack of stderr-note comparison. The
+  original R29 JSON remains unchanged; the [new supersede record](../benchmarks/release-comparison/v0.9.0-rcprime-supersede.json)
+  binds this acceptance to rcprime's `4baaee4c` source tree.
+- **M2:** the additional two scrapy and six pytest #419 stops are
+  disposed of by K1's refusal-off route, like call 1's three. The
+  supplement reverses exactly all eleven predicted stop verdicts.
+- **M5:** the blocking findings on aiohttp `247b3238` and `c74d7e98`
+  are accepted as false positives. `02558d38` is accepted as a justified
+  test-data-size reduction, retaining its real 64 MiB → 2 MiB stress
+  coverage loss; it is not called coverage-equivalent or a third proven FP.
+- He approves D-172, the guide, versioned known issues and #416 row 162,
+  its exact additive mapping to the existing end-to-end test, and the
+  corresponding derived FAILURES synchronization. M4 and M6 source
+  readings are complete; the census's 87 unanalysed rows and 15 conftest
+  parse-warning rows remain disclosed, with no separate new human gate.
+
+The human-typed rcprime `/clear` receipt at lab `223598f9`, manifest
+`33b55dba…`, passed c1–c8. The declared global-key housekeeping was then
+completed by Nelson and confirmed read-only. The #416 historical
+wrong-blob reproduction at lab `6d49fb60`, manifest `c553cf82…`, completed
+all eight declared CLI calls and reproduced root block/subdirectory pass
+on both old engines and both modes. [Fixed closeout receipts](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/README.md)
+retain human-authorized local PJU, NOT EC pool provenance.
+
+These settle the pre-publication human decisions and wording within
+G4/L9. The exact final head's hosted checks and qualification, exact main
+merge checks, annotated tag and exact tag checks still precede Release.
+Merge with a merge commit, preserving both candidates. The grant still
+stops at the real `pypi` deployment for Nelson's own approval. Public
+artifact verification remains hosted/pool work; no new work-machine
+execution, other version or downstream re-pin is authorized. M3's
+optional #419 comment is not posted, and #419 remains open.
+
+## v0.9.0 continuation authorization (2026-10-21)
+
+*Historical: ended with Codex session 01a15c24 on 2026-10-21. See "v0.9.0
+owner decisions after the Codex sessions" above.*
+
+In Codex session `01a15c24-d064-7523-b3e6-23810a2c57c2`, Nelson set the
+active goal:
+
+> 全部準備好 發布0.9.0
+
+This authorizes this session to complete the preparation and checked
+publication of v0.9.0, including necessary fixes, release integration,
+the annotated tag, GitHub Release, public artifact verification and the
+follow-up advertising the verified release. It is a separate authorization
+from the session below; its existing evidence and failed attempts remain
+attributed to their original sources and execution identities.
+
+All source, acceptance, PR/main/tag and public-install gates still apply.
+The `pypi` deployment retains its real maintainer review. The earlier
+session's PJU-only local Docker exception is not reused on this session's
+LAPTOP-16NUA5I8 host. EC task ownership, admission and execution contracts
+remain separate prerequisites for pool work.
+
+The continuation starts from release PR #552 at
+`359af75b74d1b25938436141d6fcd73ffb68e142`, with the published v0.8.0
+baseline unchanged. This records authorization, not completed acceptance
+or publication. Evidence for that starting head is not relabelled as
+evidence for later documentation commits.
+
+## v0.9.0 session publication authorization (2026-10-21)
+
+*Historical: scoped to Codex session 01a15963 and ended with it. See "v0.9.0
+owner decisions after the Codex sessions" above. R29's acceptance there
+replaces this entry's claim about the pool-only location.*
+
+In Codex session `01a15963-80bd-7053-95a2-ad67abb88fd1`, the maintainer
+Nelson instructed:
+
+> 這個session你有完整授權 完整計畫權 只設定這個session 發布0.9.0
+
+After hosted LAB test jobs did not start because of GitHub billing, he
+said 「job可以跑pool吧」. He then paused to clarify local Docker permission
+and explicitly resumed:
+
+> 繼續，用本機 Docker 跑必要驗證，一路做到 0.9.0 發布。
+
+This is the one-time, session-scoped authorization for v0.9.0 preparation,
+necessary validation and repairs, normal checked PR integration, one
+annotated public tag, GitHub Release, publication verification and the
+follow-up that advertises the verified version. Necessary Linux tests,
+builds, qualification and fixed-corpus comparison may run in local Docker
+on LAPTOP-01AGNPJU for this release; native Windows tests use the EC pool.
+This explicit instruction supersedes the pool-only location in the
+general pre-tag comparison procedure for this session's work. It does not
+edit standing EC policy or grant another version.
+
+The executor records each actual source, runtime, command and outcome.
+Local Docker evidence remains local Docker evidence, and does not stand
+for native Windows/macOS coverage, a GitHub event or a required check.
+Missing and failed evidence is preserved. The fixed-corpus comparison
+and its source review are not waived. Delegated review identifies the
+actual agent reviewer; it does not assert that the maintainer personally
+read results that have not been presented to him.
+The existing required checks and real `pypi` environment approval remain.
+
+The candidate starts from main `641efdec1a17cbb3c7291491b5db90a1fb469d22`,
+with v0.8.0 as the previous published release and verdict baseline.
+Selection, acceptance results, the pre-tag comparison, final qualification,
+exact release commit, tag and public bytes will be recorded as they occur.
+This entry is authorization and preparation, not a success receipt.
+
+### Completed R29 comparison, 2026-10-20 UTC
+
+The fixed comparison ran from 17:33:41Z to 18:55:19Z under this session's
+explicit local Docker authority: Python 3.11.16, image
+`sha256:a640d42096d21ace335b6029f1c3334146f6c9dc7dec6077cc99f4b99927c5a5`.
+It compared v0.8.0 `f02b5d8a07fa39ee1898881f66c571eb164cb11c` with candidate
+`7d173fe8f26fb84362aa0a2adb69b4e8cb564622`, whose `src/` tree is
+`17c3dd82bf597daa12e1257052e3b71f3323ca95`. All 3,600 fixed commits and
+7,200 real CLI records were verified against their raw bytes, source pins,
+commands, original members, Git labels and terminal/container receipts.
+The owned container was removed and its absence verified.
+
+| In-sample set | pass -> pass | block -> block | error -> error | Total |
+|---|---:|---:|---:|---:|
+| Python standard | 1,752 | 48 | 0 | 1,800 |
+| JS/TS | 1,759 | 39 | 2 | 1,800 |
+
+There are no mandatory movement-review items and no unresolved calls.
+Codex, acting under the recorded session delegation, reviewed the complete
+comparison and retained the two unchanged symlink refusals as errors.
+No block was adjudicated true or false, and these counts are not a
+false-positive rate. This records the actual agent reviewer; it does not
+claim Nelson personally examined each result. The
+[source-bound record](../benchmarks/release-comparison/v0.9.0.json) includes
+the exact manifest, comparison, verification and retained evidence-archive
+hashes. The [JS/TS record](../benchmarks/javascript-replay/results.md#run-3-v080-against-the-v090-candidate)
+records the same result beside the earlier runs.
+
+This satisfies this comparison step for the tested source tree, subject
+to the final-source rule above. It does not complete the combined sweep,
+`/clear`, final release checks, publication or the human PyPI approval.
+
 ## v0.8.0 one-time publication authorization (2026-10-15)
 
 On 2026-10-15 the maintainer instructed **「這版要先發了」** (release this

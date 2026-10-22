@@ -1,6 +1,179 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-16 (v0.8.0 published and verified; sweeps running on LAPTOP-01AGNPJU)
+Updated: 2026-10-22 (post-run dispositions and wording approved; exact final-head/main/tag checks and publication remain; v0.8.0 remains the verified public release)
+
+## 2026-10-22: rcprime results and wording accepted; final checks precede publication
+
+The candidate is `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, `src/` tree
+`4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`. It includes #553's off switch
+for #419's opaque refusal, with #554 and #555. `141accee` stays reachable.
+**v0.9.0 is not published; v0.8.0 remains the verified public release.**
+
+Calls 1–4 and the supplement finished on LAPTOP-01AGNPJU under the frozen
+T-546 declarations: human-authorized local PJU, NOT EC pool. All 710
+shards exited 0; this does not mean every CLI call passed. Lab evidence
+[`92d771e2`](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md)
+records blocks, retained errors and the census timeouts. K2 omitted call 5;
+C2.6 stopped the named Q4 and related counterfactual arms. The original
+combined receipt remains `complete=false`; the supplement is complete,
+and both sets of required determinism checks passed.
+
+The supplement reverses exactly the eleven #419 stop commits, rc block →
+rcprime pass, and leaves JS/TS identical. Its stdout count and three
+positive controls hold. Source review has covered all 726 predicted
+finding moves in 55 repository/commit/path rows, including the 17 moves
+under doc/example or a package directory: all affected files are Python
+tests or conftests. That scope review does not adjudicate each finding.
+
+On 2026-10-22 Nelson replied 「全部照建議核可，依既有 G4 授權續作」 to the
+concrete A/B/C package, an assistant-written option. The
+[written approval](https://github.com/taipei49314/checkwash-lab/blob/b5e0a4dfcc63ef9411a2399cf343098370bc52ea/evidence/v090-closeout-20261022-codex/maintainer-approval-A-B-C.md)
+accepts R29's empty composed v0.8.0 → rcprime list on 3,600 members
+(M1), and disposes of calls 2/3's additional eight #419 stops by K1's
+refusal-off route, like the first three (M2). S6's residuals stand:
+no per-row Docker/PJU outcome join, outcome equivalence for an identical
+source tree is assumed, and stderr notes were not compared. The original
+R29 JSON stays immutable; the separate
+[rcprime supersede](benchmarks/release-comparison/v0.9.0-rcprime-supersede.json)
+records the later acceptance. #419 stays open and M3 is not posted.
+
+For fix469, 43/370 formerly errored calls in the limits345 subset become
+analysed (40 pass, 3 block) on a496 → a469; the joined pair has 3,388
+members, including other standard/D-088 rows. Nelson accepted the blocking
+findings of aiohttp `247b3238` and `c74d7e98` as FP (M5). He accepted
+`02558d38` as a justified 64 MiB → 2 MiB test-data-size reduction, with
+the real larger-stress coverage loss retained; this is disposed of,
+not coverage-equivalent and not a third proven FP. The
+[source review](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/source-review-M4-M5.md)
+remains the source basis, not a fresh rcprime rerun. The 470-member original-rc census has 276 pass,
+107 block, 83 product errors and 4 timeouts. M6's source reading of all
+1,150 recorded matching-line entries is complete: no new runtime-control
+marker occurs in the written findings. The 87 unanalysed rows and 15
+conftest parse-warning rows remain limits; no human personal review or
+zero false-positive rate is claimed. The
+[census source record](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/census-review-followup.md)
+and these limitations are included in the approved wording, not a new
+human publication gate. S7 leaves these
+measurements on their declared engines. `cfjs131` stays on `141accee`
+under L11; its 55 pass → block commits are redesign evidence.
+
+Separately, the frozen #416 wrong-blob reproduction completed eight CLI
+calls on 2026-10-22: both v0.7.0 and pre-#453 main block at the root
+(exit 1) and pass from the subdirectory (exit 0), in range and worktree
+modes. All four comparisons reproduce the historical false pass.
+The [raw receipt](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/wrongblob-416-receipt.json)
+binds the old engines, manifest and runtime. Nelson approved R40's row-162
+wording, its additive mapping to the existing end-to-end test and the
+matching derived FAILURES synchronization. This PR records those changes;
+#416 is not declared closed ahead of its merge. This
+historical reproduction does not replace the separate 1,800-row
+subdirectory comparison or validate rcprime afresh.
+
+The approved D-172, row-162/mapping/derived-document synchronization
+and accepted R29 supersede are carried by this PR. Still before
+ready/merge/tag/Release:
+
+- new exact-final-head CI/qualification, followed by
+  the exact main commit's and tag's checks under RELEASING.
+
+The human-typed rcprime `/clear` lifecycle completed at lab `223598f9`,
+manifest `33b55dba…`: collection on 2026-10-22 at 13:50:56Z records
+**c1–c8 PASS**, using Claude Code 2.1.260 and Haiku. Session A's Stop named
+the committed weakening without a blocking decision; `/clear` created
+session B at the weakening commit, and B's Stop printed `{}` without
+naming it. This is the declared #418 receipt, human-authorized local
+PJU, NOT EC pool. A real blocking Stop was not exercised. Nelson then
+confirmed removal of the temporary global `skipDangerousModePermissionPrompt`
+key; the read-only presence check at 13:52:42Z found it absent. The original
+receipt retains its as-of-collect `bypass_key_after=true`; it was neither
+rewritten nor recollected.
+
+The [durable lifecycle receipt](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/clear-receipt.json)
+and [closeout record](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/README.md)
+retain the execution provenance and housekeeping separately.
+
+The A/B/C reply approves D-172, the guide, versioned known issues and
+#416 wording, and instructs continuation under the existing G4 grant.
+Exact final-head, main and tag checks still precede their corresponding
+publication steps. Nelson alone approves the `pypi`
+deployment. Public artifact verification precedes advertised/README
+pin updates, and baseline rotation remains a separate PR. #554's expiry
+does not require rushing these conditions: standard release self-checks
+do not replay #553's old diff. Earlier dated entries below remain history.
+
+The combined sweep also reproduces the already recorded #424/#306/#487
+movements. D-144 treats pytest `242fb7852b`'s block → pass and rich
+`a13b2a9d75`'s pass → block as correct. D-145 records scrapy
+`c8aa429c9b` and `e058a05763` as false blocks and `fada8be1db` as the
+known false block retained under #488. D-149's #487 fix returns the first
+two to pass while the other affected commits remain blocked. These are
+existing recorded dispositions, not new unruled stop conditions.
+
+## 2026-10-22: #419's refusal is turned off; the candidate moves
+
+Call 1 of the combined acceptance sweep fired #419's pre-registered stop:
+three pass → block moves on D-088 members
+([#419 comment](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6329503938)).
+Nelson then decided that v0.9.0 ships without the refusal, by D-141 C1's
+revert route ([RELEASING](docs/RELEASING.md#amendment-after-the-419-stop-2026-10-22)).
+
+- [#553](https://github.com/taipei49314/checkwash/pull/553) empties
+  `gating.OPAQUE_REFUSED_RULES`, so the refusal cannot act. #419's code stays
+  for a redesign, and #419 stays open.
+- [#554](https://github.com/taipei49314/checkwash/pull/554) records #553's
+  self-check exemptions, and
+  [#555](https://github.com/taipei49314/checkwash/pull/555) carries SPEC,
+  THREATMODEL, FAILURES.md and D-171. All three are merged.
+- The candidate is now `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, this
+  branch's merge of `main` (`47c74172`). Its src tree is
+  `4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`, which differs from R29's tested
+  tree `17c3dd82` only by #553. `141accee` stays reachable as its ancestor.
+- Still to come before the tag:
+  - Nelson approves the sweep supplement's freeze, which compares `141accee`
+    with the new candidate on the six window-1 batches, and then the
+    supplement runs.
+  - R29 for the new candidate is to be settled by composing the accepted
+    comparison with that supplement, once the supplement holds its acceptance
+    line and Nelson accepts the composed list (L7).
+  - The `/clear` receipt moves to the new candidate (L8); Nelson approves its
+    new manifest first.
+  - The release guide and the R29 record still describe `141accee` and
+    `7d173fe8`. They are rewritten for the new candidate in the text Nelson
+    approves.
+
+Calls 2 to 4 of the sweep continue, and call 5 does not run. No v0.9.0 tag,
+Release or public artifact is claimed here.
+
+## 2026-10-21: v0.9.0 candidate preparation
+
+The maintainer delegated this session's planning and execution through
+v0.9.0 publication, then explicitly authorized necessary local Docker
+verification. [RELEASING](docs/RELEASING.md#v090-session-publication-authorization-2026-10-21)
+records his words and scope.
+
+The candidate starts from main `641efdec1a17cbb3c7291491b5db90a1fb469d22`.
+This preparation changes version metadata and records authorization.
+The pre-tag fixed-corpus comparison has completed: the Python set has
+1,752 unchanged passes and 48 unchanged blocks; JS/TS has 1,759 unchanged
+passes, 39 unchanged blocks and two unchanged errors. Its mandatory review
+list is empty; the [R29 record](docs/RELEASING.md#completed-r29-comparison-2026-10-20-utc)
+identifies the tested source and actual delegated reviewer. These are
+in-sample counts, not a false-positive rate.
+The combined acceptance sweep, `/clear`, final release guide and final-head
+checks are not complete. No v0.9.0 tag, Release or public artifact is
+claimed here.
+
+Later on 2026-10-21 Nelson stopped the Codex sessions and gave four decisions
+to a Claude Code session; [RELEASING](docs/RELEASING.md#v090-owner-decisions-after-the-codex-sessions-2026-10-21)
+records them. In short:
+
+- The sweep runs before the release, on LAPTOP-01AGNPJU.
+- R29 is accepted in writing.
+- The Codex-added gates are removed: harness tests, the EC pool chain and
+  the fresh baselines.
+- The #428 table selection is NOT_RUN for v0.9.0.
+The public CLI, README install commands and Action recommendation remain
+at verified v0.8.0. Earlier dated entries below remain historical records.
 
 ## 2026-10-16: v0.8.0 published and verified
 
@@ -2753,7 +2926,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.8.0 |
+| version | v0.9.0 |
 | last published CLI | v0.8.0 |
 | last published CLI commit | f02b5d8a07fa39ee1898881f66c571eb164cb11c |
 | detectors | 22 |
