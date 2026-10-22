@@ -395,6 +395,50 @@ checkwash-lab
 `evidence/pju-inventory-20261021:evidence/v090-419-off-approvals-20261022.md`
 records these approvals.
 
+### Post-sweep acceptance and wording approval (2026-10-22)
+
+After the sweep, supplement and source readings, Nelson answered the final
+A/B/C package with **「全部照建議核可，依既有 G4 授權續作」**. The answer
+was an assistant-written option. The [fixed approval and complete package](https://github.com/taipei49314/checkwash-lab/blob/b5e0a4dfcc63ef9411a2399cf343098370bc52ea/evidence/v090-closeout-20261022-codex/maintainer-approval-A-B-C.md)
+preserve the question, his reply, the source dispositions and the exact
+wording proposals. This continuation does not reuse the ended Codex
+session grants below.
+
+- **M1:** he accepts the composed v0.8.0 → rcprime `36280924` R29 list
+  `[]` on 3,600 members in writing after the supplement, retaining S6's
+  unjoined-outcome assumption and lack of stderr-note comparison. The
+  original R29 JSON remains unchanged; the [new supersede record](../benchmarks/release-comparison/v0.9.0-rcprime-supersede.json)
+  binds this acceptance to rcprime's `4baaee4c` source tree.
+- **M2:** the additional two scrapy and six pytest #419 stops are
+  disposed of by K1's refusal-off route, like call 1's three. The
+  supplement reverses exactly all eleven predicted stop verdicts.
+- **M5:** the blocking findings on aiohttp `247b3238` and `c74d7e98`
+  are accepted as false positives. `02558d38` is accepted as a justified
+  test-data-size reduction, retaining its real 64 MiB → 2 MiB stress
+  coverage loss; it is not called coverage-equivalent or a third proven FP.
+- He approves D-172, the guide, versioned known issues and #416 row 162,
+  its exact additive mapping to the existing end-to-end test, and the
+  corresponding derived FAILURES synchronization. M4 and M6 source
+  readings are complete; the census's 87 unanalysed rows and 15 conftest
+  parse-warning rows remain disclosed, with no separate new human gate.
+
+The human-typed rcprime `/clear` receipt at lab `223598f9`, manifest
+`33b55dba…`, passed c1–c8. The declared global-key housekeeping was then
+completed by Nelson and confirmed read-only. The #416 historical
+wrong-blob reproduction at lab `6d49fb60`, manifest `c553cf82…`, completed
+all eight declared CLI calls and reproduced root block/subdirectory pass
+on both old engines and both modes. [Fixed closeout receipts](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/README.md)
+retain human-authorized local PJU, NOT EC pool provenance.
+
+These settle the pre-publication human decisions and wording within
+G4/L9. The exact final head's hosted checks and qualification, exact main
+merge checks, annotated tag and exact tag checks still precede Release.
+Merge with a merge commit, preserving both candidates. The grant still
+stops at the real `pypi` deployment for Nelson's own approval. Public
+artifact verification remains hosted/pool work; no new work-machine
+execution, other version or downstream re-pin is authorized. M3's
+optional #419 comment is not posted, and #419 remains open.
+
 ## v0.9.0 continuation authorization (2026-10-21)
 
 *Historical: ended with Codex session 01a15c24 on 2026-10-21. See "v0.9.0

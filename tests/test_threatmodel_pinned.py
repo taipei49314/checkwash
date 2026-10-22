@@ -58,6 +58,8 @@ E2E_PINNED = {
     # holding a blob over the source byte limit reaches the streamed prefix.
     # Its suffixed_runner_* rows are this row's shape.
     "161": "test_a_range_with_a_shell_shebang_on_an_unread_side_exits_2_naming_it",
+    # Issue #416: the root/subdirectory wrong-blob shape needs real Git blobs.
+    "162": "test_an_unchanged_copy_in_the_subdirectory_cannot_hide_a_root_change",
 }
 
 

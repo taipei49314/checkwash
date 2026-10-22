@@ -1,8 +1,8 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-22 (sweep, /clear and historical #416 reproduction recorded; maintainer dispositions pending; v0.8.0 remains the verified public release)
+Updated: 2026-10-22 (post-run dispositions and wording approved; exact final-head/main/tag checks and publication remain; v0.8.0 remains the verified public release)
 
-## 2026-10-22: sweep finished; rcprime dispositions and publication gates remain open
+## 2026-10-22: rcprime results and wording accepted; final checks precede publication
 
 The candidate is `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, `src/` tree
 `4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`. It includes #553's off switch
@@ -25,23 +25,35 @@ finding moves in 55 repository/commit/path rows, including the 17 moves
 under doc/example or a package directory: all affected files are Python
 tests or conftests. That scope review does not adjudicate each finding.
 
-On R29's 3,600 members the supplement has no verdict move, so L7's
-composed v0.8.0 → rcprime mandatory review list is empty. Nelson's
-post-run written acceptance is **pending (M1)**. The original R29 JSON
-remains immutable; its proposed supersede is not an acceptance receipt.
-The additional eight #419 stops still need the K1 disposition confirmation
-(M2); #419 stays open.
+On 2026-10-22 Nelson replied 「全部照建議核可，依既有 G4 授權續作」 to the
+concrete A/B/C package, an assistant-written option. The
+[written approval](https://github.com/taipei49314/checkwash-lab/blob/b5e0a4dfcc63ef9411a2399cf343098370bc52ea/evidence/v090-closeout-20261022-codex/maintainer-approval-A-B-C.md)
+accepts R29's empty composed v0.8.0 → rcprime list on 3,600 members
+(M1), and disposes of calls 2/3's additional eight #419 stops by K1's
+refusal-off route, like the first three (M2). S6's residuals stand:
+no per-row Docker/PJU outcome join, outcome equivalence for an identical
+source tree is assumed, and stderr notes were not compared. The original
+R29 JSON stays immutable; the separate
+[rcprime supersede](benchmarks/release-comparison/v0.9.0-rcprime-supersede.json)
+records the later acceptance. #419 stays open and M3 is not posted.
 
 For fix469, 43/370 formerly errored calls in the limits345 subset become
 analysed (40 pass, 3 block) on a496 → a469; the joined pair has 3,388
-members, including other standard/D-088 rows. Source review proposes two FP dispositions;
-aiohttp `02558d38` remains UNKNOWN because 64 MiB inputs shrink to 2 MiB.
-M5 awaits Nelson. The 470-member original-rc census has 276 pass,
+members, including other standard/D-088 rows. Nelson accepted the blocking
+findings of aiohttp `247b3238` and `c74d7e98` as FP (M5). He accepted
+`02558d38` as a justified 64 MiB → 2 MiB test-data-size reduction, with
+the real larger-stress coverage loss retained; this is disposed of,
+not coverage-equivalent and not a third proven FP. The
+[source review](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/source-review-M4-M5.md)
+remains the source basis, not a fresh rcprime rerun. The 470-member original-rc census has 276 pass,
 107 block, 83 product errors and 4 timeouts. M6's source reading of all
 1,150 recorded matching-line entries is complete: no new runtime-control
 marker occurs in the written findings. The 87 unanalysed rows and 15
 conftest parse-warning rows remain limits; no human personal review or
-zero false-positive rate is claimed. S7 leaves these
+zero false-positive rate is claimed. The
+[census source record](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/census-review-followup.md)
+and these limitations are included in the approved wording, not a new
+human publication gate. S7 leaves these
 measurements on their declared engines. `cfjs131` stays on `141accee`
 under L11; its 55 pass → block commits are redesign evidence.
 
@@ -49,19 +61,19 @@ Separately, the frozen #416 wrong-blob reproduction completed eight CLI
 calls on 2026-10-22: both v0.7.0 and pre-#453 main block at the root
 (exit 1) and pass from the subdirectory (exit 0), in range and worktree
 modes. All four comparisons reproduce the historical false pass.
-`C:\Users\nelson\dev\checkwash-sweeps\20261022-wrongblob-416\receipt.json`
-binds the old engines, manifest and runtime. R40's maintainer text and
-documentation disposition remain pending; #416 is not closed. This
+The [raw receipt](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/wrongblob-416-receipt.json)
+binds the old engines, manifest and runtime. Nelson approved R40's row-162
+wording, its additive mapping to the existing end-to-end test and the
+matching derived FAILURES synchronization. This PR records those changes;
+#416 is not declared closed ahead of its merge. This
 historical reproduction does not replace the separate 1,800-row
 subdirectory comparison or validate rcprime afresh.
 
-Still before ready/merge/tag/Release:
+The approved D-172, row-162/mapping/derived-document synchronization
+and accepted R29 supersede are carried by this PR. Still before
+ready/merge/tag/Release:
 
-- Nelson's M1/M2/M5 dispositions;
-- approved D-172, versioned known issues, final guide and #416 wording;
-  M6's completed source reading and retained limits are part of this wording,
-  not an additional human publication gate;
-- claims review and new exact-final-head CI/qualification, followed by
+- new exact-final-head CI/qualification, followed by
   the exact main commit's and tag's checks under RELEASING.
 
 The human-typed rcprime `/clear` lifecycle completed at lab `223598f9`,
@@ -76,7 +88,14 @@ key; the read-only presence check at 13:52:42Z found it absent. The original
 receipt retains its as-of-collect `bypass_key_after=true`; it was neither
 rewritten nor recollected.
 
-The G4 grant remains conditional. Nelson alone approves the `pypi`
+The [durable lifecycle receipt](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/clear-receipt.json)
+and [closeout record](https://github.com/taipei49314/checkwash-lab/blob/faae48d408254421ba1cbe622f1b3e13c2b89cc3/evidence/v090-closeout-20261022-codex/README.md)
+retain the execution provenance and housekeeping separately.
+
+The A/B/C reply approves D-172, the guide, versioned known issues and
+#416 wording, and instructs continuation under the existing G4 grant.
+Exact final-head, main and tag checks still precede their corresponding
+publication steps. Nelson alone approves the `pypi`
 deployment. Public artifact verification precedes advertised/README
 pin updates, and baseline rotation remains a separate PR. #554's expiry
 does not require rushing these conditions: standard release self-checks

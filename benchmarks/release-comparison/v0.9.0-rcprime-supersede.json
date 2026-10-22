@@ -1,6 +1,6 @@
 {
-  "status": "DRAFT_AWAITING_MAINTAINER_WRITTEN_ACCEPTANCE",
-  "purpose": "Proposed additional supersede record for L7; original v0.9.0.json must remain unchanged.",
+  "status": "R29_COMPOSED_GATE_SATISFIED_FOR_RCPRIME_SRC_TREE",
+  "purpose": "Additional supersede record accepted under L7; original v0.9.0.json remains unchanged.",
   "previous_record": {
     "path": "benchmarks/release-comparison/v0.9.0.json",
     "sha256": "9ecd6398fa96574bc783399c5010b0d9ced06c84cd854a1afbc87476d1ae6526",
@@ -41,12 +41,12 @@
     "S6: no per-row join between Docker R29 values and PJU supplement rc values; composition assumes same outcomes for identical tested src tree.",
     "No stderr-note comparison.",
     "In-sample counts; not a held-out or adjudicated false-positive rate.",
-    "This draft is not Nelson's written acceptance and does not activate G4."
+    "Nelson gave post-run written acceptance on 2026-10-22; final-head/main/tag checks and the real PyPI approval remain separate publication steps."
   ],
   "maintainer_acceptance": {
-    "state": "PENDING",
-    "quote": null,
-    "evidence_ref": null
+    "state": "ACCEPTED",
+    "quote": "全部照建議核可，依既有 G4 授權續作",
+    "evidence_ref": "https://github.com/taipei49314/checkwash-lab/blob/b5e0a4dfcc63ef9411a2399cf343098370bc52ea/evidence/v090-closeout-20261022-codex/maintainer-approval-A-B-C.md"
   },
   "final_source_requirement": "Final src must match 4baaee4c89dc3e7a4c6f3d069595a5ef8576025f; any further source change requires review under the current release procedure."
 }
