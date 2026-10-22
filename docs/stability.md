@@ -305,13 +305,11 @@ production file the engine cannot parse is the only repair evidence a JS/TS
 test can earn. It still suppresses escalation there, through the documented
 opaque-change rule, until the JS/TS history replay
 ([#212](https://github.com/taipei49314/checkwash/issues/212)) prices a
-change. For a Python test or conftest, since
-[#419](https://github.com/taipei49314/checkwash/issues/419), it no longer
-holds a weakened, removed, skipped or loosened assertion, or an added broad
-`except`, at warn: with no symbol evidence, compensation or MILD_WEAKENING
-such a finding is high, with the reason `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. It still holds a
-rewritten expected value, a substituted assertion and a stand-in for the code
-under test. A package manifest's test command is not production
+change. In v0.9.0 it does the same for a Python test or conftest:
+[#419](https://github.com/taipei49314/checkwash/issues/419)'s refusal, which
+on main since #464 made a weakened, removed, skipped or loosened assertion,
+or an added broad `except`, high beside such a change, is turned off after
+the combined sweep's pre-registered stop (D-171). A package manifest's test command is not production
 (issue #174): when a diff changes what `package.json` runs as its tests —
 `scripts.test`, `test:*` scripts, scripts that invoke a recognised runner, and
 the scripts `test` and `test:*` name through `npm run`, `yarn`, `pnpm`,

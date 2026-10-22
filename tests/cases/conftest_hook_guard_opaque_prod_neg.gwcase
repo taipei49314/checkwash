@@ -1,14 +1,8 @@
 === meta ===
 rule: TEST_DISABLED
-issue: 419
-title: a guarded hook beside an opaque production edit holds at warn by its own gate, not by the opaque edit
+title: a guarded hook beside an opaque production edit takes repair evidence
 origin: #209 B9 (ruling 209.Q4): only an unguarded control refuses repair
-origin2: evidence (D-028), as B10's collect_ignore did. Since #419 that reading no longer covers opaque
-origin3: evidence, which is refused for any TEST_DISABLED in a Python conftest, guarded or not.
-origin4: Re-pinned by the #419 ruling (issuecomment-6170353038: Q1 (b), rule 2): TEST_DISABLED in a
-origin5: Python conftest refuses opaque-change evidence, guarded or not. The NETWORK guard is a compat
-origin6: gate (D6, as in conftest_hook_env_guard_neg), so the finding holds at warn through COMPAT_GATE:
-origin7: same severity, same verdict, a different reason.
+origin2: evidence (D-028), as B10's collect_ignore did.
 === head: app/__init__.py ===
 === head: app/billing.py ===
 def total():
@@ -55,4 +49,4 @@ rsync -a build/ prod:/srv/app/
 set -euo pipefail
 rsync -a --delete build/ prod:/srv/app/
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

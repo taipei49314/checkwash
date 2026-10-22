@@ -197,19 +197,20 @@ by that field.
 - **Removed JavaScript tests (D-148, #429).** By reading the code, a removed
   JS/TS test whose callback held an assertion it never reaches now gets a new
   TEST_DISABLED key. D-148 records no key change; D-151 corrects it.
-- **A new escalator label,** `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` (D-141, #419).
-  In a Python test or conftest, a weakened, removed, skipped or loosened
-  assertion, or an added broad `except`, used to be held at `warn` by any change
-  to a production file checkwash does not parse (a JS/TS module, a template,
-  C or Rust source, a data file). It is now `high`, unless symbol evidence, a
-  compensation or MILD_WEAKENING holds it.
+- **A new escalator label,** `PROD_CHANGE_NOT_EVIDENCE` (D-161, #473). E1
+  used to print `NO_PROD_CHANGE_IN_DIFF` whenever a blocking finding's own
+  evidence did not reach a production change. It now prints
+  `PROD_CHANGE_NOT_EVIDENCE` when the diff changes a production-role file that
+  is not inert. Severity, verdict and fingerprint are unchanged.
+  `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` (D-141, #419), which builds of main
+  between #464 and the change that turned #419's refusal off printed, is not
+  printed in v0.9.0 (D-171).
 - **New findings,** among them: a known assertion replaced by a unittest call
   whose operands checkwash cannot bind (D-143, `strength_drop` 999), helpers
   reached through `self` (D-145, D-149), JS/TS assertions that can never fail
   or that the callback never reaches (D-147, D-148), and `collection.rebound`
   (D-144).
-- **Verdicts:** some diffs that passed on v0.8.0 now block (D-141, D-144,
-  D-145).
+- **Verdicts:** some diffs that passed on v0.8.0 now block (D-144, D-145).
 - **Exit codes** of `--format json` have not changed. In
   `--format hook-json`, a size refusal of a change in the diff that decides
   the verdict, when that change's head or worktree side is over the size
