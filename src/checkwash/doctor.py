@@ -30,8 +30,8 @@ _PINS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
     # The newest verified stable tag's peeled commit, moved
-    # forward after each publication is verified (v0.8.0 here, RELEASING step 8).
-    "taipei49314/checkwash/action": "f02b5d8a07fa39ee1898881f66c571eb164cb11c",
+    # forward after each publication is verified (v0.9.0 here, RELEASING step 8).
+    "taipei49314/checkwash/action": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
 }
 # Each step's accepted `with:` mappings, and how a reason spells them. The
 # Python versions are the ones pyproject.toml and action/README.md support,
