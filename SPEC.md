@@ -948,10 +948,11 @@ effect or statement joins its guarded ones, or when its guard is a constant
   file the test rules judge (§2) or in a `conftest.py`: a broad `except`
   around an assertion is tampering there, whatever it means in production
   code. It has no unit, so a sibling test's evidence never reaches it, and its
-  only repair evidence is an opaque production change (§5 clause 3). In a
-  Python test file or conftest it refuses that too (#419), so there it
-  escalates to high unless an exemption covers it. In a JS/TS test the opaque
-  change still holds it at warn (THREATMODEL 131).
+  only repair evidence is an opaque production change (§5 clause 3), which
+  holds it at warn in a Python or JS/TS test file or conftest
+  (THREATMODEL 2, 131). #464 made it refuse that evidence in a Python test
+  file or conftest (#419, D-141); that refusal is turned off for v0.9.0
+  (D-171).
 
 ## 4b. Artifacts are never evidence
 
@@ -982,7 +983,7 @@ From a subdirectory (§9), the task path is mapped lexically: `--task` is taken 
 
 | id | condition | effect |
 |---|---|---|
-| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) that no de-escalator below holds. The id stays E1, and the label says why it applies: a blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` (§4); otherwise a finding that may not take the diff's opaque production change (clause 3 below) is labelled `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` (#419); otherwise, in a diff that changes a production-role file (§2) other than the inert files of clause 3 below, it is labelled `PROD_CHANGE_NOT_EVIDENCE`: production changed, and no evidence the finding may take reaches that change, as when the test reaches it only through an unchanged module (#473). That production-role file can be one checkwash reads no symbols from: a file that stops parsing, a non-Python file the diff adds, deletes or renames, or one whose content runs a test runner. Generated artifacts and a change set aside unread (§4b) are no production-role change. Every other such finding, in a diff that changes no production-role file or only inert ones, is labelled `NO_PROD_CHANGE_IN_DIFF`. The label is chosen after the severity and is not part of the fingerprint, so it changes no severity, verdict or fingerprint | warn → high |
+| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) that no de-escalator below holds. The id stays E1, and the label says why it applies: a blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` (§4); otherwise, in a diff that changes a production-role file (§2) other than the inert files of clause 3 below, it is labelled `PROD_CHANGE_NOT_EVIDENCE`: production changed, and no evidence the finding may take reaches that change, as when the test reaches it only through an unchanged module (#473). That production-role file can be one checkwash reads no symbols from: a file that stops parsing, a non-Python file the diff adds, deletes or renames, or one whose content runs a test runner. Generated artifacts and a change set aside unread (§4b) are no production-role change. Every other such finding, in a diff that changes no production-role file or only inert ones, is labelled `NO_PROD_CHANGE_IN_DIFF`. `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`, which main printed from #464 for a finding #419's refusal denied the opaque change, is not printed while that refusal is off (D-171). The label is chosen after the severity and is not part of the fingerprint, so it changes no severity, verdict or fingerprint | warn → high |
 | E2 `ORACLE_FREEZE` | contract declares `oracle_freeze: true` | warn → high |
 | E3 `HARDCODE_FINGERPRINT` | **Retired** (#419, D-141). Nothing implements it: `EXPECTED_VALUE_HARDCODED` is an oracle rule and goes through E1 and D1 like the others (`gating.py` `ORACLE_RULES`; `expected_hardcoded_pos` pins warn with `REPAIR_EVIDENCE`) | none |
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |
@@ -1076,17 +1077,15 @@ and that no other de-escalator holds. Evidence exists when:
    that reaches it. Told to defeat this tool and handed its source, an agent
    wrote a three-line json file nothing imports, purely to satisfy this
    clause (row 73).
-   This clause is not evidence for `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
-   `TEST_DISABLED`, `TOLERANCE_LOOSENED` or `BROAD_EXCEPT_ADDED` when the
-   finding's file is a Python file the test rules judge (§2) or a
-   `conftest.py` (#419). Python test code reaches its subject through Python,
-   which clauses 1 and 2 read. Every other oracle finding still takes it:
-   findings in JS/TS test files, whose production code checkwash does not
-   parse, until the JS/TS history replay (#212) prices the change
-   (THREATMODEL 131); and, in every language, the expectation family
-   (`EXPECTED_VALUE_*`, `EXPECTATION_DEFINITION_CHANGED`, `SUBJECT_*`),
-   `ASSERT_SUBSTITUTED`, `TEST_PATCHES_SUBJECT` and `CONFTEST_PATCHES_PROD`
-   (THREATMODEL 130).
+   Every oracle finding takes this clause except an unguarded suite control
+   (§4, THREATMODEL 72), in Python and JS/TS test files alike. #464 made
+   `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`, `TOLERANCE_LOOSENED`
+   and `BROAD_EXCEPT_ADDED` refuse it when the finding's file is a Python file
+   the test rules judge (§2) or a `conftest.py` (#419, D-141). The combined
+   acceptance sweep's pre-registered stop fired on that refusal, and it is
+   turned off for v0.9.0 (D-171), so a no-op modification of such a file still
+   holds those findings at warn (THREATMODEL 2, #419 Route B). #419 stays
+   open; THREATMODEL 130 and 131 name what a refusal would leave open.
 
 **A fixture's producer** (#471). A test that gets its subject from a pytest
 fixture calls nothing that builds it, so clause 1 counts one call of the
