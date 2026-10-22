@@ -1,6 +1,41 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-21 (v0.9.0 candidate preparation; v0.8.0 remains the verified public release)
+Updated: 2026-10-22 (v0.9.0 candidate moved to 36280924 after #419's stop; v0.8.0 remains the verified public release)
+
+## 2026-10-22: #419's refusal is turned off; the candidate moves
+
+Call 1 of the combined acceptance sweep fired #419's pre-registered stop:
+three pass → block moves on D-088 members
+([#419 comment](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6329503938)).
+Nelson then decided that v0.9.0 ships without the refusal, by D-141 C1's
+revert route ([RELEASING](docs/RELEASING.md#amendment-after-the-419-stop-2026-10-22)).
+
+- [#553](https://github.com/taipei49314/checkwash/pull/553) empties
+  `gating.OPAQUE_REFUSED_RULES`, so the refusal cannot act. #419's code stays
+  for a redesign, and #419 stays open.
+- [#554](https://github.com/taipei49314/checkwash/pull/554) records #553's
+  self-check exemptions, and
+  [#555](https://github.com/taipei49314/checkwash/pull/555) carries SPEC,
+  THREATMODEL, FAILURES.md and D-171. All three are merged.
+- The candidate is now `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa`, this
+  branch's merge of `main` (`47c74172`). Its src tree is
+  `4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`, which differs from R29's tested
+  tree `17c3dd82` only by #553. `141accee` stays reachable as its ancestor.
+- Still to come before the tag:
+  - Nelson approves the sweep supplement's freeze, which compares `141accee`
+    with the new candidate on the six window-1 batches, and then the
+    supplement runs.
+  - R29 for the new candidate is to be settled by composing the accepted
+    comparison with that supplement, once the supplement holds its acceptance
+    line and Nelson accepts the composed list (L7).
+  - The `/clear` receipt moves to the new candidate (L8); Nelson approves its
+    new manifest first.
+  - The release guide and the R29 record still describe `141accee` and
+    `7d173fe8`. They are rewritten for the new candidate in the text Nelson
+    approves.
+
+Calls 2 to 4 of the sweep continue, and call 5 does not run. No v0.9.0 tag,
+Release or public artifact is claimed here.
 
 ## 2026-10-21: v0.9.0 candidate preparation
 

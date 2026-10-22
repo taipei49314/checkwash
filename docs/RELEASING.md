@@ -322,6 +322,79 @@ their own Codex sessions and ended with them; no later session uses it. Their
 sentence "This explicit instruction supersedes the pool-only location …" was
 not adopted as a standing rule. R29 stands on decision 2 above.
 
+### Amendment after the #419 stop (2026-10-22)
+
+Call 1 of the combined sweep fired #419's pre-registered stop: three pass →
+block moves on D-088 members
+([#419 comment](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6329503938)).
+The first condition above cannot hold as written. On 2026-10-22 Nelson
+answered two decision lists. Each reply was a button whose text the assistant
+wrote.
+- 「K1～K3 全部照建議」: v0.9.0 ships without #419's refusal, by D-141 C1's
+  revert route. Calls 2 to 4 of the sweep continue; call 5 does not run (K2).
+- 「L1～L11 全部照建議」: approves the change that turns the refusal off
+  (#553), its allow keys (#554) and its maintainer text (#555, D-171). It also
+  approves L6, L7, L9 and L10:
+  - **L10: the new candidate.** `main` (`47c74172`, with #553, #554 and #555)
+    is merged into this branch with a merge commit, with no rebase or
+    force-push, so that `141accee` stays reachable for the sweep. That merge
+    commit, `36280924b6ebfa2ab8cbd2f242c8f5cf03ae53fa` (src tree
+    `4baaee4c89dc3e7a4c6f3d069595a5ef8576025f`), is the new candidate.
+    `git diff 141accee 36280924 -- src/` equals the `src/` diff of #553's
+    merge, so its src differs from `17c3dd82` only by #553.
+  - **L6: the sweep supplement.** It compares `141accee` with the new
+    candidate on the six window-1 batches. Its acceptance line:
+    - Python verdict moves are only block → pass, caused by inverse #419 P1/P2
+      finding moves;
+    - httpx `0296c2bb`, starlette `e396f079` and werkzeug `ab6150fa`, the
+      three stop commits, must each show that move;
+    - javascript must be identical;
+    - anything else stops for Nelson.
+
+    Nelson approves the supplement's freeze (lab commit, manifest sha256, the
+    candidate's commit) before it runs.
+  - **L9: the first condition now reads:**
+    - The #419 stop is answered by D-141 C1's revert route: #553 is merged on
+      `main` and in the candidate.
+    - The sweep supplement holds its acceptance line (L6).
+    - R29 is settled as in L7.
+    - The sweep this grant names is lab `6d49fb60` (manifest `52a451cf`)
+      together with that supplement. The `/clear` receipt is on the new
+      candidate.
+
+    Every other condition stands. In them, "its three determinism checks" are
+    the checks of lab `6d49fb60`; the supplement's own checks fall under its
+    acceptance line. In the list of what the grant covers, "the RC `141accee`
+    stays reachable" now also means the new candidate.
+  - **L7: R29 for the new candidate is settled without a new run.** The
+    accepted comparison (decision 2 above: v0.8.0 → `7d173fe8`, whose src
+    tree `17c3dd82` is also `141accee`'s, no moves) is composed with the
+    supplement (`141accee` → the new candidate).
+    - For v0.9.0 this replaces the reruns that decision 2 and the comparison
+      step's **Candidate** bullet call for when `src/` changes after the
+      comparison.
+    - A verdict move from `141accee` to the new candidate on one of R29's
+      3,600 members would be a v0.8.0 → candidate move once composed. As the
+      comparison section above requires, it goes to Nelson before the tag.
+      None is expected.
+    - After the supplement runs, Nelson reviews the composed list of moves and
+      accepts R29 for the new candidate in writing before the tag.
+    - This rests on Nelson's written acceptance under EC POLICY
+      `work-machine-local` (「要當依據須在 pool 重做，或由人類明文接受」), as
+      decision 2 did. The supplement runs under EC POLICY
+      `checkwash-pju-sweep` (T-546) as acceptance for #419; that row does not
+      cover release verification, so the release relies on it only through L9
+      and L7. It holds only if the supplement holds its acceptance line.
+
+The release guide (`docs/releases/v0.9.0-public-launch.md`) and the R29
+record (`benchmarks/release-comparison/v0.9.0.json`) still describe
+`141accee` and `7d173fe8`. They are brought up to date for the new candidate
+in the text Nelson approves under G4's last condition.
+
+checkwash-lab
+`evidence/pju-inventory-20261021:evidence/v090-419-off-approvals-20261022.md`
+records these approvals.
+
 ## v0.9.0 continuation authorization (2026-10-21)
 
 *Historical: ended with Codex session 01a15c24 on 2026-10-21. See "v0.9.0
