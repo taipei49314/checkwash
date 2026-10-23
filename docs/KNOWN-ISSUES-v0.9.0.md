@@ -1,3 +1,45 @@
+# Status update — 2026-10-23
+
+v0.9.0 is [published and publicly verified](releases/v0.9.0-publication-verification.md).
+The candidate text below is the approved prepublication snapshot. Its
+publication-pending and not-yet-measured statements are historical;
+the dated records above it supply later evidence without changing the
+published source or treating residual errors as passes.
+
+## 2026-10-23: measured #345 / #469 residual exits
+
+The approved combined sweep has now run. This dated result supersedes
+the earlier statements below that the watch commits and step counters
+were not measured. It uses the declared a469 engine
+`64462ff9603023da80dae244a8f5347f3f960f6f`, not a new v0.9.0 rerun.
+
+| aiohttp watch commit | Recorded a469 outcome |
+| --- | --- |
+| `0c7ce3485d` | Analysed pass, exit 0 |
+| `92477c5a74` | Analysed pass, exit 0 |
+| `35754d4642` | Exit 2: `counter=analysis`, steps 1,000,001 / limit 1,000,000; `tests/test_multipart.py`, after, `TestPartReader.test_read_with_content_encoding_deflate` |
+| `bc504dafce` | Exit 2: `counter=analysis`, steps 1,000,001 / limit 1,000,000; `tests/test_helpers.py`, before, `test_ipv6_addresses` |
+| `5a8ebdfcae` | Exit 2: nonregular source `aiohttp/_websocket/reader_c.py` (symlink) |
+
+All 17 retained step-limit rows in limits345/a469 name the shared
+analysis counter at 1,000,001 steps against 1,000,000, with path, side
+and unit. The unit names identify where the shared budget was exhausted,
+not a proven cause. The three watch errors remain unanalysed.
+
+This is the verdict-or-named-exit record required by
+[#345 R93](https://github.com/taipei49314/checkwash/issues/345#issuecomment-6261643395).
+The two unnamed inventory/read-limit refusal shapes, #506's hook behavior
+and #469 D9's post-release pool timing decomposition remain limitations.
+No timing decomposition or fresh execution was performed for this update.
+
+Provenance: [combined sweep](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md), human-authorized local PJU,
+NOT EC pool; saved `v090-call4/combined/combined.json` SHA256
+`b9946817dacdcbd9ebec052e0910e1e2e30aa7dd0dc3e0e04e145d6d68e9e2db`.
+See the [issue closeout record](releases/v0.9.0-issue-closeout.md)
+for the other comparisons and their remaining gates.
+
+## Approved candidate snapshot (2026-10-22)
+
 # Known issues in the v0.9.0 candidate
 
 **Candidate snapshot, maintainer wording approved; not a published
