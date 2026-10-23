@@ -49,3 +49,33 @@ required checks. Earlier tag receipts are the proposal basis, not a substitute
 for that run. Native PR/main results and exact identities are retained with
 the closeout evidence. No local product execution, public tag change or
 downstream re-pin is part of this rotation.
+
+## D-174 (2026-10-23): measured keyword-operand acceptance, addendum to D-143 (#462)
+
+Nelson approved the concrete D-143 addendum in PR #558 and its conditional
+merge/issue closeout in this chat on 2026-10-23:
+「核可草稿，檢查通過後合併並結案（建議）」.
+This was an assistant-written reply option. The approval covers this
+wording and merging #558 after its current CI/dogfood gates pass, then
+closing #345 and #462. It grants no new workload execution or publication.
+
+The frozen combined sweep measured a418 (`717a705d5291913cea98544ffd57b191e0d07a88`)
+to a462 (`2422b3cebcebdb4cbf25ca0d567589d8bb6b540e`) on 3,018 members:
+2,599 pass→pass, 400 block→block and 19 error→error, with no outcome,
+finding or stdout differences. The kw462 selection has two members,
+both pass→pass, with no new finding. Both requested difference lists
+are empty; the selection is nonempty. This supplies D-143's subsequent
+measurement under R2–R7 and keeps its original preparation record
+unchanged. Provenance is human-authorized local PJU, NOT EC pool,
+under the previously approved frozen declaration. This does not
+establish a general false-positive rate or resolve the named syntax
+residuals.
+
+Sources: [frozen combined sweep](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md);
+[exact pair/engine/count extract](docs/releases/v0.9.0-issue-closeout.json);
+[issue result and remaining gate](https://github.com/taipei49314/checkwash/issues/462#issuecomment-6360716240).
+The source combined JSON SHA256 is
+`b9946817dacdcbd9ebec052e0910e1e2e30aa7dd0dc3e0e04e145d6d68e9e2db`.
+D-143 in DECISIONS-archive-2.md remains unchanged as its dated preparation
+record. This later addendum records the approved measurement without
+relabeling those old arms as a fresh rcprime run.
