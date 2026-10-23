@@ -1,5 +1,21 @@
 # Releasing
 
+## Test execution route (2026-10-23)
+
+All CheckWash tests, including release validation, now run on LAPTOP-01AGNPJU
+under the maintainer's standing decision. See [testing on PJU](testing-on-pju.md).
+This supersedes earlier venue wording only; source/tag identity, exact-head
+evidence, distribution inventory, required checks, one-time publication
+authorization and the human PyPI deployment approval remain required.
+
+Remote workflows containing tests are disabled, including the mixed
+test/publication `release.yml`. Their YAML below documents retained gates,
+not an available remote execution route. No PJU receipt-to-required-check
+bridge or publication handoff is implemented yet. Missing evidence blocks
+merging, tagging and publication; do not re-enable remote tests, bypass checks
+or publish a success for an unexecuted check. Historical publication records
+retain their actual venues and results.
+
 The remediation candidate of D-055 shipped as v0.3.0 on 2026-09-07 — the
 minor release its fingerprint and machine-interface break required
 ([upgrade notes](remediation-upgrade.md)). The promotion of the verified
@@ -52,9 +68,8 @@ and the maintainer's approval of the `pypi` deployment.
 
 This procedure still requires explicit one-time authorization for the exact
 version. Preparation of a candidate or of these workflows is not that grant.
-The working-machine restriction remains: product runs, tests, qualification
-and builds use the sanctioned hosted path; source inspection and draft edits
-do not authorize local execution.
+Tests, qualification, validation builds and public visitor execution use PJU
+under the standing route above. A source edit alone is not a passing receipt.
 
 1. Prepare the authorized candidate version, source changes, release notes and
    limits. Keep README public install commands and `release/advertised.toml`
@@ -62,7 +77,7 @@ do not authorize local execution.
    verified. Label candidate capability separately. Since 2026-10-14 the
    README's Action recommendation advances to this release once it is
    publicly verified (step 8), not one release later.
-2. Open one release PR. Require its final exact head's hosted full development
+2. Open one release PR. Require its final exact head's PJU full development
    CI, source/wheel/pyz qualification and inventory, real current-advertised
    visitor checks, and `verdict gate` success. If the head changes, obtain new
    evidence for that head. Retain the actual checkout SHA and tree, since PR
