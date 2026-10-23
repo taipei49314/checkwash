@@ -1,6 +1,34 @@
 name: quality candidate intake
+run-name: "quality intake / ${{ inputs.mode || 'intake' }} / PR ${{ inputs.pr || github.event.pull_request.number }} / ${{ inputs.head }}"
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Metadata intake or owner-admitted PJU receipt publication
+        type: choice
+        options: [intake, receipt]
+        default: intake
+      pr:
+        description: Exact target PR number (receipt mode)
+        type: string
+      head:
+        description: Exact target PR head commit (40 lowercase hex)
+        type: string
+      base:
+        description: Exact current main base commit (40 lowercase hex)
+        type: string
+      receipt_commit:
+        description: Immutable owner-published commit containing receipt/manifest.json
+        type: string
+      manifest_sha256:
+        description: Independently admitted manifest SHA256 (not copied from an untrusted PR)
+        type: string
+      collector_source_sha:
+        description: Audited collector and contract source commit
+        type: string
+      trusted_workflow_sha:
+        description: Reviewed workflow commit; must equal this run's github.sha
+        type: string
   pull_request:
     paths:
       - tools/collect_quality_candidates.py
@@ -28,3 +56,110 @@ jobs:
           name: quality-candidates
           path: quality-candidates
           if-no-files-found: error
+
+  # These jobs read Git/JSON/XML/archive data only. They never run candidate code.
+  # Required context names are created by the publisher API only after validation;
+  # a skipped job cannot manufacture a successful required context.
+  verify-pju-receipt:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'receipt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      PJU_PR: ${{ inputs.pr }}
+      PJU_HEAD: ${{ inputs.head }}
+      PJU_BASE: ${{ inputs.base }}
+      PJU_RECEIPT_COMMIT: ${{ inputs.receipt_commit }}
+      PJU_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+      PJU_COLLECTOR_SHA: ${{ inputs.collector_source_sha }}
+      PJU_WORKFLOW_SHA: ${{ inputs.trusted_workflow_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.head }}
+          path: candidate-data
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Validate exact owner-admitted PJU evidence
+        run: >-
+          python -I -B trusted/tools/pju_receipt_bridge.py verify
+          --trusted-root trusted --source-root candidate-data --receipt-root receipt-data/receipt
+          --pr "$PJU_PR" --head "$PJU_HEAD" --base "$PJU_BASE"
+          --receipt-commit "$PJU_RECEIPT_COMMIT" --manifest-sha256 "$PJU_MANIFEST_SHA256"
+          --collector-source-sha "$PJU_COLLECTOR_SHA" --trusted-workflow-sha "$PJU_WORKFLOW_SHA"
+          --output pju-verification.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pju-verification.json
+          if-no-files-found: warn
+
+  publish-pju-checks:
+    needs: verify-pju-receipt
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'receipt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    env:
+      PJU_PR: ${{ inputs.pr }}
+      PJU_HEAD: ${{ inputs.head }}
+      PJU_BASE: ${{ inputs.base }}
+      PJU_RECEIPT_COMMIT: ${{ inputs.receipt_commit }}
+      PJU_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+      PJU_COLLECTOR_SHA: ${{ inputs.collector_source_sha }}
+      PJU_WORKFLOW_SHA: ${{ inputs.trusted_workflow_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.head }}
+          path: candidate-data
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Independently revalidate and publish genuine required checks
+        run: >-
+          python -I -B trusted/tools/pju_receipt_bridge.py publish
+          --trusted-root trusted --source-root candidate-data --receipt-root receipt-data/receipt
+          --pr "$PJU_PR" --head "$PJU_HEAD" --base "$PJU_BASE"
+          --receipt-commit "$PJU_RECEIPT_COMMIT" --manifest-sha256 "$PJU_MANIFEST_SHA256"
+          --collector-source-sha "$PJU_COLLECTOR_SHA" --trusted-workflow-sha "$PJU_WORKFLOW_SHA"
+          --output pju-publication.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pju-publication.json
+          if-no-files-found: warn

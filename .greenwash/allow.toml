@@ -1,5 +1,13 @@
 
 [[allow]]
+fingerprint = "GUARDRAIL_TOUCHED/AGENTS.md/-/v2:7be958dc70814050e35348b3a4b2df947ab7f1dc4c5fdddd50a789b7b50aad08"
+rule = "GUARDRAIL_TOUCHED"
+reason = "PR #561 exact AGENTS.md before/after pair: Nelson explicitly ordered on 2026-10-23 that all CheckWash tests run on PJU, other projects retain their rules, then ordered connecting PJU receipts to required checks and resolving #561 dogfood before merge. EC T-606 policy e9ce2342fc4834f5b5d580461b26f8784b64481a records the host rule. This entry admits only that content-bound routing amendment; required checks, every-PR dogfood, protected product rulings and release gates remain. See docs/pju-receipt-bridge.md. Published in a prerequisite PR so base-side allowlist trust is preserved."
+author = "taipei49314"
+created = "2026-10-23"
+expires = "2026-11-06"
+
+[[allow]]
 fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/e2e/test_cli.py/test_cross_process_byte_identical/4bcbe59cb290"
 rule = "EXPECTATION_DEFINITION_CHANGED"
 reason = "v0.2.0 identity rename: expected strings follow the renamed product constants (greenwash->checkwash); no behavioural change; reviewed in the identity PR"
