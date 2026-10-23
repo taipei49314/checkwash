@@ -2,6 +2,19 @@
 
 Updated: 2026-10-23 (v0.9.0 published and public bytes/visitors verified; advertised pins advance in this follow-up; baseline rotation remains separate)
 
+## 2026-10-23: all CheckWash tests run on PJU
+
+Nelson explicitly made LAPTOP-01AGNPJU the standing execution host for all
+CheckWash tests; other projects retain their existing rules. See
+[the route and transition state](docs/testing-on-pju.md). Remote test
+workflows are disabled at the GitHub workflow-state level, with their
+definitions and required-check protections retained. The
+[PJU receipt bridge](docs/pju-receipt-bridge.md) verifies exact-source local
+evidence and publishes the existing required contexts; missing or failed
+receipts still block merges. Release publication needs its separate handoff
+and one-time authorization.
+Historical hosted results below retain their original host and status.
+
 ## 2026-10-23: verified public v0.9.0
 
 The [publication record](docs/releases/v0.9.0-publication-verification.md)
