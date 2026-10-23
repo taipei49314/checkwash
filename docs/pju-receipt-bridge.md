@@ -66,12 +66,15 @@ record. Do not dispatch arbitrary candidate helpers. After completion read back
 the check names, App IDs, target head, conclusions and run/evidence links.
 A source or base change requires new evidence; a prior success is not reused.
 
-PR #561 changes AGENTS.md to carry the explicitly authorized test venue rule.
-The v2 fingerprint `7be958dc70814050e35348b3a4b2df947ab7f1dc4c5fdddd50a789b7b50aad08`
-binds only its exact AGENTS.md before/after pair. Its short-lived exemption is
-merged in this prerequisite so the normal **base-side** allowlist can consume
-it. No severity, fail-on threshold, comparison base or protected fixture
-expectation is changed. The earlier BLOCK receipt remains historical evidence.
+The initial PR #561 also repeated the venue rule in AGENTS.md, producing a
+critical guardrail finding. A proposed base-side exemption then correctly
+produced a second guardrail finding for the allowlist itself. Both failed
+receipts are preserved. The final migration instead carries the standing rule
+through EC POLICY, STATE.md and the testing/release documents. Existing
+AGENTS.md already requires reading STATE.md and every-PR dogfood, and contains
+no conflicting test venue. The redundant AGENTS edit and proposed exemption
+are removed; no severity, comparison base, guardrail or fixture expectation
+is changed. The final complete diffs still require real passing receipts.
 
 PJU unavailability or missing capabilities is `NOT_RUN`, with no remote fallback.
 Sweep and model/adjudication approvals remain separate; this bridge adds none.
