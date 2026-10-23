@@ -19,7 +19,9 @@ def snapshot_repo(tmp_path):
     git("config", "user.email", "e2e@example.invalid")
     git("config", "commit.gpgsign", "false")
     (tmp_path / "tests").mkdir()
-    (tmp_path / "tests/test_中文.py").write_text("from test_helpers import assert_equal\n", encoding="utf-8")
+    # The asserted Git blob is LF on every host; do not let Windows text I/O
+    # translate the fixture before Git records it.
+    (tmp_path / "tests/test_中文.py").write_bytes(b"from test_helpers import assert_equal\n")
     git("add", "-A")
     git("commit", "-m", "base")
     return tmp_path
