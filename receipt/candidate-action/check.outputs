@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\Documents\Codex\2026-10-23\new-chat-3\work\p6\candidate-action\checkwash-action-e0q7vrmr\check-receipt.json
+base=332f139db1c290c0691ddc26243679c8820aad4b
+head=e590cc69a98b54f179d6ea6dcf75c0148cf996e1
+fail_on=high

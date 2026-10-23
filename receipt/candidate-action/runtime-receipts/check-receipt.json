@@ -1,0 +1,22 @@
+{
+  "action_receipt_version": 1,
+  "analysis_exit_code": 0,
+  "base": "332f139db1c290c0691ddc26243679c8820aad4b",
+  "error": null,
+  "exit_code": 0,
+  "fail_on": "high",
+  "head": "e590cc69a98b54f179d6ea6dcf75c0148cf996e1",
+  "identity": {
+    "base_python": "C:\\Users\\nelson\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+    "bytecode_writes_disabled": true,
+    "isolated": true,
+    "package_root": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p6\\candidate-action\\checkwash-action-e0q7vrmr\\environment\\Lib\\site-packages\\checkwash",
+    "python": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p6\\candidate-action\\checkwash-action-e0q7vrmr\\environment\\Scripts\\python.exe",
+    "python_version": "3.11.9",
+    "runtime_files": 210,
+    "source_digest": "0b3fb082b23b457c2d9a51503590d6f8c590b3e4faff8b4eac515e0df6034bd4",
+    "source_root": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-561-action-1",
+    "utf8": true,
+    "version": "0.9.0"
+  }
+}
