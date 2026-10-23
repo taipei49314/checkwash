@@ -1,0 +1,1792 @@
+{
+  "action_sha": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+  "base_sha": "618c415d9d3d37f004142edcaed331057ea8ac0f",
+  "collector_source_sha": "e2da9d01923eaecc826badb4e6385a0391762484",
+  "contract_source_sha": "e2da9d01923eaecc826badb4e6385a0391762484",
+  "files": [
+    {
+      "bytes": 4188,
+      "path": "action/action.yml",
+      "sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83"
+    },
+    {
+      "bytes": 60,
+      "path": "action/check.bash",
+      "sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93"
+    },
+    {
+      "bytes": 265,
+      "path": "action/check.outputs",
+      "sha256": "0ddd0d7ddf398c35fced1af135029b0b36bd580d6e15768c7be64a16894f557e"
+    },
+    {
+      "bytes": 1315,
+      "path": "action/command-ledger.json",
+      "sha256": "dc987327a5d947124c6f12f4731236ddbe0f5ac9308e648f0685f3edb8d75538"
+    },
+    {
+      "bytes": 14527,
+      "path": "action/git-evidence/command-ledger.json",
+      "sha256": "573bb584f1495991791dce11ad80910c63c0221dbc29ce315315693032f0dc53"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00000.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00000.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00001.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "action/git-evidence/logs/git-00001.stdout",
+      "sha256": "7839ddc0769e96a0dd088fe943bcab835f5a095da95190e67720b2beced20aa7"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00002.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00003.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "action/git-evidence/logs/git-00003.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00004.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00004.stdout",
+      "sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00005.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 75,
+      "path": "action/git-evidence/logs/git-00005.stdout",
+      "sha256": "de096b5cb1e8312bbaa469a6e8b1ced9fb9aee6a4fc421b9b44e9a9464f3d66e"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00006.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00006.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00007.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 313826,
+      "path": "action/git-evidence/logs/git-00007.stdout",
+      "sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00008.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00008.stdout",
+      "sha256": "dc57203d940a0044b2d238d42219c6501ce8f7285c855899a86b0866eadef871"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00009.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00009.stdout",
+      "sha256": "95c9227e1c29b6676df294bc4c8ebd672c5e13276f6c50cc2e5187735fad47dc"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00010.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00010.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00011.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "action/git-evidence/logs/git-00011.stdout",
+      "sha256": "7839ddc0769e96a0dd088fe943bcab835f5a095da95190e67720b2beced20aa7"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00012.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00012.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00013.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "action/git-evidence/logs/git-00013.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00014.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00014.stdout",
+      "sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00015.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 75,
+      "path": "action/git-evidence/logs/git-00015.stdout",
+      "sha256": "de096b5cb1e8312bbaa469a6e8b1ced9fb9aee6a4fc421b9b44e9a9464f3d66e"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00016.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00016.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00017.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 313826,
+      "path": "action/git-evidence/logs/git-00017.stdout",
+      "sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e"
+    },
+    {
+      "bytes": 1301,
+      "path": "action/install.bash",
+      "sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4"
+    },
+    {
+      "bytes": 361,
+      "path": "action/install.outputs",
+      "sha256": "97f09f53f337096df2eb79ef88494233f4c9e9197df2ff8189bda96613233a74"
+    },
+    {
+      "bytes": 0,
+      "path": "action/logs/check.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 27848,
+      "path": "action/logs/check.stdout",
+      "sha256": "39ccf6e857ca34a5931b17425a97301053ee8b2fcbb68a420b4d9803a2a40577"
+    },
+    {
+      "bytes": 0,
+      "path": "action/logs/install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3530,
+      "path": "action/logs/install.stdout",
+      "sha256": "8267b4ce8f072c2bc097aff5049f8e5df1ffbd37d45425eed00af54b79254657"
+    },
+    {
+      "bytes": 2887,
+      "path": "action/replay.json",
+      "sha256": "7fc19a564da373c03b38c51d5bb29db7bec661233dc1833accda76b6d073ef1e"
+    },
+    {
+      "bytes": 1046,
+      "path": "action/runtime-receipts/check-receipt.json",
+      "sha256": "6d78ddf0ab8e0bcc2c3b31feae3e6130eb4283a1319817617ef7607f434aeb49"
+    },
+    {
+      "bytes": 773,
+      "path": "action/runtime-receipts/identity.json",
+      "sha256": "ad1653194367f42341a8fc9513971f88455de6c0efecb723d957e26d3b583e9a"
+    },
+    {
+      "bytes": 22278,
+      "path": "action/runtime-receipts/install-report.json",
+      "sha256": "6fcf1fc2d2cf71d06f750f5b08f36bee66e5228862e3d7528c553bebb49630fa"
+    },
+    {
+      "bytes": 2062,
+      "path": "action/runtime-receipts/install-stderr.txt",
+      "sha256": "9b87d0c7a5c23fa79e1f6db0e7b3bdd131d21c608950ec0be825e9b069c8815e"
+    },
+    {
+      "bytes": 1261,
+      "path": "action/runtime-receipts/install-stdout.txt",
+      "sha256": "d4a1517158816ab654505951b137277fe41bd2a6074e554f96323e4f083b3731"
+    },
+    {
+      "bytes": 27092,
+      "path": "action/runtime-receipts/stderr.txt",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 647,
+      "path": "action/runtime-receipts/stdout.txt",
+      "sha256": "8eaef21a1b07595ca6513cfc5b223c03bff4d062868ed062629a56a203ef3454"
+    },
+    {
+      "bytes": 647,
+      "path": "action/step-summary.md",
+      "sha256": "8eaef21a1b07595ca6513cfc5b223c03bff4d062868ed062629a56a203ef3454"
+    },
+    {
+      "bytes": 935636,
+      "path": "artifacts/checkwash-0.9.0-py3-none-any.whl",
+      "sha256": "51bb41bc2474782f5d2d557b83b68f92f2f1f2ddb0a409b75d756de4dfd92978"
+    },
+    {
+      "bytes": 4496144,
+      "path": "artifacts/checkwash-0.9.0.tar.gz",
+      "sha256": "e8a41ad3e1f7111934a49b001b9ea86e45d022dac2e800b333411e89290409c2"
+    },
+    {
+      "bytes": 914408,
+      "path": "artifacts/checkwash.pyz",
+      "sha256": "2e50374a97aff910df09fcdeecd7ffb2e560806c82ff188e39b4c2393ca1596f"
+    },
+    {
+      "bytes": 53000,
+      "path": "candidate-action-coverage.json",
+      "sha256": "7eeb19ca9e28d9af53fcc6a9f3e9e0c4fe98677ed00211c880846558a649df45"
+    },
+    {
+      "bytes": 4188,
+      "path": "candidate-action/action.yml",
+      "sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83"
+    },
+    {
+      "bytes": 60,
+      "path": "candidate-action/check.bash",
+      "sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93"
+    },
+    {
+      "bytes": 275,
+      "path": "candidate-action/check.outputs",
+      "sha256": "b406f428504f9cf17e1863450567d6e8c79b0b8fed20f14d28f44b3fdedf1340"
+    },
+    {
+      "bytes": 1355,
+      "path": "candidate-action/command-ledger.json",
+      "sha256": "1565a2db14aabdc4c53ffa53b5716a443b55845a6a67d8192b5416af0f1074ec"
+    },
+    {
+      "bytes": 14737,
+      "path": "candidate-action/git-evidence/command-ledger.json",
+      "sha256": "5123047e3d2310ba0823dccb5fae8576cab01cfba5295b23ffcca856346f5ddc"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00000.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00000.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00001.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "candidate-action/git-evidence/logs/git-00001.stdout",
+      "sha256": "7839ddc0769e96a0dd088fe943bcab835f5a095da95190e67720b2beced20aa7"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00002.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00003.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "candidate-action/git-evidence/logs/git-00003.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00004.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00004.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00005.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 78,
+      "path": "candidate-action/git-evidence/logs/git-00005.stdout",
+      "sha256": "b01044c203f361cdaf8b7570344af3bfc609cd3118a78870478baca3e2c478e1"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00006.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00006.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00007.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "candidate-action/git-evidence/logs/git-00007.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00008.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00008.stdout",
+      "sha256": "dc57203d940a0044b2d238d42219c6501ce8f7285c855899a86b0866eadef871"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00009.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00009.stdout",
+      "sha256": "2ea02e3fdbecd83fcfa10726fa22d6576df6107be80c7a2fdb8bfec46be45281"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00010.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00010.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00011.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "candidate-action/git-evidence/logs/git-00011.stdout",
+      "sha256": "7839ddc0769e96a0dd088fe943bcab835f5a095da95190e67720b2beced20aa7"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00012.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00012.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00013.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "candidate-action/git-evidence/logs/git-00013.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00014.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00014.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00015.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 78,
+      "path": "candidate-action/git-evidence/logs/git-00015.stdout",
+      "sha256": "b01044c203f361cdaf8b7570344af3bfc609cd3118a78870478baca3e2c478e1"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00016.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00016.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00017.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "candidate-action/git-evidence/logs/git-00017.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 1301,
+      "path": "candidate-action/install.bash",
+      "sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4"
+    },
+    {
+      "bytes": 391,
+      "path": "candidate-action/install.outputs",
+      "sha256": "25c5e347ec0df61323f74e3b7f6c819a1bdfd8e6bac6a2df0cc3a26d06396ad7"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/logs/check.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 27848,
+      "path": "candidate-action/logs/check.stdout",
+      "sha256": "2d0e161a8b43d0056fbe130afceb34bd06e30f9752c6d9a6dc7fd3fa4d3b2d4c"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/logs/install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3570,
+      "path": "candidate-action/logs/install.stdout",
+      "sha256": "97bbc29cdacf3567edef2721e628fa35630c32d3cc4065a14bb4a55e4923ba12"
+    },
+    {
+      "bytes": 2947,
+      "path": "candidate-action/replay.json",
+      "sha256": "815fcb72f3a09a82fa900cf27f14a5b6605996fcdb4eca3fb3c9360340f31950"
+    },
+    {
+      "bytes": 1069,
+      "path": "candidate-action/runtime-receipts/check-receipt.json",
+      "sha256": "bf3c22b2195b30080cb4d47c713114212f34e7224113e6cde7de6ba2a4987937"
+    },
+    {
+      "bytes": 796,
+      "path": "candidate-action/runtime-receipts/identity.json",
+      "sha256": "0f2db4443eac258a65d5ca427780333a23f4ed809d322b059765878cd07d7f2a"
+    },
+    {
+      "bytes": 22617,
+      "path": "candidate-action/runtime-receipts/install-report.json",
+      "sha256": "36af291411de97d39bbd2c96d67fd1e7310a8f3c9f32b071ecc80bd019439ee3"
+    },
+    {
+      "bytes": 2079,
+      "path": "candidate-action/runtime-receipts/install-stderr.txt",
+      "sha256": "febb65b01922fcfe9da5e138c4554648666c05b0c6507e49cd270ec1ddd6acfd"
+    },
+    {
+      "bytes": 1284,
+      "path": "candidate-action/runtime-receipts/install-stdout.txt",
+      "sha256": "8e89fff07047207f128d60590f25bf1eea24fe131359c23a28f49e8db0d6af07"
+    },
+    {
+      "bytes": 27092,
+      "path": "candidate-action/runtime-receipts/stderr.txt",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 647,
+      "path": "candidate-action/runtime-receipts/stdout.txt",
+      "sha256": "8eaef21a1b07595ca6513cfc5b223c03bff4d062868ed062629a56a203ef3454"
+    },
+    {
+      "bytes": 647,
+      "path": "candidate-action/step-summary.md",
+      "sha256": "8eaef21a1b07595ca6513cfc5b223c03bff4d062868ed062629a56a203ef3454"
+    },
+    {
+      "bytes": 253,
+      "path": "collection-status.json",
+      "sha256": "70410f2bab27aba7147aa313014728e3535b8e616275e231e0fd704be72a923b"
+    },
+    {
+      "bytes": 18844,
+      "path": "command-ledger.json",
+      "sha256": "3e408ca0bd8121b1bc092ea251691e973b25a1ec97d3417207fab4457c8980ca"
+    },
+    {
+      "bytes": 190759,
+      "path": "contract-descriptor.json",
+      "sha256": "373ddba01440142b890f5185a3b996639338e4bef432653e7154b9cd1b661abb"
+    },
+    {
+      "bytes": 411,
+      "path": "dependency-lock.json",
+      "sha256": "b1a0d13126e32b9f5492695f2f04c0cdcfe377f631519ce4f61f00b76b271f05"
+    },
+    {
+      "bytes": 30454,
+      "path": "git-evidence/command-ledger.json",
+      "sha256": "094983e06c8fedb44acfe54569f19733684274f3670469957e58ecdf0bad5428"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00000.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00000.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00001.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "git-evidence/logs/git-00001.stdout",
+      "sha256": "a693fd4fd122355e2dde4c5b4a3e55ede9e7d2e353d94ce7be17cd89e5f11abb"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00002.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00003.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "git-evidence/logs/git-00003.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00004.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00004.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00005.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "git-evidence/logs/git-00005.stdout",
+      "sha256": "7839ddc0769e96a0dd088fe943bcab835f5a095da95190e67720b2beced20aa7"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00006.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00006.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00007.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "git-evidence/logs/git-00007.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00008.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00008.stdout",
+      "sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00009.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 75,
+      "path": "git-evidence/logs/git-00009.stdout",
+      "sha256": "de096b5cb1e8312bbaa469a6e8b1ced9fb9aee6a4fc421b9b44e9a9464f3d66e"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00010.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00010.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00011.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 313826,
+      "path": "git-evidence/logs/git-00011.stdout",
+      "sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00012.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00012.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00013.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00013.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00014.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00014.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00015.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00015.stdout",
+      "sha256": "2ea02e3fdbecd83fcfa10726fa22d6576df6107be80c7a2fdb8bfec46be45281"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00016.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00016.stdout",
+      "sha256": "dc57203d940a0044b2d238d42219c6501ce8f7285c855899a86b0866eadef871"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00017.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00017.stdout",
+      "sha256": "e5a4f0e16e7821871cfc2e056dbabecd53008cfefaef6dae5491a03517246492"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00018.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00018.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00019.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 78,
+      "path": "git-evidence/logs/git-00019.stdout",
+      "sha256": "b01044c203f361cdaf8b7570344af3bfc609cd3118a78870478baca3e2c478e1"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00020.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00020.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00021.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "git-evidence/logs/git-00021.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00022.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00022.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00023.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 78,
+      "path": "git-evidence/logs/git-00023.stdout",
+      "sha256": "b01044c203f361cdaf8b7570344af3bfc609cd3118a78870478baca3e2c478e1"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00024.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00024.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00025.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "git-evidence/logs/git-00025.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00026.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00026.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00027.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "git-evidence/logs/git-00027.stdout",
+      "sha256": "7839ddc0769e96a0dd088fe943bcab835f5a095da95190e67720b2beced20aa7"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00028.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00028.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00029.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "git-evidence/logs/git-00029.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00030.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00030.stdout",
+      "sha256": "2a2613e52b32ad7063870e56da486496ea0fb64eaea7c07931c0178ede66f284"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00031.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 79,
+      "path": "git-evidence/logs/git-00031.stdout",
+      "sha256": "a693fd4fd122355e2dde4c5b4a3e55ede9e7d2e353d94ce7be17cd89e5f11abb"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00032.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00032.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00033.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 319287,
+      "path": "git-evidence/logs/git-00033.stdout",
+      "sha256": "df7404057b6c4360b6f1fce80764c4487c37a735500996aac9d6292eeb284030"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00034.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00034.stdout",
+      "sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00035.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 75,
+      "path": "git-evidence/logs/git-00035.stdout",
+      "sha256": "de096b5cb1e8312bbaa469a6e8b1ced9fb9aee6a4fc421b9b44e9a9464f3d66e"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00036.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00036.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00037.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 313826,
+      "path": "git-evidence/logs/git-00037.stdout",
+      "sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e"
+    },
+    {
+      "bytes": 87029,
+      "path": "inventories/pyz.json",
+      "sha256": "87975f435d3572706301afee95b45bc220ab19516f954b534ebac851a4ff768d"
+    },
+    {
+      "bytes": 48652,
+      "path": "inventories/source.json",
+      "sha256": "a126be75a615a782155fe3427e419d7128c01ff13be45c6c57796adc0dcb6c56"
+    },
+    {
+      "bytes": 717943,
+      "path": "inventories/wheel.json",
+      "sha256": "88fcc9d99d984f780ac675efa69f2b5d81928ba9b714ee6ccb4bd7b3b83e246b"
+    },
+    {
+      "bytes": 3822380,
+      "path": "junit.xml",
+      "sha256": "9ccf0ca8f9fe43c2b358779096f0f415099855e3436ecf9c415313afb2e8e3fb"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/action-dogfood.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/action-dogfood.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/build-pyz.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/build-pyz.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/build-wheel.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 208,
+      "path": "logs/build-wheel.stdout",
+      "sha256": "57d19092062ff8e5766a254d51eb263b5b7312229fbc8134b6844301899e47df"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/candidate-action-dogfood.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/candidate-action-dogfood.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/inventory-pyz.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 97,
+      "path": "logs/inventory-pyz.stdout",
+      "sha256": "a801c6baf8c69d3c7d0a6d7e3d4e61a31685e78dc79dbdc3a1583d6ce6555b30"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/inventory-source.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 97,
+      "path": "logs/inventory-source.stdout",
+      "sha256": "a801c6baf8c69d3c7d0a6d7e3d4e61a31685e78dc79dbdc3a1583d6ce6555b30"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/inventory-wheel.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 97,
+      "path": "logs/inventory-wheel.stdout",
+      "sha256": "a801c6baf8c69d3c7d0a6d7e3d4e61a31685e78dc79dbdc3a1583d6ce6555b30"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pytest.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 23260,
+      "path": "logs/pytest.stdout",
+      "sha256": "5b6c559c32ad837f6705ee17b8d1e6f563d5600354a46f6a47697d57244a4852"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/qualify-pyz.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 116,
+      "path": "logs/qualify-pyz.stdout",
+      "sha256": "93aa40794de2f2dd0d652b23ffc362b08cca0b6bd80b750ee26eaf9a82683a25"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/qualify-source.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 119,
+      "path": "logs/qualify-source.stdout",
+      "sha256": "890cab2e64162aa77904c4d4afee0a655ec437d4680917a4e1176d410e996799"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/qualify-wheel.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 118,
+      "path": "logs/qualify-wheel.stdout",
+      "sha256": "7f7f75f1fe50b547af6f07c00ad24d2948b025c1f7fa7a5dc993d044be86f85d"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/runtime-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 591,
+      "path": "logs/runtime-identity.stdout",
+      "sha256": "4be9b7077e7b021a637df9a30b85b0509bb051de80ea640a71ed5ddab19dc81a"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/test-editable-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1022,
+      "path": "logs/test-editable-install.stdout",
+      "sha256": "21733bedede84d5f687e1e44577c502da0bafaf15373091e13e5c9976ad347c8"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/wheel-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 229,
+      "path": "logs/wheel-install.stdout",
+      "sha256": "54ee6d142c75ffe72d9f942119196a7e960f924c9d697ef3cbec2479170318b4"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/wheel-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/wheel-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 196841,
+      "path": "nested-inventory-pyz/commands.json",
+      "sha256": "3dd6e5c6195badf97724f6f3dfae999f6cc20a8fb7af8fa24ed8e6dea013407b"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-inventory-pyz/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3061941,
+      "path": "nested-inventory-pyz/stdout.bin",
+      "sha256": "7b9d57d94beed14ebaaeabc874bc9895e9d2f4efbe1670ade5f133c2a5c203c5"
+    },
+    {
+      "bytes": 196878,
+      "path": "nested-inventory-source/commands.json",
+      "sha256": "da97a8ab07cf77d8ad28d2604043dc703665146fa78d5303b672cdd8cdb28486"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-inventory-source/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3061941,
+      "path": "nested-inventory-source/stdout.bin",
+      "sha256": "7b9d57d94beed14ebaaeabc874bc9895e9d2f4efbe1670ade5f133c2a5c203c5"
+    },
+    {
+      "bytes": 2962718,
+      "path": "nested-inventory-wheel/commands.json",
+      "sha256": "f7566b0d3d4b9601e11a699f26ab775a37f692b25168acd1d1dd1d75ba8ac37b"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-inventory-wheel/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 17547357,
+      "path": "nested-inventory-wheel/stdout.bin",
+      "sha256": "3530d2d9beabf629b33d994dafeda3d8ff9007a1240b7e754259ecf5ecfac9c8"
+    },
+    {
+      "bytes": 1348098,
+      "path": "nested-qualify-pyz/commands.json",
+      "sha256": "2d760094105c6ad43db7bea84eb35c2c576703beeb728cf9f82e80bc8079fe4f"
+    },
+    {
+      "bytes": 1018,
+      "path": "nested-qualify-pyz/stderr.bin",
+      "sha256": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+    },
+    {
+      "bytes": 265793,
+      "path": "nested-qualify-pyz/stdout.bin",
+      "sha256": "025b9af841375c50ebe8097d13edef7d8d75a8e0e99cf2b0bf16693ddd74b12a"
+    },
+    {
+      "bytes": 1373683,
+      "path": "nested-qualify-source/commands.json",
+      "sha256": "180dfa03db010cfb09533e79fd6dc5dce4ae0b4b675da11c26eaf8d3c585ec12"
+    },
+    {
+      "bytes": 1018,
+      "path": "nested-qualify-source/stderr.bin",
+      "sha256": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+    },
+    {
+      "bytes": 265793,
+      "path": "nested-qualify-source/stdout.bin",
+      "sha256": "883db8df904abcadb39a9eeeeee072d0d5501d151dafd71f2c70a0fceea2438f"
+    },
+    {
+      "bytes": 1322550,
+      "path": "nested-qualify-wheel/commands.json",
+      "sha256": "eb2fde7642a684ab9460993a4129b3e95eca934aec0b74fec5cf878efe173a07"
+    },
+    {
+      "bytes": 1018,
+      "path": "nested-qualify-wheel/stderr.bin",
+      "sha256": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+    },
+    {
+      "bytes": 266443,
+      "path": "nested-qualify-wheel/stdout.bin",
+      "sha256": "ba198fb47bbdc53637d3b793c9452a749692ca86d845117b20f145ca5b144a6e"
+    },
+    {
+      "bytes": 126265,
+      "path": "qualifications/pyz.json",
+      "sha256": "90ac7f371e1ce29a154ad4f03bd2924c27d9a271ae78f8987719b56ef40570d5"
+    },
+    {
+      "bytes": 126206,
+      "path": "qualifications/source.json",
+      "sha256": "1b561754f8d9ddc95dcdb3bbcd810255ae87b975774918906240e0832f98d329"
+    },
+    {
+      "bytes": 126267,
+      "path": "qualifications/wheel.json",
+      "sha256": "26f281513e25c4581fba3dcaa3321397de5e152ce7e17db774cd51bb100a4d48"
+    },
+    {
+      "bytes": 22656,
+      "path": "test-install-report.json",
+      "sha256": "58c93a7ac20676326c1205f81ffceae799cc1e784c98fa502a1fcee58534152b"
+    },
+    {
+      "bytes": 22908,
+      "path": "wheel-install-report.json",
+      "sha256": "ace59cf0703c60d1c40ea7ba428e0797768b7397284e7ae1064360076cea1ff8"
+    }
+  ],
+  "head_sha": "e2da9d01923eaecc826badb4e6385a0391762484",
+  "host": "LAPTOP-01AGNPJU",
+  "kind": "checkwash.pju-receipt.v1",
+  "pr_number": 562,
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "raw_exits": [
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import importlib.metadata as m,json,platform,sys; print(json.dumps({'python_version':platform.python_version(),'prefix':sys.prefix,'base':sys.base_prefix,'dependencies':{d.metadata['Name']:d.version for d in m.distributions()}}))"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 0.15600000001722947,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:41:00.399472+00:00",
+      "name": "runtime-identity",
+      "started_at": "2026-10-23T13:41:00.249105+00:00",
+      "stderr": "logs/runtime-identity.stderr",
+      "stdout": "logs/runtime-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\replay_pju_action.py",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--base-sha",
+        "618c415d9d3d37f004142edcaed331057ea8ac0f",
+        "--head-sha",
+        "e2da9d01923eaecc826badb4e6385a0391762484",
+        "--python",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "--git",
+        "C:\\Program Files\\Git\\cmd\\git.exe",
+        "--bash",
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "--action-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-action-v090",
+        "--action-sha",
+        "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\action",
+        "--scratch",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\action"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 37.43799999996554,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:41:37.883106+00:00",
+      "name": "action-dogfood",
+      "started_at": "2026-10-23T13:41:00.452434+00:00",
+      "stderr": "logs/action-dogfood.stderr",
+      "stdout": "logs/action-dogfood.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\replay_pju_action.py",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--base-sha",
+        "618c415d9d3d37f004142edcaed331057ea8ac0f",
+        "--head-sha",
+        "e2da9d01923eaecc826badb4e6385a0391762484",
+        "--python",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "--git",
+        "C:\\Program Files\\Git\\cmd\\git.exe",
+        "--bash",
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "--action-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-action-3",
+        "--action-sha",
+        "e2da9d01923eaecc826badb4e6385a0391762484",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\candidate-action",
+        "--scratch",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\candidate-action"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 41.18699999997625,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:42:36.156757+00:00",
+      "name": "candidate-action-dogfood",
+      "started_at": "2026-10-23T13:41:54.969221+00:00",
+      "stderr": "logs/candidate-action-dogfood.stderr",
+      "stdout": "logs/candidate-action-dogfood.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--wheel",
+        "--sdist",
+        "--outdir",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 3.4060000000172295,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:42:43.292078+00:00",
+      "name": "build-wheel",
+      "started_at": "2026-10-23T13:42:39.880979+00:00",
+      "stderr": "logs/build-wheel.stderr",
+      "stdout": "logs/build-wheel.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "zipapp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3\\src",
+        "-m",
+        "checkwash.zipapp_entry:run",
+        "-o",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash.pyz",
+        "-c"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 0.2029999999795109,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:42:43.493485+00:00",
+      "name": "build-pyz",
+      "started_at": "2026-10-23T13:42:43.299595+00:00",
+      "stderr": "logs/build-pyz.stderr",
+      "stdout": "logs/build-pyz.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\wheel-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 7.313000000023749,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:42:50.808324+00:00",
+      "name": "wheel-venv",
+      "started_at": "2026-10-23T13:42:43.495483+00:00",
+      "stderr": "logs/wheel-venv.stderr",
+      "stdout": "logs/wheel-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\wheel-install-report.json",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash-0.9.0-py3-none-any.whl"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 1.0459999999729916,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:42:51.856159+00:00",
+      "name": "wheel-install",
+      "started_at": "2026-10-23T13:42:50.809328+00:00",
+      "stderr": "logs/wheel-install.stderr",
+      "stdout": "logs/wheel-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "--no-build-isolation",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\test-install-report.json",
+        "-e",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 1.375,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T13:42:53.233171+00:00",
+      "name": "test-editable-install",
+      "started_at": "2026-10-23T13:42:51.862956+00:00",
+      "stderr": "logs/test-editable-install.stderr",
+      "stdout": "logs/test-editable-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-p",
+        "xdist.plugin",
+        "-n",
+        "2",
+        "--dist",
+        "worksteal",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\pytest",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\junit.xml",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+      "duration_seconds": 1160.375,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:02:13.614331+00:00",
+      "name": "pytest",
+      "started_at": "2026-10-23T13:42:53.239179+00:00",
+      "stderr": "logs/pytest.stderr",
+      "stdout": "logs/pytest.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_assertions.py",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\nested-qualify-source",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--distribution",
+        "source",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\qualifications\\source.json",
+        "--",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 727.9380000000237,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:14:21.567825+00:00",
+      "name": "qualify-source",
+      "started_at": "2026-10-23T14:02:13.621329+00:00",
+      "stderr": "logs/qualify-source.stderr",
+      "stdout": "logs/qualify-source.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "release_inventory.py",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\nested-inventory-source",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--distribution",
+        "source",
+        "--qualification",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\qualifications\\source.json",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\inventories\\source.json"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 13.375,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:14:34.964556+00:00",
+      "name": "inventory-source",
+      "started_at": "2026-10-23T14:14:21.584530+00:00",
+      "stderr": "logs/inventory-source.stderr",
+      "stdout": "logs/inventory-source.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_assertions.py",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\nested-qualify-wheel",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--distribution",
+        "wheel",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\qualifications\\wheel.json",
+        "--artifact",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash-0.9.0-py3-none-any.whl",
+        "--",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\wheel-environment\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 896.0,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:29:30.966293+00:00",
+      "name": "qualify-wheel",
+      "started_at": "2026-10-23T14:14:34.969556+00:00",
+      "stderr": "logs/qualify-wheel.stderr",
+      "stdout": "logs/qualify-wheel.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "release_inventory.py",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\nested-inventory-wheel",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--distribution",
+        "wheel",
+        "--qualification",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\qualifications\\wheel.json",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\inventories\\wheel.json",
+        "--artifact",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash-0.9.0-py3-none-any.whl",
+        "--artifact",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash-0.9.0.tar.gz"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 219.15599999995902,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:33:10.130132+00:00",
+      "name": "inventory-wheel",
+      "started_at": "2026-10-23T14:29:30.973514+00:00",
+      "stderr": "logs/inventory-wheel.stderr",
+      "stdout": "logs/inventory-wheel.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_assertions.py",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\nested-qualify-pyz",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--distribution",
+        "pyz",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\qualifications\\pyz.json",
+        "--artifact",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash.pyz",
+        "--",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 924.9679999999935,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:48:35.107984+00:00",
+      "name": "qualify-pyz",
+      "started_at": "2026-10-23T14:33:10.136396+00:00",
+      "stderr": "logs/qualify-pyz.stderr",
+      "stdout": "logs/qualify-pyz.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-trusted-3\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "release_inventory.py",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\nested-inventory-pyz",
+        "--source-root",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\cw-bridge-subject-3",
+        "--distribution",
+        "pyz",
+        "--qualification",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\qualifications\\pyz.json",
+        "--output",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\inventories\\pyz.json",
+        "--artifact",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\outputs\\checkwash-pju-checks\\pr562-r5\\artifacts\\checkwash.pyz"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5",
+      "duration_seconds": 11.078000000037719,
+      "exit_code": 0,
+      "finished_at": "2026-10-23T14:48:46.202162+00:00",
+      "name": "inventory-pyz",
+      "started_at": "2026-10-23T14:48:35.116326+00:00",
+      "stderr": "logs/inventory-pyz.stderr",
+      "stdout": "logs/inventory-pyz.stdout",
+      "timed_out": false
+    }
+  ],
+  "records": {
+    "action_replay": "action/replay.json",
+    "candidate_action_coverage": "candidate-action-coverage.json",
+    "contract_descriptor": "contract-descriptor.json",
+    "dogfood": "action/runtime-receipts/check-receipt.json",
+    "inventories": {
+      "pyz": "inventories/pyz.json",
+      "source": "inventories/source.json",
+      "wheel": "inventories/wheel.json"
+    },
+    "junit": "junit.xml",
+    "qualifications": {
+      "pyz": "qualifications/pyz.json",
+      "source": "qualifications/source.json",
+      "wheel": "qualifications/wheel.json"
+    }
+  },
+  "repository": "taipei49314/checkwash",
+  "runtime": {
+    "bash_executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+    "bash_sha256": "a80d0cc4ed45f99c6073e8504bcdd9935c553afd9460627cbbb4bec103e7ef60",
+    "dependencies": {
+      "PyYAML": "6.0.3",
+      "Pygments": "2.21.0",
+      "build": "1.3.0",
+      "colorama": "0.4.6",
+      "editables": "0.5",
+      "execnet": "2.1.2",
+      "hatchling": "1.27.0",
+      "iniconfig": "2.3.1",
+      "packaging": "26.3",
+      "pathspec": "1.1.1",
+      "pip": "24.0",
+      "pluggy": "1.7.0",
+      "pyproject_hooks": "1.3.3",
+      "pytest": "9.1.1",
+      "pytest-xdist": "3.8.0",
+      "setuptools": "65.5.0",
+      "trove-classifiers": "2026.9.21.13"
+    },
+    "git_executable": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "git_sha256": "7b7971dd13f0c3a284e538601f2f9770b3a87dfaccb5fb52d68141c67ed22364",
+    "os": "Windows",
+    "other_platforms": "NOT_RUN",
+    "python_executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\pju-562-r5-env\\Scripts\\python.exe",
+    "python_sha256": "21bb438c0d4a6f1f164b9a646f6ee000340185e5871180aec06db8d3f07c0082",
+    "python_version": "3.11.9"
+  },
+  "schema_version": 1,
+  "source_tree": "c468aceb5ce78df273b4de86f1c0b79fd756aaeb",
+  "status": "completed"
+}

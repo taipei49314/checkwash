@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/Documents/Codex/2026-10-23/new-chat-3/outputs/checkwash-pju-checks/pr562-r5/candidate-action/install.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\candidate-action",
+    "duration_seconds": 20.70300000003772,
+    "exit_code": 0,
+    "finished_at": "2026-10-23T13:42:22.829330+00:00",
+    "name": "install",
+    "started_at": "2026-10-23T13:42:02.123894+00:00",
+    "stderr": "logs/install.stderr",
+    "stdout": "logs/install.stdout",
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/Documents/Codex/2026-10-23/new-chat-3/outputs/checkwash-pju-checks/pr562-r5/candidate-action/check.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-23\\new-chat-3\\work\\p5\\candidate-action",
+    "duration_seconds": 5.186999999976251,
+    "exit_code": 0,
+    "finished_at": "2026-10-23T13:42:28.027479+00:00",
+    "name": "check",
+    "started_at": "2026-10-23T13:42:22.839531+00:00",
+    "stderr": "logs/check.stderr",
+    "stdout": "logs/check.stdout",
+    "timed_out": false
+  }
+]
