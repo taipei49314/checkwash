@@ -10,11 +10,13 @@ authorization and the human PyPI deployment approval remain required.
 
 Remote workflows containing tests are disabled, including the mixed
 test/publication `release.yml`. Their YAML below documents retained gates,
-not an available remote execution route. No PJU receipt-to-required-check
-bridge or publication handoff is implemented yet. Missing evidence blocks
-merging, tagging and publication; do not re-enable remote tests, bypass checks
-or publish a success for an unexecuted check. Historical publication records
-retain their actual venues and results.
+not an available remote execution route. The
+[PJU receipt bridge](pju-receipt-bridge.md) verifies local receipts for the
+existing required PR checks. It does not implement release publication or
+prove an unexecuted platform. A separately reviewed publication handoff remains
+required. Missing evidence blocks merging, tagging and publication; do not
+re-enable remote tests, bypass checks or publish a success for an unexecuted
+check. Historical publication records retain their actual venues and results.
 
 The remediation candidate of D-055 shipped as v0.3.0 on 2026-09-07 — the
 minor release its fingerprint and machine-interface break required

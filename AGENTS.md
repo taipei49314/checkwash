@@ -18,12 +18,7 @@ The judge is immutable; the player runs free.
 2. Never modify an existing fixture's expected output. If you believe the
    expectation is wrong, open an issue and stop.
 3. Read `STATE.md` first when taking over.
-4. Every PR runs checkwash on itself (dogfood, from M2). Since the maintainer's
-   2026-10-23 standing decision, all CheckWash tests run on LAPTOP-01AGNPJU
-   (PJU), including dogfood, regression, qualification and release validation.
-   Read [the execution route](docs/testing-on-pju.md) before running tests.
-   Bind evidence to the actual source/checkout SHA and keep required checks;
-   missing checks are not success.
+4. Every PR runs checkwash on itself (dogfood, from M2).
 5. Releases happen only under an explicit one-time maintainer authorization
    for that version, recorded in `docs/RELEASING.md`. The weekly slot (estate
    T-57) was canceled by T-197, and since 2026-09-26 the estate no longer

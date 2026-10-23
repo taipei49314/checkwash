@@ -36,15 +36,25 @@ remain active. Existing results and failures retain their original provenance.
 The required-check ruleset stays in force. Its required GitHub Actions
 contexts are `checkwash` and `candidate assertion contract (source)`,
 `candidate assertion contract (wheel)`, `candidate assertion contract (pyz)`.
-**LOCAL_RECEIPT_BRIDGE_NOT_READY:** no workflow currently verifies PJU
-receipts and satisfies those contexts. New PRs cannot merge while the
-required contexts are missing. There is no skip-success or administrator
-bypass. Release source, inventory and publication gates also remain blocked
-until a reviewed handoff can consume the PJU evidence without remote tests.
+The [PJU receipt bridge](pju-receipt-bridge.md) collects full local test,
+pinned/candidate composite Action and source/wheel/pyz qualification evidence.
+The existing manual quality-intake workflow has a receipt mode that verifies
+an immutable, maintainer-admitted evidence commit and manifest digest against
+the current PR head/base before publishing those contexts. It performs data
+verification only; product execution stays on PJU. This is maintainer-backed
+evidence, not hardware attestation or an unexecuted platform's result.
 
-A future bridge must verify actual PJU execution and bind every receipt to
-the exact source/checkout and artifact bytes before reporting a result.
-This document does not claim that bridge exists or that any test has run.
+Missing, failed or stale evidence produces no successful required check.
+The ruleset is unchanged and there is no skip-success or administrator bypass.
+Native Linux/macOS and other absent runtimes remain `NOT_RUN`; a green local
+receipt does not waive any separately required platform or release validation.
+The mixed release workflow remains disabled, and a release still needs its
+own reviewed publication handoff and one-time authorization.
+
+The initial AGENTS.md amendment and the proposed allowlist exemption both
+produced retained critical dogfood receipts. The final route is recorded here,
+in STATE.md (already required reading by AGENTS.md), and in EC POLICY. No
+AGENTS.md or allowlist change is needed; the final complete diff must pass.
 
 ## Unchanged boundaries
 
