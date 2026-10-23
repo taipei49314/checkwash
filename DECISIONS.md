@@ -49,3 +49,47 @@ required checks. Earlier tag receipts are the proposal basis, not a substitute
 for that run. Native PR/main results and exact identities are retained with
 the closeout evidence. No local product execution, public tag change or
 downstream re-pin is part of this rotation.
+
+## D-174 (2026-10-23): measured keyword-operand acceptance, addendum to D-143 (#462)
+
+Nelson approved the concrete D-143 addendum in PR #558 and its conditional
+merge/issue closeout in this chat on 2026-10-23:
+「核可草稿，檢查通過後合併並結案（建議）」.
+This was an assistant-written reply option. The approval covers this
+wording and merging #558 after its current CI/dogfood gates pass, then
+closing #345 and #462. It grants no new workload execution or publication.
+
+The frozen combined sweep measured a418 (`717a705d5291913cea98544ffd57b191e0d07a88`)
+to a462 (`2422b3cebcebdb4cbf25ca0d567589d8bb6b540e`) on 3,018 members:
+2,599 pass→pass, 400 block→block and 19 error→error, with no outcome,
+finding or stdout differences. The kw462 selection has two members,
+both pass→pass, with no new finding. Both requested difference lists
+are empty; the selection is nonempty. This supplies D-143's subsequent
+measurement under R2–R7 and keeps its original preparation record
+unchanged. Provenance is human-authorized local PJU, NOT EC pool,
+under the previously approved frozen declaration. This does not
+establish a general false-positive rate or resolve the named syntax
+residuals.
+
+Sources: [frozen combined sweep](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md);
+[exact pair/engine/count extract](docs/releases/v0.9.0-issue-closeout.json);
+[issue result and remaining gate](https://github.com/taipei49314/checkwash/issues/462#issuecomment-6360716240).
+The source combined JSON SHA256 is
+`b9946817dacdcbd9ebec052e0910e1e2e30aa7dd0dc3e0e04e145d6d68e9e2db`.
+D-143 in DECISIONS-archive-2.md remains unchanged as its dated preparation
+record. This later addendum records the approved measurement without
+relabeling those old arms as a fresh rcprime run.
+
+## D-175 (2026-10-23): measured class-decorator acceptance, addendum to D-149 (#487)
+
+Nelson approved the [concrete D-149 measurement draft](https://github.com/taipei49314/checkwash/issues/487#issuecomment-6360870539) in this chat on 2026-10-23 by selecting 「核可補記，檢查通過後合併並結案（建議）」, an assistant-written option. The scope is this measurement text, merge after current CI/dogfood passes, and closure of #487. It grants no new workload execution, publication, expanded decorator support or log-capture equivalence ruling.
+
+The frozen a429b (`f4b65db6d33cecb5fc460a43aff2ad881764aa61`) to a487 (`637222e8cffd8f5fbfa0aa0502852a139af78f22`) pair completed all 4,818 declared members across standard, D-088 and the extension/JavaScript sets. Outcomes: 4,355 PASS→PASS, 440 BLOCK→BLOCK, two BLOCK→PASS and 21 unchanged product errors. Nine rows have finding/stdout differences; the errors are not passes.
+
+All seven D-149 watch commits match its expected effects. `c8aa429c9b` returns to PASS with four warn findings; `e058a05763` returns to PASS with six TEST_DISABLED warn findings. `14737e91ed`, `36c3c9713e`, `c5b1ee8101` and `c76190d491` stay BLOCK without the 37 added ASSERT_REMOVED. `02ed71d887` stays BLOCK without the extra ASSERT_SUBSTITUTED high, retaining its 71 TEST_DISABLED high and separate ASSERT_WEAKENED high.
+
+The two additional BLOCK→BLOCK rows have been reported and source-reviewed. On scrapy `6b2997af`, 30 newly exposed ASSERT_REMOVED/high findings are assertions still present in two still-called helpers that become static methods; four EXPECTATION_DEFINITION_CHANGED/high findings keep the same response-request equality while the requested URL moves from setup state to a fixture argument. One ASSERT_WEAKENED/high finding keeps an exact warning-match count of one but changes the log-capture API; full capture equivalence remains unverified. On scrapy `b4d11b8b`, four newly exposed ASSERT_REMOVED/high findings are unchanged URL guards reached through test methods newly carrying a coroutine-to-Deferred decorator. These expose helper-reading and existing-detector boundaries; they are neither new blocked commits nor 39 adjudicated true positives.
+
+This supplies D-149's later measurement and report-other-changes condition without broadening its supported decorators, changing existing fixture expectations, or adjudicating the remaining log-capture equivalence. It establishes no general false-positive rate. The archived D-149 preparation entry stays unchanged. Provenance is existing human-authorized local PJU, NOT EC pool; no new execution occurred. The whole combined manifest remains incomplete because of separately stopped/deferred arms; this pair is complete under R2/R3/R6/R7.
+
+Sources: [frozen combined sweep](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md), [exact pair extraction in #558](https://github.com/taipei49314/checkwash/blob/c991936d0f283db3b265a2065af0ca99d825de9b/docs/releases/v0.9.0-issue-closeout.json). The source combined JSON SHA256 is `b9946817dacdcbd9ebec052e0910e1e2e30aa7dd0dc3e0e04e145d6d68e9e2db`.
