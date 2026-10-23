@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "status": "DRAFT_NOT_RUN",
+  "cases": [
+    {
+      "runner": "jest",
+      "id": "plain-pass",
+      "path": "fixtures/jest/plain-pass.test.cjs",
+      "kind": "plain",
+      "observation": "control: exactly one callback; exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "plain-fail",
+      "path": "fixtures/jest/plain-fail.test.cjs",
+      "kind": "plain",
+      "observation": "control: exactly one callback; nonzero exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-one",
+      "path": "fixtures/jest/each-one.test.cjs",
+      "kind": "each-array",
+      "observation": "control: one callback; exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-empty",
+      "path": "fixtures/jest/each-empty.test.cjs",
+      "kind": "each-array",
+      "observation": "empty-array question: callback count0; record registration error, no-test exit, skip or pass",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-empty-sentinel",
+      "path": "fixtures/jest/each-empty-sentinel.test.cjs",
+      "kind": "each-array",
+      "observation": "empty-array callback count0; sentinel distinguishes no-test failure from table behavior; registration failure may prevent sentinel",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-const-empty",
+      "path": "fixtures/jest/each-const-empty.test.cjs",
+      "kind": "each-const",
+      "observation": "same declared-empty case through one const; record exit and callback count",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-template-one",
+      "path": "fixtures/jest/each-template-one.test.cjs",
+      "kind": "each-template",
+      "observation": "nonempty tagged-template control: one callback+exit0 if API is supported; unsupported recorded separately",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-template-header",
+      "path": "fixtures/jest/each-template-header.test.cjs",
+      "kind": "each-template",
+      "observation": "measurement: header-only template may reject, register zero or treat strings as rows; record callback count and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "jest",
+      "id": "each-template-blank",
+      "path": "fixtures/jest/each-template-blank.test.cjs",
+      "kind": "each-template",
+      "observation": "measurement: empty tagged template may reject, register zero or execute; record callback count and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "plain-pass",
+      "path": "fixtures/vitest/plain-pass.test.js",
+      "kind": "plain",
+      "observation": "control: exactly one callback; exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "plain-fail",
+      "path": "fixtures/vitest/plain-fail.test.js",
+      "kind": "plain",
+      "observation": "control: exactly one callback; nonzero exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-one",
+      "path": "fixtures/vitest/each-one.test.js",
+      "kind": "each-array",
+      "observation": "control: one callback; exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-empty",
+      "path": "fixtures/vitest/each-empty.test.js",
+      "kind": "each-array",
+      "observation": "empty-array question: callback count0; record registration error, no-test exit, skip or pass",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-empty-sentinel",
+      "path": "fixtures/vitest/each-empty-sentinel.test.js",
+      "kind": "each-array",
+      "observation": "empty-array callback count0; sentinel distinguishes no-test failure from table behavior; registration failure may prevent sentinel",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-const-empty",
+      "path": "fixtures/vitest/each-const-empty.test.js",
+      "kind": "each-const",
+      "observation": "same declared-empty case through one const; record exit and callback count",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-template-one",
+      "path": "fixtures/vitest/each-template-one.test.js",
+      "kind": "each-template",
+      "observation": "nonempty tagged-template control: one callback+exit0 if API is supported; unsupported recorded separately",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-template-header",
+      "path": "fixtures/vitest/each-template-header.test.js",
+      "kind": "each-template",
+      "observation": "measurement: header-only template may reject, register zero or treat strings as rows; record callback count and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "each-template-blank",
+      "path": "fixtures/vitest/each-template-blank.test.js",
+      "kind": "each-template",
+      "observation": "measurement: empty tagged template may reject, register zero or execute; record callback count and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "for-one",
+      "path": "fixtures/vitest/for-one.test.js",
+      "kind": "for-array",
+      "observation": "control: one callback+exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "for-empty",
+      "path": "fixtures/vitest/for-empty.test.js",
+      "kind": "for-array",
+      "observation": "empty-array callback count0; record no-test/skip/error/pass",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "vitest",
+      "id": "for-empty-sentinel",
+      "path": "fixtures/vitest/for-empty-sentinel.test.js",
+      "kind": "for-array",
+      "observation": "empty-array callback count0; record sentinel and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "plain-pass",
+      "path": "fixtures/bun/plain-pass.test.js",
+      "kind": "plain",
+      "observation": "control: exactly one callback; exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "plain-fail",
+      "path": "fixtures/bun/plain-fail.test.js",
+      "kind": "plain",
+      "observation": "control: exactly one callback; nonzero exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-one",
+      "path": "fixtures/bun/each-one.test.js",
+      "kind": "each-array",
+      "observation": "control: one callback; exit0",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-empty",
+      "path": "fixtures/bun/each-empty.test.js",
+      "kind": "each-array",
+      "observation": "empty-array question: callback count0; record registration error, no-test exit, skip or pass",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-empty-sentinel",
+      "path": "fixtures/bun/each-empty-sentinel.test.js",
+      "kind": "each-array",
+      "observation": "empty-array callback count0; sentinel distinguishes no-test failure from table behavior; registration failure may prevent sentinel",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-const-empty",
+      "path": "fixtures/bun/each-const-empty.test.js",
+      "kind": "each-const",
+      "observation": "same declared-empty case through one const; record exit and callback count",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-template-one",
+      "path": "fixtures/bun/each-template-one.test.js",
+      "kind": "each-template",
+      "observation": "nonempty tagged-template control: one callback+exit0 if API is supported; unsupported recorded separately",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-template-header",
+      "path": "fixtures/bun/each-template-header.test.js",
+      "kind": "each-template",
+      "observation": "measurement: header-only template may reject, register zero or treat strings as rows; record callback count and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    },
+    {
+      "runner": "bun",
+      "id": "each-template-blank",
+      "path": "fixtures/bun/each-template-blank.test.js",
+      "kind": "each-template",
+      "observation": "measurement: empty tagged template may reject, register zero or execute; record callback count and exit",
+      "repeat": 1,
+      "timeout_seconds": 60
+    }
+  ],
+  "proposed_invocations": 30,
+  "runner_versions": {
+    "node": "26.12.1",
+    "npm": "11.20.0",
+    "jest": "30.5.2",
+    "vitest": "5.0.5",
+    "vite": "8.3.5",
+    "bun": "1.4.4"
+  },
+  "scope": "Linux x86_64 GitHub-hosted Ubuntu24.04; no browsers, project suites, checkwash, other runtime versions or cross-platform claims",
+  "limits": {
+    "concurrency": 1,
+    "per_case_seconds": 60,
+    "total_cases_seconds": 1800,
+    "workflow_timeout_minutes": 45,
+    "automatic_retry": false
+  },
+  "lockfile_sha256": null,
+  "lockfile_state": "NOT_CREATED; hosted E0 lock resolution precedes E1 approval",
+  "expectations_are": "source hypotheses and measurement questions, not observed PASS/FAIL"
+}

@@ -1,0 +1,116 @@
+name: checkwash 428 empty-table observations
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: E0 locks dependencies only; E1 requires separately approved lock and source
+        type: choice
+        required: true
+        options: [resolve-lock, observe]
+      source_commit:
+        description: Approved exact commit; dispatch that same ref
+        type: string
+        required: true
+      ec_task_id:
+        description: Existing EC dispatch task ID bound to this one approved run
+        type: string
+        required: true
+      lock_sha256:
+        description: Required only for E1; reviewed committed package-lock.json SHA256
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: checkwash-428-empty-table-observations
+  cancel-in-progress: false
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      EC_TASK_ID: ${{ inputs.ec_task_id }}
+      MODE: ${{ inputs.mode }}
+      CW428_LOCK_SHA256: ${{ inputs.lock_sha256 }}
+      CI: "true"
+      NO_COLOR: "1"
+    steps:
+      - name: Check approval binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$SOURCE_COMMIT"
+          test -n "$EC_TASK_ID"
+          if [ "$MODE" = "observe" ]; then
+            [[ "$CW428_LOCK_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          else
+            test "$MODE" = "resolve-lock"
+            test -z "$CW428_LOCK_SHA256"
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "26.12.1"
+          check-latest: false
+      - name: Record exact environment
+        working-directory: tools/measure428/empty-tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p setup-record
+          node --version > setup-record/node.txt
+          npm --version > setup-record/npm.txt
+          test "$(node --version)" = "v26.12.1"
+          test "$(npm --version)" = "11.20.0"
+          printf '%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$EC_TASK_ID" "$MODE" > setup-record/binding.txt
+          uname -a > setup-record/host.txt
+          printf '%s\n' "ImageOS=${ImageOS:-UNKNOWN}" "ImageVersion=${ImageVersion:-UNKNOWN}" "RUNNER_NAME=${RUNNER_NAME:-UNKNOWN}" "RUNNER_ARCH=${RUNNER_ARCH:-UNKNOWN}" > setup-record/image.txt
+          sha256sum package.json cases.json run-observations.mjs > setup-record/input-sha256.txt
+      - name: E0 resolve lock; no package scripts or tests
+        if: inputs.mode == 'resolve-lock'
+        working-directory: tools/measure428/empty-tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund > setup-record/npm-resolve.log 2>&1
+          sha256sum package-lock.json > setup-record/lock-sha256.txt
+      - name: E1 verify committed lock and install exact graph
+        if: inputs.mode == 'observe'
+        working-directory: tools/measure428/empty-tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s  package-lock.json\n' "$CW428_LOCK_SHA256" | sha256sum --check --strict
+          npm ci --ignore-scripts --no-audit --no-fund > setup-record/npm-ci.log 2>&1
+          printf '%s  package-lock.json\n' "$CW428_LOCK_SHA256" | sha256sum --check --strict
+          npm ls --all --json > setup-record/installed-tree.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        if: inputs.mode == 'observe'
+        with:
+          bun-version: "1.4.4"
+      - name: E1 capture thirty frozen invocations
+        if: inputs.mode == 'observe'
+        working-directory: tools/measure428/empty-tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun --version > setup-record/bun.txt
+          test "$(bun --version)" = "1.4.4"
+          node run-observations.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: issue428-${{ inputs.mode }}-${{ github.run_id }}
+          path: |
+            tools/measure428/empty-tables/package-lock.json
+            tools/measure428/empty-tables/setup-record/
+            tools/measure428/empty-tables/observation-results/
+          if-no-files-found: warn
+          retention-days: 90
+
