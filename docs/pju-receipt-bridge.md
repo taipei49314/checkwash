@@ -76,5 +76,9 @@ no conflicting test venue. The redundant AGENTS edit and proposed exemption
 are removed; no severity, comparison base, guardrail or fixture expectation
 is changed. The final complete diffs still require real passing receipts.
 
-PJU unavailability or missing capabilities is `NOT_RUN`, with no remote fallback.
+PJU unavailability or missing capabilities is `NOT_RUN` with a concrete reason.
+The later [PJU primary policy, T-610](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md)
+permits capable pool hosts after connectivity returns; Nelson has stopped
+investigation of the current outage. This bridge implementation still accepts
+only its explicitly validated Windows/Python 3.11.9 receipt format.
 Sweep and model/adjudication approvals remain separate; this bridge adds none.

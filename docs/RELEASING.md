@@ -2,8 +2,12 @@
 
 ## Test execution route (2026-10-23)
 
-All CheckWash tests, including release validation, now run on LAPTOP-01AGNPJU
-under the maintainer's standing decision. See [testing on PJU](testing-on-pju.md).
+CheckWash tests, including release validation, use LAPTOP-01AGNPJU
+under the maintainer's standing decision. The later
+[PJU primary policy, T-610](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md)
+also permits capable pool hosts after connectivity is restored. Nelson has
+confirmed the current outage and stopped connection investigation; do not poll
+the pool. See [testing on PJU](testing-on-pju.md).
 This supersedes earlier venue wording only; source/tag identity, exact-head
 evidence, distribution inventory, required checks, one-time publication
 authorization and the human PyPI deployment approval remain required.
@@ -145,8 +149,8 @@ A standing step since 2026-10-19 (owner ruling 2026-10-19, R29, with R27 and
 R3; [#212](https://github.com/taipei49314/checkwash/issues/212)). It runs
 once the candidate commit is fixed, before step 5.
 
-- **Sets.** The previous published release (for the next release, v0.8.0
-  `f02b5d8`) and the candidate each check two fixed in-sample sets: the
+- **Sets.** The previous published release (currently v0.9.0,
+  `d6eda4f695fabb8e7d138f7a87b099d2028f0294`) and the candidate each check two fixed in-sample sets: the
   Python `standard` set, 300 commits from each of attrs, click, flask, httpx,
   rich and starlette (D-141, arm 1), and the JS/TS set of
   [`benchmarks/javascript-replay/`](../benchmarks/javascript-replay/README.md),
@@ -160,9 +164,13 @@ once the candidate commit is fixed, before step 5.
   `run.checkwash_version`. So a candidate frozen before the version bump
   still counts. If anything else in `src/` changes after the comparison,
   the comparison runs again.
-- **Where.** This is release verification, so it runs on the EC pool, never
-  on LAPTOP-01AGNPJU or LAPTOP-16NUA5I8: EC POLICY `checkwash-pju-sweep`
-  (T-546) does not cover release verification.
+- **Where.** Use PJU under the standing route at the top of this file and
+  current EC POLICY `pju-primary-execution-20261024` (T-610). The historical
+  sweep-only exclusion does not prohibit release verification on PJU. Preserve
+  this comparison's frozen source, sets, individual run approval and acceptance
+  conditions. Record the actual host. For PJU runs use
+  `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; capable pool evidence retains its
+  actual pool provenance. Unexecuted platforms remain `NOT_RUN`.
 - **What goes to the owner.** Every commit whose outcome moves from pass to
   block, from block to pass, or from an analysed verdict to an engine error,
   and every commit the candidate blocks that the previous release could not
