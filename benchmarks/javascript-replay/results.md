@@ -120,6 +120,35 @@ The 39 blocks remain unadjudicated. This is an in-sample comparison, not
 a false-positive rate, and it does not replace the combined acceptance
 sweep or other release gates.
 
+## Run 4: actual v0.9.0 against the narrow v0.9.1 candidate
+
+This first actual v0.9.1 R29 completed on 2026-10-24, with original outer
+closure at 11:29:27Z. Previous published source is
+`d6eda4f695fabb8e7d138f7a87b099d2028f0294`; candidate is
+`198c3ab0eb4be63977855d9a57bfcb0614940115`, src tree
+`4bf5e1adbf3bff394bfb1e0761935d3036b09a83`. It ran in fixed local Linux
+Docker/Python3.11.16 on LAPTOP-01AGNPJU,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, under current publication work and
+EC T-615. The [record](../release-comparison/v0.9.1.json) binds the source,
+manifest, original closure and independent raw-evidence review. Final release
+source must still match except for the sole version literal.
+
+| v0.9.0 -> candidate | Commits |
+|---|---:|
+| pass -> pass | 1,759 |
+| block -> block | 39 |
+| error -> error | 2 |
+| **total** | **1,800** |
+
+All 7,200 CLI calls across this and the Python set completed; independent
+review verified full membership, original primary/raw, source/runtime and
+exact-container removal. Payload and raw differences are zero. The mandatory
+movement list across both sets is empty and was delivered to Nelson; no
+separate personal acceptance quote is invented. The two errors remain
+recorded-only, not analysed PASS. Blocks remain unadjudicated; these in-sample
+counts do not estimate an FP rate or replace #419's supplementary cost review,
+platform acceptance or normal publication gates.
+
 ## What these runs do not show
 
 - **A false-positive rate.** The 39 commits that v0.7.0 and v0.8.0 both
