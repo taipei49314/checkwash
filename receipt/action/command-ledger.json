@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/Documents/Codex/2026-10-24/1-c-users-nelson-documents-codex/outputs/pr564-formal-pr-stage-r3/receipt/action/install.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw91-564-r3\\s\\action",
+    "duration_seconds": 18.54700000002049,
+    "exit_code": 0,
+    "finished_at": "2026-10-24T19:52:52.182690+00:00",
+    "name": "install",
+    "started_at": "2026-10-24T19:52:33.631991+00:00",
+    "stderr": "logs/install.stderr",
+    "stdout": "logs/install.stdout",
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/Documents/Codex/2026-10-24/1-c-users-nelson-documents-codex/outputs/pr564-formal-pr-stage-r3/receipt/action/check.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw91-564-r3\\s\\action",
+    "duration_seconds": 14.625,
+    "exit_code": 0,
+    "finished_at": "2026-10-24T19:53:06.823168+00:00",
+    "name": "check",
+    "started_at": "2026-10-24T19:52:52.190703+00:00",
+    "stderr": "logs/check.stderr",
+    "stdout": "logs/check.stdout",
+    "timed_out": false
+  }
+]

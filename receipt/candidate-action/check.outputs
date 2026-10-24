@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\dev\cw91-564-r3\s\candidate-action\checkwash-action-6wnaum4h\check-receipt.json
+base=865d3fcafbe69cf67e3e9e9789038e27b4b02809
+head=ffa824deee9f46446576bbecf1793d6e8db65044
+fail_on=high
