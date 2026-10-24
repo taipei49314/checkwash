@@ -14,8 +14,16 @@ test dependencies and artifacts confined to the task directory. A change of
 host does not establish an isolation capability; unmet isolation requirements
 remain `NOT_RUN`.
 
-Run tests on PJU. If PJU or a required environment is unavailable, record
-`NOT_RUN` with the reason. Do not fall back to pool or GitHub-hosted tests.
+On 2026-10-24 the maintainer made PJU the default execution host across
+authorized projects, superseding conflicting venue restrictions above:
+[PJU primary policy, T-610](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md).
+This has no automatic Tuesday expiry. Capable pool hosts may supply validation
+after connectivity is restored. Nelson confirmed the outage and stopped
+connection investigation; do not poll hosts or set up monitoring.
+
+Run tests on PJU. If a required capability is unavailable, record
+`NOT_RUN` with the specific reason. The newer rule does not authorize changing
+host security, services, permissions, runner labels or profiles.
 Keep fixed-source approvals and run budgets for already-declared sweeps;
 the venue decision does not renew an attempt or extend a timeout.
 
@@ -58,10 +66,12 @@ AGENTS.md or allowlist change is needed; the final complete diff must pass.
 
 ## Unchanged boundaries
 
-Other projects and LAPTOP-16NUA5I8 retain their own current policies. No
+The newer PJU primary policy also covers other projects; LAPTOP-16NUA5I8
+retains its independently applicable authorizations and owner assignments. No
 host-wide runtime, security, service, runner or label change is authorized
 here. Historical results are not retroactively accepted. Protected product
 rulings, fixture expectations, issue acceptance and release/PyPI approvals
 retain their existing gates. The separately selected #212 pool independent
 reviewers and arbitration channel, API key setup and paid calls retain their
-own admission and approval boundaries.
+own admission and approval boundaries. Conflicting venue-only restrictions
+yield to T-610; independence, source, budget and attempt conditions remain.

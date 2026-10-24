@@ -6,8 +6,11 @@ on:
       mode:
         description: Metadata intake or owner-admitted PJU receipt publication
         type: choice
-        options: [intake, receipt]
+        options: [intake, receipt, release-capture, release-receipt]
         default: intake
+      admission:
+        description: Reviewed PR release-stage capture/receipt admission JSON
+        type: string
       pr:
         description: Exact target PR number (receipt mode)
         type: string
@@ -38,6 +41,7 @@ permissions:
   contents: read
 jobs:
   intake:
+    if: github.event_name != 'workflow_dispatch' || (inputs.mode != 'release-capture' && inputs.mode != 'release-receipt')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -162,4 +166,123 @@ jobs:
         with:
           name: pju-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: pju-publication.json
+          if-no-files-found: warn
+
+  # Bootstrap PR release evidence on a reviewed branch, without bypassing the
+  # existing four required contexts or enabling old hosted product tests.
+  capture-pju-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'release-capture'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Capture native metadata only; no product qualification
+        run: python -I -B trusted/tools/pju_release_bridge.py capture --output native-capture
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pju-release-subject-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-capture/
+          if-no-files-found: error
+
+  verify-pju-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'release-receipt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).head }}
+          path: candidate-data
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: >-
+          python -I -B trusted/tools/pju_release_bridge.py verify
+          --trusted-root trusted --source-root candidate-data
+          --receipt-root receipt-data/receipt --output release-verification.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-release-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-verification.json
+          if-no-files-found: warn
+
+  publish-pju-release-checks:
+    needs: verify-pju-release
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'release-receipt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: read
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).head }}
+          path: candidate-data
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: >-
+          python -I -B trusted/tools/pju_release_bridge.py publish-check
+          --trusted-root trusted --source-root candidate-data
+          --receipt-root receipt-data/receipt --output release-stage-check.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-release-stage-check-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-stage-check.json
           if-no-files-found: warn

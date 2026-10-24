@@ -14,6 +14,7 @@ in `src/checkwash/demo_cases/` and are loaded exactly the way a pipx install
 loads them.
 """
 
+import ast
 import os
 import subprocess
 import sys
@@ -55,9 +56,26 @@ def test_zipapp_builds_and_reports_its_version(tmp_path):
     assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
     assert out.strip() == f"checkwash {__version__}", out
 
-    release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    assert 'python -m zipapp src -m "checkwash.zipapp_entry:run"' in release
-    assert "python tools/qualify_zipapp.py dist/checkwash.pyz" in release
+    # The actual build and process qualification moved to the PJU collector;
+    # the hosted publisher now reads their source-bound execution evidence.
+    backend = ast.parse((ROOT / "tools/collect_pju_receipts.py").read_text(encoding="utf-8"))
+    build = next(node for node in ast.walk(backend) if isinstance(node, ast.Call)
+                 and isinstance(node.func, ast.Name) and node.func.id == "run"
+                 and node.args and isinstance(node.args[0], ast.Constant) and node.args[0].value == "build-pyz")
+    arguments = build.args[1].elts
+    assert [node.value for node in arguments if isinstance(node, ast.Constant)] == [
+        "-m", "zipapp", "-m", "checkwash.zipapp_entry:run", "-o", "-c"]
+    assert ast.unparse(arguments[3]) == "str(source / 'src')"
+    assert ast.unparse(arguments[7]) == "str(pyz)"
+    collector = ast.parse((ROOT / "tools/collect_pju_release.py").read_text(encoding="utf-8"))
+    methods = {node.name: node for node in ast.walk(collector) if isinstance(node, ast.FunctionDef)}
+    qualification = next(node for node in ast.walk(methods["qualify_zipapp"]) if isinstance(node, ast.Call)
+                         and ast.unparse(node.func) == "ctx['run']")
+    assert "qualify_zipapp.py" in [node.value for node in ast.walk(qualification.args[1]) if isinstance(node, ast.Constant)]
+    assert ast.unparse(qualification.args[1].elts[-1]) == "str(ctx['pyz'])"
+    scopes = [ast.literal_eval(node.args[1]) for node in ast.walk(methods["stage_steps"])
+              if isinstance(node, ast.Call) and ast.unparse(node.func) == "self.qualify_zipapp"]
+    assert scopes == ["zipapp-qualification", "public-pyz-qualification"]
 
 
 def test_zipapp_demo_reads_its_packaged_cases(tmp_path):

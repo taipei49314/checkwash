@@ -52,7 +52,8 @@ def traced_worker(tool, log_root, arguments):
     top-level success exits. Two append-only byte streams avoid thousands of
     tiny receipt files. Worker subprocesses inherit only the collector allowlist.
     """
-    allowed = {"qualify_assertions.py", "release_inventory.py"}
+    allowed = {"qualify_assertions.py", "release_inventory.py", "verdict_gate.py",
+               "verify_published_source.py", "qualify_zipapp.py"}
     if tool not in allowed:
         raise ValueError("unsupported trusted helper")
     log_root.mkdir(parents=True, exist_ok=False)
@@ -140,13 +141,23 @@ def closure(snapshot):
             if path.startswith(("action/", "src/")) or path == "pyproject.toml"}
 
 
-def collect(args):
+def collect(args, *, release_context=None, stage_preflight=None, stage_steps=None, artifact_provider=None, initialize=None, finalize=None):
+    """Collect PR evidence, or an explicitly distinct release-stage packet.
+
+    Release callers provide their own admitted subject and stage operations.
+    There is no synthetic PR number and no conversion of an old PR packet.
+    Every invocation runs a fresh development/qualification collection.
+    """
     action = load_replayer()
     require = action.require
     require(os.name == "nt" and platform.node().upper() == action.HOST, "authorized PJU Windows host required")
     require(sys.version_info[:2] == (3, 11) and sys.flags.isolated and sys.dont_write_bytecode and sys.flags.utf8_mode,
             "collector requires Python 3.11 with -I -B -X utf8")
-    require(args.repository == REPOSITORY and args.pr > 0, "unexpected repository/PR")
+    require(args.repository == REPOSITORY, "unexpected repository")
+    if release_context is None:
+        require(type(args.pr) is int and args.pr > 0, "unexpected PR")
+    else:
+        require(type(release_context) is dict and callable(stage_steps), "release-stage context/operations required")
     for value in (args.base_sha, args.head_sha, args.source_tree, args.collector_source_sha):
         require(re.fullmatch(r"[0-9a-f]{40}", value), "full SHA required")
     source = action.absolute_path(args.source_root, directory=True)
@@ -181,7 +192,7 @@ def collect(args):
     reader.output.mkdir()
     ledger = []
     manifest = dict(schema_version=1, kind="checkwash.pju-receipt.v1", repository=args.repository,
-                    pr_number=args.pr, base_sha=args.base_sha, head_sha=args.head_sha, source_tree=args.source_tree,
+                    pr_number=getattr(args, "pr", None), base_sha=args.base_sha, head_sha=args.head_sha, source_tree=args.source_tree,
                     host=action.HOST, provenance="HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
                     collector_source_sha=args.collector_source_sha, contract_source_sha=args.collector_source_sha,
                     action_sha=action.ACTION_SHA, status="failed", runtime={}, files=[], raw_exits=ledger,
@@ -190,6 +201,9 @@ def collect(args):
                                  qualifications={d: f"qualifications/{d}.json" for d in ("source", "wheel", "pyz")},
                                  inventories={d: f"inventories/{d}.json" for d in ("source", "wheel", "pyz")},
                                  contract_descriptor="contract-descriptor.json"))
+    if release_context is not None:
+        manifest.pop("pr_number")
+        manifest.update(kind="checkwash.pju-release-receipt.v1", **release_context)
     errors = []
 
     def run(name, argv, *, cwd=scratch, timeout=1800):
@@ -198,7 +212,12 @@ def collect(args):
         return (output / row["stdout"]).read_bytes()
 
     py = [str(python), "-I", "-B", "-X", "utf8"]
+    context = dict(args=args, action=action, require=require, source=source, trusted=trusted,
+                   python=python, git=git, bash=bash, output=output, scratch=scratch,
+                   env=env, py=py, reader=reader, run=run, manifest=manifest)
     try:
+        if initialize is not None:
+            initialize(context)
         trusted_before = action.snapshot(reader, trusted, args.collector_source_sha)
         source_before = action.snapshot(reader, source, args.head_sha)
         pinned_before = action.snapshot(reader, pinned, action.ACTION_SHA)
@@ -240,6 +259,9 @@ def collect(args):
         package = {name: row["sha256"] for name, row in members.items()
                    if name.startswith("checkwash/") and "__pycache__" not in Path(name).parts and not name.endswith(".pyc")}
         project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+        context.update(source_before=source_before, trusted_before=trusted_before, project=project)
+        if stage_preflight is not None:
+            stage_preflight(context)
         descriptor = dict(schema_version=1, kind="checkwash.pju-contract.v1", collector_source_sha=args.collector_source_sha,
             contract_source_sha=args.collector_source_sha, source_commit=args.head_sha, source_tree=args.source_tree,
             src_tree=reader.text(source, "rev-parse", args.head_sha + ":src"), source_package_sha256=action.canonical(package),
@@ -276,12 +298,19 @@ def collect(args):
         artifacts.mkdir()
         # Build before pytest can produce ignored caches. Artifact inventory also
         # independently checks exact Git member bytes, metadata and entrypoints.
-        run("build-wheel", [*py, "-m", "build", "--no-isolation", "--wheel", "--sdist", "--outdir", str(artifacts), str(source)])
+        context.update(source_before=source_before, trusted_before=trusted_before, project=project)
+        if artifact_provider is None:
+            run("build-wheel", [*py, "-m", "build", "--no-isolation", "--wheel", "--sdist", "--outdir", str(artifacts), str(source)])
+        else:
+            artifact_provider(context)
         wheels, sdists = list(artifacts.glob("*.whl")), list(artifacts.glob("*.tar.gz"))
         require(len(wheels) == len(sdists) == 1, "expected exactly one wheel and sdist")
         wheel, sdist = wheels[0], sdists[0]
         pyz = artifacts / "checkwash.pyz"
-        run("build-pyz", [*py, "-m", "zipapp", str(source / "src"), "-m", "checkwash.zipapp_entry:run", "-o", str(pyz), "-c"])
+        if artifact_provider is None:
+            run("build-pyz", [*py, "-m", "zipapp", str(source / "src"), "-m", "checkwash.zipapp_entry:run", "-o", str(pyz), "-c"])
+        require(pyz.is_file(), "zipapp missing")
+        context.update(wheel=wheel, sdist=sdist, pyz=pyz)
         wheel_env = scratch / "wheel-environment"
         run("wheel-venv", [*py, "-m", "venv", str(wheel_env)])
         wheel_python = wheel_env / "Scripts/python.exe"
@@ -312,6 +341,8 @@ def collect(args):
                 inventory_args += ["--artifact", str(item)]
             run("inventory-" + distribution, [*worker, "release_inventory.py",
                 str(output / ("nested-inventory-" + distribution)), *inventory_args], timeout=1800)
+        if stage_steps is not None:
+            stage_steps(context)
         require(action.snapshot(reader, source, args.head_sha) == source_before, "candidate source changed during collection")
         require(action.snapshot(reader, trusted, args.collector_source_sha) == trusted_before, "collector source changed")
         require(action.snapshot(reader, pinned, action.ACTION_SHA) == pinned_before, "pinned Action source changed")
@@ -321,6 +352,8 @@ def collect(args):
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
         errors.append(type(exc).__name__ + ": " + str(exc))
     finally:
+        if finalize is not None:
+            finalize(context, errors)
         action.save_json(output / "collection-status.json", dict(status=manifest["status"], errors=errors,
             provenance=manifest["provenance"], other_platforms="NOT_RUN",
             action_build_dependency_scope="Actual Action PEP 517 build dependency resolution is logged, not claimed locked."))

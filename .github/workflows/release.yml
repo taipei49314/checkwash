@@ -1,224 +1,235 @@
 name: release
-
-# Two triggers, both deliberate:
-#   workflow_dispatch — build the artifacts and look at them, publishing nothing
-#   release: published — attach the artifacts to a release a human just cut
-#
-# Nothing here fires on a push. Cutting a release is a decision, and this
-# project's own history is the argument for making it one: a tag once shipped
-# pointing two fixes behind main, and visitors read the fixed docs while
-# installing the unfixed engine.
+run-name: "PJU release / ${{ inputs.mode || 'native event capture' }} / ${{ github.ref_name }}"
+# All hosted execution below is trusted metadata verification/publication.
+# Product tests, builds and installations execute only on PJU.
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Capture native metadata, verify PJU evidence, or publish admitted checks/assets
+        type: choice
+        options: [capture, verify, publish]
+        default: capture
+      admission:
+        description: Reviewed capture/dispatch JSON with exact sources and external digests
+        type: string
+        required: true
   release:
     types: [published]
-
 permissions:
   contents: read
-
 jobs:
-  published-source:
-    # Bind this release event anew; a previous green run is not a substitute.
-    if: github.event_name == 'release'
+  capture-native-subject:
+    if: github.event_name == 'release' || inputs.mode == 'capture'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name }}
-      RELEASE_COMMIT: ${{ github.sha }}
-      PYTHONDONTWRITEBYTECODE: "1"
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Capture native metadata only; no product qualification
+        run: python -I -B trusted/tools/pju_release_bridge.py capture --output native-capture
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pju-release-subject-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-capture/
+          if-no-files-found: error
+
+  verify-pju-release:
+    if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'verify' || inputs.mode == 'publish')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.sha }}
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          python-version: "3.12"
-      - name: validate native public tag identity and complete public surfaces
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -I -B tools/verify_published_source.py --repo . --tag "$RELEASE_TAG" --expected-commit "$RELEASE_COMMIT" --source-sha "$RELEASE_COMMIT" --remote https://github.com/taipei49314/checkwash.git --output public-receipts/tag-source.json
-      - name: install and exercise the event's actual public tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -I -B -m venv "$RUNNER_TEMP/tag-visitor"
-          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m pip install "git+https://github.com/taipei49314/checkwash.git@$RELEASE_TAG"
-          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B - <<'PY'
-          import importlib.metadata, json, os, pathlib
-          distribution = importlib.metadata.distribution('checkwash')
-          direct = json.loads(distribution.read_text('direct_url.json'))
-          assert distribution.version == os.environ['RELEASE_TAG'][1:]
-          assert direct['vcs_info']['commit_id'] == os.environ['RELEASE_COMMIT']
-          pathlib.Path('public-receipts/tag-install.json').write_text(json.dumps({
-              'status': 'passed', 'version': distribution.version, 'direct_url': direct,
-          }, sort_keys=True) + '\n', encoding='utf-8')
-          PY
-          "$RUNNER_TEMP/tag-visitor/bin/checkwash" --version
-          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m checkwash demo > /dev/null
-          "$RUNNER_TEMP/tag-visitor/bin/python" -I -B -m checkwash check HEAD~1..HEAD --repo .
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ !cancelled() }}
+          ref: ${{ fromJSON(inputs.admission).receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          name: release-public-receipts
-          path: public-receipts/
-          if-no-files-found: error
-
-  build:
-    needs: published-source
-    if: ${{ !cancelled() && ((github.event_name == 'release' && needs['published-source'].result == 'success') || (github.event_name == 'workflow_dispatch' && needs['published-source'].result == 'skipped')) }}
-    runs-on: ubuntu-latest
-    env:
-      CANDIDATE_SOURCE: ${{ github.sha }}
-      PYTHONDONTWRITEBYTECODE: "1"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
+          ref: ${{ fromJSON(inputs.admission).head }}
+          path: candidate-data
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - run: >-
+          python -I -B trusted/tools/pju_release_bridge.py verify
+          --trusted-root trusted --source-root candidate-data
+          --receipt-root receipt-data/receipt --output release-verification.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-release-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-verification.json
+          if-no-files-found: warn
+
+  publish-pju-stage-check:
+    needs: verify-pju-release
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: read
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
           ref: ${{ github.sha }}
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          python-version: "3.12"
-      - run: pip install build twine
-
-      - name: the version being built must match the tag, when there is one
-        if: github.event_name == 'release'
-        shell: bash
-        env:
-          PYTHONUTF8: "1"
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          set -euo pipefail
-          version="v$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
-          test "$version" = "$RELEASE_TAG"
-
-      - name: build sdist and wheel
-        run: python -m build
-
-      - name: qualify the release source assertion contract
-        run: python tools/qualify_assertions.py --distribution source --output assertion-receipts/source.json
-
-      - name: the sdist and wheel must be well-formed
-        run: twine check dist/*
-
-      # Zero runtime dependencies and one console entry point make a zipapp a
-      # real distribution channel, not a trick: one file, no install, no
-      # virtualenv, no network. `tests/test_zipapp.py` gates it on every push;
-      # this builds the artifact people actually download.
-      - name: build the single-file zipapp
-        shell: bash
-        env:
-          PYTHONUTF8: "1"
-        run: |
-          set -euo pipefail
-          python -m zipapp src -m "checkwash.zipapp_entry:run" -o dist/checkwash.pyz -c
-          python dist/checkwash.pyz --version
-          python dist/checkwash.pyz demo > /dev/null
-          python tools/qualify_zipapp.py dist/checkwash.pyz
-          python tools/qualify_assertions.py --distribution pyz --artifact dist/checkwash.pyz --output assertion-receipts/pyz.json
-          ls -l dist/
-
-      - name: a fresh install of the wheel must run, replay the demo, and check a repo
-        shell: bash
-        env:
-          PYTHONUTF8: "1"
-        run: |
-          set -euo pipefail
-          python -m venv /tmp/fresh
-          /tmp/fresh/bin/pip install --quiet dist/*.whl
-          /tmp/fresh/bin/pip freeze | tee /tmp/frozen.txt
-          # Zero runtime dependencies is a claim on the README, so the frozen
-          # environment must contain the checkwash distribution and nothing else.
-          test "$(grep -civ '^checkwash' /tmp/frozen.txt)" = "0"
-          /tmp/fresh/bin/greenwash --version
-          /tmp/fresh/bin/checkwash --version
-          /tmp/fresh/bin/greenwash demo > /dev/null
-          /tmp/fresh/bin/greenwash check HEAD~1..HEAD --repo .
-
-      - name: the installed wheel must match this source and satisfy every assertion contract
-        shell: bash
-        env:
-          PYTHONUTF8: "1"
-        run: |
-          set -euo pipefail
-          wheels=(dist/*.whl)
-          test "${#wheels[@]}" = 1
-          python tools/qualify_assertions.py --distribution wheel --artifact "${wheels[0]}" --output assertion-receipts/wheel.json -- /tmp/fresh/bin/python -I -m checkwash
-
-      - name: bind all delivered bytes to the exact source and qualification receipts
-        shell: bash
-        run: |
-          set -euo pipefail
-          wheels=(dist/*.whl)
-          sdists=(dist/*.tar.gz)
-          test "${#wheels[@]}" = 1
-          test "${#sdists[@]}" = 1
-          python tools/release_inventory.py --distribution source --qualification assertion-receipts/source.json --output assertion-receipts/source-inventory.json
-          python tools/release_inventory.py --distribution wheel --qualification assertion-receipts/wheel.json --artifact "${wheels[0]}" --artifact "${sdists[0]}" --output assertion-receipts/wheel-inventory.json
-          python tools/release_inventory.py --distribution pyz --qualification assertion-receipts/pyz.json --artifact dist/checkwash.pyz --output assertion-receipts/pyz-inventory.json
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ !cancelled() }}
+          ref: ${{ fromJSON(inputs.admission).receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          name: assertion-release-receipts
-          path: assertion-receipts/
-          if-no-files-found: error
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+          ref: ${{ fromJSON(inputs.admission).head }}
+          path: candidate-data
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          name: dist
-          path: dist/
-          if-no-files-found: error
+          python-version: '3.12'
+      - run: >-
+          python -I -B trusted/tools/pju_release_bridge.py publish-check
+          --trusted-root trusted --source-root candidate-data
+          --receipt-root receipt-data/receipt --output release-stage-check.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-release-stage-check-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-stage-check.json
+          if-no-files-found: warn
 
   publish-assets:
-    needs: [published-source, build]
-    if: github.event_name == 'release'
+    needs: [verify-pju-release, publish-pju-stage-check]
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && fromJSON(inputs.admission).stage == 'release-event'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
+      actions: read
+      checks: read
+      pull-requests: read
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          name: dist
-          path: dist/
-      - name: attach the source-bound artifacts to the authorized release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          GH_REPO: ${{ github.repository }}
-        run: gh release upload "$RELEASE_TAG" dist/* --clobber
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).head }}
+          path: candidate-data
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Revalidate authority, attach exact assets and read back actual bytes
+        run: >-
+          python -I -B trusted/tools/pju_release_bridge.py publish-assets
+          --trusted-root trusted --source-root candidate-data
+          --receipt-root receipt-data/receipt --output release-assets.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-release-assets-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-assets.json
+          if-no-files-found: warn
 
   pypi:
-    # Deliberately gated, on a repository *variable* rather than on the
-    # environment. The first version of this job was gated only by
-    # `environment: pypi` and a comment claiming it would be skipped until a
-    # human created that environment. That claim was false: GitHub creates an
-    # environment automatically the first time a job references one, so on the
-    # v0.1.13 release the job ran, found no trusted publisher registered on
-    # PyPI, and failed a release that was otherwise entirely fine (D-032).
-    #
-    # `vars.PYPI_ENABLED` is not auto-created by anything, so this is a gate
-    # that is actually closed. Publishing needs all three, in this order:
-    #   1. register greenwash as a trusted publisher on PyPI, for this
-    #      repository and this workflow;
-    #   2. set the repository variable PYPI_ENABLED to `true`;
-    #   3. keep the `pypi` environment for its deployment protection rules.
-    # No token is stored anywhere by anyone; trusted publishing exchanges a
-    # short-lived OIDC identity instead. Until (2), this job is skipped and
-    # the release is GitHub-only, which is what the README promises.
-    needs: [published-source, build]
-    if: github.event_name == 'release' && vars.PYPI_ENABLED == 'true'
+    needs: publish-assets
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && fromJSON(inputs.admission).stage == 'release-event' && vars.PYPI_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: pypi
     permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
       id-token: write
+    env:
+      PJU_ADMISSION: ${{ inputs.admission }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          name: dist
-          path: dist/
-      - name: the zipapp is a GitHub asset, not a PyPI one
-        run: rm -f dist/checkwash.pyz
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).receipt_commit }}
+          path: receipt-data
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ fromJSON(inputs.admission).head }}
+          path: candidate-data
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: After Nelson approval, re-read source and actual GitHub asset bytes
+        run: >-
+          python -I -B trusted/tools/pju_release_bridge.py verify-assets
+          --trusted-root trusted --source-root candidate-data
+          --receipt-root receipt-data/receipt --output pypi-handoff.json
+          --export-dist dist --pypi-only
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          packages-dir: dist/
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: pju-pypi-handoff-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pypi-handoff.json
+          if-no-files-found: warn
