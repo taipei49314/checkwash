@@ -2,6 +2,35 @@
 
 Updated: 2026-10-23 (v0.9.0 published and public bytes/visitors verified; advertised pins advance in this follow-up; baseline rotation remains separate)
 
+## 2026-10-24: narrow #419 release preparation
+
+Nelson instructed this session to carry the reviewed v0.9.1 scope through
+publication: 「直接做到發布」. The version-specific record is in
+[RELEASING](docs/RELEASING.md#v091-publication-instruction-2026-10-24).
+This branch integrates D-176's previously approved narrow implementation and
+protected-text drafts. Only Python test/conftest `BROAD_EXCEPT_ADDED` findings
+with no unit refuse opaque repair credit; the other Python rules, JS/TS,
+production-only handlers and Route A remain outside the fix. #419 stays open.
+
+The earlier first-stage source `198c3ab0` has preserved Windows/Python 3.11.9
+PJU receipts: 20,561 passed/25 skipped, 283 cases per source/wheel/pyz and
+pinned/candidate Action replays. Those receipts do not certify this new head.
+Its own full development, qualification, visitor, verdict and release-stage
+evidence are still required. Public CLI/Action/advertised pins remain v0.9.0.
+
+The first narrow history attempt stopped as `PARTIAL_UNEXPECTED`, exit3, after
+three CLI calls on one member. Its comparator incorrectly required full SHAs
+where the CLI reports native short labels; 7,434 members were not attempted.
+Original raw/consumed markers remain. Nelson then explicitly selected
+「核可 r2 精確來源發布與一次比較」 for the independently reviewed r2 packet;
+that new once admission does not revive r1 or accept historical cost.
+R29 still compares actual v0.9.0 with the fixed candidate on both 1,800-member
+sets; the narrow 7,435-member history packet does not replace it.
+
+PJU is the current default under EC T-610. No pool connectivity investigation
+is part of this work. Record real local provenance and unexecuted platforms;
+final-source platform acceptance and Nelson's PyPI deployment approval remain.
+
 ## 2026-10-23: all CheckWash tests run on PJU
 
 Nelson explicitly made LAPTOP-01AGNPJU the standing execution host for all

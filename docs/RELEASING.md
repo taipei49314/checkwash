@@ -1,5 +1,42 @@
 # Releasing
 
+## v0.9.1 publication instruction (2026-10-24)
+
+After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:
+
+> 直接做到發布
+
+The established scope is the next substantive patch release, v0.9.1: D-176's
+narrow Python unit-less broad-except fix, the PJU publication route and necessary
+release documentation. This records this session's one-time instruction to
+complete that version, its reviewed engineering, normal required checks and
+merges, annotated tag, GitHub Release, PyPI handoff and actual public-byte
+verification. It is an agent-written scope interpretation of the actual short
+human quote, not a claim that Nelson typed the longer proposed wording.
+The old v0.9.0 grant is not reused.
+
+Before tagging, complete the admitted #419 historical comparison/disposition,
+this version's v0.9.0-to-candidate R29 and owner review, exact final-source
+development/qualification/inventory/visitor/verdict evidence and any specific
+missing-platform acceptance. Preserve every failed or partial result and all
+unexecuted scope. A new substantive source/contract change requires the matching
+validation and version review; this does not authorize a different version.
+
+The original history r1 stopped and is consumed. Nelson separately selected
+「核可 r2 精確來源發布與一次比較」 for exact prepared source
+`6d294bf3a6f047b14b480a097d82c664bc31406d`, seal
+`cd367f66e1c30646061ebed89f2c5157037cc6fecdd4a2f02a4d96bf056eea5b`
+and [Lab PR22](https://github.com/taipei49314/checkwash-lab/pull/22).
+That is one new bounded attempt with original cost/source/cleanup stops; it
+does not resume r1 or pre-accept a movement. Other batches and model/API work
+are outside these named decisions.
+
+Nelson alone approves the `pypi` environment deployment. The source/distribution
+checks and actual GitHub assets must succeed first. Public GitHub/PyPI downloads
+and fresh visitors precede reviewed advertised/README/Action pin promotion;
+baseline rotation remains separate. Downstream repository re-pins are outside
+this version's publication work unless separately authorized.
+
 ## Test execution route (2026-10-23)
 
 All CheckWash tests, including release validation, now run on LAPTOP-01AGNPJU
