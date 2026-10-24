@@ -46,22 +46,42 @@ handler sets an exception on the Future subsequently awaited by the test.
 The candidate's refusal nevertheless matches its fixed metadata predicate.
 `unit=None` does not mean lexical module scope; this catch is inside a nested
 callback in a test method. Historical-cost disposition and any further once
-attempt remain pending, with no automatic retry or waiver.
+attempt remained pending after that stop. Nelson then selected the exact A
+option: a new r4 full cost census, rather than the supplemental-history waiver.
+R4 source `3d375a1a`, seal `4b0575e7`, [Lab PR24](https://github.com/taipei49314/checkwash-lab/pull/24)
+and EC T-616 bind the fresh once. It started at 2026-10-24T11:21:59Z on PJU.
+Expected D176 movements remain pending source/cost review; identical valid
+parse skips retain omitted coverage, and only exact closed both-exit2/raw-equal
+errors are recorded separately as not analysed. Other stops and the original
+24-hour cap remain. No completion or historical-cost acceptance is claimed.
 
 The required R29 first actual run, `r29-v091-r2`, is separately source/budget
 admitted under the current publication task and accounted as EC T-615. It uses
 true public `d6eda4f6` and candidate `198c3ab0`, not the later 618c maintenance
-source as the published baseline. Its result and mandatory owner review are
-pending. Exact source, runtime, limits and distinction between the human's
+source as the published baseline. It completed all 3,600 members/7,200 CLI
+calls; both payload and raw differences are zero, with an empty mandatory
+movement list. Python: 1,752 pass/pass and 48 block/block; JS/TS: 1,759
+pass/pass, 39 block/block and two recorded-only error/error. Original source,
+runtime, 40,916 session files and exact-container removal were independently
+verified. This is in-sample evidence, not an FP rate; the final source must
+still differ from `198c3ab0` only in its version literal. Exact source, runtime,
+limits and distinction between the human's
 short publication instruction and root's technical admission are recorded in
 [RELEASING](docs/RELEASING.md#v091-publication-instruction-2026-10-24).
 
 Publication-route engineering is separate [PR563](https://github.com/taipei49314/checkwash/pull/563),
 head `e462b323`. Its real pinned-Action dogfood blocks on 24 HIGH findings from
 three test-oracle migrations. Independent source review and ordinary diagnostic
-tests do not turn that BLOCK into a passing required check. A proposed precise
-maintainer exception is not yet approved or executed; no ruleset or allowlist
-change has occurred. This product branch still needs its own final-head evidence.
+tests do not turn that BLOCK into a passing required check. Actual full-suite,
+three 283-case qualifications/inventories and verdict diagnostics passed and
+were independently audited. Nelson approved the exact 24-fingerprint semantic
+exception and one temporary User/pull_request operator attempt. Under EC T-617,
+the sole actor PUT returned HTTP403, "Resource not accessible by personal
+access token"; no merge was attempted. Original and fresh native readbacks
+show the full original ruleset, empty bypass and main `5338e689`. That API once
+is consumed. A new browser-owner route is being prepared without saving any
+server change; it is not an automatic retry. This product branch still needs
+its own final-head evidence.
 
 PJU is the current default under EC T-610. No pool connectivity investigation
 is part of this work. Record real local provenance and unexecuted platforms;

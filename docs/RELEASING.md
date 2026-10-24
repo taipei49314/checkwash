@@ -69,6 +69,27 @@ fixed unit=None metadata. Its cost is not accepted, r3 remains consumed/partial,
 and a new attempt or release-specific history disposition needs a new concrete
 decision. No full-history or false-positive-rate claim follows from 112 rows.
 
+Nelson then selected the exact A option, not the release-specific
+supplemental-history waiver:
+
+> 核可 A：r4 精確來源發布與一次完整成本普查
+
+R4 source `3d375a1a25faba399d2dc6b6f0330708827f0da8`, seal
+`4b0575e769ed32f15cf9af738d967d89499419a03abfb9c754fe5fb78f8f57e2`,
+contract `e55343ae0095249bf19b5fdfe26c0f6d22090fede8c6f1322b060a2ab405f04e`
+was published/read back as [Lab PR24](https://github.com/taipei49314/checkwash-lab/pull/24),
+commit `c013eb9d48d992e98da09c1b7ce3916ceb57859d`, and admitted under EC T-616.
+It started at 2026-10-24T11:21:59Z, full 7,435 from ordinal0, one lane and the
+original call/raw/disk/cleanup/24-hour bounds. Both strict D176 movement
+classes are recorded pending source/cost review; identical valid parse skips
+also retain omitted coverage in mixed rows. Only both literal exit2 commands
+with identical stdout/stderr and complete inactive/cleanup proof are recorded
+separately as unchanged product errors, excluded from analysed denominators.
+Other anomalies still stop. Completion, if reached, is a census pending review,
+never history PASS or cost acceptance. The retained r3 prefix's naive 26.5-hour
+projection exceeds the 24-hour cap; completion within that cap was not promised.
+R1/r2/r3 stay consumed and the unselected waiver stays unapproved.
+
 The first actual required R29 run is separately admitted/accounted as EC T-615,
 `r29-v091-r2`, from reviewed harness `2e3f30861e623d6f971d5cc4e96e4b79988f8aba`,
 manifest `edadaf48f142f9d311f3518101e9841b369aab4b3f130265b3af7036baa5f7e7`.
@@ -77,8 +98,34 @@ standing fixed R29 step; Nelson did not type that harness hash or six-hour
 technical budget. It uses true public v0.9.0 `d6eda4f6` against fixed candidate
 `198c3ab0`, the original two sets of 1,800, 7,200 CLI calls, fixed local Linux
 Docker image, four CPUs/six GiB and six hours including closure. Earlier R29
-r1 was a proposal, never executed. No #419 grant is reused, and mandatory
-movement review and the final-src/version-only condition remain required.
+r1 was a proposal, never executed. No #419 grant is reused.
+
+That R29 completed all 3,600 members/7,200 CLI calls. Its original launcher
+finished at 2026-10-24T11:29:27.392879Z, duration6,797.89 seconds. Independent
+read-only audit verified all 11,215 inner commands, 40,916 session files,
+source/runtime before/after, eight native lifecycle commands and exact owned
+container removal. Python standard: 1,752 pass/pass,48 block/block; JS/TS:
+1,759 pass/pass,39 block/block,two error/error. Both payload/raw difference
+counts and the mandatory movement-review list are zero. The two errors are
+recorded-only, not analysed PASS. These are fixed in-sample counts, not an FP
+rate. The empty list was delivered to Nelson in this conversation; no separate
+written acceptance quote is invented. Final release source/version-only
+equivalence remains to be checked, along with independent #419 and release gates.
+
+For engineering PR563 `5338e689`→`e462b323`, Nelson separately selected:
+
+> 核可精確例外與所列風險，窗口內停止其他合併／規則編輯
+
+This followed actual Windows/Python3.11.9 full-suite/3×283/inventory/verdict
+diagnostics and independent original-raw review. It accepts the exact24 HIGH
+test-oracle migrations and the named temporary User/pull_request operation,
+not a false required-check PASS. EC T-617 recorded the once. The sole actor PUT
+returned HTTP403, "Resource not accessible by personal access token", and no
+merge was attempted. Main cleanup, watchdog observations and fresh native
+readback retained the full original ruleset, bypass=[]/never, PR open and main
+`5338e689`. That API once is consumed; semantic acceptance does not revive it.
+A new browser-owner route is only being prepared, with no Save performed or
+new execution approval yet. This is not a PyPI or platform acceptance.
 
 Nelson alone approves the `pypi` environment deployment. The source/distribution
 checks and actual GitHub assets must succeed first. Public GitHub/PyPI downloads
