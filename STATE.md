@@ -33,8 +33,20 @@ Its raw, consumed markers and verified cleanup are retained. Nelson explicitly
 approved the new r3 source/once contract: identical parse omissions may be
 recorded and continued without claiming the omitted files were analysed.
 [Lab PR23](https://github.com/taipei49314/checkwash-lab/pull/23) and EC T-614
-bind the new source/admission. The r3 run is in progress; neither earlier
-attempt is resumed and no future cost is accepted by that grant.
+bind the new source/admission. R3 stopped as `PARTIAL_NEW_BLOCK_COST_REVIEW`,
+exit3, after 112 compared members and 230 CLI calls; 7,323 were not attempted.
+Two identical parse-gap members retain six skipped-file occurrences. Its
+original terminal and independent closure audit are preserved; r1/r2/r3 are
+consumed and no history cost is accepted by those grants.
+
+The stop is uvloop `7b202ccf` against `ae44ec2d`: a broad-except finding in
+`tests/test_context.py` moves from warn/repair credit to high/BLOCK. Source
+review supports a legitimate callback failure-relay regression test: the
+handler sets an exception on the Future subsequently awaited by the test.
+The candidate's refusal nevertheless matches its fixed metadata predicate.
+`unit=None` does not mean lexical module scope; this catch is inside a nested
+callback in a test method. Historical-cost disposition and any further once
+attempt remain pending, with no automatic retry or waiver.
 
 The required R29 first actual run, `r29-v091-r2`, is separately source/budget
 admitted under the current publication task and accounted as EC T-615. It uses

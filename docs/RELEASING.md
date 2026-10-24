@@ -52,8 +52,22 @@ unread failures. Omitted files are not called analysed. Other error, changed
 skip, finding/source/cost/raw/cleanup stops remain. The full original 7,435
 members and one-lane/24-hour bounds are retained; start must precede
 2026-10-25T04:00Z and stop no later than 2026-10-26T04:00Z. Failure consumes
-this new attempt too. EC T-614 accounts its fresh once admission and execution;
-its mechanical result and historical-cost disposition remain pending here.
+this new attempt too. EC T-614 accounts its fresh once admission and execution.
+
+R3 terminated as `PARTIAL_NEW_BLOCK_COST_REVIEW`, exit3: 112 members compared,
+230 CLI calls, 7,323 not attempted, with two identical parse-gap members and
+six skipped-file occurrences retained. The source/runtime/raw/cleanup audit
+closed against the original terminal receipts. The first new BLOCK is
+MagicStack/uvloop `7b202ccf644396a4ae8ff8053578058f5023ac63`, parent
+`ae44ec2d9d3b13c708bd65cf91c52178c37f34a4`, fingerprint
+`BROAD_EXCEPT_ADDED/tests/test_context.py/-/ed0231ac4a64`.
+Baseline warn/REPAIR_EVIDENCE/exit0 becomes candidate
+high/OPAQUE_PROD_CHANGE_NOT_EVIDENCE/exit1. Source review supports a legitimate
+callback failure-relay regression test; runtime behavior was not executed by
+that review. The catch is nested inside a test method, despite the producer's
+fixed unit=None metadata. Its cost is not accepted, r3 remains consumed/partial,
+and a new attempt or release-specific history disposition needs a new concrete
+decision. No full-history or false-positive-rate claim follows from 112 rows.
 
 The first actual required R29 run is separately admitted/accounted as EC T-615,
 `r29-v091-r2`, from reviewed harness `2e3f30861e623d6f971d5cc4e96e4b79988f8aba`,
