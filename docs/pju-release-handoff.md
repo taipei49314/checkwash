@@ -1,168 +1,381 @@
-# PJU release handoff proposal
+# PJU release evidence and publication handoff
 
-This proposal prepares the missing main, tag, release-event and public-visitor
-route after the PR receipt bridge. Its starting source is
-`5338e6894d3a1880acb0376ce700ac0d571dbcdc`. The release workflow is still
-disabled. The included offline identity prototype cannot issue checks or publish
-distributions. There is no authorization here to bump a version, merge, tag or
-release. The next version remains provisional v0.9.1.
+This checkout implements PR, main, tag, release-event and public-visitor
+collection, deep verification and the publication handoff. Independent review,
+the final full suite and native end-to-end verification are still pending.
+Source implementation and owned tests do not prove an actual GitHub dispatch,
+check, asset upload or PyPI publication. Writing YAML does not enable a disabled
+workflow. Record real native results as they occur. This document grants no
+version bump, merge, tag, release, platform waiver or deployment approval.
 
-## Current implementation and proposed changes
+The [PJU primary policy, T-610](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md)
+authorizes PJU execution without a Tuesday expiry. Nelson stopped investigation
+of the current pool outage; do not poll it. Capable pool hosts may later supply
+their own evidence. This implementation verifies actual Windows/Python 3.11.9
+receipts from LAPTOP-01AGNPJU, labelled
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; other platforms remain `NOT_RUN` here.
 
-| Surface | Current behavior | Proposed change |
+## Implemented components and subjects
+
+| Component | Implemented behavior |
+| --- | --- |
+| `collect_pju_receipts.py` / `pju_receipt_bridge.py` | Existing PR collection and four required contexts remain available |
+| `collect_pju_release.py` | One fresh shared-backend collection per real stage, with release-specific work; no synthetic PR ID |
+| `pju_release_bridge.py` | Native capture, deep data verification, distinct checks, exact asset upload/readback and protected PyPI handoff |
+| `quality-candidate-intake.yml` | Adds `release-capture` and `release-receipt` for PR bootstrap on reviewed code; preserves legacy modes |
+| `release.yml` | Hosted metadata capture/verification and credentialed publication; product execution is local |
+| `pju_release_identity.py` | Earlier offline prototype only; `identity-matched-only`, `publication_allowed: false`; never a publishing gate |
+
+The hosted bridge never executes candidate product code, installers, tests,
+Action helpers or archive members. The independent local collector uses an
+allowlisted child environment with no GitHub/PyPI credentials. Owner-admitted
+immutable evidence is the trust boundary, not hardware attestation. Verifier
+and publisher independently repeat validation; author fields and summary flags
+cannot authenticate a receipt.
+
+A collection runs the full development suite, actual pinned/candidate Action
+replay, source/wheel/pyz qualification and inventories, twine, the process-level
+zipapp contract, advertised visitor and verdict gate. It retains original
+commands/exits/streams, nested helper raw offsets, actual runtime and source
+checks before and after. The release-event stage builds fresh distributions
+after its event. Public-visitor instead qualifies the actual downloaded GitHub
+bytes, downloads PyPI wheel/sdist too, compares all five files, performs four
+fresh artifact installations plus the Git-tag visitor, and exercises public pyz.
+
+| Stage | Real native subject | Required previous report |
 | --- | --- | --- |
-| `collect_pju_receipts.py` and `pju_receipt_bridge.py` | Full local PR evidence; live open head/base; four existing required contexts | Preserve PR behavior; add a separate collector and verifier for release stages |
-| `release.yml` | Disabled; combines hosted product execution and publication | Separate metadata capture, PJU execution, read-only evidence verification and credentialed upload |
-| `ci.yml` and `verdict-gate.yml` | Disabled test workflows | Keep disabled; execute their required product checks through PJU stage collectors |
-| `quality-candidate-intake.yml` | Active PR bridge | Do not reinterpret its PR-only success as main, tag or release success |
-| Platform coverage | Existing PR bridge accepts Windows/Python 3.11.9 only | Record each real leg and every missing leg; resolve version acceptance separately |
+| `pr` | Owner manual dispatch; live open same-repository PR number/head/base/tree | None; `parents` is `{}` |
+| `main` | Owner manual dispatch; live main commit/tree and first parent | New PR stage report, PR stage check and four required contexts |
+| `tag` | Owner manual dispatch; annotated public tag object and peeled source | Main stage report/check |
+| `release-event` | Real `release: published` event, Release ID/tag/source/run/attempt | Tag stage report/check |
+| `public-visitor` | Owner manual dispatch; exact existing Release/tag/source and public files | Release-event report/check |
 
-## Stage subjects and evidence
+Manual main/tag captures are not push runs. PR base is the live PR base, which
+need not equal the head's first parent. Other stages retain the release commit's
+first parent. Identical source or trees do not make stages interchangeable.
+New PR collection runs its release extras in the same backend, not a duplicate
+suite. Its publisher creates the unchanged four required contexts/App binding
+and `PJU release evidence (pr)`. Other stages create their own
+`PJU release evidence (<stage>)` check only. A legacy four-green PR report alone
+does not prove the new PR visitor/verdict extras.
 
-Each stage binds repository, exact commit and full tree, native event name,
-run ID, exact attempt, reviewed workflow SHA, collector SHA, immutable evidence
-commit and external manifest digest. Native observations come from a trusted
-GitHub adapter, never from a candidate-supplied URL or author field. The event
-capture workflow does data collection only, with `contents: read`; its own
-success means an event was captured, not that product checks passed.
+## 1. Prepare reviewed sources and capture native metadata
 
-| Stage | Additional subject | Fresh evidence before advancing |
-| --- | --- | --- |
-| PR | Open same-repository PR number and actual head/base | Existing four required contexts, complete full-suite raw/JUnit, qualifications and inventories, real pinned/candidate Action replay; release PR also needs visitor and verdict evidence |
-| main | `refs/heads/main`, actual push event, merge commit and first parent | Exact merge-commit execution, source and package inventories, advertised visitor and verdict gate; record comparison with reviewed PR tree |
-| tag | Tag-push event, complete annotated tag object and peeled commit | Native remote tag/source readback, actual Git-tag fresh visitor, full development/qualification/inventory and tag-specific verdict gate |
-| release-event | Native published Release ID, event payload digest and event run/attempt, native tag object | Event-after-source validation, actual Git-tag visitor, fresh build, source/wheel/pyz qualifications and all inventories |
-| public-visitor | Verification dispatch run plus the exact prior Release event, asset IDs and PyPI filenames/URLs | Independently download GitHub wheel/sdist/pyz and PyPI wheel/sdist, compare actual bytes, run fresh installations and visitors |
+Prepare clean fixed checkouts with `core.autocrlf=false`: trusted collector,
+candidate, pinned Action, separate candidate Action when its closure differs,
+and the pinned verdict canary sources. Keep the fresh admitted Python 3.11.9
+venv, receipt and scratch outside every source checkout. Its externally hashed
+package-name/version dependency JSON must include reviewed build/test packages
+and twine. Collector and verifier/workflow sources are separately admitted.
 
-Each stage resolves the previous stage's successful verification report by
-immutable digest. A report must prove that prior stage's own subject and complete
-evidence. Merely copying a digest is insufficient. Same tree does not make two
-commits identical; same peeled commit does not make two tag objects identical.
-PR, main, tag, release-event and public-visitor reports remain distinct even when
-they refer to the same product source.
+These PowerShell examples are templates, not grants. Replace all placeholders
+with saved native readbacks; example `v0.9.1` does not authorize that version.
+Use a task directory outside the checkouts:
 
-Main/tag metadata capture needs a newly reviewed workflow such as
-`pju-release-events.yml`, triggered on main pushes, tag pushes and
-`release: published`. It must not invoke product code. Initial bootstrap may
-capture the merge that introduces it; no earlier push event may be invented.
-The trusted adapter checks native run event, exact attempt, workflow path/SHA,
-source/ref and event artifact bytes against readbacks. Collection starts after
-the corresponding event; local timestamps alone are not remote attestation.
-
-## Release event and publication sequence
-
-The existing published-release event has no receipt commit/digest input. Fresh
-evidence for that event cannot exist before it occurs. Use two explicit steps:
-
-1. Capture and freeze the native published event: repository, Release ID,
-   tag name/object/peeled source, native run/attempt, workflow SHA and event
-   artifact digest. This does not upload distributions.
-2. PJU collects the event's fresh source/visitor/build/qualification evidence.
-   An authorized publisher stores it immutably. A maintainer-authenticated
-   `workflow_dispatch` on the reviewed `.github/workflows/release.yml` admits
-   that exact event, evidence commit and external digest.
-
-Publication uses the fresh release-event build as its unique distribution set.
-Do not assume it equals a pre-event build; bind every member and actual
-wheel/sdist/pyz size and digest to the event's qualified source. Rebuilding later
-invalidates that distribution admission and needs new matching qualification.
-
-The future `release.yml` job graph is:
-
-```text
-native event capture -> PJU event collection -> immutable evidence/readback
-  -> verify evidence and live native subject (contents read)
-  -> attach exact GitHub assets and verify actual readback (contents write)
-  -> PyPI deployment waits for Nelson (id-token write, environment pypi)
-  -> PJU public downloads/installations -> reviewed pin promotion
-                                      -> separate baseline rotation
+```powershell
+$ReleaseWork = 'C:\task\checkwash-release'
+$ReviewedRef = 'REVIEWED_BRANCH_OR_TAG'
+$WorkflowSha = 'FULL_REVIEWED_WORKFLOW_SHA'
+$CandidateSha = 'FULL_CANDIDATE_SHA'
+$Stage = 'pr'
+$Capture = [ordered]@{
+  schema_version=1; kind='checkwash.pju-release-capture.v1'
+  stage=$Stage; head=$CandidateSha; tag=$null; release_id=$null
+  trusted_workflow_sha=$WorkflowSha; pr_number=563 # actual open PR
+}
+@{mode='release-capture'; admission=($Capture | ConvertTo-Json -Compress)} |
+  ConvertTo-Json -Compress |
+  gh workflow run quality-candidate-intake.yml --repo taipei49314/checkwash --ref $ReviewedRef --json
 ```
 
-Keep the trusted-publisher filename `release.yml`, `environment: pypi`,
-`vars.PYPI_ENABLED == 'true'` and minimal per-job OIDC permission. Make PyPI
-depend on the successful GitHub asset upload/readback, preserving the existing
-human condition mechanically. Nelson alone approves the deployment. Before
-enabling publication, read back the actual PyPI trusted-publisher registration,
-including its environment, and verify the proposed dispatch/ref claims; the
-repository documents do not prove the live service registration.
+PR bootstrap uses the active intake entry on the reviewed branch. The native
+run must resolve to the admitted workflow SHA. After normal merge and review,
+enable only the rewritten `release.yml` when authorized, keeping the old hosted
+product-test workflows disabled. Other manual captures use `release.yml`,
+`mode=capture`, with these capture-admission changes:
 
-Before upload and again after approval, read back the Release ID, public/draft
-state, tag name/object/peeled source, admitted run and distributions. Reject
-deleted/recreated Releases or moved tags. If an asset already exists, identical
-downloaded bytes may be retained; different bytes stop the run. Remove the
-current blanket `--clobber` behavior from the proposed publisher. PyPI publication
-does not retry automatically after unknown outcome: reconcile actual public
-files first, retain the original failure, and obtain any necessary new decision.
+| Stage | `head` | `tag` | `release_id` | `pr_number` |
+| --- | --- | --- | --- | --- |
+| `main` | Exact current main commit | `null` | `null` | Omit |
+| `tag` | Exact release commit | `"v0.9.1"` | `null` | Omit |
+| `public-visitor` | Same release commit | `"v0.9.1"` | Actual integer Release ID | Omit |
 
-## Collector and verifier contract to implement
+```powershell
+@{mode='capture'; admission=($Capture | ConvertTo-Json -Compress)} |
+  ConvertTo-Json -Compress |
+  gh workflow run release.yml --repo taipei49314/checkwash --ref $ReviewedRef --json
+```
 
-The local collector runs from an independently reviewed clean checkout. Product
-subprocesses receive an allowlisted environment with no GitHub/PyPI credentials.
-Publishers do not execute candidate Python, shell, Action code, archives,
-installers or tests. They inspect source/archive/JSON/XML bytes with trusted
-code, under bounded file sizes, counts and paths.
+There is no manual `release-event` capture admission. The authorized GitHub
+Release's real published event triggers capture automatically, after the tag's
+own evidence has passed. The reviewed workflow must already exist on that tagged
+commit. This first event uploads metadata only, not distributions; fresh event
+evidence cannot exist before the event.
 
-The full stage manifest must include:
+Read back the exact capture run/attempt/event/workflow path/SHA/source/actor and
+successful completion. Do not select an unrelated latest run or another attempt.
+Download its precisely named artifact, preserving both files unchanged:
 
-- Stage subject and native capture digest; complete actual host/runtime/tool
-  identities; source commit, tree and cleanliness before and after collection.
-- Every required command's exact argv/cwd, raw streams, start/finish, timeout
-  state and actual exit. Full development collection includes performance,
-  package/zipapp and published-source positive/negative tests. Preserve failure
-  receipts; absence is never success.
-- Authoritative qualification case inventory and all source/wheel/pyz case
-  observations, complete delivered archive-member inventories and artifact
-  digests. A summary `passed` field cannot replace raw evidence.
-- Native/public source verification, visitor commands and actual installed
-  identity, with each path attributed to advertised, event tag or final public
-  distributions as appropriate. Tag visitor does not require future Release
-  assets that do not exist yet.
-- Verdict gate inputs/identities, previous highest stable baseline, protected
-  acceptance file, complete cases/canary/results and raw exits. R29's two
-  1,800-commit sets remain a separately approved comparison and owner review.
-- Executed platform legs, absent legs marked `NOT_RUN`, and separately resolved
-  source/version-specific human acceptance if the full matrix is missing.
+```powershell
+$CaptureRun = 123456 # actual run, not a literal to reuse
+$CaptureAttempt = 1
+$CaptureDir = Join-Path $ReleaseWork "captures\$CaptureRun-$CaptureAttempt"
+gh api "repos/taipei49314/checkwash/actions/runs/$CaptureRun/attempts/$CaptureAttempt"
+gh run download $CaptureRun --repo taipei49314/checkwash --name "pju-release-subject-$CaptureRun-$CaptureAttempt" --dir $CaptureDir
+$SubjectPath = Join-Path $CaptureDir 'subject.json'
+$PayloadPath = Join-Path $CaptureDir 'event-payload.json'
+$SubjectSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $SubjectPath).Hash.ToLowerInvariant()
+```
 
-The release-stage verifier and publisher independently repeat validation. A
-successful PR bridge report cannot substitute for these validators. Missing
-native capture, evidence, prior report or platform disposition stops stage
-advancement. Stage-labelled verification output must say which actual PJU scope
-it covers; do not create the names of old hosted test jobs to imply they ran.
-Existing PR ruleset contexts and App binding stay unchanged.
+The exact subject shape is below; only PR adds `pr_number`. Main has null
+tag/object/release ID; tag has null release ID; subsequent stages have the real
+Release ID. `event.name` is `release` only for release-event, otherwise the actual
+`workflow_dispatch`. The bridge re-reads these native objects:
 
-## Platform acceptance
+```json
+{
+  "schema_version": 1, "kind": "checkwash.pju-release-subject.v1",
+  "stage": "pr", "repository": "taipei49314/checkwash", "pr_number": 563,
+  "head_sha": "FULL_NATIVE_HEAD_SHA", "base_sha": "FULL_NATIVE_BASE_SHA",
+  "source_tree": "FULL_NATIVE_TREE_SHA", "tag": null, "tag_object": null,
+  "release_id": null,
+  "event": {
+    "name": "workflow_dispatch", "run_id": 123456, "run_attempt": 1,
+    "workflow_sha": "FULL_CAPTURE_WORKFLOW_SHA", "created_at": "NATIVE_UTC_TIMESTAMP",
+    "payload_sha256": "SHA256_OF_EXACT_EVENT_PAYLOAD_BYTES"
+  }
+}
+```
 
-The standing venue policy authorizes execution on PJU; it does not supply
-Linux/macOS or Python 3.12/3.13 evidence. The frozen determinism contract remains
-Linux/macOS/Windows on Python 3.11–3.13, with cross-leg byte comparison.
+## 2. Collect one fresh stage on PJU
 
-Choose the version's acceptance after its final source and actual capability
-table exist. Either supply the nine real legs and comparisons, or ask Nelson
-for a version/source-specific waiver naming every missing leg/comparison and
-the exact public wording. A waiver records acceptance of absent evidence; it
-does not turn absent legs into PASS or rewrite the standing contract. Changing
-that contract requires the separate minor-version review.
+PR's external `parents.json` is `{}`. Later stages copy the previous successful
+new stage report, without reserializing it, into
+`parent-reports/parents/<stage>.json`. Main's parent example is:
 
-## Prototype and implementation acceptance
+```json
+{"pr":{"report":"parents/pr.json","sha256":"SHA256_OF_EXACT_REPORT_BYTES","check_run_id":123457}}
+```
 
-`tools/pju_release_identity.py` checks exact stage/native-object fields and
-admitted digest links against three supplied JSON values. It rejects stage
-replay, stale subjects, different native attempts, lightweight tags and malformed
-identities. Even on success it returns `identity-matched-only` and
-`publication_allowed: false`. Its inputs do not authenticate themselves.
+Use parent keys `main`, `tag` and `release-event` for the following stages.
+For the PR parent, the link's ID is the actual `checkwash` context ID in
+`check_run_ids`; the separate report `check_run_id` is the PR stage check. Both
+it and all four contexts are read back. For other parents use their stage check
+ID. Native App/name/head/success/external-ID linkage must match, not just a JSON
+status or copied digest.
 
-The prototype has no network, check publisher, token handling, collector,
-timestamp validation, deep receipt verifier or artifact-byte validation. Parent
-digests are matched, not resolved. Do not connect its exit 0 to a publishing job
-or describe the prototype tests as completed release qualification.
+```powershell
+$TrustedRoot = Join-Path $ReleaseWork 'trusted-collector'
+$CandidateRoot = Join-Path $ReleaseWork 'candidate'
+$PinnedActionRoot = Join-Path $ReleaseWork 'action-v090'
+$CandidateActionRoot = Join-Path $ReleaseWork 'candidate-action'
+$PythonExe = Join-Path $ReleaseWork "venvs\$Stage-$CaptureRun\Scripts\python.exe"
+$CollectorSha = 'FULL_REVIEWED_COLLECTOR_SHA'
+$LockPath = Join-Path $ReleaseWork "locks\$Stage-$CaptureRun.json"
+$ParentRoot = Join-Path $ReleaseWork 'parent-reports'
+$ParentsPath = Join-Path $ReleaseWork "admissions\$Stage-parents.json"
+$StageRoot = Join-Path $ReleaseWork "runs\$Stage-$CaptureRun-$CaptureAttempt"
+$ReceiptRoot = Join-Path $StageRoot 'receipt'
+$ScratchRoot = Join-Path $StageRoot 'scratch'
+$CollectorArguments = @(
+  '-I','-B','-X','utf8',(Join-Path $TrustedRoot 'tools\collect_pju_release.py'),
+  '--source-root',$CandidateRoot,'--action-root',$PinnedActionRoot,
+  '--candidate-action-root',$CandidateActionRoot,
+  '--python',$PythonExe,'--git','C:\Program Files\Git\cmd\git.exe',
+  '--bash','C:\Program Files\Git\bin\bash.exe',
+  '--collector-source-sha',$CollectorSha,
+  '--dependency-lock',$LockPath,
+  '--dependency-lock-sha256',(Get-FileHash -Algorithm SHA256 -LiteralPath $LockPath).Hash.ToLowerInvariant(),
+  '--subject',$SubjectPath,'--subject-sha256',$SubjectSha,'--event-payload',$PayloadPath,
+  '--parents',$ParentsPath,
+  '--parents-sha256',(Get-FileHash -Algorithm SHA256 -LiteralPath $ParentsPath).Hash.ToLowerInvariant(),
+  '--parent-report-root',$ParentRoot,
+  '--verdict-canary-old-source',(Join-Path $ReleaseWork 'canary-v042'),
+  '--verdict-canary-new-source',(Join-Path $ReleaseWork 'canary-v050'),
+  '--output',$ReceiptRoot,'--scratch',$ScratchRoot
+)
+```
 
-Before the complete route can operate, implement and independently review the
-native capture/adapter, credential-free stage collector, deep verifier and
-publisher changes above. Exercise owned negative cases for stale main, PR-to-main
-reuse, changed annotation/peeled source, wrong Release ID/attempt, pre-event
-receipts, failed/partial raw commands, incomplete qualification inventories,
-changed artifact bytes, unaccepted missing platforms, stale approval and public
-download/installation failure. No successful check or upload may occur in those
-cases. Run actual final PR dogfood and required checks before a normal merge;
-bootstrap the new release route through data-only verification on reviewed
-workflow code without bypassing protections.
+Baseline and advertised source default to pinned Action only when its exact
+commit matches those pins. Supply `--verdict-baseline-source` and
+`--advertised-source` if different. Canary checkouts retain their fixed
+v0.4.2/v0.5.0 source commits/tags; the collector downloads and verifies their
+real public pinned pyz files rather than building substitutes.
+
+For release-event, add the true external human records before the packet seals:
+
+```powershell
+$ReleaseAuthorization = Join-Path $ReleaseWork 'admissions\release-authorization.json'
+$PlatformAcceptance = Join-Path $ReleaseWork 'admissions\platform-acceptance.json'
+$CollectorArguments += @(
+  '--release-authorization',$ReleaseAuthorization,
+  '--release-authorization-sha256',(Get-FileHash -Algorithm SHA256 -LiteralPath $ReleaseAuthorization).Hash.ToLowerInvariant(),
+  '--platform-acceptance',$PlatformAcceptance,
+  '--platform-acceptance-sha256',(Get-FileHash -Algorithm SHA256 -LiteralPath $PlatformAcceptance).Hash.ToLowerInvariant()
+)
+```
+
+They are saved at `release/release-authorization.json` and
+`release/platform-acceptance.json`. Inclusion is data custody, not approval.
+Proposed records do not become accepted. Publication requires real exact-version
+and source-specific human decisions, actual quotes and evidence references.
+
+For public-visitor instead admit the release-event report's actual artifact map.
+The values below are placeholders, not acceptable release bytes:
+
+```json
+{
+  "checkwash-0.9.1-py3-none-any.whl":{"bytes":123,"sha256":"ACTUAL_RELEASE_WHEEL_SHA256"},
+  "checkwash-0.9.1.tar.gz":{"bytes":456,"sha256":"ACTUAL_RELEASE_SDIST_SHA256"},
+  "checkwash.pyz":{"bytes":789,"sha256":"ACTUAL_RELEASE_PYZ_SHA256"}
+}
+```
+
+```powershell
+$ArtifactMap = Join-Path $ReleaseWork 'admissions\release-artifacts.json'
+$CollectorArguments += @(
+  '--release-artifacts',$ArtifactMap,
+  '--release-artifacts-sha256',(Get-FileHash -Algorithm SHA256 -LiteralPath $ArtifactMap).Hash.ToLowerInvariant()
+)
+```
+
+For every stage, execute its assembled arguments after appending only that
+stage's applicable flags:
+
+```powershell
+# Retain this outer command's real stdout/stderr and exit as well as its packet.
+& $PythonExe @CollectorArguments
+if ($LASTEXITCODE -ne 0) { throw 'Collection failed; preserve the complete raw packet.' }
+$ManifestSha = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $ReceiptRoot 'manifest.json')).Hash.ToLowerInvariant()
+```
+
+Run the assembled arguments once for the intended stage. Output and scratch
+must be fresh. The manifest is
+`checkwash.pju-release-receipt.v1`, with subject/parents and no synthetic top-level
+PR number. `release/collection.json` records final timing/status. The packet
+includes native payload, parent records, command/nested raw, qualifications,
+inventories, distributions and visitors. Existing 5,000-file/1 GiB bounds remain;
+missing, failed, changed or oversized evidence is not success.
+
+## 3. Immutable evidence, verification and check readback
+
+The authorized publisher stores reviewed packet bytes at `receipt/` in an
+immutable commit in **`taipei49314/checkwash`**, then reads the commit and every
+file back. Workflows check out `receipt_commit` from that repository; a private
+Lab SHA is not a substitute. Venv/scratch are not evidence-commit contents.
+This data publication is distinct from a GitHub Release or PyPI upload.
+
+Use this exact dispatch shape; only PR includes `pr_number`:
+
+```json
+{
+  "schema_version":1,"kind":"checkwash.pju-release-dispatch.v1","stage":"pr",
+  "head":"FULL_NATIVE_HEAD_SHA","base":"FULL_NATIVE_BASE_SHA",
+  "tag":null,"release_id":null,"pr_number":563,
+  "receipt_commit":"FULL_IMMUTABLE_EVIDENCE_COMMIT",
+  "manifest_sha256":"ACTUAL_MANIFEST_SHA256",
+  "collector_source_sha":"FULL_REVIEWED_COLLECTOR_SHA",
+  "trusted_workflow_sha":"FULL_REVIEWED_VERIFIER_WORKFLOW_SHA",
+  "subject_sha256":"ACTUAL_CAPTURE_SUBJECT_SHA256",
+  "release_authorization":null,"platform_acceptance":null
+}
+```
+
+For bootstrap PR, intake `release-receipt` runs separate verification and check
+publication jobs; both deeply validate the same admitted bytes:
+
+```powershell
+$DispatchPath = Join-Path $ReleaseWork "admissions\$Stage-dispatch.json"
+$DispatchJson = Get-Content -Raw -LiteralPath $DispatchPath
+@{mode='release-receipt';admission=$DispatchJson} | ConvertTo-Json -Compress |
+  gh workflow run quality-candidate-intake.yml --repo taipei49314/checkwash --ref $ReviewedRef --json
+```
+
+After bootstrap, `release.yml` mode `verify` is read-only. Mode `publish` adds
+stage checks; for release-event it also uploads distributions and reaches the
+protected PyPI deployment, so it is not a dry run:
+
+```powershell
+@{mode='verify';admission=$DispatchJson} | ConvertTo-Json -Compress |
+  gh workflow run release.yml --repo taipei49314/checkwash --ref $ReviewedRef --json
+# Only for an admitted, authorized publication of the intended stage:
+@{mode='publish';admission=$DispatchJson} | ConvertTo-Json -Compress |
+  gh workflow run release.yml --repo taipei49314/checkwash --ref $ReviewedRef --json
+```
+
+Release-event publication uses two non-null dispatch links to its sealed files:
+
+```json
+{
+  "release_authorization":{"path":"release/release-authorization.json","sha256":"ACTUAL_AUTHORIZATION_RAW_SHA256"},
+  "platform_acceptance":{"path":"release/platform-acceptance.json","sha256":"ACTUAL_ACCEPTANCE_RAW_SHA256"}
+}
+```
+
+The event-after fresh build is the unique admitted distribution set. A later
+rebuild needs matching new evidence. Existing GitHub assets are retained only
+when actual downloaded bytes match; differences stop publication. There is no
+blanket `--clobber`. Reconcile unknown outcomes before any further authorized
+action; no automatic retry is supplied.
+
+Read back each actual run/attempt and native check: name, Actions App ID `15368`,
+head, success, external ID, manifest digest, receipt commit and details URL.
+PR's four external IDs remain `pju:<manifest>:<context>`; stage checks use
+`pju-release:<manifest>:<stage>`. A skipped job is not a successful product check.
+Retain the exact named artifacts:
+
+- `pju-release-verification-<run>-<attempt>`: verification result.
+- `pju-release-stage-check-<run>-<attempt>`: published report with four PR
+  `check_run_ids` and separate stage `check_run_id`, when applicable.
+- `pju-release-assets-<run>-<attempt>`: actual GitHub asset readback.
+- `pju-pypi-handoff-<run>-<attempt>`: post-approval source/asset check.
+
+For example, retrieve a completed publisher's report and inspect every native
+check it names. Compare the returned fields with the admitted subject/digest and
+the required names above before advancing:
+
+```powershell
+$PublisherRun = 123458 # actual publisher run
+$PublisherAttempt = 1
+$ReportDir = Join-Path $ReleaseWork "reports\$PublisherRun-$PublisherAttempt"
+gh run download $PublisherRun --repo taipei49314/checkwash --name "pju-release-stage-check-$PublisherRun-$PublisherAttempt" --dir $ReportDir
+$ReportPath = Join-Path $ReportDir 'release-stage-check.json'
+$StageReport = Get-Content -Raw -LiteralPath $ReportPath -ErrorAction Stop | ConvertFrom-Json
+$NativeCheckIds = @($StageReport.check_run_ids) + @($StageReport.check_run_id)
+foreach ($NativeCheckId in $NativeCheckIds) {
+  gh api "repos/taipei49314/checkwash/check-runs/$NativeCheckId" --jq '{id,name,head_sha,status,conclusion,external_id,details_url,app_id:.app.id}'
+}
+$ParentReportSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $ReportPath).Hash.ToLowerInvariant()
+```
+
+Use the published stage report's original bytes as the next parent. A read-only
+verify report without a native check ID cannot replace it.
+
+## 4. Complete the authorized version
+
+Follow [RELEASING](RELEASING.md): final PR evidence and normal merge; exact main;
+authorized annotated tag and its own evidence; authorized GitHub Release;
+event-after fresh build/qualification; actual assets; Nelson's PyPI approval;
+real public downloads/installations. R29's two fixed 1,800-member sets and owner
+review remain separate from verdict cases and #419 history.
+
+PyPI retains filename `release.yml`, `environment: pypi`,
+`vars.PYPI_ENABLED == 'true'` and per-job `id-token: write`. It depends on
+successful actual GitHub asset readback, then repeats verification after Nelson
+approves the deployment. Agents cannot approve it. Before enabling this path,
+read back the live PyPI trusted-publisher registration, environment and dispatch/
+ref compatibility; repository documentation alone does not establish that setup.
+
+This verifier certifies Windows/Python 3.11.9 only. All eight other matrix legs
+and cross-platform byte comparison remain `NOT_RUN` here. Its publisher requires
+real version/source-specific acceptance of those missing items while preserving
+the standing nine-leg contract. Supplementary Linux evidence is not silently
+certified by this packet. A different acceptance table or full-matrix route
+requires an explicitly reviewed extension, not invented coverage or a contract
+rewrite inside this patch.
+
+Advance reviewed advertised/README/Action pins only after the new public-visitor
+packet and native check succeed. Preserve failed historical receipts and record
+actual source, tag, runs, bytes, visitors and limits. Rotate verdict baseline in
+a separate reviewed change. Downstream re-pins and issue closure keep their own
+applicable authorization.
