@@ -323,27 +323,78 @@ def validate_inventory(packet, value, desc, qualification, qualification_path, d
                 "qualified artifact differs from delivered primary artifact")
 
 
-def validate_junit(raw):
+def pytest_passed_subtests(stdout, version):
+    """Reconcile the one supported pytest producer from original command bytes."""
+    require(version == "9.1.1" and type(stdout) is bytes, "JUnit subtests require pinned pytest 9.1.1 stdout")
+    require(b"\x1b" not in stdout, "colored pytest subtest stdout unsupported")
+    lines = [line.removesuffix(b"\r") for line in stdout.split(b"\n") if line.removesuffix(b"\r")]
+    # Count every summary-shaped outcome, including failed/unknown categories.
+    # Otherwise an earlier failed summary could hide behind the final success.
+    shape = rb"(?:=+ )?[0-9]+ [A-Za-z][A-Za-z ]*(?:, [0-9]+ [A-Za-z][A-Za-z ]*)* in .+"
+    summaries = [line for line in lines if re.fullmatch(shape, line)]
+    require(len(summaries) == 1 and summaries[0] == lines[-1], "JUnit needs one final pytest summary")
+    match = re.fullmatch(rb"([1-9][0-9]*) passed(?:, ([1-9][0-9]*) skipped)?, "
+                         rb"([1-9][0-9]*) subtests passed in ((0|[1-9][0-9]*)\.[0-9]{2})s"
+                         rb"( \([0-9]+:[0-5][0-9]:[0-5][0-9]\))?", summaries[0])
+    require(match is not None, "unsupported pytest subtest summary")
+    elapsed = float(match[4])
+    require(math.isfinite(elapsed) and elapsed > 0, "invalid pytest summary duration")
+    # The seconds field rounds to two decimals, while timedelta floors the
+    # original duration. Thus 60.00s may have no suffix (59.999 seconds), and
+    # 3601.00s (1:00:00) is a genuine formatter boundary (3600.999 seconds).
+    if match[6] is None:
+        require(elapsed <= 60, "pytest summary duration suffix missing")
+    else:
+        hours, minutes, seconds = map(int, match[6][2:-1].split(b":"))
+        whole = hours * 3600 + minutes * 60 + seconds
+        require(whole >= 60 and (whole == int(elapsed)
+                or (elapsed.is_integer() and whole == int(elapsed) - 1)), "pytest summary duration differs")
+    return {"passed": int(match[1]), "skipped": int(match[2] or b"0"), "subtests": int(match[3])}
+
+
+def validate_junit(raw, *, pytest_stdout=None, pytest_version=None):
+    mentioned = type(pytest_stdout) is bytes and b"subtests passed" in pytest_stdout
+    if mentioned:
+        require(b"\0" not in raw, "subtest JUnit must be UTF-8")
+        raw.decode("utf-8")
     require(b"<!DOCTYPE" not in raw.upper() and b"<!ENTITY" not in raw.upper(), "DTD/entity forbidden in JUnit")
     root = ET.fromstring(raw)
     require(root.tag in ("testsuites", "testsuite"), "JUnit root")
     cases = list(root.iter("testcase"))
     require(cases and any(case.find("skipped") is None for case in cases), "empty/all-skipped JUnit")
     require(not list(root.iter("failure")) and not list(root.iter("error")), "JUnit failures/errors")
-    for suite in root.iter("testsuite"):
+    suites = list(root.iter("testsuite"))
+    totals = []
+    for suite in suites:
         direct = list(suite.findall("testcase"))
         require(not suite.findall("testsuite"), "nested JUnit suites unsupported")
-        for attr, expected in (("tests", len(direct)), ("failures", 0), ("errors", 0),
+        declared = suite.get("tests")
+        require(declared is not None and re.fullmatch(r"[0-9]+", declared), "JUnit summary mismatch: tests")
+        totals.append(int(declared))
+        for attr, expected in (("failures", 0), ("errors", 0),
                                ("skipped", sum(case.find("skipped") is not None for case in direct))):
             value = suite.get(attr)
             require(value is not None and re.fullmatch(r"[0-9]+", value) and int(value) == expected, "JUnit summary mismatch: " + attr)
+    subtests = 0
+    if any(total != len(suite.findall("testcase")) for total, suite in zip(totals, suites)) or mentioned:
+        require(len(suites) == 1 and len(suites[0].findall("testcase")) == len(cases)
+                and (root is suites[0] or list(root.findall("testsuite")) == suites), "subtest JUnit must have one direct suite")
+        summary = pytest_passed_subtests(pytest_stdout, pytest_version)
+        skipped = sum(case.find("skipped") is not None for case in cases)
+        require(summary["passed"] + summary["skipped"] == len(cases) and summary["skipped"] == skipped,
+                "pytest/JUnit testcase outcomes differ")
+        subtests = summary["subtests"]
+        require(totals[0] == len(cases) + subtests, "JUnit subtest count differs")
     if root.tag == "testsuites":
-        for attr, expected in (("tests", len(cases)), ("failures", 0), ("errors", 0),
+        for attr, expected in (("tests", len(cases) + subtests), ("failures", 0), ("errors", 0),
                                ("skipped", sum(c.find("skipped") is not None for c in cases))):
             if attr in root.attrib:
                 value = root.attrib[attr]
                 require(re.fullmatch(r"[0-9]+", value) and int(value) == expected, "JUnit aggregate mismatch")
-    return {"tests": len(cases), "skipped": sum(c.find("skipped") is not None for c in cases)}
+    result = {"tests": len(cases), "skipped": sum(c.find("skipped") is not None for c in cases)}
+    if subtests:
+        result.update(reported_tests=len(cases) + subtests, passed_subtests=subtests)
+    return result
 
 
 def action_run_blocks(raw):
@@ -520,7 +571,8 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
                               "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
             and argv[17] == "--junitxml" and argv[19] == "tests"
             and argv[18].replace("\\", "/").endswith("/" + records["junit"]), "full pytest command scope differs")
-    junit = validate_junit(packet.raw(records["junit"]))
+    junit = validate_junit(packet.raw(records["junit"]), pytest_stdout=packet.raw(pytest["stdout"]),
+                           pytest_version=runtime["dependencies"].get("pytest"))
     validate_action(packet, records, head, base, trusted_root)
     validate_candidate_action(packet, records, head, base, source_root, trusted_root, collector)
     for distribution in ("source", "wheel", "pyz"):
