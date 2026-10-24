@@ -31,6 +31,41 @@ That is one new bounded attempt with original cost/source/cleanup stops; it
 does not resume r1 or pre-accept a movement. Other batches and model/API work
 are outside these named decisions.
 
+R2 then stopped correctly as `PARTIAL_UNCHANGED_WITH_GAPS`, exit3: six members
+compared, 16 CLI calls, 7,429 members not attempted. Its two fixed engines
+returned identical pass/two-WARN output and the same three Python2 example
+parse omissions on pytest commit `4ee3831ac957f0fcfb57bce3ed3f74108ea05e08`.
+Independent byte/source review confirmed inherited omissions and known cleanup;
+r2 remains consumed/partial under EC T-612, not accepted as a full history.
+
+Nelson subsequently selected exactly:
+
+> 核可 r3 精確來源發布與一次比較，採新解析略過契約
+
+The referenced r3 source is `dbeb603ca8aba80c4376af95eca58529ab48b88f`, seal
+`a60c7cedbfeb068a66d90d859f46936633de3ae80410d8c8583c1c818cddd585`,
+published/read back as [Lab PR23](https://github.com/taipei49314/checkwash-lab/pull/23),
+commit `020d7977d1d77739e399156086e07d68b90f81e5`. The sole new contract permits
+recording and continuing fully identical returned envelopes/ordered findings,
+exit and raw stderr with identical parse skips, empty config errors and no
+unread failures. Omitted files are not called analysed. Other error, changed
+skip, finding/source/cost/raw/cleanup stops remain. The full original 7,435
+members and one-lane/24-hour bounds are retained; start must precede
+2026-10-25T04:00Z and stop no later than 2026-10-26T04:00Z. Failure consumes
+this new attempt too. EC T-614 accounts its fresh once admission and execution;
+its mechanical result and historical-cost disposition remain pending here.
+
+The first actual required R29 run is separately admitted/accounted as EC T-615,
+`r29-v091-r2`, from reviewed harness `2e3f30861e623d6f971d5cc4e96e4b79988f8aba`,
+manifest `edadaf48f142f9d311f3518101e9841b369aab4b3f130265b3af7036baa5f7e7`.
+Root admitted that exact first run under this publication instruction and the
+standing fixed R29 step; Nelson did not type that harness hash or six-hour
+technical budget. It uses true public v0.9.0 `d6eda4f6` against fixed candidate
+`198c3ab0`, the original two sets of 1,800, 7,200 CLI calls, fixed local Linux
+Docker image, four CPUs/six GiB and six hours including closure. Earlier R29
+r1 was a proposal, never executed. No #419 grant is reused, and mandatory
+movement review and the final-src/version-only condition remain required.
+
 Nelson alone approves the `pypi` environment deployment. The source/distribution
 checks and actual GitHub assets must succeed first. Public GitHub/PyPI downloads
 and fresh visitors precede reviewed advertised/README/Action pin promotion;

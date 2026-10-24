@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-23 (v0.9.0 published and public bytes/visitors verified; advertised pins advance in this follow-up; baseline rotation remains separate)
+Updated: 2026-10-24 (v0.9.1 preparation and admitted comparisons in progress; v0.9.0 remains the verified public CLI/Action)
 
 ## 2026-10-24: narrow #419 release preparation
 
@@ -26,6 +26,30 @@ Original raw/consumed markers remain. Nelson then explicitly selected
 that new once admission does not revive r1 or accept historical cost.
 R29 still compares actual v0.9.0 with the fixed candidate on both 1,800-member
 sets; the narrow 7,435-member history packet does not replace it.
+
+R2 correctly stopped at the inherited, identical three-file Python2 parse gap:
+`PARTIAL_UNCHANGED_WITH_GAPS`, exit3, six compared/16 CLI/7,429 not attempted.
+Its raw, consumed markers and verified cleanup are retained. Nelson explicitly
+approved the new r3 source/once contract: identical parse omissions may be
+recorded and continued without claiming the omitted files were analysed.
+[Lab PR23](https://github.com/taipei49314/checkwash-lab/pull/23) and EC T-614
+bind the new source/admission. The r3 run is in progress; neither earlier
+attempt is resumed and no future cost is accepted by that grant.
+
+The required R29 first actual run, `r29-v091-r2`, is separately source/budget
+admitted under the current publication task and accounted as EC T-615. It uses
+true public `d6eda4f6` and candidate `198c3ab0`, not the later 618c maintenance
+source as the published baseline. Its result and mandatory owner review are
+pending. Exact source, runtime, limits and distinction between the human's
+short publication instruction and root's technical admission are recorded in
+[RELEASING](docs/RELEASING.md#v091-publication-instruction-2026-10-24).
+
+Publication-route engineering is separate [PR563](https://github.com/taipei49314/checkwash/pull/563),
+head `e462b323`. Its real pinned-Action dogfood blocks on 24 HIGH findings from
+three test-oracle migrations. Independent source review and ordinary diagnostic
+tests do not turn that BLOCK into a passing required check. A proposed precise
+maintainer exception is not yet approved or executed; no ruleset or allowlist
+change has occurred. This product branch still needs its own final-head evidence.
 
 PJU is the current default under EC T-610. No pool connectivity investigation
 is part of this work. Record real local provenance and unexecuted platforms;
