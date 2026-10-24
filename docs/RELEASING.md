@@ -231,8 +231,8 @@ A standing step since 2026-10-19 (owner ruling 2026-10-19, R29, with R27 and
 R3; [#212](https://github.com/taipei49314/checkwash/issues/212)). It runs
 once the candidate commit is fixed, before step 5.
 
-- **Sets.** The previous published release (for the next release, v0.8.0
-  `f02b5d8`) and the candidate each check two fixed in-sample sets: the
+- **Sets.** The previous published release (v0.9.0 `d6eda4f6` for the
+  v0.9.1 preparation above) and the candidate each check two fixed in-sample sets: the
   Python `standard` set, 300 commits from each of attrs, click, flask, httpx,
   rich and starlette (D-141, arm 1), and the JS/TS set of
   [`benchmarks/javascript-replay/`](../benchmarks/javascript-replay/README.md),
