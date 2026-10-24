@@ -246,9 +246,14 @@ once the candidate commit is fixed, before step 5.
   `run.checkwash_version`. So a candidate frozen before the version bump
   still counts. If anything else in `src/` changes after the comparison,
   the comparison runs again.
-- **Where.** This is release verification, so it runs on the EC pool, never
-  on LAPTOP-01AGNPJU or LAPTOP-16NUA5I8: EC POLICY `checkwash-pju-sweep`
-  (T-546) does not cover release verification.
+- **Where.** Current EC POLICY `pju-primary-execution-20261024` (T-610)
+  designates LAPTOP-01AGNPJU as the default authorized execution host,
+  including this release verification. Record
+  `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, actual runtime, fixed sources and
+  original receipts. This supersedes the former pool-only venue restriction;
+  source isolation, run authority and acceptance conditions remain. The owner
+  confirmed the pool is offline and instructed agents to stop connection
+  investigation. [Current policy source](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md).
 - **What goes to the owner.** Every commit whose outcome moves from pass to
   block, from block to pass, or from an analysed verdict to an engine error,
   and every commit the candidate blocks that the previous release could not
