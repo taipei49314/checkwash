@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-24 (v0.9.1 preparation and admitted comparisons in progress; v0.9.0 remains the verified public CLI/Action)
+Updated: 2026-10-24 (v0.9.1 preparation; historical disposition pending; v0.9.0 remains the verified public CLI/Action)
 
 ## 2026-10-24: narrow #419 release preparation
 
@@ -53,7 +53,15 @@ and EC T-616 bind the fresh once. It started at 2026-10-24T11:21:59Z on PJU.
 Expected D176 movements remain pending source/cost review; identical valid
 parse skips retain omitted coverage, and only exact closed both-exit2/raw-equal
 errors are recorded separately as not analysed. Other stops and the original
-24-hour cap remain. No completion or historical-cost acceptance is claimed.
+24-hour cap remained. The run stopped at 2026-10-24T14:12:18Z when the Django
+shard's original 3,600-second budget expired. It completed 881 two-arm result
+comparisons, retained one partial candidate timeout and left 6,553 members
+unattempted: 6,554 members lack a completed comparison. Three cost members /
+four finding occurrences remain pending. Three parse-gap members retain seven
+file omissions; two identical exit2 members remain not analysed. The
+[T-616 terminal audit](https://github.com/taipei49314/estate-consolidation/commit/34e5a4a57ac9c84fd4cf5164e577edabd2242361)
+verified original raw/source/runtime and cleanup. R4 is consumed and partial;
+neither a new run nor this-version unknown-cost acceptance is implicit.
 
 The required R29 first actual run, `r29-v091-r2`, is separately source/budget
 admitted under the current publication task and accounted as EC T-615. It uses
@@ -102,8 +110,16 @@ collection. Six prepared Windows/
 Linux legs are not executed evidence or a waiver of the bridge's eight absent
 platforms; the separate strict nine-leg comparison still lacks three macOS legs.
 
-This is an as-of preparation checkpoint. R4 remains admitted and running,
-with source/cost disposition pending and publication blocked. A later immutable
+The first combined validation at `fa45b2f6` failed two documentation assertions
+(status-count format and the authoritative version row). Its validation
+checkout also lacked the real v0.9.0 tag required by the README pin test. The
+separate matrix omitted ProgramFiles from its Windows outer environment and
+failed Action preflight tests. Original failures remain evidence; corrected
+documentation and fresh validation inputs require a new exact capture and
+complete matching validation, without changing test expectations.
+
+This is an as-of preparation checkpoint. R4 has stopped partial, with
+source/cost disposition pending and publication blocked. A later immutable
 Lab/EC result plus explicit Nelson disposition may close that external gate
 for an unchanged candidate; this paragraph claims neither completion nor
 acceptance. Any required code or contract correction changes the candidate
@@ -3065,7 +3081,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.9.0 |
+| version | v0.9.1 |
 | last published CLI | v0.9.0 |
 | last published CLI commit | d6eda4f695fabb8e7d138f7a87b099d2028f0294 |
 | detectors | 22 |

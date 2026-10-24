@@ -22,8 +22,8 @@ missing-platform acceptance. Preserve every failed or partial result and all
 unexecuted scope. A new substantive source/contract change requires the matching
 validation and version review; this does not authorize a different version.
 
-The fixed candidate may be validated while the independently admitted r4 census
-continues. This document records the preparation state as of 2026-10-24; it is
+The fixed candidate may be validated while the independently admitted history
+and its disposition are pending. This document records preparation as of 2026-10-24; it is
 not a historical-cost decision. For an unchanged candidate, later census
 closure/source review and Nelson's exact disposition may be recorded in
 immutable Lab/EC evidence and linked from the PR and Release notes. Do not
@@ -103,6 +103,19 @@ Other anomalies still stop. Completion, if reached, is a census pending review,
 never history PASS or cost acceptance. The retained r3 prefix's naive 26.5-hour
 projection exceeds the 24-hour cap; completion within that cap was not promised.
 R1/r2/r3 stay consumed and the unselected waiver stays unapproved.
+
+R4 subsequently stopped as `PARTIAL_COMMAND_FAILURE` at 2026-10-24T14:12:18Z.
+The original Django shard budget of 3,600 seconds left only 27.255 seconds
+for ordinal881's candidate call. Its TIMEOUT/124 does not prove the command
+would exceed the nominal 60-second limit; the baseline arm was not run.
+There are 881 completed result comparisons (879 returned envelopes plus two
+identical exit2/not-analysed members), one partial and 6,553 not attempted.
+Three parse-gap members retain seven skipped-file occurrences. Three members /
+four finding occurrences remain pending cost review. The
+[independent terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/34e5a4a57ac9c84fd4cf5164e577edabd2242361)
+closed source/runtime/raw/owned cleanup. R4 also remains consumed; a new exact
+attempt or a version-specific acceptance of known cost and the 6,554 incomplete
+comparisons needs a separate explicit Nelson decision. None is recorded here.
 
 The first actual required R29 run is separately admitted/accounted as EC T-615,
 `r29-v091-r2`, from reviewed harness `2e3f30861e623d6f971d5cc4e96e4b79988f8aba`,
