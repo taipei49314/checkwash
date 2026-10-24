@@ -320,12 +320,18 @@ class ReleaseCollectorTests(unittest.TestCase):
 
     def test_clean_subprocess_environment_drops_caller_credentials(self):
         action = COLLECT.load_backend().load_replayer()
-        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {
-                "GH_TOKEN": "owned-not-secret", "OPENAI_API_KEY": "owned-not-secret", "SSH_AUTH_SOCK": "owned",
-                "PIP_INDEX_URL": "https://owned.invalid", "PYTHONPATH": "owned"}):
-            env = action.clean_environment(Path(sys.executable), Path(r"C:\Program Files\Git\cmd\git.exe"),
-                                           Path(r"C:\Program Files\Git\bin\bash.exe"), Path(folder))
-            self.assertFalse({"GH_TOKEN", "OPENAI_API_KEY", "SSH_AUTH_SOCK", "PIP_INDEX_URL", "PYTHONPATH"} & env.keys())
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            system, program = root / "system", root / "program"
+            for directory in (system / "System32", program / "Git/cmd", program / "Git/bin", program / "Git/usr/bin"):
+                directory.mkdir(parents=True)
+            with patch.dict(os.environ, {
+                    "GH_TOKEN": "owned-not-secret", "OPENAI_API_KEY": "owned-not-secret", "SSH_AUTH_SOCK": "owned",
+                    "PIP_INDEX_URL": "https://owned.invalid", "PYTHONPATH": "owned",
+                    "SystemRoot": str(system), "ProgramFiles": str(program)}):
+                env = action.clean_environment(Path(sys.executable), program / "Git/cmd/git.exe",
+                                               program / "Git/bin/bash.exe", root)
+                self.assertFalse({"GH_TOKEN", "OPENAI_API_KEY", "SSH_AUTH_SOCK", "PIP_INDEX_URL", "PYTHONPATH"} & env.keys())
 
 
 if __name__ == "__main__":

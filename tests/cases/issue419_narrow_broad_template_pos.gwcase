@@ -1,0 +1,25 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+issue: 419
+title: D-176 narrow Python broad-except refusal beside a template comment edit
+status: Development candidate; first-stage expectation approved, runtime not yet verified
+origin: New named candidate; do not restore D-141's five-rule refusal or deleted suite
+=== before: app/templates/status.html ===
+<!-- status -->
+<p>{{ value }}</p>
+=== after: app/templates/status.html ===
+<!-- status, presentation note -->
+<p>{{ value }}</p>
+=== before: tests/test_sample.py ===
+def test_oracle():
+    value = 2
+    assert value == 2
+=== after: tests/test_sample.py ===
+def test_oracle():
+    value = 2
+    try:
+        assert value == 2
+    except Exception:
+        pass
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"]}]

@@ -1,0 +1,28 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+issue: 419
+title: JS broad catch retains opaque credit under the Python-only narrow proposal
+status: D-176 development candidate; #212 remains independent
+origin: Existing js_catch_assertion_swallowed_pos shape plus an existing template edit
+=== before: app/templates/status.html ===
+<!-- status -->
+<p>{{ value }}</p>
+=== after: app/templates/status.html ===
+<!-- status, presentation note -->
+<p>{{ value }}</p>
+=== before: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  expect(withTax(10.005, 0.1)).toBe(11.01);
+});
+=== after: tests/cart.test.ts ===
+import { expect, it } from "vitest";
+it("rounds to cents", () => {
+  try {
+    expect(withTax(10.005, 0.1)).toBe(11.01);
+  } catch (e) {
+    // rounding differs between CI runners
+  }
+});
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "warn", "unit": null, "deescalators": ["REPAIR_EVIDENCE"]}]

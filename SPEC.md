@@ -944,15 +944,16 @@ effect or statement joins its guarded ones, or when its guard is a constant
   it from a refactor is where the new expectation comes from, so the rule
   fires only when the resolved dependencies of the expectation intersect the
   names in the subject.
-- `BROAD_EXCEPT_ADDED` is treated as an **oracle** rule when it lands in a
-  file the test rules judge (§2) or in a `conftest.py`: a broad `except`
-  around an assertion is tampering there, whatever it means in production
-  code. It has no unit, so a sibling test's evidence never reaches it, and its
-  only repair evidence is an opaque production change (§5 clause 3), which
-  holds it at warn in a Python or JS/TS test file or conftest
-  (THREATMODEL 2, 131). #464 made it refuse that evidence in a Python test
-  file or conftest (#419, D-141); that refusal is turned off for v0.9.0
-  (D-171).
+- `BROAD_EXCEPT_ADDED` is an **oracle** rule when its file is judged as a
+  test (§2) or has the conftest role. The detector records these findings
+  without a unit, including handlers inside a function; "file-scoped" does
+  not mean module-level syntax. A sibling test's symbol evidence never
+  reaches such a finding. In a Python file, a finding with no unit now
+  refuses clause 3's opaque production credit (D-176). In JS/TS, that credit
+  is unchanged pending #212. The broad five-rule refusal introduced by #464
+  remains disabled under D-171; this revision admits only the separately
+  stated Python broad-except condition. Production-role handlers that carry
+  no test obligations remain non-oracle findings.
 
 ## 4b. Artifacts are never evidence
 
@@ -983,7 +984,7 @@ From a subdirectory (§9), the task path is mapped lexically: `--task` is taken 
 
 | id | condition | effect |
 |---|---|---|
-| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) that no de-escalator below holds. The id stays E1, and the label says why it applies: a blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` (§4); otherwise, in a diff that changes a production-role file (§2) other than the inert files of clause 3 below, it is labelled `PROD_CHANGE_NOT_EVIDENCE`: production changed, and no evidence the finding may take reaches that change, as when the test reaches it only through an unchanged module (#473). That production-role file can be one checkwash reads no symbols from: a file that stops parsing, a non-Python file the diff adds, deletes or renames, or one whose content runs a test runner. Generated artifacts and a change set aside unread (§4b) are no production-role change. Every other such finding, in a diff that changes no production-role file or only inert ones, is labelled `NO_PROD_CHANGE_IN_DIFF`. `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`, which main printed from #464 for a finding #419's refusal denied the opaque change, is not printed while that refusal is off (D-171). The label is chosen after the severity and is not part of the fingerprint, so it changes no severity, verdict or fingerprint | warn → high |
+| E1 `NO_PROD_CHANGE_IN_DIFF` | oracle finding with **no repair evidence** (defined below) that no de-escalator below holds. The id stays E1; the label is chosen in this order. A blocking unguarded conftest suite control in a diff that changes any production-role file is labelled `COLLECTION_CONTROL_UNEXPLAINED` (§4). Otherwise, a finding matching the separately admitted Python unit-less `BROAD_EXCEPT_ADDED` condition is labelled `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` when `prod_opaque_change` is true. Otherwise, a diff that changes a production-role file (§2) other than the inert files of clause 3 below gives `PROD_CHANGE_NOT_EVIDENCE`: production changed, and no evidence the finding may take reaches that change, as when the test reaches it only through an unchanged module (#473). That production-role file can be one checkwash reads no symbols from: a file that stops parsing, a non-Python file the diff adds, deletes or renames, or one whose content runs a test runner. Generated artifacts and a change set aside unread (§4b) are no production-role change. Every other such finding, in a diff that changes no production-role file or only inert ones, is labelled `NO_PROD_CHANGE_IN_DIFF`. The broad five-rule refusal set remains empty. The label is chosen after severity and remains outside the fingerprint. The label itself changes no severity, verdict or fingerprint; the new refusal of repair credit can change severity and verdict | warn → high |
 | E2 `ORACLE_FREEZE` | contract declares `oracle_freeze: true` | warn → high |
 | E3 `HARDCODE_FINGERPRINT` | **Retired** (#419, D-141). Nothing implements it: `EXPECTED_VALUE_HARDCODED` is an oracle rule and goes through E1 and D1 like the others (`gating.py` `ORACLE_RULES`; `expected_hardcoded_pos` pins warn with `REPAIR_EVIDENCE`) | none |
 | E4 `META` | guardrail / greenwash-own-config touched | → critical |
@@ -1078,14 +1079,14 @@ and that no other de-escalator holds. Evidence exists when:
    wrote a three-line json file nothing imports, purely to satisfy this
    clause (row 73).
    Every oracle finding takes this clause except an unguarded suite control
-   (§4, THREATMODEL 72), in Python and JS/TS test files alike. #464 made
-   `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`, `TOLERANCE_LOOSENED`
-   and `BROAD_EXCEPT_ADDED` refuse it when the finding's file is a Python file
-   the test rules judge (§2) or a `conftest.py` (#419, D-141). The combined
-   acceptance sweep's pre-registered stop fired on that refusal, and it is
-   turned off for v0.9.0 (D-171), so a no-op modification of such a file still
-   holds those findings at warn (THREATMODEL 2, #419 Route B). #419 stays
-   open; THREATMODEL 130 and 131 name what a refusal would leave open.
+   (§4, THREATMODEL 72) and a `BROAD_EXCEPT_ADDED` finding with no unit in a
+   Python file judged as a test (§2) or holding the conftest role (D-176).
+   The latter condition refuses this credit for comment-only and substantive
+   opaque modifications alike; it does not prove that the modification is
+   irrelevant or dishonest. All other rules retain D-171's refusal-off
+   behavior, including Python unit-scoped weakening, removal, disabling and
+   tolerance findings. #419 remains open for those routes and for Route A;
+   JS/TS behavior and #212's ruling remain independent.
 
 **A fixture's producer** (#471). A test that gets its subject from a pytest
 fixture calls nothing that builds it, so clause 1 counts one call of the

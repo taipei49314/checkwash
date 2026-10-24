@@ -1,6 +1,133 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-23 (v0.9.0 published and public bytes/visitors verified; advertised pins advance in this follow-up; baseline rotation remains separate)
+Updated: 2026-10-24 (v0.9.1 preparation; historical disposition pending; v0.9.0 remains the verified public CLI/Action)
+
+## 2026-10-24: narrow #419 release preparation
+
+Nelson instructed this session to carry the reviewed v0.9.1 scope through
+publication: 「直接做到發布」. The version-specific record is in
+[RELEASING](docs/RELEASING.md#v091-publication-instruction-2026-10-24).
+This branch integrates D-176's previously approved narrow implementation and
+protected-text drafts. Only Python test/conftest `BROAD_EXCEPT_ADDED` findings
+with no unit refuse opaque repair credit; the other Python rules, JS/TS,
+production-only handlers and Route A remain outside the fix. #419 stays open.
+
+The earlier first-stage source `198c3ab0` has preserved Windows/Python 3.11.9
+PJU receipts: 20,561 passed/25 skipped, 283 cases per source/wheel/pyz and
+pinned/candidate Action replays. Those receipts do not certify this new head.
+Its own full development, qualification, visitor, verdict and release-stage
+evidence are still required. Public CLI/Action/advertised pins remain v0.9.0.
+
+The first narrow history attempt stopped as `PARTIAL_UNEXPECTED`, exit3, after
+three CLI calls on one member. Its comparator incorrectly required full SHAs
+where the CLI reports native short labels; 7,434 members were not attempted.
+Original raw/consumed markers remain. Nelson then explicitly selected
+「核可 r2 精確來源發布與一次比較」 for the independently reviewed r2 packet;
+that new once admission does not revive r1 or accept historical cost.
+R29 still compares actual v0.9.0 with the fixed candidate on both 1,800-member
+sets; the narrow 7,435-member history packet does not replace it.
+
+R2 correctly stopped at the inherited, identical three-file Python2 parse gap:
+`PARTIAL_UNCHANGED_WITH_GAPS`, exit3, six compared/16 CLI/7,429 not attempted.
+Its raw, consumed markers and verified cleanup are retained. Nelson explicitly
+approved the new r3 source/once contract: identical parse omissions may be
+recorded and continued without claiming the omitted files were analysed.
+[Lab PR23](https://github.com/taipei49314/checkwash-lab/pull/23) and EC T-614
+bind the new source/admission. R3 stopped as `PARTIAL_NEW_BLOCK_COST_REVIEW`,
+exit3, after 112 compared members and 230 CLI calls; 7,323 were not attempted.
+Two identical parse-gap members retain six skipped-file occurrences. Its
+original terminal and independent closure audit are preserved; r1/r2/r3 are
+consumed and no history cost is accepted by those grants.
+
+The stop is uvloop `7b202ccf` against `ae44ec2d`: a broad-except finding in
+`tests/test_context.py` moves from warn/repair credit to high/BLOCK. Source
+review supports a legitimate callback failure-relay regression test: the
+handler sets an exception on the Future subsequently awaited by the test.
+The candidate's refusal nevertheless matches its fixed metadata predicate.
+`unit=None` does not mean lexical module scope; this catch is inside a nested
+callback in a test method. Historical-cost disposition and any further once
+attempt remained pending after that stop. Nelson then selected the exact A
+option: a new r4 full cost census, rather than the supplemental-history waiver.
+R4 source `3d375a1a`, seal `4b0575e7`, [Lab PR24](https://github.com/taipei49314/checkwash-lab/pull/24)
+and EC T-616 bind the fresh once. It started at 2026-10-24T11:21:59Z on PJU.
+Expected D176 movements remain pending source/cost review; identical valid
+parse skips retain omitted coverage, and only exact closed both-exit2/raw-equal
+errors are recorded separately as not analysed. Other stops and the original
+24-hour cap remained. The run stopped at 2026-10-24T14:12:18Z when the Django
+shard's original 3,600-second budget expired. It completed 881 two-arm result
+comparisons, retained one partial candidate timeout and left 6,553 members
+unattempted: 6,554 members lack a completed comparison. Three cost members /
+four finding occurrences remain pending. Three parse-gap members retain seven
+file omissions; two identical exit2 members remain not analysed. The
+[T-616 terminal audit](https://github.com/taipei49314/estate-consolidation/commit/34e5a4a57ac9c84fd4cf5164e577edabd2242361)
+verified original raw/source/runtime and cleanup. R4 is consumed and partial;
+neither a new run nor this-version unknown-cost acceptance is implicit.
+
+The required R29 first actual run, `r29-v091-r2`, is separately source/budget
+admitted under the current publication task and accounted as EC T-615. It uses
+true public `d6eda4f6` and candidate `198c3ab0`, not the later 618c maintenance
+source as the published baseline. It completed all 3,600 members/7,200 CLI
+calls; both payload and raw differences are zero, with an empty mandatory
+movement list. Python: 1,752 pass/pass and 48 block/block; JS/TS: 1,759
+pass/pass, 39 block/block and two recorded-only error/error. Original source,
+runtime, 40,916 session files and exact-container removal were independently
+verified. This is in-sample evidence, not an FP rate; the final source must
+still differ from `198c3ab0` only in its version literal. Exact source, runtime,
+limits and distinction between the human's
+short publication instruction and root's technical admission are recorded in
+[RELEASING](docs/RELEASING.md#v091-publication-instruction-2026-10-24).
+
+Publication-route engineering is separate [PR563](https://github.com/taipei49314/checkwash/pull/563),
+head `e462b323`. Its real pinned-Action dogfood blocks on 24 HIGH findings from
+three test-oracle migrations. Independent source review and ordinary diagnostic
+tests do not turn that BLOCK into a passing required check. Actual full-suite,
+three 283-case qualifications/inventories and verdict diagnostics passed and
+were independently audited. Nelson approved the exact 24-fingerprint semantic
+exception and one temporary User/pull_request operator attempt. Under EC T-617,
+the sole actor PUT returned HTTP403, "Resource not accessible by personal
+access token"; no merge was attempted. Original and fresh native readbacks
+show the full original ruleset, empty bypass and main `5338e689`. That API once
+is consumed. The separate T-618 browser attempt then consumed its once: first
+Save opened Confirm access, root cancelled and did not attempt a merge. The
+bounded cleanup and independent fresh readbacks observed the entire original
+ruleset, empty bypass/never, open PR563 and unchanged main; they do not prove
+every unseen transient state. T-618's [terminal record](https://github.com/taipei49314/estate-consolidation/commit/da118ad8713648dc5f2687092c06bfdd1ac5826b)
+preserves that consumed outcome. Nelson subsequently completed authentication;
+the unchanged-form auth-only Save displayed "No changes have been made" and
+an empty bypass list. Authentication does not authorize a new actor-add/merge
+window. Nelson then separately approved r2 under EC T-619. The sole merge PUT
+acknowledged `865d3fcafbe69cf67e3e9e9789038e27b4b02809` at 13:11:06Z.
+The original helper retains exit3/uncertain: the PR response omitted
+`merge_commit_sha` while reporting merged/closed. Independent fixed-commit
+readback verified exact parents `[5338e689,e462b323]`, head tree and main.
+Fresh UI removal/Save succeeded; an original full-baseline GET was within the
+60-second cleanup effort, and two later independent full-projection reads
+confirmed empty bypass/never. The [T-619 terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/e71d4da87ec4586c839d74da21ef3a77f02f7f0f)
+preserves original uncertainty and later proof separately. All three once
+attempts remain consumed; the exact24 semantic acceptance persists.
+This product branch still needs its own fixed final-head capture and
+collection. Six prepared Windows/
+Linux legs are not executed evidence or a waiver of the bridge's eight absent
+platforms; the separate strict nine-leg comparison still lacks three macOS legs.
+
+The first combined validation at `fa45b2f6` failed two documentation assertions
+(status-count format and the authoritative version row). Its validation
+checkout also lacked the real v0.9.0 tag required by the README pin test. The
+separate matrix omitted ProgramFiles from its Windows outer environment and
+failed Action preflight tests. Original failures remain evidence; corrected
+documentation and fresh validation inputs require a new exact capture and
+complete matching validation, without changing test expectations.
+
+This is an as-of preparation checkpoint. R4 has stopped partial, with
+source/cost disposition pending and publication blocked. A later immutable
+Lab/EC result plus explicit Nelson disposition may close that external gate
+for an unchanged candidate; this paragraph claims neither completion nor
+acceptance. Any required code or contract correction changes the candidate
+and requires new matching evidence. No tag or public release precedes closure.
+
+PJU is the current default under EC T-610. No pool connectivity investigation
+is part of this work. Record real local provenance and unexecuted platforms;
+final-source platform acceptance and Nelson's PyPI deployment approval remain.
 
 ## 2026-10-23: all CheckWash tests run on PJU
 
@@ -2954,7 +3081,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.9.0 |
+| version | v0.9.1 |
 | last published CLI | v0.9.0 |
 | last published CLI commit | d6eda4f695fabb8e7d138f7a87b099d2028f0294 |
 | detectors | 22 |

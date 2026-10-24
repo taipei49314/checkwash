@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "release": "0.9.1",
+  "status": "COMPLETE_FIXED_CORPUS_COMPARISON",
+  "classification": "in-sample; not held-out and not a false-positive rate",
+  "previous_published_release": {
+    "version": "0.9.0",
+    "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+    "src_tree": "4baaee4c89dc3e7a4c6f3d069595a5ef8576025f"
+  },
+  "candidate": {
+    "commit": "198c3ab0eb4be63977855d9a57bfcb0614940115",
+    "src_tree": "4bf5e1adbf3bff394bfb1e0761935d3036b09a83",
+    "observed_version": "0.9.0",
+    "final_release_condition": "Final src identical except sole __version__ literal0.9.0->0.9.1 in src/checkwash/__init__.py; other engine dependencies/entrypoints/defaults must not change."
+  },
+  "attempt_id": "r29-v091-r2",
+  "harness_commit": "2e3f30861e623d6f971d5cc4e96e4b79988f8aba",
+  "manifest_sha256": "edadaf48f142f9d311f3518101e9841b369aab4b3f130265b3af7036baa5f7e7",
+  "seal_sha256": "66290d6c2eb14819aed1a139ce0447b1bf023558dd2677ad145cb6af1345eadc",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "Linux Docker / Python3.11.16 / frozen image a640d420",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "members": 3600,
+  "cli_calls": 7200,
+  "counts": {
+    "javascript": {
+      "ANALYZED_BLOCK -> ANALYZED_BLOCK": 39,
+      "ANALYZED_PASS -> ANALYZED_PASS": 1759,
+      "PRODUCT_ERROR_EXIT -> PRODUCT_ERROR_EXIT": 2
+    },
+    "standard": {
+      "ANALYZED_BLOCK -> ANALYZED_BLOCK": 48,
+      "ANALYZED_PASS -> ANALYZED_PASS": 1752
+    }
+  },
+  "review_required": [],
+  "unresolved": [],
+  "payload_differences": 0,
+  "raw_differences": 0,
+  "error_semantics": "Two JS/TS PRODUCT_ERROR_EXIT->PRODUCT_ERROR_EXIT members retained; recorded-only, not analyzed PASS.",
+  "closure": {
+    "session_files": 40916,
+    "inner_commands": 11215,
+    "native_commands": 8,
+    "exact_owned_container_removed": true,
+    "source_runtime_before_after_equal": true,
+    "finished_utc": "2026-10-24T11:29:27.392879+00:00"
+  },
+  "owner_review": {
+    "mandatory_list_empty": true,
+    "empty_list_delivered_in_active_conversation": true,
+    "separate_written_acceptance_quote": null
+  },
+  "evidence": {
+    "ec_task": "T-615",
+    "ec_accounting_commit": "3861c88469687211d6a10b778f73267245ce4b95",
+    "independent_terminal_review_url": "https://github.com/taipei49314/estate-consolidation/blob/3861c88469687211d6a10b778f73267245ce4b95/evidence/requests/4ee9453b-40b5-40dd-9bce-16b225cbff99/r29-independent-terminal-review.json",
+    "independent_rows_review_url": "https://github.com/taipei49314/estate-consolidation/blob/3861c88469687211d6a10b778f73267245ce4b95/evidence/requests/4ee9453b-40b5-40dd-9bce-16b225cbff99/r29-independent-rows-review.json",
+    "comparison_sha256": "f917319e7a364a0abfab7f65f96dade62f5b455708b2bb02eb73688024e170ff"
+  },
+  "not_implied": [
+    "#419supplemental7435costacceptance",
+    "PR563governanceexecution",
+    "platformacceptance",
+    "publicrelease",
+    "ECpoolornativeLinux/macOScertification"
+  ]
+}

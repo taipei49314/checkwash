@@ -10,7 +10,7 @@ errors. With `--format hook-json` (the Claude Code Stop hook) an engine error
 now exits 0 with a "not analysed" message. The recommended Action is pinned to
 the same v0.9.0 release.
 
-The #419 opaque-change refusal is turned off for this release. A no-op opaque
+The #419 opaque-change refusal is turned off in that published v0.9.0 pin. A no-op opaque
 production edit can still leave affected oracle findings at warn; #419 remains
 open. Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/v0.9.0/docs/KNOWN-ISSUES-v0.9.0.md)
 before relying on a pass.
@@ -356,5 +356,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 20634 tests in the current source tree.
+Alpha pre-release. 22 detectors, 20654 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).
