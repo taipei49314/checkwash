@@ -22,6 +22,14 @@ missing-platform acceptance. Preserve every failed or partial result and all
 unexecuted scope. A new substantive source/contract change requires the matching
 validation and version review; this does not authorize a different version.
 
+The fixed candidate may be validated while the independently admitted r4 census
+continues. This document records the preparation state as of 2026-10-24; it is
+not a historical-cost decision. For an unchanged candidate, later census
+closure/source review and Nelson's exact disposition may be recorded in
+immutable Lab/EC evidence and linked from the PR and Release notes. Do not
+relabel a partial census or unknown cost as PASS, merge/tag before the required
+disposition, or change candidate bytes without refreshing matching evidence.
+
 The original history r1 stopped and is consumed. Nelson separately selected
 「核可 r2 精確來源發布與一次比較」 for exact prepared source
 `6d294bf3a6f047b14b480a097d82c664bc31406d`, seal
@@ -131,11 +139,26 @@ empty bypass/never, open PR563 and unchanged main, without proving every unseen
 transient state. Its [terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/da118ad8713648dc5f2687092c06bfdd1ac5826b)
 is retained. Nelson later completed authentication; an unchanged-form auth-only
 Save displayed "No changes have been made" and an empty bypass list. That
-capability prerequisite is not a new actor-add/merge authorization. Browser r2
-remains PROPOSED_NOT_APPROVED, T-617/T-618 remain consumed, and the existing
-exact24 semantic acceptance persists. None is a PyPI or platform acceptance.
+capability prerequisite did not itself authorize a new actor-add/merge window.
+T-617/T-618 remain consumed and their original records are preserved.
 
-After engineering merges, fix this version's final source before fresh native
+Nelson separately approved the new browser r2 window under EC T-619. Its sole
+merge PUT returned a successful acknowledgement at 2026-10-24T13:11:06Z for
+`865d3fcafbe69cf67e3e9e9789038e27b4b02809`. The original helper nevertheless
+retains its uncertain outcome: the PR reported merged/closed while
+`merge_commit_sha` was absent. No helper PASS or retry is invented. Root removed
+only the admitted temporary actor through the UI. One native GET within the
+60-second cleanup window observed the full original ruleset, empty bypass and
+`current_user_can_bypass=never`. Independent fresh readback later confirmed the
+acknowledged commit, parents `5338e689`/`e462b323`, tree
+`33740a7ac8c32624fd340d8c338db70de507af6c`, main at that commit, merged/closed
+PR563 and two complete baseline/empty/never observations. These close the
+engineering merge and maintenance window without rewriting the original
+helper's uncertainty or making an unobserved-continuity guarantee. The exact24
+semantic acceptance persists; this does not accept a different release PR's
+dogfood, platform evidence or PyPI deployment.
+
+With engineering merged, fix this version's final source before fresh native
 capture, collection and platform evidence. The completed R29 remains tied to
 `198c3ab0`; reuse requires the recorded sole-version-literal engine equivalence,
 not an assumed match. The prepared six Windows/Linux legs do not change the
@@ -152,21 +175,30 @@ this version's publication work unless separately authorized.
 
 ## Test execution route (2026-10-23)
 
-All CheckWash tests, including release validation, now run on LAPTOP-01AGNPJU
-under the maintainer's standing decision. See [testing on PJU](testing-on-pju.md).
+CheckWash tests, including release validation, use LAPTOP-01AGNPJU
+under the maintainer's standing decision. The later
+[PJU primary policy, T-610](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md)
+also permits capable pool hosts after connectivity is restored. Nelson has
+confirmed the current outage and stopped connection investigation; do not poll
+the pool. See [testing on PJU](testing-on-pju.md).
 This supersedes earlier venue wording only; source/tag identity, exact-head
 evidence, distribution inventory, required checks, one-time publication
 authorization and the human PyPI deployment approval remain required.
 
-Remote workflows containing tests are disabled, including the mixed
-test/publication `release.yml`. Their YAML below documents retained gates,
-not an available remote execution route. The
-[PJU receipt bridge](pju-receipt-bridge.md) verifies local receipts for the
-existing required PR checks. It does not implement release publication or
-prove an unexecuted platform. A separately reviewed publication handoff remains
-required. Missing evidence blocks merging, tagging and publication; do not
-re-enable remote tests, bypass checks or publish a success for an unexecuted
-check. Historical publication records retain their actual venues and results.
+Remote workflows containing product tests remain disabled. The existing
+[PJU receipt bridge](pju-receipt-bridge.md) retains its four required PR checks.
+The [PJU release handoff](pju-release-handoff.md) implements separate PR, main,
+tag, release-event and public-visitor subjects, local execution receipts, deep
+verification and credentialed publication. Its native end-to-end validation is
+pending; source implementation alone proves no dispatch, check or upload.
+Only after ordinary reviewed merge may the rewritten metadata/publisher-only
+`release.yml` be enabled. Do not enable its former hosted product-test graph.
+Actual native dispatch/event identities and stage checks accompany PJU raw
+evidence. Manual main/tag captures are not push CI runs. Missing evidence
+blocks merging, tagging and publication; do not bypass checks or claim an
+unexecuted platform. A release-specific missing-platform acceptance remains a
+separate maintainer decision; this route does not amend the standing matrix or
+byte-comparison contract. Historical records retain their actual venues.
 
 The remediation candidate of D-055 shipped as v0.3.0 on 2026-09-07 — the
 minor release its fingerprint and machine-interface break required
@@ -203,18 +235,21 @@ command must succeed. Source, tree, tag object and peeled commit are retained
 in the receipt. Owned temporary Git repositories exercise these same checks in
 ordinary CI; a local/private synthetic tag is never evidence of publication.
 
-The release workflow repeats the native source/visitor validation for its own
-release event. `build` cannot proceed on that event unless `published-source`
-succeeds. Existing source, installed-wheel and actual-pyz assertion
-qualification remains in place. Before distribution upload, all three
-`tools/release_inventory.py` checks bind exact source and qualification
-receipts to every wheel, sdist and pyz member and artifact digest. Diagnostic
-receipts can upload after a failure; distribution assets cannot. Both GitHub
-asset attachment and PyPI have successful source/build dependencies and remain
-conditional on a real release event. They start in parallel once
-`published-source` and `build` succeed; PyPI also requires `PYPI_ENABLED`
-and the maintainer's approval of the `pypi` deployment.
-`workflow_dispatch` builds and qualifies a candidate without publishing.
+The current release workflow captures its real `release: published` event.
+A fresh PJU collection after that event repeats native source/visitor
+validation, the full suite, source/installed-wheel/actual-pyz qualification,
+twine and all three `tools/release_inventory.py` checks. Inventories bind
+source and qualification receipts to every wheel, sdist and pyz member and
+artifact digest. An owner-admitted manual publication dispatch verifies the
+immutable packet and native parent checks, then publishes its stage check.
+`publish-assets` depends on both successful verification and that check;
+existing different asset bytes stop it. `pypi` depends on successful asset
+publication and rechecks actual GitHub bytes after Nelson personally approves
+the protected deployment. It also requires `PYPI_ENABLED`. The manual
+publisher binds the captured real release event; it cannot invent one.
+Hosted jobs inspect data and publish reviewed bytes; they execute no candidate
+product, installer, test or Action code. Diagnostic evidence is not a
+distribution upload or proof of external delivery.
 
 ## Main first, then the tag
 
@@ -236,7 +271,8 @@ under the standing route above. A source edit alone is not a passing receipt.
    merge-checkout evidence and PR-head evidence have different subjects.
 3. Merge through the normal required checks. A merge/squash/rebase creates a
    new commit: record it and compare its tree with the qualified head. Require
-   the exact merge commit's `main` push CI and `verdict gate` success before
+   the exact merge commit's native main capture, fresh PJU CI/qualification,
+   visitor and `verdict gate` receipts, and successful main stage check before
    creating a public tag. Missing, failed or cancelled required evidence stops
    publication; neither a local tag nor an expected red replaces it.
 4. At that commit, `[baseline]` in `tests/verdict_gate/baseline.toml` still pins
@@ -249,24 +285,26 @@ under the standing route above. A source edit alone is not a passing receipt.
    the qualified merge commit and push only that tag. No ruleset is unlocked
    or restored any more (2026-10-14, below); the grant is what permits the
    push. Never move or delete an existing public tag to fix a failed check.
-6. Require that tag's own `ci/published-source`, actual tag visitor, full CI and
-   `verdict gate` successes, all bound to the same release commit. Record native
-   run IDs and attempts. Failure leaves the tag public and the release stopped;
+6. Require that tag's own native annotated identity, actual tag visitor,
+   fresh PJU full CI/qualification, `verdict gate` receipts and successful tag
+   stage check, all bound to the release commit. Record native capture/run IDs
+   and attempts. Failure leaves the tag public and the release stopped;
    the maintainer decides the remedy. README still advertises the previously
    verified release rather than prematurely offering this incomplete target.
-7. Publish the authorized GitHub Release only after those receipts exist. Its
-   workflow repeats exact source identity/visitor checks, qualifies the built
-   distributions and validates all inventories before attaching assets or
-   publishing to PyPI. `publish-assets` and the `pypi` job start in parallel
-   once `published-source` and `build` succeed; the `pypi` job then waits for
-   the `pypi` environment's required reviewer. The maintainer approves that
-   deployment in GitHub, on the release workflow run's page under **Review
-   deployments**, only after checking that the run belongs to the authorized
-   tag and that `published-source`, `build` and `publish-assets` all
-   succeeded, so PyPI never receives a version whose Release lacks its assets. An agent session cannot approve it. A rejected or expired
+7. Publish the authorized GitHub Release only after those receipts exist.
+   Its real published event is captured first. Prepare fresh post-event PJU
+   source, suite, visitor, qualification and inventory evidence, together with
+   the exact version/source authorization and any concrete missing-platform
+   acceptance. Admit its immutable packet through the manual publisher.
+   `publish-assets` waits for `verify-pju-release` and
+   `publish-pju-stage-check`; `pypi` then waits for `publish-assets` and the
+   protected environment's required reviewer. Nelson approves the deployment
+   on that run's GitHub page under **Review deployments**, after checking its
+   authorized tag, release-event evidence and successful asset publication.
+   The job rechecks the actual assets before exporting the wheel/sdist for
+   PyPI. An agent session cannot approve the deployment. A rejected or expired
    approval leaves the Release without a PyPI version; the maintainer decides
-   the remedy. A job success does not by itself establish that every
-   external package service has delivered the expected bytes.
+   the remedy. Job success alone does not establish external delivery.
 8. Download the actual GitHub/PyPI assets, compare identities and bytes, and
    execute the actual public visitor installation through the sanctioned path.
    Record source, native tag, distribution digests, complete run identities
@@ -295,8 +333,9 @@ A standing step since 2026-10-19 (owner ruling 2026-10-19, R29, with R27 and
 R3; [#212](https://github.com/taipei49314/checkwash/issues/212)). It runs
 once the candidate commit is fixed, before step 5.
 
-- **Sets.** The previous published release (v0.9.0 `d6eda4f6` for the
-  v0.9.1 preparation above) and the candidate each check two fixed in-sample sets: the
+- **Sets.** The previous published release (v0.9.0,
+  `d6eda4f695fabb8e7d138f7a87b099d2028f0294`, for the v0.9.1 preparation above)
+  and the candidate each check two fixed in-sample sets: the
   Python `standard` set, 300 commits from each of attrs, click, flask, httpx,
   rich and starlette (D-141, arm 1), and the JS/TS set of
   [`benchmarks/javascript-replay/`](../benchmarks/javascript-replay/README.md),
@@ -312,12 +351,13 @@ once the candidate commit is fixed, before step 5.
   the comparison runs again.
 - **Where.** Current EC POLICY `pju-primary-execution-20261024` (T-610)
   designates LAPTOP-01AGNPJU as the default authorized execution host,
-  including this release verification. Record
-  `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, actual runtime, fixed sources and
-  original receipts. This supersedes the former pool-only venue restriction;
-  source isolation, run authority and acceptance conditions remain. The owner
-  confirmed the pool is offline and instructed agents to stop connection
-  investigation. [Current policy source](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md).
+  including this release verification. Preserve this comparison's frozen
+  source, sets, individual run approval, isolation and acceptance conditions.
+  Record `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, actual runtime and original
+  receipts. This supersedes the former pool-only and sweep-only exclusions.
+  Capable pool evidence retains its actual pool provenance; unexecuted platforms
+  remain `NOT_RUN`. The owner confirmed the pool is offline and instructed
+  agents to stop connection investigation. [Current policy source](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md).
 - **What goes to the owner.** Every commit whose outcome moves from pass to
   block, from block to pass, or from an analysed verdict to an engine error,
   and every commit the candidate blocks that the previous release could not

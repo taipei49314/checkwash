@@ -87,11 +87,27 @@ every unseen transient state. T-618's [terminal record](https://github.com/taipe
 preserves that consumed outcome. Nelson subsequently completed authentication;
 the unchanged-form auth-only Save displayed "No changes have been made" and
 an empty bypass list. Authentication does not authorize a new actor-add/merge
-window. Browser r2 remains PROPOSED_NOT_APPROVED and neither prior once revives.
-The existing exact24 semantic acceptance persists. This product branch still
-needs its own fixed final-head capture and collection. Six prepared Windows/
+window. Nelson then separately approved r2 under EC T-619. The sole merge PUT
+acknowledged `865d3fcafbe69cf67e3e9e9789038e27b4b02809` at 13:11:06Z.
+The original helper retains exit3/uncertain: the PR response omitted
+`merge_commit_sha` while reporting merged/closed. Independent fixed-commit
+readback verified exact parents `[5338e689,e462b323]`, head tree and main.
+Fresh UI removal/Save succeeded; an original full-baseline GET was within the
+60-second cleanup effort, and two later independent full-projection reads
+confirmed empty bypass/never. The [T-619 terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/e71d4da87ec4586c839d74da21ef3a77f02f7f0f)
+preserves original uncertainty and later proof separately. All three once
+attempts remain consumed; the exact24 semantic acceptance persists.
+This product branch still needs its own fixed final-head capture and
+collection. Six prepared Windows/
 Linux legs are not executed evidence or a waiver of the bridge's eight absent
 platforms; the separate strict nine-leg comparison still lacks three macOS legs.
+
+This is an as-of preparation checkpoint. R4 remains admitted and running,
+with source/cost disposition pending and publication blocked. A later immutable
+Lab/EC result plus explicit Nelson disposition may close that external gate
+for an unchanged candidate; this paragraph claims neither completion nor
+acceptance. Any required code or contract correction changes the candidate
+and requires new matching evidence. No tag or public release precedes closure.
 
 PJU is the current default under EC T-610. No pool connectivity investigation
 is part of this work. Record real local provenance and unexecuted platforms;

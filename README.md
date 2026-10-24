@@ -356,5 +356,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 20586 tests in the current source tree.
+Alpha pre-release. 22 detectors; test count: FINAL_NATIVE_COLLECTION_PENDING.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).
