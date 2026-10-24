@@ -124,8 +124,25 @@ returned HTTP403, "Resource not accessible by personal access token", and no
 merge was attempted. Main cleanup, watchdog observations and fresh native
 readback retained the full original ruleset, bypass=[]/never, PR open and main
 `5338e689`. That API once is consumed; semantic acceptance does not revive it.
-A new browser-owner route is only being prepared, with no Save performed or
-new execution approval yet. This is not a PyPI or platform acceptance.
+The separate T-618 browser once was then consumed when first Save prompted
+Confirm access; root cancelled and did not attempt a merge. Bounded cleanup
+and independent fresh native readbacks observed the full original ruleset,
+empty bypass/never, open PR563 and unchanged main, without proving every unseen
+transient state. Its [terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/da118ad8713648dc5f2687092c06bfdd1ac5826b)
+is retained. Nelson later completed authentication; an unchanged-form auth-only
+Save displayed "No changes have been made" and an empty bypass list. That
+capability prerequisite is not a new actor-add/merge authorization. Browser r2
+remains PROPOSED_NOT_APPROVED, T-617/T-618 remain consumed, and the existing
+exact24 semantic acceptance persists. None is a PyPI or platform acceptance.
+
+After engineering merges, fix this version's final source before fresh native
+capture, collection and platform evidence. The completed R29 remains tied to
+`198c3ab0`; reuse requires the recorded sole-version-literal engine equivalence,
+not an assumed match. The prepared six Windows/Linux legs do not change the
+bridge's Windows3.11-only receipt scope or its exact eight-platform absence
+record. Even after six real legs, the three missing macOS legs and unexecuted
+strict nine-leg byte comparison need a precise release-specific decision;
+neither acceptance nor execution is claimed by preparation.
 
 Nelson alone approves the `pypi` environment deployment. The source/distribution
 checks and actual GitHub assets must succeed first. Public GitHub/PyPI downloads

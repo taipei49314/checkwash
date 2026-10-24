@@ -79,9 +79,19 @@ exception and one temporary User/pull_request operator attempt. Under EC T-617,
 the sole actor PUT returned HTTP403, "Resource not accessible by personal
 access token"; no merge was attempted. Original and fresh native readbacks
 show the full original ruleset, empty bypass and main `5338e689`. That API once
-is consumed. A new browser-owner route is being prepared without saving any
-server change; it is not an automatic retry. This product branch still needs
-its own final-head evidence.
+is consumed. The separate T-618 browser attempt then consumed its once: first
+Save opened Confirm access, root cancelled and did not attempt a merge. The
+bounded cleanup and independent fresh readbacks observed the entire original
+ruleset, empty bypass/never, open PR563 and unchanged main; they do not prove
+every unseen transient state. T-618's [terminal record](https://github.com/taipei49314/estate-consolidation/commit/da118ad8713648dc5f2687092c06bfdd1ac5826b)
+preserves that consumed outcome. Nelson subsequently completed authentication;
+the unchanged-form auth-only Save displayed "No changes have been made" and
+an empty bypass list. Authentication does not authorize a new actor-add/merge
+window. Browser r2 remains PROPOSED_NOT_APPROVED and neither prior once revives.
+The existing exact24 semantic acceptance persists. This product branch still
+needs its own fixed final-head capture and collection. Six prepared Windows/
+Linux legs are not executed evidence or a waiver of the bridge's eight absent
+platforms; the separate strict nine-leg comparison still lacks three macOS legs.
 
 PJU is the current default under EC T-610. No pool connectivity investigation
 is part of this work. Record real local provenance and unexecuted platforms;
