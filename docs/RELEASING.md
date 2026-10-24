@@ -30,6 +30,12 @@ immutable Lab/EC evidence and linked from the PR and Release notes. Do not
 relabel a partial census or unknown cost as PASS, merge/tag before the required
 disposition, or change candidate bytes without refreshing matching evidence.
 
+The combined preparation source `e6d29c94` was collected on PJU Windows/Python
+3.11.9: 20,654 original node IDs, collection exit0, 6.65 seconds, with all
+3,050 tracked files unchanged during the bounded job. This updates the source
+documentation's collection denominator only. It is not a full-suite result or
+evidence for a later final head; that head's formal collection remains fresh.
+
 The original history r1 stopped and is consumed. Nelson separately selected
 「核可 r2 精確來源發布與一次比較」 for exact prepared source
 `6d294bf3a6f047b14b480a097d82c664bc31406d`, seal
