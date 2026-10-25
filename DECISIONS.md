@@ -93,3 +93,80 @@ The two additional BLOCK→BLOCK rows have been reported and source-reviewed. On
 This supplies D-149's later measurement and report-other-changes condition without broadening its supported decorators, changing existing fixture expectations, or adjudicating the remaining log-capture equivalence. It establishes no general false-positive rate. The archived D-149 preparation entry stays unchanged. Provenance is existing human-authorized local PJU, NOT EC pool; no new execution occurred. The whole combined manifest remains incomplete because of separately stopped/deferred arms; this pair is complete under R2/R3/R6/R7.
 
 Sources: [frozen combined sweep](https://github.com/taipei49314/checkwash-lab/blob/92d771e2bfb41b1109b57cce55f3df2a0e99726d/evidence/v090-sweep-results-20261022.md), [exact pair extraction in #558](https://github.com/taipei49314/checkwash/blob/c991936d0f283db3b265a2065af0ca99d825de9b/docs/releases/v0.9.0-issue-closeout.json). The source combined JSON SHA256 is `b9946817dacdcbd9ebec052e0910e1e2e30aa7dd0dc3e0e04e145d6d68e9e2db`.
+
+## D-176 (2026-10-23): first-stage Python unit-less broad-except candidate (#419)
+
+Nelson selected 「核可第一階段開發與 PJU 驗證（建議）」 in this chat.
+That is the verbatim assistant-written reply option, not a quotation of a
+longer human-authored ruling. It accepts the r1 packet's first-stage scope:
+apply its narrow implementation and protected-text drafts, complete the
+new tests and validate on PJU, stopping for any existing-expectation or
+out-of-scope outcome movement. The approved packet's manifest SHA256 is
+`fc2db8f745637d124a2e7a11f2a68fe0a4c7d264700eae70708cfc048771aea0`,
+based on engine source `618c415d9d3d37f004142edcaed331057ea8ac0f`.
+The isolated development branch starts at
+`e10cddcd9668d81baef64d18ab591dae5f8f5cd7`, whose engine is unchanged from
+that packet's baseline. D-141 and D-171 remain unchanged in their archive.
+
+D-171's broad opaque refusal remains off: `OPAQUE_REFUSED_RULES` stays
+empty. The only separate refusal requires `BROAD_EXCEPT_ADDED`, the
+finding's own `f.unit is None`, a resolved `unit is None`, a Python
+`FileIR`, and the existing `judged_as_test(file)` or conftest role.
+A nonempty unit name that misses lookup is not a unit-less finding.
+`judged_as_test` includes retained roles carrying test obligations, not
+only role `test` or a literal `tests/` directory. Production-role handlers
+without test obligations do not join the oracle path.
+
+The current detector records every broad-except finding without a unit.
+Thus this gate does not further divide today's findings by syntax or
+position: it also covers recognised handlers inside functions, and does
+not mean module-top-level `except Exception: pass` only. A sibling unit's
+symbol evidence does not reach a file-scoped finding. Without another
+valid de-escalator, refusal reaches existing E1/high; when opaque production
+changed, the label is `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`. A suite control
+keeps its earlier reason. Severity thresholds, compensation order, E2,
+base-side allowances, fingerprints, detector syntax and unit pairing do
+not change. Python weakening/removal/disabling/tolerance rules and JS/TS
+keep D-171's current credit behavior.
+
+Comment-only and substantive opaque implementation modifications lose the
+same credit. That is a development-stage blocking risk, not proof that
+the production edit is irrelevant or dishonest. The new C source-data
+example tests the mechanism; it is not a runtime-qualified honest repair
+or an adjudicated false positive. Historical cost has not been measured or
+accepted for this candidate.
+
+The new unit/engine and golden tests encode expectations for Python refusal, conftest and
+retained-role boundaries, unchanged production/JS/TS behavior, all four
+other former-refusal rules, the unresolved nonempty-unit boundary, and E2.
+A new CLI test is written to verify head-only allowance rejection and active base-side
+allowance precedence over E2, in worktree and committed-range modes.
+Existing fixture expectations and `tests/gates/**` are not edited; the
+deleted D-141 five-rule suite is not restored.
+
+The first-stage execution scope is development tests, source/wheel/pyz
+qualification and published pinned/candidate Action dogfood on
+LAPTOP-01AGNPJU. Keep exact source/base/tree, runtime, commands, raw exits
+and receipts, with `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. Missing
+platforms stay NOT_RUN. If an existing expectation or a finding/verdict
+outside this scope moves, retain the failure and stop for the exact
+difference; do not change a label, gate, threshold or allowlist to pass.
+Protected document edits may themselves trigger critical dogfood findings;
+this approval does not waive those checks.
+
+**Preparation status: NOT_RUN.** This entry records source changes and the
+development authorization; no candidate test, qualification, dogfood,
+historical replay or sweep result has yet been observed in this stage.
+It grants no merge, publication, issue closure or historical workload.
+A later historical-cost packet must freeze baseline/candidate and Lab SHAs,
+complete membership/hash, commands/attempts/deadlines, failure retention
+and acceptance terms. Old D-141 arms and consumed sweep grants do not revive.
+
+The eleven historical stop commits' high findings are not broad-except
+findings. Werkzeug `ab6150fa` also has four broad-except warn findings in
+`examples/couchy/{application,models}.py` and
+`examples/cupoftee/{db,network}.py`; their production role is why unchanged
+behavior is predicted. None of this is a candidate replay or a zero-cost
+measurement. Route A, other Python Route B and file-scoped credits, JS/TS
+(#212), and unrecognised neutralisation syntax remain. #419 and THREATMODEL
+rows 2, 93, 130 and 131 remain open.

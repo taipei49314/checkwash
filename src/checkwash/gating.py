@@ -68,9 +68,11 @@ ORACLE_RULES = {
 }
 
 # The rules whose finding in a Python test or conftest refuses the
-# opaque-change credit (see apply_gates). Empty: no finding refuses it, so
-# every rule takes the credit as it did before #464, except an unguarded
-# suite control (D-028). #419's refusal (ruling Q1 (b), 2026-10-14:
+# opaque-change credit (see apply_gates). This broad set remains empty.
+# A separate condition below refuses this credit for Python findings with
+# BROAD_EXCEPT_ADDED and no unit, in files judged as tests or conftest.
+# Other findings retain D-171, including the D-028 suite-control exception.
+# The original broad refusal (ruling Q1 (b), 2026-10-14:
 # ASSERT_REMOVED, ASSERT_WEAKENED, TEST_DISABLED, TOLERANCE_LOOSENED and
 # BROAD_EXCEPT_ADDED) fired its pre-registered stop in the v0.9.0 combined
 # sweep and is turned off (D-171). #419 stays open for a redesign.
@@ -798,10 +800,10 @@ def apply_gates(
         ):
             compensation = "PROD_SYMBOL_REMOVED"
 
-        # Off (D-171): OPAQUE_REFUSED_RULES is empty, so `refuses_opaque` is
-        # always false and every finding takes the opaque-change credit as it
-        # did before #464. The rest of this comment is #419's ruled design,
-        # kept for its redesign; it is not what runs.
+        # D-171 keeps the broad OPAQUE_REFUSED_RULES set empty. Only the
+        # narrow file-scoped BROAD_EXCEPT_ADDED condition below is enabled.
+        # The following historical broad design remains disabled for all
+        # other rules; it is retained to explain the earlier experiment.
         #
         # A weakening-class finding in a Python test or conftest does not
         # take the opaque-change credit (#419, ruling Q1 (b), 2026-10-14).
@@ -863,7 +865,14 @@ def apply_gates(
         # kept no-op edit in a called function (Route A, THREATMODEL 93 as
         # widened by #419 Q3).
         refuses_opaque = (
-            f.rule in OPAQUE_REFUSED_RULES
+            (
+                f.rule in OPAQUE_REFUSED_RULES
+                or (
+                    f.rule == "BROAD_EXCEPT_ADDED"
+                    and f.unit is None
+                    and unit is None
+                )
+            )
             and f.path in python_files
             and test_or_conftest
         )
@@ -986,8 +995,10 @@ def apply_gates(
             # that word for a side that is never read at all, and such a side
             # never sets `prod_opaque_change`. A suite control keeps its own
             # label, which it always reaches first here: an opaque change is
-            # a production file in `prod_files_changed`. While
-            # OPAQUE_REFUSED_RULES is empty (D-171) this label is never printed.
+            # a production file in `prod_files_changed`. D-171's broad set
+            # remains empty. This label is reachable only for the separately
+            # admitted Python unit-less BROAD_EXCEPT_ADDED condition, when
+            # an opaque production change exists and the finding reaches E1.
             #
             # Every other finding here is the same class of claim (#473,
             # ruling Q2 and Q3, 2026-10-18). If the diff changed a

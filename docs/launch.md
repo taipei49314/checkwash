@@ -65,7 +65,7 @@ ASSERT_WEAKENED   high   tests/test_billing.py :: test_invoice_total
   after   assert total > 0
 ```
 
-Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. Historical draft version: v0.1.25; current source: 22 detectors, 20634 tests, Apache-2.0.
+Pure-stdlib Python. Zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. Alignment (qualname → shingle fingerprint → backstop), then a two-sided AST comparison against an assertion-strength lattice, so `== 105.3` becoming `> 0` is a finding and a genuine refactor is not. Historical draft version: v0.1.25; current source: 22 detectors, 20654 tests (collection denominator); Apache-2.0.
 
 When nothing fires, the report says **`no known tampering pattern detected`**. Not "no cheating". That wording is fixed in the source, because the second sentence is one a diff-layer tool cannot support.
 
@@ -237,9 +237,20 @@ Integrations — GitHub Action (the doctor-verified prior stable pin `dacae21…
 
 ## Determinism
 
-Verdicts are byte-identical across Linux, macOS and Windows on Python 3.11–3.13, proved on every push by a `byte-compare` job that diffs the artifacts from all nine matrix legs. A file the analysing interpreter cannot parse is reported (`TEST_FILE_UNPARSEABLE`), never silently skipped — that is the one place the running version can change a verdict, and it says so out loud.
+Earlier hosted `byte-compare` jobs compared the original verdict artifacts from
+all nine Linux/macOS/Windows and Python 3.11–3.13 legs. Those receipts apply to
+their recorded source commits. Since the 2026-10-23 PJU migration, hosted
+product tests are disabled; this v0.9.1 preparation has six unexecuted Windows/
+Linux legs, three absent macOS legs and no strict nine-leg byte-comparison
+result. A file the analysing interpreter cannot parse is reported
+(`TEST_FILE_UNPARSEABLE`), never silently skipped — that is the one place the
+running version can change a verdict, and it says so out loud.
 
-greenwash runs the published Action against its own diff on every push. That job used to be gated to pull requests, in a repository that has never had one, so it had never executed for the entire life of the project; a test now fails if anyone makes it conditional again. It has twice blocked its own author for putting `|| true` in CI.
+The earlier hosted setup ran the published Action against its own diff on
+every push, after fixing a pull-request-only condition that had kept it from
+running. It twice blocked its own author for putting `|| true` in CI. The PJU
+route now retains actual pinned/candidate composite-Action replay receipts;
+these are local evidence, not a claim of current hosted execution.
 
 ## Prior art, credited up front
 
@@ -275,7 +286,15 @@ Apache-2.0. https://github.com/taipei49314/greenwash
 
 Agents make CI green two ways: by fixing the bug, or by deleting the failing test, widening a tolerance, rewriting the expected value to whatever the broken code returns, or dropping `|| true` into `scripts/test.sh`. greenwash reads the *diff* and blocks the second kind — alignment, then a two-sided AST comparison against an assertion-strength lattice, so `assert total == 105.3` → `assert total > 0` is a finding and a genuine refactor is not.
 
-Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Verdicts byte-identical across Linux/macOS/Windows on 3.11–3.13, proved on every push by a job that diffs artifacts from all nine matrix legs. Historical draft version: v0.1.25; current source: 22 detectors, 20634 tests, Apache-2.0.
+Pure stdlib, zero runtime dependencies, zero LLM calls, zero network calls, and it never executes the code under review. 0.2 s on a 3000-line test diff, under a gate that fails at 1.0 s. Historical draft version: v0.1.25; current source: 22 detectors, 20654 tests (collection denominator); Apache-2.0.
+
+Earlier hosted runs compared verdict bytes across all nine Linux/macOS/Windows
+and Python 3.11–3.13 legs. That is historical evidence for those source commits.
+Since the 2026-10-23 PJU migration, hosted product tests are disabled. For this
+v0.9.1 preparation, six Windows/Linux runtime legs are prepared but not yet
+executed; three macOS legs and the original strict nine-leg byte comparison
+remain NOT_RUN. Actual final-source receipts and any release-specific platform
+acceptance must be recorded before making a current cross-platform claim.
 
 What is measured, all from a harness in `benchmarks/`:
 
@@ -327,7 +346,7 @@ That is the audit's exact finding, quoted in the threat model: a list that knew 
 Grep gets you a real fraction of it and costs nothing, so do that today. What grep cannot do is the thing that produces the low block rate: two-sided comparison. `assert x > 0` is perfectly clean code — state-based linting cannot see it; only the fact that it used to be `== 105.3` makes it a finding. Same for a tolerance that got wider, an expected literal rewritten to whatever the broken code returns, or a test that left collection because its file was renamed. And a grep for `|| true` does not know whether the file it is in runs tests, which is exactly the distinction between a blocking finding and a Makefile compiling a C extension.
 
 **9. "Why not just have an LLM review the diff?"**
-For the semantic layer it genuinely would catch more — the residual false-positive floor here is explicitly a semantic problem. But an LLM reviewer is non-deterministic, costs per call, needs a key and network, and is promptable by the diff it is reading, which matters when the diff is attacker-controlled and, in hook mode, the entire working tree is. greenwash is 0.2 s, byte-identical across nine OS/interpreter legs, and safe as a required check. They compose: this is the deterministic layer underneath. The swarm comparison was run with LLM judging off, and that caveat is stated where the comparison lives.
+For the semantic layer it genuinely would catch more — the residual false-positive floor here is explicitly a semantic problem. But an LLM reviewer is non-deterministic, costs per call, needs a key and network, and is promptable by the diff it is reading, which matters when the diff is attacker-controlled and, in hook mode, the entire working tree is. The historical greenwash measurements report 0.2 s and nine-leg byte comparison for their recorded source, not this unverified v0.9.1 preparation. They compose: this is the deterministic layer underneath. The swarm comparison was run with LLM judging off, and that caveat is stated where the comparison lives.
 
 **10. "Isn't this just mutation testing, or a coverage ratchet?"**
 Different axis. Mutation testing measures oracle strength by running the suite, minutes to hours, over all code. A coverage ratchet notices a line stopped being executed. Neither sees `assert total == 105.3` become `assert total > 0` on a line that still runs and still passes. greenwash is diff-scoped, sub-second, runs no code, and fits in a pre-commit or an agent stop-hook. Human review is the actual answer and this is not a substitute for it — it is for the 400-line diff where the reviewer is looking at the production change and the one-line assertion loosening three files down has a plausible comment on it.
@@ -410,13 +429,13 @@ Deleting the hook: nothing, and it is documented as out of scope — pair it wit
 | designs thrown away | ~700-line bounded shell parser (one `eval` off-switch, 3 reproduced FPs); data-file repair credit | `DECISIONS.md` D-029; `STATE.md` v0.1.12 round |
 | performance | 0.2 s / 3000-line test diff; 0.7 s / 500 changed files | `README.md` |
 | perf gates | 1.0 s and 2.5 s; the gate first failed at 4.1 s | `tests/gates/test_perf.py` (`BUDGET_LARGE_DIFF_S`, `BUDGET_MANY_FILES_S`); `STATE.md` M1 section; `DECISIONS.md` D-007 |
-| determinism | byte-identical across 9 matrix legs (3 OS × 3 Python) | `README.md`; `STATE.md` determinism section |
+| determinism | historical nine-leg byte comparison for recorded source (3 OS × 3 Python); v0.9.1 strict nine-leg comparison NOT_RUN | `README.md`; `STATE.md` determinism section; current limits above |
 | exit codes / defaults | 0 / 1 / 2; `fail_on = high`; `on_engine_error = pass_with_warning` | `SPEC.md` §9; `src/greenwash/config.py` |
 | exemption cap | 180 days, enforced on read | `src/greenwash/allowlist.py` (`MAX_EXPIRY_DAYS = 180`); `THREATMODEL.md` row 39 |
 | demo contents | 7 tampering cases + 1 honest fix | `src/greenwash/demo_cases/` (01–08); `README.md` |
 | CLI surface | `check`, `sweep <revs> --limit --repo --fail-on`, `hook install --agent {claude-code,pre-commit}`, `demo`, `allow <fp> --reason` | `src/greenwash/cli.py` |
 | action cost | `pip install` + `git fetch --deepen=200`, wants `fetch-depth: 0` (unmeasured) | `action/action.yml`; `README.md` |
-| dogfood job | runs the published action on greenwash's own diff every push; had never executed before (gated to PRs in a repo with none) | `README.md`; pinned by `tests/test_packaging.py::test_dogfood_job_actually_runs` |
+| dogfood job | historical hosted pushes ran the published Action after removal of its PR-only condition; current PJU composite replays retain their actual venue | `README.md`; `docs/pju-release-handoff.md` |
 | self-blocks | blocked its own author's `\|\| true` twice | `THREATMODEL.md` rows 61–69 preamble |
 | report wording | "no known tampering pattern detected" | `src/greenwash/report/term.py`; `THREATMODEL.md` opening |
 | swarm head-to-head | both detect 12/12 cheats; swarm fires on 11 of 12 honest fixes, greenwash on 0 of 12; run 2026-07-31, swarm v12.1.1, no LLM judge, Python corpus | `benchmarks/compare/COMPARISON.md` |

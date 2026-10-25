@@ -1,5 +1,197 @@
 # Releasing
 
+## v0.9.1 publication instruction (2026-10-24)
+
+After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:
+
+> 直接做到發布
+
+The established scope is the next substantive patch release, v0.9.1: D-176's
+narrow Python unit-less broad-except fix, the PJU publication route and necessary
+release documentation. This records this session's one-time instruction to
+complete that version, its reviewed engineering, normal required checks and
+merges, annotated tag, GitHub Release, PyPI handoff and actual public-byte
+verification. It is an agent-written scope interpretation of the actual short
+human quote, not a claim that Nelson typed the longer proposed wording.
+The old v0.9.0 grant is not reused.
+
+Before tagging, complete the admitted #419 historical comparison/disposition,
+this version's v0.9.0-to-candidate R29 and owner review, exact final-source
+development/qualification/inventory/visitor/verdict evidence and any specific
+missing-platform acceptance. Preserve every failed or partial result and all
+unexecuted scope. A new substantive source/contract change requires the matching
+validation and version review; this does not authorize a different version.
+
+The fixed candidate may be validated while the independently admitted history
+and its disposition are pending. This document records preparation as of 2026-10-24; it is
+not a historical-cost decision. For an unchanged candidate, later census
+closure/source review and Nelson's exact disposition may be recorded in
+immutable Lab/EC evidence and linked from the PR and Release notes. Do not
+relabel a partial census or unknown cost as PASS, merge/tag before the required
+disposition, or change candidate bytes without refreshing matching evidence.
+
+The combined preparation source `e6d29c94` was collected on PJU Windows/Python
+3.11.9: 20,654 original node IDs, collection exit0, 6.65 seconds, with all
+3,050 tracked files unchanged during the bounded job. This updates the source
+documentation's collection denominator only. It is not a full-suite result or
+evidence for a later final head; that head's formal collection remains fresh.
+
+The original history r1 stopped and is consumed. Nelson separately selected
+「核可 r2 精確來源發布與一次比較」 for exact prepared source
+`6d294bf3a6f047b14b480a097d82c664bc31406d`, seal
+`cd367f66e1c30646061ebed89f2c5157037cc6fecdd4a2f02a4d96bf056eea5b`
+and [Lab PR22](https://github.com/taipei49314/checkwash-lab/pull/22).
+That is one new bounded attempt with original cost/source/cleanup stops; it
+does not resume r1 or pre-accept a movement. Other batches and model/API work
+are outside these named decisions.
+
+R2 then stopped correctly as `PARTIAL_UNCHANGED_WITH_GAPS`, exit3: six members
+compared, 16 CLI calls, 7,429 members not attempted. Its two fixed engines
+returned identical pass/two-WARN output and the same three Python2 example
+parse omissions on pytest commit `4ee3831ac957f0fcfb57bce3ed3f74108ea05e08`.
+Independent byte/source review confirmed inherited omissions and known cleanup;
+r2 remains consumed/partial under EC T-612, not accepted as a full history.
+
+Nelson subsequently selected exactly:
+
+> 核可 r3 精確來源發布與一次比較，採新解析略過契約
+
+The referenced r3 source is `dbeb603ca8aba80c4376af95eca58529ab48b88f`, seal
+`a60c7cedbfeb068a66d90d859f46936633de3ae80410d8c8583c1c818cddd585`,
+published/read back as [Lab PR23](https://github.com/taipei49314/checkwash-lab/pull/23),
+commit `020d7977d1d77739e399156086e07d68b90f81e5`. The sole new contract permits
+recording and continuing fully identical returned envelopes/ordered findings,
+exit and raw stderr with identical parse skips, empty config errors and no
+unread failures. Omitted files are not called analysed. Other error, changed
+skip, finding/source/cost/raw/cleanup stops remain. The full original 7,435
+members and one-lane/24-hour bounds are retained; start must precede
+2026-10-25T04:00Z and stop no later than 2026-10-26T04:00Z. Failure consumes
+this new attempt too. EC T-614 accounts its fresh once admission and execution.
+
+R3 terminated as `PARTIAL_NEW_BLOCK_COST_REVIEW`, exit3: 112 members compared,
+230 CLI calls, 7,323 not attempted, with two identical parse-gap members and
+six skipped-file occurrences retained. The source/runtime/raw/cleanup audit
+closed against the original terminal receipts. The first new BLOCK is
+MagicStack/uvloop `7b202ccf644396a4ae8ff8053578058f5023ac63`, parent
+`ae44ec2d9d3b13c708bd65cf91c52178c37f34a4`, fingerprint
+`BROAD_EXCEPT_ADDED/tests/test_context.py/-/ed0231ac4a64`.
+Baseline warn/REPAIR_EVIDENCE/exit0 becomes candidate
+high/OPAQUE_PROD_CHANGE_NOT_EVIDENCE/exit1. Source review supports a legitimate
+callback failure-relay regression test; runtime behavior was not executed by
+that review. The catch is nested inside a test method, despite the producer's
+fixed unit=None metadata. Its cost is not accepted, r3 remains consumed/partial,
+and a new attempt or release-specific history disposition needs a new concrete
+decision. No full-history or false-positive-rate claim follows from 112 rows.
+
+Nelson then selected the exact A option, not the release-specific
+supplemental-history waiver:
+
+> 核可 A：r4 精確來源發布與一次完整成本普查
+
+R4 source `3d375a1a25faba399d2dc6b6f0330708827f0da8`, seal
+`4b0575e769ed32f15cf9af738d967d89499419a03abfb9c754fe5fb78f8f57e2`,
+contract `e55343ae0095249bf19b5fdfe26c0f6d22090fede8c6f1322b060a2ab405f04e`
+was published/read back as [Lab PR24](https://github.com/taipei49314/checkwash-lab/pull/24),
+commit `c013eb9d48d992e98da09c1b7ce3916ceb57859d`, and admitted under EC T-616.
+It started at 2026-10-24T11:21:59Z, full 7,435 from ordinal0, one lane and the
+original call/raw/disk/cleanup/24-hour bounds. Both strict D176 movement
+classes are recorded pending source/cost review; identical valid parse skips
+also retain omitted coverage in mixed rows. Only both literal exit2 commands
+with identical stdout/stderr and complete inactive/cleanup proof are recorded
+separately as unchanged product errors, excluded from analysed denominators.
+Other anomalies still stop. Completion, if reached, is a census pending review,
+never history PASS or cost acceptance. The retained r3 prefix's naive 26.5-hour
+projection exceeds the 24-hour cap; completion within that cap was not promised.
+R1/r2/r3 stay consumed and the unselected waiver stays unapproved.
+
+R4 subsequently stopped as `PARTIAL_COMMAND_FAILURE` at 2026-10-24T14:12:18Z.
+The original Django shard budget of 3,600 seconds left only 27.255 seconds
+for ordinal881's candidate call. Its TIMEOUT/124 does not prove the command
+would exceed the nominal 60-second limit; the baseline arm was not run.
+There are 881 completed result comparisons (879 returned envelopes plus two
+identical exit2/not-analysed members), one partial and 6,553 not attempted.
+Three parse-gap members retain seven skipped-file occurrences. Three members /
+four finding occurrences remain pending cost review. The
+[independent terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/34e5a4a57ac9c84fd4cf5164e577edabd2242361)
+closed source/runtime/raw/owned cleanup. R4 also remains consumed; a new exact
+attempt or a version-specific acceptance of known cost and the 6,554 incomplete
+comparisons needs a separate explicit Nelson decision. None is recorded here.
+
+The first actual required R29 run is separately admitted/accounted as EC T-615,
+`r29-v091-r2`, from reviewed harness `2e3f30861e623d6f971d5cc4e96e4b79988f8aba`,
+manifest `edadaf48f142f9d311f3518101e9841b369aab4b3f130265b3af7036baa5f7e7`.
+Root admitted that exact first run under this publication instruction and the
+standing fixed R29 step; Nelson did not type that harness hash or six-hour
+technical budget. It uses true public v0.9.0 `d6eda4f6` against fixed candidate
+`198c3ab0`, the original two sets of 1,800, 7,200 CLI calls, fixed local Linux
+Docker image, four CPUs/six GiB and six hours including closure. Earlier R29
+r1 was a proposal, never executed. No #419 grant is reused.
+
+That R29 completed all 3,600 members/7,200 CLI calls. Its original launcher
+finished at 2026-10-24T11:29:27.392879Z, duration6,797.89 seconds. Independent
+read-only audit verified all 11,215 inner commands, 40,916 session files,
+source/runtime before/after, eight native lifecycle commands and exact owned
+container removal. Python standard: 1,752 pass/pass,48 block/block; JS/TS:
+1,759 pass/pass,39 block/block,two error/error. Both payload/raw difference
+counts and the mandatory movement-review list are zero. The two errors are
+recorded-only, not analysed PASS. These are fixed in-sample counts, not an FP
+rate. The empty list was delivered to Nelson in this conversation; no separate
+written acceptance quote is invented. Final release source/version-only
+equivalence remains to be checked, along with independent #419 and release gates.
+
+For engineering PR563 `5338e689`→`e462b323`, Nelson separately selected:
+
+> 核可精確例外與所列風險，窗口內停止其他合併／規則編輯
+
+This followed actual Windows/Python3.11.9 full-suite/3×283/inventory/verdict
+diagnostics and independent original-raw review. It accepts the exact24 HIGH
+test-oracle migrations and the named temporary User/pull_request operation,
+not a false required-check PASS. EC T-617 recorded the once. The sole actor PUT
+returned HTTP403, "Resource not accessible by personal access token", and no
+merge was attempted. Main cleanup, watchdog observations and fresh native
+readback retained the full original ruleset, bypass=[]/never, PR open and main
+`5338e689`. That API once is consumed; semantic acceptance does not revive it.
+The separate T-618 browser once was then consumed when first Save prompted
+Confirm access; root cancelled and did not attempt a merge. Bounded cleanup
+and independent fresh native readbacks observed the full original ruleset,
+empty bypass/never, open PR563 and unchanged main, without proving every unseen
+transient state. Its [terminal accounting](https://github.com/taipei49314/estate-consolidation/commit/da118ad8713648dc5f2687092c06bfdd1ac5826b)
+is retained. Nelson later completed authentication; an unchanged-form auth-only
+Save displayed "No changes have been made" and an empty bypass list. That
+capability prerequisite did not itself authorize a new actor-add/merge window.
+T-617/T-618 remain consumed and their original records are preserved.
+
+Nelson separately approved the new browser r2 window under EC T-619. Its sole
+merge PUT returned a successful acknowledgement at 2026-10-24T13:11:06Z for
+`865d3fcafbe69cf67e3e9e9789038e27b4b02809`. The original helper nevertheless
+retains its uncertain outcome: the PR reported merged/closed while
+`merge_commit_sha` was absent. No helper PASS or retry is invented. Root removed
+only the admitted temporary actor through the UI. One native GET within the
+60-second cleanup window observed the full original ruleset, empty bypass and
+`current_user_can_bypass=never`. Independent fresh readback later confirmed the
+acknowledged commit, parents `5338e689`/`e462b323`, tree
+`33740a7ac8c32624fd340d8c338db70de507af6c`, main at that commit, merged/closed
+PR563 and two complete baseline/empty/never observations. These close the
+engineering merge and maintenance window without rewriting the original
+helper's uncertainty or making an unobserved-continuity guarantee. The exact24
+semantic acceptance persists; this does not accept a different release PR's
+dogfood, platform evidence or PyPI deployment.
+
+With engineering merged, fix this version's final source before fresh native
+capture, collection and platform evidence. The completed R29 remains tied to
+`198c3ab0`; reuse requires the recorded sole-version-literal engine equivalence,
+not an assumed match. The prepared six Windows/Linux legs do not change the
+bridge's Windows3.11-only receipt scope or its exact eight-platform absence
+record. Even after six real legs, the three missing macOS legs and unexecuted
+strict nine-leg byte comparison need a precise release-specific decision;
+neither acceptance nor execution is claimed by preparation.
+
+Nelson alone approves the `pypi` environment deployment. The source/distribution
+checks and actual GitHub assets must succeed first. Public GitHub/PyPI downloads
+and fresh visitors precede reviewed advertised/README/Action pin promotion;
+baseline rotation remains separate. Downstream repository re-pins are outside
+this version's publication work unless separately authorized.
+
 ## Test execution route (2026-10-23)
 
 CheckWash tests, including release validation, use LAPTOP-01AGNPJU
@@ -160,8 +352,9 @@ A standing step since 2026-10-19 (owner ruling 2026-10-19, R29, with R27 and
 R3; [#212](https://github.com/taipei49314/checkwash/issues/212)). It runs
 once the candidate commit is fixed, before step 5.
 
-- **Sets.** The previous published release (currently v0.9.0,
-  `d6eda4f695fabb8e7d138f7a87b099d2028f0294`) and the candidate each check two fixed in-sample sets: the
+- **Sets.** The previous published release (v0.9.0,
+  `d6eda4f695fabb8e7d138f7a87b099d2028f0294`, for the v0.9.1 preparation above)
+  and the candidate each check two fixed in-sample sets: the
   Python `standard` set, 300 commits from each of attrs, click, flask, httpx,
   rich and starlette (D-141, arm 1), and the JS/TS set of
   [`benchmarks/javascript-replay/`](../benchmarks/javascript-replay/README.md),
@@ -175,13 +368,15 @@ once the candidate commit is fixed, before step 5.
   `run.checkwash_version`. So a candidate frozen before the version bump
   still counts. If anything else in `src/` changes after the comparison,
   the comparison runs again.
-- **Where.** Use PJU under the standing route at the top of this file and
-  current EC POLICY `pju-primary-execution-20261024` (T-610). The historical
-  sweep-only exclusion does not prohibit release verification on PJU. Preserve
-  this comparison's frozen source, sets, individual run approval and acceptance
-  conditions. Record the actual host. For PJU runs use
-  `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; capable pool evidence retains its
-  actual pool provenance. Unexecuted platforms remain `NOT_RUN`.
+- **Where.** Current EC POLICY `pju-primary-execution-20261024` (T-610)
+  designates LAPTOP-01AGNPJU as the default authorized execution host,
+  including this release verification. Preserve this comparison's frozen
+  source, sets, individual run approval, isolation and acceptance conditions.
+  Record `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, actual runtime and original
+  receipts. This supersedes the former pool-only and sweep-only exclusions.
+  Capable pool evidence retains its actual pool provenance; unexecuted platforms
+  remain `NOT_RUN`. The owner confirmed the pool is offline and instructed
+  agents to stop connection investigation. [Current policy source](https://github.com/taipei49314/estate-consolidation/blob/103c52abd38eb87c13980aa7cf6f0db4412e53ac/POLICY.md).
 - **What goes to the owner.** Every commit whose outcome moves from pass to
   block, from block to pass, or from an analysed verdict to an engine error,
   and every commit the candidate blocks that the previous release could not
