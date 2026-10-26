@@ -18,6 +18,7 @@ from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import FileChange, analyze
 from checkwash.ir.model import FileIR, judged_as_test
+from checkwash.gitio.snapshot import search_source_mapping
 
 SOURCE = pathlib.Path(__file__).resolve().parent.parent / "src" / "checkwash"
 
@@ -42,6 +43,21 @@ def _analyze(changes, roles=None):
     for role, globs in (roles or {}).items():
         config.roles[role] = list(config.roles.get(role, [])) + globs
     return analyze(changes, config, Contract(), [], datetime.date(2026, 10, 3))
+
+
+def _closed_move(old, new, before, after, producers):
+    # A complete owned head snapshot; explicit change bytes supply BASE.
+    snapshot = {**producers, new: after}
+    return analyze(
+        [FileChange(new, "modified", before, after, old_path=old)],
+        Config(), Contract(), [], datetime.date(2026, 10, 3),
+        head_reader=snapshot.get,
+        head_searcher=lambda needles: search_source_mapping(snapshot, needles),
+        root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+        root_path_lister=lambda: sorted(snapshot),
+        root_batch_reader=lambda paths: {path: snapshot.get(path) for path in paths},
+    )
 
 
 def _summary(findings):
@@ -94,14 +110,26 @@ def test_moving_a_test_into_another_role_keeps_it_a_test(old, new, role):
 
 
 def test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal():
-    # v0.5.0 read the old path as a deleted workflow that ran tests and
-    # blocked. Only YAML there is a workflow (197.Q5), and the units arrive
-    # intact at the new path.
+    # Only YAML is a workflow (197.Q5). Preserve the canonical producer
+    # while the test leaves CI: unchanged './value' would resolve elsewhere.
     old, new = ".github/workflows/value.test.ts", "src/value.test.ts"
-    _ir, findings, verdict = _analyze([FileChange(new, "modified", BEFORE, BEFORE, old_path=old)])
+    moved = BEFORE.replace(b'"./value"', b'"../.github/workflows/value"')
+    producers = {".github/workflows/value.ts": b"export function total() { return 78.75; }\n"}
+    _ir, findings, verdict = _closed_move(old, new, BEFORE, moved, producers)
     assert verdict == "pass"
     assert ("CI_WORKFLOW_TOUCHED", "warn", None) in _summary(findings)
     assert all(finding.severity in ("warn", "info") for finding in findings)
+
+
+def test_ci_test_move_with_a_different_relative_producer_keeps_blocking():
+    old, new = ".github/workflows/value.test.ts", "src/value.test.ts"
+    producers = {".github/workflows/value.ts": b"export function total() { return 78.75; }\n",
+                 "src/value.ts": b"export function total() { return 0; }\n"}
+    _ir, findings, verdict = _closed_move(old, new, BEFORE, BEFORE, producers)
+    assert verdict == "block"
+    assert any(f.rule == "TEST_DISABLED" and f.severity == "high" for f in findings)
+    assert ("CI_WORKFLOW_TOUCHED", "warn", None) in _summary(findings)
+    assert not any("ASSERTION_MOVED" in f.deescalators for f in findings if f.rule == "TEST_DISABLED")
 
 
 @pytest.mark.parametrize("path,role,obligations", [
