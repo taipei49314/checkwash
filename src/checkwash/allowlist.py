@@ -146,6 +146,26 @@ def fingerprint_diagnostics(entries: list[AllowEntry]) -> list[str]:
     ]
 
 
+def namespace_diagnostics(entries: list[AllowEntry]) -> list[str]:
+    """Advisory only: preserve keys from a newer engine without claiming a match."""
+    from checkwash import __version__
+    from checkwash.detectors import REGISTRY
+    from checkwash.quality.model import ALLOW_PATH, RULES
+
+    messages = []
+    for entry in entries:
+        rule = entry.fingerprint.split("/", 1)[0]
+        if rule in RULES:
+            messages.append(f"{entry.fingerprint!r}: quality key belongs in {ALLOW_PATH}, "
+                            "with target_id; it cannot match a check finding")
+        elif rule not in REGISTRY and rule != "EXEMPTION_ADDED":
+            messages.append(f"{entry.fingerprint!r}: namespace {rule!r} is not recognized by "
+                            f"checkwash version {__version__}; retained for version compatibility, "
+                            "but this version emits no matching finding. Verify engine versions "
+                            "and copy the key from the intended reviewed diff")
+    return messages
+
+
 def active_fingerprints(entries: list[AllowEntry], today: datetime.date) -> set[str]:
     """Exemptions still in force today.
 

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from checkwash.config import resolve_config_file
-from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
+from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, namespace_diagnostics, summarize_allowlist
 from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook, stop_reads_hook_input
 from checkwash.report.textio import write_text
 
@@ -562,6 +562,7 @@ def collect(root: Path) -> list[Note]:
             f"{ledger.entries} entries in {allow_rel}; {ledger.active} active today, "
             f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read), "
             f"{ledger.retired} retired fingerprint(s), {ledger.invalid} invalid entry/entries."
+            " Active counts describe key/expiry eligibility; a matching finding is still required."
             if ledger.present else
             f"no allow.toml yet. `checkwash allow` writes one; expiry is capped at "
             f"{MAX_EXPIRY_DAYS} days. Commit it and put `{allow_rel.split('/')[0]}/` in CODEOWNERS."
@@ -575,6 +576,10 @@ def collect(root: Path) -> list[Note]:
                 + ". Re-run the intended diff and review a new content-bound fingerprint; "
                 "old approvals cannot be migrated without reviewing the actual change.",
             ))
+        if ledger.present:
+            entries, _error = load_allowlist(ledger_data, path=allow_rel)
+            for message in namespace_diagnostics(entries):
+                notes.append(Note("warn", "unrecognized or wrong-ledger exemption namespace", message))
     notes.append(Note(
         "info", "use a three-dot range for pull requests",
         "`checkwash check BASE...HEAD` resolves through the merge base. A two-dot range drags "

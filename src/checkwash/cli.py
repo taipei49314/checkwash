@@ -33,7 +33,7 @@ import sys
 from dataclasses import dataclass
 
 from checkwash import __version__
-from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
+from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
 from checkwash.change import SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, parse_contract
@@ -201,6 +201,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
     # intact and report the ignored base-side keys on stderr in every format.
     for message in fingerprint_diagnostics(allow_entries):
         advise(f"checkwash: {allow_path}: ignored exemption: {message}\n")
+    for message in namespace_diagnostics(allow_entries):
+        advise(f"checkwash: {allow_path}: exemption warning: {message}\n")
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
     # Value-level warnings are visible in the same channels but never fatal:
@@ -610,6 +612,8 @@ def _cmd_allow(args: argparse.Namespace) -> int:
     if issue is not None:
         write_text(f"error: {issue}\n", sys.stderr)
         return 2
+    for message in namespace_diagnostics([AllowEntry(args.fingerprint, "", "", "", "", "")]):
+        write_text(f"warning: {message}\n", sys.stderr)
     if not args.reason.strip():
         write_text("error: --reason must not be empty\n", sys.stderr)
         return 2
