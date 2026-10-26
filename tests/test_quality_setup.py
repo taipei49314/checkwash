@@ -178,7 +178,10 @@ def test_setup_flags_never_silently_change_review_behavior(command, flags):
     assert code == 2
     # These are machine-mode calls: rejection must keep the selected format.
     payload = json.loads(text)
-    if args.format == "json":
+    if args.format == "json" and args.range in {"init", "doctor"}:
+        assert payload["state"] == "error" and payload["authority"] == "advisory_only"
+        assert "verdict" not in payload
+    elif args.format == "json":
         assert payload["analysis_status"] == payload["verdict"] == "error"
     else:
         assert payload["runs"][0]["invocations"][0]["executionSuccessful"] is False

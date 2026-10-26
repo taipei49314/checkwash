@@ -10,6 +10,13 @@ from .snapshot import Snapshot
 def usage_error(args, message):
     if args.format == "term":
         return "error: " + message + "\n", 2
+    if args.format == "json" and args.range in {"init", "doctor"}:
+        from .setup import add_issue, base_result, render
+
+        result = base_result(args.range)
+        result["state"] = "error"
+        add_issue(result, "POLICY_INVALID", message)
+        return render(result, "json"), 2
     payload = new_payload("HEAD", "worktree")
     diagnostic(payload, "POLICY_INVALID", message, kind="error")
     payload, code = finish(payload)
