@@ -1,55 +1,105 @@
 {
   "FINDINGS_VERSION": 2,
   "IR_VERSION": 3,
-  "checkpoint_branch": "handoff/core-010-pju-20261027-8a8941dc",
-  "checkpoint_kind": "HANDOFF_BACKUP_NOT_RELEASE_ACCEPTANCE",
+  "NOT_RUN": [
+    "other OS",
+    "Python 3.13",
+    "native file symlink privilege unavailable"
+  ],
+  "archives": [
+    {
+      "bytes": 11009496,
+      "path": "legacy-stage1-sanitized.zip",
+      "sha256": "fff0b0e35282fa10df0d9f85a7996938e64ad267a9fa64dc1fdad03f654d5a8a"
+    },
+    {
+      "bytes": 14057012,
+      "path": "legacy-stage2-sanitized.zip",
+      "sha256": "b17dda4b17d0585e365b8439589c819c0be3f6ea35abb4773f9e6b240449d1cd"
+    },
+    {
+      "bytes": 11513483,
+      "path": "legacy-stage3-sanitized.zip",
+      "sha256": "1d9e52fabc28e3018ccdf12d21c5465b8a817f2d668325d5bffab591f21e3705"
+    }
+  ],
+  "artifacts_and_current_raw_bundle_present": false,
+  "backup_is_acceptance": false,
+  "candidate_selfdogfood": {
+    "config_errors": [],
+    "exit_code": 1,
+    "skipped_files": [],
+    "state": "BLOCK",
+    "summary": {
+      "critical": 0,
+      "high": 2,
+      "info": 0,
+      "warn": 8
+    },
+    "today": "2026-10-27"
+  },
   "code_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
-  "collected_parent_tests": 21102,
-  "collection_is_not_pass_count": true,
-  "created_utc": "2026-10-26T18:55:09.778910+00:00",
-  "fixed_source_311_312_corpus": {
-    "bytes_per_arm": 8873976,
-    "case_count": 1117,
-    "raw_bytes_equal": true,
-    "same_Windows_host_not_cross_OS": true,
-    "sha256": "1305fa51b86ce3a987107603e182920bdcdd02f25b2e5f59ebd4634a64165d54"
+  "full_suite": {
+    "collected_parent_tests": 21102,
+    "collection_is_not_pass_count": true,
+    "label": "full-suite-311-r1",
+    "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+    "state": "RUNNING"
   },
-  "full_suite": "NOT_STARTED_AT_THIS_CHECKPOINT",
-  "golden_disposition_issue": "https://github.com/taipei49314/checkwash/issues/567",
-  "golden_proposal_accepted": false,
-  "preservation": {
-    "global_memory_and_original_nested_archives": "LOCAL_ONLY_NOT_PUBLICLY_UPLOADED",
-    "original_failed_and_partial_receipts": "PRESERVED_NOT_RECLASSIFIED",
-    "runtime_venvs_cache_fixture_temporaries": "LOCAL_INTERMEDIATES_NOT_IN_THIS_CHECKPOINT"
+  "golden_disposition": {
+    "count": 8,
+    "existing_expectations_changed": false,
+    "human_accepted": false,
+    "issue": "https://github.com/taipei49314/checkwash/issues/567",
+    "proposal_applied": false
   },
+  "handoff_branch": "handoff/core-010-pju-20261027-8a8941dc",
+  "host": "LAPTOP-01AGNPJU",
+  "kind": "HANDOFF_BACKUP_NOT_RELEASE_ACCEPTANCE",
+  "original_private_context_archives": "LOCAL_ONLY_PRESERVED",
   "product_branch": "fix/ux-repairs-20261026",
   "product_pr": "https://github.com/taipei49314/checkwash/pull/566",
-  "qualification_snapshot": {
+  "product_publication_performed": false,
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "public_090_action": {
+    "action_source": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+    "analysis_exit_code": 0,
+    "comments": false,
+    "state": "COMPLETED_LOCAL_COMPOSITE_REPLAY"
+  },
+  "qualification": {
     "pyz": {
-      "complete_expected_case_count": 283,
-      "completed_commands": 685,
-      "not_a_pass": true,
-      "observed_case_cli_calls": 136,
-      "raw_prefix_offsets_and_hashes_verified": true,
-      "state": "RUNNING_PARTIAL_PREFIX_ONLY"
+      "receipt": "completed/qualification-pyz.json",
+      "receipt_sha256": "5c40546b49efc6b2589ed605134510872cd6539fb1f320d3c41a9c43d624dd02",
+      "state": "COMPLETE_PASSED_LOCAL_QUALIFICATION",
+      "summary": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      }
     },
     "source": {
-      "complete_expected_case_count": 283,
-      "completed_commands": 983,
-      "not_a_pass": true,
-      "observed_case_cli_calls": 195,
-      "raw_prefix_offsets_and_hashes_verified": true,
-      "state": "RUNNING_PARTIAL_PREFIX_ONLY"
+      "receipt": "completed/qualification-source.json",
+      "receipt_sha256": "28cf2dbb42b9a1f586eac8e78c2614ff6a64308b2e557123cb62fe0e6469c9c1",
+      "state": "COMPLETE_PASSED_LOCAL_QUALIFICATION",
+      "summary": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      }
     },
     "wheel": {
-      "complete_expected_case_count": 283,
-      "completed_commands": 644,
-      "not_a_pass": true,
-      "observed_case_cli_calls": 127,
-      "raw_prefix_offsets_and_hashes_verified": true,
-      "state": "RUNNING_PARTIAL_PREFIX_ONLY"
+      "receipt": "completed/qualification-wheel.json",
+      "receipt_sha256": "fb466d6a3b10730cf7c0855e6032083d3a5b886a6572b0aa54eb72c77bc6842a",
+      "state": "COMPLETE_PASSED_LOCAL_QUALIFICATION",
+      "summary": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      }
     }
   },
-  "release_allowed_by_this_checkpoint": false,
+  "snapshot_utc": "2026-10-26T19:23:07.177873+00:00",
+  "stop_before_version": "1.0",
   "version": "0.10.0"
 }

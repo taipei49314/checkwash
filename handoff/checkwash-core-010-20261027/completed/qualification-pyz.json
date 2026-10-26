@@ -1,0 +1,72 @@
+{
+  "kind": "READ_ONLY_QUALIFICATION_RESULT_AUDIT_NOT_RELEASE_BRIDGE",
+  "distribution": "pyz",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "qualification_status": "passed",
+  "summary": {
+    "executed": 283,
+    "failed": 0,
+    "total": 283
+  },
+  "version": "checkwash 0.10.0",
+  "source_manifest_files": 3084,
+  "qualification_errors": [],
+  "exit_code": 0,
+  "source_files_unchanged": true,
+  "source_package_sha256": "93570306cff9de84dbd525fcceb370692f172ca21f9c510682e10a3ce9900cf2",
+  "suite_sha256": "2a8f8a0d40964c36563d737534965c4769ebc0b08d3fdd6bfa011f4b32f4c311",
+  "artifact_sha256": "4b4365d878a5a5a8ea59258b1e12d3a9bc82bbaf807c91dcf0bfc8333bee9089",
+  "artifact": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\artifacts\\checkwash.pyz",
+  "archive_package_members_verified": 212,
+  "loaded_wheel_probes_verified": [],
+  "trusted_trace_source": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+  "trusted_trace_sha256": "502ffbadca30169131966db28a6a1e133cfd044f43974079827c0a68c0caa2fa",
+  "qualifier_sha256": "8b06293aa3192c40cb555fee7bdc408dfcfbf20e8df1b4cd4dfead824c1a8995",
+  "contracts": {
+    "tests/data/javascript_assertion_support.json": "f23a9278c7d8fc96ebbb89d8aaf6c1ff439564114e09f5de4d8adaeddc060c9d",
+    "tests/data/javascript_foundation_mutations.json": "d3d422f7172fb14f19ef2f6f3d05aa348b7f83249190a844c9423a08c3bb9774"
+  },
+  "recorded_subprocesses": 1422,
+  "case_cli_commands": 283,
+  "total_product_cli_commands": 286,
+  "auxiliary_cli_commands": 3,
+  "case_exit_counts": {
+    "1": 149,
+    "0": 134
+  },
+  "raw_stream_slice_hash_checks": 2844,
+  "raw_stream_full_hashes": {
+    "stdout": "9f41a5951f608760ce6d3397183864e549fecccf87b76eae074f1756c714d3e9",
+    "stderr": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+  },
+  "qualification_json_sha256": "f9c7dd956191b92ebd98384d66381b481d2125f5180913b592658ee8ac50adc1",
+  "worker_receipt_sha256": "10a91c5938bd0ebb2783a85f3b7af8a430bd1f6f7e2c27d6dc5566070cd92fc0",
+  "outer_receipt_sha256": "d53041a7965c1ac8af479f091459e7a52a55aa94aed5250d4579bee9f8f80007",
+  "ledger_sha256": "1bb24ce28b2b485302d1a5fb04f6b191131b40174ba4841da4fe2e5b0ffc83dc",
+  "formal_release_collector": false,
+  "published_check_runs": 0,
+  "product_reexecuted_by_auditor": false,
+  "auditor_command": [
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\qualification\\read_source_result.py",
+    "--kind",
+    "pyz",
+    "--output",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\qualification\\pyz-r1",
+    "--capture",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\final\\pyz-assertion-qualification-r1"
+  ],
+  "auditor_runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "auditor_sha256": "7134c70531052d41cf25b44ae443ff112552988b8684366df93652c3be3845b4",
+  "not_run_by_this_leg": [
+    "source",
+    "wheel",
+    "full product suite",
+    "formal release bridge",
+    "published checks",
+    "other OS",
+    "Python 3.12/3.13"
+  ]
+}

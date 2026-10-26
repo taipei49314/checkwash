@@ -1,0 +1,81 @@
+{
+  "code_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "files": [
+    {
+      "bytes": 4134,
+      "path": "00-START-HERE.md",
+      "sha256": "61bdc1fa862cd5fd2cd361c1d18bcd45a7d1101468d9a6308009c59eab09b1c1"
+    },
+    {
+      "bytes": 3307,
+      "path": "checkpoint.json",
+      "sha256": "4378930f017c55ff8462023d9b7e796d394d12dd6ae3da7df272c848ac126223"
+    },
+    {
+      "bytes": 1547,
+      "path": "completed/candidate-selfdogfood-receipt.json",
+      "sha256": "24a75047d0c9cf7e8b2915f3d0ddf40a3d6dd618d80d3c40adfcf1d95e1513ac"
+    },
+    {
+      "bytes": 5120,
+      "path": "completed/corpus-311-312-comparison.json",
+      "sha256": "8986062485b332d641d13acc67fd1b6fe00376867ffa4941dbd6e76cdebd6757"
+    },
+    {
+      "bytes": 3049,
+      "path": "completed/public-090-action-replay.json",
+      "sha256": "b305a32175f32a8c169048268feea7faee9828f258be571d4e5e0bd7ec2ed81a"
+    },
+    {
+      "bytes": 3342,
+      "path": "completed/qualification-pyz.json",
+      "sha256": "5c40546b49efc6b2589ed605134510872cd6539fb1f320d3c41a9c43d624dd02"
+    },
+    {
+      "bytes": 3180,
+      "path": "completed/qualification-source.json",
+      "sha256": "28cf2dbb42b9a1f586eac8e78c2614ff6a64308b2e557123cb62fe0e6469c9c1"
+    },
+    {
+      "bytes": 4128,
+      "path": "completed/qualification-wheel.json",
+      "sha256": "fb466d6a3b10730cf7c0855e6032083d3a5b886a6572b0aa54eb72c77bc6842a"
+    },
+    {
+      "bytes": 5380,
+      "path": "completed/selfdogfood-issue266-review.md",
+      "sha256": "c7734c5285fdca1faf262c8954d824cd05acac45822ad4a9fb9ba53a88bcf6c8"
+    },
+    {
+      "bytes": 11009496,
+      "path": "legacy-stage1-sanitized.zip",
+      "sha256": "fff0b0e35282fa10df0d9f85a7996938e64ad267a9fa64dc1fdad03f654d5a8a"
+    },
+    {
+      "bytes": 94,
+      "path": "legacy-stage1-sanitized.zip.sha256",
+      "sha256": "f8dcd5fc22ba451cc90e34f57c3a38d6ad002b3b9533a201f43b1569e7742da7"
+    },
+    {
+      "bytes": 14057012,
+      "path": "legacy-stage2-sanitized.zip",
+      "sha256": "b17dda4b17d0585e365b8439589c819c0be3f6ea35abb4773f9e6b240449d1cd"
+    },
+    {
+      "bytes": 94,
+      "path": "legacy-stage2-sanitized.zip.sha256",
+      "sha256": "6e31fe4fd53ad48f2bc7a5de082a4bcccfee9b1d4c064939fe2830aa03670f88"
+    },
+    {
+      "bytes": 11513483,
+      "path": "legacy-stage3-sanitized.zip",
+      "sha256": "1d9e52fabc28e3018ccdf12d21c5465b8a817f2d668325d5bffab591f21e3705"
+    },
+    {
+      "bytes": 94,
+      "path": "legacy-stage3-sanitized.zip.sha256",
+      "sha256": "ffd37faa6f151184f270f289c046bebee0543dd5295bcc24e64adcbf400e8f54"
+    }
+  ],
+  "snapshot_utc": "2026-10-26T19:23:07.177873+00:00"
+}
