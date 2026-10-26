@@ -190,8 +190,13 @@ def mark_js_expected_provenance(ir: IR, raw: dict[str, tuple[bytes | None, bytes
                 if (b is None or a is None or pair.strength_change is None or pair.strength_change < 0
                         or b.form != "compare_eq" or a.form != "compare_eq" or not (b.positive and a.positive)
                         or b.operand_source is None or a.operand_source is None
-                        or b.operand_source == a.operand_source or b.inherited or a.inherited):
+                        or b.inherited or a.inherited):
                     continue
+                # The same expected-name spelling can resolve to a changed
+                # local definition. Compare the resolved two-sided context.
+                from checkwash.ir.diffalign import tolerance_change
+                if tolerance_change(b, a, pair.fallback, pair.strength_change) is not None:
+                    continue  # the native tolerance event owns this same edit.
                 pairs.append((unit.qualname, b, a))
         if not pairs:
             continue

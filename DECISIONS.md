@@ -324,3 +324,23 @@ range/worktree finding comparison, plus content/whitespace/binary/invalid-UTF-8
 negatives. This closes that bounded EOL discrepancy; other native Git
 similarity, parameter and oracle-credit differences are not declared solved
 by the reader change. Existing fixture labels and old receipts remain.
+
+## D-184 (2026-10-27): compare resolved JS/TS expectations behind stable names
+
+The JS/TS expected-provenance pass skipped an aligned assertion when its
+expected operand spelling stayed the same, even if the local definition
+changed. Compare the two resolved bindings under the existing rule's subject,
+indirectness and shared-producer conditions. `expected = 1` becoming
+`expected = 2` behind the unchanged `toBe(expected)` now produces
+EXPECTATION_DEFINITION_CHANGED through its existing identity and severity path.
+
+The existing native tolerance event retains ownership of tolerance changes,
+preventing duplicate provenance findings. Unchanged canonical values, unknown
+resolution and subject/shared-producer controls remain. No new namespace,
+finding field, strength value or exemption migration is introduced. This is
+the adjacent detector repair within the authorized 0.10.0 core integration;
+D-179 separately governs oracle relocation and compensation.
+
+Six new JS/TS controls and the existing expected-provenance module passed on
+recorded development source hashes (71 checks total). Final-source validation
+remains separate. Original golden fixture labels and failed receipts remain.
