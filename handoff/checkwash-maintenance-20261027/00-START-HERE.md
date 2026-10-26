@@ -14,10 +14,10 @@ No waiver, exemption, expected-label change or gate override is added by this ba
 
 | Validation role | Actual captured state | Actual exit |
 |---|---|---|
-| qualification_source | NOT_STARTED | not terminal |
-| qualification_wheel | NOT_STARTED | not terminal |
-| qualification_pyz | NOT_STARTED | not terminal |
-| full_suite | RUNNING | not terminal |
+| qualification_source | RUNNING | not terminal |
+| qualification_wheel | RUNNING | not terminal |
+| qualification_pyz | RUNNING | not terminal |
+| full_suite | TERMINAL | 1 |
 
 Only completed stage5 outer receipts supply terminal exits. A missing terminal receipt
 is not PASS, and a directory does not prove a process is still live. Independent audit

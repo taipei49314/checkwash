@@ -1,0 +1,805 @@
+{
+  "status": "COMPLETE_FAILED_SUITE",
+  "readback_integrity": "VERIFIED",
+  "suite_state": "FAILED",
+  "suite_exit_code": 1,
+  "audit_exit_code": 0,
+  "issues": [],
+  "scope": "LOCAL_DEVELOPMENT_FULL_SUITE_NOT_RELEASE_BRIDGE",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "command": [
+    "..\\test-runtime\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-p",
+    "xdist.plugin",
+    "-n",
+    "2",
+    "--dist",
+    "worksteal",
+    "-o",
+    "addopts=",
+    "-q",
+    "-ra",
+    "--basetemp",
+    "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf5-24687d5e\\p",
+    "--junitxml=C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\final\\full-suite-311-r1\\junit.xml"
+  ],
+  "capture_source_files_unchanged": true,
+  "manifest_files": 3084,
+  "current_source_differences": [],
+  "sealed_source_map_exact_match": true,
+  "source_seal_sha256": "7e6e103f43efa4fb9941351c07fa4f8407b2d5b380cdd15dd419303563e801ba",
+  "read_only_git_queries": [
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit": 0,
+      "stdout": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c\n",
+      "stderr": "",
+      "stdout_sha256": "4d6bef840c0070173f4e971f74bf803a61227e163056b72a1334dd239b08712e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "file_sha256": {
+    "receipt.json": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0",
+    "stdout.txt": "132420a635754daaaa4055af28f9f33263abbfe784b08c905ee3ff748b929491",
+    "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "junit.xml": "fa97656f0141bfdfa2c35a7389bc594afd1c3e0c97334663f409f8bcfa6bf10f",
+    "input-hashes.json": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5",
+    "source.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "git-status.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "final-source-sha.txt": "e7a2e900fa0f17592ce9c2a2755a394cc211127dcd0920b76137b75c30a95ee4"
+  },
+  "stdout_terminal_summary": "15 failed, 21064 passed, 25 skipped, 67 subtests passed in 2859.47s (0:47:39)",
+  "stdout_native_report_counts": {
+    "failed": 15,
+    "passed": 21064,
+    "skipped": 25,
+    "subtests passed": 67
+  },
+  "stdout_explicit_collection": null,
+  "stdout_collection_missing_note": "No explicit collection count in stdout; use native parent topology without claiming a collection banner.",
+  "native_xml_suite_attributes": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "15",
+      "skipped": "25",
+      "tests": "21171",
+      "time": "2859.115",
+      "timestamp": "2026-10-27T04:52:49.574631+08:00",
+      "hostname": "LAPTOP-01AGNPJU"
+    }
+  ],
+  "native_xml_declared_report_counts": {
+    "tests": 21171,
+    "failures": 15,
+    "errors": 0,
+    "skipped": 25
+  },
+  "native_xml_testcase_elements": 21104,
+  "native_xml_unique_parent_nodeids": 21104,
+  "native_xml_parent_outcomes": {
+    "passed": 21064,
+    "failed": 15,
+    "skipped": 25
+  },
+  "native_xml_report_total_minus_testcase_elements": 67,
+  "stdout_explicit_subtest_categories": {
+    "subtests passed": 67
+  },
+  "parent_subtest_note": "XML declared tests counts reports; testcase/unique-nodeID totals describe parents. Failed/skipped subtest reports may share terminal categories with their parents; raw native categories and result nodes are retained without inventing a split.",
+  "failure_nodeids": [
+    "tests/gates/test_refactor_corpus.py::test_no_silent_refactor_starts_blocking",
+    "tests/gates/test_tamper_corpus.py::test_every_tamper_case_still_behaves",
+    "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]",
+    "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]",
+    "tests/test_cases_runner.py::test_case[assert_removed_moved_neg]",
+    "tests/test_cases_runner.py::test_case[bare_bound_then_used_neg]",
+    "tests/test_cases_runner.py::test_case[js_chai_property_moved_neg]",
+    "tests/test_cases_runner.py::test_case[merged_parametrize_neg]",
+    "tests/test_cases_runner.py::test_case[split_rename_genuine_neg]",
+    "tests/test_cases_runner.py::test_case[subject_pairing_other_subject_known_limit_pos]",
+    "tests/test_cases_runner.py::test_case[test_split_neg]",
+    "tests/test_cases_runner.py::test_case[unittest_keyword_split_neg]",
+    "tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+    "tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit",
+    "tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]"
+  ],
+  "stdout_failure_nodes": [
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+      "line": "FAILED tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/gates/test_refactor_corpus.py::test_no_silent_refactor_starts_blocking",
+      "line": "FAILED tests/gates/test_refactor_corpus.py::test_no_silent_refactor_starts_blocking"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/gates/test_tamper_corpus.py::test_every_tamper_case_still_behaves",
+      "line": "FAILED tests/gates/test_tamper_corpus.py::test_every_tamper_case_still_behaves"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]",
+      "line": "FAILED tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]",
+      "line": "FAILED tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[assert_removed_moved_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[assert_removed_moved_neg] - Asse..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[bare_bound_then_used_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[bare_bound_then_used_neg] - Asse..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[js_chai_property_moved_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[js_chai_property_moved_neg] - As..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[merged_parametrize_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[merged_parametrize_neg] - Assert..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[split_rename_genuine_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[split_rename_genuine_neg] - Asse..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[subject_pairing_other_subject_known_limit_pos]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[subject_pairing_other_subject_known_limit_pos]"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[test_split_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[test_split_neg] - AssertionError..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_cases_runner.py::test_case[unittest_keyword_split_neg]",
+      "line": "FAILED tests/test_cases_runner.py::test_case[unittest_keyword_split_neg] - As..."
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+      "line": "FAILED tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated"
+    },
+    {
+      "outcome": "FAILED",
+      "nodeid": "tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit",
+      "line": "FAILED tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit"
+    }
+  ],
+  "native_xml_failure_or_error_details": [
+    {
+      "nodeid": "tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+      "xml_attributes": {
+        "classname": "tests.test_js_liveness",
+        "name": "test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+        "time": "0.002"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: assert ('block', [('...ED', 'high')]) == ('pass', [('T...ED', 'info')])\n  \n  At index 0 diff: 'block' != 'pass'\n  Use -v to get more diff",
+      "text": "target = 'describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n'\noutcome = ('pass', 'info')\n\n    @pytest.mark.parametrize(\"target,outcome\", [\n        ('describe(\"moved\", () => {\\n  ' + UNIT + \"\\n});\\n\", (\"pass\", \"info\")),\n        ('describe.skip(\"moved\", () => {\\n  ' + UNIT + \"\\n});\\n\", (\"block\", \"high\")),\n    ])\n    def test_a_unit_moved_into_a_skipped_block_earns_no_move_credit(target, outcome):\n        changes = [\n            FileChange(\"tests/a.test.js\", \"modified\", (UNIT + \"\\n\").encode(), b\"// moved to b\\n\"),\n            FileChange(\"tests/b.test.js\", \"added\", None, target.encode()),\n        ]\n        _ir, findings, verdict = analyze(changes, Config(), Contract(), [], DATE)\n>       assert (verdict, [(f.rule, f.severity) for f in findings]) == (\n            outcome[0], [(\"TEST_DISABLED\", outcome[1])],\n        )\nE       AssertionError: assert ('block', [('...ED', 'high')]) == ('pass', [('T...ED', 'info')])\nE         \nE         At index 0 diff: 'block' != 'pass'\nE         Use -v to get more diff\n\ntests\\test_js_liveness.py:243: AssertionError",
+      "text_sha256": "4276deb838eda20da5819b5b0d5cb2399e802aa550a0b25ff95d29565dc40017"
+    },
+    {
+      "nodeid": "tests/gates/test_refactor_corpus.py::test_no_silent_refactor_starts_blocking",
+      "xml_attributes": {
+        "classname": "tests.gates.test_refactor_corpus",
+        "name": "test_no_silent_refactor_starts_blocking",
+        "time": "0.697"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: honest refactors that started blocking:\n    CASE_020_windows: NEW false positive (TEST_DISABLED)\n    CASE_029_flatten: NEW false positive (TEST_DISABLED)\nassert not ['CASE_020_windows: NEW false positive (TEST_DISABLED)', 'CASE_029_flatten: NEW false positive (TEST_DISABLED)']",
+      "text": "replayed = {'CASE_001_clamp': ('pass', []), 'CASE_002_factorial': ('pass', []), 'CASE_003_palindrome': ('pass', []), 'CASE_004_unique': ('pass', []), ...}\n\n    def test_no_silent_refactor_starts_blocking(replayed):\n        \"\"\"Recorded passing cases must keep passing. These are the regression guard.\"\"\"\n        problems = []\n        for name, spec in _expected().items():\n            if spec[\"blocks\"]:\n                continue\n            verdict, rules = replayed[name]\n            if verdict == \"block\":\n                problems.append(f\"{name}: NEW false positive ({', '.join(rules)})\")\n>       assert not problems, \"honest refactors that started blocking:\\n  \" + \"\\n  \".join(problems)\nE       AssertionError: honest refactors that started blocking:\nE           CASE_020_windows: NEW false positive (TEST_DISABLED)\nE           CASE_029_flatten: NEW false positive (TEST_DISABLED)\nE       assert not ['CASE_020_windows: NEW false positive (TEST_DISABLED)', 'CASE_029_flatten: NEW false positive (TEST_DISABLED)']\n\ntests\\gates\\test_refactor_corpus.py:88: AssertionError",
+      "text_sha256": "482c511bcfd31af1f103e9494ce60fe1cb0e211fd037d58445fb7a234983a8dc"
+    },
+    {
+      "nodeid": "tests/gates/test_tamper_corpus.py::test_every_tamper_case_still_behaves",
+      "xml_attributes": {
+        "classname": "tests.gates.test_tamper_corpus",
+        "name": "test_every_tamper_case_still_behaves",
+        "time": "0.596"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: tamper-corpus regressions:\n    d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.\n    d010-stack-is-lifo: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.\nassert not ['d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news \u2014 update expected...e and now blocks (TEST_DISABLED). Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.']",
+      "text": "replayed = {'001-addsub': ('block', ['ASSERT_WEAKENED']), '002-biggest': ('pass', []), '003-evenness': ('pass', []), '004-clamp': ('block', ['ASSERT_REMOVED', 'ASSERT_WEAKENED']), ...}\n\n    def test_every_tamper_case_still_behaves(replayed):\n        problems = []\n        for name, spec in _expected().items():\n            verdict, rules = replayed[name]\n            if spec[\"verdict\"] == \"block\":\n                if verdict != \"block\":\n                    problems.append(\n                        f\"{name}: REGRESSION \u2014 recorded as blocked, now {verdict} \"\n                        f\"({', '.join(rules) or 'no findings'})\"\n                    )\n            elif verdict == \"block\":\n                problems.append(\n                    f\"{name}: recorded as an authorised escape and now blocks ({', '.join(rules)}). \"\n                    \"Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.\"\n                )\n>       assert not problems, \"tamper-corpus regressions:\\n  \" + \"\\n  \".join(problems)\nE       AssertionError: tamper-corpus regressions:\nE           d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.\nE           d010-stack-is-lifo: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.\nE       assert not ['d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news \u2014 update expected...e and now blocks (TEST_DISABLED). Good news \u2014 update expected.json, and close THREATMODEL 91 when the family is done.']\n\ntests\\gates\\test_tamper_corpus.py:93: AssertionError",
+      "text_sha256": "939c842a32b50885186ce4c32057b6c7c765a6144003b4fcd9e010e42fff3693"
+    },
+    {
+      "nodeid": "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]",
+      "xml_attributes": {
+        "classname": "tests.test_benchmark_snapshot_adapters",
+        "name": "test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]",
+        "time": "0.407"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: ('refactors', 'CASE_020_windows', 'block', 'block', 'pass')\nassert 'block' == 'pass'\n  \n  - pass\n  + block",
+      "text": "family = 'refactors'\n\n    @pytest.mark.parametrize(\"family\", [\"refactors\", \"tamper\"])\n    def test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity(family):\n        corpus = ROOT / \"benchmarks\" / family\n        expected = json.loads((corpus / \"expected.json\").read_text(encoding=\"utf-8\"))[\"cases\"]\n        for name, recorded in sorted(expected.items()):\n            case = corpus / \"cases\" / name\n            if family == \"refactors\":\n                args = (case / \"BEFORE\", case / \"AFTER\", case / \"PROD-GOOD\" / \"src\")\n                actual, rules = WRAPPERS[\"refactor\"](*args)\n                want = \"block\" if recorded[\"blocks\"] else \"pass\"\n            else:\n                args = (case / \"before\", case / \"after\", case / \"src\")\n                actual, rules = WRAPPERS[\"tamper\"](case)\n                want = recorded[\"verdict\"]\n            score, score_rules = WRAPPERS[\"score\"](*args)\n>           assert actual == score == want, (family, name, actual, score, want)\nE           AssertionError: ('refactors', 'CASE_020_windows', 'block', 'block', 'pass')\nE           assert 'block' == 'pass'\nE             \nE             - pass\nE             + block\n\ntests\\test_benchmark_snapshot_adapters.py:105: AssertionError",
+      "text_sha256": "5bc8d3a65b96517c3ded2b60de0c98d4002f7c7e63958fd891efb1b7eafe08da"
+    },
+    {
+      "nodeid": "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]",
+      "xml_attributes": {
+        "classname": "tests.test_benchmark_snapshot_adapters",
+        "name": "test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]",
+        "time": "0.682"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: ('tamper', 'd007-factorial-of-zero', 'block', 'block', 'pass')\nassert 'block' == 'pass'\n  \n  - pass\n  + block",
+      "text": "family = 'tamper'\n\n    @pytest.mark.parametrize(\"family\", [\"refactors\", \"tamper\"])\n    def test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity(family):\n        corpus = ROOT / \"benchmarks\" / family\n        expected = json.loads((corpus / \"expected.json\").read_text(encoding=\"utf-8\"))[\"cases\"]\n        for name, recorded in sorted(expected.items()):\n            case = corpus / \"cases\" / name\n            if family == \"refactors\":\n                args = (case / \"BEFORE\", case / \"AFTER\", case / \"PROD-GOOD\" / \"src\")\n                actual, rules = WRAPPERS[\"refactor\"](*args)\n                want = \"block\" if recorded[\"blocks\"] else \"pass\"\n            else:\n                args = (case / \"before\", case / \"after\", case / \"src\")\n                actual, rules = WRAPPERS[\"tamper\"](case)\n                want = recorded[\"verdict\"]\n            score, score_rules = WRAPPERS[\"score\"](*args)\n>           assert actual == score == want, (family, name, actual, score, want)\nE           AssertionError: ('tamper', 'd007-factorial-of-zero', 'block', 'block', 'pass')\nE           assert 'block' == 'pass'\nE             \nE             - pass\nE             + block\n\ntests\\test_benchmark_snapshot_adapters.py:105: AssertionError",
+      "text_sha256": "3336403eca9e55e2741d23478a3babafd08f631353867ff168f3031758f0e4d8"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[assert_removed_moved_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[assert_removed_moved_neg]",
+        "time": "0.005"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: assert_removed_moved_neg.gwcase: no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"ASSERT_REMOVED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_auth.py\", \"unit\": \"test_login_all_cases\"}]\nassert 'no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVE...ators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_auth.py\", \"unit\": \"test_login_all_cases\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/assert_removed_moved_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: assert_removed_moved_neg.gwcase: no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"ASSERT_REMOVED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_auth.py\", \"unit\": \"test_login_all_cases\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVE...ators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_auth.py\", \"unit\": \"test_login_all_cases\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "930000053faf35ff8c0e0e6cc1a58b5c0eab9e9702943b76f4b4f71edef6d0d2"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[bare_bound_then_used_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[bare_bound_then_used_neg]",
+        "time": "0.005"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: bare_bound_then_used_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_billing.py\", \"unit\": \"test_total\"}]\nassert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}... \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_billing.py\", \"unit\": \"test_total\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/bare_bound_then_used_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: bare_bound_then_used_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_billing.py\", \"unit\": \"test_total\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}... \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_billing.py\", \"unit\": \"test_total\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "9ce386926a130cba05cc0235f449c0520c240819615fe37355a7c2c936f99437"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[js_chai_property_moved_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[js_chai_property_moved_neg]",
+        "time": "0.006"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: js_chai_property_moved_neg.gwcase: no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"ASSERT_REMOVED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"test/invoice.spec.js\", \"unit\": \"totals the invoice\"}]\nassert 'no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVE...ators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"test/invoice.spec.js\", \"unit\": \"totals the invoice\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/js_chai_property_moved_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: js_chai_property_moved_neg.gwcase: no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"ASSERT_REMOVED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"test/invoice.spec.js\", \"unit\": \"totals the invoice\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVE...ators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"test/invoice.spec.js\", \"unit\": \"totals the invoice\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "e066886f0c159b0fbe81ee9f48d948563e48492bca8055ea9f30a6840106f340"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[merged_parametrize_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[merged_parametrize_neg]",
+        "time": "0.007"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: merged_parametrize_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_fragment_encoding\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_path_encoding\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_query_encoding\"}]\nassert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}...rs\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_query_encoding\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/merged_parametrize_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: merged_parametrize_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_fragment_encoding\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_path_encoding\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_query_encoding\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}...rs\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_query_encoding\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "dd25b281e960c5bc959524d23b35f3f40f4a0df65411a2857b24dcf8b3448696"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[split_rename_genuine_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[split_rename_genuine_neg]",
+        "time": "0.005"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: split_rename_genuine_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_automatic_options_attr\"}]\nassert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}...NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_automatic_options_attr\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/split_rename_genuine_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: split_rename_genuine_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_automatic_options_attr\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}...NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_automatic_options_attr\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "610dde51f83100c9d3de75bca05c9512f99cdd5e25c3496fefbf511d19bf5a11"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[subject_pairing_other_subject_known_limit_pos]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[subject_pairing_other_subject_known_limit_pos]",
+        "time": "0.028"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: subject_pairing_other_subject_known_limit_pos.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"], \"unit\": \"test_get_locks_from_targets_warns_for_non_lock_entity\"}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"PROD_CHANGE_NOT_EVIDENCE\"], \"deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_for_non_lock_entity\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"PROD_CHANGE_NOT_EVIDENCE\"], \"deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_when_lock_not_in_lcm\"}]\nassert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"],...deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_when_lock_not_in_lcm\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/subject_pairing_other_subject_known_limit_pos.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: subject_pairing_other_subject_known_limit_pos.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"], \"unit\": \"test_get_locks_from_targets_warns_for_non_lock_entity\"}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"PROD_CHANGE_NOT_EVIDENCE\"], \"deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_for_non_lock_entity\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"PROD_CHANGE_NOT_EVIDENCE\"], \"deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_when_lock_not_in_lcm\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"],...deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_when_lock_not_in_lcm\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "405deb77cfffebf97760911349e53bc3f0dfae1435817b988c88b9379ecc5a2b"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[test_split_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[test_split_neg]",
+        "time": "0.010"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: test_split_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_provide_automatic_options_attr\"}]\nassert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED...CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_provide_automatic_options_attr\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/test_split_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: test_split_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_provide_automatic_options_attr\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED...CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_provide_automatic_options_attr\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "c24c5ac827a013a749b552c87ca41e546c904c5ad580f897ceba17dd764fbd28"
+    },
+    {
+      "nodeid": "tests/test_cases_runner.py::test_case[unittest_keyword_split_neg]",
+      "xml_attributes": {
+        "classname": "tests.test_cases_runner",
+        "name": "test_case[unittest_keyword_split_neg]",
+        "time": "0.005"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: unittest_keyword_split_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"TestOptions.test_automatic_options_attr\"}]\nassert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}...GE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"TestOptions.test_automatic_options_attr\"}]' is None",
+      "text": "case_path = WindowsPath('C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/checkwash-ux/tests/cases/unittest_keyword_split_neg.gwcase')\n\n    @pytest.mark.parametrize(\"case_path\", CASES, ids=lambda p: p.stem)\n    def test_case(case_path):\n        case = parse_case(case_path.read_text(encoding=\"utf-8\"))\n        contract = parse_contract(case.task) if case.task else Contract()\n        known = (known_baseline() | set(case.env)) if case.env is not None else None\n        head = {p: c.encode(\"utf-8\") for p, c in case.head.items()}\n        snapshot = case_snapshot(case)\n        ir, findings, _verdict = analyze(\n            case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,\n            head_reader=head.get if head else None,\n            head_searcher=(\n                (lambda needles: [p for p, data in sorted(head.items())\n                                  if any(n.encode(\"utf-8\") in data for n in needles)])\n                if head else None\n            ),\n            # Declarative fixtures are a closed snapshot: an omitted head path is\n            # absent, and the in-memory search cannot suffer an I/O failure.\n            policy_base=case_policy_base(case),\n            root_reader=snapshot.get,\n            root_searcher=lambda needles: search_source_mapping(snapshot, needles),\n        )\n        visible = [f for f in findings if not f.allowlisted]\n        mismatch = match_expectations(case.expect, visible)\n>       assert mismatch is None, f\"{case_path.name}: {mismatch}\"\nE       AssertionError: unittest_keyword_split_neg.gwcase: no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"TestOptions.test_automatic_options_attr\"}]\nE       assert 'no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}...GE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"TestOptions.test_automatic_options_attr\"}]' is None\n\ntests\\test_cases_runner.py:53: AssertionError",
+      "text_sha256": "b507f5c00630fdd5d38cd1a11a4bfd62094d9a811db470375e6541050ee9cd8a"
+    },
+    {
+      "nodeid": "tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+      "xml_attributes": {
+        "classname": "tests.test_issue263_string_conditions",
+        "name": "test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+        "time": "0.004"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: assert 'block' == 'pass'\n  \n  - pass\n  + block",
+      "text": "def test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated():\n        \"\"\"pytest 1ff173baee's shape: two tests move into a class whose `pytestmark`\n        is a name bound to `skipif(\"sys.version_info < (2,6)\")`. The moved units\n        run, so their old units' disappearance is a relocation, not a disable.\"\"\"\n        tests = \"def test_one():\\n    assert add(1, 2) == 3\\n\\n\\ndef test_two():\\n    assert add(2, 2) == 4\\n\"\n        before = \"import pytest\\n\\nfrom app.calc import add\\n\\n\\n\" + tests\n        after = (\n            \"import pytest\\n\\nfrom app.calc import add\\n\\n\"\n            \"old_python = pytest.mark.skipif(\\\"sys.version_info < (2,6)\\\")\\n\\n\\n\"\n            \"class TestAdd:\\n    pytestmark = old_python\\n\\n\"\n            \"    def test_one(self):\\n        assert add(1, 2) == 3\\n\\n\"\n            \"    def test_two(self):\\n        assert add(2, 2) == 4\\n\"\n        )\n        verdict, findings = outcome(after, before=before)\n>       assert verdict == \"pass\"\nE       AssertionError: assert 'block' == 'pass'\nE         \nE         - pass\nE         + block\n\ntests\\test_issue263_string_conditions.py:229: AssertionError",
+      "text_sha256": "c27150121555e0896cded537e6bdf7b0416d42e070c3379f78045696a9738bb1"
+    },
+    {
+      "nodeid": "tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit",
+      "xml_attributes": {
+        "classname": "tests.test_issue358_own_mark_guards",
+        "name": "test_a_test_moved_under_the_gate_keeps_its_move_credit",
+        "time": "0.005"
+      },
+      "outcome": "failure",
+      "type": null,
+      "message": "AssertionError: assert 'block' == 'pass'\n  \n  - pass\n  + block",
+      "text": "def test_a_test_moved_under_the_gate_keeps_its_move_credit():\n        \"\"\"An unmarked test carries no marker, so its arrival is live (D2).\"\"\"\n        body = \"def test_total():\\n    assert total() == 78.75\\n\"\n        other = \"tests/test_other.py\"\n        after = module(tests=\"\")\n        moved = module(tests=body)\n        snapshot = {**APP, PATH: after.encode(), other: moved.encode()}\n        _ir, findings, verdict = analyze(\n            [FileChange(PATH, \"modified\", module().encode(), after.encode()),\n             FileChange(other, \"added\", None, moved.encode())],\n            Config(), Contract(), [], datetime.date(2026, 10, 8), head_reader=snapshot.get, root_reader=snapshot.get,\n        )\n>       assert verdict == \"pass\"\nE       AssertionError: assert 'block' == 'pass'\nE         \nE         - pass\nE         + block\n\ntests\\test_issue358_own_mark_guards.py:336: AssertionError",
+      "text_sha256": "1f24412a492a8fe306142a4723ef1c590d8cf7d900dc5b51b899fd5f05bd2d4b"
+    }
+  ],
+  "native_xml_skip_details": [
+    {
+      "nodeid": "tests/test_doctor.py::test_linked_workflow_and_local_action_paths_are_never_healthy",
+      "xml_attributes": {
+        "classname": "tests.test_doctor",
+        "name": "test_linked_workflow_and_local_action_paths_are_never_healthy",
+        "time": "4.234"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\canonical-source.yml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\.github\\\\workflows\\\\checkwash.yml'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_doctor.py:401: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\canonical-source.yml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\.github\\\\workflows\\\\checkwash.yml'",
+      "text_sha256": "68c5b5d3211d3ed518e9788bf255a3470ccc3e49e58c0a90653cd50072cca2f3"
+    },
+    {
+      "nodeid": "tests/test_issue346_config_reads.py::test_working_tree_batch_refusal_names_the_symlinked_path",
+      "xml_attributes": {
+        "classname": "tests.test_issue346_config_reads",
+        "name": "test_working_tree_batch_refusal_names_the_symlinked_path",
+        "time": "0.003"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '../pyproject.toml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_working_tree_batch_refusa0\\\\requirements\\\\pyproject.toml'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue346_config_reads.py:161: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '../pyproject.toml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_working_tree_batch_refusa0\\\\requirements\\\\pyproject.toml'",
+      "text_sha256": "72c475cc7e4d3a04772a9154f57807941049822df7447ea889231aac9c06cea6"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_the_inventory_lists_a_directory_symlink_as_an_opaque_directory",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_the_inventory_lists_a_directory_symlink_as_an_opaque_directory",
+        "time": "0.004"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_the_inventory_lists_a_dir0\\\\link'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_the_inventory_lists_a_dir0\\\\link'",
+      "text_sha256": "a6277b36c5a52f937ce519dcd0d393da60bb918cf60d7b119847c3b37e0c4713"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_a_read_inside_a_directory_symlink_names_it",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_a_read_inside_a_directory_symlink_names_it",
+        "time": "0.005"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_read_inside_a_directory0\\\\link'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_read_inside_a_directory0\\\\link'",
+      "text_sha256": "ed187ca575b05c5c70a1ec15fef884c167a1ff24a12bd5c80e96d4aa790397cd"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_searches_name_the_directory_symlink",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_searches_name_the_directory_symlink",
+        "time": "0.004"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_searches_name_the_directo0\\\\link'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_searches_name_the_directo0\\\\link'",
+      "text_sha256": "7b081e636a65806e7c38c0bf87ed17a7375e02c98bae28921b826f8e612ae114"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_an_unreachable_directory_symlink_gives_a_verdict[venv_lib64-term]",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[venv_lib64-term]",
+        "time": "0.664"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_0\\\\.venv\\\\lib64'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_0\\\\.venv\\\\lib64'",
+      "text_sha256": "9e92b578ce5f2556928e2d7ab9554c95232d8ce944bbeef1da663ea478c74431"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_an_unreachable_directory_symlink_gives_a_verdict[venv_lib64-hook-json]",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[venv_lib64-hook-json]",
+        "time": "1.311"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_1\\\\.venv\\\\lib64'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_1\\\\.venv\\\\lib64'",
+      "text_sha256": "618e302631f4b9d2f6f46426e53ff59d104fbd2b9d54d45fd2cf60b9acbcd08c"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_an_unreachable_directory_symlink_gives_a_verdict[pnpm_node_modules-term]",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[pnpm_node_modules-term]",
+        "time": "1.277"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_2\\\\node_modules\\\\left-pad'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_2\\\\node_modules\\\\left-pad'",
+      "text_sha256": "b294b9ca3fc24e95dbc572b0e795f7205f3866d5c9a49e15cdbe5ec8931a22b1"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_an_unreachable_directory_symlink_gives_a_verdict[pnpm_node_modules-hook-json]",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[pnpm_node_modules-hook-json]",
+        "time": "0.321"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_3\\\\node_modules\\\\left-pad'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_3\\\\node_modules\\\\left-pad'",
+      "text_sha256": "5febc648b31c187b0a02d5bfef89ecd2ee74f05ded69f6e9c6e507d8efff8619"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_a_collection_that_reaches_a_directory_symlink_fails_closed_naming_it[term]",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_a_collection_that_reaches_a_directory_symlink_fails_closed_naming_it[term]",
+        "time": "0.329"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches3\\\\linked'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches3\\\\linked'",
+      "text_sha256": "c20e09bed0970937562533759376069aa777b7125832f90b15187265238576fd"
+    },
+    {
+      "nodeid": "tests/test_issue414_worktree_directory_symlinks.py::test_a_collection_that_reaches_a_directory_symlink_fails_closed_naming_it[hook-json]",
+      "xml_attributes": {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "name": "test_a_collection_that_reaches_a_directory_symlink_fails_closed_naming_it[hook-json]",
+        "time": "0.673"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches4\\\\linked'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches4\\\\linked'",
+      "text_sha256": "4e4348159f341c43e03d0d86f3660b7216c567a35405db942637e791fe9ce677"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[range-root-tracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-root-tracked]",
+        "time": "0.898"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can0\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can0\\\\repo\\\\TASK.md'",
+      "text_sha256": "29b5365b8078b43189379ffa801adf9251d4e399ea5e0935ab34c4a39ff24f6d"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[range-root-untracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-root-untracked]",
+        "time": "2.473"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can1\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can1\\\\repo\\\\TASK.md'",
+      "text_sha256": "9719cbc733a34bd2d0ce6299fd8eff6c0efa3e215607025e8dd16ab6deb816e2"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[range-subdirectory-tracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-subdirectory-tracked]",
+        "time": "1.035"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can2\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can2\\\\repo\\\\TASK.md'",
+      "text_sha256": "0e70fbdc1620e623be5cc0a69281b73e022049ad2ce636b6f72218638ed82bab"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[range-subdirectory-untracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-subdirectory-untracked]",
+        "time": "1.879"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can3\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can3\\\\repo\\\\TASK.md'",
+      "text_sha256": "730bb08189f7491c817d44340d6a9fb88c2a7d3f3c2ff1f6cc7535b5c2669ab0"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[worktree-root-tracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-root-tracked]",
+        "time": "0.513"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can4\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can4\\\\repo\\\\TASK.md'",
+      "text_sha256": "d52d98bab073840f34b204d842502fe77d6140682e7096125c6cb8de53075983"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[worktree-root-untracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-root-untracked]",
+        "time": "0.803"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can5\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can5\\\\repo\\\\TASK.md'",
+      "text_sha256": "9ef7a5b378c2ee7971595468c7d0b0c68ca64d411908efa4c0e7d0dfb271fe70"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[worktree-subdirectory-tracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-subdirectory-tracked]",
+        "time": "2.201"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can6\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can6\\\\repo\\\\TASK.md'",
+      "text_sha256": "5ad3101c9e8e9979cf1690ca1c8b4030701a6d144c897c6367360a12fbd7a364"
+    },
+    {
+      "nodeid": "tests/test_issue416_subdirectory_root.py::test_a_symlinked_task_file_cannot_choose_the_contract[worktree-subdirectory-untracked]",
+      "xml_attributes": {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-subdirectory-untracked]",
+        "time": "0.523"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can7\\\\repo\\\\TASK.md'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can7\\\\repo\\\\TASK.md'",
+      "text_sha256": "2b8206dab810bd848c0c0ad9da96889801453e9771265edfa0587dbf30d25712"
+    },
+    {
+      "nodeid": "tests/test_issue500_root_task_path.py::test_a_task_path_through_a_committed_directory_symlink_is_an_engine_error[json-2]",
+      "xml_attributes": {
+        "classname": "tests.test_issue500_root_task_path",
+        "name": "test_a_task_path_through_a_committed_directory_symlink_is_an_engine_error[json-2]",
+        "time": "1.081"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com0\\\\repo\\\\ci'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com0\\\\repo\\\\ci'",
+      "text_sha256": "847b3c2050d2dff91edada0de845cdb35eced2298ae40effb7a63edb4089754b"
+    },
+    {
+      "nodeid": "tests/test_issue500_root_task_path.py::test_a_task_path_through_a_committed_directory_symlink_is_an_engine_error[hook-json-0]",
+      "xml_attributes": {
+        "classname": "tests.test_issue500_root_task_path",
+        "name": "test_a_task_path_through_a_committed_directory_symlink_is_an_engine_error[hook-json-0]",
+        "time": "0.767"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com1\\\\repo\\\\ci'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com1\\\\repo\\\\ci'",
+      "text_sha256": "b1ffc0cce545f70552c79ac6770499a789db7544205684f205ff5db635627d30"
+    },
+    {
+      "nodeid": "tests/test_issue500_root_task_path.py::test_repo_reached_through_a_symlink_to_the_root[link-root]",
+      "xml_attributes": {
+        "classname": "tests.test_issue500_root_task_path",
+        "name": "test_repo_reached_through_a_symlink_to_the_root[link-root]",
+        "time": "0.569"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\link'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\link'",
+      "text_sha256": "9f079fc097e355986e33fa4814825b0a0401a77ee18253acfdae9560662d35dd"
+    },
+    {
+      "nodeid": "tests/test_issue500_root_task_path.py::test_repo_reached_through_a_symlink_to_the_root[root-link]",
+      "xml_attributes": {
+        "classname": "tests.test_issue500_root_task_path",
+        "name": "test_repo_reached_through_a_symlink_to_the_root[root-link]",
+        "time": "1.564"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\link'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\link'",
+      "text_sha256": "57891eb45f13fdd5c369d6d4b1cb522cf8d1ffc1450f60b415cd91b13df9e2fd"
+    },
+    {
+      "nodeid": "tests/test_issue500_root_task_path.py::test_repo_reached_through_a_symlink_to_the_root[link-link]",
+      "xml_attributes": {
+        "classname": "tests.test_issue500_root_task_path",
+        "name": "test_repo_reached_through_a_symlink_to_the_root[link-link]",
+        "time": "1.546"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\link'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\link'",
+      "text_sha256": "e0b47bb0a5994b1ecf0eb1e0fbc36f4f1d8afde12069a51b104f3fe860ee4df0"
+    },
+    {
+      "nodeid": "tests/test_issue455_q4_unchanged_dot_less_refusal.py::test_an_unchanged_dot_less_symlink_still_refuses[worktree]",
+      "xml_attributes": {
+        "classname": "tests.test_issue455_q4_unchanged_dot_less_refusal",
+        "name": "test_an_unchanged_dot_less_symlink_still_refuses[worktree]",
+        "time": "1.274"
+      },
+      "outcome": "skipped",
+      "type": "pytest.skip",
+      "message": "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'python3.12' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unchanged_dot_less_sym1\\\\.venv\\\\bin\\\\python'",
+      "text": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_issue455_q4_unchanged_dot_less_refusal.py:122: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'python3.12' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unchanged_dot_less_sym1\\\\.venv\\\\bin\\\\python'",
+      "text_sha256": "1873bd8efc2dd5dbbb54eda5b81afc44614903d1e90ab69d5556909461b17175"
+    }
+  ],
+  "native_xml_skip_reason_counts": {
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\canonical-source.yml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\.github\\\\workflows\\\\checkwash.yml'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '../pyproject.toml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_working_tree_batch_refusa0\\\\requirements\\\\pyproject.toml'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_the_inventory_lists_a_dir0\\\\link'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_read_inside_a_directory0\\\\link'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_searches_name_the_directo0\\\\link'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_0\\\\.venv\\\\lib64'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_1\\\\.venv\\\\lib64'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_2\\\\node_modules\\\\left-pad'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_3\\\\node_modules\\\\left-pad'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches3\\\\linked'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches4\\\\linked'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can0\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can1\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can2\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can3\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can4\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can5\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can6\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can7\\\\repo\\\\TASK.md'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com0\\\\repo\\\\ci'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com1\\\\repo\\\\ci'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\link'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\link'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\link'": 1,
+    "symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'python3.12' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unchanged_dot_less_sym1\\\\.venv\\\\bin\\\\python'": 1
+  },
+  "stdout_skip_summary_lines": [
+    "SKIPPED [1] tests\\test_issue346_config_reads.py:161: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '../pyproject.toml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_working_tree_batch_refusa0\\\\requirements\\\\pyproject.toml'",
+    "SKIPPED [1] tests\\test_doctor.py:401: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\canonical-source.yml' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\.github\\\\workflows\\\\checkwash.yml'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_the_inventory_lists_a_dir0\\\\link'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_read_inside_a_directory0\\\\link'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'real' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_searches_name_the_directo0\\\\link'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_0\\\\.venv\\\\lib64'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'lib' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_1\\\\.venv\\\\lib64'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_2\\\\node_modules\\\\left-pad'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unreachable_directory_3\\\\node_modules\\\\left-pad'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches3\\\\linked'",
+    "SKIPPED [1] tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'src' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_collection_that_reaches4\\\\linked'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can0\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can1\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can2\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can3\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can4\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can5\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'NOTES.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can6\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'evil.md' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_symlinked_task_file_can7\\\\repo\\\\TASK.md'",
+    "SKIPPED [1] tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com0\\\\repo\\\\ci'",
+    "SKIPPED [1] tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'contracts' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_a_task_path_through_a_com1\\\\repo\\\\ci'",
+    "SKIPPED [1] tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\link'",
+    "SKIPPED [1] tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\link'",
+    "SKIPPED [1] tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\repo' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\link'",
+    "SKIPPED [1] tests\\test_issue455_q4_unchanged_dot_less_refusal.py:122: symlinks unavailable: [WinError 1314] \u7528\u6236\u7aef\u6c92\u6709\u9019\u9805\u7279\u6b8a\u6b0a\u9650\u3002: 'python3.12' -> 'C:\\\\Users\\\\nelson\\\\AppData\\\\Local\\\\Temp\\\\cwf5-24687d5e\\\\p\\\\popen-gw1\\\\test_an_unchanged_dot_less_sym1\\\\.venv\\\\bin\\\\python'"
+  ],
+  "unmapped_xml_cases": [],
+  "stderr_bytes": 0,
+  "stderr_text": "",
+  "product_calls": 0,
+  "pytest_calls": 0,
+  "published_checks": 0,
+  "auditor_runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "auditor_command": [
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\qualification\\read_full_suite.py"
+  ],
+  "auditor_sha256": "d5c8f45967e262f6322570ac42de6620767eb38c5ce96448c34afe653f66095c"
+}

@@ -5,6 +5,8 @@
     "work/ux-stage5/controller-copy-record.json": "c3c3bab0351f17afe8132b179f14780b80ba329d5cb037d0502bd413cba5aa07",
     "work/ux-stage5/final/build-artifacts-r1/receipt.json": "e3b269a8a0b5823afb2b0aff7b4c1a231de1be7b627f28a30c586dad606c4781",
     "work/ux-stage5/final/build-pyz-r1/receipt.json": "16e731307f7394e4219ad565107eccbf9754888f03a72b6c94a87b24496c1f44",
+    "work/ux-stage5/final/full-suite-311-r1/independent-readback.json": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6",
+    "work/ux-stage5/final/full-suite-311-r1/receipt.json": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0",
     "work/ux-stage5/final/wheel-runtime-create-r1/receipt.json": "f60e014bb075acb92ecc5adad69efd0bf232656e35f3f16e325c8b1bc8d57b03",
     "work/ux-stage5/final/wheel-runtime-install-r1/receipt.json": "680f41aeb396da4787279d7d756aa3e54341f799ef25daeafc32ffd15bf661d1",
     "work/ux-stage5/seal/source-seal.json": "7e6e103f43efa4fb9941351c07fa4f8407b2d5b380cdd15dd419303563e801ba",
@@ -33,14 +35,14 @@
   },
   "files": [
     {
-      "bytes": 2593,
+      "bytes": 2571,
       "path": "00-START-HERE.md",
-      "sha256": "fa1aca093a9abbc47e7abc357e25ef5a780aecffddd1e13219d0e6789a42f9f2"
+      "sha256": "6a1919308f0e377df10a6a41816493575b8bd241ea7da60807300e0e3033bf08"
     },
     {
-      "bytes": 1961,
+      "bytes": 2257,
       "path": "checkpoint.json",
-      "sha256": "c0aff7f58b74dd00af5dd5e46b48bbde4b244d75d95784565002e2d3db800bec"
+      "sha256": "0e83cdd039126e3bd1556acf87914f1f1c3f649f86b333bbade5305fbae35624"
     },
     {
       "bytes": 1104,
@@ -186,6 +188,31 @@
       "bytes": 1148512,
       "path": "completed/source-seal.json",
       "sha256": "7e6e103f43efa4fb9941351c07fa4f8407b2d5b380cdd15dd419303563e801ba"
+    },
+    {
+      "bytes": 101303,
+      "path": "completed/validation/full_suite/independent-readback.json",
+      "sha256": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6"
+    },
+    {
+      "bytes": 1834,
+      "path": "completed/validation/full_suite/receipt.json",
+      "sha256": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0"
+    },
+    {
+      "bytes": 2593,
+      "path": "index-history/20261026T214442.435750Z/00-START-HERE.md",
+      "sha256": "fa1aca093a9abbc47e7abc357e25ef5a780aecffddd1e13219d0e6789a42f9f2"
+    },
+    {
+      "bytes": 10874,
+      "path": "index-history/20261026T214442.435750Z/MANIFEST.json",
+      "sha256": "a2869e1a7722e4482b953919b4555e71f4a866ccd9ee659442b5294851ce3b1a"
+    },
+    {
+      "bytes": 1961,
+      "path": "index-history/20261026T214442.435750Z/checkpoint.json",
+      "sha256": "c0aff7f58b74dd00af5dd5e46b48bbde4b244d75d95784565002e2d3db800bec"
     },
     {
       "bytes": 5952436,

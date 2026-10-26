@@ -11,7 +11,7 @@
     "state": "NOT_READY"
   },
   "code_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
-  "created_utc": "2026-10-26T21:28:33.290555+00:00",
+  "created_utc": "2026-10-26T21:44:42.407123+00:00",
   "findings_version": 2,
   "ir_version": 3,
   "producer_git_calls": 0,
@@ -37,20 +37,27 @@
     "all_active_jobs_terminal": false,
     "roles": {
       "full_suite": {
+        "audit": {
+          "path": "completed/validation/full_suite/independent-readback.json",
+          "sha256": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6",
+          "state": "VERIFIED"
+        },
+        "exit_code": 1,
+        "receipt": "completed/validation/full_suite/receipt.json",
+        "sha256": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0",
+        "state": "TERMINAL"
+      },
+      "qualification_pyz": {
         "detail": "terminal_missing; directory presence does not prove a live process",
         "state": "RUNNING"
       },
-      "qualification_pyz": {
-        "detail": "No stage5 attempt directory or terminal receipt at index capture time",
-        "state": "NOT_STARTED"
-      },
       "qualification_source": {
-        "detail": "No stage5 attempt directory or terminal receipt at index capture time",
-        "state": "NOT_STARTED"
+        "detail": "terminal_missing; directory presence does not prove a live process",
+        "state": "RUNNING"
       },
       "qualification_wheel": {
-        "detail": "No stage5 attempt directory or terminal receipt at index capture time",
-        "state": "NOT_STARTED"
+        "detail": "terminal_missing; directory presence does not prove a live process",
+        "state": "RUNNING"
       }
     }
   },
