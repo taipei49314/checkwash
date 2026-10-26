@@ -36,7 +36,7 @@ from checkwash import __version__
 from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
 from checkwash.change import SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
-from checkwash.contract import Contract, parse_contract
+from checkwash.contract import Contract, contract_diagnostics, parse_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
 from checkwash.engine import analyze
 from checkwash.pyenv import known_baseline
@@ -237,7 +237,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
             rel = os.path.relpath(args.task, repo).replace("\\", "/")
         data = read_base_file(repo, config_side, rel)
         if data is not None:
-            contract = parse_contract(data.decode("utf-8", errors="replace"))
+            task_text = data.decode("utf-8", errors="replace")
+            contract = parse_contract(task_text)
         elif prefix:
             # Git spells the prefix as the directory is on disk. On a
             # case-insensitive checkout the head chooses that spelling (`PKG/`
@@ -269,11 +270,15 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
                     return 2
                 return _engine_error(args, _task_alias_error(args.task, rel, alias))
             with open(args.task, encoding="utf-8") as fh:
-                contract = parse_contract(fh.read())
+                task_text = fh.read()
+                contract = parse_contract(task_text)
             if not quiet:
                 _advise(f"checkwash: --task {args.task}: the base tree has no file at {rel}, so the "
                         "contract is read from the working-tree copy, which the change controls; "
                         "commit the task file to read it from the base\n")
+        task_source = "BASE" if data is not None else "working-tree fallback"
+        for message in contract_diagnostics(task_text):
+            advise(f"checkwash: --task {rel!r} ({task_source}): {message}\n")
 
     known_modules: set[str] | None = None
     declared: set[str] = set()
