@@ -1,0 +1,1465 @@
+{
+  "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "mode": "READ_ONLY_RAW_RECEIPT_ANALYSIS_NO_PRODUCT_IMPORT",
+  "capture_receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\final\\native-final-rename-r1\\receipt.json",
+  "capture_receipt_sha256": "0833468901c8fc06968f7a133ba8af51a495a3ddb6e7cf8e7a873a959b1c29d6",
+  "capture_source_manifest_sha256": "3649879bd02d32a9e3d1f868790d7af33d86382300720b072bed0320ad14fe22",
+  "runner_sha256": "b87cf72b7863d888dc3d4b7adc6c21f127799a966c33515a3172606062c8a930",
+  "runner_derivation_sha256": "529be279bffa80b00c48cd4cbe6da625649c26db36dd38f763182dd43d788b0a",
+  "analysis_helper_sha256": "cd9df135148480098e76785ea280a8bea8d52a0b05c01e46e30c391527f2a78d",
+  "source_archive_sha256": "f5217a1464628f485354d114f7750413c4b7f2ef8e75c5de3c88ec2b1d178916",
+  "case_inputs_sha256": "65193f40e2218db136dc2419053d2149192943390e0ba1826942aef9e23572fc",
+  "input_bytes_equal_original_stage2": true,
+  "actual_fixture_inputs_verified": {
+    "A/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "839dd669a1130481dd9fa25b8db07c4d1fda8611c8b7dd71f8febe9978aa5e5a",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "A/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "839dd669a1130481dd9fa25b8db07c4d1fda8611c8b7dd71f8febe9978aa5e5a",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "B/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "c04a88c87b5c2afc5c62aae50b6317bdb2eda562f7e5fa2f60d1741ccea14ef0",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "B/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "c04a88c87b5c2afc5c62aae50b6317bdb2eda562f7e5fa2f60d1741ccea14ef0",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "B_from_A/default": {
+      "before_sha256": "839dd669a1130481dd9fa25b8db07c4d1fda8611c8b7dd71f8febe9978aa5e5a",
+      "after_sha256": "c04a88c87b5c2afc5c62aae50b6317bdb2eda562f7e5fa2f60d1741ccea14ef0",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "B_from_A/freeze": {
+      "before_sha256": "839dd669a1130481dd9fa25b8db07c4d1fda8611c8b7dd71f8febe9978aa5e5a",
+      "after_sha256": "c04a88c87b5c2afc5c62aae50b6317bdb2eda562f7e5fa2f60d1741ccea14ef0",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "N_unroll_changed/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "ce6cd6fdc941148cf82bd2813eb9af1e3a331ab83c273c967c802bbebb893d45",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "N_unroll_changed/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "ce6cd6fdc941148cf82bd2813eb9af1e3a331ab83c273c967c802bbebb893d45",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_rename_only/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "515d34899b8d0dd91c8c4b36508a1708344d312f7a8ec81f5ea4694bc2212d8e",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_rename_only/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "515d34899b8d0dd91c8c4b36508a1708344d312f7a8ec81f5ea4694bc2212d8e",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_unroll_preserved/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "1b7f795126f05641bcfe1b34ab34c66997b43ecd346f67b2284b1c62eb9da501",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_unroll_preserved/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "1b7f795126f05641bcfe1b34ab34c66997b43ecd346f67b2284b1c62eb9da501",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_same_name_changed/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "883c70f652bcc923b21ef37da3c954ae7257b305bfd687f31785cd83d11d6c2e",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_same_name_changed/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "883c70f652bcc923b21ef37da3c954ae7257b305bfd687f31785cd83d11d6c2e",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_cross_file_move/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "control_cross_file_move/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "cross_file_param_changed/default": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "7d39b069ada019dcf4f90bb5940625fe37960a2b4463d5d1fe9cf867b767d7fb",
+      "task_sha256": "b0d0e38f9931ce56d4a9aea7537af560d4b5b3f63143616bf05d1d1a881ff0aa",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    },
+    "cross_file_param_changed/freeze": {
+      "before_sha256": "7a8eef7f49d209833afcdae63421acb12fbb48ea10af92381bb3c4dc673ad466",
+      "after_sha256": "7d39b069ada019dcf4f90bb5940625fe37960a2b4463d5d1fe9cf867b767d7fb",
+      "task_sha256": "38dab09207e4e87302136bbe00559ab502089c9fec713617338829381c16e851",
+      "production_sha256": "7742d0297f9f6478d5c62ed73adaa5c1080fd13333ab11ad1b450aa26658a46f"
+    }
+  },
+  "before_verification_git_commands": 18,
+  "cli_observations": 36,
+  "explicit_expected_controls": 26,
+  "observation_only_rows": 10,
+  "explicit_expected_failures": [],
+  "exit_counts": {
+    "1": 24,
+    "0": 12
+  },
+  "verdict_counts": {
+    "block": 24,
+    "pass": 12
+  },
+  "findings_schema": 2,
+  "reported_checkwash_version": "0.10.0",
+  "baseline_comparisons": {
+    "v090": {
+      "pairs": 36,
+      "differing_pairs": 14,
+      "difference_fields": {
+        "exit": 10,
+        "verdict": 10,
+        "summary": 10,
+        "findings": 14
+      },
+      "verdict_moves": {
+        "pass -> block": 10
+      }
+    },
+    "v091": {
+      "pairs": 36,
+      "differing_pairs": 14,
+      "difference_fields": {
+        "exit": 10,
+        "verdict": 10,
+        "summary": 10,
+        "findings": 14
+      },
+      "verdict_moves": {
+        "pass -> block": 10
+      }
+    }
+  },
+  "observations": [
+    {
+      "case": "A",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "A",
+      "freeze": false,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "A",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "A",
+      "freeze": true,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B",
+      "freeze": false,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B",
+      "freeze": true,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B_from_A",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              23,
+              107
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_checkout/v2:117fb44b26e2f5c9c55bea95e56da5105287c7c7e6d3c3f5aaf697d72802dfa2",
+          "message": "test_checkout: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_checkout"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B_from_A",
+      "freeze": false,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              23,
+              107
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_checkout/v2:117fb44b26e2f5c9c55bea95e56da5105287c7c7e6d3c3f5aaf697d72802dfa2",
+          "message": "test_checkout: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_checkout"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B_from_A",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              23,
+              107
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_checkout/v2:117fb44b26e2f5c9c55bea95e56da5105287c7c7e6d3c3f5aaf697d72802dfa2",
+          "message": "test_checkout: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_checkout"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "B_from_A",
+      "freeze": true,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              23,
+              107
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_checkout/v2:117fb44b26e2f5c9c55bea95e56da5105287c7c7e6d3c3f5aaf697d72802dfa2",
+          "message": "test_checkout: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_checkout"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "N_unroll_changed",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              74,
+              95
+            ],
+            "text": "assert calc(20) == 45"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(20) == 40"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_2a4efd91afe9830fa88b0cb4_1/v2:de11f0cfae7ac2ab8ed485af65f41b9c483d64aa8307d8a702b23dd3020c5e9b",
+          "message": "test_concrete_2a4efd91afe9830fa88b0cb4_1: expected value rewritten 40 -> 45 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_2a4efd91afe9830fa88b0cb4_1"
+        },
+        {
+          "after": {
+            "span": [
+              48,
+              69
+            ],
+            "text": "assert calc(10) == 25"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(10) == 20"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_4618a6ec86b83e3457c9e9d5_1/v2:ffe14c7123a1c8f7a44d3bad42cfc6eefaa2060b63a199520226586f3bc3d3cc",
+          "message": "test_concrete_4618a6ec86b83e3457c9e9d5_1: expected value rewritten 20 -> 25 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_4618a6ec86b83e3457c9e9d5_1"
+        },
+        {
+          "after": {
+            "span": [
+              100,
+              121
+            ],
+            "text": "assert calc(30) == 65"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(30) == 60"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_db867f7a154785cd18983266_1/v2:364288e07646b2c5339503154b3a39f9452238412b4b69f53bd91addbefe0fdd",
+          "message": "test_concrete_db867f7a154785cd18983266_1: expected value rewritten 60 -> 65 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_db867f7a154785cd18983266_1"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "N_unroll_changed",
+      "freeze": false,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              74,
+              95
+            ],
+            "text": "assert calc(20) == 45"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(20) == 40"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_2a4efd91afe9830fa88b0cb4_1/v2:de11f0cfae7ac2ab8ed485af65f41b9c483d64aa8307d8a702b23dd3020c5e9b",
+          "message": "test_concrete_2a4efd91afe9830fa88b0cb4_1: expected value rewritten 40 -> 45 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_2a4efd91afe9830fa88b0cb4_1"
+        },
+        {
+          "after": {
+            "span": [
+              48,
+              69
+            ],
+            "text": "assert calc(10) == 25"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(10) == 20"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_4618a6ec86b83e3457c9e9d5_1/v2:ffe14c7123a1c8f7a44d3bad42cfc6eefaa2060b63a199520226586f3bc3d3cc",
+          "message": "test_concrete_4618a6ec86b83e3457c9e9d5_1: expected value rewritten 20 -> 25 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_4618a6ec86b83e3457c9e9d5_1"
+        },
+        {
+          "after": {
+            "span": [
+              100,
+              121
+            ],
+            "text": "assert calc(30) == 65"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(30) == 60"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_db867f7a154785cd18983266_1/v2:364288e07646b2c5339503154b3a39f9452238412b4b69f53bd91addbefe0fdd",
+          "message": "test_concrete_db867f7a154785cd18983266_1: expected value rewritten 60 -> 65 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_db867f7a154785cd18983266_1"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "N_unroll_changed",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              74,
+              95
+            ],
+            "text": "assert calc(20) == 45"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(20) == 40"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_2a4efd91afe9830fa88b0cb4_1/v2:de11f0cfae7ac2ab8ed485af65f41b9c483d64aa8307d8a702b23dd3020c5e9b",
+          "message": "test_concrete_2a4efd91afe9830fa88b0cb4_1: expected value rewritten 40 -> 45 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_2a4efd91afe9830fa88b0cb4_1"
+        },
+        {
+          "after": {
+            "span": [
+              48,
+              69
+            ],
+            "text": "assert calc(10) == 25"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(10) == 20"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_4618a6ec86b83e3457c9e9d5_1/v2:ffe14c7123a1c8f7a44d3bad42cfc6eefaa2060b63a199520226586f3bc3d3cc",
+          "message": "test_concrete_4618a6ec86b83e3457c9e9d5_1: expected value rewritten 20 -> 25 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_4618a6ec86b83e3457c9e9d5_1"
+        },
+        {
+          "after": {
+            "span": [
+              100,
+              121
+            ],
+            "text": "assert calc(30) == 65"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(30) == 60"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_db867f7a154785cd18983266_1/v2:364288e07646b2c5339503154b3a39f9452238412b4b69f53bd91addbefe0fdd",
+          "message": "test_concrete_db867f7a154785cd18983266_1: expected value rewritten 60 -> 65 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_db867f7a154785cd18983266_1"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "N_unroll_changed",
+      "freeze": true,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              74,
+              95
+            ],
+            "text": "assert calc(20) == 45"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(20) == 40"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_2a4efd91afe9830fa88b0cb4_1/v2:de11f0cfae7ac2ab8ed485af65f41b9c483d64aa8307d8a702b23dd3020c5e9b",
+          "message": "test_concrete_2a4efd91afe9830fa88b0cb4_1: expected value rewritten 40 -> 45 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_2a4efd91afe9830fa88b0cb4_1"
+        },
+        {
+          "after": {
+            "span": [
+              48,
+              69
+            ],
+            "text": "assert calc(10) == 25"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(10) == 20"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_4618a6ec86b83e3457c9e9d5_1/v2:ffe14c7123a1c8f7a44d3bad42cfc6eefaa2060b63a199520226586f3bc3d3cc",
+          "message": "test_concrete_4618a6ec86b83e3457c9e9d5_1: expected value rewritten 20 -> 25 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_4618a6ec86b83e3457c9e9d5_1"
+        },
+        {
+          "after": {
+            "span": [
+              100,
+              121
+            ],
+            "text": "assert calc(30) == 65"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(30) == 60"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_concrete_db867f7a154785cd18983266_1/v2:364288e07646b2c5339503154b3a39f9452238412b4b69f53bd91addbefe0fdd",
+          "message": "test_concrete_db867f7a154785cd18983266_1: expected value rewritten 60 -> 65 with no change in assertion strength",
+          "path": "tests/test_calc.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_concrete_db867f7a154785cd18983266_1"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_rename_only",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_rename_only",
+      "freeze": false,
+      "entry": "range",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_rename_only",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_rename_only",
+      "freeze": true,
+      "entry": "range",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_unroll_preserved",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_unroll_preserved",
+      "freeze": false,
+      "entry": "range",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_unroll_preserved",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_unroll_preserved",
+      "freeze": true,
+      "entry": "range",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_same_name_changed",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              23,
+              103
+            ],
+            "text": "parametrize cases: None"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:4520bc4e10cdc9ffddaa2f396cf240a714a34a25e0c89af8e27ad5a74803b0ff",
+          "message": "test_calc: 2 parametrized case(s) deleted (3 -> 1)",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "param_cases_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_same_name_changed",
+      "freeze": false,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              23,
+              103
+            ],
+            "text": "parametrize cases: None"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:4520bc4e10cdc9ffddaa2f396cf240a714a34a25e0c89af8e27ad5a74803b0ff",
+          "message": "test_calc: 2 parametrized case(s) deleted (3 -> 1)",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "param_cases_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_same_name_changed",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              23,
+              103
+            ],
+            "text": "parametrize cases: None"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:4520bc4e10cdc9ffddaa2f396cf240a714a34a25e0c89af8e27ad5a74803b0ff",
+          "message": "test_calc: 2 parametrized case(s) deleted (3 -> 1)",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "param_cases_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_same_name_changed",
+      "freeze": true,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              23,
+              103
+            ],
+            "text": "parametrize cases: None"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:4520bc4e10cdc9ffddaa2f396cf240a714a34a25e0c89af8e27ad5a74803b0ff",
+          "message": "test_calc: 2 parametrized case(s) deleted (3 -> 1)",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "param_cases_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_cross_file_move",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_cross_file_move",
+      "freeze": false,
+      "entry": "range",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_cross_file_move",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "control_cross_file_move",
+      "freeze": true,
+      "entry": "range",
+      "exit": 0,
+      "verdict": "pass",
+      "explicit_expected_control": true,
+      "findings": [],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "cross_file_param_changed",
+      "freeze": false,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "cross_file_param_changed",
+      "freeze": false,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": false,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              141,
+              167
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTATION_DEFINITION_CHANGED/tests/test_moved.py/test_calc/v2:e8c4f51ee742833d3557a9169bdb2af779a8ac7276e4fd6237e3208f2a4440bb",
+          "message": "test_calc: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_moved.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "cross_file_param_changed",
+      "freeze": true,
+      "entry": "worktree",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              105,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_calc/v2:c4a9c9af0a2a23922eda3b18783c2fc039791592e335344814a1e35f999793b4",
+          "message": "test_calc: test unit disappeared",
+          "path": "tests/test_calc.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "case": "cross_file_param_changed",
+      "freeze": true,
+      "entry": "range",
+      "exit": 1,
+      "verdict": "block",
+      "explicit_expected_control": true,
+      "findings": [
+        {
+          "after": {
+            "span": [
+              141,
+              167
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              137,
+              163
+            ],
+            "text": "assert calc(x) == expected"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF",
+            "ORACLE_FREEZE"
+          ],
+          "fingerprint": "EXPECTATION_DEFINITION_CHANGED/tests/test_moved.py/test_calc/v2:e8c4f51ee742833d3557a9169bdb2af779a8ac7276e4fd6237e3208f2a4440bb",
+          "message": "test_calc: the assertion is unchanged but its expectation is not — expected is defined differently now, so the test compares against a different value than it did",
+          "path": "tests/test_moved.py",
+          "rule": "EXPECTATION_DEFINITION_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_calc"
+        }
+      ],
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "comparison_sha256": "d4f0fd4fc1ee11519ec155cc85425683b1680a02e49b2ffcbd1abe33441bf1f5",
+  "results_sha256": "8758ad1362f89bcae48af3abd4e79d17c2d40224cdbca72cb27ae9e862f9ad24",
+  "execution_journal_sha256": "285aed04980e476ef74970a3ccf8a94a136637148775a42da9bc62d217640c6f",
+  "git_journal_sha256": "09b2d089771326fc56eaf0189ec89886c8b2c00b65dfdd45db088ad5a317e23c",
+  "git_fixture_commands": 181,
+  "fixture_programs_executed": false,
+  "scope_limits": [
+    "36 synthetic CLI observations; 26 explicit expected outcome checks and 10 fully observed comparison rows.",
+    "Deltas from the two preserved baselines are observations, not an automatic zero-delta acceptance gate.",
+    "Eight existing D179 golden expectation costs remain unchanged and separately tracked by root; this native subset does not waive them.",
+    "PJU Windows Python 3.11.9 only; no native file-symlink, Python 3.13, other OS, wheel/pyz or release-stage coverage is supplied by this run."
+  ]
+}

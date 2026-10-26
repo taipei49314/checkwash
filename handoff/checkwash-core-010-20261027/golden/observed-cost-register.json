@@ -1,0 +1,859 @@
+{
+  "source": "cost-r4/results.json",
+  "source_sha256": "f40d55f9c972ec203adc5ffd659e5b8553f26c114eb2969267e0696a173f4149",
+  "marker": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "hostname": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "baseline_source_sha": "9a5a27f44c895ba2fdee8c83a6313baf0e120873",
+  "candidate_binding": "COPIED_DEVELOPMENT_WORKING_TREE_BYTES_NOT_HEAD_QUALIFICATION",
+  "static_api_calls": 16,
+  "product_cli_calls": 0,
+  "rows": [
+    {
+      "case": "bare_bound_then_used_neg",
+      "fixture_sha256": "4d3e0a1360cdaca3455cf011bbb33328c094769badfa2b85741dbd46af918acf",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_total: test unit disappeared",
+          "path": "tests/test_billing.py",
+          "unit": "test_total",
+          "before": {
+            "text": "assert invoice_total([50.0, 50.0], 0.05) == 105.0",
+            "span": [
+              36,
+              107
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:4d7391a89300553c844f2ca845edc3e0def80928aa9ac34aff884dcf6a7de357",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_total: test unit disappeared",
+          "path": "tests/test_billing.py",
+          "unit": "test_total",
+          "before": {
+            "text": "assert invoice_total([50.0, 50.0], 0.05) == 105.0",
+            "span": [
+              36,
+              107
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:4d7391a89300553c844f2ca845edc3e0def80928aa9ac34aff884dcf6a7de357",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_billing.py\", \"unit\": \"test_total\"}]",
+      "classification": "OUTPUT_ORACLE_REMOVED: output invoice_total==105 replaced by input data equality; a different strong assertion is not the same obligation.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/bare_bound_then_used_neg"
+    },
+    {
+      "case": "split_rename_genuine_neg",
+      "fixture_sha256": "7992b912ec37339e5e6e858065fd57a601081f901423b45370a00ffe13d134da",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "test_automatic_options_attr",
+          "before": {
+            "text": "assert options(\"a\") == [\"OPTIONS\"]\nassert options(\"b\") == [\"GET\"]",
+            "span": [
+              26,
+              134
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/test_automatic_options_attr/v2:90e4741be4f4976ea8c957e9e47bf2016d816b14a3f3ffbe10c9ef9ca2d33c80",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "test_automatic_options_attr",
+          "before": {
+            "text": "assert options(\"a\") == [\"OPTIONS\"]\nassert options(\"b\") == [\"GET\"]",
+            "span": [
+              26,
+              134
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/test_automatic_options_attr/v2:90e4741be4f4976ea8c957e9e47bf2016d816b14a3f3ffbe10c9ef9ca2d33c80",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_automatic_options_attr\"}]",
+      "classification": "SUBJECT_NORMALIZED: sorted(options(...)) can conceal return container/type/order differences; same expected literal and mass do not prove equivalence.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/split_rename_genuine_neg"
+    },
+    {
+      "case": "unittest_keyword_split_neg",
+      "fixture_sha256": "7e465159cdc882f3a6e8512dda312f0f38048f431c32a7692cc77d882c8c4d33",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "TestOptions.test_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "TestOptions.test_automatic_options_attr",
+          "before": {
+            "text": "self.assertEqual(options(\"a\"), [\"OPTIONS\"])\nself.assertEqual(options(\"b\"), [\"GET\"])",
+            "span": [
+              85,
+              223
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/TestOptions.test_automatic_options_attr/v2:6d9402d91105025d47adc80ad95fcd207da486690ee55b608c5d77c7e4ede2b3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "TestOptions.test_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "TestOptions.test_automatic_options_attr",
+          "before": {
+            "text": "self.assertEqual(options(\"a\"), [\"OPTIONS\"])\nself.assertEqual(options(\"b\"), [\"GET\"])",
+            "span": [
+              85,
+              223
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/TestOptions.test_automatic_options_attr/v2:6d9402d91105025d47adc80ad95fcd207da486690ee55b608c5d77c7e4ede2b3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"TestOptions.test_automatic_options_attr\"}]",
+      "classification": "SUBJECT_NORMALIZED: keyword assertEqual operands are supported; the remaining changed sorted subject is not proven equivalent.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/unittest_keyword_split_neg"
+    },
+    {
+      "case": "test_split_neg",
+      "fixture_sha256": "6df6b13d044f4d481c7dc10dad962c87708bb4666bb411b32d8d821a96f63eb4",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "info",
+          "message": "test_provide_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "test_provide_automatic_options_attr",
+          "before": {
+            "text": "assert app.open(\"/\", method=\"OPTIONS\").status_code == 405\nassert sorted(app.open(\"/\", method=\"OPTIONS\").allow) == [\"OPTIONS\"]",
+            "span": [
+              27,
+              224
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/test_provide_automatic_options_attr/v2:329395cd8cad7a6df37717e6fc600eb2600f2ed10cb5ea8c0003b9dafbe92e0a",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_provide_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "test_provide_automatic_options_attr",
+          "before": {
+            "text": "assert app.open(\"/\", method=\"OPTIONS\").status_code == 405\nassert sorted(app.open(\"/\", method=\"OPTIONS\").allow) == [\"OPTIONS\"]",
+            "span": [
+              27,
+              224
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/test_provide_automatic_options_attr/v2:329395cd8cad7a6df37717e6fc600eb2600f2ed10cb5ea8c0003b9dafbe92e0a",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "info",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_options.py\", \"unit\": \"test_provide_automatic_options_attr\"}]",
+      "classification": "UNKNOWN_CHANGED_SETUP: make_app() becomes make_app(automatic_options=True) for one moved assertion; no source/default proof is supplied by the fixture.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/test_split_neg"
+    },
+    {
+      "case": "subject_pairing_other_subject_known_limit_pos",
+      "fixture_sha256": "b39b09bdd843bebc57ac26a29383d2597a10b597b4aad98aa51f0467168147d1",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "block",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_with_device_id: assertion replaced \u2014 subject and polarity both changed (assert mock_lock in locks -> assert entry is not None); checkwash cannot verify the replacement is equivalent",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_with_device_id",
+          "before": {
+            "text": "assert mock_lock in locks",
+            "span": [
+              2993,
+              3018
+            ]
+          },
+          "after": {
+            "text": "assert entry is not None",
+            "span": [
+              1618,
+              1642
+            ]
+          },
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_WEAKENED/tests/test_helpers.py/test_get_locks_from_targets_with_device_id/v2:8452d998e593392f3e5884e0cccc0a5982ae9225d895a72d46608c669608fb11",
+          "allowlisted": false,
+          "strength_drop": 30,
+          "strength_after": 30,
+          "subject_changed": true,
+          "shape": null
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_get_locks_from_targets_warns_for_non_lock_entity: test unit disappeared",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_for_non_lock_entity",
+          "before": {
+            "text": "assert len(locks) == 0\nassert \"invalid lock entities\" in caplog.text\nassert \"switch.not_a_lock\" in caplog.text",
+            "span": [
+              807,
+              1412
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_helpers.py/test_get_locks_from_targets_warns_for_non_lock_entity/v2:0d838cd3f7b8b347003022d09e27e6a9b0a690ecd4a6a4f3c5322c522f718eff",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_get_locks_from_targets_warns_when_lock_not_in_lcm: test unit disappeared",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm",
+          "before": {
+            "text": "assert len(locks) == 0\nassert \"not managed by Lock Code Manager\" in caplog.text\nassert \"lock.unmanaged_lock\" in caplog.text",
+            "span": [
+              1415,
+              2030
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_helpers.py/test_get_locks_from_targets_warns_when_lock_not_in_lcm/v2:6426795fa8e6bfe58846dc51fb1b0920e87fa7f11026ddf4ffac16a569128a61",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_with_device_id: assertion replaced \u2014 subject and polarity both changed (assert mock_lock in locks -> assert entry is not None); checkwash cannot verify the replacement is equivalent",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_with_device_id",
+          "before": {
+            "text": "assert mock_lock in locks",
+            "span": [
+              2993,
+              3018
+            ]
+          },
+          "after": {
+            "text": "assert entry is not None",
+            "span": [
+              1618,
+              1642
+            ]
+          },
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_WEAKENED/tests/test_helpers.py/test_get_locks_from_targets_with_device_id/v2:8452d998e593392f3e5884e0cccc0a5982ae9225d895a72d46608c669608fb11",
+          "allowlisted": false,
+          "strength_drop": 30,
+          "strength_after": 30,
+          "subject_changed": true,
+          "shape": null
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_warns_for_non_lock_entity: test unit disappeared",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_for_non_lock_entity",
+          "before": {
+            "text": "assert len(locks) == 0\nassert \"invalid lock entities\" in caplog.text\nassert \"switch.not_a_lock\" in caplog.text",
+            "span": [
+              807,
+              1412
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_helpers.py/test_get_locks_from_targets_warns_for_non_lock_entity/v2:0d838cd3f7b8b347003022d09e27e6a9b0a690ecd4a6a4f3c5322c522f718eff",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_warns_when_lock_not_in_lcm: test unit disappeared",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm",
+          "before": {
+            "text": "assert len(locks) == 0\nassert \"not managed by Lock Code Manager\" in caplog.text\nassert \"lock.unmanaged_lock\" in caplog.text",
+            "span": [
+              1415,
+              2030
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_helpers.py/test_get_locks_from_targets_warns_when_lock_not_in_lcm/v2:6426795fa8e6bfe58846dc51fb1b0920e87fa7f11026ddf4ffac16a569128a61",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "unit": "test_get_locks_from_targets_with_device_id"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"], \"unit\": \"test_get_locks_from_targets_warns_for_non_lock_entity\"}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"PROD_CHANGE_NOT_EVIDENCE\"], \"deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_for_non_lock_entity\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"PROD_CHANGE_NOT_EVIDENCE\"], \"deescalators\": [], \"path\": \"tests/test_helpers.py\", \"unit\": \"test_get_locks_from_targets_warns_when_lock_not_in_lcm\"}]",
+      "classification": "UNKNOWN_FIXTURE_REWRITE: two warning tests change fixture/setup/input context; the original independent ASSERT_WEAKENED block remains. Static equivalence of the disappeared units is not established.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/subject_pairing_other_subject_known_limit_pos"
+    },
+    {
+      "case": "assert_removed_moved_neg",
+      "fixture_sha256": "e7295cfa348225858c51a4f685d03073e0a32b9b454162931b8e712811c5de0c",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "info",
+          "message": "test_login_all_cases: assertion removed (strength NON_NULL)",
+          "path": "tests/test_auth.py",
+          "unit": "test_login_all_cases",
+          "before": {
+            "text": "assert login(\"alice\", \"wrong\") is None",
+            "span": [
+              57,
+              95
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ],
+          "fingerprint": "ASSERT_REMOVED/tests/test_auth.py/test_login_all_cases/v2:bd6fae181d6dfd92855fdfa900a1454bc2e18b680984e6dac6fb1525d548ceed",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": null
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "message": "test_login_all_cases: assertion removed (strength NON_NULL)",
+          "path": "tests/test_auth.py",
+          "unit": "test_login_all_cases",
+          "before": {
+            "text": "assert login(\"alice\", \"wrong\") is None",
+            "span": [
+              57,
+              95
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_REMOVED/tests/test_auth.py/test_login_all_cases/v2:bd6fae181d6dfd92855fdfa900a1454bc2e18b680984e6dac6fb1525d548ceed",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": null
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "info",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"ASSERT_REMOVED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_auth.py\", \"unit\": \"test_login_all_cases\"}]",
+      "classification": "UNKNOWN_ASSERTION_EFFECTS: login calls are reordered across test units; absent source/purity proof, the original unknown prior/following assertion calls cannot be erased from execution context.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/assert_removed_moved_neg"
+    },
+    {
+      "case": "js_chai_property_moved_neg",
+      "fixture_sha256": "be3cba2ffce2ebf570629dc2419554a78efba3e83e9a4fc02e96670b88fbb97a",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "info",
+          "message": "totals the invoice: assertion removed (strength EXACT_VALUE)",
+          "path": "test/invoice.spec.js",
+          "unit": "totals the invoice",
+          "before": {
+            "text": "expect(isPaid({ balance: 0 })).to.be.true",
+            "span": [
+              162,
+              203
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ],
+          "fingerprint": "ASSERT_REMOVED/test/invoice.spec.js/totals the invoice/v2:05993e5f9a148c5a64f25750c55ecaef7050edffedbb97a9565bee79775ee8a3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": null
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "message": "totals the invoice: assertion removed (strength EXACT_VALUE)",
+          "path": "test/invoice.spec.js",
+          "unit": "totals the invoice",
+          "before": {
+            "text": "expect(isPaid({ balance: 0 })).to.be.true",
+            "span": [
+              162,
+              203
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_REMOVED/test/invoice.spec.js/totals the invoice/v2:05993e5f9a148c5a64f25750c55ecaef7050edffedbb97a9565bee79775ee8a3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": null
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "info",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"ASSERT_REMOVED\", \"severity\": \"info\", \"deescalators\": [\"ASSERTION_MOVED\"]}; actuals: [{\"rule\": \"ASSERT_REMOVED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"test/invoice.spec.js\", \"unit\": \"totals the invoice\"}]",
+      "classification": "UNKNOWN_ASSERTION_EFFECTS: isPaid/total calls are reordered across callbacks; no implementation/purity proof is supplied, so the old text-only move label is unresolved conservative cost.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/js_chai_property_moved_neg"
+    },
+    {
+      "case": "merged_parametrize_neg",
+      "fixture_sha256": "10b3d2841205743b38fbb518dcb149c0dc6ee8bebd0a47fc5e4d2555fe61218f",
+      "fixture_labels_unchanged": true,
+      "old_verdict": "pass",
+      "new_verdict": "block",
+      "old_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_fragment_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_fragment_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/#a b\").fragment == \"a%20b\"",
+            "span": [
+              187,
+              270
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_fragment_encoding/v2:c29cb8d346a715c97a9c1b605dd205b1a9c8676283406c56f8f67a7e37af6efd",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_path_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_path_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/a b\").path == \"/a%20b\"",
+            "span": [
+              25,
+              100
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_path_encoding/v2:c81432acca6ff1aa0a92e9696c2c533508b8e14b4a8da64e588a2e75c0af5b30",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "message": "test_query_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_query_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/?q=a b\").query == \"q=a%20b\"",
+            "span": [
+              103,
+              184
+            ]
+          },
+          "after": null,
+          "escalators": [],
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_query_encoding/v2:8a81b63c4c4e27dfefccd305b0ba370479bcde6ab515e4910c5723c92c636f10",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "new_findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_fragment_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_fragment_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/#a b\").fragment == \"a%20b\"",
+            "span": [
+              187,
+              270
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_fragment_encoding/v2:c29cb8d346a715c97a9c1b605dd205b1a9c8676283406c56f8f67a7e37af6efd",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_path_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_path_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/a b\").path == \"/a%20b\"",
+            "span": [
+              25,
+              100
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_path_encoding/v2:c81432acca6ff1aa0a92e9696c2c533508b8e14b4a8da64e588a2e75c0af5b30",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_query_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_query_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/?q=a b\").query == \"q=a%20b\"",
+            "span": [
+              103,
+              184
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_query_encoding/v2:8a81b63c4c4e27dfefccd305b0ba370479bcde6ab515e4910c5723c92c636f10",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "preserved_expectations": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "old_expectation_mismatch": null,
+      "new_expectation_mismatch": "no actual finding matches expectation {\"rule\": \"TEST_DISABLED\", \"severity\": \"warn\", \"deescalators\": [\"RESTRUCTURED\"]}; actuals: [{\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_fragment_encoding\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_path_encoding\"}, {\"rule\": \"TEST_DISABLED\", \"severity\": \"high\", \"escalators\": [\"NO_PROD_CHANGE_IN_DIFF\"], \"deescalators\": [], \"path\": \"tests/test_encoding.py\", \"unit\": \"test_query_encoding\"}]",
+      "classification": "UNKNOWN_DYNAMIC_LOOKUP: literal table/input substitution is retained, but getattr(parse(url), attr) is not assumed identical to direct attribute access; opaque calls can alter builtin lookup. Optional getattr projection was removed after a real independent API counterexample.",
+      "acceptance": "UNRESOLVED_COMPATIBILITY_GATE_NOT_RELABELLED",
+      "raw_prefix": "cost-r4/raw/merged_parametrize_neg"
+    }
+  ],
+  "finding_keys_recomputed_from_actual_arms": true,
+  "existing_fixture_labels_changed": false,
+  "candidate_new_pass_to_block_cases": 7
+}

@@ -1,0 +1,8 @@
+{
+  "state": "RUNNING_PARTIAL_PREFIX_ONLY",
+  "not_a_pass": true,
+  "completed_commands": 644,
+  "observed_case_cli_calls": 127,
+  "complete_expected_case_count": 283,
+  "raw_prefix_offsets_and_hashes_verified": true
+}

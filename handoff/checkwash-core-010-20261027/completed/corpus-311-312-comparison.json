@@ -1,0 +1,98 @@
+{
+  "marker": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "comparison": "RAW_COMPLETE_FINDINGS_PLUS_IR_BYTES_NO_NORMALIZATION_NO_FIELD_REMOVAL",
+  "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "raw_bytes_equal": true,
+  "headers_equal": true,
+  "case_count_from_raw_headers": 1117,
+  "source_input_manifests_equal": true,
+  "arms": [
+    {
+      "label": "corpus-311-r1",
+      "stdout_sha256": "1305fa51b86ce3a987107603e182920bdcdd02f25b2e5f59ebd4634a64165d54",
+      "stdout_bytes": 8873976,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0,
+      "receipt_sha256": "d621a359decca6aeeee93ada3dd719d994ac7e807ceb5fa2981fc79e8836958b",
+      "receipt": {
+        "label": "corpus-311-r1",
+        "host": "LAPTOP-01AGNPJU",
+        "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+        "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+        "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "expected_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+        "validation_kind": "FIXED_SOURCE_NOT_RELEASE_BRIDGE",
+        "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+        "ending_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+        "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "input_manifest_sha256": "3649879bd02d32a9e3d1f868790d7af33d86382300720b072bed0320ad14fe22",
+        "source_files_unchanged": true,
+        "changed_inputs": [],
+        "command": [
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+          "-I",
+          "-B",
+          "-X",
+          "utf8",
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tools\\emit_corpus.py"
+        ],
+        "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf4-540ac929",
+        "harness_sha256": "7f71c0525168ef61b5ab9c33b3dcf401dc250e9f2d500f60e00e471409abc8b1",
+        "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+        "started_utc": "2026-10-26T18:23:01.084320+00:00",
+        "ended_utc": "2026-10-26T18:23:07.094273+00:00",
+        "exit_code": 0
+      },
+      "header_count": 1117,
+      "unique_header_count": 1117
+    },
+    {
+      "label": "corpus-312-r1",
+      "stdout_sha256": "1305fa51b86ce3a987107603e182920bdcdd02f25b2e5f59ebd4634a64165d54",
+      "stdout_bytes": 8873976,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0,
+      "receipt_sha256": "49d4a78834d3f9a191794c13844913e0a24b92468b85d3676bc9b27d412bbfde",
+      "receipt": {
+        "label": "corpus-312-r1",
+        "host": "LAPTOP-01AGNPJU",
+        "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+        "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+        "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\python312-runtime\\Scripts\\python.exe",
+        "platform": "Windows-11-10.0.26200-SP0",
+        "expected_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+        "validation_kind": "FIXED_SOURCE_NOT_RELEASE_BRIDGE",
+        "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+        "ending_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+        "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "input_manifest_sha256": "3649879bd02d32a9e3d1f868790d7af33d86382300720b072bed0320ad14fe22",
+        "source_files_unchanged": true,
+        "changed_inputs": [],
+        "command": [
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\python312-runtime\\Scripts\\python.exe",
+          "-I",
+          "-B",
+          "-X",
+          "utf8",
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tools\\emit_corpus.py"
+        ],
+        "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf4-2e167c8a",
+        "harness_sha256": "7f71c0525168ef61b5ab9c33b3dcf401dc250e9f2d500f60e00e471409abc8b1",
+        "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+        "started_utc": "2026-10-26T18:23:01.306637+00:00",
+        "ended_utc": "2026-10-26T18:23:08.461184+00:00",
+        "exit_code": 0
+      },
+      "header_count": 1117,
+      "unique_header_count": 1117
+    }
+  ],
+  "not_run": [
+    "Python3.13",
+    "other operating systems"
+  ],
+  "acceptance_boundary": "Byte determinism only, not golden-label acceptance; eight #567 failures remain open"
+}

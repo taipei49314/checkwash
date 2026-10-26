@@ -1,0 +1,80 @@
+{
+  "state": "IMPLEMENTED_BOUNDED_REVIEW_PASSED_COMPATIBILITY_GATES_REMAIN_OPEN",
+  "marker": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "hostname": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "source_binding": "SHARED_DEVELOPMENT_WORKING_TREE_BYTES_NOT_HEAD_QUALIFICATION",
+  "observed_head_not_source_identity": "72858bc3b08bf7dab21584aeb1ff2a9fb0b47a9e",
+  "owned_files": {
+    "src/checkwash/oracle_credit.py": "dae96be0b17b411dfbdd3e44f03aafbebbfd87ecefbbeacee1d483b44de20155",
+    "src/checkwash/engine.py": "f3ad9f34db31dc168a119a788ace37dbea60e8b834cf175b1ca5165384b8096d",
+    "src/checkwash/gating.py": "2a84a2018fa5dbcb4f2e0506b10a9e0cb931779c6aab236c4bdbccf3308ad7ec",
+    "src/checkwash/ir/model.py": "77961c9e7139ae9ede4d23f230adb6f702ebeb9ab90396ab6851ecb7a41d826e",
+    "src/checkwash/frontends/javascript/expected_provenance.py": "0e3fe1cd8870e9c332b9f8116de732da530eb87f3d7368e6b1dbdc638084a6c3",
+    "tests/test_oracle_credit_context.py": "8326abd268c22d4cfeb6aacf9be32414841839799837b956243109b5ccac2ac5",
+    "tests/test_issue219_python_snapshot_tests.py": "d5163903a950d3f1a2a0ecb430701e0b05d3686e1ffe013e6c059992fa33820e",
+    "tests/test_issue266_survivor_conftest_chain.py": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f"
+  },
+  "targeted": {
+    "receipt": "final-reviewed-r3/receipt.json",
+    "pytest_exit": 0,
+    "tests": 369,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "passed": 369,
+    "failed_cases": []
+  },
+  "corpus": {
+    "receipt": "final-corpus-r2/receipt.json",
+    "pytest_exit": 1,
+    "tests": 1119,
+    "errors": 0,
+    "failures": 8,
+    "skipped": 0,
+    "passed": 1111,
+    "failed_cases": [
+      "test_case[assert_removed_moved_neg]",
+      "test_case[bare_bound_then_used_neg]",
+      "test_case[js_chai_property_moved_neg]",
+      "test_case[merged_parametrize_neg]",
+      "test_case[split_rename_genuine_neg]",
+      "test_case[subject_pairing_other_subject_known_limit_pos]",
+      "test_case[test_split_neg]",
+      "test_case[unittest_keyword_split_neg]"
+    ]
+  },
+  "cost_register": {
+    "path": "cost-r4/immutable-cost-register.json",
+    "sha256": "fb2bd09800319a67aa8e34fd51fd285f8fa8d3d575b87270deb41cea24125adf",
+    "cases": 8,
+    "old_new_api_arms": 16,
+    "golden_labels_changed": false
+  },
+  "independent_review": {
+    "readback": "../oracle-independent-review/six-blocker-final-readback.json",
+    "sha256": "a11e44afcd4434fcc5c321da848df499bea75a465068fe8f2b44d615a2b8e944",
+    "all_expected": true,
+    "known_counterexample_shapes": 6,
+    "observations": 18,
+    "final_full_qualification": false
+  },
+  "native_controls": {
+    "receipt": "native-r1/receipt.json",
+    "calls": 24,
+    "blocks": 16,
+    "passes": 8,
+    "source_binding": "COPIED_DEVELOPMENT_WORKING_TREE_HASHES_NOT_HEAD_QUALIFICATION",
+    "matches_final_owned_files": false,
+    "limitation": "earlier captured development source; later six review corrections are bound to targeted/API receipts, not these native observations"
+  },
+  "platforms": {
+    "python311_windows": "OBSERVED_DEVELOPMENT_EVIDENCE",
+    "python312": "EXISTING_BUNDLED_3.12.14_AVAILABLE_FINAL_SOURCE_COMPARISON_PENDING_ROOT",
+    "python313": "NOT_RUN",
+    "other_os": "NOT_RUN"
+  },
+  "fixtures_executed": false,
+  "commit_or_push_by_child": false,
+  "release_acceptance": "NOT_ESTABLISHED_EIGHT_IMMUTABLE_GOLDEN_GATES_FAIL"
+}

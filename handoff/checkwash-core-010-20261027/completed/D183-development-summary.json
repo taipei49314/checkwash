@@ -1,0 +1,509 @@
+{
+  "marker": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "mode": "READ_ONLY_EXISTING_RECEIPT_SUMMARY_NO_PRODUCT_IMPORT",
+  "hostname": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9",
+  "source_kind": "WORKING_TREE_NOT_COMMITTED_SOURCE_BYTES_IDENTIFIED",
+  "d183_final_owned_sha256": {
+    "src/checkwash/cli.py": "bfc0c4ed84a07b4ca457a3da290998e7d6ad2ccad78aa4693f769b77cbcb0023",
+    "src/checkwash/gitio/pytest_configs.py": "ab3f4293dabc4f6131dcbdb4e5bddba6f43af64383c32400c9bf47fde8d201d7",
+    "src/checkwash/gitio/snapshot.py": "1262d04b8dc2bf5c27184425d4ecb38292e5c007a5609c563471fb66c31611e5",
+    "tests/test_worktree_pytest_config_context.py": "f13431d748bd20592f7d977480a4dd5b0592f0aa9084f146384dcb343f30fa77"
+  },
+  "checks": {
+    "core-r1": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\core-r1\\receipt.json",
+      "receipt_sha256": "7d92dc24c03c98bcc4702321096a7e8087b7f8f3b64c54a80efbdd1682da9b5f",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\core-r1\\pytest-temp",
+        "tests/test_policy_shadow_ir3_consumers.py",
+        "tests/test_config_dirs.py",
+        "tests/test_corpus_artifacts.py",
+        "tests/test_fingerprint_scope.py",
+        "tests/test_release_compatibility_record.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": null,
+      "count_note": "No JUnit or summary count captured; exit code only."
+    },
+    "adapters-r1": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\adapters-r1\\receipt.json",
+      "receipt_sha256": "b8f8ece62465555e119e69b250ecf122c6c195a6a1e4c457d8ae5f16459b77fa",
+      "exit_code": 1,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [
+        "src/checkwash/contract.py",
+        "src/checkwash/engine.py",
+        "src/checkwash/frontends/javascript/expected_provenance.py",
+        "src/checkwash/oracle_credit.py",
+        "tests/test_oracle_credit_context.py",
+        "tests/test_task_contract_validation.py"
+      ],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\adapters-r1\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\adapters-r1\\pytest-temp",
+        "tests/test_cases_runner.py",
+        "tests/test_determinism.py",
+        "tests/test_detector_coverage.py",
+        "tests/test_findings_schema.py",
+        "tests/test_demo_command.py",
+        "tests/test_snapshot_inventory_adapters.py",
+        "tests/test_param_row_expectations.py",
+        "tests/test_expected_value_definition.py",
+        "tests/test_finding_shape.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 1359,
+        "failures": 17,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 1342
+      },
+      "junit_sha256": "5cc835860f73cf40b242108d5f0f1f113670ac98aa5df14a7390ba6f860ad753"
+    },
+    "independent-review-r1": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\independent-review-r1\\receipt.json",
+      "receipt_sha256": "35cd7daf1a9d30f4bbb167e70e779369ccf5d9591527f07808732c488b82451c",
+      "exit_code": 1,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\independent-review-r1\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\independent-review-r1\\pytest-temp",
+        "tests/test_stage4_contract_crlf_review.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 7,
+        "failures": 7,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 0
+      },
+      "junit_sha256": "04a42b4ed817407fb1332db140b29e632a404043132527eee42f88c0f31dd077"
+    },
+    "pytest-context-baseline-red": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-baseline-red\\receipt.json",
+      "receipt_sha256": "4f14a21c0d9bf88f039e32d566fd6edf7292d49db6c868dcd34dc84e00300012",
+      "exit_code": 1,
+      "source_kind": "IMMUTABLE_PRE_D183_WORKING_TREE_SNAPSHOT_NOT_HEAD",
+      "source_changed_paths": null,
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import sys;sys.path.insert(0,'C:\\\\Users\\\\nelson\\\\Documents\\\\Codex\\\\2026-10-26\\\\1-00-start-here-md-c\\\\work\\\\ux-stage4\\\\policy\\\\native\\\\source\\\\src');import pytest;raise SystemExit(pytest.main(['-c', 'C:\\\\Users\\\\nelson\\\\Documents\\\\Codex\\\\2026-10-26\\\\1-00-start-here-md-c\\\\work\\\\ux-stage4\\\\policy\\\\pytest-context-baseline-red\\\\pytest.ini', '-q', '--junitxml', 'C:\\\\Users\\\\nelson\\\\Documents\\\\Codex\\\\2026-10-26\\\\1-00-start-here-md-c\\\\work\\\\ux-stage4\\\\policy\\\\pytest-context-baseline-red\\\\junit.xml', '--basetemp', 'C:\\\\Users\\\\nelson\\\\Documents\\\\Codex\\\\2026-10-26\\\\1-00-start-here-md-c\\\\work\\\\ux-stage4\\\\policy\\\\pytest-context-baseline-red\\\\pytest-temp', 'C:\\\\Users\\\\nelson\\\\Documents\\\\Codex\\\\2026-10-26\\\\1-00-start-here-md-c\\\\work\\\\ux-stage4\\\\policy\\\\pytest-context-baseline-red\\\\test_entry.py::test_git_base_link_with_fake_worktree_link_cannot_silently_pass']))"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 2,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 0
+      },
+      "junit_sha256": "44716873097a227ac0fa80e5e9d6fe43f08f183f388629b58f074c960d97f805"
+    },
+    "pytest-context-r1": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r1\\receipt.json",
+      "receipt_sha256": "8fbb68afa31a040e36718ce9a4cd645661e8d541309e8720c34ae5a21b94ca0c",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r1\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r1\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 15
+      },
+      "junit_sha256": "70f003597f32294cf2c35d5775944b1875e50c940c207476864f1688784a5468"
+    },
+    "pytest-context-r2": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r2\\receipt.json",
+      "receipt_sha256": "51f5628137816965664983b2a2bcb6ac08e0d43f10b34ee9726a329a4729d1c9",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [
+        "src/checkwash/oracle_credit.py",
+        "tests/test_oracle_credit_context.py"
+      ],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r2\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r2\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py",
+        "tests/test_config_snapshot.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 96,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 96
+      },
+      "junit_sha256": "be0782d66489e7155cdd63ed359497ec84f9f60e9e911844560d479019e55cd1"
+    },
+    "pytest-context-r3": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r3\\receipt.json",
+      "receipt_sha256": "e02efb2e85d04e5724f58c7df2f51a4b8409a82b1724c153436b25c6489427ff",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r3\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-r3\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 21
+      },
+      "junit_sha256": "e2fac04b74b3ec11c35ff7cd446e68e58f48f60c2c43195d8de99797b619bd34"
+    },
+    "pytest-context-session": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-session\\receipt.json",
+      "receipt_sha256": "721568e22d18df91b2b0bab991a9b236e0f0818d6d64f9b5971a6c2d53170576",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-session\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-session\\pytest-temp",
+        "tests/test_issue418_session_base.py::test_a_committed_blocked_edit_is_named_instead_of_a_bare_pass",
+        "tests/test_issue418_session_base.py::test_an_uncommitted_blocked_edit_still_blocks_as_before",
+        "tests/test_issue418_session_base.py::test_with_no_commits_the_output_is_unchanged",
+        "tests/test_issue418_session_base.py::test_a_record_git_cannot_compare_is_a_note_not_an_engine_error"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 4
+      },
+      "junit_sha256": "c3ee6996fe0c620e1b6738b589c21bac8f68033e7ac3780d902f3a73ae1f13c5"
+    },
+    "pytest-context-consistency-red": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-consistency-red\\receipt.json",
+      "receipt_sha256": "ade93aae9c0e8395205e4ecb93c37ff19b24f73b3e3b42b176a7d575f0e99945",
+      "exit_code": 1,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-consistency-red\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-consistency-red\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py::test_backslash_diff_path_cannot_bypass_captured_bytes_consistency"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 0
+      },
+      "junit_sha256": "89e4c8c5507cefe0bdf0cb3162aaa749d6d5fdec9fe01902a13df5261728fef9"
+    },
+    "pytest-context-final": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-final\\receipt.json",
+      "receipt_sha256": "e028d526a392d2259bfc503d4b13bdddf298b0ea6c31bf60e6f765d5f7ac3f0c",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-final\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-final\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 22
+      },
+      "junit_sha256": "dd800f10a9e9ea1b67d4c5ab690c4056549f398209a1d40c1627450b19ed2c4b"
+    },
+    "pytest-context-rename-red": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-red\\receipt.json",
+      "receipt_sha256": "43102d500367b46d385ca0c02f1aa69e8acd1ec0140085e0c3fb88199bb1ac37",
+      "exit_code": 1,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-red\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-red\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py::test_renamed_config_old_path_cannot_reappear_outside_captured_diff",
+        "tests/test_worktree_pytest_config_context.py::test_renamed_config_keeps_captured_old_path_absence",
+        "tests/test_worktree_pytest_config_context.py::test_explicit_old_path_change_keeps_its_captured_after_bytes"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 5,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 3
+      },
+      "junit_sha256": "c3c10b88dea2c125c9635db22914f2f1c7be28dbb9c292088b0864d699788c90"
+    },
+    "pytest-context-rename-green": {
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-green\\receipt.json",
+      "receipt_sha256": "99ec1a11b11793737179adfcaa38042a4b66a87821db92ab5a72adbfebf4de13",
+      "exit_code": 0,
+      "source_kind": "WORKING_TREE_NOT_COMMITTED",
+      "source_changed_paths": [],
+      "command": [
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-green\\junit.xml",
+        "--basetemp",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-green\\pytest-temp",
+        "tests/test_worktree_pytest_config_context.py",
+        "tests/test_config_snapshot.py"
+      ],
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "junit": {
+        "tests": 104,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 104
+      },
+      "junit_sha256": "9d4473145b52cd6503695cf6b4d622adb7df5456c4c196cda6bb006056edddf9"
+    }
+  },
+  "policy_native": {
+    "source_kind": "WORKING_TREE_SNAPSHOT_NOT_COMMITTED",
+    "head_reference": "5f0af4b40cdc6ed2f20414c76dd748549de67109",
+    "source_archive_sha256": "b9d40d00f0e8c9f052211072c14fc55cb8111da81480089b036b6635c6732709",
+    "frozen_source_manifest_sha256": "ed35381eb2fa311ec365db4465fffb2cb630abe520e969b2f212b7cd6cc44434",
+    "cases": 12,
+    "actual_cli_calls": 24,
+    "expected_policy_review_controls_checked": 11,
+    "complete_findings_equal": 15,
+    "changed_finding_observations": 9,
+    "changed_verdict_observations": 6,
+    "before_passes": 8,
+    "after_passes": 6,
+    "after_blocks": 18,
+    "engine_errors": 0,
+    "native_command_count": 184,
+    "original_native_command_count": 186,
+    "original_fixture_definitions_unchanged": true,
+    "fixture_programs_executed": false
+  },
+  "policy_native_comparison_sha256": "b0d5d672a6e8e72f2459ed298f37df2668697d3b135ffb66f921a575e2a35818",
+  "independent_contract_crlf_review": {
+    "mode": "READ_ONLY_INDEPENDENT_SOURCE_AND_RECEIPT_READBACK",
+    "status": "PASS_NO_REMAINING_BLOCKER_IN_REVIEWED_SCOPE",
+    "marker": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+    "hostname": "LAPTOP-01AGNPJU",
+    "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "exit_code": 0,
+    "passed": 56,
+    "covered_new_red_controls": 7,
+    "target_files_match_green_input_manifest": {
+      "src/checkwash/contract.py": {
+        "expected": "934fa7ca49a23ecd38a8e53a2a8d6041fbb82fe08c4eacf4e8d93d8e2549b373",
+        "actual": "934fa7ca49a23ecd38a8e53a2a8d6041fbb82fe08c4eacf4e8d93d8e2549b373"
+      },
+      "src/checkwash/gitio/git.py": {
+        "expected": "d67c3a0ce2e0c2c23fda1ab89cece895dd0ab64cb4f1d5b318d5ade6c3040389",
+        "actual": "d67c3a0ce2e0c2c23fda1ab89cece895dd0ab64cb4f1d5b318d5ade6c3040389"
+      },
+      "tests/test_stage4_contract_crlf_review.py": {
+        "expected": "6146eb6a82c45b4404ad6bb29ad4f92acb13348e3cba55c7ba0a98049005a930",
+        "actual": "6146eb6a82c45b4404ad6bb29ad4f92acb13348e3cba55c7ba0a98049005a930"
+      }
+    },
+    "unrelated_changed_inputs": [
+      "src/checkwash/engine.py",
+      "src/checkwash/oracle_credit.py"
+    ],
+    "final_source_qualification": false,
+    "original_receipt_sha256": "344fec2a7897f53106da7437b3c84446f636fe169ea281e679d15ac3abd60e23",
+    "original_stdout_sha256": "626fec9c1364a61f936c7d67b418f700ff8a560be1c09c4d0ddc6278a18622bd"
+  },
+  "limitations": [
+    "Development receipts use working-tree bytes or a pinned working-tree source archive, not a sealed final HEAD.",
+    "The adapters-r1 result is an interim failure, never a PASS; concurrent oracle sources changed and root owns resolution/final suite.",
+    "Native Windows file symlink creation was unavailable (WinError 1314); D183 fake metadata controls and real Git BASE link blobs are distinct from native OS link coverage.",
+    "The working-tree config cache is read-once, not an atomic filesystem snapshot; generic source admission remains unchanged.",
+    "No existing golden/corpus labels were changed by this agent.",
+    "No full suite or source/wheel/pyz qualification was performed by this agent.",
+    "Analysed fixture programs were not executed; no pool, model, paid batch or host-global changes were used."
+  ],
+  "d183_spec_draft_sha256": "33708910921bbc6058965f2dfc4b0ac29d2f610ad1897e07c57e6199d6fc29e8",
+  "independent_d183_review": {
+    "audit": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\D183-independent-review\\audit.json",
+    "audit_sha256": "b95cf82c3490e246a977bbc7a0d459bb7bebd8b49a75abcf6b886265b6ac4353",
+    "status": "PASS_NO_REMAINING_BLOCKERS",
+    "scope": "BOUNDED_D183_INDEPENDENT_REVIEW_NOT_FULL_QUALIFICATION",
+    "observations": 8,
+    "source_hashes_match_current": true,
+    "author_terminal_readback": {
+      "review_state": "PASS_NO_REMAINING_BLOCKERS",
+      "mode": "READ_ONLY_AUTHOR_TERMINAL_RECEIPT_NO_PRODUCT_IMPORT_OR_RERUN",
+      "marker": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+      "hostname": "LAPTOP-01AGNPJU",
+      "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "receipt": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-green\\receipt.json",
+      "receipt_sha256": "99ec1a11b11793737179adfcaa38042a4b66a87821db92ab5a72adbfebf4de13",
+      "junit": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\policy\\pytest-context-rename-green\\junit.xml",
+      "junit_sha256": "9d4473145b52cd6503695cf6b4d622adb7df5456c4c196cda6bb006056edddf9",
+      "exit_code": 0,
+      "source_changed_paths": [],
+      "source_manifest_sha256": "909489b7bba1d43048fe3b2686eb7b3c878515dd61ccc50310b584b5cd884f43",
+      "source_manifest_members": 1777,
+      "tests": 104,
+      "passed": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "group_counts": {
+        "tests.test_worktree_pytest_config_context": 27,
+        "tests.test_config_snapshot": 77
+      },
+      "current_owned_test_sha256": "f13431d748bd20592f7d977480a4dd5b0592f0aa9084f146384dcb343f30fa77",
+      "original_review_member_hashes_verified": 70,
+      "preserved_original_hashes": {
+        "audit.json": "b75d954fc65d08397fc748265d515e580a5cd868e596db43f7db4c3a6e7bfaa3",
+        "report.md": "d022839e1c896f159826c8f6f07dcdd828efee8f696ef200b5a35ea6d43d73d8",
+        "manifest.json": "140d169c8fc1e8f7ebd8346840c8b4f9fc12aef5fc631f875e49a64161d2762a",
+        "finalize_review.py": "f1deaa6d51dee99f070379b77dfbddf5d760dfa9fe6884e0d0b8ddef7e3b1401"
+      },
+      "prior_raw_files_rewritten": false,
+      "product_calls": 0,
+      "readback_utc": "2026-10-26T18:04:30.535628+00:00"
+    },
+    "author_regression_is_a_separate_receipt": true
+  }
+}

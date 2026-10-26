@@ -1,0 +1,55 @@
+{
+  "FINDINGS_VERSION": 2,
+  "IR_VERSION": 3,
+  "checkpoint_branch": "handoff/core-010-pju-20261027-8a8941dc",
+  "checkpoint_kind": "HANDOFF_BACKUP_NOT_RELEASE_ACCEPTANCE",
+  "code_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "collected_parent_tests": 21102,
+  "collection_is_not_pass_count": true,
+  "created_utc": "2026-10-26T18:55:09.778910+00:00",
+  "fixed_source_311_312_corpus": {
+    "bytes_per_arm": 8873976,
+    "case_count": 1117,
+    "raw_bytes_equal": true,
+    "same_Windows_host_not_cross_OS": true,
+    "sha256": "1305fa51b86ce3a987107603e182920bdcdd02f25b2e5f59ebd4634a64165d54"
+  },
+  "full_suite": "NOT_STARTED_AT_THIS_CHECKPOINT",
+  "golden_disposition_issue": "https://github.com/taipei49314/checkwash/issues/567",
+  "golden_proposal_accepted": false,
+  "preservation": {
+    "global_memory_and_original_nested_archives": "LOCAL_ONLY_NOT_PUBLICLY_UPLOADED",
+    "original_failed_and_partial_receipts": "PRESERVED_NOT_RECLASSIFIED",
+    "runtime_venvs_cache_fixture_temporaries": "LOCAL_INTERMEDIATES_NOT_IN_THIS_CHECKPOINT"
+  },
+  "product_branch": "fix/ux-repairs-20261026",
+  "product_pr": "https://github.com/taipei49314/checkwash/pull/566",
+  "qualification_snapshot": {
+    "pyz": {
+      "complete_expected_case_count": 283,
+      "completed_commands": 685,
+      "not_a_pass": true,
+      "observed_case_cli_calls": 136,
+      "raw_prefix_offsets_and_hashes_verified": true,
+      "state": "RUNNING_PARTIAL_PREFIX_ONLY"
+    },
+    "source": {
+      "complete_expected_case_count": 283,
+      "completed_commands": 983,
+      "not_a_pass": true,
+      "observed_case_cli_calls": 195,
+      "raw_prefix_offsets_and_hashes_verified": true,
+      "state": "RUNNING_PARTIAL_PREFIX_ONLY"
+    },
+    "wheel": {
+      "complete_expected_case_count": 283,
+      "completed_commands": 644,
+      "not_a_pass": true,
+      "observed_case_cli_calls": 127,
+      "raw_prefix_offsets_and_hashes_verified": true,
+      "state": "RUNNING_PARTIAL_PREFIX_ONLY"
+    }
+  },
+  "release_allowed_by_this_checkpoint": false,
+  "version": "0.10.0"
+}

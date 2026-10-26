@@ -1,0 +1,62 @@
+--- a/tests/cases/bare_bound_then_used_neg.gwcase
++++ b/tests/cases/bare_bound_then_used_neg.gwcase
+@@ -20,3 +20,3 @@
+     assert data == [50.0, 50.0]
+ === expect ===
+-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
++[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+--- a/tests/cases/split_rename_genuine_neg.gwcase
++++ b/tests/cases/split_rename_genuine_neg.gwcase
+@@ -21,3 +21,3 @@
+     assert sorted(options("b")) == ["GET"]
+ === expect ===
+-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
++[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+--- a/tests/cases/unittest_keyword_split_neg.gwcase
++++ b/tests/cases/unittest_keyword_split_neg.gwcase
+@@ -26,3 +26,3 @@
+         self.assertEqual(first=sorted(options("b")), second=["GET"])
+ === expect ===
+-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
++[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+--- a/tests/cases/test_split_neg.gwcase
++++ b/tests/cases/test_split_neg.gwcase
+@@ -24,3 +24,3 @@
+     assert sorted(app.open("/", method="OPTIONS").allow) == ["OPTIONS"]
+ === expect ===
+-[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]
++[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+--- a/tests/cases/subject_pairing_other_subject_known_limit_pos.gwcase
++++ b/tests/cases/subject_pairing_other_subject_known_limit_pos.gwcase
+@@ -186,4 +186,4 @@
+ === expect ===
+ [{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "unit": "test_get_locks_from_targets_with_device_id"},
+- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"], "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"},
+- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"], "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"}]
++ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"},
++ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"}]
+--- a/tests/cases/assert_removed_moved_neg.gwcase
++++ b/tests/cases/assert_removed_moved_neg.gwcase
+@@ -24,3 +24,3 @@
+     assert login("alice", "wrong") is None
+ === expect ===
+-[{"rule": "ASSERT_REMOVED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]
++[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+--- a/tests/cases/js_chai_property_moved_neg.gwcase
++++ b/tests/cases/js_chai_property_moved_neg.gwcase
+@@ -34,3 +34,3 @@
+ });
+ === expect ===
+-[{"rule": "ASSERT_REMOVED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]
++[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
+--- a/tests/cases/merged_parametrize_neg.gwcase
++++ b/tests/cases/merged_parametrize_neg.gwcase
+@@ -34,5 +34,5 @@
+     assert getattr(parse(url), attr) == expected
+ === expect ===
+-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
+- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
+- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
++[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
++ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
++ {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

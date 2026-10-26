@@ -1,0 +1,4742 @@
+8a8941dc2d7c581715a0f6f196c00da6c55f084b
+{"package": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\wheel-runtime\\Lib\\site-packages\\checkwash\\__init__.py", "prefix": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\wheel-runtime", "base": "C:\\Users\\nelson\\AppData\\Local\\Programs\\Python\\Python311"}
+checkwash 0.10.0
+Initialized empty Git repository in C:/Users/nelson/AppData/Local/Temp/cwf4-83d10601/checkwash-assertion-qualification-hhanf4ef/.git/
+[main (root-commit) 603dbde] node.assert.remove before
+ 1 file changed, 5 insertions(+)
+ create mode 100644 tests/contract.test.js
+[main 33a1a8b] node.assert.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          120
+        ],
+        "text": "assert(subject())"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:ab6c1c8fa04daeab557047a71ec30487db7362310f239e901af1373addc582a8",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "603dbde",
+    "checkwash_version": "0.10.0",
+    "head": "33a1a8b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 515fbe9] node.assert.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0910e1b] node.assert.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "515fbe9",
+    "checkwash_version": "0.10.0",
+    "head": "0910e1b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 9267eb3] node.deepEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 2caa99b] node.deepEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.deepEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:08b978c80dc8fd2681f3f0df4cda09a35268dbd1b533b01a032cb87da62601c1",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "9267eb3",
+    "checkwash_version": "0.10.0",
+    "head": "2caa99b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 6332368] node.deepEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 97d5875] node.deepEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "6332368",
+    "checkwash_version": "0.10.0",
+    "head": "97d5875"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 41b76a7] node.deepEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main fb6213f] node.deepEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          123
+        ],
+        "text": "assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.deepEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:366dfab5e876092a62e8db7aa849becb8c067b55929966dde5468b008f0318cc",
+      "message": "contract: assertion strength EXACT_STRUCT(100) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 80,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "41b76a7",
+    "checkwash_version": "0.10.0",
+    "head": "fb6213f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 212d8cf] node.deepStrictEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main fe74e8b] node.deepStrictEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          141
+        ],
+        "text": "assert.deepStrictEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:82bca29147830dee7e98f79796007831d872a9f1160338ced983573e2db3ecd2",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "212d8cf",
+    "checkwash_version": "0.10.0",
+    "head": "fe74e8b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 4f096bb] node.deepStrictEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main b19e6bc] node.deepStrictEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "4f096bb",
+    "checkwash_version": "0.10.0",
+    "head": "b19e6bc"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main ec31e73] node.deepStrictEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 1aaaa15] node.deepStrictEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          123
+        ],
+        "text": "assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          141
+        ],
+        "text": "assert.deepStrictEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:01c3cc272e11ff965e34252b0e3a0a6347e364065eefdd6bdd240eed4e974444",
+      "message": "contract: assertion strength EXACT_STRUCT(100) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 80,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "ec31e73",
+    "checkwash_version": "0.10.0",
+    "head": "1aaaa15"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 54943a8] node.equal.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 6c3c1ce] node.equal.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          129
+        ],
+        "text": "assert.equal(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:62054bf803770b1aeca5d1d25e55bb587e7b45eabc8606d52dd8f1c55f880696",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "54943a8",
+    "checkwash_version": "0.10.0",
+    "head": "6c3c1ce"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 6124594] node.equal.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 183d235] node.equal.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "6124594",
+    "checkwash_version": "0.10.0",
+    "head": "183d235"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 312ce35] node.equal.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 1b97d33] node.equal.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          123
+        ],
+        "text": "assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          129
+        ],
+        "text": "assert.equal(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:ac3e0822778a80c26617ab4ad52119cfd50a53831b8a46bb6bf74d08409028cb",
+      "message": "contract: assertion predicate widened (=== 5 -> truthy) — the new assertion also passes values the old one rejected; strength EXACT_VALUE(90) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 70,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "312ce35",
+    "checkwash_version": "0.10.0",
+    "head": "1b97d33"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main bda4aed] node.ok.remove before
+[main 19487d9] node.ok.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          123
+        ],
+        "text": "assert.ok(subject())"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:2ac0a19251fa6338f4465678cb49d0a8b811b5a717f36448fb35228ec8142b62",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "bda4aed",
+    "checkwash_version": "0.10.0",
+    "head": "19487d9"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main f44c934] node.ok.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main ff8fb88] node.ok.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "f44c934",
+    "checkwash_version": "0.10.0",
+    "head": "ff8fb88"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 9816c73] node.strictEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 9a79a5b] node.strictEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "9816c73",
+    "checkwash_version": "0.10.0",
+    "head": "9a79a5b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 8bcda99] node.strictEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 87dedb3] node.strictEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "8bcda99",
+    "checkwash_version": "0.10.0",
+    "head": "87dedb3"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 9cb9009] node.strictEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f5f2e6c] node.strictEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          123
+        ],
+        "text": "assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:2a5c0a163e1db3838e5c1822803307d1fa6351fb9f3444589a1bcfed52e3727f",
+      "message": "contract: assertion predicate widened (=== 5 -> truthy) — the new assertion also passes values the old one rejected; strength EXACT_VALUE(90) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 70,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "9cb9009",
+    "checkwash_version": "0.10.0",
+    "head": "f5f2e6c"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 7502cdf] node.context.equal.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 79f3bf0] node.context.equal.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          131
+        ],
+        "text": "t.assert.equal(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:70169fae89e02259ae71a73d4788081d65bfc43eb73684bb8d64734561a312c6",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "7502cdf",
+    "checkwash_version": "0.10.0",
+    "head": "79f3bf0"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 01c0c2e] node.context.equal.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 4188939] node.context.equal.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "01c0c2e",
+    "checkwash_version": "0.10.0",
+    "head": "4188939"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 952b882] node.context.equal.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 199591a] node.context.equal.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          125
+        ],
+        "text": "t.assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          131
+        ],
+        "text": "t.assert.equal(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:1af7b8d58622f1d4994686103f0f9fc503255e7d8ca4c0a95f6562ec591d7f2d",
+      "message": "contract: assertion strength EXACT_VALUE(90) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 70,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "952b882",
+    "checkwash_version": "0.10.0",
+    "head": "199591a"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main f5616d2] node.context.strictEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main b57d66d] node.context.strictEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          137
+        ],
+        "text": "t.assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:43dd98b00f8f1ecc98ea58a682f4c7ca189738197de7f7d802ace51bfe774b2b",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "f5616d2",
+    "checkwash_version": "0.10.0",
+    "head": "b57d66d"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 38d4a88] node.context.strictEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 3fa54cd] node.context.strictEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "38d4a88",
+    "checkwash_version": "0.10.0",
+    "head": "3fa54cd"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 2782d81] node.context.strictEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 30f048e] node.context.strictEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          125
+        ],
+        "text": "t.assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          137
+        ],
+        "text": "t.assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:6868db205294d5fbc1147bfae7f22d2c954dcc2d380eb21467fe048891b8316a",
+      "message": "contract: assertion predicate widened (=== 5 -> truthy) — the new assertion also passes values the old one rejected; strength EXACT_VALUE(90) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 70,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "2782d81",
+    "checkwash_version": "0.10.0",
+    "head": "30f048e"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 8c490b6] node.context.deepEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d034a56] node.context.deepEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          137
+        ],
+        "text": "t.assert.deepEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:27d1b4bc27d74fdae24afe387586a6313e316118190324405ee2cbc9f820ea75",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "8c490b6",
+    "checkwash_version": "0.10.0",
+    "head": "d034a56"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main b73e849] node.context.deepEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0d82fd0] node.context.deepEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "b73e849",
+    "checkwash_version": "0.10.0",
+    "head": "0d82fd0"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main c315289] node.context.deepEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d79e51f] node.context.deepEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          125
+        ],
+        "text": "t.assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          137
+        ],
+        "text": "t.assert.deepEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:21c63c433b14ce7ea2db82a559c76fa8cb50d7c93ef8b1ad40549b1d142023fa",
+      "message": "contract: assertion strength EXACT_STRUCT(100) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 80,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "c315289",
+    "checkwash_version": "0.10.0",
+    "head": "d79e51f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main dcb2b7d] node.context.deepStrictEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 9224c7f] node.context.deepStrictEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          143
+        ],
+        "text": "t.assert.deepStrictEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:f8d5d79b755450f7a26dac71e8e9ef6339097afad4a67f40ae4c4cf0f0107f5e",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "dcb2b7d",
+    "checkwash_version": "0.10.0",
+    "head": "9224c7f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main effc1f1] node.context.deepStrictEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main efa0f82] node.context.deepStrictEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "effc1f1",
+    "checkwash_version": "0.10.0",
+    "head": "efa0f82"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main a7a61b9] node.context.deepStrictEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f9354a5] node.context.deepStrictEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          103,
+          125
+        ],
+        "text": "t.assert.ok(subject())"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          143
+        ],
+        "text": "t.assert.deepStrictEqual(subject(), [5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:50f22649ed6011c9ee4fdc8ac3220ac2ef7cfb90ccf962ba0b778ce6b0ea22b6",
+      "message": "contract: assertion strength EXACT_STRUCT(100) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 80,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "a7a61b9",
+    "checkwash_version": "0.10.0",
+    "head": "f9354a5"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 516013b] node.context.ok.remove before
+[main 2405480] node.context.ok.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          125
+        ],
+        "text": "t.assert.ok(subject())"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:4eb4d0047f0cdb1c17d4620048133c25167dbc6fc76976523acb02e7830a042c",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "516013b",
+    "checkwash_version": "0.10.0",
+    "head": "2405480"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main f2590cc] node.context.ok.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 5cd6a20] node.context.ok.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "f2590cc",
+    "checkwash_version": "0.10.0",
+    "head": "5cd6a20"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main ad95fa2] node.import.esm-default-legacy.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main 472a9c2] node.import.esm-default-legacy.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          96,
+          128
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "ad95fa2",
+    "checkwash_version": "0.10.0",
+    "head": "472a9c2"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 4bdc10d] node.import.esm-default-legacy.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 641a21d] node.import.esm-default-legacy.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "4bdc10d",
+    "checkwash_version": "0.10.0",
+    "head": "641a21d"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 20d70de] node.import.esm-bare-module.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main d086d8b] node.import.esm-bare-module.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          91,
+          123
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "20d70de",
+    "checkwash_version": "0.10.0",
+    "head": "d086d8b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main c1297e8] node.import.esm-bare-module.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 34cd2fe] node.import.esm-bare-module.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "c1297e8",
+    "checkwash_version": "0.10.0",
+    "head": "34cd2fe"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 54f3c23] node.import.esm-bare-strict.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main 22e7c93] node.import.esm-bare-strict.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          98,
+          130
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "54f3c23",
+    "checkwash_version": "0.10.0",
+    "head": "22e7c93"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 9ab8c0c] node.import.esm-bare-strict.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f822216] node.import.esm-bare-strict.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "9ab8c0c",
+    "checkwash_version": "0.10.0",
+    "head": "f822216"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 225d782] node.import.esm-strict-named.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main 2bc9e0f] node.import.esm-strict-named.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          110,
+          142
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "225d782",
+    "checkwash_version": "0.10.0",
+    "head": "2bc9e0f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 4180a1a] node.import.esm-strict-named.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main c459548] node.import.esm-strict-named.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "4180a1a",
+    "checkwash_version": "0.10.0",
+    "head": "c459548"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main b85c8b0] node.import.esm-namespace.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main c1458f5] node.import.esm-namespace.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          101,
+          133
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "b85c8b0",
+    "checkwash_version": "0.10.0",
+    "head": "c1458f5"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main c0cc5f0] node.import.esm-namespace.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main b336b37] node.import.esm-namespace.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "c0cc5f0",
+    "checkwash_version": "0.10.0",
+    "head": "b336b37"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 8129366] node.import.cjs-node.remove before
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+[main 85f4818] node.import.cjs-node.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          106,
+          138
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "8129366",
+    "checkwash_version": "0.10.0",
+    "head": "85f4818"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 8d03c27] node.import.cjs-node.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 8295f2f] node.import.cjs-node.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "8d03c27",
+    "checkwash_version": "0.10.0",
+    "head": "8295f2f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 0c9b9fd] node.import.cjs-node-strict.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main d299452] node.import.cjs-node-strict.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          113,
+          145
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "0c9b9fd",
+    "checkwash_version": "0.10.0",
+    "head": "d299452"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 1f22717] node.import.cjs-node-strict.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main eb09d34] node.import.cjs-node-strict.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "1f22717",
+    "checkwash_version": "0.10.0",
+    "head": "eb09d34"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 2035bc4] node.import.cjs-strict-member.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main c4c98d1] node.import.cjs-strict-member.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          113,
+          145
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "2035bc4",
+    "checkwash_version": "0.10.0",
+    "head": "c4c98d1"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 6c4e42b] node.import.cjs-strict-member.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main bcd4350] node.import.cjs-strict-member.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "6c4e42b",
+    "checkwash_version": "0.10.0",
+    "head": "bcd4350"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main aecf07f] node.import.cjs-bare.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main 2a6dc0d] node.import.cjs-bare.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          101,
+          133
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5e5c4a074701b35c1b0ba5fe637cda8b318ab10660f88d80d10797e4e949dec7",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "aecf07f",
+    "checkwash_version": "0.10.0",
+    "head": "2a6dc0d"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 1e9c8be] node.import.cjs-bare.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d79761e] node.import.cjs-bare.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "1e9c8be",
+    "checkwash_version": "0.10.0",
+    "head": "d79761e"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main d0f94a0] jest.toBe.remove before
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+[main 7e1b619] jest.toBe.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          99
+        ],
+        "text": "expect(subject()).toBe(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:33529575385a90ac4463d2e0f2d4460aa93721b3d3112e4f3830b9265d0000d6",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "d0f94a0",
+    "checkwash_version": "0.10.0",
+    "head": "7e1b619"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 8dc7d39] jest.toBe.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0509e78] jest.toBe.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "8dc7d39",
+    "checkwash_version": "0.10.0",
+    "head": "0509e78"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main e9f8e93] jest.not.toBe.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main cc2dc98] jest.not.toBe.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          103
+        ],
+        "text": "expect(subject()).not.toBe(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:ae8c776403300b1a3957fa0251ccdd4146ba9a0131d7b552ebbfb3b89c2e1df3",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "e9f8e93",
+    "checkwash_version": "0.10.0",
+    "head": "cc2dc98"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main f7f510d] jest.not.toBe.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 8165160] jest.not.toBe.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "f7f510d",
+    "checkwash_version": "0.10.0",
+    "head": "8165160"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 8c42e16] jest.toBe.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 6af0faa] jest.toBe.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          99
+        ],
+        "text": "expect(subject()).toBe(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:720251255098b938a38dddf8a85845585dc561dea0ccdc00c61a9471404ed9dc",
+      "message": "contract: assertion predicate widened (=== 5 -> truthy) — the new assertion also passes values the old one rejected; strength EXACT_VALUE(90) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 70,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "8c42e16",
+    "checkwash_version": "0.10.0",
+    "head": "6af0faa"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 0d7f634] jest.toEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 9d8851d] jest.toEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          102
+        ],
+        "text": "expect(subject()).toEqual(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:a8ea430b0f6a6d800a327229127f2ea337a3db316ea9d878b01459f00ad2d285",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "0d7f634",
+    "checkwash_version": "0.10.0",
+    "head": "9d8851d"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 340d971] jest.toEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 8d25481] jest.toEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "340d971",
+    "checkwash_version": "0.10.0",
+    "head": "8d25481"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 795cb33] jest.not.toEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 381caef] jest.not.toEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          106
+        ],
+        "text": "expect(subject()).not.toEqual(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:73f7cb168d9fd60583b2e49a70bdbb3ebd4d2ec0b6b6606434afaefe06565d7d",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "795cb33",
+    "checkwash_version": "0.10.0",
+    "head": "381caef"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 2cac41a] jest.not.toEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 55b4ce9] jest.not.toEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "2cac41a",
+    "checkwash_version": "0.10.0",
+    "head": "55b4ce9"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 7d81c05] jest.toEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d9d8066] jest.toEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          102
+        ],
+        "text": "expect(subject()).toEqual(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:bcca2a2c7a83ab8e28b3cfbb6fc3e3ed99b001c0d04a8ea2011b7e863c1d51ef",
+      "message": "contract: assertion strength EXACT_VALUE(90) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 70,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "7d81c05",
+    "checkwash_version": "0.10.0",
+    "head": "d9d8066"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 3f398ba] jest.toStrictEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 35e055a] jest.toStrictEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          110
+        ],
+        "text": "expect(subject()).toStrictEqual([5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:51bf9f88d5ddc978f8216b44fc05306544b7d1be736961b020b05223e07d5f5f",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "3f398ba",
+    "checkwash_version": "0.10.0",
+    "head": "35e055a"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 991e23b] jest.toStrictEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main b11f44f] jest.toStrictEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "991e23b",
+    "checkwash_version": "0.10.0",
+    "head": "b11f44f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 04bfd8f] jest.not.toStrictEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 2224f18] jest.not.toStrictEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          114
+        ],
+        "text": "expect(subject()).not.toStrictEqual([5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:c44e6216a40f21d496237bd07c0b86233d4fbd41228a54518a8cde924c620839",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "04bfd8f",
+    "checkwash_version": "0.10.0",
+    "head": "2224f18"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 0b1c66a] jest.not.toStrictEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 6e63779] jest.not.toStrictEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "0b1c66a",
+    "checkwash_version": "0.10.0",
+    "head": "6e63779"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 5067281] jest.toStrictEqual.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 7632d21] jest.toStrictEqual.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          110
+        ],
+        "text": "expect(subject()).toStrictEqual([5])"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:f41597aaf31756fead80af0f12cbad59c99bc50e04d776035916b5f4b83ed953",
+      "message": "contract: assertion strength EXACT_STRUCT(100) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 80,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "5067281",
+    "checkwash_version": "0.10.0",
+    "head": "7632d21"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main dcacf4d] jest.toBeCloseTo.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 89415a9] jest.toBeCloseTo.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          109
+        ],
+        "text": "expect(subject()).toBeCloseTo(5, 2)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:6230305479e32a3fe66c240ef71b5274c7921e221a186704f6904aa971ef8969",
+      "message": "contract: assertion removed (strength APPROX)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "dcacf4d",
+    "checkwash_version": "0.10.0",
+    "head": "89415a9"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 480ea5b] jest.toBeCloseTo.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 1f3943f] jest.toBeCloseTo.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "480ea5b",
+    "checkwash_version": "0.10.0",
+    "head": "1f3943f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main b92afea] jest.not.toBeCloseTo.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main c5a2da4] jest.not.toBeCloseTo.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          113
+        ],
+        "text": "expect(subject()).not.toBeCloseTo(5, 2)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:49277d3ad490e05079ff3d0de60950ecded27d94497c5fb584d31ed7683e823f",
+      "message": "contract: assertion removed (strength APPROX)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "b92afea",
+    "checkwash_version": "0.10.0",
+    "head": "c5a2da4"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main e7ab299] jest.not.toBeCloseTo.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 1c03b92] jest.not.toBeCloseTo.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "e7ab299",
+    "checkwash_version": "0.10.0",
+    "head": "1c03b92"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main d5d0e7e] jest.toBeCloseTo.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d20aac8] jest.toBeCloseTo.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          109
+        ],
+        "text": "expect(subject()).toBeCloseTo(5, 2)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:25038ab72d5a40a2a94072d55ba3dd573af2ee6dbe7ab8cbae35b1e2c2aeb88d",
+      "message": "contract: assertion strength APPROX(70) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 50,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "d5d0e7e",
+    "checkwash_version": "0.10.0",
+    "head": "d20aac8"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main e4ea95c] jest.toContain.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main ea9a917] jest.toContain.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toContain(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:e83c1c37768aeabef1d450b68769e9fcf0bbc11a60ada37c1e78a5c57505d513",
+      "message": "contract: assertion removed (strength PATTERN)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "e4ea95c",
+    "checkwash_version": "0.10.0",
+    "head": "ea9a917"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main b3a2642] jest.toContain.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 52082e7] jest.toContain.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "b3a2642",
+    "checkwash_version": "0.10.0",
+    "head": "52082e7"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 378d3bf] jest.not.toContain.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 720ecc5] jest.not.toContain.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          108
+        ],
+        "text": "expect(subject()).not.toContain(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:4fddeaf06caac273746243ea9d64eeda3c80ced7fca54e34bacc3383d1a4e841",
+      "message": "contract: assertion removed (strength PATTERN)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "378d3bf",
+    "checkwash_version": "0.10.0",
+    "head": "720ecc5"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main c1299cc] jest.not.toContain.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0935bbe] jest.not.toContain.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "c1299cc",
+    "checkwash_version": "0.10.0",
+    "head": "0935bbe"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main d4ae51d] jest.toContain.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f4ca8ab] jest.toContain.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toContain(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:2874b6c42c945c17c597e57036b2145050f7919da6799c743cefebe297c5b9ca",
+      "message": "contract: assertion strength PATTERN(60) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 40,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "d4ae51d",
+    "checkwash_version": "0.10.0",
+    "head": "f4ca8ab"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main d7ee4f8] jest.toMatch.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d24a2b6] jest.toMatch.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          108
+        ],
+        "text": "expect(subject()).toMatch(/ready/)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:b369a6319215fcddbcf58b4effaa69012cbe9222e8536ddb89a0f02fd5bdc1dd",
+      "message": "contract: assertion removed (strength PATTERN)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "d7ee4f8",
+    "checkwash_version": "0.10.0",
+    "head": "d24a2b6"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 837452d] jest.toMatch.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f3cd6b7] jest.toMatch.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "837452d",
+    "checkwash_version": "0.10.0",
+    "head": "f3cd6b7"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 8992954] jest.not.toMatch.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 9110037] jest.not.toMatch.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          112
+        ],
+        "text": "expect(subject()).not.toMatch(/ready/)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:39151461640058608baf1bfbf99d921d263fd474fc9c4d18d9551e6f1a6d8ceb",
+      "message": "contract: assertion removed (strength PATTERN)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "8992954",
+    "checkwash_version": "0.10.0",
+    "head": "9110037"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 72106aa] jest.not.toMatch.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main eb255c6] jest.not.toMatch.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "72106aa",
+    "checkwash_version": "0.10.0",
+    "head": "eb255c6"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main adb3f58] jest.toMatch.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 2ab5481] jest.toMatch.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          108
+        ],
+        "text": "expect(subject()).toMatch(/ready/)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:25c65973de1a991f93fe181c4a136ba0d2d1b0e185ff773eadc6b4c56ef2a7c6",
+      "message": "contract: assertion strength PATTERN(60) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 40,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "adb3f58",
+    "checkwash_version": "0.10.0",
+    "head": "2ab5481"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main fc6ca4a] jest.toBeTruthy.remove before
+[main 2eca8ad] jest.toBeTruthy.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:db6e9fd1f54822807277d385f804cd0ecb3c077d0f651268ca045fc2d9a8cd92",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "fc6ca4a",
+    "checkwash_version": "0.10.0",
+    "head": "2eca8ad"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main c6d4318] jest.toBeTruthy.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 6b69a5f] jest.toBeTruthy.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "c6d4318",
+    "checkwash_version": "0.10.0",
+    "head": "6b69a5f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main e8d76c6] jest.not.toBeTruthy.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main c01adbd] jest.not.toBeTruthy.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          108
+        ],
+        "text": "expect(subject()).not.toBeTruthy()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:e08242b6ce5f7ee8d0f9628836d05fac6824571803a69c04d62782133028e4cb",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "e8d76c6",
+    "checkwash_version": "0.10.0",
+    "head": "c01adbd"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 25a87c2] jest.not.toBeTruthy.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 1d1439f] jest.not.toBeTruthy.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "25a87c2",
+    "checkwash_version": "0.10.0",
+    "head": "1d1439f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main dc9a3e9] jest.toBeFalsy.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d2c3874] jest.toBeFalsy.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          103
+        ],
+        "text": "expect(subject()).toBeFalsy()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:9a022885c388aa11041270ba7af6912393250178d18a538736f5fc3f64b67ba1",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "dc9a3e9",
+    "checkwash_version": "0.10.0",
+    "head": "d2c3874"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 5b65eef] jest.toBeFalsy.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main ad3a759] jest.toBeFalsy.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "5b65eef",
+    "checkwash_version": "0.10.0",
+    "head": "ad3a759"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 32e00cc] jest.not.toBeFalsy.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main a834b41] jest.not.toBeFalsy.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          107
+        ],
+        "text": "expect(subject()).not.toBeFalsy()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:3bb29838722bfe599a3eb37aba9b9c309c3849cbf9d8f4b6b71f07462a171b2c",
+      "message": "contract: assertion removed (strength TRUTHY)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "32e00cc",
+    "checkwash_version": "0.10.0",
+    "head": "a834b41"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 6e5a88b] jest.not.toBeFalsy.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f65b0ac] jest.not.toBeFalsy.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "6e5a88b",
+    "checkwash_version": "0.10.0",
+    "head": "f65b0ac"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 89cf699] jest.toBeDefined.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0dd1d07] jest.toBeDefined.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          105
+        ],
+        "text": "expect(subject()).toBeDefined()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:d8e956cfc29d9330c1778c64d4df467aecf1ef712ce6681e6e79e2f9fbd040cf",
+      "message": "contract: assertion removed (strength NON_NULL)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "89cf699",
+    "checkwash_version": "0.10.0",
+    "head": "0dd1d07"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 4094709] jest.toBeDefined.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0e1d366] jest.toBeDefined.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "4094709",
+    "checkwash_version": "0.10.0",
+    "head": "0e1d366"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 072d1b5] jest.not.toBeDefined.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 35f1cfd] jest.not.toBeDefined.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          109
+        ],
+        "text": "expect(subject()).not.toBeDefined()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:2af2aa2fccf3742ac63512c191ee686a0b376efd647001b51bb57b3a0c7529e0",
+      "message": "contract: assertion removed (strength NON_NULL)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "072d1b5",
+    "checkwash_version": "0.10.0",
+    "head": "35f1cfd"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 39d5d03] jest.not.toBeDefined.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 7880640] jest.not.toBeDefined.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "39d5d03",
+    "checkwash_version": "0.10.0",
+    "head": "7880640"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 67018d1] jest.toBeUndefined.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 9ca62c5] jest.toBeUndefined.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          107
+        ],
+        "text": "expect(subject()).toBeUndefined()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:e5af29451f4c57b1c7ecc8af7939a840af9fe5abd42ef449c8406b50b856b225",
+      "message": "contract: assertion removed (strength NON_NULL)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "67018d1",
+    "checkwash_version": "0.10.0",
+    "head": "9ca62c5"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 1530360] jest.toBeUndefined.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 00206a0] jest.toBeUndefined.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "1530360",
+    "checkwash_version": "0.10.0",
+    "head": "00206a0"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main e867333] jest.not.toBeUndefined.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main dbeaf05] jest.not.toBeUndefined.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          111
+        ],
+        "text": "expect(subject()).not.toBeUndefined()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:42bde7428d4e0c8929f4a4a7aadc86b1cdcec60508b4a287d67bfaaa27a47e4c",
+      "message": "contract: assertion removed (strength NON_NULL)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "e867333",
+    "checkwash_version": "0.10.0",
+    "head": "dbeaf05"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main b013c44] jest.not.toBeUndefined.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 7c7845e] jest.not.toBeUndefined.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "b013c44",
+    "checkwash_version": "0.10.0",
+    "head": "7c7845e"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 8f7f1d1] jest.toBeNull.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 57233a1] jest.toBeNull.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          102
+        ],
+        "text": "expect(subject()).toBeNull()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:3f584b9adbb234c5fc26be6a8da37cd20e89813592bd805d3cd5b8a8b5ce3646",
+      "message": "contract: assertion removed (strength NON_NULL)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "8f7f1d1",
+    "checkwash_version": "0.10.0",
+    "head": "57233a1"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 1fefe3b] jest.toBeNull.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f77a794] jest.toBeNull.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "1fefe3b",
+    "checkwash_version": "0.10.0",
+    "head": "f77a794"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main b55e8ac] jest.not.toBeNull.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main b671368] jest.not.toBeNull.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          106
+        ],
+        "text": "expect(subject()).not.toBeNull()"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:60390661c4d2aa52e1e53db8601e049b99971f5f7e2652b23d512c46931a09ff",
+      "message": "contract: assertion removed (strength NON_NULL)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "b55e8ac",
+    "checkwash_version": "0.10.0",
+    "head": "b671368"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 1cda438] jest.not.toBeNull.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 968531a] jest.not.toBeNull.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "1cda438",
+    "checkwash_version": "0.10.0",
+    "head": "968531a"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main d4e0713] jest.toBeGreaterThan.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 0c8c7ff] jest.toBeGreaterThan.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          110
+        ],
+        "text": "expect(subject()).toBeGreaterThan(1)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:8410db8c07c1c3a0d0cc8f9b7676ebb8ed992de1d88498549644d3e72eea3247",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "d4e0713",
+    "checkwash_version": "0.10.0",
+    "head": "0c8c7ff"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 603088c] jest.toBeGreaterThan.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 8c0ced1] jest.toBeGreaterThan.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "603088c",
+    "checkwash_version": "0.10.0",
+    "head": "8c0ced1"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 873cac4] jest.not.toBeGreaterThan.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 2e4223b] jest.not.toBeGreaterThan.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          114
+        ],
+        "text": "expect(subject()).not.toBeGreaterThan(1)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:6989d0f1f456d9ebcf15e9e1e7ba29fdd33788e82455f153c94a1e5bc233f18d",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "873cac4",
+    "checkwash_version": "0.10.0",
+    "head": "2e4223b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main c37b9b3] jest.not.toBeGreaterThan.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main cbfb5ba] jest.not.toBeGreaterThan.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "c37b9b3",
+    "checkwash_version": "0.10.0",
+    "head": "cbfb5ba"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main bb6f8f2] jest.toBeGreaterThan.truthiness before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d57b6f9] jest.toBeGreaterThan.truthiness after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          74,
+          104
+        ],
+        "text": "expect(subject()).toBeTruthy()"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          110
+        ],
+        "text": "expect(subject()).toBeGreaterThan(1)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/contract.test.js/contract/v2:8322520f026eb4fccba85abb91452eb67d387904e3a7a9ef38b9e6baf8893de6",
+      "message": "contract: assertion strength BOUND(40) -> TRUTHY(20)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 20,
+      "strength_drop": 20,
+      "subject_changed": false,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "bb6f8f2",
+    "checkwash_version": "0.10.0",
+    "head": "d57b6f9"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 119f545] jest.toBeGreaterThanOrEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d4f40f6] jest.toBeGreaterThanOrEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          117
+        ],
+        "text": "expect(subject()).toBeGreaterThanOrEqual(1)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:2ff5537b5e5e6e1f7f7d8b2dca8ce4d1bd015649290a80b8f9fa52b7727b4197",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "119f545",
+    "checkwash_version": "0.10.0",
+    "head": "d4f40f6"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main cd513da] jest.toBeGreaterThanOrEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 1936c3e] jest.toBeGreaterThanOrEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "cd513da",
+    "checkwash_version": "0.10.0",
+    "head": "1936c3e"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 2ee73ec] jest.not.toBeGreaterThanOrEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main c656598] jest.not.toBeGreaterThanOrEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          121
+        ],
+        "text": "expect(subject()).not.toBeGreaterThanOrEqual(1)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:e62099e0a910c654196fb59030b47947036e0a8ddb18fd63b38bbdd7b1dcfc98",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "2ee73ec",
+    "checkwash_version": "0.10.0",
+    "head": "c656598"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 12fa4ec] jest.not.toBeGreaterThanOrEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main b49f0af] jest.not.toBeGreaterThanOrEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "12fa4ec",
+    "checkwash_version": "0.10.0",
+    "head": "b49f0af"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 0171e95] jest.toBeLessThan.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 7ed105b] jest.toBeLessThan.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          107
+        ],
+        "text": "expect(subject()).toBeLessThan(9)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:e2f83ce9e70d03d5b7b288f5e5af5b22b523864e9e25f34c5f510ceb1e8fc00a",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "0171e95",
+    "checkwash_version": "0.10.0",
+    "head": "7ed105b"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 8a4e1f6] jest.toBeLessThan.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main c329f7d] jest.toBeLessThan.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "8a4e1f6",
+    "checkwash_version": "0.10.0",
+    "head": "c329f7d"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main dd28433] jest.not.toBeLessThan.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main a8c6b33] jest.not.toBeLessThan.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          111
+        ],
+        "text": "expect(subject()).not.toBeLessThan(9)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:117c5321cf6202281ccbc8936251ebd07b0661de98e9bc487324c87a0e3b9b2a",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "dd28433",
+    "checkwash_version": "0.10.0",
+    "head": "a8c6b33"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main d136e37] jest.not.toBeLessThan.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 3ef59c7] jest.not.toBeLessThan.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "d136e37",
+    "checkwash_version": "0.10.0",
+    "head": "3ef59c7"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 0e8a6d7] jest.toBeLessThanOrEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 2e4f707] jest.toBeLessThanOrEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          114
+        ],
+        "text": "expect(subject()).toBeLessThanOrEqual(9)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:e8eda27c567b0ca24b1c12c39651896e259d0277f0c2601765680f041d161fc1",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "0e8a6d7",
+    "checkwash_version": "0.10.0",
+    "head": "2e4f707"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main f486763] jest.toBeLessThanOrEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 578f574] jest.toBeLessThanOrEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "f486763",
+    "checkwash_version": "0.10.0",
+    "head": "578f574"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 3981491] jest.not.toBeLessThanOrEqual.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 5ee9a57] jest.not.toBeLessThanOrEqual.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          74,
+          118
+        ],
+        "text": "expect(subject()).not.toBeLessThanOrEqual(9)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:5fd2f6faeb0faa22ac494939129a455742b11dbc5039a9a576007faa40ce9780",
+      "message": "contract: assertion removed (strength BOUND)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "3981491",
+    "checkwash_version": "0.10.0",
+    "head": "5ee9a57"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 4c00a9c] jest.not.toBeLessThanOrEqual.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main af2e1b7] jest.not.toBeLessThanOrEqual.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "4c00a9c",
+    "checkwash_version": "0.10.0",
+    "head": "af2e1b7"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 92a04c9] vitest.direct.remove before
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[main 21caf0f] vitest.direct.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          67,
+          92
+        ],
+        "text": "expect(subject()).toBe(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:33529575385a90ac4463d2e0f2d4460aa93721b3d3112e4f3830b9265d0000d6",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "92a04c9",
+    "checkwash_version": "0.10.0",
+    "head": "21caf0f"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main b6ad5a6] vitest.direct.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 131424a] vitest.direct.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "b6ad5a6",
+    "checkwash_version": "0.10.0",
+    "head": "131424a"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main b9dc3a2] syntax.nested-arguments.remove before
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+[main 3bdd903] syntax.nested-arguments.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          171
+        ],
+        "text": "assert.deepStrictEqual(subject([1, 2], {flag: true}), {ready: true})"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.js/contract/v2:da30e124b9338d54b936f2feac923f4b16c10cd151b52fffa25ea5df81307eb0",
+      "message": "contract: assertion removed (strength EXACT_STRUCT)",
+      "path": "tests/contract.test.js",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "b9dc3a2",
+    "checkwash_version": "0.10.0",
+    "head": "3bdd903"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main b31bd29] syntax.nested-arguments.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 3413e1a] syntax.nested-arguments.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "b31bd29",
+    "checkwash_version": "0.10.0",
+    "head": "3413e1a"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 50ed92a] syntax.path.spec.cjs.remove before
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+ create mode 100644 tests/contract.spec.cjs
+ delete mode 100644 tests/contract.test.js
+[main fce737c] syntax.path.spec.cjs.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.spec.cjs/contract/v2:4e1ef5f75c51fa0410cb0533a50378d209abe05f133b78419219c1f0fe8be896",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.spec.cjs",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "50ed92a",
+    "checkwash_version": "0.10.0",
+    "head": "fce737c"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main a9b60a0] syntax.path.spec.cjs.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main f719ffb] syntax.path.spec.cjs.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "a9b60a0",
+    "checkwash_version": "0.10.0",
+    "head": "f719ffb"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main c698336] syntax.path.test.mjs.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ rename tests/{contract.spec.cjs => contract.test.mjs} (57%)
+[main 949d29d] syntax.path.test.mjs.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.mjs/contract/v2:9200f60614216597f96a5cb5b9cffc48706287d24cd4f92661ad8f2fc934dc76",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.mjs",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "c698336",
+    "checkwash_version": "0.10.0",
+    "head": "949d29d"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 73430a7] syntax.path.test.mjs.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d82b485] syntax.path.test.mjs.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "73430a7",
+    "checkwash_version": "0.10.0",
+    "head": "d82b485"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 85009b4] syntax.path.test.ts.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ rename tests/{contract.test.mjs => contract.test.ts} (57%)
+[main d5a36e4] syntax.path.test.ts.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.ts/contract/v2:a8b13ddfd6cbcff06ea7b1850ce0f39ad26dfcdd83298133296e6002ca993970",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.ts",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "85009b4",
+    "checkwash_version": "0.10.0",
+    "head": "d5a36e4"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 6361d6a] syntax.path.test.ts.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main 43adfb0] syntax.path.test.ts.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "6361d6a",
+    "checkwash_version": "0.10.0",
+    "head": "43adfb0"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main afd4358] syntax.path.test.tsx.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ rename tests/{contract.test.ts => contract.test.tsx} (57%)
+[main cc8c2bc] syntax.path.test.tsx.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          103,
+          135
+        ],
+        "text": "assert.strictEqual(subject(), 5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_REMOVED/tests/contract.test.tsx/contract/v2:85a4b3f8d592b9ab9812da5c65b79d81026a11bae4692c9d093a63b8eda76afa",
+      "message": "contract: assertion removed (strength EXACT_VALUE)",
+      "path": "tests/contract.test.tsx",
+      "rule": "ASSERT_REMOVED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "contract"
+    }
+  ],
+  "run": {
+    "base": "afd4358",
+    "checkwash_version": "0.10.0",
+    "head": "cc8c2bc"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}
+[main 0756148] syntax.path.test.tsx.comment before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[main d9eb0fb] syntax.path.test.tsx.comment after
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [],
+  "run": {
+    "base": "0756148",
+    "checkwash_version": "0.10.0",
+    "head": "d9eb0fb"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "pass"
+}
+[main 78a64e0] syntax.path.spec.jsx.remove before
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ rename tests/{contract.test.tsx => contract.spec.jsx} (57%)
+[main f70d04c] syntax.path.spec.jsx.remove after
+ 1 file changed, 1 insertion(+), 1 deletion(-)

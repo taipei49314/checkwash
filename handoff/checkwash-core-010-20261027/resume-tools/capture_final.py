@@ -1,0 +1,76 @@
+"""Record pinned final-source commands; no release checks are published."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import platform
+import subprocess
+import sys
+import tempfile
+
+p = argparse.ArgumentParser()
+p.add_argument("label")
+p.add_argument("command", nargs=argparse.REMAINDER)
+a = p.parse_args()
+ROOT = Path(__file__).resolve().parents[2]
+REPO = ROOT / "work/checkwash-ux"
+OUT = Path(__file__).resolve().parent / "final" / a.label
+OUT.mkdir(parents=True, exist_ok=False)
+temporary = Path(tempfile.gettempdir()) / ("cwf4-" + hashlib.sha256(a.label.encode()).hexdigest()[:8])
+temporary.mkdir(exist_ok=False)
+trusted = ROOT / "work/trusted/replay_pju_action.py"
+spec = importlib.util.spec_from_file_location("trusted_replay", trusted)
+replay = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(replay)
+env = replay.clean_environment(Path(sys.executable), Path(r"C:\Program Files\Git\cmd\git.exe"),
+                               Path(r"C:\Program Files\Git\bin\bash.exe"), temporary)
+env["PYTHONPATH"] = str(REPO / "src")
+env["PYTHONDONTWRITEBYTECODE"] = "1"
+template = temporary / "git-template"
+template.mkdir()
+env["GIT_TEMPLATE_DIR"] = str(template)
+
+def git(*args):
+    return subprocess.run(["git", *args], cwd=REPO, capture_output=True, check=True).stdout
+def snapshot():
+    names = git("ls-files", "-c", "-o", "--exclude-standard", "-z").decode("utf-8").split("\0")
+    return {name:hashlib.sha256((REPO / name).read_bytes()).hexdigest()
+            for name in sorted(set(names)) if name and (REPO / name).is_file()}
+before = snapshot()
+head = git("rev-parse", "HEAD").decode().strip()
+expected_head = (Path(__file__).resolve().parent / "final-source-sha.txt").read_text(encoding="utf-8").strip()
+assert head == expected_head, "final source moved"
+assert not git("status", "--porcelain", "--untracked-files=all"), "final checkout is dirty"
+safe_basetemp = temporary / "p"
+assert safe_basetemp.resolve().is_relative_to(temporary.resolve()) and not safe_basetemp.exists()
+a.command = [str(safe_basetemp) if argument == "__PJU_BASETEMP__" else argument for argument in a.command]
+diff = git("diff", "HEAD", "--binary")
+(OUT / "source.diff").write_bytes(diff)
+manifest = json.dumps(before, sort_keys=True, indent=2).encode()
+(OUT / "input-hashes.json").write_bytes(manifest)
+(OUT / "git-status.txt").write_bytes(git("status", "--short"))
+started = datetime.now(timezone.utc).isoformat()
+with (OUT / "stdout.txt").open("wb") as stdout, (OUT / "stderr.txt").open("wb") as stderr:
+    result = subprocess.run(a.command, cwd=REPO, env=env, stdout=stdout, stderr=stderr)
+after = snapshot()
+record = dict(label=a.label, host=platform.node(), provenance="HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+              python=sys.version, executable=sys.executable, platform=platform.platform(),
+              expected_source_sha=expected_head, validation_kind="FIXED_SOURCE_NOT_RELEASE_BRIDGE",
+              source_sha=head, ending_sha=git("rev-parse", "HEAD").decode().strip(),
+              source_diff_sha256=hashlib.sha256(diff).hexdigest(),
+              input_manifest_sha256=hashlib.sha256(manifest).hexdigest(),
+              source_files_unchanged=before==after,
+              changed_inputs=sorted(name for name in before.keys()|after.keys() if before.get(name)!=after.get(name)),
+              command=a.command, cwd=str(REPO), temp_root=str(temporary),
+              harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              replayer_sha256=hashlib.sha256(trusted.read_bytes()).hexdigest(),
+              started_utc=started, ended_utc=datetime.now(timezone.utc).isoformat(), exit_code=result.returncode)
+(OUT / "receipt.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+print(json.dumps(record, indent=2))
+for name in ("stdout.txt", "stderr.txt"):
+    text = (OUT / name).read_bytes().decode("utf-8", errors="backslashreplace")
+    print(text[-3500:].encode("ascii", errors="backslashreplace").decode())
+sys.exit(result.returncode)
