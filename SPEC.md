@@ -1204,6 +1204,16 @@ to an unrelated function disarm the gate for the whole run.
 
 ## 6. Exemptions
 
+### Quality policy maintenance (D-180)
+
+Main and quality exemption lanes are independent. Edits of existing quality
+policy/allow files retain main's guardrail review. Quality `reported`/0 can
+include policy warnings and is not a main-check pass. Only eligible entries
+in the selected BASE quality policy/ledger can affect that quality comparison;
+new HEAD entries and tool-generated ownership claims grant no authority.
+Precise maintenance uses the existing prior-BASE review route, without a
+blanket quality-path exception or automatic main/quality key translation.
+
 ### Policy-shadow transitions (0.10.0, D-177)
 
 Existing guardrail edits remain critical, except for the append-only ledger

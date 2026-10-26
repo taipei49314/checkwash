@@ -83,6 +83,21 @@ current PowerShell process decode native output as UTF-8. It does not control
 
 ## 2. Diagnose the local setup
 
+Quality and main-check approvals use separate ledgers. A quality `reported`
+result with exit 0 may include warnings; it does not mean the main `check`
+passed. An edit of an existing quality policy or allow file still requires
+main's guardrail review, even when quality reports an append at warn. Only
+eligible BASE entries affect the current comparison; a new HEAD entry cannot
+approve itself. Review each required check against the intended range.
+
+For maintenance, capture the exact quality identity (including target_id) and
+main GUARDRAIL identity, then use the existing maintainer/BASE review process.
+If that process uses a main exemption, its exact main key must already exist
+in a separately accepted BASE. QW keys belong only in the quality ledger.
+Committing a file or a tool's ownership claim is not evidence of human approval.
+This is the retained trust policy recorded in D-180, without a blanket
+quality-path exemption or automatic key translation.
+
 ```sh
 checkwash quality doctor
 checkwash quality doctor --format json

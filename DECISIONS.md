@@ -251,6 +251,41 @@ the fixture source itself is never executed. Root records final accepted
 source and validation separately. D-178 does not authorize a 1.0 release or
 revive historical/paid/model/adjudication grants.
 
+## D-180 (2026-10-27): retain prior-BASE quality maintenance review
+
+Quality policy and exemption maintenance retains prior-BASE authority and
+the two existing trust lanes. Main `check` continues to classify an edit of
+an existing `.checkwash/quality-allow.toml` as GUARDRAIL_TOUCHED/critical.
+Quality continues to report a schema-valid append at warn and evaluates
+only eligible BASE entries. A new HEAD entry cannot excuse that same
+comparison. A quality `reported` result with exit 0 is not a clean result,
+does not replace main `check`, and does not establish that main's required
+check passed. Each required lane must run against its intended range.
+
+The concrete second-entry friction is deliberately retained: the preserved
+18 native controls show append-only report and enforce comparisons with
+main BLOCK/1 versus quality reported/0. An existing exact eligible BASE
+entry still works. Expired or wrong-target entries do not match; unknown
+or malformed quality policy is a hard error. Those observations establish
+the lane distinction, not a natural-repository false-positive rate or human
+review acceptance of the synthetic fixtures.
+
+The maintenance route remains exact prior review. Capture the intended q1
+quality identity and main GUARDRAIL_TOUCHED v2 identity; use the existing
+maintainer/BASE review process. If that process uses the main exemption
+route, its exact main GUARDRAIL key must already be in a separately accepted
+BASE. QW keys never belong in the main ledger. Commit presence alone is
+not evidence of human approval. No blanket `quality*` exclusion, broad
+"tightening" exemption, generator/ownership self-claim or HEAD self-approval
+is introduced. No exemption is added to make this PR pass.
+
+This decision changes protected documentation only, preserving the existing
+main and quality executable gate behavior, findings schema, fingerprints,
+exit meanings, writers and authority. Initial-creation rules remain their
+own contract; D-177's separately bounded main config/allow shadow handling
+does not extend to these quality paths. Release/publication acceptance and
+the human's pre-1.0 stop remain independent requirements.
+
 ## D-181 (2026-10-27): validate TASK authority before applying its subset
 
 Nelson's pre-1.0 repair continuation authorizes the necessary core contracts
