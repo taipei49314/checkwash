@@ -176,6 +176,22 @@ def _task_alias_error(task: str, rel: str, alias: TreeAlias) -> str:
             "directory; name the task file by its path in the base tree")
 
 
+def _task_path_context(args, mapped) -> str:
+    """Describe the invocation's lexical mapping without changing path authority."""
+    try:
+        cwd = os.getcwd()
+    except OSError:
+        cwd = "<unavailable>"
+    try:
+        resolved = os.path.abspath(args.task)
+    except (OSError, ValueError):
+        resolved = "<unavailable>"
+    return (f"checkwash: TASK path context: requested={args.task!r}; resolved={resolved!r}; "
+            f"repo={args.repo!r}; cwd={cwd!r}; mapped={mapped!r}. "
+            "Retry with an absolute repository-owned task path and review its BASE copy. "
+            "This note does not change path resolution or the original refusal.\n")
+
+
 def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label: str, head_label: str,
              head_reader, head_searcher, root_snapshot, pytest_configs, quiet: bool = False) -> _Run | int:
     """One analysis of `changes` with policy read from `config_side`.
@@ -227,15 +243,23 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         # and only when the base tree holds nothing the path can stand for
         # on disk (#500). Nothing checks that the file is untracked.
         prefix = getattr(args, "repo_prefix", "")
-        if prefix:
+        try:
             # Re-rooted (#416): relative to the directory `--repo` named, then
             # into the root with Git's prefix, lexically. Never realpath: a
             # head-side symlink at the task path would choose which base file
             # supplies the contract, or hand the fallback attacker bytes.
-            rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
-        else:
-            rel = os.path.relpath(args.task, repo).replace("\\", "/")
-        data = read_base_file(repo, config_side, rel)
+            if prefix:
+                rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
+            else:
+                rel = os.path.relpath(args.task, repo).replace("\\", "/")
+        except ValueError:
+            advise(_task_path_context(args, None))
+            raise
+        try:
+            data = read_base_file(repo, config_side, rel)
+        except (GitError, SourceOverLimit):
+            advise(_task_path_context(args, rel))
+            raise
         if data is not None:
             task_text = data.decode("utf-8", errors="replace")
             contract = parse_contract(task_text)
