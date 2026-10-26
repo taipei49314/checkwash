@@ -1,0 +1,321 @@
+{
+  "CRC_all_members": true,
+  "all_5024_archive_hashes_and_current_local_original_bytes_compared": true,
+  "all_history_replay_self_contained": false,
+  "archive": "outputs/checkwash-core-010-handoff-20261027/historical-source-snapshots.zip",
+  "archive_members": 5031,
+  "archive_names_relative_unique_sorted_regular0644_fixed1980": true,
+  "bytes": 16386105,
+  "creator_and_product_executed": false,
+  "creator_before_after_plan_rebuild": "READ_FROM_CREATOR_RECORD_ONLY_NOT_REEXECUTED",
+  "current_8a_and_Git_object_binding": "8a comparison only; historical snapshots are not qualified Git heads",
+  "distinct_map_reference_files": 17,
+  "duplicate_classifications_independently_checked": [
+    {
+      "archive_is_in_current_core_plan": true,
+      "exact_archive_verified": true,
+      "files": 212,
+      "matches_8a_members": true,
+      "root": "work/ux-stage4/native-final-control/source-candidate"
+    },
+    {
+      "archive_is_in_current_core_plan": true,
+      "exact_archive_verified": true,
+      "files": 212,
+      "matches_8a_members": false,
+      "root": "work/ux-stage4/policy/native/source"
+    },
+    {
+      "archive_is_in_current_core_plan": false,
+      "exact_archive_verified": false,
+      "files": 212,
+      "matches_8a_members": true,
+      "root": "work/ux-stage4/pyz-source-stage"
+    }
+  ],
+  "full_snapshot_roots_independently_recomputed": [
+    {
+      "attempt_boundary": null,
+      "files": 1896,
+      "full_map_sha256": "6a24d1588e43a083fc7c124377eaf5743f3f1580c52180e4a078108459c81a2b",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/d179-consumer-inventory/focused-source"
+    },
+    {
+      "attempt_boundary": "NO_RESULTS_RECEIPT; preserve abandoned source, not a completed run",
+      "files": 212,
+      "full_map_sha256": "37d5f34d0b944ddbafd466974b916b54bb36fd3afb09ea84445cbed0a0f140a6",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/oracle/cost-r1/working-tree-source"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 212,
+      "full_map_sha256": "37d5f34d0b944ddbafd466974b916b54bb36fd3afb09ea84445cbed0a0f140a6",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/oracle/cost-r2/working-tree-source"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 212,
+      "full_map_sha256": "a36b6e7e8edd9e8d81c8d3d4b4944ad9e6c3ced19116bf9422223efff0b20977",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/oracle/cost-r3/working-tree-source"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 212,
+      "full_map_sha256": "9851e57dfb276fe943d3206308d3e4cd43a82bf68e7ba19ec68dc5e7cfb191ba",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/oracle/cost-r4/working-tree-source"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 212,
+      "full_map_sha256": "735dccb5ec302040171361a5ad2b6b8b13fc9463c5d05991aedceccb50f1b27e",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/oracle/native-r1/source"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 218,
+      "full_map_sha256": "7d4e9cb4e4c6fd23f0392ee16bfe71c9a0ec73d2fd7c7bc00f45e73dca5952dc",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/after-corrected-r2/snapshot"
+    },
+    {
+      "attempt_boundary": "ABORTED_DURING_SNAPSHOT_GUARD; no tests began for this attempt",
+      "files": 218,
+      "full_map_sha256": "7d4e9cb4e4c6fd23f0392ee16bfe71c9a0ec73d2fd7c7bc00f45e73dca5952dc",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/after-corrected/snapshot"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 216,
+      "full_map_sha256": "2e87845485ced44bb1229291303ffa7319157e789d5db4f52053279fe3d9c050",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/after-path-focused/snapshot"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 217,
+      "full_map_sha256": "49efa8dffa70bc56360b6b29c44623d5f35438dc70a4aa27c13eec496d85782f",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/after/snapshot"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 214,
+      "full_map_sha256": "91fa1403a2c449c5330e743a94dc7ebb28b1136923877bab431068c0ab0b2189",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/before-corrected/snapshot"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 214,
+      "full_map_sha256": "ca68da27517d2a20a5161bb152af431e40a0fe3581aafd13fc46809fffb5e935",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/before/snapshot"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 216,
+      "full_map_sha256": "a4095f3712b99e29bed809cb77e95558e4b4fa26f9e67785e2a37c9ef365a1d3",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/encoding-after/snapshot"
+    },
+    {
+      "attempt_boundary": null,
+      "files": 216,
+      "full_map_sha256": "c19457d8b59a4af56c3a6e9c678abc484a51d9efe6d9ca691d7b903842eb7d9b",
+      "local_and_archive_maps_equal": true,
+      "root": "work/ux-stage4/task/encoding-before/snapshot"
+    }
+  ],
+  "git_queries": 0,
+  "hostname": "LAPTOP-01AGNPJU",
+  "initial_pin_failure": "Original record/read source only; initial failed attempt was not reexecuted",
+  "local_per_file_stat_stability_checked": true,
+  "local_snapshot_maps_rehashed_twice": false,
+  "metadata_sha256": {
+    "HISTORICAL-BUNDLE-TOOLS/historical-source-guard-readback.json": "2f2164104766369ea9b003e9bd5856cdb6a607946b3a5273c8968c78360c4397",
+    "HISTORICAL-BUNDLE-TOOLS/historical_sources.initial.py.txt": "1f8c7740b56286e69c9f9e6497fed28a2d641b24e45299fc958113d98fe51391",
+    "HISTORICAL-BUNDLE-TOOLS/historical_sources.py": "efb17a1ced1b5293e513219f9c5294f25d0f8468532920e2e51cf7d59729887e",
+    "HISTORICAL-SOURCES-CLASSIFICATION.json": "03859a99aedaeb84d9ebbb40b0faddea819ec10f49ec741aff878654486af878",
+    "HISTORICAL-SOURCES-MANIFEST.json": "cbe5ca8967f537ed7ba7169d63d77fcbaabd21d879c31615b8d5e29413fa37ea",
+    "HISTORICAL-SOURCES-OLDREFS.json": "9f09a257f0c4f8a61106def70ec95f36abeaa354f4abb0044599d75b66ee7062",
+    "HISTORICAL-SOURCES-README.md": "b4505fa97db1b9dade62bd890b0558ecf50129a86c4618e16f0a3f4866961617"
+  },
+  "mode": "INDEPENDENT_READ_ONLY_HISTORICAL_SOURCE_ARCHIVE_REVIEW",
+  "old_reference_files": 339,
+  "privacy_flags_without_values": [],
+  "privacy_guard_imported_or_executed": false,
+  "privacy_recursive_scans": 5031,
+  "privacy_scope": "bounded exact-private-reference/global-header/common-key/userinfo checks; synthetic URL prefixes independently bound to sealed tests; not a universal secret-free assurance",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "publication_performed": false,
+  "raw_original_bytes": 50700804,
+  "raw_original_files": 5024,
+  "record_created_utc": "2026-10-26T19:55:17.569485+00:00",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "same_runtime_deterministic_rebuild": "NOT_RUN_BY_THIS_REVIEWER",
+  "semantic_boundaries_checked": [
+    {
+      "declared_boundary": "NO_RESULTS_RECEIPT; preserve abandoned source, not a completed run",
+      "not_reclassified_as_pass": true,
+      "root": "work/ux-stage4/oracle/cost-r1/working-tree-source"
+    },
+    {
+      "declared_boundary": "ABORTED_DURING_SNAPSHOT_GUARD; no tests began for this attempt",
+      "not_reclassified_as_pass": true,
+      "root": "work/ux-stage4/task/after-corrected/snapshot"
+    }
+  ],
+  "sha256": "3773ccdf0473fbbd8a0e4d52adfaf2317da3a13c7c7fb3704014abc7b27bb5f0",
+  "sidecar_matches": true,
+  "source_8a_worker_auditor_product_changed": false,
+  "source_snapshot_files": 4685,
+  "source_test_map_field_check_count": 23,
+  "source_test_map_field_checks": [
+    {
+      "entries": 1896,
+      "field": "before",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/d179-consumer-inventory/focused-receipt.json"
+    },
+    {
+      "entries": 1896,
+      "field": "after",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/d179-consumer-inventory/focused-receipt.json"
+    },
+    {
+      "entries": 212,
+      "field": "candidate_source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/oracle/cost-r2/results.json"
+    },
+    {
+      "entries": 212,
+      "field": "candidate_source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/oracle/cost-r3/results.json"
+    },
+    {
+      "entries": 212,
+      "field": "candidate_source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/oracle/cost-r4/results.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/oracle/native-r1/receipt.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/after-corrected-r2/started.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/after-path-focused/receipt.json"
+    },
+    {
+      "entries": 3,
+      "field": "test_inputs",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/after-path-focused/receipt.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/after-path-focused/started.json"
+    },
+    {
+      "entries": 211,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/after/started.json"
+    },
+    {
+      "entries": 211,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/before-corrected/receipt.json"
+    },
+    {
+      "entries": 2,
+      "field": "test_inputs",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/before-corrected/receipt.json"
+    },
+    {
+      "entries": 211,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/before-corrected/started.json"
+    },
+    {
+      "entries": 211,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/before/receipt.json"
+    },
+    {
+      "entries": 2,
+      "field": "test_inputs",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/before/receipt.json"
+    },
+    {
+      "entries": 211,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/before/started.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/encoding-after/receipt.json"
+    },
+    {
+      "entries": 3,
+      "field": "test_inputs",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/encoding-after/receipt.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/encoding-after/started.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/encoding-before/receipt.json"
+    },
+    {
+      "entries": 3,
+      "field": "test_inputs",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/encoding-before/receipt.json"
+    },
+    {
+      "entries": 212,
+      "field": "source_files",
+      "independently_matches_archived_and_local_snapshot": true,
+      "reference": "work/ux-stage4/task/encoding-before/started.json"
+    }
+  ],
+  "status": "PASS_NO_REMAINING_SOURCE_OR_PRIVACY_BLOCKERS_IN_CHECKED_SCOPE"
+}

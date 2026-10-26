@@ -6,7 +6,22 @@
     "Python 3.13",
     "native file symlink privilege unavailable"
   ],
+  "additional_frozen_corpus_disposition": {
+    "issue": "https://github.com/taipei49314/checkwash/issues/568",
+    "state": "OPEN_UNACCEPTED",
+    "unique_case_count": 4
+  },
   "archives": [
+    {
+      "bytes": 29871864,
+      "path": "checkwash-8a-sanitized-continuation.zip",
+      "sha256": "d8a24a21cc811bc9237631d69d2d163dea98d66430d26aa35fc766cdadc68a4d"
+    },
+    {
+      "bytes": 16386105,
+      "path": "historical-source-snapshots.zip",
+      "sha256": "3773ccdf0473fbbd8a0e4d52adfaf2317da3a13c7c7fb3704014abc7b27bb5f0"
+    },
     {
       "bytes": 11009496,
       "path": "legacy-stage1-sanitized.zip",
@@ -23,7 +38,7 @@
       "sha256": "1d9e52fabc28e3018ccdf12d21c5465b8a817f2d668325d5bffab591f21e3705"
     }
   ],
-  "artifacts_and_current_raw_bundle_present": false,
+  "artifacts_and_current_raw_bundle_present": true,
   "backup_is_acceptance": false,
   "candidate_selfdogfood": {
     "config_errors": [],
@@ -40,11 +55,33 @@
   },
   "code_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
   "full_suite": {
-    "collected_parent_tests": 21102,
-    "collection_is_not_pass_count": true,
-    "label": "full-suite-311-r1",
+    "additional_failure_nodeids": [
+      "tests/gates/test_refactor_corpus.py::test_no_silent_refactor_starts_blocking",
+      "tests/gates/test_tamper_corpus.py::test_every_tamper_case_still_behaves",
+      "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]",
+      "tests/test_benchmark_snapshot_adapters.py::test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]",
+      "tests/test_classic_raises_additions.py::test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    assert divide(a, b) == expected, f'Expected {expected}, got {result}'\\n]",
+      "tests/test_classic_raises_additions.py::test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    result = divide(a, b)\\n    assert result == expected, f'Expected {expected}, got {result}'\\n]",
+      "tests/test_issue223_conftest_request_side.py::test_an_importer_the_engine_adds_unchanged_reads_no_chain",
+      "tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+      "tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit",
+      "tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+      "tests/test_js_test_obligations.py::test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal",
+      "tests/test_packaging.py::test_readme_action_snippet_is_zizmor_blanket",
+      "tests/test_root_oracles.py::test_helper_only_assertion_removal_discovers_unchanged_importer",
+      "tests/test_state_claims.py::test_version_row_matches_package"
+    ],
+    "exit_code": 1,
+    "native_stdout_summary": "22 failed, 21055 passed, 25 skipped, 67 subtests passed in 2991.46s (0:49:51)",
+    "readback_independent-readback.json": {
+      "path": "completed/full-suite-independent-readback.json",
+      "sha256": "89ee94bc17caec0b79a80834fed1228643e68eb61cf7f01879bb40e329f5b177"
+    },
+    "receipt": "completed/full-suite-receipt.json",
+    "receipt_sha256": "588fd4b198c5d0de6478ab020e91ccf33cf855752c6191dc4422a503e7a3008e",
+    "registered_golden_failures_observed": 8,
     "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
-    "state": "RUNNING"
+    "state": "COMPLETE_FAILED_SUITE"
   },
   "golden_disposition": {
     "count": 8,
@@ -55,6 +92,7 @@
   },
   "handoff_branch": "handoff/core-010-pju-20261027-8a8941dc",
   "host": "LAPTOP-01AGNPJU",
+  "index_generator_sha256": "b5d3326c381889a580ecdfccf553522d9edf5400ee2984dd0035b12b1240a83a",
   "kind": "HANDOFF_BACKUP_NOT_RELEASE_ACCEPTANCE",
   "original_private_context_archives": "LOCAL_ONLY_PRESERVED",
   "product_branch": "fix/ux-repairs-20261026",
@@ -99,7 +137,7 @@
       }
     }
   },
-  "snapshot_utc": "2026-10-26T19:23:07.177873+00:00",
+  "snapshot_utc": "2026-10-26T20:27:32.269811+00:00",
   "stop_before_version": "1.0",
   "version": "0.10.0"
 }

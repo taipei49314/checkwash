@@ -1,0 +1,10 @@
+{
+  "checkpoint_commit": "5cce6944ee6a159aa51eba99d45cba578afa3bdb",
+  "expected_git_blob": "ddc66d13525e077a360ed374ab3fd827cc07ec7d",
+  "returned_git_blob": "ddc66d13525e077a360ed374ab3fd827cc07ec7d",
+  "matched": true,
+  "url": "https://github.com/taipei49314/checkwash/blob/handoff/core-010-pju-20261027-8a8941dc/handoff/checkwash-core-010-20261027/00-START-HERE.md",
+  "readback": "GitHub connector fetch_file with explicit handoff branch",
+  "recorded_after_readback_utc": "2026-10-26T19:03:11Z",
+  "publication": false
+}

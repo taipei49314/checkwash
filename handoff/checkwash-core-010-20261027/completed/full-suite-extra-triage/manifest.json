@@ -1,0 +1,26 @@
+{
+  "status": "READ_ONLY_TRIAGED_ACCEPTANCE_NONPASS",
+  "source": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "files": {
+    "collect_triage.py": {
+      "bytes": 13989,
+      "sha256": "59c018d4fa134185618d3a05487796d675b0e424ea053cf7469172251dff9bc6"
+    },
+    "report.md": {
+      "bytes": 9334,
+      "sha256": "6e729b38de9269c90dea0d5fec7025b800149c704a67b9c829d6ac6a11b69270"
+    },
+    "selected-native-junit-failures.json": {
+      "bytes": 18626,
+      "sha256": "2aa24fa2d0ef8b546b4931b4f3d1831123c4b0e133c2ddc6f636d01d62d0873c"
+    },
+    "triage.json": {
+      "bytes": 72076,
+      "sha256": "02cd1db9d9e90d27eed98eed496ba3da081315639693da26cc66e43ba41551e1"
+    }
+  },
+  "original_raw_hash_readback": "MATCH",
+  "source46_hash_readback": "MATCH",
+  "product_calls": 0,
+  "reruns": 0
+}

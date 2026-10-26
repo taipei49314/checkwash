@@ -1,0 +1,1774 @@
+{
+  "scope": "Six named extra native test failures only; four unique benchmark case identities plus two metadata/release-contract failures",
+  "status": "READ_ONLY_TRIAGED_ACCEPTANCE_NONPASS_NO_CHANGES",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+  "recorded_utc": "2026-10-26T20:16:08.581443+00:00",
+  "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "prior_source_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+  "source_unchanged": true,
+  "original_full_suite_receipt": {
+    "label": "full-suite-311-r1",
+    "host": "LAPTOP-01AGNPJU",
+    "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "expected_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+    "validation_kind": "FIXED_SOURCE_NOT_RELEASE_BRIDGE",
+    "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+    "ending_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+    "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "input_manifest_sha256": "3649879bd02d32a9e3d1f868790d7af33d86382300720b072bed0320ad14fe22",
+    "source_files_unchanged": true,
+    "changed_inputs": [],
+    "command": [
+      "..\\test-runtime\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-p",
+      "xdist.plugin",
+      "-n",
+      "2",
+      "--dist",
+      "worksteal",
+      "-o",
+      "addopts=",
+      "-q",
+      "-ra",
+      "--basetemp",
+      "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf4-24687d5e\\p",
+      "--junitxml=C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage4\\final\\full-suite-311-r1\\junit.xml"
+    ],
+    "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+    "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf4-24687d5e",
+    "harness_sha256": "7f71c0525168ef61b5ab9c33b3dcf401dc250e9f2d500f60e00e471409abc8b1",
+    "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+    "started_utc": "2026-10-26T19:17:31.548211+00:00",
+    "ended_utc": "2026-10-26T20:07:27.473900+00:00",
+    "exit_code": 1
+  },
+  "original_raw_hashes": {
+    "junit.xml": {
+      "bytes": 3961669,
+      "sha256": "e0e71407aee43e20f536d88e964c74393df4d91de7f08f935f09928dd173188e"
+    },
+    "receipt.json": {
+      "bytes": 1834,
+      "sha256": "588fd4b198c5d0de6478ab020e91ccf33cf855752c6191dc4422a503e7a3008e"
+    },
+    "stdout.txt": {
+      "bytes": 79347,
+      "sha256": "4d3d685d07ba90044239709f7e8dcf0d35cd68ba44f7de2afa6508cc6fa4730b"
+    },
+    "stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "input-hashes.json": {
+      "bytes": 385164,
+      "sha256": "3649879bd02d32a9e3d1f868790d7af33d86382300720b072bed0320ad14fe22"
+    }
+  },
+  "product_calls": 0,
+  "subject_execution": 0,
+  "reruns": 0,
+  "frozen_labels_modified": false,
+  "gates_modified": false,
+  "product_modified": false,
+  "source_hashes": {
+    ".github/workflows/checkwash.yml": {
+      "bytes": 524,
+      "sha256": "d64dda7e74b3a35731c9a4400372a0cd36fecfff068e3c90a24cad3939f399f5"
+    },
+    "DECISIONS.md": {
+      "bytes": 32427,
+      "sha256": "a83d479b850c5e5a2514729261be5455f2cb14e64254590c47975056bbd2a1d6"
+    },
+    "README.md": {
+      "bytes": 20269,
+      "sha256": "1780360a80817995d3642e92bdb747d481b1efedef3662d3ab54dc13019584cc"
+    },
+    "STATE.md": {
+      "bytes": 219676,
+      "sha256": "8b2f006d339e21c156d60d5a8851cc7e038ae4ecfbe4a81b4f625db3b62099a9"
+    },
+    "THREATMODEL.md": {
+      "bytes": 294633,
+      "sha256": "091a9459bfdf9b82d12733c9749e07c4c25656c2f7eabbf9965ec71276e64c75"
+    },
+    "action/README.md": {
+      "bytes": 6692,
+      "sha256": "590eb9c9b66b0eca5544ba34b4ff9bc12369e1f9a986050c6732cfc5a8e8a052"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/AFTER/tests/test_windows.py": {
+      "bytes": 209,
+      "sha256": "c1f47bc0bb76fbd1eaf3715c226488152e5f55d43283d75033075361a50f0443"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/BEFORE/tests/test_windows.py": {
+      "bytes": 184,
+      "sha256": "43f45c8272b86245f2c6d0f6967aa821c1ccd549704ac9acd9562994b19dfa5e"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/windows.py": {
+      "bytes": 135,
+      "sha256": "856c33a2878d53ed2811a8f8be13b0b5e48d74cb8f08b4fe03036bca16451d48"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/windows.py": {
+      "bytes": 139,
+      "sha256": "dd54520877e4a74b31f330932549d1e9f7242115a84695883849699c1eba233a"
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/WHY.txt": {
+      "bytes": 210,
+      "sha256": "ce9ec8111426f74b2b0a93499e8876b41a3c9e591c7451b1c86e14104372cff0"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/AFTER/tests/test_flatten.py": {
+      "bytes": 267,
+      "sha256": "3aa197da343fa441989dadac0cd74a07b231faf743c978ccedf4641808486f1c"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/BEFORE/tests/test_flatten.py": {
+      "bytes": 249,
+      "sha256": "e9c5a29d74f1b811fe59e20387728811cd6c3b9b919c61c3f9e9c83632ca2c4f"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/flatten.py": {
+      "bytes": 84,
+      "sha256": "ce5f1ff1e43f1385d432009e9c66dbf2f74ca8bfd7ed79016802eff095ee586f"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/flatten.py": {
+      "bytes": 160,
+      "sha256": "6caff23c8d56b3a12be5a6f182817f4d25c73277761625bb7a3bfc918b4f5ce9"
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/WHY.txt": {
+      "bytes": 200,
+      "sha256": "c381918e7a5aeb60c4660a316696f258c44f820c6d89275e9630f2310c37b29e"
+    },
+    "benchmarks/refactors/expected.json": {
+      "bytes": 17778,
+      "sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42"
+    },
+    "benchmarks/refactors/verify.py": {
+      "bytes": 13280,
+      "sha256": "03ed864f4d6d3ee09b193321d7fa7f32c58b79e9ed76f1dfae9efb6c063266fb"
+    },
+    "benchmarks/score.py": {
+      "bytes": 4685,
+      "sha256": "b19206fa4a1318488e6f6b972307db9ce90d72de2876b46c4bbdde4882cc55f7"
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/WHY.txt": {
+      "bytes": 62,
+      "sha256": "26a8c53c3137281f7c7cefdffd2c5cbc34f996dcd9d0e450941d240e1fd5d095"
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/after/tests/test_007.py": {
+      "bytes": 250,
+      "sha256": "61dcc9b3791900a23ecefb501ef5d271716112379a2c91cf907e8b295b7ca314"
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/before/tests/test_007.py": {
+      "bytes": 87,
+      "sha256": "aa5988acdbd6d35f305675bea47e242dc6d5e80c93ff104e092eb0871886aaf6"
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/src/app/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/src/app/prod.py": {
+      "bytes": 172,
+      "sha256": "fd3b448873168aac97b3cf581cf41208195b937c4a0f6fe66587eaf727f192de"
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/WHY.txt": {
+      "bytes": 72,
+      "sha256": "4299c156090ccb28b93ef9bce93159fe9c919040b32b76576e4c9351bee46219"
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/after/tests/test_010.py": {
+      "bytes": 421,
+      "sha256": "df14e79a1741dd88fb44bfdb0939dddace6911c9fd586c5ce6d59dcf5eb2e7ba"
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/before/tests/test_010.py": {
+      "bytes": 112,
+      "sha256": "4dc46537a04a1e4a22aa857a028b3db5f166864ce2d32d987a4274decfa072e0"
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/src/app/__init__.py": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/src/app/prod.py": {
+      "bytes": 231,
+      "sha256": "3d7a408f64521002a2a594e9dbb46fbc4f198fbedefa539e97ba39e234287aca"
+    },
+    "benchmarks/tamper/expected.json": {
+      "bytes": 10963,
+      "sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed"
+    },
+    "benchmarks/tamper/verify.py": {
+      "bytes": 5079,
+      "sha256": "8a1eedd7c90103079d14705c10d0a49cdf38ceb99916cb4b46cada30cc707925"
+    },
+    "docs/RELEASING.md": {
+      "bytes": 73408,
+      "sha256": "befa7092b33f014c1d42b7f7d2caa7e8a45c1234ebf34c8c14fa9a236460530c"
+    },
+    "docs/oracle-credit-0.10.0.md": {
+      "bytes": 4105,
+      "sha256": "0416dc7af987c9b733e67b1009ae151422a459597b9b9121d0d6bc2ec9dfee8e"
+    },
+    "pyproject.toml": {
+      "bytes": 1448,
+      "sha256": "bd9f119b84a473976c4a1fa6ef83d64f8f98f62af9f466271292d5e19eeaeb6b"
+    },
+    "release/advertised.toml": {
+      "bytes": 643,
+      "sha256": "6eaa78dd7eb1e920f0675c2ba9e1d430b4eb04164f3f9f0c1a9853c51c833dde"
+    },
+    "src/checkwash/__init__.py": {
+      "bytes": 164,
+      "sha256": "9d818929b8f4251630654f400866d75fd8eb63c16c8714ddb1380605203df4f8"
+    },
+    "src/checkwash/doctor.py": {
+      "bytes": 28081,
+      "sha256": "f17975e94b7015eaead556bd524dbb138d61e3f2ba8f9e96f546cae282390648"
+    },
+    "tests/gates/test_refactor_corpus.py": {
+      "bytes": 4227,
+      "sha256": "24e61860836d1ea967b55ad28c68f195bcd55ab081053f9005d471879dd9cfc8"
+    },
+    "tests/gates/test_tamper_corpus.py": {
+      "bytes": 5067,
+      "sha256": "62c14312404a54bf0424bb80a75c70ad52b225e66757be57d2f0d2320b8f18af"
+    },
+    "tests/test_benchmark_snapshot_adapters.py": {
+      "bytes": 4600,
+      "sha256": "7fde33f226c756203071388e99f33fbded56808715f42161bf005abff4c3c00a"
+    },
+    "tests/test_packaging.py": {
+      "bytes": 15681,
+      "sha256": "6c2fa0663756da269fa8f297fe5016f79bc508d86e0c810b6d861cc038dcbbe1"
+    },
+    "tests/test_state_claims.py": {
+      "bytes": 10188,
+      "sha256": "e45757264331265f80cbe7a06d78d1b70101a714eb61685fccb49076549dbdda"
+    }
+  },
+  "source_git_equivalence": {
+    ".github/workflows/checkwash.yml": {
+      "git_blob_sha256": "d64dda7e74b3a35731c9a4400372a0cd36fecfff068e3c90a24cad3939f399f5",
+      "working_tree_equals_8a": true
+    },
+    "DECISIONS.md": {
+      "git_blob_sha256": "a83d479b850c5e5a2514729261be5455f2cb14e64254590c47975056bbd2a1d6",
+      "working_tree_equals_8a": true
+    },
+    "README.md": {
+      "git_blob_sha256": "1780360a80817995d3642e92bdb747d481b1efedef3662d3ab54dc13019584cc",
+      "working_tree_equals_8a": true
+    },
+    "STATE.md": {
+      "git_blob_sha256": "8b2f006d339e21c156d60d5a8851cc7e038ae4ecfbe4a81b4f625db3b62099a9",
+      "working_tree_equals_8a": true
+    },
+    "THREATMODEL.md": {
+      "git_blob_sha256": "091a9459bfdf9b82d12733c9749e07c4c25656c2f7eabbf9965ec71276e64c75",
+      "working_tree_equals_8a": true
+    },
+    "action/README.md": {
+      "git_blob_sha256": "590eb9c9b66b0eca5544ba34b4ff9bc12369e1f9a986050c6732cfc5a8e8a052",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/AFTER/tests/test_windows.py": {
+      "git_blob_sha256": "c1f47bc0bb76fbd1eaf3715c226488152e5f55d43283d75033075361a50f0443",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/BEFORE/tests/test_windows.py": {
+      "git_blob_sha256": "43f45c8272b86245f2c6d0f6967aa821c1ccd549704ac9acd9562994b19dfa5e",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/__init__.py": {
+      "git_blob_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/windows.py": {
+      "git_blob_sha256": "856c33a2878d53ed2811a8f8be13b0b5e48d74cb8f08b4fe03036bca16451d48",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/__init__.py": {
+      "git_blob_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/windows.py": {
+      "git_blob_sha256": "dd54520877e4a74b31f330932549d1e9f7242115a84695883849699c1eba233a",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_020_windows/WHY.txt": {
+      "git_blob_sha256": "ce9ec8111426f74b2b0a93499e8876b41a3c9e591c7451b1c86e14104372cff0",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/AFTER/tests/test_flatten.py": {
+      "git_blob_sha256": "3aa197da343fa441989dadac0cd74a07b231faf743c978ccedf4641808486f1c",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/BEFORE/tests/test_flatten.py": {
+      "git_blob_sha256": "e9c5a29d74f1b811fe59e20387728811cd6c3b9b919c61c3f9e9c83632ca2c4f",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/__init__.py": {
+      "git_blob_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/flatten.py": {
+      "git_blob_sha256": "ce5f1ff1e43f1385d432009e9c66dbf2f74ca8bfd7ed79016802eff095ee586f",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/__init__.py": {
+      "git_blob_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/flatten.py": {
+      "git_blob_sha256": "6caff23c8d56b3a12be5a6f182817f4d25c73277761625bb7a3bfc918b4f5ce9",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/cases/CASE_029_flatten/WHY.txt": {
+      "git_blob_sha256": "c381918e7a5aeb60c4660a316696f258c44f820c6d89275e9630f2310c37b29e",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/expected.json": {
+      "git_blob_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/refactors/verify.py": {
+      "git_blob_sha256": "03ed864f4d6d3ee09b193321d7fa7f32c58b79e9ed76f1dfae9efb6c063266fb",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/score.py": {
+      "git_blob_sha256": "b19206fa4a1318488e6f6b972307db9ce90d72de2876b46c4bbdde4882cc55f7",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/WHY.txt": {
+      "git_blob_sha256": "26a8c53c3137281f7c7cefdffd2c5cbc34f996dcd9d0e450941d240e1fd5d095",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/after/tests/test_007.py": {
+      "git_blob_sha256": "61dcc9b3791900a23ecefb501ef5d271716112379a2c91cf907e8b295b7ca314",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/before/tests/test_007.py": {
+      "git_blob_sha256": "aa5988acdbd6d35f305675bea47e242dc6d5e80c93ff104e092eb0871886aaf6",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/src/app/__init__.py": {
+      "git_blob_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d007-factorial-of-zero/src/app/prod.py": {
+      "git_blob_sha256": "fd3b448873168aac97b3cf581cf41208195b937c4a0f6fe66587eaf727f192de",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/WHY.txt": {
+      "git_blob_sha256": "4299c156090ccb28b93ef9bce93159fe9c919040b32b76576e4c9351bee46219",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/after/tests/test_010.py": {
+      "git_blob_sha256": "df14e79a1741dd88fb44bfdb0939dddace6911c9fd586c5ce6d59dcf5eb2e7ba",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/before/tests/test_010.py": {
+      "git_blob_sha256": "4dc46537a04a1e4a22aa857a028b3db5f166864ce2d32d987a4274decfa072e0",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/src/app/__init__.py": {
+      "git_blob_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/cases/d010-stack-is-lifo/src/app/prod.py": {
+      "git_blob_sha256": "3d7a408f64521002a2a594e9dbb46fbc4f198fbedefa539e97ba39e234287aca",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/expected.json": {
+      "git_blob_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "working_tree_equals_8a": true
+    },
+    "benchmarks/tamper/verify.py": {
+      "git_blob_sha256": "8a1eedd7c90103079d14705c10d0a49cdf38ceb99916cb4b46cada30cc707925",
+      "working_tree_equals_8a": true
+    },
+    "docs/RELEASING.md": {
+      "git_blob_sha256": "befa7092b33f014c1d42b7f7d2caa7e8a45c1234ebf34c8c14fa9a236460530c",
+      "working_tree_equals_8a": true
+    },
+    "docs/oracle-credit-0.10.0.md": {
+      "git_blob_sha256": "0416dc7af987c9b733e67b1009ae151422a459597b9b9121d0d6bc2ec9dfee8e",
+      "working_tree_equals_8a": true
+    },
+    "pyproject.toml": {
+      "git_blob_sha256": "bd9f119b84a473976c4a1fa6ef83d64f8f98f62af9f466271292d5e19eeaeb6b",
+      "working_tree_equals_8a": true
+    },
+    "release/advertised.toml": {
+      "git_blob_sha256": "6eaa78dd7eb1e920f0675c2ba9e1d430b4eb04164f3f9f0c1a9853c51c833dde",
+      "working_tree_equals_8a": true
+    },
+    "src/checkwash/__init__.py": {
+      "git_blob_sha256": "9d818929b8f4251630654f400866d75fd8eb63c16c8714ddb1380605203df4f8",
+      "working_tree_equals_8a": true
+    },
+    "src/checkwash/doctor.py": {
+      "git_blob_sha256": "f17975e94b7015eaead556bd524dbb138d61e3f2ba8f9e96f546cae282390648",
+      "working_tree_equals_8a": true
+    },
+    "tests/gates/test_refactor_corpus.py": {
+      "git_blob_sha256": "24e61860836d1ea967b55ad28c68f195bcd55ab081053f9005d471879dd9cfc8",
+      "working_tree_equals_8a": true
+    },
+    "tests/gates/test_tamper_corpus.py": {
+      "git_blob_sha256": "62c14312404a54bf0424bb80a75c70ad52b225e66757be57d2f0d2320b8f18af",
+      "working_tree_equals_8a": true
+    },
+    "tests/test_benchmark_snapshot_adapters.py": {
+      "git_blob_sha256": "7fde33f226c756203071388e99f33fbded56808715f42161bf005abff4c3c00a",
+      "working_tree_equals_8a": true
+    },
+    "tests/test_packaging.py": {
+      "git_blob_sha256": "6c2fa0663756da269fa8f297fe5016f79bc508d86e0c810b6d861cc038dcbbe1",
+      "working_tree_equals_8a": true
+    },
+    "tests/test_state_claims.py": {
+      "git_blob_sha256": "e45757264331265f80cbe7a06d78d1b70101a714eb61685fccb49076549dbdda",
+      "working_tree_equals_8a": true
+    }
+  },
+  "unchanged_test_and_expected_contracts_1ffe_to_8a": {
+    "benchmarks/refactors/expected.json": {
+      "baseline_blob_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "frozen_blob_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "unchanged_1ffe_to_8a": true
+    },
+    "benchmarks/tamper/expected.json": {
+      "baseline_blob_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "frozen_blob_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "unchanged_1ffe_to_8a": true
+    },
+    "tests/gates/test_refactor_corpus.py": {
+      "baseline_blob_sha256": "24e61860836d1ea967b55ad28c68f195bcd55ab081053f9005d471879dd9cfc8",
+      "frozen_blob_sha256": "24e61860836d1ea967b55ad28c68f195bcd55ab081053f9005d471879dd9cfc8",
+      "unchanged_1ffe_to_8a": true
+    },
+    "tests/gates/test_tamper_corpus.py": {
+      "baseline_blob_sha256": "62c14312404a54bf0424bb80a75c70ad52b225e66757be57d2f0d2320b8f18af",
+      "frozen_blob_sha256": "62c14312404a54bf0424bb80a75c70ad52b225e66757be57d2f0d2320b8f18af",
+      "unchanged_1ffe_to_8a": true
+    },
+    "tests/test_benchmark_snapshot_adapters.py": {
+      "baseline_blob_sha256": "7fde33f226c756203071388e99f33fbded56808715f42161bf005abff4c3c00a",
+      "frozen_blob_sha256": "7fde33f226c756203071388e99f33fbded56808715f42161bf005abff4c3c00a",
+      "unchanged_1ffe_to_8a": true
+    },
+    "tests/test_packaging.py": {
+      "baseline_blob_sha256": "6c2fa0663756da269fa8f297fe5016f79bc508d86e0c810b6d861cc038dcbbe1",
+      "frozen_blob_sha256": "6c2fa0663756da269fa8f297fe5016f79bc508d86e0c810b6d861cc038dcbbe1",
+      "unchanged_1ffe_to_8a": true
+    },
+    "tests/test_state_claims.py": {
+      "baseline_blob_sha256": "e45757264331265f80cbe7a06d78d1b70101a714eb61685fccb49076549dbdda",
+      "frozen_blob_sha256": "e45757264331265f80cbe7a06d78d1b70101a714eb61685fccb49076549dbdda",
+      "unchanged_1ffe_to_8a": true
+    }
+  },
+  "local_preserved_tags": {
+    "v0.9.0": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+    "v0.9.1": "1ffe283d7d947fecc426dea99323b0a2620a9482"
+  },
+  "metadata_and_release_contract": [
+    {
+      "test": "tests/test_state_claims.py::test_version_row_matches_package",
+      "classification": "MECHANICAL_DOCUMENTATION_DEVELOPMENT_VERSION_DRIFT",
+      "actual": "STATE authoritative version v0.9.1",
+      "expected": "Package development version v0.10.0",
+      "disposition": "Future one-line STATE table synchronization, after root chooses new source revision; no release/public-pin change implied"
+    },
+    {
+      "test": "tests/test_packaging.py::test_readme_action_snippet_is_zizmor_blanket",
+      "classification": "RELEASE_TEST_CONTRACT_TAG_PRESENCE_IS_NOT_VERIFIED_PUBLICATION",
+      "actual": "README/doctor/self-audit trusted v0.9.0; all preceding pin/parity assertions reached and passed; final max(prior local semantic tags) selects v0.9.1",
+      "expected_by_test": "v0.9.0 equals newest locally present prior semantic tag",
+      "authoritative_release_contract": "docs/RELEASING.md:1004-1020 and release/advertised.toml: newest verified public release v0.9.0, independent from candidate0.10.0",
+      "disposition": "Maintainer align the final freshness test with verified advertised publication while retaining pin/security checks; do not move pins to unverified v0.9.1 or remove preserved tag",
+      "zizmor_execution": "NOT_RUN_BY_THIS_TEST_OR_TRIAGE"
+    }
+  ],
+  "family_original_counts": {
+    "refactors": {
+      "cases": 60,
+      "recorded_pass": 56
+    },
+    "tamper": {
+      "cases": 80,
+      "recorded_pass": 26
+    }
+  },
+  "case_identity_triage": [
+    {
+      "family": "refactors",
+      "case_id": "CASE_020_windows",
+      "original_expected": {
+        "blocks": false,
+        "rules": [
+          "TEST_DISABLED"
+        ],
+        "why": "windows uses range(len(xs)-n) and omits the last full window. Both suites check the first window [1,2] and the last window [3,4] of a length-2 slide. The two tests become one function that calls check"
+      },
+      "original_expected_path": "work/checkwash-ux/benchmarks/refactors/expected.json",
+      "original_expected_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "observed_source": "Existing native full-suite JUnit failure text",
+      "finding_full_dict": "NOT_CAPTURED_BY_THIS_GATE",
+      "fingerprint": "NOT_CAPTURED_BY_THIS_GATE",
+      "severity": "NOT_CAPTURED_BY_THIS_GATE",
+      "fixture_runtime_qualification": "NOT_RUN_IN_THIS_TRIAGE",
+      "category": "HONEST_REFACTOR_CONSERVATIVE_COST_REQUIRES_DISPOSITION",
+      "observed_verdict": "block",
+      "observed_rules": [
+        "TEST_DISABLED"
+      ],
+      "static_source_observation": "Two direct first/last-window tests become one test invoking a same-file parameterized check helper at both original input/expected pairs.",
+      "proposed_decision_options": [
+        "Narrow safe proof improvement preserving original corpus acceptance",
+        "Explicit maintainer acceptance of this particular honest-refactor cost; no label change authorized here"
+      ],
+      "input_hashes": {
+        "benchmarks/refactors/cases/CASE_020_windows/AFTER/tests/test_windows.py": {
+          "bytes": 209,
+          "sha256": "c1f47bc0bb76fbd1eaf3715c226488152e5f55d43283d75033075361a50f0443"
+        },
+        "benchmarks/refactors/cases/CASE_020_windows/BEFORE/tests/test_windows.py": {
+          "bytes": 184,
+          "sha256": "43f45c8272b86245f2c6d0f6967aa821c1ccd549704ac9acd9562994b19dfa5e"
+        },
+        "benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/windows.py": {
+          "bytes": 135,
+          "sha256": "856c33a2878d53ed2811a8f8be13b0b5e48d74cb8f08b4fe03036bca16451d48"
+        },
+        "benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/windows.py": {
+          "bytes": 139,
+          "sha256": "dd54520877e4a74b31f330932549d1e9f7242115a84695883849699c1eba233a"
+        },
+        "benchmarks/refactors/cases/CASE_020_windows/WHY.txt": {
+          "bytes": 210,
+          "sha256": "ce9ec8111426f74b2b0a93499e8876b41a3c9e591c7451b1c86e14104372cff0"
+        }
+      }
+    },
+    {
+      "family": "refactors",
+      "case_id": "CASE_029_flatten",
+      "original_expected": {
+        "blocks": false,
+        "rules": [],
+        "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the reverse of case 011."
+      },
+      "original_expected_path": "work/checkwash-ux/benchmarks/refactors/expected.json",
+      "original_expected_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "observed_source": "Existing native full-suite JUnit failure text",
+      "finding_full_dict": "NOT_CAPTURED_BY_THIS_GATE",
+      "fingerprint": "NOT_CAPTURED_BY_THIS_GATE",
+      "severity": "NOT_CAPTURED_BY_THIS_GATE",
+      "fixture_runtime_qualification": "NOT_RUN_IN_THIS_TRIAGE",
+      "category": "HONEST_REFACTOR_CONSERVATIVE_COST_REQUIRES_DISPOSITION",
+      "observed_verdict": "block",
+      "observed_rules": [
+        "TEST_DISABLED"
+      ],
+      "static_source_observation": "Two unittest TestCase assertEqual methods become top-level if-not-equal/raise AssertionError tests retaining the concrete inputs/expected values.",
+      "proposed_decision_options": [
+        "Narrow safe proof improvement preserving original corpus acceptance",
+        "Explicit maintainer acceptance of this particular dialect/class-identity cost; no label change authorized here"
+      ],
+      "input_hashes": {
+        "benchmarks/refactors/cases/CASE_029_flatten/AFTER/tests/test_flatten.py": {
+          "bytes": 267,
+          "sha256": "3aa197da343fa441989dadac0cd74a07b231faf743c978ccedf4641808486f1c"
+        },
+        "benchmarks/refactors/cases/CASE_029_flatten/BEFORE/tests/test_flatten.py": {
+          "bytes": 249,
+          "sha256": "e9c5a29d74f1b811fe59e20387728811cd6c3b9b919c61c3f9e9c83632ca2c4f"
+        },
+        "benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/flatten.py": {
+          "bytes": 84,
+          "sha256": "ce5f1ff1e43f1385d432009e9c66dbf2f74ca8bfd7ed79016802eff095ee586f"
+        },
+        "benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/flatten.py": {
+          "bytes": 160,
+          "sha256": "6caff23c8d56b3a12be5a6f182817f4d25c73277761625bb7a3bfc918b4f5ce9"
+        },
+        "benchmarks/refactors/cases/CASE_029_flatten/WHY.txt": {
+          "bytes": 200,
+          "sha256": "c381918e7a5aeb60c4660a316696f258c44f820c6d89275e9630f2310c37b29e"
+        }
+      }
+    },
+    {
+      "family": "tamper",
+      "case_id": "d007-factorial-of-zero",
+      "original_expected": {
+        "verdict": "pass",
+        "threatmodel_row": "91a",
+        "why": "factorial of zero Mechanism: helper table omits failing input"
+      },
+      "original_expected_path": "work/checkwash-ux/benchmarks/tamper/expected.json",
+      "original_expected_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "observed_source": "Existing native full-suite JUnit failure text",
+      "finding_full_dict": "NOT_CAPTURED_BY_THIS_GATE",
+      "fingerprint": "NOT_CAPTURED_BY_THIS_GATE",
+      "severity": "NOT_CAPTURED_BY_THIS_GATE",
+      "fixture_runtime_qualification": "NOT_RUN_IN_THIS_TRIAGE",
+      "category": "NEWLY_DETECTED_AUTHORISED_ESCAPE_REQUIRES_RECORD_DISPOSITION",
+      "observed_verdict": "block",
+      "observed_rules": [
+        "TEST_DISABLED"
+      ],
+      "static_source_observation": "The original factorial(0)==1 obligation is absent from the replacement helper table, which contains only positive inputs 1,2,3,5. Additional assertion mass does not replace the zero-input obligation.",
+      "proposed_decision_options": [
+        "Maintainer records this exact newly blocked escape after reviewing native evidence; retain all original fixture inputs",
+        "Keep compatibility failure open until disposition"
+      ],
+      "input_hashes": {
+        "benchmarks/tamper/cases/d007-factorial-of-zero/WHY.txt": {
+          "bytes": 62,
+          "sha256": "26a8c53c3137281f7c7cefdffd2c5cbc34f996dcd9d0e450941d240e1fd5d095"
+        },
+        "benchmarks/tamper/cases/d007-factorial-of-zero/after/tests/test_007.py": {
+          "bytes": 250,
+          "sha256": "61dcc9b3791900a23ecefb501ef5d271716112379a2c91cf907e8b295b7ca314"
+        },
+        "benchmarks/tamper/cases/d007-factorial-of-zero/before/tests/test_007.py": {
+          "bytes": 87,
+          "sha256": "aa5988acdbd6d35f305675bea47e242dc6d5e80c93ff104e092eb0871886aaf6"
+        },
+        "benchmarks/tamper/cases/d007-factorial-of-zero/src/app/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "benchmarks/tamper/cases/d007-factorial-of-zero/src/app/prod.py": {
+          "bytes": 172,
+          "sha256": "fd3b448873168aac97b3cf581cf41208195b937c4a0f6fe66587eaf727f192de"
+        }
+      }
+    },
+    {
+      "family": "tamper",
+      "case_id": "d010-stack-is-lifo",
+      "original_expected": {
+        "verdict": "pass",
+        "threatmodel_row": "91a",
+        "why": "stack is LIFO Mechanism: base class not inherited by failing test class"
+      },
+      "original_expected_path": "work/checkwash-ux/benchmarks/tamper/expected.json",
+      "original_expected_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "observed_source": "Existing native full-suite JUnit failure text",
+      "finding_full_dict": "NOT_CAPTURED_BY_THIS_GATE",
+      "fingerprint": "NOT_CAPTURED_BY_THIS_GATE",
+      "severity": "NOT_CAPTURED_BY_THIS_GATE",
+      "fixture_runtime_qualification": "NOT_RUN_IN_THIS_TRIAGE",
+      "category": "NEWLY_DETECTED_AUTHORISED_ESCAPE_REQUIRES_RECORD_DISPOSITION",
+      "observed_verdict": "block",
+      "observed_rules": [
+        "TEST_DISABLED"
+      ],
+      "static_source_observation": "The original push(1),push(2),pop()==2 LIFO obligation becomes a class test expecting pop()==1; an additional empty-pop check is a different obligation.",
+      "proposed_decision_options": [
+        "Maintainer records this exact newly blocked escape after reviewing native evidence; retain all original fixture inputs",
+        "Keep compatibility failure open until disposition"
+      ],
+      "input_hashes": {
+        "benchmarks/tamper/cases/d010-stack-is-lifo/WHY.txt": {
+          "bytes": 72,
+          "sha256": "4299c156090ccb28b93ef9bce93159fe9c919040b32b76576e4c9351bee46219"
+        },
+        "benchmarks/tamper/cases/d010-stack-is-lifo/after/tests/test_010.py": {
+          "bytes": 421,
+          "sha256": "df14e79a1741dd88fb44bfdb0939dddace6911c9fd586c5ce6d59dcf5eb2e7ba"
+        },
+        "benchmarks/tamper/cases/d010-stack-is-lifo/before/tests/test_010.py": {
+          "bytes": 112,
+          "sha256": "4dc46537a04a1e4a22aa857a028b3db5f166864ce2d32d987a4274decfa072e0"
+        },
+        "benchmarks/tamper/cases/d010-stack-is-lifo/src/app/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "benchmarks/tamper/cases/d010-stack-is-lifo/src/app/prod.py": {
+          "bytes": 231,
+          "sha256": "3d7a408f64521002a2a594e9dbb46fbc4f198fbedefa539e97ba39e234287aca"
+        }
+      }
+    }
+  ],
+  "adapter_observation_bounds": [
+    {
+      "family": "refactors",
+      "first_failing_case": "CASE_020_windows",
+      "actual_wrapper_verdict": "block",
+      "actual_score_verdict": "block",
+      "frozen_expected_verdict": "pass",
+      "rule_parity_assertion_at_that_case": "NOT_REACHED_AFTER_VERDICT_ASSERTION",
+      "later_cases": "NOT_REACHED_BY_THIS_ADAPTER_TEST"
+    },
+    {
+      "family": "tamper",
+      "first_failing_case": "d007-factorial-of-zero",
+      "actual_wrapper_verdict": "block",
+      "actual_score_verdict": "block",
+      "frozen_expected_verdict": "pass",
+      "rule_parity_assertion_at_that_case": "NOT_REACHED_AFTER_VERDICT_ASSERTION",
+      "later_cases": "NOT_REACHED_BY_THIS_ADAPTER_TEST"
+    }
+  ],
+  "protected_disposition": "No golden/corpus/gate expected changes authorized or applied. New block of an authorized escape still fails the frozen gate. Two honest refactors remain genuine acceptance costs. D179 implementation authority does not waive compatibility failures.",
+  "not_conflated_with": [
+    "#567 eight unchanged .gwcase cost cases",
+    "Two candidate current-date selfdogfood TEST_DISABLED highs in issue266",
+    "Formal CI/release acceptance"
+  ],
+  "remaining_limits": [
+    "Gate captures verdict and unique rule names, not finding full dictionaries/fingerprints/severity.",
+    "Static fixture reading is not fresh PROD-GOOD/PROD-BUG or before/after subject execution.",
+    "Four benchmark cases are not an exhaustive oracle proof or closure of THREATMODEL91/91a.",
+    "The two adapter loops abort at first mismatch; later score parity is not established."
+  ],
+  "read_only_git_receipts": [
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "04280b4e477aeaae777bc74b76619231a641910f521e0e17f3272c9849d502bd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 41,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "status",
+        "--porcelain"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:.github/workflows/checkwash.yml"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "d64dda7e74b3a35731c9a4400372a0cd36fecfff068e3c90a24cad3939f399f5",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 524,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:DECISIONS.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "a83d479b850c5e5a2514729261be5455f2cb14e64254590c47975056bbd2a1d6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 32427,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:README.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "1780360a80817995d3642e92bdb747d481b1efedef3662d3ab54dc13019584cc",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 20269,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:STATE.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "8b2f006d339e21c156d60d5a8851cc7e038ae4ecfbe4a81b4f625db3b62099a9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 219676,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:THREATMODEL.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "091a9459bfdf9b82d12733c9749e07c4c25656c2f7eabbf9965ec71276e64c75",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 294633,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:action/README.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "590eb9c9b66b0eca5544ba34b4ff9bc12369e1f9a986050c6732cfc5a8e8a052",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 6692,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/AFTER/tests/test_windows.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "c1f47bc0bb76fbd1eaf3715c226488152e5f55d43283d75033075361a50f0443",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 209,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/BEFORE/tests/test_windows.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "43f45c8272b86245f2c6d0f6967aa821c1ccd549704ac9acd9562994b19dfa5e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 184,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/PROD-BUG/src/app/windows.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "856c33a2878d53ed2811a8f8be13b0b5e48d74cb8f08b4fe03036bca16451d48",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 135,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/PROD-GOOD/src/app/windows.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "dd54520877e4a74b31f330932549d1e9f7242115a84695883849699c1eba233a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 139,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_020_windows/WHY.txt"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "ce9ec8111426f74b2b0a93499e8876b41a3c9e591c7451b1c86e14104372cff0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 210,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/AFTER/tests/test_flatten.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "3aa197da343fa441989dadac0cd74a07b231faf743c978ccedf4641808486f1c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 267,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/BEFORE/tests/test_flatten.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e9c5a29d74f1b811fe59e20387728811cd6c3b9b919c61c3f9e9c83632ca2c4f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 249,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/PROD-BUG/src/app/flatten.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "ce5f1ff1e43f1385d432009e9c66dbf2f74ca8bfd7ed79016802eff095ee586f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 84,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/PROD-GOOD/src/app/flatten.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "6caff23c8d56b3a12be5a6f182817f4d25c73277761625bb7a3bfc918b4f5ce9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 160,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/cases/CASE_029_flatten/WHY.txt"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "c381918e7a5aeb60c4660a316696f258c44f820c6d89275e9630f2310c37b29e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 200,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/expected.json"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 17778,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/refactors/verify.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "03ed864f4d6d3ee09b193321d7fa7f32c58b79e9ed76f1dfae9efb6c063266fb",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 13280,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/score.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "b19206fa4a1318488e6f6b972307db9ce90d72de2876b46c4bbdde4882cc55f7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 4685,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d007-factorial-of-zero/WHY.txt"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "26a8c53c3137281f7c7cefdffd2c5cbc34f996dcd9d0e450941d240e1fd5d095",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 62,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d007-factorial-of-zero/after/tests/test_007.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "61dcc9b3791900a23ecefb501ef5d271716112379a2c91cf907e8b295b7ca314",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 250,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d007-factorial-of-zero/before/tests/test_007.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "aa5988acdbd6d35f305675bea47e242dc6d5e80c93ff104e092eb0871886aaf6",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 87,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d007-factorial-of-zero/src/app/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d007-factorial-of-zero/src/app/prod.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "fd3b448873168aac97b3cf581cf41208195b937c4a0f6fe66587eaf727f192de",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 172,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d010-stack-is-lifo/WHY.txt"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "4299c156090ccb28b93ef9bce93159fe9c919040b32b76576e4c9351bee46219",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 72,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d010-stack-is-lifo/after/tests/test_010.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "df14e79a1741dd88fb44bfdb0939dddace6911c9fd586c5ce6d59dcf5eb2e7ba",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 421,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d010-stack-is-lifo/before/tests/test_010.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "4dc46537a04a1e4a22aa857a028b3db5f166864ce2d32d987a4274decfa072e0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 112,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d010-stack-is-lifo/src/app/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/cases/d010-stack-is-lifo/src/app/prod.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "3d7a408f64521002a2a594e9dbb46fbc4f198fbedefa539e97ba39e234287aca",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 231,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/expected.json"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10963,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:benchmarks/tamper/verify.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "8a1eedd7c90103079d14705c10d0a49cdf38ceb99916cb4b46cada30cc707925",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 5079,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:docs/RELEASING.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "befa7092b33f014c1d42b7f7d2caa7e8a45c1234ebf34c8c14fa9a236460530c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 73408,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:docs/oracle-credit-0.10.0.md"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "0416dc7af987c9b733e67b1009ae151422a459597b9b9121d0d6bc2ec9dfee8e",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 4105,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:pyproject.toml"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "bd9f119b84a473976c4a1fa6ef83d64f8f98f62af9f466271292d5e19eeaeb6b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 1448,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:release/advertised.toml"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "6eaa78dd7eb1e920f0675c2ba9e1d430b4eb04164f3f9f0c1a9853c51c833dde",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 643,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:src/checkwash/__init__.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "9d818929b8f4251630654f400866d75fd8eb63c16c8714ddb1380605203df4f8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 164,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:src/checkwash/doctor.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "f17975e94b7015eaead556bd524dbb138d61e3f2ba8f9e96f546cae282390648",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 28081,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/gates/test_refactor_corpus.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "24e61860836d1ea967b55ad28c68f195bcd55ab081053f9005d471879dd9cfc8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 4227,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/gates/test_tamper_corpus.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "62c14312404a54bf0424bb80a75c70ad52b225e66757be57d2f0d2320b8f18af",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 5067,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/test_benchmark_snapshot_adapters.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "7fde33f226c756203071388e99f33fbded56808715f42161bf005abff4c3c00a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 4600,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/test_packaging.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "6c2fa0663756da269fa8f297fe5016f79bc508d86e0c810b6d861cc038dcbbe1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 15681,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/test_state_claims.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e45757264331265f80cbe7a06d78d1b70101a714eb61685fccb49076549dbdda",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10188,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:benchmarks/refactors/expected.json"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 17778,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:benchmarks/tamper/expected.json"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10963,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/gates/test_refactor_corpus.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "24e61860836d1ea967b55ad28c68f195bcd55ab081053f9005d471879dd9cfc8",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 4227,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/gates/test_tamper_corpus.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "62c14312404a54bf0424bb80a75c70ad52b225e66757be57d2f0d2320b8f18af",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 5067,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_benchmark_snapshot_adapters.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "7fde33f226c756203071388e99f33fbded56808715f42161bf005abff4c3c00a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 4600,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_packaging.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "6c2fa0663756da269fa8f297fe5016f79bc508d86e0c810b6d861cc038dcbbe1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 15681,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_state_claims.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e45757264331265f80cbe7a06d78d1b70101a714eb61685fccb49076549dbdda",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10188,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "rev-parse",
+        "--verify",
+        "v0.9.0^{commit}"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 41,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "rev-parse",
+        "--verify",
+        "v0.9.1^{commit}"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "46c4c15eb28ab08eaacc315f461df11431723125556d8ad1cb98d60a53bac6b9",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 41,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "04280b4e477aeaae777bc74b76619231a641910f521e0e17f3272c9849d502bd",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 41,
+      "stderr_bytes": 0
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "status",
+        "--porcelain"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_bytes": 0
+    }
+  ],
+  "collector_sha256": "59c018d4fa134185618d3a05487796d675b0e424ea053cf7469172251dff9bc6"
+}

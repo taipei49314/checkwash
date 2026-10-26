@@ -1,0 +1,11 @@
+{
+  "kind": "DERIVED_HELPER_PIN_READBACK_NOT_PRODUCT_FAILURE",
+  "initial_plan_exit": 1,
+  "initial_tool_chunk_id": "dcce70",
+  "guard_check_stopped_before_snapshot_or_zip_output": true,
+  "old_expected_helper_sha256": "6b1d6062e6ef4f38e55967d55a674436adbcc9981dab6d1038f98bcd493bc4d2",
+  "observed_reviewed_helper_sha256": "548566e890a5bd057d6f9ae1970824889c69e07d658b5265a32668b5cd8e598a",
+  "readback": "Read top-level imports/constants and regular/read/guards/inspect plus final main guard; no product imports or automatic execution were added. Only the metadata helper is reused; source_guard/main are never invoked.",
+  "initial_creator_preserved": "historical_sources.initial.py.txt",
+  "product_and_original_evidence_changed": false
+}

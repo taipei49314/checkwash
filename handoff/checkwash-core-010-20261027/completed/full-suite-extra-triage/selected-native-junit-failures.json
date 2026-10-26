@@ -1,0 +1,186 @@
+{
+  "source": "Existing original JUnit only; no replay",
+  "raw": {
+    "junit.xml": {
+      "bytes": 3961669,
+      "sha256": "e0e71407aee43e20f536d88e964c74393df4d91de7f08f935f09928dd173188e"
+    },
+    "receipt.json": {
+      "bytes": 1834,
+      "sha256": "588fd4b198c5d0de6478ab020e91ccf33cf855752c6191dc4422a503e7a3008e"
+    },
+    "stdout.txt": {
+      "bytes": 79347,
+      "sha256": "4d3d685d07ba90044239709f7e8dcf0d35cd68ba44f7de2afa6508cc6fa4730b"
+    },
+    "stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "input-hashes.json": {
+      "bytes": 385164,
+      "sha256": "3649879bd02d32a9e3d1f868790d7af33d86382300720b072bed0320ad14fe22"
+    }
+  },
+  "selected": [
+    {
+      "classname": "tests.test_packaging",
+      "name": "test_readme_action_snippet_is_zizmor_blanket",
+      "time": "0.857",
+      "failure_attributes": {
+        "message": "AssertionError: trusted v0.9.0 is not the newest prior stable tag\nassert ([(0, 1, 0), (0, 1, 1), (0, 1, 10), (0, 1, 11), (0, 1, 12), (0, 1, 13), ...] and (0, 9, 0) == (0, 9, 1)\n  \n  At index 2 diff: 0 != 1\n  Use -v to get more diff)"
+      },
+      "failure_text": "def test_readme_action_snippet_is_zizmor_blanket():\n        \"\"\"The documented workflow must be mergeable under zizmor 1.29 blanket.\n    \n        The 2026-08-07 pydantic integration scored two highs on the then-README\n        snippet (no permissions, no persist-credentials). Those two are gone.\n        Re-check 2026-08-15: zizmor 1.29.0 still reports unpinned-uses as high\n        for @v4 / @v0.1.34, so every uses: in the snippet must be a commit SHA.\n        \"\"\"\n        import subprocess\n    \n        readme = (ROOT / \"README.md\").read_text(encoding=\"utf-8\")\n        match = re.search(\n            r\"```yaml\\n(# \\.github/workflows/checkwash\\.yml\\n.*?)```\",\n            readme,\n            flags=re.S,\n        )\n        assert match, \"README lost the required-check workflow fence\"\n        snippet = match.group(1)\n        assert re.search(r\"^permissions:\\n  contents: read$\", snippet, flags=re.M)\n        assert \"persist-credentials: false\" in snippet\n        uses = re.findall(r\"^\\s+- uses: (\\S+)\", snippet, flags=re.M)\n        assert uses, \"README workflow has no uses: entries\"\n        for ref in uses:\n            assert re.search(r\"@[0-9a-f]{40}$\", ref), (\n                f\"{ref} is not hash-pinned; zizmor unpinned-uses is high\"\n            )\n    \n        # The required-check snippet, self-audit workflow, and doctor's offline\n        # allowlist are one contract. The Greenwash pin intentionally trails by one\n        # release: a commit cannot contain its own SHA, so only an already-existing\n        # stable tag can be verified and embedded.\n        from checkwash.doctor import _PINS\n    \n        greenwash = re.search(\n            r\"^\\s+- uses: taipei49314/checkwash/action@([0-9a-f]{40}) # (v\\d+\\.\\d+\\.\\d+)$\",\n            snippet,\n            flags=re.M,\n        )\n        if greenwash is None:\n            raise AssertionError(\"README Greenwash Action pin lost its trusted-tag annotation\")\n        pin, trusted_tag = greenwash.groups()\n        tag = trusted_tag\n        sha = subprocess.check_output(\n            [\"git\", \"rev-parse\", \"--verify\", f\"{tag}^{{commit}}\"],\n            cwd=str(ROOT),\n            text=True,\n        ).strip()\n        checkwash_refs = [\n            ref for ref in uses if ref.startswith(\"taipei49314/checkwash/action@\")\n        ]\n        assert checkwash_refs == [f\"taipei49314/checkwash/action@{sha}\"], (\n            f\"README Action pin is not {tag}'s peeled commit ({sha}). Verify the \"\n            \"trusted release with `git rev-parse 'vX.Y.Z^{{commit}}'`.\"\n        )\n        assert \"`git rev-parse 'vX.Y.Z^{commit}'`\" in readme\n        action_doc = (ROOT / \"action\" / \"README.md\").read_text(encoding=\"utf-8\")\n        assert (\n            f\"git ls-remote https://github.com/taipei49314/checkwash.git \"\n            f\"'refs/tags/{tag}^{{}}'\"\n        ) in action_doc\n    \n        self_audit = (ROOT / \".github\" / \"workflows\" / \"checkwash.yml\").read_text(\n            encoding=\"utf-8\"\n        )\n        assert self_audit == snippet, \"README and self-audit workflow differ\"\n        assert pin == _PINS[\"taipei49314/checkwash/action\"]\n        assert uses == [\n            f\"{owner}@{_PINS[owner]}\"\n            for owner in (\n                \"actions/checkout\",\n                \"actions/setup-python\",\n                \"taipei49314/checkwash/action\",\n            )\n        ]\n        assert sha == pin, f\"{tag} peels to {sha}, not trusted pin {pin}\"\n    \n        def version_tuple(value: str) -> tuple[int, int, int]:\n            return tuple(int(part) for part in value.removeprefix(\"v\").split(\".\"))\n    \n        current_version = version_tuple(_pyproject()[\"project\"][\"version\"])\n        trusted_version = version_tuple(trusted_tag)\n        assert trusted_version <= current_version\n        if trusted_version < current_version:\n            released = subprocess.check_output(\n                [\"git\", \"tag\", \"--list\", \"v[0-9]*\"], cwd=str(ROOT), text=True\n            ).splitlines()\n            prior = [\n                version_tuple(tag)\n                for tag in released\n                if re.fullmatch(r\"v\\d+\\.\\d+\\.\\d+\", tag)\n                and version_tuple(tag) < current_version\n            ]\n>           assert prior and trusted_version == max(prior), (\n                f\"trusted {trusted_tag} is not the newest prior stable tag\"\n            )\nE           AssertionError: trusted v0.9.0 is not the newest prior stable tag\nE           assert ([(0, 1, 0), (0, 1, 1), (0, 1, 10), (0, 1, 11), (0, 1, 12), (0, 1, 13), ...] and (0, 9, 0) == (0, 9, 1)\nE             \nE             At index 2 diff: 0 != 1\nE             Use -v to get more diff)\n\ntests\\test_packaging.py:252: AssertionError"
+    },
+    {
+      "classname": "tests.gates.test_refactor_corpus",
+      "name": "test_no_silent_refactor_starts_blocking",
+      "time": "1.065",
+      "failure_attributes": {
+        "message": "AssertionError: honest refactors that started blocking:\n    CASE_020_windows: NEW false positive (TEST_DISABLED)\n    CASE_029_flatten: NEW false positive (TEST_DISABLED)\nassert not ['CASE_020_windows: NEW false positive (TEST_DISABLED)', 'CASE_029_flatten: NEW false positive (TEST_DISABLED)']"
+      },
+      "failure_text": "replayed = {'CASE_001_clamp': ('pass', []), 'CASE_002_factorial': ('pass', []), 'CASE_003_palindrome': ('pass', []), 'CASE_004_unique': ('pass', []), ...}\n\n    def test_no_silent_refactor_starts_blocking(replayed):\n        \"\"\"Recorded passing cases must keep passing. These are the regression guard.\"\"\"\n        problems = []\n        for name, spec in _expected().items():\n            if spec[\"blocks\"]:\n                continue\n            verdict, rules = replayed[name]\n            if verdict == \"block\":\n                problems.append(f\"{name}: NEW false positive ({', '.join(rules)})\")\n>       assert not problems, \"honest refactors that started blocking:\\n  \" + \"\\n  \".join(problems)\nE       AssertionError: honest refactors that started blocking:\nE           CASE_020_windows: NEW false positive (TEST_DISABLED)\nE           CASE_029_flatten: NEW false positive (TEST_DISABLED)\nE       assert not ['CASE_020_windows: NEW false positive (TEST_DISABLED)', 'CASE_029_flatten: NEW false positive (TEST_DISABLED)']\n\ntests\\gates\\test_refactor_corpus.py:88: AssertionError"
+    },
+    {
+      "classname": "tests.gates.test_tamper_corpus",
+      "name": "test_every_tamper_case_still_behaves",
+      "time": "1.089",
+      "failure_attributes": {
+        "message": "AssertionError: tamper-corpus regressions:\n    d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news — update expected.json, and close THREATMODEL 91 when the family is done.\n    d010-stack-is-lifo: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news — update expected.json, and close THREATMODEL 91 when the family is done.\nassert not ['d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news — update expected...e and now blocks (TEST_DISABLED). Good news — update expected.json, and close THREATMODEL 91 when the family is done.']"
+      },
+      "failure_text": "replayed = {'001-addsub': ('block', ['ASSERT_WEAKENED']), '002-biggest': ('pass', []), '003-evenness': ('pass', []), '004-clamp': ('block', ['ASSERT_REMOVED', 'ASSERT_WEAKENED']), ...}\n\n    def test_every_tamper_case_still_behaves(replayed):\n        problems = []\n        for name, spec in _expected().items():\n            verdict, rules = replayed[name]\n            if spec[\"verdict\"] == \"block\":\n                if verdict != \"block\":\n                    problems.append(\n                        f\"{name}: REGRESSION — recorded as blocked, now {verdict} \"\n                        f\"({', '.join(rules) or 'no findings'})\"\n                    )\n            elif verdict == \"block\":\n                problems.append(\n                    f\"{name}: recorded as an authorised escape and now blocks ({', '.join(rules)}). \"\n                    \"Good news — update expected.json, and close THREATMODEL 91 when the family is done.\"\n                )\n>       assert not problems, \"tamper-corpus regressions:\\n  \" + \"\\n  \".join(problems)\nE       AssertionError: tamper-corpus regressions:\nE           d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news — update expected.json, and close THREATMODEL 91 when the family is done.\nE           d010-stack-is-lifo: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news — update expected.json, and close THREATMODEL 91 when the family is done.\nE       assert not ['d007-factorial-of-zero: recorded as an authorised escape and now blocks (TEST_DISABLED). Good news — update expected...e and now blocks (TEST_DISABLED). Good news — update expected.json, and close THREATMODEL 91 when the family is done.']\n\ntests\\gates\\test_tamper_corpus.py:93: AssertionError"
+    },
+    {
+      "classname": "tests.test_state_claims",
+      "name": "test_version_row_matches_package",
+      "time": "0.002",
+      "failure_attributes": {
+        "message": "AssertionError: assert 'v0.9.1' == 'v0.10.0'\n  \n  - v0.10.0\n  + v0.9.1"
+      },
+      "failure_text": "def test_version_row_matches_package():\n        from checkwash import __version__\n    \n>       assert _table()[\"version\"] == f\"v{__version__}\"\nE       AssertionError: assert 'v0.9.1' == 'v0.10.0'\nE         \nE         - v0.10.0\nE         + v0.9.1\n\ntests\\test_state_claims.py:51: AssertionError"
+    },
+    {
+      "classname": "tests.test_benchmark_snapshot_adapters",
+      "name": "test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]",
+      "time": "0.463",
+      "failure_attributes": {
+        "message": "AssertionError: ('refactors', 'CASE_020_windows', 'block', 'block', 'pass')\nassert 'block' == 'pass'\n  \n  - pass\n  + block"
+      },
+      "failure_text": "family = 'refactors'\n\n    @pytest.mark.parametrize(\"family\", [\"refactors\", \"tamper\"])\n    def test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity(family):\n        corpus = ROOT / \"benchmarks\" / family\n        expected = json.loads((corpus / \"expected.json\").read_text(encoding=\"utf-8\"))[\"cases\"]\n        for name, recorded in sorted(expected.items()):\n            case = corpus / \"cases\" / name\n            if family == \"refactors\":\n                args = (case / \"BEFORE\", case / \"AFTER\", case / \"PROD-GOOD\" / \"src\")\n                actual, rules = WRAPPERS[\"refactor\"](*args)\n                want = \"block\" if recorded[\"blocks\"] else \"pass\"\n            else:\n                args = (case / \"before\", case / \"after\", case / \"src\")\n                actual, rules = WRAPPERS[\"tamper\"](case)\n                want = recorded[\"verdict\"]\n            score, score_rules = WRAPPERS[\"score\"](*args)\n>           assert actual == score == want, (family, name, actual, score, want)\nE           AssertionError: ('refactors', 'CASE_020_windows', 'block', 'block', 'pass')\nE           assert 'block' == 'pass'\nE             \nE             - pass\nE             + block\n\ntests\\test_benchmark_snapshot_adapters.py:105: AssertionError"
+    },
+    {
+      "classname": "tests.test_benchmark_snapshot_adapters",
+      "name": "test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]",
+      "time": "0.700",
+      "failure_attributes": {
+        "message": "AssertionError: ('tamper', 'd007-factorial-of-zero', 'block', 'block', 'pass')\nassert 'block' == 'pass'\n  \n  - pass\n  + block"
+      },
+      "failure_text": "family = 'tamper'\n\n    @pytest.mark.parametrize(\"family\", [\"refactors\", \"tamper\"])\n    def test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity(family):\n        corpus = ROOT / \"benchmarks\" / family\n        expected = json.loads((corpus / \"expected.json\").read_text(encoding=\"utf-8\"))[\"cases\"]\n        for name, recorded in sorted(expected.items()):\n            case = corpus / \"cases\" / name\n            if family == \"refactors\":\n                args = (case / \"BEFORE\", case / \"AFTER\", case / \"PROD-GOOD\" / \"src\")\n                actual, rules = WRAPPERS[\"refactor\"](*args)\n                want = \"block\" if recorded[\"blocks\"] else \"pass\"\n            else:\n                args = (case / \"before\", case / \"after\", case / \"src\")\n                actual, rules = WRAPPERS[\"tamper\"](case)\n                want = recorded[\"verdict\"]\n            score, score_rules = WRAPPERS[\"score\"](*args)\n>           assert actual == score == want, (family, name, actual, score, want)\nE           AssertionError: ('tamper', 'd007-factorial-of-zero', 'block', 'block', 'pass')\nE           assert 'block' == 'pass'\nE             \nE             - pass\nE             + block\n\ntests\\test_benchmark_snapshot_adapters.py:105: AssertionError"
+    }
+  ],
+  "all_failed_testcases": [
+    {
+      "classname": "tests.test_js_liveness",
+      "name": "test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]"
+    },
+    {
+      "classname": "tests.test_js_test_obligations",
+      "name": "test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal"
+    },
+    {
+      "classname": "tests.test_packaging",
+      "name": "test_readme_action_snippet_is_zizmor_blanket"
+    },
+    {
+      "classname": "tests.test_root_oracles",
+      "name": "test_helper_only_assertion_removal_discovers_unchanged_importer"
+    },
+    {
+      "classname": "tests.gates.test_refactor_corpus",
+      "name": "test_no_silent_refactor_starts_blocking"
+    },
+    {
+      "classname": "tests.gates.test_tamper_corpus",
+      "name": "test_every_tamper_case_still_behaves"
+    },
+    {
+      "classname": "tests.test_state_claims",
+      "name": "test_version_row_matches_package"
+    },
+    {
+      "classname": "tests.test_benchmark_snapshot_adapters",
+      "name": "test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[refactors]"
+    },
+    {
+      "classname": "tests.test_benchmark_snapshot_adapters",
+      "name": "test_benchmark_wrappers_keep_frozen_corpus_verdicts_and_rule_parity[tamper]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[assert_removed_moved_neg]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[bare_bound_then_used_neg]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[js_chai_property_moved_neg]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[merged_parametrize_neg]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[split_rename_genuine_neg]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[subject_pairing_other_subject_known_limit_pos]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[test_split_neg]"
+    },
+    {
+      "classname": "tests.test_cases_runner",
+      "name": "test_case[unittest_keyword_split_neg]"
+    },
+    {
+      "classname": "tests.test_classic_raises_additions",
+      "name": "test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    result = divide(a, b)\\n    assert result == expected, f'Expected {expected}, got {result}'\\n]"
+    },
+    {
+      "classname": "tests.test_classic_raises_additions",
+      "name": "test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    assert divide(a, b) == expected, f'Expected {expected}, got {result}'\\n]"
+    },
+    {
+      "classname": "tests.test_issue223_conftest_request_side",
+      "name": "test_an_importer_the_engine_adds_unchanged_reads_no_chain"
+    },
+    {
+      "classname": "tests.test_issue263_string_conditions",
+      "name": "test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated"
+    },
+    {
+      "classname": "tests.test_issue358_own_mark_guards",
+      "name": "test_a_test_moved_under_the_gate_keeps_its_move_credit"
+    }
+  ],
+  "suite_attributes": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "22",
+      "skipped": "25",
+      "tests": "21169",
+      "time": "2991.069",
+      "timestamp": "2026-10-27T03:17:32.066724+08:00",
+      "hostname": "LAPTOP-01AGNPJU"
+    }
+  ],
+  "stdout_summary_lines": [
+    "22 failed, 21055 passed, 25 skipped, 67 subtests passed in 2991.46s (0:49:51)"
+  ]
+}

@@ -1,0 +1,106 @@
+[
+  {
+    "nodeid": "tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+    "xml_attributes": {
+      "classname": "tests.test_js_liveness",
+      "name": "test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+      "time": "0.003"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert ('block', [('...ED', 'high')]) == ('pass', [('T...ED', 'info')])\n  \n  At index 0 diff: 'block' != 'pass'\n  Use -v to get more diff",
+    "text": "target = 'describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n'\noutcome = ('pass', 'info')\n\n    @pytest.mark.parametrize(\"target,outcome\", [\n        ('describe(\"moved\", () => {\\n  ' + UNIT + \"\\n});\\n\", (\"pass\", \"info\")),\n        ('describe.skip(\"moved\", () => {\\n  ' + UNIT + \"\\n});\\n\", (\"block\", \"high\")),\n    ])\n    def test_a_unit_moved_into_a_skipped_block_earns_no_move_credit(target, outcome):\n        changes = [\n            FileChange(\"tests/a.test.js\", \"modified\", (UNIT + \"\\n\").encode(), b\"// moved to b\\n\"),\n            FileChange(\"tests/b.test.js\", \"added\", None, target.encode()),\n        ]\n        _ir, findings, verdict = analyze(changes, Config(), Contract(), [], DATE)\n>       assert (verdict, [(f.rule, f.severity) for f in findings]) == (\n            outcome[0], [(\"TEST_DISABLED\", outcome[1])],\n        )\nE       AssertionError: assert ('block', [('...ED', 'high')]) == ('pass', [('T...ED', 'info')])\nE         \nE         At index 0 diff: 'block' != 'pass'\nE         Use -v to get more diff\n\ntests\\test_js_liveness.py:243: AssertionError",
+    "text_sha256": "4276deb838eda20da5819b5b0d5cb2399e802aa550a0b25ff95d29565dc40017"
+  },
+  {
+    "nodeid": "tests/test_js_test_obligations.py::test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal",
+    "xml_attributes": {
+      "classname": "tests.test_js_test_obligations",
+      "name": "test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal",
+      "time": "0.004"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert 'block' == 'pass'\n  \n  - pass\n  + block",
+    "text": "def test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal():\n        # v0.5.0 read the old path as a deleted workflow that ran tests and\n        # blocked. Only YAML there is a workflow (197.Q5), and the units arrive\n        # intact at the new path.\n        old, new = \".github/workflows/value.test.ts\", \"src/value.test.ts\"\n        _ir, findings, verdict = _analyze([FileChange(new, \"modified\", BEFORE, BEFORE, old_path=old)])\n>       assert verdict == \"pass\"\nE       AssertionError: assert 'block' == 'pass'\nE         \nE         - pass\nE         + block\n\ntests\\test_js_test_obligations.py:102: AssertionError",
+    "text_sha256": "abb468aab9658be47a659bdf32c0c4ecab25487f186ea906b03637b584c6e2f6"
+  },
+  {
+    "nodeid": "tests/test_root_oracles.py::test_helper_only_assertion_removal_discovers_unchanged_importer",
+    "xml_attributes": {
+      "classname": "tests.test_root_oracles",
+      "name": "test_helper_only_assertion_removal_discovers_unchanged_importer",
+      "time": "0.005"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert ['tests/test_...it__.py', ...] == ['tests/test_.../__init__.py']\n  \n  Left contains 3 more items, first extra item: 'tests/conftest.py'\n  Use -v to get more diff",
+    "text": "def test_helper_only_assertion_removal_discovers_unchanged_importer():\n        (ir, findings, verdict), searches, reads = helper_only_change(b\"def assert_equal(actual, expected):\\n    pass\\n\")\n        assert verdict == \"block\"\n        removed = next(f for f in findings if f.rule == \"ASSERT_REMOVED\")\n        assert removed.path == \"tests/test_calc.py\" and removed.severity == \"high\"\n        assert removed.before.text == \"assert_equal(add(2, 3), 5)\"\n        assert searches == [[\"test_helpers\"]]\n        # `test_helpers.py` is itself a test module the diff changes, so the\n        # conftest above it is read (#223); the unchanged importer reads none.\n>       assert reads == [\"tests/test_calc.py\", \"conftest.py\", \"tests/calc.py\", \"tests/test_helpers.py\",\n                         \"test_helpers/__init__.py\", \"tests/test_helpers/__init__.py\"]\nE       AssertionError: assert ['tests/test_...it__.py', ...] == ['tests/test_.../__init__.py']\nE         \nE         Left contains 3 more items, first extra item: 'tests/conftest.py'\nE         Use -v to get more diff\n\ntests\\test_root_oracles.py:228: AssertionError",
+    "text_sha256": "0d0859c2432e2ac4ba8624f509f71b7cff679ab01e4a1176b7b4d9b1ad49f978"
+  },
+  {
+    "nodeid": "tests/test_classic_raises_additions.py::test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    result = divide(a, b)\\n    assert result == expected, f'Expected {expected}, got {result}'\\n]",
+    "xml_attributes": {
+      "classname": "tests.test_classic_raises_additions",
+      "name": "test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    result = divide(a, b)\\n    assert result == expected, f'Expected {expected}, got {result}'\\n]",
+      "time": "0.013"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert UnitSide(span...e065095df83'}) == UnitSide(span...n_contexts={})\n  \n  Omitting 17 identical items, use -vv to show\n  Differing attributes:\n  ['oracle_context', 'oracle_assertion_contexts']\n  \n  Drill down into differing attribute oracle_context:\n    oracle_context: '194757751bbb9e7be1112f107011d5c5878d6d04ae23a6f143f11d9d4ef9cd17' != ''...\n  \n  ...Full output truncated (10 lines hidden), use '-vv' to show",
+    "text": "after = \"from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f....0)])\\ndef test_more(a, b, expected):\\n    result = divide(a, b)\\n    assert result == expected, 'unexpected result'\\n\"\n\n    @pytest.mark.parametrize('after', [AFTER, AFTER.replace('result = divide(a, b)\\n    assert result', 'assert divide(a, b)')])\n    def test_added_literal_rows_retain_exception_removal_and_native_units(after):\n        # A direct call message cannot reference the removed capture.\n        after = after.replace(\"f'Expected {expected}, got {result}'\", \"'unexpected result'\")\n        ir, findings, verdict = projected(after)\n        assert has_exception(ir) and verdict == 'block'\n        assert any(f.rule == 'ASSERT_REMOVED' for f in findings)\n        original = next(u for u in parse_python(after.encode(), True).units if u.qualname == 'test_more')\n        preserved = next(u for file in ir.files for u in file.units if u.qualname == 'test_more')\n>       assert preserved.after == original.side\nE       AssertionError: assert UnitSide(span...e065095df83'}) == UnitSide(span...n_contexts={})\nE         \nE         Omitting 17 identical items, use -vv to show\nE         Differing attributes:\nE         ['oracle_context', 'oracle_assertion_contexts']\nE         \nE         Drill down into differing attribute oracle_context:\nE           oracle_context: '194757751bbb9e7be1112f107011d5c5878d6d04ae23a6f143f11d9d4ef9cd17' != ''...\nE         \nE         ...Full output truncated (10 lines hidden), use '-vv' to show\n\ntests\\test_classic_raises_additions.py:38: AssertionError",
+    "text_sha256": "b200a00680cd6416567c4bd243d4253b8312df148e23ab949bd5f489e1e845eb"
+  },
+  {
+    "nodeid": "tests/test_classic_raises_additions.py::test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    assert divide(a, b) == expected, f'Expected {expected}, got {result}'\\n]",
+    "xml_attributes": {
+      "classname": "tests.test_classic_raises_additions",
+      "name": "test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    assert divide(a, b) == expected, f'Expected {expected}, got {result}'\\n]",
+      "time": "0.014"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert UnitSide(span...7361d9e435f'}) == UnitSide(span...n_contexts={})\n  \n  Omitting 17 identical items, use -vv to show\n  Differing attributes:\n  ['oracle_context', 'oracle_assertion_contexts']\n  \n  Drill down into differing attribute oracle_context:\n    oracle_context: '6ab92ce8893883a77e1053552b1f71044b704fac66cd122073a4cfcbef1835b7' != ''...\n  \n  ...Full output truncated (10 lines hidden), use '-vv' to show",
+    "text": "after = \"from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f..., 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    assert divide(a, b) == expected, 'unexpected result'\\n\"\n\n    @pytest.mark.parametrize('after', [AFTER, AFTER.replace('result = divide(a, b)\\n    assert result', 'assert divide(a, b)')])\n    def test_added_literal_rows_retain_exception_removal_and_native_units(after):\n        # A direct call message cannot reference the removed capture.\n        after = after.replace(\"f'Expected {expected}, got {result}'\", \"'unexpected result'\")\n        ir, findings, verdict = projected(after)\n        assert has_exception(ir) and verdict == 'block'\n        assert any(f.rule == 'ASSERT_REMOVED' for f in findings)\n        original = next(u for u in parse_python(after.encode(), True).units if u.qualname == 'test_more')\n        preserved = next(u for file in ir.files for u in file.units if u.qualname == 'test_more')\n>       assert preserved.after == original.side\nE       AssertionError: assert UnitSide(span...7361d9e435f'}) == UnitSide(span...n_contexts={})\nE         \nE         Omitting 17 identical items, use -vv to show\nE         Differing attributes:\nE         ['oracle_context', 'oracle_assertion_contexts']\nE         \nE         Drill down into differing attribute oracle_context:\nE           oracle_context: '6ab92ce8893883a77e1053552b1f71044b704fac66cd122073a4cfcbef1835b7' != ''...\nE         \nE         ...Full output truncated (10 lines hidden), use '-vv' to show\n\ntests\\test_classic_raises_additions.py:38: AssertionError",
+    "text_sha256": "12e71076965905d5e249f1a543ecfb8d8dcd167a5f1f9a431c2e14e0966097a0"
+  },
+  {
+    "nodeid": "tests/test_issue223_conftest_request_side.py::test_an_importer_the_engine_adds_unchanged_reads_no_chain",
+    "xml_attributes": {
+      "classname": "tests.test_issue223_conftest_request_side",
+      "name": "test_an_importer_the_engine_adds_unchanged_reads_no_chain",
+      "time": "0.006"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert ('tests/test_billing.py' in ['tests/test_billing.py', 'conftest.py', 'tests/test_helpers.py', 'test_helpers/__init__.py', 'tests/test_helpers/__init__.py', 'tests/conftest.py', ...] and ['conftest.py.../conftest.py'] == ['conftest.py']\n  \n  Left contains one more item: 'tests/conftest.py'\n  Use -v to get more diff)",
+    "text": "def test_an_importer_the_engine_adds_unchanged_reads_no_chain():\n        \"\"\"A root helper's importer joins the analysis unchanged: no module the diff changes (D-093 7).\"\"\"\n        helper = b\"def assert_equal(actual, expected):\\n    assert actual == expected\\n\"\n        # No fixture request: a request would also read its conftest for the\n        # fixture's own assertions (`_merge_crossfile_oracles`), which is no chain.\n        caller = (b\"from app.billing import total\\nfrom test_helpers import assert_equal\\n\\n\\n\"\n                  b\"def test_total():\\n    assert_equal(total(), 78.75)\\n\")\n        snapshot = {**APP, \"tests/conftest.py\": SKIP.encode(), TEST: caller,\n                    \"test_helpers.py\": b\"def assert_equal(actual, expected):\\n    pass\\n\"}\n        reads = []\n    \n        def reader(path):\n            reads.append(path)\n            return snapshot.get(path)\n    \n        def searcher(needles):\n            return [path for path, data in sorted(snapshot.items()) if any(n.encode() in data for n in needles)]\n    \n        _ir, findings, verdict = analyze(\n            [FileChange(\"test_helpers.py\", \"modified\", helper, snapshot[\"test_helpers.py\"])],\n            Config(), Contract(), [], TODAY, head_reader=reader, head_searcher=searcher,\n            root_reader=reader, root_searcher=searcher,\n        )\n        assert verdict == \"block\"\n        assert any(f.rule == \"ASSERT_REMOVED\" and f.path == TEST for f in findings)\n        # The helper is itself a module the diff changes (`test_*.py`), so the\n        # root level is read for it; the importer's own level is not.\n>       assert TEST in reads and [path for path in reads if path.endswith(\"conftest.py\")] == [\"conftest.py\"]\nE       AssertionError: assert ('tests/test_billing.py' in ['tests/test_billing.py', 'conftest.py', 'tests/test_helpers.py', 'test_helpers/__init__.py', 'tests/test_helpers/__init__.py', 'tests/conftest.py', ...] and ['conftest.py.../conftest.py'] == ['conftest.py']\nE         \nE         Left contains one more item: 'tests/conftest.py'\nE         Use -v to get more diff)\n\ntests\\test_issue223_conftest_request_side.py:425: AssertionError",
+    "text_sha256": "f1560d2afc3ef9cc147b47fe1e379e7b427d9f8187e212738ee7db85c3ad3c45"
+  },
+  {
+    "nodeid": "tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+    "xml_attributes": {
+      "classname": "tests.test_issue263_string_conditions",
+      "name": "test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+      "time": "0.003"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert 'block' == 'pass'\n  \n  - pass\n  + block",
+    "text": "def test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated():\n        \"\"\"pytest 1ff173baee's shape: two tests move into a class whose `pytestmark`\n        is a name bound to `skipif(\"sys.version_info < (2,6)\")`. The moved units\n        run, so their old units' disappearance is a relocation, not a disable.\"\"\"\n        tests = \"def test_one():\\n    assert add(1, 2) == 3\\n\\n\\ndef test_two():\\n    assert add(2, 2) == 4\\n\"\n        before = \"import pytest\\n\\nfrom app.calc import add\\n\\n\\n\" + tests\n        after = (\n            \"import pytest\\n\\nfrom app.calc import add\\n\\n\"\n            \"old_python = pytest.mark.skipif(\\\"sys.version_info < (2,6)\\\")\\n\\n\\n\"\n            \"class TestAdd:\\n    pytestmark = old_python\\n\\n\"\n            \"    def test_one(self):\\n        assert add(1, 2) == 3\\n\\n\"\n            \"    def test_two(self):\\n        assert add(2, 2) == 4\\n\"\n        )\n        verdict, findings = outcome(after, before=before)\n>       assert verdict == \"pass\"\nE       AssertionError: assert 'block' == 'pass'\nE         \nE         - pass\nE         + block\n\ntests\\test_issue263_string_conditions.py:229: AssertionError",
+    "text_sha256": "c27150121555e0896cded537e6bdf7b0416d42e070c3379f78045696a9738bb1"
+  },
+  {
+    "nodeid": "tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit",
+    "xml_attributes": {
+      "classname": "tests.test_issue358_own_mark_guards",
+      "name": "test_a_test_moved_under_the_gate_keeps_its_move_credit",
+      "time": "0.007"
+    },
+    "outcome": "failure",
+    "type": null,
+    "message": "AssertionError: assert 'block' == 'pass'\n  \n  - pass\n  + block",
+    "text": "def test_a_test_moved_under_the_gate_keeps_its_move_credit():\n        \"\"\"An unmarked test carries no marker, so its arrival is live (D2).\"\"\"\n        body = \"def test_total():\\n    assert total() == 78.75\\n\"\n        other = \"tests/test_other.py\"\n        after = module(tests=\"\")\n        moved = module(tests=body)\n        snapshot = {**APP, PATH: after.encode(), other: moved.encode()}\n        _ir, findings, verdict = analyze(\n            [FileChange(PATH, \"modified\", module().encode(), after.encode()),\n             FileChange(other, \"added\", None, moved.encode())],\n            Config(), Contract(), [], datetime.date(2026, 10, 8), head_reader=snapshot.get, root_reader=snapshot.get,\n        )\n>       assert verdict == \"pass\"\nE       AssertionError: assert 'block' == 'pass'\nE         \nE         - pass\nE         + block\n\ntests\\test_issue358_own_mark_guards.py:336: AssertionError",
+    "text_sha256": "1f24412a492a8fe306142a4723ef1c590d8cf7d900dc5b51b899fd5f05bd2d4b"
+  }
+]

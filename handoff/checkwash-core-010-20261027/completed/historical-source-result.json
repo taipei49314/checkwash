@@ -1,0 +1,17 @@
+{
+  "acceptance_reclassified": false,
+  "archive": "historical-source-snapshots.zip",
+  "bytes": 16386105,
+  "crc": "PASS",
+  "inputs_unchanged": true,
+  "local_only": [],
+  "mode": "HISTORICAL_BYTES_BACKED_UP_NOT_EXECUTED_NOT_PUBLISHED",
+  "oldref_files": 339,
+  "original_file_hashes": "MATCH",
+  "selected_files_with_oldrefs": 5024,
+  "sha256": "3773ccdf0473fbbd8a0e4d52adfaf2317da3a13c7c7fb3704014abc7b27bb5f0",
+  "snapshot_files": 4685,
+  "source_or_fixture_calls": 0,
+  "source_roots": 14,
+  "uncompressed_bytes": 50700804
+}

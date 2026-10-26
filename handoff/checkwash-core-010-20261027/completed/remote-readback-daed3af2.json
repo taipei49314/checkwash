@@ -1,0 +1,137 @@
+{
+  "checkpoint_commit": "daed3af275fab98b39f6e0bcede7846be518c8e3",
+  "recorded_utc": "2026-10-26 19:27:22 UTC",
+  "method": "Independent GitHub connector contents API and fetch_file at explicit commit; blob SHA/size checked against local push receipt",
+  "checks": [
+    {
+      "path": "handoff/checkwash-core-010-20261027/00-START-HERE.md",
+      "bytes": 4134,
+      "git_blob": "c490316eda5bea65f25872ae05e0d20e34c69934",
+      "remote_size": 4134,
+      "remote_blob": "c490316eda5bea65f25872ae05e0d20e34c69934",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/checkpoint.json",
+      "bytes": 3307,
+      "git_blob": "699090f943c41ac9b0281dcb03bd934f4a92e2df",
+      "remote_size": 3307,
+      "remote_blob": "699090f943c41ac9b0281dcb03bd934f4a92e2df",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/candidate-selfdogfood-receipt.json",
+      "bytes": 1547,
+      "git_blob": "af76047c7809891fadffa4dbbd87da666f0fa25c",
+      "remote_size": 1547,
+      "remote_blob": "af76047c7809891fadffa4dbbd87da666f0fa25c",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/corpus-311-312-comparison.json",
+      "bytes": 5120,
+      "git_blob": "f888ae7a3e606e4ce2749f13f94cf4435780fa29",
+      "remote_size": 5120,
+      "remote_blob": "f888ae7a3e606e4ce2749f13f94cf4435780fa29",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/public-090-action-replay.json",
+      "bytes": 3049,
+      "git_blob": "970c6670406d87cc597d7175faf80d3e558b1658",
+      "remote_size": 3049,
+      "remote_blob": "970c6670406d87cc597d7175faf80d3e558b1658",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/qualification-pyz.json",
+      "bytes": 3342,
+      "git_blob": "c15289c92016c8db3af35f4529d69397ea4b5a44",
+      "remote_size": 3342,
+      "remote_blob": "c15289c92016c8db3af35f4529d69397ea4b5a44",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/qualification-source.json",
+      "bytes": 3180,
+      "git_blob": "9c4700a860b539483400347a6192e2113813ed26",
+      "remote_size": 3180,
+      "remote_blob": "9c4700a860b539483400347a6192e2113813ed26",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/qualification-wheel.json",
+      "bytes": 4128,
+      "git_blob": "b7cd4074f5bbe983b8d231469876c7b8a494fb20",
+      "remote_size": 4128,
+      "remote_blob": "b7cd4074f5bbe983b8d231469876c7b8a494fb20",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/completed/selfdogfood-issue266-review.md",
+      "bytes": 5380,
+      "git_blob": "0f85aecfc887797b73e9be6f3d8918a0af6a882a",
+      "remote_size": 5380,
+      "remote_blob": "0f85aecfc887797b73e9be6f3d8918a0af6a882a",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/HANDOFF-MANIFEST.json",
+      "bytes": 2727,
+      "git_blob": "d80e14953c61b4b22aee5f71f3e8f89fac599be6",
+      "remote_size": 2727,
+      "remote_blob": "d80e14953c61b4b22aee5f71f3e8f89fac599be6",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/legacy-stage1-sanitized.zip",
+      "bytes": 11009496,
+      "git_blob": "30b055d70c5d729cf811fe038247b6abaa107619",
+      "remote_size": 11009496,
+      "remote_blob": "30b055d70c5d729cf811fe038247b6abaa107619",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/legacy-stage1-sanitized.zip.sha256",
+      "bytes": 94,
+      "git_blob": "81bb9fa0c77cb14b47d48fd0aae5c9ce41d51fcd",
+      "remote_size": 94,
+      "remote_blob": "81bb9fa0c77cb14b47d48fd0aae5c9ce41d51fcd",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/legacy-stage2-sanitized.zip",
+      "bytes": 14057012,
+      "git_blob": "b8d424af325bfb7b0a3675f2889e81984f172956",
+      "remote_size": 14057012,
+      "remote_blob": "b8d424af325bfb7b0a3675f2889e81984f172956",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/legacy-stage2-sanitized.zip.sha256",
+      "bytes": 94,
+      "git_blob": "f4a6e82a7e38901fb6d77ca339b4a5a3cc90f818",
+      "remote_size": 94,
+      "remote_blob": "f4a6e82a7e38901fb6d77ca339b4a5a3cc90f818",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/legacy-stage3-sanitized.zip",
+      "bytes": 11513483,
+      "git_blob": "ea628d50a9936b984ee9a0ea39d4f0a40d803103",
+      "remote_size": 11513483,
+      "remote_blob": "ea628d50a9936b984ee9a0ea39d4f0a40d803103",
+      "matched": true
+    },
+    {
+      "path": "handoff/checkwash-core-010-20261027/legacy-stage3-sanitized.zip.sha256",
+      "bytes": 94,
+      "git_blob": "1914aab4f42082c6e7c5efca230817dce8ea16a5",
+      "remote_size": 94,
+      "remote_blob": "1914aab4f42082c6e7c5efca230817dce8ea16a5",
+      "matched": true
+    }
+  ],
+  "all_matched": true,
+  "raw_binary_redownloaded": false
+}

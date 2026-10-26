@@ -1,0 +1,90 @@
+{
+  "state": "READ_ONLY_TRIAGE_COMPLETE_FAILURES_REMAIN",
+  "source": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "full_suite_state": "COMPLETE_FAILED_SUITE",
+  "suite_exit": 1,
+  "summary": {
+    "failed_parents": 22,
+    "passed_parents": 21055,
+    "skipped_parents": 25,
+    "subtests_passed": 67,
+    "native_xml_reports": 21169,
+    "native_xml_parents": 21102
+  },
+  "selected_ordinary_rows": [
+    {
+      "nodeid": "tests/test_js_liveness.py::test_a_unit_moved_into_a_skipped_block_earns_no_move_credit[describe(\"moved\", () => {\\n  it(\"computes\", () => { expect(total()).toBe(5); });\\n});\\n-outcome0]",
+      "classification": "UNRESOLVED_ORDINARY_POSITIVE_COMPATIBILITY_COST",
+      "observed_native_result": "Expected PASS, observed BLOCK. Source explanation is a bounded-context inference, not a new execution.",
+      "next_scope": "PRESERVE_EXPECTATION: safe-proof expansion or explicit maintainer disposition remains pending.",
+      "native_text_sha256": "4276deb838eda20da5819b5b0d5cb2399e802aa550a0b25ff95d29565dc40017",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_js_test_obligations.py::test_moving_a_test_out_of_a_ci_directory_is_not_a_workflow_removal",
+      "classification": "POSITIVE_FIXTURE_DOES_NOT_PRESERVE_RELATIVE_PRODUCER",
+      "observed_native_result": "Expected PASS, observed BLOCK; full actual finding vector was not printed.",
+      "next_scope": "INERT_PROPOSAL_ONLY: same canonical producer positive, retain changed-relative-target negative.",
+      "native_text_sha256": "abb468aab9658be47a659bdf32c0c4ecab25487f186ea906b03637b584c6e2f6",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_root_oracles.py::test_helper_only_assertion_removal_discovers_unchanged_importer",
+      "classification": "STARTUP_READ_OBSERVER_CONTRACT_MIGRATION",
+      "observed_native_result": "BLOCK, ASSERT_REMOVED/high/path/text and search assertions passed; exact reader list has three additional items, first tests/conftest.py.",
+      "next_scope": "INERT_PROPOSAL_ONLY: distinguish optional D179 startup probes and preserve main detector/read-budget controls.",
+      "native_text_sha256": "0d0859c2432e2ac4ba8624f509f71b7cff679ab01e4a1176b7b4d9b1ad49f978",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_classic_raises_additions.py::test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    result = divide(a, b)\\n    assert result == expected, f'Expected {expected}, got {result}'\\n]",
+      "classification": "DEFINITE_IR3_METADATA_CONSUMER_MIGRATION",
+      "observed_native_result": "Exception evidence, BLOCK and ASSERT_REMOVED checks passed; whole-UnitSide equality differs only on the two new proof fields, with 17 old fields identical.",
+      "next_scope": "INERT_PROPOSAL_ONLY: exact native fields plus separately checked IR3 enrichment.",
+      "native_text_sha256": "b200a00680cd6416567c4bd243d4253b8312df148e23ab949bd5f489e1e845eb",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_classic_raises_additions.py::test_added_literal_rows_retain_exception_removal_and_native_units[from app.prod import divide\\nimport pytest\\ndef test_zero():\\n    result = divide(1, 0)\\n    assert result is None, f'Expected None, got {result}'\\n@pytest.mark.parametrize('a, b, expected', [(2, 2, 1.0), (5, -3, -1.6666666666666667), (0, 1, 0.0), (-1, -1, 1.0)])\\ndef test_more(a, b, expected):\\n    assert divide(a, b) == expected, f'Expected {expected}, got {result}'\\n]",
+      "classification": "DEFINITE_IR3_METADATA_CONSUMER_MIGRATION",
+      "observed_native_result": "Exception evidence, BLOCK and ASSERT_REMOVED checks passed; whole-UnitSide equality differs only on the two new proof fields, with 17 old fields identical.",
+      "next_scope": "INERT_PROPOSAL_ONLY: exact native fields plus separately checked IR3 enrichment.",
+      "native_text_sha256": "12e71076965905d5e249f1a543ecfb8d8dcd167a5f1f9a431c2e14e0966097a0",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_issue223_conftest_request_side.py::test_an_importer_the_engine_adds_unchanged_reads_no_chain",
+      "classification": "STARTUP_READ_OBSERVER_CONTRACT_MIGRATION",
+      "observed_native_result": "BLOCK and ASSERT_REMOVED/path assertions passed; conftest read list additionally contains tests/conftest.py. This test did not assert the severity.",
+      "next_scope": "INERT_PROPOSAL_ONLY: distinguish proof startup probes from original detector-chain semantics.",
+      "native_text_sha256": "f1560d2afc3ef9cc147b47fe1e379e7b427d9f8187e212738ee7db85c3ad3c45",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_issue263_string_conditions.py::test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated",
+      "classification": "UNRESOLVED_ORDINARY_POSITIVE_COMPATIBILITY_COST",
+      "observed_native_result": "Expected PASS, observed BLOCK. Source explanation is a bounded-context inference, not a new execution.",
+      "next_scope": "PRESERVE_EXPECTATION: safe-proof expansion or explicit maintainer disposition remains pending.",
+      "native_text_sha256": "c27150121555e0896cded537e6bdf7b0416d42e070c3379f78045696a9738bb1",
+      "new_product_run_performed": false
+    },
+    {
+      "nodeid": "tests/test_issue358_own_mark_guards.py::test_a_test_moved_under_the_gate_keeps_its_move_credit",
+      "classification": "UNRESOLVED_ORDINARY_POSITIVE_COMPATIBILITY_COST",
+      "observed_native_result": "Expected PASS, observed BLOCK. Source explanation is a bounded-context inference, not a new execution.",
+      "next_scope": "PRESERVE_EXPECTATION: safe-proof expansion or explicit maintainer disposition remains pending.",
+      "native_text_sha256": "1f24412a492a8fe306142a4723ef1c590d8cf7d900dc5b51b899fd5f05bd2d4b",
+      "new_product_run_performed": false
+    }
+  ],
+  "existing_test_files_unchanged": true,
+  "product_calls": 0,
+  "pytest_calls": 0,
+  "source_or_expected_labels_modified": false,
+  "external_artifacts_sha256": {
+    "fullsuite-triage-js.md": "c57f28d9ca8a073e388c714f342ab47e8a3090b396ebae75d2463c2ee3e71e46",
+    "fullsuite-triage-js-evidence.json": "d2294cac8e7b4b1917b016702f4fb7fc2357ccc9dd3bfa737d7e125e12bdcfcb"
+  },
+  "collector_sha256": "cc395d5b0a3567e8b2cb0b0ee88eabd082a0f3265fb07f834bceca57e12b8f16",
+  "source_unchanged_after_triage": true
+}

@@ -1,0 +1,88 @@
+{
+  "archives": [
+    {
+      "added_metadata_files": 3,
+      "archive": "legacy-stage1-sanitized.zip",
+      "bytes": 11009496,
+      "exclusions": [
+        {
+          "bytes": 15137,
+          "path": "checkwash-ux-milestone-20261026/global-AGENTS.snapshot.md",
+          "reason": "exact-global-agent-memory-local-only"
+        }
+      ],
+      "retained_original_files": 822,
+      "sha256": "fff0b0e35282fa10df0d9f85a7996938e64ad267a9fa64dc1fdad03f654d5a8a",
+      "stage": "stage1",
+      "validation": {
+        "crc": "PASS",
+        "membership_sorted": true,
+        "metadata": "FIXED",
+        "private_marker_readback": "NO_FLAGS",
+        "retained_original_hashes": "MATCH",
+        "same_runtime_deterministic_rebuild": true
+      }
+    },
+    {
+      "added_metadata_files": 3,
+      "archive": "legacy-stage2-sanitized.zip",
+      "bytes": 14057012,
+      "exclusions": [
+        {
+          "bytes": 15137,
+          "path": "checkwash-ux-stage2-20261026/context/global-AGENTS.md",
+          "reason": "exact-global-agent-memory-local-only"
+        },
+        {
+          "bytes": 11040008,
+          "path": "checkwash-ux-stage2-20261026/first-milestone-complete.zip",
+          "reason": "known-original-archive-containing-private-context"
+        }
+      ],
+      "retained_original_files": 2086,
+      "sha256": "b17dda4b17d0585e365b8439589c819c0be3f6ea35abb4773f9e6b240449d1cd",
+      "stage": "stage2",
+      "validation": {
+        "crc": "PASS",
+        "membership_sorted": true,
+        "metadata": "FIXED",
+        "private_marker_readback": "NO_FLAGS",
+        "retained_original_hashes": "MATCH",
+        "same_runtime_deterministic_rebuild": true
+      }
+    },
+    {
+      "added_metadata_files": 3,
+      "archive": "legacy-stage3-sanitized.zip",
+      "bytes": 11513483,
+      "exclusions": [
+        {
+          "bytes": 15137,
+          "path": "checkwash-ux-stage3-20261026/context/global-AGENTS.md",
+          "reason": "exact-global-agent-memory-local-only"
+        },
+        {
+          "bytes": 24918785,
+          "path": "checkwash-ux-stage3-20261026/previous-stage2-complete.zip",
+          "reason": "known-original-archive-containing-private-context"
+        }
+      ],
+      "retained_original_files": 1893,
+      "sha256": "1d9e52fabc28e3018ccdf12d21c5465b8a817f2d668325d5bffab591f21e3705",
+      "stage": "stage3",
+      "validation": {
+        "crc": "PASS",
+        "membership_sorted": true,
+        "metadata": "FIXED",
+        "private_marker_readback": "NO_FLAGS",
+        "retained_original_hashes": "MATCH",
+        "same_runtime_deterministic_rebuild": true
+      }
+    }
+  ],
+  "originals_unchanged": true,
+  "product_or_fixture_test_calls": 0,
+  "publication_performed": false,
+  "root_START_HERE_status_untouched": true,
+  "status": "SANITIZED_HISTORICAL_BACKUP_NOT_ACCEPTANCE_NOT_FULL_HISTORY_REPLAY"
+}

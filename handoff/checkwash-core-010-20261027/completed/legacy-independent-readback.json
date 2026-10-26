@@ -1,0 +1,68 @@
+{
+  "mode": "READ_ONLY_DERIVATIVE_BYTES_NO_PRODUCT",
+  "record_type": "SAVED_EXISTING_TOOL_RESULT_NOT_A_NEW_EXECUTION",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "hostname": "LAPTOP-01AGNPJU",
+  "runtime": "task-local Python 3.11.9 with -I -B -X utf8",
+  "original_tool_chunk_id": "84150b",
+  "original_tool_exit_code": 0,
+  "execution_timestamp": "NOT_CAPTURED_BY_THE_ORIGINAL_READBACK_COMMAND",
+  "operations_actually_executed": [
+    "Read each new legacy-stage*-sanitized.zip as bytes and compute its SHA256 and byte length.",
+    "Read each same-name .sha256 sidecar and compare its declared hash.",
+    "Run zipfile.testzip() across every member of each new derivative.",
+    "Require exactly one SANITIZED-MANIFEST.json and one SANITIZATION-EXCLUSIONS.json per derivative.",
+    "Hash all 4801 retained members and compare them with the new SANITIZED-MANIFEST declarations.",
+    "Confirm no archive filename contains both global and agent, and confirm the original MANIFEST.json is present.",
+    "Read and report exclusion names, byte lengths and reason labels without private content values."
+  ],
+  "scope_limits": [
+    "This command checked retained bytes against each derivative's new manifest. It did not separately decompress and compare all old archive members again.",
+    "Original archive SHA256, sidecar and CRC checks were executed in an earlier independent inventory; post-write original checks also exist in the sanitizer's own receipt, not this readback.",
+    "Recursive private-content and same-runtime deterministic-rebuild checks are sanitizer-owned checks; the reviewer read the sanitizer source but did not rerun it.",
+    "No product, fixture program, qualification, upload, Git write or source change was executed by this readback."
+  ],
+  "original_tool_result": {
+    "mode": "READ_ONLY_DERIVATIVE_BYTES_NO_PRODUCT",
+    "archives": [
+      {
+        "zip": "legacy-stage1-sanitized.zip",
+        "bytes": 11009496,
+        "sha256": "fff0b0e35282fa10df0d9f85a7996938e64ad267a9fa64dc1fdad03f654d5a8a",
+        "retained_members_verified": 822,
+        "archive_members": 825,
+        "exclusions": [
+          {"bytes": 15137, "path": "checkwash-ux-milestone-20261026/global-AGENTS.snapshot.md", "reason": "exact-global-agent-memory-local-only"}
+        ],
+        "original_manifest_retained": true,
+        "CRC_and_sidecar": true
+      },
+      {
+        "zip": "legacy-stage2-sanitized.zip",
+        "bytes": 14057012,
+        "sha256": "b17dda4b17d0585e365b8439589c819c0be3f6ea35abb4773f9e6b240449d1cd",
+        "retained_members_verified": 2086,
+        "archive_members": 2089,
+        "exclusions": [
+          {"bytes": 15137, "path": "checkwash-ux-stage2-20261026/context/global-AGENTS.md", "reason": "exact-global-agent-memory-local-only"},
+          {"bytes": 11040008, "path": "checkwash-ux-stage2-20261026/first-milestone-complete.zip", "reason": "known-original-archive-containing-private-context"}
+        ],
+        "original_manifest_retained": true,
+        "CRC_and_sidecar": true
+      },
+      {
+        "zip": "legacy-stage3-sanitized.zip",
+        "bytes": 11513483,
+        "sha256": "1d9e52fabc28e3018ccdf12d21c5465b8a817f2d668325d5bffab591f21e3705",
+        "retained_members_verified": 1893,
+        "archive_members": 1896,
+        "exclusions": [
+          {"bytes": 15137, "path": "checkwash-ux-stage3-20261026/context/global-AGENTS.md", "reason": "exact-global-agent-memory-local-only"},
+          {"bytes": 24918785, "path": "checkwash-ux-stage3-20261026/previous-stage2-complete.zip", "reason": "known-original-archive-containing-private-context"}
+        ],
+        "original_manifest_retained": true,
+        "CRC_and_sidecar": true
+      }
+    ]
+  }
+}

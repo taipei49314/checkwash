@@ -1,0 +1,112 @@
+"""Append an explicitly prepared task backup to the existing handoff branch.
+
+Uses a private Git index and commit-tree. Product HEAD/index, main and tags do
+not move. A prepared-commit receipt is written before push for safe recovery.
+"""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+
+p = argparse.ArgumentParser()
+p.add_argument("--payload", type=Path, required=True)
+p.add_argument("--label", required=True)
+p.add_argument("--dry-run", action="store_true")
+a = p.parse_args()
+assert re.fullmatch(r"[a-z0-9-]+", a.label)
+here = Path(__file__).resolve().parent
+repo = here.parent / "checkwash-ux"
+pin = (here / "final-source-sha.txt").read_text(encoding="utf-8").strip()
+branch = "handoff/core-010-pju-20261027-8a8941dc"
+prefix = "handoff/checkwash-core-010-20261027"
+state_path = here / "remote-checkpoint/state.json"
+previous = json.loads(state_path.read_text(encoding="utf-8"))
+assert previous["branch"] == branch and previous.get("code_source_sha", previous.get("source_sha")) == pin
+parent = previous["checkpoint_commit"]
+payload = a.payload.resolve(strict=True)
+assert payload.is_relative_to(here.parents[1]) and payload.is_dir()
+stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+out = here / "remote-checkpoint" / (stamp + "-" + a.label)
+out.mkdir(exist_ok=False)
+base_env = {k: v for k, v in os.environ.items() if k not in {
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE"}}
+
+def git(*arguments, data=None, env=None):
+    result = subprocess.run(["git", *arguments], cwd=repo, env=env or base_env,
+                            input=data, capture_output=True)
+    if result.returncode:
+        raise RuntimeError(result.stderr.decode("utf-8", "backslashreplace"))
+    return result.stdout
+
+def check_source():
+    assert git("rev-parse", "HEAD").decode().strip() == pin
+    assert not git("status", "--porcelain", "--untracked-files=all")
+
+def save(path, value):
+    path.write_text(json.dumps(value, sort_keys=True, indent=2), encoding="utf-8")
+
+check_source()
+remote_before = git("ls-remote", "--heads", "origin", "refs/heads/" + branch).decode().split()
+assert remote_before[0] == parent, "remote handoff moved; reconcile before appending"
+index_path = Path(git("rev-parse", "--git-path", "index").decode().strip())
+if not index_path.is_absolute():
+    index_path = repo / index_path
+original_index = index_path.read_bytes()
+members = []
+for path in sorted(payload.rglob("*")):
+    info = path.lstat()
+    assert not stat.S_ISLNK(info.st_mode) and not getattr(info, "st_file_attributes", 0) & 0x400
+    if path.is_dir():
+        continue
+    assert stat.S_ISREG(info.st_mode)
+    relative = path.relative_to(payload).as_posix()
+    assert not any(part in {".git", "__pycache__", "site-packages", "node_modules"} for part in path.relative_to(payload).parts)
+    assert path.suffix in {".zip", ".md", ".json", ".txt", ".patch", ".sha256"}, relative
+    raw = path.read_bytes()
+    assert len(raw) < 90_000_000, "GitHub blob too large; split the task bundle"
+    members.append({"path": relative, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
+assert members and (payload / "00-START-HERE.md").is_file() and (payload / "checkpoint.json").is_file()
+plan = {"source_sha": pin, "code_source_sha": pin, "branch": branch, "parent": parent, "prefix": prefix,
+        "payload": str(payload), "members": members, "bytes": sum(x["bytes"] for x in members),
+        "product_publication_performed": False}
+save(out / "plan.json", plan)
+if a.dry_run:
+    print(json.dumps({k: v for k, v in plan.items() if k != "members"}, indent=2))
+    raise SystemExit(0)
+env = {**base_env, "GIT_INDEX_FILE": str(out / "alternate.index"),
+       "GIT_AUTHOR_NAME": "Codex checkpoint", "GIT_AUTHOR_EMAIL": "checkpoint@example.invalid",
+       "GIT_COMMITTER_NAME": "Codex checkpoint", "GIT_COMMITTER_EMAIL": "checkpoint@example.invalid"}
+git("read-tree", parent, env=env)
+blobs = []
+for row in members:
+    path = payload / row["path"]
+    raw = path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == row["sha256"]
+    oid = git("hash-object", "-w", "--stdin", data=raw, env=env).decode().strip()
+    destination = prefix + "/" + row["path"]
+    git("update-index", "--add", "--cacheinfo", "100644", oid, destination, env=env)
+    blobs.append({**row, "path": destination, "git_blob": oid})
+tree = git("write-tree", env=env).decode().strip()
+message = f"checkpoint: preserve {pin[:8]} {a.label} at {stamp}\n\nBackup only; no acceptance, golden approval, merge, tag or release.\n"
+commit = git("-c", "commit.gpgsign=false", "commit-tree", tree, "-p", parent,
+             data=message.encode(), env=env).decode().strip()
+prepared = {**plan, "checkpoint_commit": commit, "tree": tree, "files": blobs,
+            "created_utc": datetime.now(timezone.utc).isoformat()}
+save(out / "prepared-commit.json", prepared)
+check_source()
+assert index_path.read_bytes() == original_index
+git("push", "origin", commit + ":refs/heads/" + branch)
+assert git("ls-remote", "--heads", "origin", "refs/heads/" + branch).decode().split()[0] == commit
+check_source()
+assert index_path.read_bytes() == original_index
+result = {k: v for k, v in prepared.items() if k != "members"}
+result.update(head_unchanged=True, product_index_unchanged=True, remote_ref_verified=True)
+save(out / "push-receipt.json", result)
+save(state_path, result)
+print(json.dumps({k: v for k, v in result.items() if k != "files"}, indent=2))

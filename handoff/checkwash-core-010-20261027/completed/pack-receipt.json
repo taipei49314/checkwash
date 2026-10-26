@@ -1,0 +1,46 @@
+{
+  "archive": "checkwash-8a-sanitized-continuation.zip",
+  "bytes": 29871864,
+  "file_count": 2908,
+  "host": "LAPTOP-01AGNPJU",
+  "publication_performed": false,
+  "python": "3.11.9",
+  "sha256": "d8a24a21cc811bc9237631d69d2d163dea98d66430d26aa35fc766cdadc68a4d",
+  "source_and_inputs_unchanged": true,
+  "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "validation": {
+    "all_active_jobs_terminal": true,
+    "interpretation": "Backup completion records actual outcomes; it does not assert all tests passed or authorize publication.",
+    "roles": [
+      {
+        "exit_code": 0,
+        "receipt": "work/ux-stage4/final/source-assertion-qualification-r1/receipt.json",
+        "role": "qualification_source",
+        "sha256": "cbdfa5d8b8f373a4b4ed269fe7058e76dc9bc8339ef8ee6dfcf13ef8b65de14f",
+        "state": "TERMINAL"
+      },
+      {
+        "exit_code": 0,
+        "receipt": "work/ux-stage4/final/wheel-assertion-qualification-r1/receipt.json",
+        "role": "qualification_wheel",
+        "sha256": "a6181295379f132019883ef674b1f79232fc77e8b7e45d72bea990f9bdf0e2fb",
+        "state": "TERMINAL"
+      },
+      {
+        "exit_code": 0,
+        "receipt": "work/ux-stage4/final/pyz-assertion-qualification-r1/receipt.json",
+        "role": "qualification_pyz",
+        "sha256": "d53041a7965c1ac8af479f091459e7a52a55aa94aed5250d4579bee9f8f80007",
+        "state": "TERMINAL"
+      },
+      {
+        "exit_code": 1,
+        "receipt": "work/ux-stage4/final/full-suite-311-r1/receipt.json",
+        "role": "full_suite",
+        "sha256": "588fd4b198c5d0de6478ab020e91ccf33cf855752c6191dc4422a503e7a3008e",
+        "state": "TERMINAL"
+      }
+    ],
+    "source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b"
+  }
+}
