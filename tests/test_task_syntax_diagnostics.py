@@ -42,7 +42,7 @@ def test_supported_or_absent_metadata_has_no_syntax_warning(text):
 
 
 @pytest.mark.parametrize("format", ("term", "json", "sarif", "hook-json"))
-def test_cli_task_diagnostic_keeps_existing_exit_and_payload(tmp_path, capsys, format):
+def test_cli_invalid_task_policy_refuses_instead_of_applying_a_partial_contract(tmp_path, capsys, format):
     def git(*args):
         subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
     git("init")
@@ -53,16 +53,19 @@ def test_cli_task_diagnostic_keeps_existing_exit_and_payload(tmp_path, capsys, f
     git("add", ".")
     git("-c", "commit.gpgsign=false", "commit", "-m", "trusted baseline")
     (tmp_path / "test_api.py").write_text("def test_api():\n    assert api() > 0\n", encoding="utf-8")
-    assert main(["check", "--repo", str(tmp_path), "--task", str(tmp_path / "TASK.md"), "--format", format]) == (0 if format == "hook-json" else 1)
+    assert main(["check", "--repo", str(tmp_path), "--task", str(tmp_path / "TASK.md"), "--format", format]) == (0 if format == "hook-json" else 2)
     output = capsys.readouterr()
-    assert "TASK syntax" in output.err
-    assert "BASE" in output.err and "TASK.md" in output.err
-    if format == "json":
-        payload = json.loads(output.out)
-        assert payload["checkwash_findings_version"] == 2 and payload["verdict"] == "block"
-        assert payload["config_errors"] == []
-        assert any(f["rule"] == "ASSERT_WEAKENED" and "ORACLE_FREEZE" not in f["escalators"] for f in payload["findings"])
-    elif format == "sarif":
-        assert json.loads(output.out)["version"] == "2.1.0"
+    # D-181 / 0.10.0 deliberately replaces the old advisory-only CLI behavior.
+    # Low-level historical decoding and diagnostic nonmutation above stay pinned.
+    visible_error = output.err + output.out
+    assert "TASK syntax" in visible_error
+    assert "BASE" in visible_error and "TASK.md" in visible_error
+    if format in {"json", "sarif"}:
+        # Main check's generic engine errors keep empty stdout, unlike quality
+        # setup errors and the separately documented size-refusal projection.
+        assert output.out == ""
+        assert "invalid TASK contract" in output.err
     elif format == "hook-json":
-        assert json.loads(output.out)["decision"] == "block"
+        payload = json.loads(output.out)
+        assert "decision" not in payload
+        assert "not analysed" in payload["systemMessage"]

@@ -250,3 +250,26 @@ Native range/worktree controls compare the same intended BASE contract;
 the fixture source itself is never executed. Root records final accepted
 source and validation separately. D-178 does not authorize a 1.0 release or
 revive historical/paid/model/adjudication grants.
+
+## D-181 (2026-10-27): validate TASK authority before applying its subset
+
+Nelson's pre-1.0 repair continuation authorizes the necessary core contracts
+and version movement. The previous UX stage only warned about unsupported
+TASK syntax; a commented or quoted true, BOM or flow list could still silently
+disable intended freeze/scope. 0.10.0 authority loading now refuses those
+recognized unsupported or ambiguous inputs with EngineError before analysis.
+The restricted block language is retained, without a YAML runtime dependency.
+
+`load_contract` validates complete input before decoding. Duplicate/unknown or
+misnested policy fields refuse as well. Canonical/legacy headers, true/false,
+quoted literal globs, unrelated metadata, absent policy and the existing empty
+scope meaning are controlled. Historical `parse_contract` decoding remains for
+old static case records; it is not an authority loader. The old CLI syntax
+regression now asserts refusal and no partial verdict instead of its superseded
+advisory-only result; no golden fixture expectation is changed.
+
+This is a deliberate minor-version CLI policy compatibility cost. Existing
+unsupported TASK files need canonical rewriting after review. Error projection
+retains exit 2 and the hook's non-blocking NOT_ANALYSED message; no fake clean
+result, guessed YAML coercion or automatic activation is introduced. Targeted
+and final-source checks must identify their own input hashes and actual runs.

@@ -1003,6 +1003,27 @@ with the existing disclosure that the change controls that fallback. It is
 not necessary that the path be untracked. The permitted fallback may still
 be followed by the OS; it is never used to rescue a refused BASE alias.
 
+### TASK policy syntax validation (0.10.0, D-181)
+
+Authority readers validate the restricted front-matter subset before applying
+any TASK contract. BASE bytes require strict UTF-8 decoding; NUL text refuses
+instead of silently treating UTF-16-like input as an absent contract.
+Recognized unsupported forms (including BOM, an unclosed
+front matter, commented/indented contract headers, noncanonical booleans,
+inline scope/list forms and trailing scope comments) are engine errors rather
+than advisory-only partial policies. Duplicate blocks/fields, unknown or
+misplaced fields within a recognized block, malformed glob quoting and
+inconsistent field/list nesting also refuse. The error names the TASK source
+and explains that no TASK policy was applied. Existing engine-error projection
+applies: exit 2 for term/JSON/SARIF and NOT_ANALYSED for the Stop hook (§9).
+
+Canonical block forms, the legacy greenwash header, case-insensitive bare
+true/false, literal fully quoted globs, unrelated front-matter metadata,
+ordinary prose and existing empty-scope semantics remain. This is validation,
+not general YAML support. `load_contract` is the authority API. The historical
+best-effort `parse_contract` decoder remains for old case records and must not
+be used to load an unvalidated policy for review.
+
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 
 | id | condition | effect |

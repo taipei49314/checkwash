@@ -34,9 +34,9 @@ from dataclasses import dataclass
 
 from checkwash import __version__
 from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
-from checkwash.change import SourceOverLimit, UnreadSide
+from checkwash.change import EngineError, SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
-from checkwash.contract import Contract, contract_diagnostics, parse_contract
+from checkwash.contract import Contract, contract_diagnostics, load_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
 from checkwash.policy_shadow import PolicyBase
 from checkwash.engine import analyze
@@ -273,8 +273,11 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
             advise(_task_path_context(args, rel))
             raise
         if data is not None:
-            task_text = data.decode("utf-8", errors="replace")
-            contract = parse_contract(task_text)
+            try:
+                task_text = data.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise EngineError(f"--task {rel!r} (BASE): UTF-8 required") from exc
+            contract = load_contract(task_text, source=f"--task {rel!r} (BASE)")
         elif prefix:
             # Git spells the prefix as the directory is on disk. On a
             # case-insensitive checkout the head chooses that spelling (`PKG/`
@@ -307,7 +310,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
                 return _engine_error(args, _task_alias_error(args.task, rel, alias))
             with open(task_path, encoding="utf-8") as fh:
                 task_text = fh.read()
-                contract = parse_contract(task_text)
+                contract = load_contract(task_text, source=f"--task {rel!r} (working-tree fallback)")
             if not quiet:
                 _advise(f"checkwash: --task {args.task}: the base tree has no file at {rel}, so the "
                         "contract is read from the working-tree copy, which the change controls; "
