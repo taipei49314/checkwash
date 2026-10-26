@@ -76,7 +76,7 @@ def contract_diagnostics(text: str | None) -> list[str]:
         return ["TASK syntax: opening front matter has no closing --- line; no contract is parsed. "
                 "Review docs/task-input.md before changing the task."]
     messages = []
-    in_block = in_scope = False
+    in_block = in_scope = in_allow = False
     for number, raw in enumerate(lines[1:end], start=2):
         value = raw.strip()
         if not value or value.startswith("#"):
@@ -87,24 +87,33 @@ def contract_diagnostics(text: str | None) -> list[str]:
             reason = "tab indentation is not supported; contract fields may be ignored"
         if indent == 0:
             in_block = value in ("checkwash:", "greenwash:")
-            in_scope = False
+            in_scope = in_allow = False
             if not in_block and value.startswith(("checkwash:", "greenwash:")):
                 reason = "the contract block header must appear alone; this block is ignored"
+        elif not in_block and value in ("checkwash:", "greenwash:"):
+            reason = "leading spaces on the contract block header prevent recognition; place it at column 1"
         elif in_block:
             if value.startswith("oracle_freeze:"):
                 if value.split(":", 1)[1].strip().lower() not in {"true", "false"}:
                     reason = "oracle_freeze requires an unquoted true/false scalar with no trailing comment; this value is parsed as false"
-                in_scope = False
+                in_scope = in_allow = False
             elif value.startswith("scope:"):
                 in_scope = value == "scope:"
+                in_allow = False
                 if not in_scope:
                     reason = "scope requires a block mapping; this inline form is ignored"
             elif in_scope and value.startswith("allow:"):
+                in_allow = value == "allow:"
                 if value != "allow:":
                     reason = "scope.allow requires a block list; this inline form is ignored"
                     in_scope = False
+            elif in_scope and in_allow and value.startswith("- "):
+                item = value[2:].strip()
+                fully_quoted = len(item) >= 2 and item[0] in "\"'" and item[-1] == item[0]
+                if not fully_quoted and " #" in item:
+                    reason = "scope.allow retains trailing # text in its literal glob; review whether a comment was intended"
             elif in_scope and not value.startswith("- "):
-                in_scope = False
+                in_scope = in_allow = False
         if reason:
             messages.append(f"TASK syntax: line {number}: {reason}. See docs/task-input.md; "
                             "this note does not change the parsed contract.")

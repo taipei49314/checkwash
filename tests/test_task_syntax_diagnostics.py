@@ -16,6 +16,8 @@ BAD = (
     ("flow", CANONICAL.replace("    allow:\n      - tests/**", "    allow: [tests/**]"), True, [], True),
     ("unclosed", CANONICAL.rsplit("---", 1)[0], False, [], False),
     ("block-comment", CANONICAL.replace("checkwash:", "checkwash: # policy"), True, [], False),
+    ("indented-block", CANONICAL.replace("checkwash:", "  checkwash:"), True, [], False),
+    ("list-comment", CANONICAL.replace("tests/**", "tests/** # review"), True, ["tests/** # review"], True),
 )
 
 
@@ -32,6 +34,7 @@ def test_unsupported_syntax_has_nonmutating_diagnostics(name, text, present, sco
 
 @pytest.mark.parametrize("text", (None, "", "Plain task instructions", CANONICAL,
                                   CANONICAL.replace("checkwash:", "greenwash:"),
+                                  CANONICAL.replace("tests/**", "'tests/hash # review/**'"),
                                   CANONICAL.replace("true", "FALSE").replace("\n", "\r\n")))
 def test_supported_or_absent_metadata_has_no_syntax_warning(text):
     diagnostic = getattr(contract_module, "contract_diagnostics", lambda value: [])
