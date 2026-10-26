@@ -3,7 +3,7 @@ from checkwash.gitio import merge_base
 from .engine import analyze, diagnostic, finish, new_payload
 from .model import POLICY_PATH, QualityError, RULES
 from .profiles import available
-from .report import json_report, terminal, sarif
+from .report import explanation, json_report, terminal, sarif
 from .snapshot import Snapshot
 
 
@@ -76,7 +76,7 @@ def run(args, today):
             "QW_POLICY_CHANGED": "A declaration changed, or base-owned Checkwash policy was edited. Head policy never governs its own review. This event does not prove tool execution.",
             "QW_ANALYSIS_INCOMPLETE": "An unsupported construct or bounded resource limit prevented analysis. This cannot be exempted; enforce returns 2 and report remains explicitly incomplete.",
         }
-        return f"{args.rule}: {explanations[args.rule]}\nSee docs/quality.md for the support matrix and base-only exemptions.\n", 0
+        return explanation(args.rule, explanations[args.rule], args.format), 0
     base_label, head_label = "HEAD", "worktree"
     try:
         if args.rule is not None:

@@ -7,6 +7,23 @@ def json_report(payload):
     return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
 
 
+def explanation(rule, description, format):
+    """Rule metadata only: describing a rule does not analyze a change."""
+    help_text = "See docs/quality.md for the support matrix and base-only exemptions."
+    if format == "term":
+        return f"{rule}: {description}\n{help_text}\n"
+    if format == "json":
+        return json_report({"operation": "explain", "authority": "advisory_only",
+                            "rule": rule, "description": description, "documentation": "docs/quality.md"})
+    return json_report({"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+                        "runs": [{"tool": {"driver": {"name": "checkwash-quality",
+                                                       "rules": [{"id": rule, "shortDescription": {"text": rule},
+                                                                  "fullDescription": {"text": description},
+                                                                  "help": {"text": help_text}}],
+                                                       "properties": {"operation": "explain", "authority": "advisory_only"}}},
+                                  "results": []}]})
+
+
 def visible(line):
     # Repository input must not impersonate new terminal output.
     return "".join(("\\u%04x" % ord(c)) if unicodedata.category(c) in {"Cc", "Cf"} else c for c in line)
