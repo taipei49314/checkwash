@@ -1,6 +1,23 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-24 (v0.9.1 preparation; historical disposition pending; v0.9.0 remains the verified public CLI/Action)
+Updated: 2026-10-26 (UX repair candidate; v0.9.1 publication paused; v0.9.0 remains the verified public CLI/Action)
+
+## 2026-10-26: bounded UX repair candidate
+
+This candidate follows the next-session handoff for individual experience
+defects. The 2026-10-26 r65 human pause still governs v0.9.1 publication;
+this work does not resume collectors, automations, tag validation or publication.
+The existing v0.9.1 tag and failed receipts remain unchanged. Package metadata
+stays 0.9.1 while the next version is undecided.
+
+The [candidate scope](docs/ux-repair-candidate-2026-10-26.md) separates narrow
+reader, quality, output and exemption-diagnostic repairs from unresolved
+policy decisions. In particular, rename/decorator and D2/D5 oracle-credit
+changes are reproduced proposals, not implemented policy fixes. No protected
+contract, severity table, strength lattice, alignment parameter or existing
+fixture label changes in this candidate. PJU receipts describe their actual
+runtime and source; they do not establish unexecuted platform coverage or
+release acceptance.
 
 ## 2026-10-24: narrow #419 release preparation
 
