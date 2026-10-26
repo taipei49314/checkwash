@@ -670,7 +670,8 @@ def build_parser() -> argparse.ArgumentParser:
     quality = sub.add_parser("quality", help="review bounded quality configuration weakening")
     quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, init, doctor, profiles or explain")
     quality.add_argument("rule", nargs="?", help="rule ID for quality explain")
-    quality.add_argument("--format", choices=["term", "json", "sarif"], default="term")
+    quality.add_argument("--format", choices=["term", "json", "sarif"], default=None,
+                         help="output format (default: JSON for profiles; terminal otherwise)")
     quality.add_argument("--repo", default=".", help=_REPO_HELP + " (not for profiles or explain)")
     quality.add_argument("--root", help="init only: repository-relative target root")
     quality.add_argument("--paths", action="append", help="init only: literal source file or directory ending /; repeatable")
@@ -884,6 +885,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "quality":
             from checkwash.quality.cli import run as run_quality
 
+            if args.format is None:
+                args.format = "json" if args.range == "profiles" else "term"
             # profiles and explain read no repository, so they never ask Git.
             # Elsewhere an unanswered root keeps `--repo`, and quality's own
             # JSON error reporting applies as before (#416).

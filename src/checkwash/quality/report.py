@@ -24,6 +24,22 @@ def explanation(rule, description, format):
                                   "results": []}]})
 
 
+def profile_inventory(rows, format, *, details=False):
+    if format == "json":
+        return json_report({"profiles": rows})
+    lines = ["Checkwash quality profiles | limited preview"]
+    brief = {"id", "tool", "tool_version", "digest", "scope"}
+    for row in rows:
+        lines.append(f"{row['id']}: {row['tool']} {row['tool_version']} | {row['scope']}")
+        lines.append("  digest: " + row["digest"])
+        if details:
+            for key in sorted(set(row) - brief):
+                lines.append("  " + key + ":")
+                lines.extend("    " + line for line in json_report(row[key]).rstrip().splitlines())
+    lines.append("Models describe declared configuration; tool execution and CI protection were not verified.")
+    return "\n".join(visible(line) for line in lines) + "\n"
+
+
 def visible(line):
     # Repository input must not impersonate new terminal output.
     return "".join(("\\u%04x" % ord(c)) if unicodedata.category(c) in {"Cc", "Cf"} else c for c in line)

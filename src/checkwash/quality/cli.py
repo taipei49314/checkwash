@@ -3,7 +3,7 @@ from checkwash.gitio import merge_base
 from .engine import analyze, diagnostic, finish, new_payload
 from .model import POLICY_PATH, QualityError, RULES
 from .profiles import available
-from .report import explanation, json_report, terminal, sarif
+from .report import explanation, json_report, profile_inventory, terminal, sarif, visible
 from .snapshot import Snapshot
 
 
@@ -62,10 +62,12 @@ def run(args, today):
         try:
             rows = list(available().values())
         except QualityError as exc:
+            if args.format == "term":
+                return f"error: {exc.code}: {visible(str(exc))}\n", 2
             return json_report({"error": exc.code, "message": str(exc)}), 2
         if not details:
             rows = [{key: row[key] for key in ("id", "tool", "tool_version", "digest", "scope")} for row in rows]
-        return json_report({"profiles": rows}), 0
+        return profile_inventory(rows, args.format, details=details), 0
     if args.range == "explain":
         if args.rule not in RULES:
             return usage_error(args, "expected a quality rule ID")
