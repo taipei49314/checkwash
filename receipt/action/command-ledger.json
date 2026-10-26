@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/Documents/Codex/2026-10-24/1-c-users-nelson-documents-codex/outputs/v091-main-r1-1ffe283d-formal/receipt/action/install.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw91-main-r1-1ffe283d\\s\\action",
+    "duration_seconds": 15.01600000000326,
+    "exit_code": 0,
+    "finished_at": "2026-10-25T21:40:09.279901+00:00",
+    "name": "install",
+    "started_at": "2026-10-25T21:39:54.260526+00:00",
+    "stderr": "logs/install.stderr",
+    "stdout": "logs/install.stdout",
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/Documents/Codex/2026-10-24/1-c-users-nelson-documents-codex/outputs/v091-main-r1-1ffe283d-formal/receipt/action/check.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw91-main-r1-1ffe283d\\s\\action",
+    "duration_seconds": 6.26600000000326,
+    "exit_code": 0,
+    "finished_at": "2026-10-25T21:40:15.547798+00:00",
+    "name": "check",
+    "started_at": "2026-10-25T21:40:09.287909+00:00",
+    "stderr": "logs/check.stderr",
+    "stdout": "logs/check.stdout",
+    "timed_out": false
+  }
+]

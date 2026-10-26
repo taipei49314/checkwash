@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\dev\cw91-main-r1-1ffe283d\s\candidate-action\checkwash-action-0vtrveos\check-receipt.json
+base=865d3fcafbe69cf67e3e9e9789038e27b4b02809
+head=1ffe283d7d947fecc426dea99323b0a2620a9482
+fail_on=high
