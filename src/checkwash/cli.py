@@ -596,6 +596,16 @@ def _toml_str(value: str) -> str:
 
 
 def _cmd_allow(args: argparse.Namespace) -> int:
+    from checkwash.quality.model import ALLOW_PATH as QUALITY_ALLOW_PATH, RULES as QUALITY_RULES
+
+    if args.fingerprint.split("/", 1)[0] in QUALITY_RULES:
+        write_text(
+            f"error: quality fingerprints do not belong in check's allow.toml; "
+            f"review {QUALITY_ALLOW_PATH} with its target_id and quality exemption schema. "
+            "Only supported strong quality findings can be exempted; see docs/quality.md.\n",
+            sys.stderr,
+        )
+        return 2
     issue = fingerprint_issue(args.fingerprint)
     if issue is not None:
         write_text(f"error: {issue}\n", sys.stderr)
