@@ -6,6 +6,15 @@ import sys
 import codecs
 
 
+def unicode_decoration(stream) -> bool:
+    """Whether write_text preserves Unicode decorations on this stream."""
+    try:
+        encoding = codecs.lookup(getattr(stream, "encoding", None) or "ascii").name
+    except LookupError:
+        return False
+    return encoding.startswith(("utf-8", "utf-16", "utf-32"))
+
+
 def write_text(text: str, stream=None) -> None:
     """Keep Unicode streams intact; visibly escape legacy output, never '?'.
 

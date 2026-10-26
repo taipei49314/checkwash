@@ -13,6 +13,7 @@ from checkwash.findings import Finding
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 from checkwash.report.unread import sorted_unread
+from checkwash.report.textio import unicode_decoration
 
 _SEV_COLOR = {"critical": "35", "high": "31", "warn": "33", "info": "36"}
 
@@ -30,12 +31,9 @@ def _symbols(stream) -> dict[str, str]:
     UnicodeEncodeError and turned a clean diff into exit 1 (confirmed
     red-team crash). ASCII fallback keeps the exit-code contract intact.
     """
-    enc = getattr(stream, "encoding", None) or "ascii"
-    try:
-        "✓✗⚠—".encode(enc)
-    except (UnicodeEncodeError, LookupError):
-        return {"pass": "OK", "block": "X", "warn": "!", "dash": "-"}
-    return {"pass": "✓", "block": "✗", "warn": "⚠", "dash": "—"}
+    if not unicode_decoration(stream):
+        return {"pass": "OK", "block": "X", "warn": "!", "dash": "-", "ellipsis": "..."}
+    return {"pass": "✓", "block": "✗", "warn": "⚠", "dash": "—", "ellipsis": "…"}
 
 
 # One line of evidence, bounded. SUPPRESSION_ADDED on a generated module
@@ -44,11 +42,11 @@ def _symbols(stream) -> dict[str, str]:
 _EVIDENCE_WIDTH = 160
 
 
-def _evidence(text: str | None) -> str:
+def _evidence(text: str | None, ellipsis: str = "…") -> str:
     if not text:
         return ""
     first = text.splitlines()[0]
-    return first if len(first) <= _EVIDENCE_WIDTH else first[: _EVIDENCE_WIDTH - 1] + "…"
+    return first if len(first) <= _EVIDENCE_WIDTH else first[: _EVIDENCE_WIDTH - len(ellipsis)] + ellipsis
 
 
 def _c(code: str, text: str, color: bool) -> str:
@@ -118,9 +116,9 @@ def render(
             # class of lie.
             lines.append("  no de-escalator applied")
         if f.before is not None:
-            lines.append(f"  before  {_evidence(f.before.text)}")
+            lines.append(f"  before  {_evidence(f.before.text, sym['ellipsis'])}")
         if f.after is not None:
-            lines.append(f"  after   {_evidence(f.after.text)}")
+            lines.append(f"  after   {_evidence(f.after.text, sym['ellipsis'])}")
         if f.severity in ("high", "critical"):
             lines.append("  next: fix the code, or record a reviewed exemption:")
             lines.append(f'    checkwash allow "{f.fingerprint}" --reason "..."')
@@ -130,7 +128,7 @@ def render(
             # the identical block, with nothing saying why (field integration
             # 2026-08-07). The reader of a blocking report is exactly the
             # person who needs the second half of the sentence.
-            lines.append(f"    then commit {ledger_path} — it is read from the base side")
+            lines.append(f"    then commit {ledger_path} {sym['dash']} it is read from the base side")
         lines.append("")
 
     for message in errors or []:

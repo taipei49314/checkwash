@@ -20,18 +20,15 @@ from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
 from checkwash.gitio.snapshot import search_source_mapping
-from checkwash.report.textio import write_text
+from checkwash.report.textio import unicode_decoration, write_text
 
 _TODAY = datetime.date(2026, 1, 1)
 
 
 def _symbols(stream):
-    enc = getattr(stream, "encoding", None) or "ascii"
-    try:
-        "✓✗→".encode(enc)
-    except (UnicodeEncodeError, LookupError):
-        return {"hit": "[caught]", "miss": "[MISSED]", "ok": "[clean]", "arrow": "->"}
-    return {"hit": "✗", "miss": "!", "ok": "✓", "arrow": "→"}
+    if not unicode_decoration(stream):
+        return {"hit": "[caught]", "miss": "[MISSED]", "ok": "[clean]", "arrow": "->", "dash": "-", "dot": ";"}
+    return {"hit": "✗", "miss": "!", "ok": "✓", "arrow": "→", "dash": "—", "dot": "·"}
 
 
 def _load_cases() -> list[tuple[str, str]]:
@@ -54,7 +51,7 @@ def run(stream=None) -> int:
         w("checkwash demo: no cases packaged\n")
         return 2
 
-    w("\ncheckwash demo — replaying real tampering cases, fully offline\n")
+    w(f"\ncheckwash demo {sym['dash']} replaying real tampering cases, fully offline\n")
     w("=" * 64 + "\n\n")
 
     caught = 0
@@ -100,6 +97,6 @@ def run(stream=None) -> int:
         w(f"    verdict: {label}\n\n")
 
     w("-" * 64 + "\n")
-    w(f"{caught}/{tampering} tampering cases blocked · "
-      f"the honest fix stayed clean · 0 network calls · 0 tokens · 0 LLM\n\n")
+    w(f"{caught}/{tampering} tampering cases blocked {sym['dot']} "
+      f"the honest fix stayed clean {sym['dot']} 0 network calls {sym['dot']} 0 tokens {sym['dot']} 0 LLM\n\n")
     return 0 if caught == tampering else 1
