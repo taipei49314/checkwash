@@ -32,6 +32,7 @@ unchanged.
 | Nonregular worktree source diagnostics | Existing worktree read/batch refusals identify the logical path, side, entrypoint and regular-source recovery. Legacy Git/search helpers retain their messages; no new source is admitted. |
 | Ruff ignore discovery diagnostics | The existing incomplete result identifies the ignore input, side and declared profile. Nonempty ignore files, including comment-only files, remain unqualified; support and enforcement do not expand. |
 | Doctor tracked hook maintenance | Doctor identifies tracked local Stop settings and explains that reinstalling may modify a protected guardrail requiring diff review and the existing BASE process. No managed-upgrade exemption is added. |
+| PowerShell draft saving | The adoption guide provides explicit UTF-8 saving and JSON policy_toml extraction, with exit checks. Native Windows PowerShell 5.1 default redirection produces invalid UTF-16LE TOML; explicit UTF-8 (with its accepted BOM) and PowerShell 7.6 controls preserve the parsed policy. No parser or setup authority changes. |
 
 ## Validation and limits
 
@@ -76,6 +77,9 @@ changed by this work.
   the comparison baseline require a contract decision.
 - Relative `--task` paths resolve from cwd rather than the documented repo
   base. A repo-owned task supplied by absolute path is the positive control.
+  Native controls with two different BASE-owned TASK files also select the
+  wrong existing contract as cwd changes, producing PASS instead of freeze
+  BLOCK. The lookup diagnostic does not repair that authority defect.
   Changing the resolution base needs its own CLI compatibility decision.
 - Quality report-to-enforce edits are still critical guardrail changes in
   `check`, while quality review uses the old report policy. A second quality
@@ -88,8 +92,11 @@ changed by this work.
   external consumers that reject additional keys must account for the
   documented optional array. Historical sweep results are not recomputed.
 - Quality format/guidance and main-reader refusal diagnostics are repaired
-  above. Native cross-drive/root-junction coverage, PowerShell 5.1 redirection,
-  and broader CRLF rename/fingerprint compatibility remain unverified.
+  above. Six native C: root-junction controls preserve complete JSON/hook
+  payloads against the physical-root controls. PowerShell 5.1 and 7.6 saving
+  controls underpin the [adoption recipes](quality-adoption.md#saving-drafts-in-powershell).
+  Other root-junction topologies, cross-drive behavior and broader CRLF
+  rename/fingerprint compatibility remain unverified.
 
 The bounded candidate may fit a patch release after full compatibility and
 acceptance checks. A complete rename/oracle contract repair belongs to a
