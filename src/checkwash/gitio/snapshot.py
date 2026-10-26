@@ -89,12 +89,20 @@ def _run(repo, args, *, data=None, no_matches=False):
     return result.stdout
 
 
-def _nonregular(message, path, mode):
+def _nonregular(message, path, mode, *, side=None, entry=None):
     """A refusal that names the path and what it is (#346).
 
-    The path is shown as is, unless it would not print on one line.
+    Legacy callers keep their original text. Worktree read/batch callers
+    opt into side, entrypoint and safe recovery context.
     """
     kind = {b"120000": "a symlink", b"040000": "a directory"}.get(mode, "not a regular file")
+    if entry is not None:
+        logical = "<non-repository-relative path>" if Path(path).anchor else path
+        return EngineError(
+            f"{message} {logical!r} ({kind}); side={side!r}, entry={entry!r}. "
+            "Use a repository-owned regular source at this path; "
+            "a committed range reads committed bytes only."
+        )
     shown = path if path.isprintable() else repr(path)
     return EngineError(f"{message} {shown} ({kind})")
 
@@ -703,7 +711,8 @@ class WorkingTreeSnapshot:
                 raise opaque_error(owner, f"{path} lies inside it")
             lexical = self.root / path
             if lexical.is_symlink():
-                raise _nonregular("strict snapshot batch cannot inspect nonregular source", path, b"120000")
+                raise _nonregular("strict snapshot batch cannot inspect nonregular source", path, b"120000",
+                                  side=self.side, entry="worktree/read_many")
             data = self.read(path)
             if data is not None:
                 size_total += len(data)
@@ -749,7 +758,8 @@ class WorkingTreeSnapshot:
             return None
         if not stat.S_ISREG(mode):
             kind = b"120000" if stat.S_ISLNK(mode) else b"040000" if stat.S_ISDIR(mode) else None
-            raise _nonregular("strict snapshot cannot inspect nonregular source", path, kind)
+            raise _nonregular("strict snapshot cannot inspect nonregular source", path, kind,
+                              side=self.side, entry="worktree/read")
         try:
             with target.open("rb") as source:
                 data = source.read(MAX_SOURCE_BYTES + 1)

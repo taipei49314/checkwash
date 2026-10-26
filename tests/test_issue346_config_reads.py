@@ -146,8 +146,10 @@ def test_working_tree_refusal_names_a_directory(tmp_path):
     (tmp_path / "configs" / "pytest.ini").mkdir(parents=True)
     with pytest.raises(EngineError) as caught:
         snapshots.WorkingTreeSnapshot(tmp_path).read("configs/pytest.ini")
-    assert str(caught.value) == (
-        "strict snapshot cannot inspect nonregular source configs/pytest.ini (a directory)")
+    message = str(caught.value)
+    assert message.startswith("strict snapshot cannot inspect nonregular source 'configs/pytest.ini' (a directory)")
+    assert "side='worktree'" in message and "entry='worktree/read'" in message
+    assert "repository-owned regular source" in message
 
 
 def test_working_tree_batch_refusal_names_the_symlinked_path(tmp_path):
@@ -159,8 +161,10 @@ def test_working_tree_batch_refusal_names_the_symlinked_path(tmp_path):
         pytest.skip(f"symlinks unavailable: {exc}")
     with pytest.raises(EngineError) as caught:
         snapshots.WorkingTreeSnapshot(tmp_path).read_many([NESTED])
-    assert str(caught.value) == (
-        "strict snapshot batch cannot inspect nonregular source requirements/pyproject.toml (a symlink)")
+    message = str(caught.value)
+    assert message.startswith("strict snapshot batch cannot inspect nonregular source 'requirements/pyproject.toml' (a symlink)")
+    assert "side='worktree'" in message and "entry='worktree/read_many'" in message
+    assert "repository-owned regular source" in message
 
 
 def test_a_path_that_would_break_the_line_is_quoted():

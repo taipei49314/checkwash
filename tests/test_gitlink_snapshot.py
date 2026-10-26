@@ -156,7 +156,7 @@ def test_unregistered_nested_repository_still_refuses(submodule_repo):
     (nested / "payload.py").write_bytes(b"VALUE = 1\n")
     git(nested, "add", ".")
     git(nested, "commit", "-m", "nested base")
-    with pytest.raises(EngineError, match="nonregular source nested/ \\(a directory\\)"):
+    with pytest.raises(EngineError, match="nonregular source 'nested/' \\(a directory\\)"):
         list_worktree_changes(str(repo))
 
 

@@ -83,11 +83,14 @@ def test_repository_owned_regular_file_still_reads(tmp_path):
     assert WorkingTreeSnapshot(tmp_path).read("source.py") == PROD
 
 
-def test_nonregular_admission_and_existing_reason_are_unchanged(tmp_path):
+def test_nonregular_admission_remains_refused(tmp_path):
     (tmp_path / "source.py").mkdir()
     with pytest.raises(EngineError) as caught:
         WorkingTreeSnapshot(tmp_path).read("source.py")
-    assert str(caught.value) == "strict snapshot cannot inspect nonregular source source.py (a directory)"
+    message = str(caught.value)
+    assert message.startswith("strict snapshot cannot inspect nonregular source 'source.py' (a directory)")
+    assert "side='worktree'" in message and "entry='worktree/read'" in message
+    assert "repository-owned regular source" in message
 
 
 @pytest.fixture(scope="module")
