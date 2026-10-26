@@ -736,7 +736,13 @@ class WorkingTreeSnapshot:
         lexical = self.root / path
         target = lexical.resolve()
         if not target.is_relative_to(self.root):
-            raise EngineError("strict snapshot path leaves the repository")
+            logical = "<non-repository-relative path>" if Path(path).anchor else path
+            raise EngineError(
+                f"strict snapshot path leaves the repository: path={logical!r}, "
+                f"side={self.side!r}, entry='worktree/read'. "
+                "Restore a repository-owned regular source at this path; "
+                "a committed range reads committed bytes only, not this working-tree source."
+            )
         try:
             mode = lexical.lstat().st_mode
         except FileNotFoundError:
