@@ -11,7 +11,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from checkwash.config import resolve_config_file
+from checkwash.config import CONFIG_DIRS, resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, namespace_diagnostics, summarize_allowlist
 from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook, stop_reads_hook_input
 from checkwash.report.textio import write_text
@@ -553,6 +553,17 @@ def collect(root: Path) -> list[Note]:
         f"allowlist: {'present (' + allow_rel + ')' if allow.exists() else 'absent'}. A new allowlist entry "
         "takes effect on the next diff and must be committed.",
     ))
+    for name in ("config.toml", "allow.toml"):
+        present = [f"{directory}/{name}" for directory in CONFIG_DIRS
+                   if root.joinpath(directory, name).is_file()]
+        if len(present) > 1:
+            notes.append(Note(
+                "info", "policy file precedence in this working tree",
+                f"For {name}, {present[0]} takes precedence over {', '.join(present[1:])}. "
+                "Precedence is per filename. Review both files before migrating or editing "
+                "a shadowed policy. Doctor describes the working tree; check reads the "
+                "reviewed BASE, whose files may differ.",
+            ))
     ledger_data = allow.read_bytes() if allow.exists() else None
     ledger = summarize_allowlist(ledger_data, datetime.date.today(), path=allow_rel)
     if ledger.parse_error:
