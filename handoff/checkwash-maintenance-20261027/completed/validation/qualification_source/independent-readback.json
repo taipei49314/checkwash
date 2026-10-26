@@ -1,0 +1,74 @@
+{
+  "kind": "READ_ONLY_QUALIFICATION_RESULT_AUDIT_NOT_RELEASE_BRIDGE",
+  "distribution": "source",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "qualification_status": "passed",
+  "summary": {
+    "executed": 283,
+    "failed": 0,
+    "total": 283
+  },
+  "source_pin_path": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\final-source-sha.txt",
+  "source_pin_sha256": "e7a2e900fa0f17592ce9c2a2755a394cc211127dcd0920b76137b75c30a95ee4",
+  "version": "checkwash 0.10.0",
+  "source_manifest_files": 3084,
+  "qualification_errors": [],
+  "exit_code": 0,
+  "source_files_unchanged": true,
+  "source_package_sha256": "93570306cff9de84dbd525fcceb370692f172ca21f9c510682e10a3ce9900cf2",
+  "suite_sha256": "2a8f8a0d40964c36563d737534965c4769ebc0b08d3fdd6bfa011f4b32f4c311",
+  "artifact_sha256": null,
+  "artifact": null,
+  "archive_package_members_verified": null,
+  "loaded_wheel_probes_verified": [],
+  "trusted_trace_source": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+  "trusted_trace_sha256": "502ffbadca30169131966db28a6a1e133cfd044f43974079827c0a68c0caa2fa",
+  "qualifier_sha256": "8b06293aa3192c40cb555fee7bdc408dfcfbf20e8df1b4cd4dfead824c1a8995",
+  "contracts": {
+    "tests/data/javascript_assertion_support.json": "f23a9278c7d8fc96ebbb89d8aaf6c1ff439564114e09f5de4d8adaeddc060c9d",
+    "tests/data/javascript_foundation_mutations.json": "d3d422f7172fb14f19ef2f6f3d05aa348b7f83249190a844c9423a08c3bb9774"
+  },
+  "recorded_subprocesses": 1422,
+  "case_cli_commands": 283,
+  "total_product_cli_commands": 286,
+  "auxiliary_cli_commands": 3,
+  "case_exit_counts": {
+    "1": 149,
+    "0": 134
+  },
+  "raw_stream_slice_hash_checks": 2844,
+  "raw_stream_full_hashes": {
+    "stdout": "742cf5871368e1b4ceb6f0899069785d5d6bf8f427953279e9698a9723800842",
+    "stderr": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+  },
+  "qualification_json_sha256": "1a0371d7513d02d3ceeed34215b0bb9ff1afc0ed0747f0dd75cb0d63016e9164",
+  "worker_receipt_sha256": "29bcf6b2666c10eb75c85bb0b8231c14318e3d4f335b6f6a76b2a3a023fb7a58",
+  "outer_receipt_sha256": "07e855ebba04be80ba2e50997e3a5e4e322ef0b7424fbd61e934008b5438ee2d",
+  "ledger_sha256": "94b00f956f793d30010db48b3f9d9d20f6cbea41bd9763d5f9a2aa3047e32e63",
+  "formal_release_collector": false,
+  "published_check_runs": 0,
+  "product_reexecuted_by_auditor": false,
+  "auditor_command": [
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\qualification\\read_source_result.py",
+    "--kind",
+    "source",
+    "--output",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\qualification\\source-r1",
+    "--capture",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\final\\source-assertion-qualification-r1"
+  ],
+  "auditor_runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "auditor_sha256": "f2053f8b42d8721388a1ac74211a7fe2faaa82203f929f037617775ff2f80a9f",
+  "not_run_by_this_leg": [
+    "wheel",
+    "pyz",
+    "full product suite",
+    "formal release bridge",
+    "published checks",
+    "other OS",
+    "Python 3.12/3.13"
+  ]
+}

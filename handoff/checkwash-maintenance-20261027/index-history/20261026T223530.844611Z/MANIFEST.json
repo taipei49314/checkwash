@@ -1,0 +1,234 @@
+{
+  "backup_state": "PARTIAL_CHECKPOINT",
+  "code_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "completed_input_hashes": {
+    "work/ux-stage5/controller-copy-record.json": "c3c3bab0351f17afe8132b179f14780b80ba329d5cb037d0502bd413cba5aa07",
+    "work/ux-stage5/final/build-artifacts-r1/receipt.json": "e3b269a8a0b5823afb2b0aff7b4c1a231de1be7b627f28a30c586dad606c4781",
+    "work/ux-stage5/final/build-pyz-r1/receipt.json": "16e731307f7394e4219ad565107eccbf9754888f03a72b6c94a87b24496c1f44",
+    "work/ux-stage5/final/full-suite-311-r1/independent-readback.json": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6",
+    "work/ux-stage5/final/full-suite-311-r1/receipt.json": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0",
+    "work/ux-stage5/final/wheel-runtime-create-r1/receipt.json": "f60e014bb075acb92ecc5adad69efd0bf232656e35f3f16e325c8b1bc8d57b03",
+    "work/ux-stage5/final/wheel-runtime-install-r1/receipt.json": "680f41aeb396da4787279d7d756aa3e54341f799ef25daeafc32ffd15bf661d1",
+    "work/ux-stage5/seal/source-seal.json": "7e6e103f43efa4fb9941351c07fa4f8407b2d5b380cdd15dd419303563e801ba",
+    "work/ux-stage5/selfdogfood-review/README.md": "723e5110b10e2bc05db6bcd04880f908684f6957693ed4b96706d9bb545d54c0",
+    "work/ux-stage5/selfdogfood-review/candidate-selfdogfood.raw.json": "67e316ef340f1e14f2769344f644535ae38552ce309756dc9d9a7862055fbb3a",
+    "work/ux-stage5/selfdogfood-review/native-capture-receipt.json": "64c12268a050bfda55070264f45059de2cf6c8ccc1abcdbd975bf0246d06d459",
+    "work/ux-stage5/selfdogfood-review/native-stderr.txt": "2bd19388247d63074e507e83f82bf17d970ac1512cfc6f4757795434e42c5871",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-1ffe-to-fbc.diff": "5537f61825af057152af00ca4cb009dc28228a1fe67ea0ecfacb7ee87d514b26",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-1ffe-to-fbc.diff.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-base.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-base.stdout": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-candidate.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-candidate.stdout": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-prior8a.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_classic_raises_additions-prior8a.stdout": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff": "30ec23be2a4e6bfc094f63f608a3af67f6a231d16577afa0814c50c1f5397729",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-base.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-base.stdout": "5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-candidate.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-candidate.stdout": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-prior8a.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage5/selfdogfood-review/raw/test_issue266_survivor_conftest_chain-prior8a.stdout": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f",
+    "work/ux-stage5/selfdogfood-review/review.json": "bd92e4c4cfd63adffaf54ae07c9b2f03d529b6c68fe021c5e8bde8a02c009785",
+    "work/ux-stage5/source-content-equivalence.json": "503616ebcb1e53d37d66f42717dbd7fa93fd81fd26a2b79918d8ae5c0a37be06"
+  },
+  "files": [
+    {
+      "bytes": 2571,
+      "path": "00-START-HERE.md",
+      "sha256": "6a1919308f0e377df10a6a41816493575b8bd241ea7da60807300e0e3033bf08"
+    },
+    {
+      "bytes": 2257,
+      "path": "checkpoint.json",
+      "sha256": "0e83cdd039126e3bd1556acf87914f1f1c3f649f86b333bbade5305fbae35624"
+    },
+    {
+      "bytes": 1104,
+      "path": "completed/controller-copy-record.json",
+      "sha256": "c3c3bab0351f17afe8132b179f14780b80ba329d5cb037d0502bd413cba5aa07"
+    },
+    {
+      "bytes": 1673,
+      "path": "completed/preparation/build-artifacts-r1.json",
+      "sha256": "e3b269a8a0b5823afb2b0aff7b4c1a231de1be7b627f28a30c586dad606c4781"
+    },
+    {
+      "bytes": 1520,
+      "path": "completed/preparation/build-pyz-r1.json",
+      "sha256": "16e731307f7394e4219ad565107eccbf9754888f03a72b6c94a87b24496c1f44"
+    },
+    {
+      "bytes": 1629,
+      "path": "completed/preparation/wheel-runtime-create-r1.json",
+      "sha256": "f60e014bb075acb92ecc5adad69efd0bf232656e35f3f16e325c8b1bc8d57b03"
+    },
+    {
+      "bytes": 1887,
+      "path": "completed/preparation/wheel-runtime-install-r1.json",
+      "sha256": "680f41aeb396da4787279d7d756aa3e54341f799ef25daeafc32ffd15bf661d1"
+    },
+    {
+      "bytes": 4623,
+      "path": "completed/selfdogfood/RAW-EXPORT-MAP.json",
+      "sha256": "3ade34dd1f4e4f6d2f94e3c6860c1c70ea4a53b1144bbd90861b64aa93e2cb5c"
+    },
+    {
+      "bytes": 3291,
+      "path": "completed/selfdogfood/README.md",
+      "sha256": "723e5110b10e2bc05db6bcd04880f908684f6957693ed4b96706d9bb545d54c0"
+    },
+    {
+      "bytes": 13085,
+      "path": "completed/selfdogfood/candidate-selfdogfood.raw.json",
+      "sha256": "67e316ef340f1e14f2769344f644535ae38552ce309756dc9d9a7862055fbb3a"
+    },
+    {
+      "bytes": 1547,
+      "path": "completed/selfdogfood/native-capture-receipt.json",
+      "sha256": "64c12268a050bfda55070264f45059de2cf6c8ccc1abcdbd975bf0246d06d459"
+    },
+    {
+      "bytes": 27577,
+      "path": "completed/selfdogfood/native-stderr.txt",
+      "sha256": "2bd19388247d63074e507e83f82bf17d970ac1512cfc6f4757795434e42c5871"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-1ffe-to-fbc.diff.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2057,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-1ffe-to-fbc.diff.txt",
+      "sha256": "5537f61825af057152af00ca4cb009dc28228a1fe67ea0ecfacb7ee87d514b26"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-base.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 4596,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-base.stdout.txt",
+      "sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-candidate.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5753,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-candidate.stdout.txt",
+      "sha256": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-prior8a.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 4596,
+      "path": "completed/selfdogfood/raw/test_classic_raises_additions-prior8a.stdout.txt",
+      "sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3086,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff.txt",
+      "sha256": "30ec23be2a4e6bfc094f63f608a3af67f6a231d16577afa0814c50c1f5397729"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-base.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5656,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-base.stdout.txt",
+      "sha256": "5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-candidate.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5779,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-candidate.stdout.txt",
+      "sha256": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f"
+    },
+    {
+      "bytes": 0,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-prior8a.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5779,
+      "path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-prior8a.stdout.txt",
+      "sha256": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f"
+    },
+    {
+      "bytes": 9930,
+      "path": "completed/selfdogfood/review.json",
+      "sha256": "bd92e4c4cfd63adffaf54ae07c9b2f03d529b6c68fe021c5e8bde8a02c009785"
+    },
+    {
+      "bytes": 758,
+      "path": "completed/source-content-equivalence.json",
+      "sha256": "503616ebcb1e53d37d66f42717dbd7fa93fd81fd26a2b79918d8ae5c0a37be06"
+    },
+    {
+      "bytes": 1148512,
+      "path": "completed/source-seal.json",
+      "sha256": "7e6e103f43efa4fb9941351c07fa4f8407b2d5b380cdd15dd419303563e801ba"
+    },
+    {
+      "bytes": 101303,
+      "path": "completed/validation/full_suite/independent-readback.json",
+      "sha256": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6"
+    },
+    {
+      "bytes": 1834,
+      "path": "completed/validation/full_suite/receipt.json",
+      "sha256": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0"
+    },
+    {
+      "bytes": 2593,
+      "path": "index-history/20261026T214442.435750Z/00-START-HERE.md",
+      "sha256": "fa1aca093a9abbc47e7abc357e25ef5a780aecffddd1e13219d0e6789a42f9f2"
+    },
+    {
+      "bytes": 10874,
+      "path": "index-history/20261026T214442.435750Z/MANIFEST.json",
+      "sha256": "a2869e1a7722e4482b953919b4555e71f4a866ccd9ee659442b5294851ce3b1a"
+    },
+    {
+      "bytes": 1961,
+      "path": "index-history/20261026T214442.435750Z/checkpoint.json",
+      "sha256": "c0aff7f58b74dd00af5dd5e46b48bbde4b244d75d95784565002e2d3db800bec"
+    },
+    {
+      "bytes": 5952436,
+      "path": "source-fbc9374d.zip",
+      "sha256": "3ca6e7ec2277b6c9c2854065fab86a30f005b696f66c5952dfe7e27022b85d65"
+    },
+    {
+      "bytes": 86,
+      "path": "source-fbc9374d.zip.sha256",
+      "sha256": "26289ec65a2d046966969c80be0f6d3f790ed6e6f40d9b00758ea8ceff546809"
+    }
+  ],
+  "git_calls": 0,
+  "manifest_excludes_itself": true,
+  "producer_sha256": "fbb0384b77ee293eb4419356a660c5e3a61b3697b642aa4029c20d013376406f",
+  "product_calls": 0,
+  "purpose": "BACKUP_ONLY_NOT_ACCEPTANCE_NOT_RELEASE",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+}

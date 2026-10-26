@@ -1,17 +1,19 @@
 {
   "acceptance_state": "NONPASS",
-  "backup_state": "PARTIAL_CHECKPOINT",
+  "backup_state": "TERMINAL_BACKUP",
   "baseline_only": {
     "commit": "d158ec02aac9c0c19751d0475f935b533e3d03f7",
     "not_current_validation": true,
     "old_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b"
   },
   "bundle": {
+    "bytes": 15994430,
     "filename": "checkwash-fbc9374d-maintenance-evidence.zip",
-    "state": "NOT_READY"
+    "sha256": "ce7d6f9c28a90704e8e4bb5ed235c4675feaa65b3a1c0d1626a5b3ae97733253",
+    "state": "COMPLETE"
   },
   "code_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
-  "created_utc": "2026-10-26T21:44:42.407123+00:00",
+  "created_utc": "2026-10-26T22:35:30.810414+00:00",
   "findings_version": 2,
   "ir_version": 3,
   "producer_git_calls": 0,
@@ -34,7 +36,7 @@
   "source_guard_delegated_to_publisher": true,
   "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
   "validation": {
-    "all_active_jobs_terminal": false,
+    "all_active_jobs_terminal": true,
     "roles": {
       "full_suite": {
         "audit": {
@@ -48,16 +50,37 @@
         "state": "TERMINAL"
       },
       "qualification_pyz": {
-        "detail": "terminal_missing; directory presence does not prove a live process",
-        "state": "RUNNING"
+        "audit": {
+          "path": "completed/validation/qualification_pyz/independent-readback.json",
+          "sha256": "b5c661789e01bc85d252692c13b5807085d0f902b40ce27b1d44b5899370d2ce",
+          "state": "READBACK_RECORDED"
+        },
+        "exit_code": 0,
+        "receipt": "completed/validation/qualification_pyz/receipt.json",
+        "sha256": "7ef676f052dfb1811cd26e34d87f463f12e248345ea4a843e1bc2766b2e8fd11",
+        "state": "TERMINAL"
       },
       "qualification_source": {
-        "detail": "terminal_missing; directory presence does not prove a live process",
-        "state": "RUNNING"
+        "audit": {
+          "path": "completed/validation/qualification_source/independent-readback.json",
+          "sha256": "82f13b124aba0554eb747639feac616d84a4aa11fff4f155830b9079a5b48f1b",
+          "state": "READBACK_RECORDED"
+        },
+        "exit_code": 0,
+        "receipt": "completed/validation/qualification_source/receipt.json",
+        "sha256": "07e855ebba04be80ba2e50997e3a5e4e322ef0b7424fbd61e934008b5438ee2d",
+        "state": "TERMINAL"
       },
       "qualification_wheel": {
-        "detail": "terminal_missing; directory presence does not prove a live process",
-        "state": "RUNNING"
+        "audit": {
+          "path": "completed/validation/qualification_wheel/independent-readback.json",
+          "sha256": "5fb2d243ade816d6466d473894c2b646bccb292ec6d55511e641ee4423c7318c",
+          "state": "READBACK_RECORDED"
+        },
+        "exit_code": 0,
+        "receipt": "completed/validation/qualification_wheel/receipt.json",
+        "sha256": "1ec93635165aab6b8ab447c252fcf7bd0f879dca85e20bf729470795bd60fc94",
+        "state": "TERMINAL"
       }
     }
   },

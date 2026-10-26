@@ -1,14 +1,21 @@
 {
-  "backup_state": "PARTIAL_CHECKPOINT",
+  "backup_state": "TERMINAL_BACKUP",
   "code_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
   "completed_input_hashes": {
+    "work/ux-stage5/checkpoint-pack/pack-receipt.json": "1a47172e5ced5814c5415710da36dafc4f0f0069fdce7a45792f9d34c629b4eb",
     "work/ux-stage5/controller-copy-record.json": "c3c3bab0351f17afe8132b179f14780b80ba329d5cb037d0502bd413cba5aa07",
     "work/ux-stage5/final/build-artifacts-r1/receipt.json": "e3b269a8a0b5823afb2b0aff7b4c1a231de1be7b627f28a30c586dad606c4781",
     "work/ux-stage5/final/build-pyz-r1/receipt.json": "16e731307f7394e4219ad565107eccbf9754888f03a72b6c94a87b24496c1f44",
     "work/ux-stage5/final/full-suite-311-r1/independent-readback.json": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6",
     "work/ux-stage5/final/full-suite-311-r1/receipt.json": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0",
+    "work/ux-stage5/final/pyz-assertion-qualification-r1/receipt.json": "7ef676f052dfb1811cd26e34d87f463f12e248345ea4a843e1bc2766b2e8fd11",
+    "work/ux-stage5/final/source-assertion-qualification-r1/receipt.json": "07e855ebba04be80ba2e50997e3a5e4e322ef0b7424fbd61e934008b5438ee2d",
+    "work/ux-stage5/final/wheel-assertion-qualification-r1/receipt.json": "1ec93635165aab6b8ab447c252fcf7bd0f879dca85e20bf729470795bd60fc94",
     "work/ux-stage5/final/wheel-runtime-create-r1/receipt.json": "f60e014bb075acb92ecc5adad69efd0bf232656e35f3f16e325c8b1bc8d57b03",
     "work/ux-stage5/final/wheel-runtime-install-r1/receipt.json": "680f41aeb396da4787279d7d756aa3e54341f799ef25daeafc32ffd15bf661d1",
+    "work/ux-stage5/qualification/pyz-r1/independent-readback.json": "b5c661789e01bc85d252692c13b5807085d0f902b40ce27b1d44b5899370d2ce",
+    "work/ux-stage5/qualification/source-r1/independent-readback.json": "82f13b124aba0554eb747639feac616d84a4aa11fff4f155830b9079a5b48f1b",
+    "work/ux-stage5/qualification/wheel-r1/independent-readback.json": "5fb2d243ade816d6466d473894c2b646bccb292ec6d55511e641ee4423c7318c",
     "work/ux-stage5/seal/source-seal.json": "7e6e103f43efa4fb9941351c07fa4f8407b2d5b380cdd15dd419303563e801ba",
     "work/ux-stage5/selfdogfood-review/README.md": "723e5110b10e2bc05db6bcd04880f908684f6957693ed4b96706d9bb545d54c0",
     "work/ux-stage5/selfdogfood-review/candidate-selfdogfood.raw.json": "67e316ef340f1e14f2769344f644535ae38552ce309756dc9d9a7862055fbb3a",
@@ -35,19 +42,34 @@
   },
   "files": [
     {
-      "bytes": 2571,
+      "bytes": 2550,
       "path": "00-START-HERE.md",
-      "sha256": "6a1919308f0e377df10a6a41816493575b8bd241ea7da60807300e0e3033bf08"
+      "sha256": "e962c0a4ef75307f0bb2981463c9bf5503c6d7af65afca99735d96de0e232635"
     },
     {
-      "bytes": 2257,
+      "bytes": 3387,
       "path": "checkpoint.json",
-      "sha256": "0e83cdd039126e3bd1556acf87914f1f1c3f649f86b333bbade5305fbae35624"
+      "sha256": "d0e73772878dd2826442333bdfbde73e09bb727468beafebf5ba69e1799c729e"
+    },
+    {
+      "bytes": 15994430,
+      "path": "checkwash-fbc9374d-maintenance-evidence.zip",
+      "sha256": "ce7d6f9c28a90704e8e4bb5ed235c4675feaa65b3a1c0d1626a5b3ae97733253"
+    },
+    {
+      "bytes": 111,
+      "path": "checkwash-fbc9374d-maintenance-evidence.zip.sha256",
+      "sha256": "b6023626af323163ccfcf9e913e18cc87be810e732c5d33f530fea30fbaf9403"
     },
     {
       "bytes": 1104,
       "path": "completed/controller-copy-record.json",
       "sha256": "c3c3bab0351f17afe8132b179f14780b80ba329d5cb037d0502bd413cba5aa07"
+    },
+    {
+      "bytes": 1748,
+      "path": "completed/pack-receipt.json",
+      "sha256": "1a47172e5ced5814c5415710da36dafc4f0f0069fdce7a45792f9d34c629b4eb"
     },
     {
       "bytes": 1673,
@@ -200,6 +222,36 @@
       "sha256": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0"
     },
     {
+      "bytes": 3566,
+      "path": "completed/validation/qualification_pyz/independent-readback.json",
+      "sha256": "b5c661789e01bc85d252692c13b5807085d0f902b40ce27b1d44b5899370d2ce"
+    },
+    {
+      "bytes": 2093,
+      "path": "completed/validation/qualification_pyz/receipt.json",
+      "sha256": "7ef676f052dfb1811cd26e34d87f463f12e248345ea4a843e1bc2766b2e8fd11"
+    },
+    {
+      "bytes": 3404,
+      "path": "completed/validation/qualification_source/independent-readback.json",
+      "sha256": "82f13b124aba0554eb747639feac616d84a4aa11fff4f155830b9079a5b48f1b"
+    },
+    {
+      "bytes": 2108,
+      "path": "completed/validation/qualification_source/receipt.json",
+      "sha256": "07e855ebba04be80ba2e50997e3a5e4e322ef0b7424fbd61e934008b5438ee2d"
+    },
+    {
+      "bytes": 4352,
+      "path": "completed/validation/qualification_wheel/independent-readback.json",
+      "sha256": "5fb2d243ade816d6466d473894c2b646bccb292ec6d55511e641ee4423c7318c"
+    },
+    {
+      "bytes": 2131,
+      "path": "completed/validation/qualification_wheel/receipt.json",
+      "sha256": "1ec93635165aab6b8ab447c252fcf7bd0f879dca85e20bf729470795bd60fc94"
+    },
+    {
       "bytes": 2593,
       "path": "index-history/20261026T214442.435750Z/00-START-HERE.md",
       "sha256": "fa1aca093a9abbc47e7abc357e25ef5a780aecffddd1e13219d0e6789a42f9f2"
@@ -213,6 +265,21 @@
       "bytes": 1961,
       "path": "index-history/20261026T214442.435750Z/checkpoint.json",
       "sha256": "c0aff7f58b74dd00af5dd5e46b48bbde4b244d75d95784565002e2d3db800bec"
+    },
+    {
+      "bytes": 2571,
+      "path": "index-history/20261026T223530.844611Z/00-START-HERE.md",
+      "sha256": "6a1919308f0e377df10a6a41816493575b8bd241ea7da60807300e0e3033bf08"
+    },
+    {
+      "bytes": 12078,
+      "path": "index-history/20261026T223530.844611Z/MANIFEST.json",
+      "sha256": "909ff5519b28ade813e2c4e02e1dfa0576bfdfcfcf3550434413665465464aba"
+    },
+    {
+      "bytes": 2257,
+      "path": "index-history/20261026T223530.844611Z/checkpoint.json",
+      "sha256": "0e83cdd039126e3bd1556acf87914f1f1c3f649f86b333bbade5305fbae35624"
     },
     {
       "bytes": 5952436,

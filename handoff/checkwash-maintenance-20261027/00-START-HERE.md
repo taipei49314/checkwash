@@ -1,7 +1,7 @@
 # CheckWash maintenance follow-up: backup only
 
 Source / code source: `fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c`. Candidate version **0.10.0**, IR3 / findings2.
-`backup_state=PARTIAL_CHECKPOINT`; purpose `BACKUP_ONLY_NOT_ACCEPTANCE_NOT_RELEASE`.
+`backup_state=TERMINAL_BACKUP`; purpose `BACKUP_ONLY_NOT_ACCEPTANCE_NOT_RELEASE`.
 Acceptance state: **NONPASS**. No product publication was performed.
 Version 1.0 requires Nelson's explicit decision.
 
@@ -14,16 +14,16 @@ No waiver, exemption, expected-label change or gate override is added by this ba
 
 | Validation role | Actual captured state | Actual exit |
 |---|---|---|
-| qualification_source | RUNNING | not terminal |
-| qualification_wheel | RUNNING | not terminal |
-| qualification_pyz | RUNNING | not terminal |
+| qualification_source | TERMINAL | 0 |
+| qualification_wheel | TERMINAL | 0 |
+| qualification_pyz | TERMINAL | 0 |
 | full_suite | TERMINAL | 1 |
 
 Only completed stage5 outer receipts supply terminal exits. A missing terminal receipt
 is not PASS, and a directory does not prove a process is still live. Independent audit
 exit 0 means evidence consistency only: a full-suite exit 1 remains NONPASS permanently.
 The index does not predict test counts or borrow old8a qualification results.
-Bundle state: **NOT_READY**. No final evidence ZIP is included or claimed complete; this is a partial checkpoint.
+Bundle state: **COMPLETE**. The complete evidence ZIP is included; terminal backup completion still does not mean acceptance.
 See [checkpoint.json](checkpoint.json) and [MANIFEST.json](MANIFEST.json) for exact copied bytes.
 
 The frozen8a backup, its five archives and 22 failing tests are a **historical baseline**

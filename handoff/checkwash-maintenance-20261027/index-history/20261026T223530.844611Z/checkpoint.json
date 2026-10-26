@@ -1,0 +1,66 @@
+{
+  "acceptance_state": "NONPASS",
+  "backup_state": "PARTIAL_CHECKPOINT",
+  "baseline_only": {
+    "commit": "d158ec02aac9c0c19751d0475f935b533e3d03f7",
+    "not_current_validation": true,
+    "old_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b"
+  },
+  "bundle": {
+    "filename": "checkwash-fbc9374d-maintenance-evidence.zip",
+    "state": "NOT_READY"
+  },
+  "code_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "created_utc": "2026-10-26T21:44:42.407123+00:00",
+  "findings_version": 2,
+  "ir_version": 3,
+  "producer_git_calls": 0,
+  "producer_product_calls": 0,
+  "product_publication_performed": false,
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "purpose": "BACKUP_ONLY_NOT_ACCEPTANCE_NOT_RELEASE",
+  "selfdogfood": {
+    "exit_code": 1,
+    "receipt": "completed/selfdogfood/native-capture-receipt.json",
+    "sha256": "64c12268a050bfda55070264f45059de2cf6c8ccc1abcdbd975bf0246d06d459",
+    "state": "BLOCK_NONPASS_PRESERVED",
+    "summary": {
+      "critical": 0,
+      "high": 3,
+      "info": 0,
+      "warn": 9
+    }
+  },
+  "source_guard_delegated_to_publisher": true,
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "validation": {
+    "all_active_jobs_terminal": false,
+    "roles": {
+      "full_suite": {
+        "audit": {
+          "path": "completed/validation/full_suite/independent-readback.json",
+          "sha256": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6",
+          "state": "VERIFIED"
+        },
+        "exit_code": 1,
+        "receipt": "completed/validation/full_suite/receipt.json",
+        "sha256": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0",
+        "state": "TERMINAL"
+      },
+      "qualification_pyz": {
+        "detail": "terminal_missing; directory presence does not prove a live process",
+        "state": "RUNNING"
+      },
+      "qualification_source": {
+        "detail": "terminal_missing; directory presence does not prove a live process",
+        "state": "RUNNING"
+      },
+      "qualification_wheel": {
+        "detail": "terminal_missing; directory presence does not prove a live process",
+        "state": "RUNNING"
+      }
+    }
+  },
+  "version": "0.10.0",
+  "version_1_0_requires_human_decision": true
+}
