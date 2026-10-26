@@ -1,0 +1,202 @@
+"""Read existing root API receipts; parse only literal test constructors.
+
+No CheckWash/test import, compile, eval, exec, fixture execution or subprocess.
+The evaluator accepts only literal values, string concatenation and the exact
+module() f-string constructor; it never calls any Python function from tests.
+"""
+import ast
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[3]
+HERE = Path(__file__).resolve().parent
+SOURCE = ROOT / "work/checkwash-ux"
+RAW = ROOT / "work/ux-stage6/proof-diagnostics-r1"
+CAPTURE = ROOT / "work/ux-stage6/final/bounded-context-r1"
+PIN = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+checks = []
+inputs = {}
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def require(condition, name):
+    checks.append({"name": name, "passed": bool(condition)})
+    if not condition:
+        raise ValueError(name)
+
+
+def raw(path):
+    data = path.read_bytes()
+    inputs[path.relative_to(ROOT).as_posix()] = {"sha256": sha(data), "bytes": len(data)}
+    return data
+
+
+def read(path):
+    return json.loads(raw(path))
+
+
+def literal(node, env):
+    if isinstance(node, ast.Name):
+        return env[node.id]
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left, right = literal(node.left, env), literal(node.right, env)
+        if type(left) is str and type(right) is str:
+            return left + right
+        raise ValueError("constructor concatenation must be strings")
+    if isinstance(node, ast.JoinedStr):
+        result = []
+        for part in node.values:
+            if isinstance(part, ast.Constant) and type(part.value) is str:
+                result.append(part.value)
+            elif isinstance(part, ast.FormattedValue) and part.conversion == -1 and part.format_spec is None:
+                value = literal(part.value, env)
+                if type(value) is not str:
+                    raise ValueError("constructor interpolation must be strings")
+                result.append(value)
+            else:
+                raise ValueError("unknown constructor interpolation")
+        return "".join(result)
+    return ast.literal_eval(node)
+
+
+def assignment_strings(function, env):
+    for item in function.body:
+        if isinstance(item, ast.Assign) and len(item.targets) == 1 and isinstance(item.targets[0], ast.Name):
+            try:
+                value = literal(item.value, env)
+            except (ValueError, KeyError, TypeError):
+                continue
+            env[item.targets[0].id] = value
+    return env
+
+
+def expected263(tree):
+    target = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                  and n.name == "test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated")
+    values = assignment_strings(target, {})
+    return values["before"].encode(), values["after"].encode()
+
+
+def expected358(tree):
+    gate = next(literal(n.value, {}) for n in tree.body if isinstance(n, ast.Assign)
+                and any(isinstance(t, ast.Name) and t.id == "GATE" for t in n.targets))
+    constructor = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "module")
+    require(len(constructor.body) == 1 and isinstance(constructor.body[0], ast.Return), "358 constructor is sole f-string return")
+    names = [a.arg for a in constructor.args.args]
+    env = {name: literal(value, {"GATE": gate})
+           for name, value in zip(names[-len(constructor.args.defaults):], constructor.args.defaults)}
+    target = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                  and n.name == "test_a_test_moved_under_the_gate_keeps_its_move_credit")
+    body = assignment_strings(target, {})["body"]
+    before = literal(constructor.body[0].value, {**env, "tests": body}).encode()
+    empty = literal(constructor.body[0].value, {**env, "tests": ""}).encode()
+    return before, empty, gate.encode()
+
+
+def main():
+    t263 = ast.parse(raw(SOURCE / "tests/test_issue263_string_conditions.py"))
+    t358 = ast.parse(raw(SOURCE / "tests/test_issue358_own_mark_guards.py"))
+    before263, after263 = expected263(t263)
+    before358, empty358, gate = expected358(t358)
+    fixture_values = {"issue263-before.py.txt": before263, "issue263-after.py.txt": after263,
+                      "issue358-before.py.txt": before358, "issue358-empty-old.py.txt": empty358}
+    for name, expected in fixture_values.items():
+        require(raw(HERE / "fixtures" / name) == expected, "inert copy exactly equals original test constructor: " + name)
+    capture = read(CAPTURE / "receipt.json")
+    require(capture["source_sha"] == capture["expected_source_sha"] == capture["ending_sha"] == PIN,
+            "root capture fixed fbc")
+    require(capture["source_files_unchanged"] is True and capture["changed_inputs"] == [], "root capture unchanged inputs")
+    require(type(capture["exit_code"]) is int and capture["exit_code"] == 0, "capture completed (not a product PASS)")
+    require(sha(raw(CAPTURE / "input-hashes.json")) == capture["input_manifest_sha256"], "capture input manifest hash")
+    require(raw(CAPTURE / "source.diff") == raw(CAPTURE / "git-status.txt") == b"", "capture source diff/status empty")
+    results = read(RAW / "results.json")
+    require(results["source_sha"] == PIN and results["static_analyzer_calls"] == 12,
+            "root diagnostics identify twelve unchanged-source API observations")
+    require(results["fixture_program_executions"] == results["pytest_calls"] == results["cli_calls"] == 0,
+            "diagnostic scope records no fixture/pytest/CLI calls")
+    originals = {
+        "263-original": [("tests/test_calc.py", before263, after263)],
+        "263-closed-root": [("tests/test_calc.py", before263, after263)],
+        "358-original": [("tests/test_billing.py", before358, empty358), ("tests/test_other.py", None, before358)],
+        "358-no-gate-control": [("tests/test_billing.py", before358.replace(gate, b""), empty358.replace(gate, b"")),
+                                ("tests/test_other.py", None, before358.replace(gate, b""))],
+    }
+    summaries = []
+    for label, expected_changes in originals.items():
+        path = RAW / (label + ".json")
+        data = raw(path)
+        row = json.loads(data)
+        declared = results["files"][path.name]
+        require(declared["sha256"] == sha(data) and declared["bytes"] == len(data), label + " declared raw hash/size")
+        require(len(row["changes"]) == len(expected_changes), label + " exact change count")
+        for change, (name, before, after) in zip(row["changes"], expected_changes):
+            require(change["path"] == name, label + " path")
+            for field, expected in (("before", before), ("after", after)):
+                text = change[field + "_utf8"]
+                consumed = text.encode() if text is not None else None
+                require(consumed == expected and change[field + "_sha256"] == (sha(expected) if expected is not None else None),
+                        label + " exact " + field + " bytes/hash")
+        for name, value in row["snapshot"].items():
+            require(sha(value["utf8"].encode()) == value["sha256"], label + " snapshot byte hash " + name)
+        snapshot_bytes = {name: value["utf8"].encode() for name, value in row["snapshot"].items()}
+        if label == "263-original":
+            expected_snapshot = {}
+        elif label == "263-closed-root":
+            expected_snapshot = {"tests/test_calc.py": after263}
+        else:
+            expected_snapshot = {"app/__init__.py": b"", "app/billing.py": b"def total():\n    return 78.75\n",
+                                 **{name: after for name, _before, after in expected_changes}}
+        require(snapshot_bytes == expected_snapshot, label + " complete exact closed snapshot")
+        calls = row["mark_context_calls"]
+        for call in calls:
+            if call["source_sha256"] is None:
+                require(not call["units"] and call["startup_known"] is False, label + " absent side has no proof")
+        summaries.append({"label": label, "raw_path": path.relative_to(ROOT).as_posix(), "raw_sha256": sha(data),
+                          "verdict": row["verdict"], "closed_snapshot": row["closed_snapshot"],
+                          "findings": [{key: f[key] for key in ("rule", "severity", "fingerprint", "deescalators", "escalators")}
+                                       for f in row["findings"]],
+                          "mark_context_calls": calls, "startup_lookups": row["startup_lookups"]})
+    indexed = {r["label"]: r for r in summaries}
+    for label in ("263-original", "263-closed-root", "358-original"):
+        row = indexed[label]
+        require(row["verdict"] == "block" and all(f["severity"] == "high" and not f["deescalators"] for f in row["findings"]),
+                label + " actual BLOCK/high without optional credit")
+    control = indexed["358-no-gate-control"]
+    require(control["verdict"] == "pass" and len(control["findings"]) == 1
+            and control["findings"][0]["severity"] == "info"
+            and control["findings"][0]["deescalators"] == ["ASSERTION_MOVED"], "358 no-gate observed PASS/info move control")
+    b263, a263 = indexed["263-closed-root"]["mark_context_calls"]
+    require(b263["startup_known"] is a263["startup_known"] is True and b263["startup"] == a263["startup"] == "[]",
+            "263 strict startup known on both sides")
+    require(all(u["oracle_context"] and u["oracle_assertion_contexts"] for u in b263["units"])
+            and all(not u["oracle_context"] and not u["oracle_assertion_contexts"] for u in a263["units"]),
+            "263 closed root repairs before proof only; after stays unknown")
+    require(all(not u["oracle_context"] and not u["oracle_assertion_contexts"]
+                for call in indexed["358-original"]["mark_context_calls"] for u in call["units"]),
+            "358 original known startup still has no unit/assertion proof")
+    for name, before in list(inputs.items()):
+        require(sha((ROOT / name).read_bytes()) == before["sha256"], "original input preserved: " + name)
+    result = {"review_state": "PASS_BOUNDED_EXISTING_DIAGNOSTIC_READBACK", "source_sha": PIN,
+              "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL", "host": capture["host"],
+              "runtime": sys.version, "audit_created_utc": datetime.now(timezone.utc).isoformat(),
+              "capture_exit_code": capture["exit_code"], "capture_exit_is_product_pass": False,
+              "product_calls_by_reader": 0, "pytest_calls_by_reader": 0, "fixture_execution_by_reader": 0,
+              "original_test_constructors_byte_exact": True, "original_inputs_preserved": True,
+              "checked_python_observations": summaries, "checks": checks, "inputs": inputs,
+              "reader_sha256": sha(Path(__file__).read_bytes()),
+              "interpretation": "Current fbc API observations, not CLI qualification or a changed-judge result. Source branch diagnosis and future projected movement remain separate, unexecuted claims."}
+    out = HERE / "existing-diagnostic-readback-r2.json"
+    require(not out.exists(), "new readback path (preserve prior results)")
+    out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(json.dumps({"review_state": result["review_state"], "checks": len(checks),
+                      "readback": str(out), "sha256": sha(out.read_bytes()), "product_calls": 0}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

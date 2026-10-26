@@ -1,0 +1,15 @@
+import os
+
+import pytest
+
+from app.billing import total
+
+
+@pytest.fixture(autouse=True)
+def only_slow(request):
+    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):
+        pytest.skip('slow tests are off')
+
+
+def test_total():
+    assert total() == 78.75

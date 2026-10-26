@@ -1,0 +1,13 @@
+{
+  "origin": "work/ux-stage5/capture_final.py",
+  "origin_sha256": "78bdf1762224daa5b922a725c9403d6ef9f48eaef38f808fb91bf00e10a4b5d0",
+  "derived": "work/ux-stage6/capture_diagnostic.py",
+  "derived_sha256": "2b1b2616254aca05e907b9ebe4608be5a4227d542d63c914ed79640fe5733d9e",
+  "changes": [
+    "docstring states bounded fbc diagnostics",
+    "temp prefix cwf5- to cwf6-"
+  ],
+  "product_source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "purpose": "DIAGNOSTIC_NOT_RELEASE_BRIDGE",
+  "stage5_unchanged": true
+}

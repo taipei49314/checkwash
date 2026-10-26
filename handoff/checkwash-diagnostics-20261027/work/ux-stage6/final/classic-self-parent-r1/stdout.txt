@@ -1,0 +1,112 @@
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          2566,
+          2615
+        ],
+        "text": "assert preserved.after.span == original.side.span"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          2133,
+          2284
+        ],
+        "text": "assert {name: getattr(preserved.after, name) for name in native_fields} == {\n        name: getattr(original.side, name) for name in native_fields\n    }"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:807bc974429fd6c3ef21d12bf47a7b52882630d140bd110ae1572f80ae4a3e21",
+      "message": "test_added_literal_rows_retain_exception_removal_and_native_units: an assertion was replaced by an unrelated one of the same strength ({name: getattr(preserved.after, name) for name in native_fields} -> preserved.after.span); the original assertion is gone and the strength lattice cannot see it",
+      "path": "tests/test_classic_raises_additions.py",
+      "rule": "ASSERT_SUBSTITUTED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+    },
+    {
+      "after": {
+        "span": [
+          2097,
+          2406
+        ],
+        "text": "assert set(native_fields) == {\n        \"span\", \"assertions\", \"calls\", \"markers\", \"handlers\", \"param_cases\",\n        \"body_hash\", \"bindings\", \"param_columns\", \"param_rows\", \"param_rows_unknown\",\n        \"collect_ignored\", \"invoked\", \"params\", \"patches\", \"exclusive_bindings\",\n        \"fixture_producers\",\n    }"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          2097,
+          2128
+        ],
+        "text": "assert len(native_fields) == 17"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:e68a25623431b7cf1a6357dfa1dc1eed464f198881e679f208e09ac4cd44e231",
+      "message": "test_added_literal_rows_retain_exception_removal_and_native_units: an assertion was replaced by an unrelated one of the same strength (len(native_fields) -> set(native_fields)); the original assertion is gone and the strength lattice cannot see it",
+      "path": "tests/test_classic_raises_additions.py",
+      "rule": "ASSERT_SUBSTITUTED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+    },
+    {
+      "after": {
+        "span": [
+          2097,
+          2406
+        ],
+        "text": "assert set(native_fields) == {\n        \"span\", \"assertions\", \"calls\", \"markers\", \"handlers\", \"param_cases\",\n        \"body_hash\", \"bindings\", \"param_columns\", \"param_rows\", \"param_rows_unknown\",\n        \"collect_ignored\", \"invoked\", \"params\", \"patches\", \"exclusive_bindings\",\n        \"fixture_producers\",\n    }"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          2097,
+          2128
+        ],
+        "text": "assert len(native_fields) == 17"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:2084a7ecf98c2996eebe9d8a1c07c9f3f01830344c93fee71eb38ae3a7569b05",
+      "message": "test_added_literal_rows_retain_exception_removal_and_native_units: expected value rewritten 17 -> {'assertions', 'bindings', 'body_hash', 'calls', 'collect_ignored', 'exclusive_bindings', 'fixture_producers', 'handlers', 'invoked', 'markers', 'param_cases', 'param_columns', 'param_rows', 'param_rows_unknown', 'params', 'patches', 'span'} despite increased assertion strength",
+      "path": "tests/test_classic_raises_additions.py",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+    }
+  ],
+  "run": {
+    "base": "fbc9374d",
+    "checkwash_version": "0.10.0",
+    "head": "15ac8045"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "info": 0,
+    "warn": 0
+  },
+  "verdict": "block"
+}

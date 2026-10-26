@@ -1,0 +1,327 @@
+{
+  "kind": "READ_ONLY_GOAL_COMPLETION_AUDIT_NOT_ACCEPTANCE",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "recorded_utc": "2026-10-26T22:51:46.585228+00:00",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "goal_complete": false,
+  "backup_milestone": "COMPLETE_PER_ROOT_VERIFIED_CHECKPOINT_AND_LOCAL_RECEIPTS",
+  "repair_acceptance": "NONPASS",
+  "current_remote_checkpoint_from_saved_publisher_receipt": "ec4b80ac162d1fbdb73c329ee39d87992d4fbafe",
+  "remote_blob_verification_repeated_by_this_audit": false,
+  "fresh_primary_reads": [
+    "PR566",
+    "issue567",
+    "issue568",
+    "issue567 comments",
+    "issue568 comments"
+  ],
+  "fresh_PR": {
+    "head_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+    "base_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+    "draft": true,
+    "state": "open",
+    "merged": false,
+    "updated_at": "2026-10-26T22:31:35Z"
+  },
+  "full_suite": {
+    "actual_exit": 1,
+    "native_parent_outcomes": {
+      "passed": 21064,
+      "failed": 15,
+      "skipped": 25
+    },
+    "parents": 21104,
+    "subtests_passed": 67,
+    "reports": 21171,
+    "audit_exit_is_not_suite_pass": true
+  },
+  "qualification": {
+    "source": {
+      "summary": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "actual_exit": 0,
+      "audit_sha256": "82f13b124aba0554eb747639feac616d84a4aa11fff4f155830b9079a5b48f1b",
+      "outer_receipt_sha256": "07e855ebba04be80ba2e50997e3a5e4e322ef0b7424fbd61e934008b5438ee2d"
+    },
+    "wheel": {
+      "summary": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "actual_exit": 0,
+      "audit_sha256": "5fb2d243ade816d6466d473894c2b646bccb292ec6d55511e641ee4423c7318c",
+      "outer_receipt_sha256": "1ec93635165aab6b8ab447c252fcf7bd0f879dca85e20bf729470795bd60fc94"
+    },
+    "pyz": {
+      "summary": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "actual_exit": 0,
+      "audit_sha256": "b5c661789e01bc85d252692c13b5807085d0f902b40ce27b1d44b5899370d2ce",
+      "outer_receipt_sha256": "7ef676f052dfb1811cd26e34d87f463f12e248345ea4a843e1bc2766b2e8fd11"
+    }
+  },
+  "selfdogfood": {
+    "actual_exit": 1,
+    "summary": {
+      "critical": 0,
+      "high": 3,
+      "info": 0,
+      "warn": 9
+    },
+    "state": "BLOCK_NONPASS_PRESERVED"
+  },
+  "original_14_items": [
+    {
+      "original_item": 1,
+      "current_regression_modules": {
+        "test_human_encoding": {
+          "passed": 32
+        },
+        "test_human_decoration": {
+          "passed": 8
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 2,
+      "current_regression_modules": {
+        "test_snapshot_path_diagnostics": {
+          "passed": 11
+        },
+        "test_snapshot_nonregular_diagnostics": {
+          "passed": 14
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 3,
+      "current_regression_modules": {
+        "test_policy_shadow_ir3_consumers": {
+          "passed": 15
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 4,
+      "current_regression_modules": {
+        "test_task_repo_relative_authority": {
+          "passed": 30
+        },
+        "test_task_source_encoding": {
+          "passed": 15
+        },
+        "test_task_path_diagnostics": {
+          "passed": 3
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 5,
+      "current_regression_modules": {
+        "test_doctor_hook_maintenance": {
+          "passed": 13
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 6,
+      "current_regression_modules": {
+        "test_quality_usage_format": {
+          "passed": 8
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 7,
+      "current_regression_modules": {
+        "test_js_liveness": {
+          "passed": 86,
+          "failed": 1
+        },
+        "test_issue263_string_conditions": {
+          "passed": 33,
+          "failed": 1
+        },
+        "test_issue358_own_mark_guards": {
+          "passed": 84,
+          "failed": 1
+        }
+      },
+      "product_status": "IMPLEMENTED_WITH_OPEN_ACCEPTANCE_COSTS",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 8,
+      "current_regression_modules": {
+        "test_worktree_crlf_rename": {
+          "passed": 12
+        },
+        "test_stage4_contract_crlf_review": {
+          "passed": 7
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 9,
+      "current_regression_modules": {
+        "test_gitlink_snapshot": {
+          "passed": 22
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 10,
+      "current_regression_modules": {
+        "test_allow_quality_route": {
+          "passed": 12
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 11,
+      "current_regression_modules": {
+        "test_allow_namespace_diagnostics": {
+          "passed": 3
+        },
+        "test_fingerprint_scope": {
+          "passed": 45
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 12,
+      "current_regression_modules": {
+        "test_quality_crlf": {
+          "passed": 21
+        },
+        "test_quality_junction": {
+          "passed": 6
+        },
+        "test_ruff_ignore_diagnostics": {
+          "passed": 16
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 13,
+      "current_regression_modules": {
+        "test_task_contract_validation": {
+          "passed": 37
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    },
+    {
+      "original_item": 14,
+      "current_regression_modules": {
+        "test_worktree_pytest_config_context": {
+          "passed": 27
+        },
+        "test_sweep_commit_diagnostics": {
+          "passed": 11
+        }
+      },
+      "product_status": "IMPLEMENTED_BOUNDED_SCOPE",
+      "claim_scope": "Module outcomes do not prove every static subclaim or every platform; overlapping rows are not additive."
+    }
+  ],
+  "remaining": [
+    {
+      "id": "R1",
+      "subject": "3 ordinary positive controls",
+      "action": "Bounded static-equivalence/root-context product or consumer proof, preserving adjacent bad controls",
+      "human_only": false,
+      "state": "OPEN_ENGINEERING;263/358_SOURCE_DIAGNOSIS_IN_PROGRESS_NOT_EXECUTED_BY_AUDIT"
+    },
+    {
+      "id": "R2",
+      "subject": "CASE_020_windows and CASE_029_flatten",
+      "action": "Safe bounded proof repair, or individual acceptance of legitimate refactor cost",
+      "human_only": "Only cost acceptance or frozen expectation/gate changes",
+      "state": "OPEN"
+    },
+    {
+      "id": "R3",
+      "subject": "8 golden expectations (#567)",
+      "action": "Individual genuine-source proof where possible, otherwise reviewed individual disposition of preserved judgments",
+      "human_only": "Changing original expected labels or accepting contract tradeoffs",
+      "state": "OPEN_ISSUE_NO_COMMENTS"
+    },
+    {
+      "id": "R4",
+      "subject": "d007 and d010 authorized-escape records (#568)",
+      "action": "Retain interception; individually dispose preserved records",
+      "human_only": "Original recorded expectation disposition",
+      "state": "OPEN_ISSUE_NO_COMMENTS"
+    },
+    {
+      "id": "R5",
+      "subject": "3 selfdogfood high findings",
+      "action": "Substantive old-obligation/consumer/alignment proof or exact valid prior-BASE disposition; no HEAD waiver",
+      "human_only": "Any intentional exemption or acceptance; genuine safe engineering remains possible",
+      "state": "BLOCK_NONPASS"
+    },
+    {
+      "id": "R6",
+      "subject": "Formal publication/unsupported platforms",
+      "action": "Applicable exact-source release requirements after repairs, with explicit unavailable-capability boundaries",
+      "human_only": "Exact publication/environment approval and stop before1.0",
+      "state": "NOT_ESTABLISHED_BY_CURRENT_LOCAL_QUALIFICATIONS_NOT_LAUNCHED"
+    }
+  ],
+  "not_new_mandatory_work": [
+    "No blanket127 empirical-case rerun",
+    "No new historical census/natural cohort/model/paid batch",
+    "No pool investigation",
+    "No blanket managed-hook upgrade exception",
+    "No new Ruff profile support",
+    "No universal JS/Python runtime equivalence promise"
+  ],
+  "new_unidentified_independent_mandatory_product_feature_found": false,
+  "limits": [
+    "Only bounded requirement and existing-evidence audit",
+    "Not exhaustive code/security review",
+    "Not every original127 subclaim re-proven",
+    "Not a fresh remote52-blob verification",
+    "No new-source/platform/test execution"
+  ],
+  "product_calls": 0,
+  "test_calls": 0,
+  "model_calls": 0,
+  "fixture_execution": 0,
+  "git_writes": 0,
+  "push_calls": 0,
+  "protected_or_expected_edits": 0
+}

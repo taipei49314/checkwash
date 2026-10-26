@@ -1,0 +1,489 @@
+"""Bounded static identity proofs for oracle relocation, never execution.
+
+Text, assertion strength, row counts and body hashes are candidates, not
+proof. Unknown contexts earn no credit. Source parsers and liveness remain
+the authority for what is a collected unit and a reachable assertion.
+"""
+from __future__ import annotations
+
+import ast
+from collections import Counter
+import copy
+from dataclasses import asdict
+import hashlib
+import itertools
+import json
+import posixpath
+import re
+
+from checkwash.ir.astutil import stable_dump
+
+
+def _key(*parts):
+    return hashlib.sha256(json.dumps(parts, sort_keys=True, ensure_ascii=True).encode()).hexdigest()
+
+
+def _dump(node):
+    node = copy.deepcopy(node)
+    for child in ast.walk(node):
+        if getattr(child, "type_params", ()):
+            raise ValueError("generic syntax has no oracle relocation proof")
+        if "type_params" in child._fields and not getattr(child, "type_params", ()):
+            # 3.12 added this empty field to functions/classes. It is not
+            # semantic evidence and must not make serialized proofs drift.
+            child._fields = tuple(field for field in child._fields if field != "type_params")
+    return stable_dump(node)
+
+
+def _literal(node):
+    try:
+        ast.literal_eval(node)
+        return True
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return False
+
+
+def _span(node, lines, offsets):
+    def point(line, column):
+        return offsets[line - 1] + len(lines[line - 1].encode("utf-8")[:column].decode("utf-8"))
+    return point(node.lineno, node.col_offset), point(node.end_lineno, node.end_col_offset)
+
+
+class _Concrete(ast.NodeTransformer):
+    def __init__(self, bindings):
+        self.bindings = bindings
+
+    def visit_Name(self, node):
+        if isinstance(node.ctx, ast.Load) and node.id in self.bindings:
+            return copy.deepcopy(self.bindings[node.id])
+        return node
+
+def _rows(side):
+    result = [{}]
+    for table in side.param_rows:
+        choices = []
+        for values, disabled in zip(table.rows, table.disabled):
+            if disabled:
+                continue
+            try:
+                row = {name: ast.parse(value, mode="eval").body for name, value in zip(table.names, values)}
+            except (ValueError, SyntaxError, RecursionError):
+                return []
+            if not all(_literal(value) for value in row.values()):
+                return []
+            choices.append(row)
+        if len(result) * len(choices) > 64:
+            return []
+        result = [{**old, **new} for old, new in itertools.product(result, choices) if not old.keys() & new.keys()]
+    return result
+
+
+def _python_context(source, units, path, startup, needed):
+    try:
+        text = source.decode("utf-8-sig").replace("\r\n", "\n")
+        tree = ast.parse(text)
+    except (UnicodeError, SyntaxError, ValueError, MemoryError, RecursionError):
+        return
+    if any(getattr(node, "type_params", ()) for node in ast.walk(tree)):
+        return  # generic syntax is outside this bounded proof.
+    if sum(1 for _ in ast.walk(tree)) > 16384:
+        return
+    if any((isinstance(node, ast.Name) and node.id in {
+                "request", "__name__", "__file__", "__package__", "__spec__", "__loader__",
+                "__builtins__", "globals", "locals", "vars", "eval", "exec"})
+           or (isinstance(node, ast.Attribute) and node.attr in {
+                "__name__", "__file__", "__module__", "__qualname__", "__code__", "__globals__", "__closure__",
+                "currentframe", "_getframe", "getframeinfo", "getmodule", "stack", "f_code", "f_globals", "f_locals"})
+           for node in ast.walk(tree)):
+        return  # Helpers/defaults share the module's identity too.
+    lines = text.splitlines(keepends=True)
+    offsets, total = [], 0
+    for line in lines:
+        offsets.append(total)
+        total += len(line)
+    nodes = { _span(n, lines, offsets): n for n in ast.walk(tree)
+             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) }
+    selected = {id(nodes[side.span]) for _name, side in units if side.span in nodes}
+    test_names = {nodes[side.span].name for _name, side in units if side.span in nodes}
+
+    def context_statements(statements):
+        result = []
+        for statement in statements:
+            if id(statement) in selected:
+                continue
+            if isinstance(statement, ast.ClassDef):
+                if statement.decorator_list:
+                    return None
+                clone = copy.copy(statement)
+                clone.body = context_statements(statement.body)
+                if clone.body is None:
+                    return None
+                result.append(_dump(clone))
+            elif isinstance(statement, (ast.Import, ast.ImportFrom)):
+                if isinstance(statement, ast.ImportFrom) and any(a.name == "*" for a in statement.names):
+                    return None
+                clone = copy.copy(statement)
+                if isinstance(clone, ast.ImportFrom) and clone.level:
+                    directory = path.rpartition("/")[0].split("/")
+                    if clone.level > len(directory):
+                        return None
+                    clone.module = ".".join(directory[:len(directory) - clone.level + 1] + [clone.module or ""])
+                    clone.level = 0
+                result.append(_dump(clone))
+            elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if statement.decorator_list or any(not _literal(default) for default in (
+                        *statement.args.defaults, *(d for d in statement.args.kw_defaults if d is not None))):
+                    return None
+                result.append(_dump(statement))
+            elif isinstance(statement, (ast.Assign, ast.AnnAssign)) and statement.value is not None and _literal(statement.value):
+                result.append(_dump(statement))
+            elif isinstance(statement, ast.Pass) or (isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)):
+                continue
+            else:
+                return None
+        return result
+
+    environment = context_statements(tree.body)
+    if environment is None:
+        return
+    for qualname, side in units:
+        if needed is not None and qualname not in needed:
+            continue
+        function = nodes.get(side.span)
+        if function is None or not function.name.startswith("test"):
+            continue
+        if len(function.body) > 128 or sum(1 for _ in ast.walk(function)) > 4096:
+            continue
+        args = function.args
+        parameters = {a.arg for a in (*args.posonlyargs, *args.args, *args.kwonlyargs)} - {"self", "cls"}
+        if args.vararg or args.kwarg or any(not _literal(default) for default in (*args.defaults, *(d for d in args.kw_defaults if d is not None))):
+            continue
+        fixture_parameters = parameters - set(side.param_columns)
+        if fixture_parameters - {"monkeypatch"} or (parameters and not fixture_parameters and not side.param_rows):
+            continue  # fixture/callback inputs and unreadable tables are unknown.
+        decorators_known = True
+        for decorator in function.decorator_list:
+            name = decorator.func if isinstance(decorator, ast.Call) else decorator
+            spelling = ast.unparse(name)
+            if spelling not in {"pytest.mark.parametrize", "pytest.mark.skip", "pytest.mark.skipif", "pytest.mark.xfail",
+                                 "unittest.skip", "unittest.skipIf", "unittest.skipUnless"}:
+                decorators_known = False
+        if not decorators_known:
+            continue
+        if any(isinstance(n, ast.Name) and (n.id in {"request", "__file__", "__name__", "globals", "locals", "vars", "eval", "exec", "setattr"}
+                                           or (isinstance(n.ctx, ast.Load) and n.id in test_names)) for n in ast.walk(function)):
+            continue
+        if any(isinstance(n, ast.Attribute) and n.attr in test_names for n in ast.walk(function)):
+            continue
+        declaration = copy.copy(function)
+        declaration.name = function.name if fixture_parameters else "_relocated_test"
+        class_name = qualname.rpartition(".")[0]
+        own_environment = environment
+        pytest_import = "Import(names=[alias(name='pytest')])"
+        if not any(isinstance(n, ast.Name) and n.id == "pytest" for n in ast.walk(function)):
+            others = [item for item in environment if item != pytest_import]
+            if not any("id='pytest'" in item for item in others):
+                own_environment = others
+        scope = (own_environment, startup, class_name, _dump(args), [_dump(d) for d in function.decorator_list],
+                 [asdict(row) for row in side.param_rows], side.param_cases)
+        side.oracle_context = _key("python-unit-v1", scope, _dump(declaration))
+        if fixture_parameters:
+            continue  # exact standard-fixture smoke relocation only, no text credit.
+        concrete_args = copy.deepcopy(args)
+        for name in ("posonlyargs", "args", "kwonlyargs"):
+            setattr(concrete_args, name, [a for a in getattr(concrete_args, name) if a.arg not in side.param_columns])
+        if args.defaults or any(default is not None for default in args.kw_defaults):
+            continue
+        concrete_args.kw_defaults = [None] * len(concrete_args.kwonlyargs)
+        other_decorators = [d for d in function.decorator_list if not (isinstance(d, ast.Call)
+                            and ast.unparse(d.func) == "pytest.mark.parametrize")]
+        assertion_environment = own_environment
+        if not any(isinstance(n, ast.Name) and n.id == "pytest"
+                   for part in [*function.body, *other_decorators] for n in ast.walk(part)):
+            assertion_environment = [item for item in environment if item != pytest_import]
+        assertion_scope = (assertion_environment, startup, class_name, _dump(concrete_args),
+                           [_dump(d) for d in other_decorators])
+        rows = _rows(side)
+        prefix = []
+        from checkwash.frontends.python.snapshot_context import _literal_expression
+        def literal_assert(statement):
+            return (isinstance(statement, ast.Assert) and _literal_expression(statement.test)
+                    and (statement.msg is None or _literal_expression(statement.msg)))
+        for statement_index, statement in enumerate(function.body):
+            if isinstance(statement, ast.Assert):
+                span = _span(statement, lines, offsets)
+                for assertion in side.assertions:
+                    if assertion.span == span and not assertion.inherited and assertion.via is None:
+                        for ordinal, row in enumerate(rows):
+                            substitute = _Concrete(row)
+                            concrete_prefix = [_dump(substitute.visit(copy.deepcopy(item))) for item in prefix]
+                            suffix = [item for item in function.body[statement_index + 1:]
+                                      if not literal_assert(item) and not isinstance(item, ast.Pass)
+                                      and not (isinstance(item, ast.Expr) and isinstance(item.value, ast.Constant))]
+                            concrete_suffix = [_dump(substitute.visit(copy.deepcopy(item))) for item in suffix]
+                            concrete_assertion = substitute.visit(copy.deepcopy(statement))
+                            side.oracle_assertion_contexts[f"{assertion.id}@{ordinal}"] = _key(
+                                "python-assertion-v1", assertion_scope, concrete_prefix, _dump(concrete_assertion), concrete_suffix)
+                if not literal_assert(statement):
+                    prefix.append(statement)
+            elif isinstance(statement, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Expr)):
+                if not (isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)):
+                    prefix.append(statement)
+            elif isinstance(statement, (ast.Pass,)):
+                continue
+            else:
+                break  # No text-only credit through unknown control flow.
+
+
+def _javascript_environment_spans(text, units, code):
+    """Project one source-closed plain framework grouping, never its contents.
+
+    Unit declaration/body/assertions still supply the complete proof. Only a
+    module containing one global plain describe with one plain unit, and no
+    other executable/binding context, admits this registration-only envelope.
+    """
+    spans = [side.span for _name, side in units]
+    if len(units) != 1:
+        return spans
+    from checkwash.frontends.javascript.frontend import _declarations, _test_body, file_bindings
+
+    side = units[0][1]
+    if side.markers or side.param_rows_unknown or side.param_rows or side.param_cases is not None:
+        return spans
+    bindings = file_bindings(text.encode("utf-8"))
+    if len(bindings.tokens) > 4096:
+        return spans
+
+    def tokens(first, last):
+        return [value for value, start, end in bindings.tokens if first <= start and end <= last]
+
+    def separators_outside(first, last, envelope_first, envelope_last):
+        return all(value == ";" for value, start, end in bindings.tokens
+                   if first <= start and end <= last
+                   and not (envelope_first <= start and end <= envelope_last))
+
+    def plain(declaration, words):
+        if declaration.call is None or declaration.table or declaration.markers or declaration.focus is not None:
+            return False
+        head = tokens(declaration.start, declaration.opening)
+        if len(head) != 1 or head[0] not in words or not bindings.is_global((head[0],), declaration.start):
+            return False
+        args, _end = declaration.call
+        if len(args) != 2:
+            return False
+        title = tokens(*args[0])
+        if len(title) != 1 or len(title[0]) < 2 or title[0][0] not in "\"'" or title[0][-1] != title[0][0]:
+            return False
+        callback = _test_body(text, code, bindings, declaration)
+        return bool(callback and tokens(callback[3][0], callback[0]) == ["(", ")", "=>", "{"])
+
+    declarations = _declarations(text, code, bindings)
+    if len(declarations) != 2:
+        return spans
+    unit_start, unit_end = side.span
+    inner = next((d for d in declarations if d.unit and d.start == unit_start
+                  and d.call is not None and d.call[1] == unit_end), None)
+    if inner is None or not plain(inner, {"it", "test"}):
+        return spans
+    unit_tokens = tokens(unit_start, unit_end)
+    if any(value in {"this", "arguments", "super", "eval", "Function", "getState", "currentTestName"}
+           for value in unit_tokens):
+        return spans
+    if any(unit_tokens[i:i + 3] == ["new", ".", "target"] for i in range(len(unit_tokens) - 2)):
+        return spans
+    for outer in declarations:
+        if outer.unit or not plain(outer, {"describe"}) or bindings.scope(outer.start) != 0:
+            continue
+        callback = _test_body(text, code, bindings, outer)
+        first, last, call_end, _argument = callback
+        if not (first <= unit_start < unit_end <= last):
+            continue
+        if not separators_outside(first, last, unit_start, unit_end):
+            continue
+        if not separators_outside(0, len(text), outer.start, call_end):
+            continue
+        return [(outer.start, call_end)]
+    return spans
+
+
+def _javascript_context(source, units, path, needed):
+    try:
+        text = source.decode("utf-8-sig").replace("\r\n", "\n")
+    except UnicodeError:
+        return
+    from checkwash.frontends.javascript.frontend import _code_positions, file_bindings
+    source_code = _code_positions(text)
+    if any(source_code[match.start()] for match in re.finditer(
+            r"\b(?:__dirname|__filename)\b|\bimport\s*\.\s*meta\b|\bmodule\s*\.\s*(?:filename|id)\b|\bprocess\s*\.\s*argv\b|\.\s*stack\b", text)):
+        return
+    ordered = sorted(_javascript_environment_spans(text, units, source_code))
+    outside, last = [], 0
+    for start, end in ordered:
+        if start < last or not (0 <= start <= end <= len(text)):
+            return
+        outside.append(text[last:start])
+        last = end
+    outside.append(text[last:])
+    environment = "".join(outside)
+    # Ordinary strings are data, including './...' strings. Canonicalize
+    # only specifier tokens in static imports the existing frontend bound.
+    # Unknown require/dynamic-import resolution binds the original directory.
+    code = _code_positions(environment)
+    bindings = file_bindings(environment.encode("utf-8"))
+    modules = {module for module, _export in bindings.import_sources.values()}
+    replacements = []
+    unresolved_import = False
+    for index, (token, start, _end) in enumerate(bindings.tokens):
+        if code[start] and token in {"import", "require"}:
+            following = bindings.token(index + 1)
+            if following == "(":
+                unresolved_import = True
+            elif token == "import" and following.startswith(("'", '"')):
+                unresolved_import |= following[1:].startswith(("./", "../")) or "\\" in following
+        if code[start] and token == "from" and "\\" in bindings.token(index + 1):
+            unresolved_import = True
+        if token != "import" or not code[start] or bindings.token(index + 1) in {"(", "."}:
+            continue
+        stop = index + 1
+        while stop < len(bindings.tokens) and bindings.token(stop) not in {"from", ";"}:
+            stop += 1
+        if bindings.token(stop) != "from" or stop + 1 >= len(bindings.tokens):
+            continue
+        literal, first, last = bindings.tokens[stop + 1]
+        if len(literal) < 2 or literal[0] not in "\"'" or literal[-1] != literal[0] or "\\" in literal:
+            continue
+        module = literal[1:-1]
+        if module in modules and module.startswith(("./", "../")):
+            replacements.append((first, last, repr(posixpath.normpath(posixpath.join(posixpath.dirname(path), module)))))
+    for first, last, replacement in reversed(replacements):
+        environment = environment[:first] + replacement + environment[last:]
+    code = _code_positions(environment)
+    relative_import = unresolved_import or any(code[m.start()] for m in re.finditer(
+        r"\b(?:from\s*|require\s*\(\s*|import\s*(?:\(\s*)?)(['\"])\.{1,2}/", environment))
+    environment_key = (environment.strip(), posixpath.dirname(path) if relative_import else "")
+    for name, side in units:
+        if needed is not None and name not in needed:
+            continue
+        if side.param_rows_unknown:
+            continue
+        start, end = side.span
+        body = text[start:end]
+        header = body.split("{", 1)[0]
+        if not re.search(r"(?:function\s*\(\s*\)|\(\s*\)\s*=>)\s*$", header):
+            continue  # an unknown callback/context parameter is not proof.
+        side.oracle_context = _key("javascript-unit-v1", environment_key, body.strip(),
+                                   [asdict(row) for row in side.param_rows], side.param_cases)
+        # JS lexical prefixes include every binding/control/table wrapper.
+        # Equal assertion text in a changed callback therefore proves nothing.
+        for assertion in side.assertions:
+            a, b = assertion.span
+            if assertion.via is None and start <= a < b <= end:
+                scalar = r"(?:true|false|null|-?[0-9]+(?:\.[0-9]+)?|\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*')"
+                harmless = re.compile(r"\s*expect\(\s*" + scalar + r"\s*\)\.toBe\(\s*" + scalar + r"\s*\)\s*;?\s*")
+                pieces, cursor = [], start
+                for other in sorted(side.assertions, key=lambda item: item.span):
+                    left, right = other.span
+                    if not (cursor <= left < right <= end):
+                        continue
+                    pieces.append(text[cursor:left])
+                    if other is assertion:
+                        pieces.append("<oracle>")
+                    elif not harmless.fullmatch(other.text):
+                        pieces.append(text[left:right])
+                    cursor = right
+                pieces.append(text[cursor:end])
+                prefix = "".join(pieces)
+                prefix = re.sub(r"^(\s*(?:test|it)\s*\(\s*)(['\"])(?:\\.|(?!\2).)*?\2",
+                                lambda m: m[1] + '"<relocated>"', prefix, count=1)
+                if "`" in prefix or re.search(r"\b(?:if|for|while|switch|try|return|await|yield)\b", prefix):
+                    continue
+                prefix = "\n".join(line for line in prefix.splitlines() if not line.lstrip().startswith("//"))
+                tokens, index = [], 0
+                while index < len(prefix):
+                    char = prefix[index]
+                    if char in "\"'":
+                        token_end = index + 1
+                        while token_end < len(prefix):
+                            if prefix[token_end] == "\\":
+                                token_end += 2
+                            elif prefix[token_end] == char:
+                                token_end += 1
+                                break
+                            else:
+                                token_end += 1
+                        tokens.append(prefix[index:token_end])
+                        index = token_end
+                    else:
+                        if not char.isspace() and char != ";":
+                            tokens.append(char)
+                        index += 1
+                side.oracle_assertion_contexts[assertion.id] = _key("javascript-assertion-v1", environment_key, "".join(tokens), assertion.text,
+                    [asdict(row) for row in side.param_rows], side.param_cases)
+
+
+def mark_contexts(source, units, path, language, *, startup_known=True, startup="", needed=None):
+    """Attach optional proofs; missing source/setup knowledge leaves them empty."""
+    for _name, side in units:
+        side.oracle_context = ""
+        side.oracle_assertion_contexts = {}
+    if source is None or not startup_known or len(source) > 262144 or len(units) > 128:
+        return
+    try:
+        if language == "python":
+            _python_context(source, units, path, startup, needed)
+        elif path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
+            _javascript_context(source, units, path, needed)
+    except (RecursionError, MemoryError, ValueError, TypeError):
+        # This optional proof is not analysis admission. A gap withholds
+        # every partial credit; the ordinary detectors still run.
+        for _name, side in units:
+            side.oracle_context = ""
+            side.oracle_assertion_contexts = {}
+
+
+def assertion_keys(side, ids=None):
+    if side is None:
+        return []
+    mapping = side.oracle_assertion_contexts
+    if not valid_proof_map(mapping):
+        return []
+    return [key for a in side.assertions if a.via is None and (ids is None or a.id in ids)
+            for identity, key in mapping.items()
+            if identity == a.id or identity.startswith(a.id + "@")]
+
+
+def valid_proof(value):
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def valid_proof_map(mapping):
+    return isinstance(mapping, dict) and all(isinstance(name, str) and re.fullmatch(r"a[0-9]+(?:@[0-9]+)?", name)
+            and valid_proof(key) for name, key in mapping.items())
+
+
+def assertions_proven(side):
+    return bool(side.assertions) and all(assertion_keys(side, {a.id}) for a in side.assertions if a.via is None)
+
+
+def arrival_credits(ir, live):
+    """Each proven arriving assertion is spendable once across all routes."""
+    assertions, units = Counter(), Counter()
+    for file in ir.files:
+        for unit in file.units:
+            if unit.after is None or not live(file, unit.after):
+                continue
+            if unit.before is None:
+                assertions.update(assertion_keys(unit.after))
+                if valid_proof(unit.after.oracle_context) and valid_proof_map(unit.after.oracle_assertion_contexts):
+                    units[unit.after.oracle_context] += 1
+            elif unit.delta is not None:
+                assertions.update(assertion_keys(unit.after, unit.delta.assertions_added))
+    return assertions, units
+
+
+def spend(credits, needed):
+    needed = Counter(needed)
+    if not needed or any(credits[key] < count for key, count in needed.items()):
+        return False
+    credits.subtract(needed)
+    return True

@@ -1,0 +1,854 @@
+{
+  "review_state": "PASS_BOUNDED_NATIVE_SELFCHECK_READBACK",
+  "new_source_sha": "15ac804593bc41db8f904e7921667bd6c276fa9a",
+  "actual_product_acceptance_state": "NONPASS_BLOCK_PRESERVED",
+  "cases": [
+    {
+      "label": "classic-self-parent-r1",
+      "base_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "head_sha": "15ac804593bc41db8f904e7921667bd6c276fa9a",
+      "actual_exit_code": 1,
+      "receipt_sha256": "dc03ad7921bc6138d7200f77c5071d32ee58229cd3b3ec8de98c557b736a5ba3",
+      "json_sha256": "6f99203857baff86d885be60a566a28cb714bec2d61d2e01b5b736f7155e9fca",
+      "stderr_sha256": "50dc293ead38ff26c23bad696bba5a512b5a272f7d54f9fb113d2a970688f8cc",
+      "run": {
+        "base": "fbc9374d",
+        "checkwash_version": "0.10.0",
+        "head": "15ac8045"
+      },
+      "summary": {
+        "critical": 0,
+        "high": 3,
+        "info": 0,
+        "warn": 0
+      },
+      "verdict": "block",
+      "actual_date_command_header": {
+        "date": "2026-10-27",
+        "zone": "Asia/Taipei",
+        "base": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "source": "15ac804593bc41db8f904e7921667bd6c276fa9a",
+        "command": [
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+          "-B",
+          "-m",
+          "checkwash",
+          "check",
+          "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c..15ac804593bc41db8f904e7921667bd6c276fa9a",
+          "--repo",
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup",
+          "--format",
+          "json"
+        ],
+        "kind": "ORDINARY_DOGFOOD_NOT_RELEASE_BRIDGE"
+      },
+      "findings_preserved_exactly": [
+        {
+          "after": {
+            "span": [
+              2566,
+              2615
+            ],
+            "text": "assert preserved.after.span == original.side.span"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              2133,
+              2284
+            ],
+            "text": "assert {name: getattr(preserved.after, name) for name in native_fields} == {\n        name: getattr(original.side, name) for name in native_fields\n    }"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:807bc974429fd6c3ef21d12bf47a7b52882630d140bd110ae1572f80ae4a3e21",
+          "message": "test_added_literal_rows_retain_exception_removal_and_native_units: an assertion was replaced by an unrelated one of the same strength ({name: getattr(preserved.after, name) for name in native_fields} -> preserved.after.span); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_classic_raises_additions.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+        },
+        {
+          "after": {
+            "span": [
+              2097,
+              2406
+            ],
+            "text": "assert set(native_fields) == {\n        \"span\", \"assertions\", \"calls\", \"markers\", \"handlers\", \"param_cases\",\n        \"body_hash\", \"bindings\", \"param_columns\", \"param_rows\", \"param_rows_unknown\",\n        \"collect_ignored\", \"invoked\", \"params\", \"patches\", \"exclusive_bindings\",\n        \"fixture_producers\",\n    }"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              2097,
+              2128
+            ],
+            "text": "assert len(native_fields) == 17"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:e68a25623431b7cf1a6357dfa1dc1eed464f198881e679f208e09ac4cd44e231",
+          "message": "test_added_literal_rows_retain_exception_removal_and_native_units: an assertion was replaced by an unrelated one of the same strength (len(native_fields) -> set(native_fields)); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_classic_raises_additions.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+        },
+        {
+          "after": {
+            "span": [
+              2097,
+              2406
+            ],
+            "text": "assert set(native_fields) == {\n        \"span\", \"assertions\", \"calls\", \"markers\", \"handlers\", \"param_cases\",\n        \"body_hash\", \"bindings\", \"param_columns\", \"param_rows\", \"param_rows_unknown\",\n        \"collect_ignored\", \"invoked\", \"params\", \"patches\", \"exclusive_bindings\",\n        \"fixture_producers\",\n    }"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              2097,
+              2128
+            ],
+            "text": "assert len(native_fields) == 17"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:2084a7ecf98c2996eebe9d8a1c07c9f3f01830344c93fee71eb38ae3a7569b05",
+          "message": "test_added_literal_rows_retain_exception_removal_and_native_units: expected value rewritten 17 -> {'assertions', 'bindings', 'body_hash', 'calls', 'collect_ignored', 'exclusive_bindings', 'fixture_producers', 'handlers', 'invoked', 'markers', 'param_cases', 'param_columns', 'param_rows', 'param_rows_unknown', 'params', 'patches', 'span'} despite increased assertion strength",
+          "path": "tests/test_classic_raises_additions.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+        }
+      ]
+    },
+    {
+      "label": "classic-self-integration-r1",
+      "base_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+      "head_sha": "15ac804593bc41db8f904e7921667bd6c276fa9a",
+      "actual_exit_code": 1,
+      "receipt_sha256": "6e39364d9e809c5ed181b44781c5dfe54f313b51a237d9e60677806a88dc313c",
+      "json_sha256": "6ea35e957cbf8aadb11b18716c6fd2a68613de0af33537eb7a5c419042f50803",
+      "stderr_sha256": "9e73b47469d40d4324e30507edcc7c6450ef52e8e02bf4b6672de75b7b101733",
+      "run": {
+        "base": "1ffe283d",
+        "checkwash_version": "0.10.0",
+        "head": "15ac8045"
+      },
+      "summary": {
+        "critical": 0,
+        "high": 3,
+        "info": 0,
+        "warn": 9
+      },
+      "verdict": "block",
+      "actual_date_command_header": {
+        "date": "2026-10-27",
+        "zone": "Asia/Taipei",
+        "base": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+        "source": "15ac804593bc41db8f904e7921667bd6c276fa9a",
+        "command": [
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+          "-B",
+          "-m",
+          "checkwash",
+          "check",
+          "1ffe283d7d947fecc426dea99323b0a2620a9482..15ac804593bc41db8f904e7921667bd6c276fa9a",
+          "--repo",
+          "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup",
+          "--format",
+          "json"
+        ],
+        "kind": "ORDINARY_DOGFOOD_NOT_RELEASE_BRIDGE"
+      },
+      "findings_preserved_exactly": [
+        {
+          "after": {
+            "span": [
+              2097,
+              2406
+            ],
+            "text": "assert set(native_fields) == {\n        \"span\", \"assertions\", \"calls\", \"markers\", \"handlers\", \"param_cases\",\n        \"body_hash\", \"bindings\", \"param_columns\", \"param_rows\", \"param_rows_unknown\",\n        \"collect_ignored\", \"invoked\", \"params\", \"patches\", \"exclusive_bindings\",\n        \"fixture_producers\",\n    }"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              1666,
+              1705
+            ],
+            "text": "assert preserved.after == original.side"
+          },
+          "deescalators": [],
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "fingerprint": "ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:c9dc461a02a7d99abf7784c2ada713fb89c8db1638d6ffc145a0a1a36fa54ec6",
+          "message": "test_added_literal_rows_retain_exception_removal_and_native_units: an assertion was replaced by an unrelated one of the same strength (preserved.after -> set(native_fields)); the original assertion is gone and the strength lattice cannot see it",
+          "path": "tests/test_classic_raises_additions.py",
+          "rule": "ASSERT_SUBSTITUTED",
+          "severity": "high",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+        },
+        {
+          "after": {
+            "span": [
+              11588,
+              11633
+            ],
+            "text": "assert reads == oracle_reads + startup_probes"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              11248,
+              11426
+            ],
+            "text": "assert reads == [\"tests/test_calc.py\", \"conftest.py\", \"tests/calc.py\", \"tests/test_helpers.py\",\n                     \"test_helpers/__init__.py\", \"tests/test_helpers/__init__.py\"]"
+          },
+          "deescalators": [
+            "REPAIR_EVIDENCE"
+          ],
+          "escalators": [],
+          "fingerprint": "ASSERT_WEAKENED/tests/test_root_oracles.py/test_helper_only_assertion_removal_discovers_unchanged_importer/v2:d91f646debb4912aee4bfa0c547cacdf4525d3b7629ffaac3bacf976018ced85",
+          "message": "test_helper_only_assertion_removal_discovers_unchanged_importer: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
+          "path": "tests/test_root_oracles.py",
+          "rule": "ASSERT_WEAKENED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": 90,
+          "strength_drop": 10,
+          "subject_changed": false,
+          "unit": "test_helper_only_assertion_removal_discovers_unchanged_importer"
+        },
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              4413,
+              4512
+            ],
+            "text": "assert outcome(head) == CREDITED"
+          },
+          "deescalators": [],
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb",
+          "message": "test_a_survivor_the_chain_does_not_skip_is_credited: test unit disappeared",
+          "path": "tests/test_issue266_survivor_conftest_chain.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_a_survivor_the_chain_does_not_skip_is_credited"
+        },
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              5244,
+              5655
+            ],
+            "text": "assert outcome(head, root=False) == CREDITED"
+          },
+          "deescalators": [],
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before/v2:e132c2bebecb035512ebaa870b40474afd7f1f1707e137e7da08dba600a31941",
+          "message": "test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before: test unit disappeared",
+          "path": "tests/test_issue266_survivor_conftest_chain.py",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before"
+        },
+        {
+          "after": {
+            "span": [
+              3053,
+              3089
+            ],
+            "text": "assert IR_VERSION == ir.version == 3"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              3053,
+              3109
+            ],
+            "text": "assert IR_VERSION == FINDINGS_VERSION == ir.version == 2"
+          },
+          "deescalators": [
+            "REPAIR_EVIDENCE"
+          ],
+          "escalators": [],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_fingerprint_scope.py/test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copies/v2:fc0f76995a45ed984540c07880b07cd0aec19cee0564bed3592254671136f6d2",
+          "message": "test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copies: expected value rewritten 2 -> 3 with no change in assertion strength",
+          "path": "tests/test_fingerprint_scope.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copies"
+        },
+        {
+          "after": {
+            "span": [
+              5326,
+              5434
+            ],
+            "text": "assert outcome({**head, \"tests/conftest.py\": plain}, {\"tests/conftest.py\": (SKIPPING, plain)}) == UNCREDITED"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              5135,
+              5241
+            ],
+            "text": "assert outcome({**head, \"tests/conftest.py\": plain}, {\"tests/conftest.py\": (SKIPPING, plain)}) == CREDITED"
+          },
+          "deescalators": [
+            "REPAIR_EVIDENCE"
+          ],
+          "escalators": [],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_issue266_survivor_conftest_chain.py/test_a_conftest_the_diff_changes_is_read_on_its_head_side/v2:82039d198e96068f1570f97003741d8b91abc4a8e6a3d86c85fe369298c7a2ae",
+          "message": "test_a_conftest_the_diff_changes_is_read_on_its_head_side: expected call rewritten to a different call ['CREDITED'] -> ['UNCREDITED'] with no change in assertion strength",
+          "path": "tests/test_issue266_survivor_conftest_chain.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_a_conftest_the_diff_changes_is_read_on_its_head_side"
+        },
+        {
+          "after": {
+            "span": [
+              6924,
+              7227
+            ],
+            "text": "assert str(caught.value) == (\n        \"strict snapshot batch cannot inspect nonregular source 'requirements/pyproject.toml' (a symlink); \"\n        \"side='worktree', entry='worktree/read_many'. Use a repository-owned regular source at this path; \"\n        \"a committed range reads committed bytes only.\")"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              6761,
+              6896
+            ],
+            "text": "assert str(caught.value) == (\n        \"strict snapshot batch cannot inspect nonregular source requirements/pyproject.toml (a symlink)\")"
+          },
+          "deescalators": [
+            "REPAIR_EVIDENCE"
+          ],
+          "escalators": [],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_issue346_config_reads.py/test_working_tree_batch_refusal_names_the_symlinked_path/v2:5320a2b4ec2f30fa45b20e82c82b719f86eaec380e8acad891bf4e1acaddf29a",
+          "message": "test_working_tree_batch_refusal_names_the_symlinked_path: expected value rewritten 'strict snapshot batch cannot inspect nonregular source requirements/pyproject.toml (a symlink)' -> \"strict snapshot batch cannot inspect nonregular source 'requirements/pyproject.toml' (a symlink); side='worktree', entry='worktree/read_many'. Use a repository-owned regular source at this path; a committed range reads committed bytes only.\" with no change in assertion strength",
+          "path": "tests/test_issue346_config_reads.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_working_tree_batch_refusal_names_the_symlinked_path"
+        },
+        {
+          "after": {
+            "span": [
+              6158,
+              6443
+            ],
+            "text": "assert str(caught.value) == (\n        \"strict snapshot cannot inspect nonregular source 'configs/pytest.ini' (a directory); \"\n        \"side='worktree', entry='worktree/read'. Use a repository-owned regular source at this path; \"\n        \"a committed range reads committed bytes only.\")"
+          },
+          "allowlisted": false,
+          "before": {
+            "span": [
+              6158,
+              6280
+            ],
+            "text": "assert str(caught.value) == (\n        \"strict snapshot cannot inspect nonregular source configs/pytest.ini (a directory)\")"
+          },
+          "deescalators": [
+            "REPAIR_EVIDENCE"
+          ],
+          "escalators": [],
+          "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_issue346_config_reads.py/test_working_tree_refusal_names_a_directory/v2:de34bcaea03015343d5026b1f6e601473f69901873ed54eb237249408daa7a2a",
+          "message": "test_working_tree_refusal_names_a_directory: expected value rewritten 'strict snapshot cannot inspect nonregular source configs/pytest.ini (a directory)' -> \"strict snapshot cannot inspect nonregular source 'configs/pytest.ini' (a directory); side='worktree', entry='worktree/read'. Use a repository-owned regular source at this path; a committed range reads committed bytes only.\" with no change in assertion strength",
+          "path": "tests/test_issue346_config_reads.py",
+          "rule": "EXPECTED_VALUE_CHANGED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "test_working_tree_refusal_names_a_directory"
+        },
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [],
+          "fingerprint": "CI_WORKFLOW_TOUCHED/pyproject.toml/-/v2:b3c5ef5b1c7070f8720fe3357018b5d1fa082ec78271f85ef589cb1d7af1be87",
+          "message": "CI configuration changed",
+          "path": "pyproject.toml",
+          "rule": "CI_WORKFLOW_TOUCHED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": null
+        },
+        {
+          "after": {
+            "span": [
+              0,
+              0
+            ],
+            "text": "exceptExceptionasexc:#noqa:BLE001-asweepmustsurviveonebadcommit"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [],
+          "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/sweep.py/-/395f9cada265",
+          "message": "broad exception handler added (exceptExceptionasexc:#noqa:BLE001-asweepmustsurviveonebadcommit)",
+          "path": "src/checkwash/sweep.py",
+          "rule": "BROAD_EXCEPT_ADDED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": null
+        },
+        {
+          "after": {
+            "span": [
+              0,
+              0
+            ],
+            "text": "except Exception as exc:  # noqa: BLE001 - a sweep must survive one bad commit"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [],
+          "fingerprint": "SUPPRESSION_ADDED/src/checkwash/sweep.py/-/cef10e013fe8",
+          "message": "lint/type suppression added (except Exception as exc:  # noqa: BLE001 - a sweep must survive one bad commit)",
+          "path": "src/checkwash/sweep.py",
+          "rule": "SUPPRESSION_ADDED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": null
+        },
+        {
+          "after": {
+            "span": [
+              0,
+              0
+            ],
+            "text": "from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case  # noqa: E402"
+          },
+          "allowlisted": false,
+          "before": null,
+          "deescalators": [],
+          "escalators": [],
+          "fingerprint": "SUPPRESSION_ADDED/tools/emit_corpus.py/-/0aca1b5978ab",
+          "message": "lint/type suppression added (from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case  # noqa: E402)",
+          "path": "tools/emit_corpus.py",
+          "rule": "SUPPRESSION_ADDED",
+          "severity": "warn",
+          "shape": null,
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": null
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "new commit provenance readback exists",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 fixed15ac unchanged",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 actual exit1 preserved",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact reviewed byte map",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 clean fixed source",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 actual machine schema/verdict/summary",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact finding severity counts",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 no config/skipped exclusions",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact range/version",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 retained actual-date command header",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 actual CLI command range/format",
+      "passed": true
+    },
+    {
+      "name": "finding path is repository relative",
+      "passed": true
+    },
+    {
+      "name": "exact committed finding source exists",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact before committed assertion span ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:807bc974429fd6c3ef21d12bf47a7b52882630d140bd110ae1572f80ae4a3e21",
+      "passed": true
+    },
+    {
+      "name": "finding path is repository relative",
+      "passed": true
+    },
+    {
+      "name": "exact committed finding source exists",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact after committed assertion span ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:807bc974429fd6c3ef21d12bf47a7b52882630d140bd110ae1572f80ae4a3e21",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact before committed assertion span ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:e68a25623431b7cf1a6357dfa1dc1eed464f198881e679f208e09ac4cd44e231",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact after committed assertion span ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:e68a25623431b7cf1a6357dfa1dc1eed464f198881e679f208e09ac4cd44e231",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact before committed assertion span EXPECTED_VALUE_CHANGED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:2084a7ecf98c2996eebe9d8a1c07c9f3f01830344c93fee71eb38ae3a7569b05",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 exact after committed assertion span EXPECTED_VALUE_CHANGED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:2084a7ecf98c2996eebe9d8a1c07c9f3f01830344c93fee71eb38ae3a7569b05",
+      "passed": true
+    },
+    {
+      "name": "classic-self-parent-r1 all highs unallowlisted and uncredited",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 fixed15ac unchanged",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 actual exit1 preserved",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact reviewed byte map",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 clean fixed source",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 actual machine schema/verdict/summary",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact finding severity counts",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 no config/skipped exclusions",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact range/version",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 retained actual-date command header",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 actual CLI command range/format",
+      "passed": true
+    },
+    {
+      "name": "finding path is repository relative",
+      "passed": true
+    },
+    {
+      "name": "exact committed finding source exists",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact before committed assertion span ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:c9dc461a02a7d99abf7784c2ada713fb89c8db1638d6ffc145a0a1a36fa54ec6",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact after committed assertion span ASSERT_SUBSTITUTED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:c9dc461a02a7d99abf7784c2ada713fb89c8db1638d6ffc145a0a1a36fa54ec6",
+      "passed": true
+    },
+    {
+      "name": "finding path is repository relative",
+      "passed": true
+    },
+    {
+      "name": "exact committed finding source exists",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact committed removed-unit span TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact representative assertion inside removed-unit span TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact committed removed-unit span TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before/v2:e132c2bebecb035512ebaa870b40474afd7f1f1707e137e7da08dba600a31941",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 exact representative assertion inside removed-unit span TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before/v2:e132c2bebecb035512ebaa870b40474afd7f1f1707e137e7da08dba600a31941",
+      "passed": true
+    },
+    {
+      "name": "classic-self-integration-r1 all highs unallowlisted and uncredited",
+      "passed": true
+    },
+    {
+      "name": "parent range exact2substitution plus1expected-value rules",
+      "passed": true
+    },
+    {
+      "name": "all nine integrated warning objects unchanged from prior fbc self-check",
+      "passed": true
+    },
+    {
+      "name": "two original issue266 high finding objects unchanged",
+      "passed": true
+    },
+    {
+      "name": "integrated classic high is actual substitution, not a green result",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage5/selfdogfood-review/candidate-selfdogfood.raw.json",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/python-relocation/classic-commit-provenance.json",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-parent-r1/receipt.json",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-parent-r1/input-hashes.json",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-parent-r1/source.diff",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-parent-r1/git-status.txt",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-parent-r1/stdout.txt",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-parent-r1/stderr.txt",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-integration-r1/receipt.json",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-integration-r1/input-hashes.json",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-integration-r1/source.diff",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-integration-r1/git-status.txt",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-integration-r1/stdout.txt",
+      "passed": true
+    },
+    {
+      "name": "original self-check/provenance input preserved: work/ux-stage6/final/classic-self-integration-r1/stderr.txt",
+      "passed": true
+    },
+    {
+      "name": "new output path; retain previous receipts",
+      "passed": true
+    }
+  ],
+  "input_hashes": {
+    "work/ux-stage5/selfdogfood-review/candidate-selfdogfood.raw.json": "67e316ef340f1e14f2769344f644535ae38552ce309756dc9d9a7862055fbb3a",
+    "work/ux-stage6/python-relocation/classic-commit-provenance.json": "bd6748d4f545665cb091c192f1829246ce717386a3592c8883e2e4c5ee7c6a87",
+    "work/ux-stage6/final/classic-self-parent-r1/receipt.json": "dc03ad7921bc6138d7200f77c5071d32ee58229cd3b3ec8de98c557b736a5ba3",
+    "work/ux-stage6/final/classic-self-parent-r1/input-hashes.json": "6580ef369d33c01db0960263bdcce9016980e56ae28529605653775b516915c1",
+    "work/ux-stage6/final/classic-self-parent-r1/source.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage6/final/classic-self-parent-r1/git-status.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage6/final/classic-self-parent-r1/stdout.txt": "6f99203857baff86d885be60a566a28cb714bec2d61d2e01b5b736f7155e9fca",
+    "work/ux-stage6/final/classic-self-parent-r1/stderr.txt": "50dc293ead38ff26c23bad696bba5a512b5a272f7d54f9fb113d2a970688f8cc",
+    "work/ux-stage6/final/classic-self-integration-r1/receipt.json": "6e39364d9e809c5ed181b44781c5dfe54f313b51a237d9e60677806a88dc313c",
+    "work/ux-stage6/final/classic-self-integration-r1/input-hashes.json": "6580ef369d33c01db0960263bdcce9016980e56ae28529605653775b516915c1",
+    "work/ux-stage6/final/classic-self-integration-r1/source.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage6/final/classic-self-integration-r1/git-status.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "work/ux-stage6/final/classic-self-integration-r1/stdout.txt": "6ea35e957cbf8aadb11b18716c6fd2a68613de0af33537eb7a5c419042f50803",
+    "work/ux-stage6/final/classic-self-integration-r1/stderr.txt": "9e73b47469d40d4324e30507edcc7c6450ef52e8e02bf4b6672de75b7b101733"
+  },
+  "read_only_git_commands": [
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup",
+        "show",
+        "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c:tests/test_classic_raises_additions.py"
+      ],
+      "started_utc": "2026-10-26T23:05:27.452016+00:00",
+      "ended_utc": "2026-10-26T23:05:27.498271+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup",
+        "show",
+        "15ac804593bc41db8f904e7921667bd6c276fa9a:tests/test_classic_raises_additions.py"
+      ],
+      "started_utc": "2026-10-26T23:05:27.499271+00:00",
+      "ended_utc": "2026-10-26T23:05:27.543968+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "4be73ac445f82cdda2138769915d17070a4459400951baa2e3f00130eef5fc6b",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_classic_raises_additions.py"
+      ],
+      "started_utc": "2026-10-26T23:05:27.545966+00:00",
+      "ended_utc": "2026-10-26T23:05:27.590433+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_issue266_survivor_conftest_chain.py"
+      ],
+      "started_utc": "2026-10-26T23:05:27.590433+00:00",
+      "ended_utc": "2026-10-26T23:05:27.638940+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "product_calls_by_reader": 0,
+  "pytest_calls_by_reader": 0,
+  "reader_runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "reader_sha256": "129b847bd7febd3497b34d89f0db695574968de3c14dceb3cda7df058b03e0dd",
+  "not_run_for_new_source": [
+    "full suite",
+    "source/wheel/pyz distribution qualification",
+    "formal release bridge",
+    "published checks"
+  ],
+  "evidence_span_scope": "All six high-finding before/after carriers checked against exact Git sources; TEST_DISABLED uses a whole-unit span containing its representative assertion. All nine warning objects are exactly equal to prior fbc native objects; their heterogeneous summary-span semantics are not independently re-proved here.",
+  "interpretation": "Native BLOCKs and every finding object remain intact. The independent ordinary-test semantic contract review does not override checker authority or make15ac accepted. No exemption, strength/gating/alignment or original verdict/golden-label authority was changed. The native-field expected assertion changed from cardinality17 to the complete17-name set, exactly as the native EXPECTED_VALUE_CHANGED finding records; that syntactic change is not hidden by the semantic-contract assessment."
+}

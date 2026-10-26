@@ -1,0 +1,135 @@
+"""Bounded static analyzer observations. Never execute the fixture programs."""
+from dataclasses import asdict
+from datetime import date
+import hashlib
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+REPO = ROOT / 'work/checkwash-ux'
+STAGE = ROOT / 'work/ux-stage6'
+sys.path.insert(0, str(REPO / 'src'))
+import checkwash.engine as engine
+from checkwash.change import FileChange
+from checkwash.config import Config
+from checkwash.contract import Contract
+
+assert Path(engine.__file__).resolve() == (REPO / 'src/checkwash/engine.py').resolve()
+OUT = STAGE / 'proof-diagnostics-r1'
+OUT.mkdir(exist_ok=False)
+results = []
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def observe(label, changes, when, snapshot=None):
+    lookups, marks = [], []
+    original = engine.mark_contexts
+
+    def marked(source, units, path, language, **kwargs):
+        returned = original(source, units, path, language, **kwargs)
+        marks.append({'path': path, 'language': language,
+                      'source_sha256': sha(source) if source is not None else None,
+                      'startup_known': kwargs.get('startup_known'),
+                      'startup': kwargs.get('startup'),
+                      'needed': sorted(kwargs.get('needed') or []),
+                      'units': [{'name': name, 'span': side.span,
+                                 'oracle_context': side.oracle_context,
+                                 'oracle_assertion_contexts': side.oracle_assertion_contexts.copy()}
+                                for name, side in units]})
+        return returned
+
+    def reader(channel):
+        def read(path):
+            value = snapshot.get(path)
+            lookups.append({'channel': channel, 'path': path,
+                            'sha256': sha(value) if value is not None else None})
+            return value
+        return read
+
+    kwargs = {} if snapshot is None else {'head_reader': reader('HEAD'), 'root_reader': reader('ROOT')}
+    row = {'label': label, 'date': str(when), 'closed_snapshot': snapshot is not None,
+           'changes': [{'path': c.path, 'status': c.status,
+                        'before_sha256': sha(c.before) if c.before is not None else None,
+                        'after_sha256': sha(c.after) if c.after is not None else None,
+                        'before_utf8': c.before.decode() if c.before is not None else None,
+                        'after_utf8': c.after.decode() if c.after is not None else None}
+                       for c in changes],
+           'snapshot': {p: {'sha256': sha(b), 'utf8': b.decode()} for p, b in (snapshot or {}).items()}}
+    engine.mark_contexts = marked
+    try:
+        ir, findings, verdict = engine.analyze(changes, Config(), Contract(), [], when, **kwargs)
+        row.update({'verdict': verdict, 'findings': [asdict(f) for f in findings],
+                    'files': [{'path': f.path, 'role': f.role, 'language': f.language,
+                               'units': [{'qualname': u.qualname,
+                                          'before': asdict(u.before) if u.before else None,
+                                          'after': asdict(u.after) if u.after else None,
+                                          'after_live': engine.unit_is_live(u.after, f.constants) if u.after else None}
+                                         for u in f.units]} for f in ir.files]})
+    finally:
+        engine.mark_contexts = original
+    row['startup_lookups'] = lookups
+    row['mark_context_calls'] = marks
+    results.append(row)
+    (OUT / (label + '.json')).write_text(json.dumps(row, sort_keys=True, indent=2) + '\n', encoding='utf-8')
+
+
+fixture = STAGE / 'python-relocation/fixtures'
+before263 = (fixture / 'issue263-before.py.txt').read_bytes()
+after263 = (fixture / 'issue263-after.py.txt').read_bytes()
+change263 = [FileChange('tests/test_calc.py', 'modified', before263, after263)]
+observe('263-original', change263, date(2026, 10, 6))
+observe('263-closed-root', change263, date(2026, 10, 6), {'tests/test_calc.py': after263})
+before358 = (fixture / 'issue358-before.py.txt').read_bytes()
+empty358 = (fixture / 'issue358-empty-old.py.txt').read_bytes()
+APP = {'app/__init__.py': b'', 'app/billing.py': b'def total():\n    return 78.75\n'}
+
+
+def move358(label, before, empty):
+    old, new = 'tests/test_billing.py', 'tests/test_other.py'
+    changes = [FileChange(old, 'modified', before, empty), FileChange(new, 'added', None, before)]
+    observe(label, changes, date(2026, 10, 8), {**APP, old: empty, new: before})
+
+
+move358('358-original', before358, empty358)
+GATE = (b'@pytest.fixture(autouse=True)\ndef only_slow(request):\n'
+        b"    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n"
+        b"        pytest.skip('slow tests are off')\n\n\n")
+assert before358.count(GATE) == empty358.count(GATE) == 1
+move358('358-no-gate-control', before358.replace(GATE, b''), empty358.replace(GATE, b''))
+
+UNIT = 'it("computes", () => { expect(total()).toBe(5); });'
+WRAPPED = 'describe("moved", () => {\n  ' + UNIT + '\n});\n'
+
+
+def move_js(label, before, after):
+    observe(label, [FileChange('tests/a.test.js', 'modified', before.encode(), b'// moved to b\n'),
+                    FileChange('tests/b.test.js', 'added', None, after.encode())], date(2026, 10, 1))
+
+
+move_js('js-bare-to-wrapper', UNIT + '\n', WRAPPED)
+move_js('js-bare-to-bare-control', UNIT + '\n', UNIT + '\n')
+move_js('js-same-wrapper-control', WRAPPED, WRAPPED)
+move_js('js-hook-negative', UNIT + '\n', WRAPPED.replace('  it(', '  beforeEach(() => { mutate(); });\n  it('))
+move_js('js-local-binding-negative', UNIT + '\n', WRAPPED.replace('  it(', '  const total = () => 5;\n  it('))
+SHADOW = 'function describe(_name, cb) {}\n'
+move_js('js-shadow-negative', SHADOW + UNIT + '\n', SHADOW + WRAPPED)
+THIS_UNIT = 'it("computes", () => { expect(this.value).toBe(5); });'
+move_js('js-this-negative', THIS_UNIT + '\n', 'describe("moved", function() {\n  ' + THIS_UNIT + '\n});\n')
+move_js('js-skipped-negative', UNIT + '\n', WRAPPED.replace('describe(', 'describe.skip('))
+
+summary = {'status': 'CAPTURE_COMPLETE_NOT_PRODUCT_ACCEPTANCE',
+           'source_sha': 'fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c',
+           'static_analyzer_calls': len(results), 'fixture_program_executions': 0,
+           'pytest_calls': 0, 'cli_calls': 0,
+           'observations': [{'label': r['label'], 'verdict': r['verdict'],
+                             'findings': [{'rule': f['rule'], 'severity': f['severity'],
+                                           'fingerprint': f['fingerprint']} for f in r['findings']]}
+                            for r in results],
+           'files': {p.name: {'sha256': sha(p.read_bytes()), 'bytes': p.stat().st_size}
+                     for p in sorted(OUT.glob('*.json'))}}
+(OUT / 'results.json').write_text(json.dumps(summary, sort_keys=True, indent=2) + '\n', encoding='utf-8')
+print(json.dumps(summary['observations'], sort_keys=True))

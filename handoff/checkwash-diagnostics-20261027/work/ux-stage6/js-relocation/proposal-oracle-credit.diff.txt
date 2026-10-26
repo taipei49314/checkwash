@@ -1,0 +1,93 @@
+--- a/src/checkwash/oracle_credit.py
++++ b/src/checkwash/oracle_credit.py
+@@ -235,6 +235,77 @@
+                 break  # No text-only credit through unknown control flow.
+ 
+ 
++def _javascript_environment_spans(text, units, code):
++    """Project one source-closed plain framework grouping, never its contents.
++
++    Unit declaration/body/assertions still supply the complete proof. Only a
++    module containing one global plain describe with one plain unit, and no
++    other executable/binding context, admits this registration-only envelope.
++    """
++    spans = [side.span for _name, side in units]
++    if len(units) != 1:
++        return spans
++    from checkwash.frontends.javascript.frontend import _declarations, _test_body, file_bindings
++
++    side = units[0][1]
++    if side.markers or side.param_rows_unknown or side.param_rows or side.param_cases is not None:
++        return spans
++    bindings = file_bindings(text.encode("utf-8"))
++    if len(bindings.tokens) > 4096:
++        return spans
++
++    def tokens(first, last):
++        return [value for value, start, end in bindings.tokens if first <= start and end <= last]
++
++    def separators_outside(first, last, envelope_first, envelope_last):
++        return all(value == ";" for value, start, end in bindings.tokens
++                   if first <= start and end <= last
++                   and not (envelope_first <= start and end <= envelope_last))
++
++    def plain(declaration, words):
++        if declaration.call is None or declaration.table or declaration.markers or declaration.focus is not None:
++            return False
++        head = tokens(declaration.start, declaration.opening)
++        if len(head) != 1 or head[0] not in words or not bindings.is_global((head[0],), declaration.start):
++            return False
++        args, _end = declaration.call
++        if len(args) != 2:
++            return False
++        title = tokens(*args[0])
++        if len(title) != 1 or len(title[0]) < 2 or title[0][0] not in "\"'" or title[0][-1] != title[0][0]:
++            return False
++        callback = _test_body(text, code, bindings, declaration)
++        return bool(callback and tokens(callback[3][0], callback[0]) == ["(", ")", "=>", "{"])
++
++    declarations = _declarations(text, code, bindings)
++    if len(declarations) != 2:
++        return spans
++    unit_start, unit_end = side.span
++    inner = next((d for d in declarations if d.unit and d.start == unit_start
++                  and d.call is not None and d.call[1] == unit_end), None)
++    if inner is None or not plain(inner, {"it", "test"}):
++        return spans
++    unit_tokens = tokens(unit_start, unit_end)
++    if any(value in {"this", "arguments", "super", "eval", "Function", "getState", "currentTestName"}
++           for value in unit_tokens):
++        return spans
++    if any(unit_tokens[i:i + 3] == ["new", ".", "target"] for i in range(len(unit_tokens) - 2)):
++        return spans
++    for outer in declarations:
++        if outer.unit or not plain(outer, {"describe"}) or bindings.scope(outer.start) != 0:
++            continue
++        callback = _test_body(text, code, bindings, outer)
++        first, last, call_end, _argument = callback
++        if not (first <= unit_start < unit_end <= last):
++            continue
++        if not separators_outside(first, last, unit_start, unit_end):
++            continue
++        if not separators_outside(0, len(text), outer.start, call_end):
++            continue
++        return [(outer.start, call_end)]
++    return spans
++
++
+ def _javascript_context(source, units, path, needed):
+     try:
+         text = source.decode("utf-8-sig").replace("\r\n", "\n")
+@@ -245,10 +316,9 @@
+     if any(source_code[match.start()] for match in re.finditer(
+             r"\b(?:__dirname|__filename)\b|\bimport\s*\.\s*meta\b|\bmodule\s*\.\s*(?:filename|id)\b|\bprocess\s*\.\s*argv\b|\.\s*stack\b", text)):
+         return
+-    ordered = sorted(units, key=lambda item: item[1].span)
++    ordered = sorted(_javascript_environment_spans(text, units, source_code))
+     outside, last = [], 0
+-    for _name, side in ordered:
+-        start, end = side.span
++    for start, end in ordered:
+         if start < last or not (0 <= start <= end <= len(text)):
+             return
+         outside.append(text[last:start])

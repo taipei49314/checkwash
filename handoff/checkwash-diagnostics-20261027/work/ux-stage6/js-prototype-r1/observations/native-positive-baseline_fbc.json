@@ -1,0 +1,161 @@
+{
+  "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+  "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+  "case": "native-positive",
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          0,
+          50
+        ],
+        "text": "expect(total()).toBe(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+      "message": "computes: test unit disappeared",
+      "path": "tests/a.test.js",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "computes"
+    }
+  ],
+  "implementation": "baseline_fbc",
+  "prototype_sha256": null,
+  "units": [
+    {
+      "after": null,
+      "before": {
+        "assertions": [
+          {
+            "bare_expectation": false,
+            "epsilon": null,
+            "epsilon_kind": null,
+            "fixture_reads": [],
+            "form": "compare_eq",
+            "id": "a0",
+            "inherited": false,
+            "left": "total()",
+            "left_names": [],
+            "operand_source": "5",
+            "positive": true,
+            "predicate": "eq_strict",
+            "reaching": null,
+            "reaching_sig": "",
+            "resolved_subject": null,
+            "right_depends_on": [],
+            "right_literal": "5",
+            "right_value": "5.0",
+            "span": [
+              23,
+              46
+            ],
+            "strength": 90,
+            "text": "expect(total()).toBe(5)",
+            "trivial": false,
+            "unbound_operands": false,
+            "unevaluated_expected": null,
+            "via": null
+          }
+        ],
+        "bindings": {},
+        "body_hash": "bcf6f6f4058e204b439d13332052548e144eb19cc671086d8b44b3a43f21e661",
+        "calls": [],
+        "collect_ignored": [],
+        "exclusive_bindings": [],
+        "fixture_producers": [],
+        "handlers": [],
+        "invoked": [],
+        "markers": [],
+        "oracle_assertion_contexts": {
+          "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+        },
+        "oracle_context": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+        "param_cases": null,
+        "param_columns": {},
+        "param_rows": [],
+        "param_rows_unknown": false,
+        "params": [],
+        "patches": [],
+        "span": [
+          0,
+          50
+        ]
+      },
+      "name": "computes",
+      "path": "tests/a.test.js"
+    },
+    {
+      "after": {
+        "assertions": [
+          {
+            "bare_expectation": false,
+            "epsilon": null,
+            "epsilon_kind": null,
+            "fixture_reads": [],
+            "form": "compare_eq",
+            "id": "a0",
+            "inherited": false,
+            "left": "total()",
+            "left_names": [],
+            "operand_source": "5",
+            "positive": true,
+            "predicate": "eq_strict",
+            "reaching": null,
+            "reaching_sig": "",
+            "resolved_subject": null,
+            "right_depends_on": [],
+            "right_literal": "5",
+            "right_value": "5.0",
+            "span": [
+              51,
+              74
+            ],
+            "strength": 90,
+            "text": "expect(total()).toBe(5)",
+            "trivial": false,
+            "unbound_operands": false,
+            "unevaluated_expected": null,
+            "via": null
+          }
+        ],
+        "bindings": {},
+        "body_hash": "bcf6f6f4058e204b439d13332052548e144eb19cc671086d8b44b3a43f21e661",
+        "calls": [],
+        "collect_ignored": [],
+        "exclusive_bindings": [],
+        "fixture_producers": [],
+        "handlers": [],
+        "invoked": [],
+        "markers": [],
+        "oracle_assertion_contexts": {
+          "a0": "923debae368c590041a28cc51bbb13aa623dcf359f010216b93acd1e59cabba4"
+        },
+        "oracle_context": "9c1b54ade18087ca36f68a9e2569797c272eb481cee9531c23425f84799a4edc",
+        "param_cases": null,
+        "param_columns": {},
+        "param_rows": [],
+        "param_rows_unknown": false,
+        "params": [],
+        "patches": [],
+        "span": [
+          28,
+          78
+        ]
+      },
+      "before": null,
+      "name": "computes",
+      "path": "tests/b.test.js"
+    }
+  ],
+  "verdict": "block"
+}

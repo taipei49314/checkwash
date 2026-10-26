@@ -1,0 +1,61 @@
+{
+  "kind": "COMPLETION_AUDIT_PACKET_NOT_ACCEPTANCE",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "recorded_utc": "2026-10-26T22:52:24.949957+00:00",
+  "files": [
+    {
+      "path": "audit.json",
+      "bytes": 10885,
+      "sha256": "f48f7ac677820f1a2743cb06829c632cafd94af1681197ddf7298059dd09f266"
+    },
+    {
+      "path": "input-manifest.json",
+      "bytes": 7818,
+      "sha256": "ae2dd944b322abdba4fdad4dece4c47908048aee6391fa21c9a16cb191287648"
+    },
+    {
+      "path": "native-failed-parents.json",
+      "bytes": 30606,
+      "sha256": "58a13fa2580a61588549f47b337c40bf20a3cad28d50731aa71ca0699349af6e"
+    },
+    {
+      "path": "remote-issue567-comments.json",
+      "bytes": 424,
+      "sha256": "6b936607ecfecb3d55d2c987f430ba77d7146e6c354dc0658e4682eaf48bee66"
+    },
+    {
+      "path": "remote-issue567.json",
+      "bytes": 4584,
+      "sha256": "34b57553c81d7ad80b72efdcdc4779b3255a5ebdb3ee1f8b5398adde4b38f91f"
+    },
+    {
+      "path": "remote-issue568-comments.json",
+      "bytes": 424,
+      "sha256": "9604e3f24d3fe36b44cf3654c20d48ce6d7846d0f06085cbec407d792dd74b4e"
+    },
+    {
+      "path": "remote-issue568.json",
+      "bytes": 4579,
+      "sha256": "dd5f159bb649d04ee8e4ce63405ce38ddb6267a42798a144f565949ed197032b"
+    },
+    {
+      "path": "remote-pr566.json",
+      "bytes": 6295,
+      "sha256": "9961bdc7976432866ce63ec067e48251823f07f6fd143173f9dd326485100b20"
+    },
+    {
+      "path": "report.md",
+      "bytes": 13932,
+      "sha256": "42e5f68c501dc5a42c674057f86a2a52d7b8eafe0d0c5d76d47dc1941185405b"
+    }
+  ],
+  "file_count": 9,
+  "uncompressed_bytes": 79547,
+  "bounded_content_scan_flags": [],
+  "privacy_scope": "Only these audit output files checked for multiple global-memory headers, private-key/token-shaped bytes and authenticated URL shapes. Not a universal secrets assurance. No global instructions/context bytes were copied into this packet.",
+  "product_test_model_calls": 0,
+  "git_writes": 0,
+  "push_calls": 0,
+  "goal_complete": false,
+  "backup_milestone_is_not_repair_acceptance": true
+}

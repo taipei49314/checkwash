@@ -1,0 +1,32 @@
+{
+  "status": "INERT_NOT_APPLIED_NOT_IMPORTED_NOT_EXECUTED_NOT_ACCEPTED",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "product_file": "src/checkwash/oracle_credit.py",
+  "before_sha256": "dae96be0b17b411dfbdd3e44f03aafbebbfd87ecefbbeacee1d483b44de20155",
+  "proposed_after_sha256": "464435753edb7dc6a2dc2c652584f4c1f5b9a675838dd3fd8850da6bcd4ec36d",
+  "raw_patch_sha256": "75a8d8e4983c15abe159b5e0c7cf8427cd123c67379ceb1fa8db88de813f7b51",
+  "patch_bytes": 4306,
+  "EOL": "LF raw bytes",
+  "constraints": [
+    "Wholemodule exactlyone plain globaldescribe +one plain globalit/test",
+    "Literaltitle, zeroargument nonasyncarrow callbacks, no table/modifiers/options/focus/skip",
+    "No other module/wrapper executable tokens or lexicalbindings; separators/comments only",
+    "No this/arguments/super/eval/Function/new.target/direct testmetadata-sensitive names",
+    "Complete unitbody/assertion context, imported producer resolution, liveness and spentcredits remain existing owners",
+    "No fallback to text/body/mass waiver; all rejected shapes retain exactexisting proof algorithm"
+  ],
+  "predicted_movement": "Original bare->plainwrapper positive is candidate PASS/info under frontendframework assumptions; proposed source never executed",
+  "not_modified": [
+    "Productcheckout",
+    "Tests/fixtures/expected",
+    "gating/strength/alignment",
+    "SPEC/DECISIONS/contracts",
+    "stage5/outputs"
+  ],
+  "not_run": [
+    "modifiedproduct/API/CLI/pytest",
+    "newnegativecontrols onproposedsource"
+  ],
+  "actual_fbc_evidence": "Root bounded-context-r1; separate readonly nativeaudit records exact observations",
+  "product_calls_by_preparation": 0
+}

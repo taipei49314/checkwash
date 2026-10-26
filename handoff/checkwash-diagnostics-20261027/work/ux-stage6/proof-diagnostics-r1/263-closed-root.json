@@ -1,0 +1,465 @@
+{
+  "changes": [
+    {
+      "after_sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a",
+      "after_utf8": "import pytest\n\nfrom app.calc import add\n\nold_python = pytest.mark.skipif(\"sys.version_info < (2,6)\")\n\n\nclass TestAdd:\n    pytestmark = old_python\n\n    def test_one(self):\n        assert add(1, 2) == 3\n\n    def test_two(self):\n        assert add(2, 2) == 4\n",
+      "before_sha256": "1d4fa51e24e0f17f9381cb9b71293e752ca407dfd31f7b388166bc5199d5cc9f",
+      "before_utf8": "import pytest\n\nfrom app.calc import add\n\n\ndef test_one():\n    assert add(1, 2) == 3\n\n\ndef test_two():\n    assert add(2, 2) == 4\n",
+      "path": "tests/test_calc.py",
+      "status": "modified"
+    }
+  ],
+  "closed_snapshot": true,
+  "date": "2026-10-06",
+  "files": [
+    {
+      "language": "python",
+      "path": "tests/test_calc.py",
+      "role": "test",
+      "units": [
+        {
+          "after": null,
+          "after_live": null,
+          "before": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "add(1, 2)",
+                "left_names": [
+                  "add"
+                ],
+                "operand_source": null,
+                "positive": true,
+                "predicate": null,
+                "reaching": {},
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "3",
+                "right_value": "3",
+                "span": [
+                  62,
+                  83
+                ],
+                "strength": 90,
+                "text": "assert add(1, 2) == 3",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "99e90ed31aa5a82a04057972b9a04c1b97de8309e116e4d254a3583a13922eb4",
+            "calls": [
+              "add"
+            ],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [
+              "add"
+            ],
+            "markers": [],
+            "oracle_assertion_contexts": {
+              "a0@0": "107893ebadbefd92aa5457c604f5a474496de3f494ed8ac5cca00e4c8de913cb"
+            },
+            "oracle_context": "cb6a2b01b7b110eb6cc1d9a59449b243b571dffce2be47389b0803e8dabf3365",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              42,
+              83
+            ]
+          },
+          "qualname": "test_one"
+        },
+        {
+          "after": null,
+          "after_live": null,
+          "before": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "add(2, 2)",
+                "left_names": [
+                  "add"
+                ],
+                "operand_source": null,
+                "positive": true,
+                "predicate": null,
+                "reaching": {},
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "4",
+                "right_value": "4",
+                "span": [
+                  106,
+                  127
+                ],
+                "strength": 90,
+                "text": "assert add(2, 2) == 4",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "54e031f33a37cc232202e22485716218f961140d07f9ec5196bef355262c9088",
+            "calls": [
+              "add"
+            ],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [
+              "add"
+            ],
+            "markers": [],
+            "oracle_assertion_contexts": {
+              "a0@0": "c82dff1d1b7cf8290fe255963a82aa83564aa43bace20b82a71806b8791fc818"
+            },
+            "oracle_context": "a867786d37772fbaaab95c46cf06b9f12adb2954f83883af06e3822cd2f4a8c4",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              86,
+              127
+            ]
+          },
+          "qualname": "test_two"
+        },
+        {
+          "after": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "add(1, 2)",
+                "left_names": [
+                  "add"
+                ],
+                "operand_source": null,
+                "positive": true,
+                "predicate": null,
+                "reaching": {},
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "3",
+                "right_value": "3",
+                "span": [
+                  179,
+                  200
+                ],
+                "strength": 90,
+                "text": "assert add(1, 2) == 3",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "e772b79fe0e6372a703a343fbe5d58156cb37f563ac42d0c53ecbc9e847f267a",
+            "calls": [
+              "add"
+            ],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [
+              "add"
+            ],
+            "markers": [
+              {
+                "guard": null,
+                "name": "pytest.mark.skipif(\"sys.version_info<(2,6)\")",
+                "span": [
+                  54,
+                  100
+                ],
+                "text": "pytest.mark.skipif(\"sys.version_info < (2,6)\")"
+              }
+            ],
+            "oracle_assertion_contexts": {},
+            "oracle_context": "",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              151,
+              200
+            ]
+          },
+          "after_live": true,
+          "before": null,
+          "qualname": "TestAdd.test_one"
+        },
+        {
+          "after": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "add(2, 2)",
+                "left_names": [
+                  "add"
+                ],
+                "operand_source": null,
+                "positive": true,
+                "predicate": null,
+                "reaching": {},
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "4",
+                "right_value": "4",
+                "span": [
+                  234,
+                  255
+                ],
+                "strength": 90,
+                "text": "assert add(2, 2) == 4",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "50a28b425165660a658ac415f8d961a6bf99aaf6b53c1767a9be42ec43385ed6",
+            "calls": [
+              "add"
+            ],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [
+              "add"
+            ],
+            "markers": [
+              {
+                "guard": null,
+                "name": "pytest.mark.skipif(\"sys.version_info<(2,6)\")",
+                "span": [
+                  54,
+                  100
+                ],
+                "text": "pytest.mark.skipif(\"sys.version_info < (2,6)\")"
+              }
+            ],
+            "oracle_assertion_contexts": {},
+            "oracle_context": "",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              206,
+              255
+            ]
+          },
+          "after_live": true,
+          "before": null,
+          "qualname": "TestAdd.test_two"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          42,
+          83
+        ],
+        "text": "assert add(1, 2) == 3"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_one/v2:426ee3ff4d0dab4c755f9a18d744ca351f68718a99e9ecb6298328af898aa7b3",
+      "message": "test_one: test unit disappeared",
+      "path": "tests/test_calc.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_one"
+    },
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          86,
+          127
+        ],
+        "text": "assert add(2, 2) == 4"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_two/v2:3791a1cdd7e2ba33fb3043e0a9f22d7fa1a65c2042270b7f67c87dee2119508b",
+      "message": "test_two: test unit disappeared",
+      "path": "tests/test_calc.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_two"
+    }
+  ],
+  "label": "263-closed-root",
+  "mark_context_calls": [
+    {
+      "language": "python",
+      "needed": [
+        "TestAdd.test_one",
+        "TestAdd.test_two",
+        "test_one",
+        "test_two"
+      ],
+      "path": "tests/test_calc.py",
+      "source_sha256": "1d4fa51e24e0f17f9381cb9b71293e752ca407dfd31f7b388166bc5199d5cc9f",
+      "startup": "[]",
+      "startup_known": true,
+      "units": [
+        {
+          "name": "test_one",
+          "oracle_assertion_contexts": {
+            "a0@0": "107893ebadbefd92aa5457c604f5a474496de3f494ed8ac5cca00e4c8de913cb"
+          },
+          "oracle_context": "cb6a2b01b7b110eb6cc1d9a59449b243b571dffce2be47389b0803e8dabf3365",
+          "span": [
+            42,
+            83
+          ]
+        },
+        {
+          "name": "test_two",
+          "oracle_assertion_contexts": {
+            "a0@0": "c82dff1d1b7cf8290fe255963a82aa83564aa43bace20b82a71806b8791fc818"
+          },
+          "oracle_context": "a867786d37772fbaaab95c46cf06b9f12adb2954f83883af06e3822cd2f4a8c4",
+          "span": [
+            86,
+            127
+          ]
+        }
+      ]
+    },
+    {
+      "language": "python",
+      "needed": [
+        "TestAdd.test_one",
+        "TestAdd.test_two",
+        "test_one",
+        "test_two"
+      ],
+      "path": "tests/test_calc.py",
+      "source_sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a",
+      "startup": "[]",
+      "startup_known": true,
+      "units": [
+        {
+          "name": "TestAdd.test_one",
+          "oracle_assertion_contexts": {},
+          "oracle_context": "",
+          "span": [
+            151,
+            200
+          ]
+        },
+        {
+          "name": "TestAdd.test_two",
+          "oracle_assertion_contexts": {},
+          "oracle_context": "",
+          "span": [
+            206,
+            255
+          ]
+        }
+      ]
+    }
+  ],
+  "snapshot": {
+    "tests/test_calc.py": {
+      "sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a",
+      "utf8": "import pytest\n\nfrom app.calc import add\n\nold_python = pytest.mark.skipif(\"sys.version_info < (2,6)\")\n\n\nclass TestAdd:\n    pytestmark = old_python\n\n    def test_one(self):\n        assert add(1, 2) == 3\n\n    def test_two(self):\n        assert add(2, 2) == 4\n"
+    }
+  },
+  "startup_lookups": [
+    {
+      "channel": "ROOT",
+      "path": "tests/conftest.py",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "conftest.py",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/__init__.py",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "__init__.py",
+      "sha256": null
+    }
+  ],
+  "verdict": "block"
+}

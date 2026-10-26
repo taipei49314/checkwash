@@ -1,0 +1,39 @@
+diff --git a/tests/test_classic_raises_additions.py b/tests/test_classic_raises_additions.py
+index 1298c936..3cf7b75e 100644
+--- a/tests/test_classic_raises_additions.py
++++ b/tests/test_classic_raises_additions.py
+@@ -43,10 +43,31 @@ def test_added_literal_rows_retain_exception_removal_and_native_units(after):
+     # deleting or blanking the new authority fields on either object.
+     enrichment = {"oracle_context", "oracle_assertion_contexts"}
+     native_fields = [field.name for field in fields(original.side) if field.name not in enrichment]
+-    assert len(native_fields) == 17
+-    assert {name: getattr(preserved.after, name) for name in native_fields} == {
+-        name: getattr(original.side, name) for name in native_fields
++    assert set(native_fields) == {
++        "span", "assertions", "calls", "markers", "handlers", "param_cases",
++        "body_hash", "bindings", "param_columns", "param_rows", "param_rows_unknown",
++        "collect_ignored", "invoked", "params", "patches", "exclusive_bindings",
++        "fixture_producers",
+     }
++    # Whole-field checks show exactly what the native preservation contract
++    # covers. The schema guard above fails if a native field is added or lost.
++    assert preserved.after.span == original.side.span
++    assert preserved.after.assertions == original.side.assertions
++    assert preserved.after.calls == original.side.calls
++    assert preserved.after.markers == original.side.markers
++    assert preserved.after.handlers == original.side.handlers
++    assert preserved.after.param_cases == original.side.param_cases
++    assert preserved.after.body_hash == original.side.body_hash
++    assert preserved.after.bindings == original.side.bindings
++    assert preserved.after.param_columns == original.side.param_columns
++    assert preserved.after.param_rows == original.side.param_rows
++    assert preserved.after.param_rows_unknown == original.side.param_rows_unknown
++    assert preserved.after.collect_ignored == original.side.collect_ignored
++    assert preserved.after.invoked == original.side.invoked
++    assert preserved.after.params == original.side.params
++    assert preserved.after.patches == original.side.patches
++    assert preserved.after.exclusive_bindings == original.side.exclusive_bindings
++    assert preserved.after.fixture_producers == original.side.fixture_producers
+     assert original.side.oracle_context == ""
+     assert original.side.oracle_assertion_contexts == {}
+     assert re.fullmatch(r"[0-9a-f]{64}", preserved.after.oracle_context)

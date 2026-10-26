@@ -1,0 +1,824 @@
+{
+  "status": "READ_ONLY_NATIVE_AND_PROTOTYPE_AUDIT_COMPLETE_REJECTED_UNSAFE",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "original_fixture_source_sha256": "ed56143de8c53954b6344fb2bab64296133502618ab8929052e4e7cc1d11f286",
+  "oracle_credit_base_sha256": "dae96be0b17b411dfbdd3e44f03aafbebbfd87ecefbbeacee1d483b44de20155",
+  "native_fixture_match": "P1 bounded-context beforeA/afterAcomment/arrivalB exactly original normaldescribe param; restricted literal AST extraction only",
+  "prototype_native_variant": "Prototype native-positive beforeA/arrivalB match original; deletedA comment is //moved rather than //moved to b, as explicitly encoded in driver. Not claimed identical fullfixture byte set.",
+  "our_11_arm_packet_scope": "Root baseline diagnostic coversP1/P2/P3 exactpositive inputs and5negative family variants; hook/shadow/indent bytes differ from proposedpacket. AdditionalN6/N7/N8 not run. No prototype PASS for unexecutedarms.",
+  "baseline_js_calls": 8,
+  "baseline_capture_total_calls": 12,
+  "baseline_other4_python": "NOT_AUDITED_HERE",
+  "prototype_calls": 6,
+  "prototype_runtime_kind": "MIXED_RUNTIME_PROTOTYPE_NOT_FBC_QUALIFICATION",
+  "baseline": [
+    {
+      "label": "js-bare-to-bare-control",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-bare-to-bare-control.json",
+      "raw_sha256": "f450a20e4b56ef3456966d7b20b6830affc04e9d792753c35e1858eba4971156",
+      "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "after_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "before_span": [
+        0,
+        50
+      ],
+      "after_span": [
+        0,
+        50
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": ";",
+      "derived_outside_environment_after": ";",
+      "oracle_context_before": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+      "oracle_context_after": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+      "assertion_map_before": {
+        "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+      },
+      "assertion_map_after": {
+        "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+      },
+      "after_live": true,
+      "verdict": "pass",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              0,
+              50
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ],
+          "escalators": [],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "info",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-bare-to-wrapper",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-bare-to-wrapper.json",
+      "raw_sha256": "cf6a430680234adc99c450dfc9f177a6daecfd5984595b7df1d4bbb78edb9ab8",
+      "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "before_span": [
+        0,
+        50
+      ],
+      "after_span": [
+        28,
+        78
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": ";",
+      "derived_outside_environment_after": "describe(\"moved\", () => {\n  ;\n});",
+      "oracle_context_before": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+      "oracle_context_after": "9c1b54ade18087ca36f68a9e2569797c272eb481cee9531c23425f84799a4edc",
+      "assertion_map_before": {
+        "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+      },
+      "assertion_map_after": {
+        "a0": "923debae368c590041a28cc51bbb13aa623dcf359f010216b93acd1e59cabba4"
+      },
+      "after_live": true,
+      "verdict": "block",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              0,
+              50
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-hook-negative",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-hook-negative.json",
+      "raw_sha256": "41b0107289bd9ce9e34f8885de609744d65263ca54c59cc687fdd5ab70891a53",
+      "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "after_utf8": "describe(\"moved\", () => {\n  beforeEach(() => { mutate(); });\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "before_span": [
+        0,
+        50
+      ],
+      "after_span": [
+        63,
+        113
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": ";",
+      "derived_outside_environment_after": "describe(\"moved\", () => {\n  beforeEach(() => { mutate(); });\n  ;\n});",
+      "oracle_context_before": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+      "oracle_context_after": "252fd3a6206a2a620fcad13c22acd7b7cc2fdd06ac476576779dbd9454b67c76",
+      "assertion_map_before": {
+        "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+      },
+      "assertion_map_after": {
+        "a0": "dd5e0a0ec19263942de598481be539e4116e0b22b9ba02bc00b0dcbce19a3dbb"
+      },
+      "after_live": true,
+      "verdict": "block",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              0,
+              50
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-local-binding-negative",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-local-binding-negative.json",
+      "raw_sha256": "841d9a30d8c37066b509edcbad41688abccf3d5d96e8e7cb8f5851986c459b03",
+      "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "after_utf8": "describe(\"moved\", () => {\n  const total = () => 5;\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "before_span": [
+        0,
+        50
+      ],
+      "after_span": [
+        53,
+        103
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": ";",
+      "derived_outside_environment_after": "describe(\"moved\", () => {\n  const total = () => 5;\n  ;\n});",
+      "oracle_context_before": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+      "oracle_context_after": "5b81a37055a8402b58330a2238103861f923ce5eb1e1c5636f60feb1d67041e8",
+      "assertion_map_before": {
+        "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+      },
+      "assertion_map_after": {
+        "a0": "270be678a87e283d93b390acb4bfa98be6032bdcd84032681de44375eb2385fa"
+      },
+      "after_live": true,
+      "verdict": "block",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              0,
+              50
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-same-wrapper-control",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-same-wrapper-control.json",
+      "raw_sha256": "4cd5df369f010dd37a34de9518f40ce3236630ac59d430e77b309478b1f6cd00",
+      "before_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "before_span": [
+        28,
+        78
+      ],
+      "after_span": [
+        28,
+        78
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": "describe(\"moved\", () => {\n  ;\n});",
+      "derived_outside_environment_after": "describe(\"moved\", () => {\n  ;\n});",
+      "oracle_context_before": "9c1b54ade18087ca36f68a9e2569797c272eb481cee9531c23425f84799a4edc",
+      "oracle_context_after": "9c1b54ade18087ca36f68a9e2569797c272eb481cee9531c23425f84799a4edc",
+      "assertion_map_before": {
+        "a0": "923debae368c590041a28cc51bbb13aa623dcf359f010216b93acd1e59cabba4"
+      },
+      "assertion_map_after": {
+        "a0": "923debae368c590041a28cc51bbb13aa623dcf359f010216b93acd1e59cabba4"
+      },
+      "after_live": true,
+      "verdict": "pass",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              28,
+              78
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ],
+          "escalators": [],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "info",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-shadow-negative",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-shadow-negative.json",
+      "raw_sha256": "9fbfe13a0668ed29eb50eeeefc7a7a7f85576a9ef4a5d247dd1e80d9a720735b",
+      "before_utf8": "function describe(_name, cb) {}\nit(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "after_utf8": "function describe(_name, cb) {}\ndescribe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "before_span": [
+        32,
+        82
+      ],
+      "after_span": [
+        60,
+        110
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": "function describe(_name, cb) {}\n;",
+      "derived_outside_environment_after": "function describe(_name, cb) {}\ndescribe(\"moved\", () => {\n  ;\n});",
+      "oracle_context_before": "5f6a889ff6a4143d92946bb3d5f457aeecdbbdb14a11b235e90f0f5ffd51e34c",
+      "oracle_context_after": "c53d6bec30dea9497e33f0cb8927c4a9a2c823a93157bdf1884780dd2c2220bb",
+      "assertion_map_before": {
+        "a0": "bf017c080c88c26e2860a4753c5b491f5987fb774e1552209c8b32c6d0440435"
+      },
+      "assertion_map_after": {
+        "a0": "6d22a0a6d82441e8cf7bf3a2c46a3beedab1d21b27269102d8ad1a7c64fe11ef"
+      },
+      "after_live": true,
+      "verdict": "block",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              32,
+              82
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-skipped-negative",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-skipped-negative.json",
+      "raw_sha256": "9e8eb7c41331b4b5718cfd12504a9af3ce9f06078e98bd819a90b8b63aa8a0c2",
+      "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+      "after_utf8": "describe.skip(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+      "before_span": [
+        0,
+        50
+      ],
+      "after_span": [
+        33,
+        83
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": ";",
+      "derived_outside_environment_after": "describe.skip(\"moved\", () => {\n  ;\n});",
+      "oracle_context_before": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+      "oracle_context_after": "",
+      "assertion_map_before": {
+        "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+      },
+      "assertion_map_after": {},
+      "after_live": false,
+      "verdict": "block",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              0,
+              50
+            ],
+            "text": "expect(total()).toBe(5)"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    },
+    {
+      "label": "js-this-negative",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/js-this-negative.json",
+      "raw_sha256": "93f99072ab5466df204011d5f2d12379526a3bfbb6acc34b5b8a6f7b09eb771b",
+      "before_utf8": "it(\"computes\", () => { expect(this.value).toBe(5); });\n",
+      "after_utf8": "describe(\"moved\", function() {\n  it(\"computes\", () => { expect(this.value).toBe(5); });\n});\n",
+      "before_span": [
+        0,
+        53
+      ],
+      "after_span": [
+        33,
+        86
+      ],
+      "unit_text_equal": true,
+      "derived_outside_environment_before": ";",
+      "derived_outside_environment_after": "describe(\"moved\", function() {\n  ;\n});",
+      "oracle_context_before": "a9d4dfa6dc83c80fa737ada1d07a5be4cf5dd32b66d5b1146709814653583097",
+      "oracle_context_after": "e59aa65ae27322a5d913d1e308a342db452e4ea35ae2b47242e44073088944ee",
+      "assertion_map_before": {
+        "a0": "f34cfd3bb82cd706b7194b4a808b284125628e00fab3c94c5890e6690e495c81"
+      },
+      "assertion_map_after": {
+        "a0": "392227ba877c6e758ef64e1b455909519346c7d2a5d302260ae086aca7b782d0"
+      },
+      "after_live": true,
+      "verdict": "block",
+      "full_findings": [
+        {
+          "after": null,
+          "allowlisted": false,
+          "before": {
+            "span": [
+              0,
+              53
+            ],
+            "text": "expect(this.value).toBe(5)"
+          },
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:088bc4d783077ab985baf1452fe4ddf407c2b42a8a14201c0f6cb1a6b6672945",
+          "message": "computes: test unit disappeared",
+          "path": "tests/a.test.js",
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "shape": "unit_removed",
+          "strength_after": null,
+          "strength_drop": null,
+          "subject_changed": null,
+          "unit": "computes"
+        }
+      ]
+    }
+  ],
+  "prototype_pairs": [
+    {
+      "case": "native-positive",
+      "baseline_fbc": {
+        "path": "work/ux-stage6/js-prototype-r1/observations/native-positive-baseline_fbc.json",
+        "sha256": "24f5c62f9f8098224f27ca4a0d6c933bb28b9a95feebd14929a9dcb5e66374a0",
+        "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+        "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+        "before_oracle_context": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+        "after_oracle_context": "9c1b54ade18087ca36f68a9e2569797c272eb481cee9531c23425f84799a4edc",
+        "before_assertion_map": {
+          "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+        },
+        "after_assertion_map": {
+          "a0": "923debae368c590041a28cc51bbb13aa623dcf359f010216b93acd1e59cabba4"
+        },
+        "body_hash_equal": true,
+        "verdict": "block",
+        "full_findings": [
+          {
+            "after": null,
+            "allowlisted": false,
+            "before": {
+              "span": [
+                0,
+                50
+              ],
+              "text": "expect(total()).toBe(5)"
+            },
+            "deescalators": [],
+            "escalators": [
+              "NO_PROD_CHANGE_IN_DIFF"
+            ],
+            "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+            "message": "computes: test unit disappeared",
+            "path": "tests/a.test.js",
+            "rule": "TEST_DISABLED",
+            "severity": "high",
+            "shape": "unit_removed",
+            "strength_after": null,
+            "strength_drop": null,
+            "subject_changed": null,
+            "unit": "computes"
+          }
+        ]
+      },
+      "unapplied_prototype": {
+        "path": "work/ux-stage6/js-prototype-r1/observations/native-positive-unapplied_prototype.json",
+        "sha256": "cac4957dcc4347d1de215dffc71b5b785bcc77ebd7f2b43cf07285ebb4d7699c",
+        "before_utf8": "it(\"computes\", () => { expect(total()).toBe(5); });\n",
+        "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n",
+        "before_oracle_context": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+        "after_oracle_context": "100beca457a1967e7519ae24fef2a8d5047b033008f56d676253b04029948c61",
+        "before_assertion_map": {
+          "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+        },
+        "after_assertion_map": {
+          "a0": "b39f5c2a2d314fdb35f32edd8420bc13f57c0ddb1ae0fefbb9fcaab41de23165"
+        },
+        "body_hash_equal": true,
+        "verdict": "pass",
+        "full_findings": [
+          {
+            "after": null,
+            "allowlisted": false,
+            "before": {
+              "span": [
+                0,
+                50
+              ],
+              "text": "expect(total()).toBe(5)"
+            },
+            "deescalators": [
+              "ASSERTION_MOVED"
+            ],
+            "escalators": [],
+            "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+            "message": "computes: test unit disappeared",
+            "path": "tests/a.test.js",
+            "rule": "TEST_DISABLED",
+            "severity": "info",
+            "shape": "unit_removed",
+            "strength_after": null,
+            "strength_drop": null,
+            "subject_changed": null,
+            "unit": "computes"
+          }
+        ]
+      }
+    },
+    {
+      "case": "indirect-title-observer",
+      "baseline_fbc": {
+        "path": "work/ux-stage6/js-prototype-r1/observations/indirect-title-observer-baseline_fbc.json",
+        "sha256": "c72ec98200560d11c15433da75b9e7d3c93c4860a237c18fc451b51dbfdf8728",
+        "before_utf8": "it(\"computes\", () => { const s = expect['get' + 'State'](); if (s['current' + 'TestName'].startsWith('moved')) return; expect(total()).toBe(5); });\n",
+        "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { const s = expect['get' + 'State'](); if (s['current' + 'TestName'].startsWith('moved')) return; expect(total()).toBe(5); });\n});\n",
+        "before_oracle_context": "28d152aca279dcd5138f073ec9aeaf6acd59cf2950bd7425cf4edbc3ed25a58b",
+        "after_oracle_context": "7029c1c415b54a82fea977944ceb80255e1bbc6b2536ee62c9ae28a4dfaea462",
+        "before_assertion_map": {},
+        "after_assertion_map": {},
+        "body_hash_equal": true,
+        "verdict": "block",
+        "full_findings": [
+          {
+            "after": null,
+            "allowlisted": false,
+            "before": {
+              "span": [
+                0,
+                146
+              ],
+              "text": "expect(total()).toBe(5)"
+            },
+            "deescalators": [],
+            "escalators": [
+              "NO_PROD_CHANGE_IN_DIFF"
+            ],
+            "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+            "message": "computes: test unit disappeared",
+            "path": "tests/a.test.js",
+            "rule": "TEST_DISABLED",
+            "severity": "high",
+            "shape": "unit_removed",
+            "strength_after": null,
+            "strength_drop": null,
+            "subject_changed": null,
+            "unit": "computes"
+          }
+        ]
+      },
+      "unapplied_prototype": {
+        "path": "work/ux-stage6/js-prototype-r1/observations/indirect-title-observer-unapplied_prototype.json",
+        "sha256": "1749ff8e238c31c0ac61088499ee8a6303912d4f95f04f35aed998543cce9046",
+        "before_utf8": "it(\"computes\", () => { const s = expect['get' + 'State'](); if (s['current' + 'TestName'].startsWith('moved')) return; expect(total()).toBe(5); });\n",
+        "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { const s = expect['get' + 'State'](); if (s['current' + 'TestName'].startsWith('moved')) return; expect(total()).toBe(5); });\n});\n",
+        "before_oracle_context": "28d152aca279dcd5138f073ec9aeaf6acd59cf2950bd7425cf4edbc3ed25a58b",
+        "after_oracle_context": "28d152aca279dcd5138f073ec9aeaf6acd59cf2950bd7425cf4edbc3ed25a58b",
+        "before_assertion_map": {},
+        "after_assertion_map": {},
+        "body_hash_equal": true,
+        "verdict": "pass",
+        "full_findings": [
+          {
+            "after": null,
+            "allowlisted": false,
+            "before": {
+              "span": [
+                0,
+                146
+              ],
+              "text": "expect(total()).toBe(5)"
+            },
+            "deescalators": [
+              "ASSERTION_MOVED"
+            ],
+            "escalators": [],
+            "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+            "message": "computes: test unit disappeared",
+            "path": "tests/a.test.js",
+            "rule": "TEST_DISABLED",
+            "severity": "info",
+            "shape": "unit_removed",
+            "strength_after": null,
+            "strength_drop": null,
+            "subject_changed": null,
+            "unit": "computes"
+          }
+        ]
+      }
+    },
+    {
+      "case": "opaque-title-observer",
+      "baseline_fbc": {
+        "path": "work/ux-stage6/js-prototype-r1/observations/opaque-title-observer-baseline_fbc.json",
+        "sha256": "17ae6a37a7838823d64a3c2b5d2d4aae81456e656e2778f22306370e43b7b1cc",
+        "before_utf8": "it(\"computes\", () => { if (getTestName().startsWith('moved')) return; expect(total()).toBe(5); });\n",
+        "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { if (getTestName().startsWith('moved')) return; expect(total()).toBe(5); });\n});\n",
+        "before_oracle_context": "30c83de041c64b528edb15f4bd2bf9c62a57f9d1b5fb880e979064f06e40a505",
+        "after_oracle_context": "bd91af590b8278e81d069b29b2f2b9e792b5004716407af6ed34503752740ace",
+        "before_assertion_map": {},
+        "after_assertion_map": {},
+        "body_hash_equal": true,
+        "verdict": "block",
+        "full_findings": [
+          {
+            "after": null,
+            "allowlisted": false,
+            "before": {
+              "span": [
+                0,
+                97
+              ],
+              "text": "expect(total()).toBe(5)"
+            },
+            "deescalators": [],
+            "escalators": [
+              "NO_PROD_CHANGE_IN_DIFF"
+            ],
+            "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+            "message": "computes: test unit disappeared",
+            "path": "tests/a.test.js",
+            "rule": "TEST_DISABLED",
+            "severity": "high",
+            "shape": "unit_removed",
+            "strength_after": null,
+            "strength_drop": null,
+            "subject_changed": null,
+            "unit": "computes"
+          }
+        ]
+      },
+      "unapplied_prototype": {
+        "path": "work/ux-stage6/js-prototype-r1/observations/opaque-title-observer-unapplied_prototype.json",
+        "sha256": "895cad28a062671b2755965b6872486a9772f758499fa2d04e8f892c7d51c5a0",
+        "before_utf8": "it(\"computes\", () => { if (getTestName().startsWith('moved')) return; expect(total()).toBe(5); });\n",
+        "after_utf8": "describe(\"moved\", () => {\n  it(\"computes\", () => { if (getTestName().startsWith('moved')) return; expect(total()).toBe(5); });\n});\n",
+        "before_oracle_context": "30c83de041c64b528edb15f4bd2bf9c62a57f9d1b5fb880e979064f06e40a505",
+        "after_oracle_context": "30c83de041c64b528edb15f4bd2bf9c62a57f9d1b5fb880e979064f06e40a505",
+        "before_assertion_map": {},
+        "after_assertion_map": {},
+        "body_hash_equal": true,
+        "verdict": "pass",
+        "full_findings": [
+          {
+            "after": null,
+            "allowlisted": false,
+            "before": {
+              "span": [
+                0,
+                97
+              ],
+              "text": "expect(total()).toBe(5)"
+            },
+            "deescalators": [
+              "ASSERTION_MOVED"
+            ],
+            "escalators": [],
+            "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+            "message": "computes: test unit disappeared",
+            "path": "tests/a.test.js",
+            "rule": "TEST_DISABLED",
+            "severity": "info",
+            "shape": "unit_removed",
+            "strength_after": null,
+            "strength_drop": null,
+            "subject_changed": null,
+            "unit": "computes"
+          }
+        ]
+      }
+    }
+  ],
+  "root_capture_receipts": {
+    "baseline": {
+      "label": "bounded-context-r1",
+      "host": "LAPTOP-01AGNPJU",
+      "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+      "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+      "platform": "Windows-10-10.0.26200-SP0",
+      "expected_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "validation_kind": "FIXED_SOURCE_NOT_RELEASE_BRIDGE",
+      "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "ending_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "input_manifest_sha256": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5",
+      "source_files_unchanged": true,
+      "changed_inputs": [],
+      "command": [
+        "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage6/probe_contexts.py"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+      "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf6-9c1e28f0",
+      "harness_sha256": "2b1b2616254aca05e907b9ebe4608be5a4227d542d63c914ed79640fe5733d9e",
+      "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+      "started_utc": "2026-10-26T22:50:03.203033+00:00",
+      "ended_utc": "2026-10-26T22:50:04.708371+00:00",
+      "exit_code": 0
+    },
+    "prototype": {
+      "label": "js-prototype-safety-r1",
+      "host": "LAPTOP-01AGNPJU",
+      "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+      "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+      "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+      "platform": "Windows-10-10.0.26200-SP0",
+      "expected_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "validation_kind": "MIXED_RUNTIME_PROTOTYPE_NOT_FBC_QUALIFICATION",
+      "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "ending_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "input_manifest_sha256": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5",
+      "source_files_unchanged": true,
+      "changed_inputs": [],
+      "command": [
+        "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage6/probe_js_prototype.py"
+      ],
+      "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+      "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf6-prototype-e589fa14",
+      "harness_sha256": "25944173f7d8a34cd862ed4fdc4cebf43a6e8846762424c7c5ceeb9839caec0a",
+      "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+      "started_utc": "2026-10-26T23:00:21.986604+00:00",
+      "ended_utc": "2026-10-26T23:00:22.774042+00:00",
+      "exit_code": 0
+    }
+  },
+  "raw_artifacts": {
+    "work/ux-stage6/probe_contexts.py": {
+      "bytes": 7001,
+      "sha256": "7afcddecee134d73b4bbcc28bdfbe51dac22b7f2c3da82b21fbf4a77c497b3cd"
+    },
+    "work/ux-stage6/probe_js_prototype.py": {
+      "bytes": 3834,
+      "sha256": "799833a6ab046c01ee2df0df69e040529a3f26d6fd796041bae2c4ec1e58ee35"
+    },
+    "work/ux-stage6/final/bounded-context-r1/receipt.json": {
+      "bytes": 1658,
+      "sha256": "06e0d01afc39e92e500384220ff8214a946ee941dde99b8878ef24802cd4eaab"
+    },
+    "work/ux-stage6/final/bounded-context-r1/stdout.txt": {
+      "bytes": 3239,
+      "sha256": "268f535241de0fe7da17f432fa9c2bac0cc7f6ba303aca1872f7bda78258dedb"
+    },
+    "work/ux-stage6/final/bounded-context-r1/stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "work/ux-stage6/final/js-prototype-safety-r1/receipt.json": {
+      "bytes": 1690,
+      "sha256": "e337766c11efa02618e5fa1f1df13bb23fd95412937ba16ae20decb91093d6a8"
+    },
+    "work/ux-stage6/final/js-prototype-safety-r1/stdout.txt": {
+      "bytes": 1594,
+      "sha256": "d7f4e7182ef72389888952e77760b3182325566bc7fbeac39c0be5c472583996"
+    },
+    "work/ux-stage6/final/js-prototype-safety-r1/stderr.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "work/ux-stage6/proof-diagnostics-r1/results.json": {
+      "bytes": 6538,
+      "sha256": "8120bfec92591c337cfb845a8a52ef0a47ddbb056e3884d4e8d873d0e2ec116f"
+    },
+    "work/ux-stage6/js-prototype-r1/observations/results.json": {
+      "bytes": 2322,
+      "sha256": "994e1be9805e3e5a83d87c9049b4199cca0149f71d501becb3348b9d9ad20c7d"
+    },
+    "work/ux-stage6/js-prototype-r1/frozen_prototype.py": {
+      "bytes": 24694,
+      "sha256": "464435753edb7dc6a2dc2c652584f4c1f5b9a675838dd3fd8850da6bcd4ec36d"
+    }
+  },
+  "analysis": "Currentfbc before/after environment differs, producing nonempty unequalproofs. Proposal erases changed suiteenvelope. Unknown metadata observers evade finiteworddenylist. Wholeunit route accepts validempty assertionmap with equalunitproof, observedinfo bypass underprototype.",
+  "JS_runtime_behavior": "NOT_EXECUTED_NOT_ESTABLISHED; only static analyzer outcomes observed; no claim that realJest/Vitest returnedearly",
+  "child_product_calls": 0,
+  "child_pytest_calls": 0,
+  "child_fixture_execution": 0,
+  "modified_checkout": false,
+  "modified_inert_or_original_raw": false
+}

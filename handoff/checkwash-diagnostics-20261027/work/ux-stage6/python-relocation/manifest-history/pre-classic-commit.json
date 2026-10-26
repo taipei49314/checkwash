@@ -1,0 +1,127 @@
+{
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "kind": "READ_ONLY_DIAGNOSIS_AND_INERT_PROPOSALS_NOT_ACCEPTANCE",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "product_calls_by_this_agent": 0,
+  "pytest_calls_by_this_agent": 0,
+  "fixture_execution_by_this_agent": 0,
+  "source_files_modified_by_this_agent": [],
+  "files": [
+    {
+      "path": "00-README.md",
+      "bytes": 2584,
+      "sha256": "a797fa7850f774d740f98fead1237d5300ab4b496836de796c15379440c7103b"
+    },
+    {
+      "path": "CLASSIC-ACTUAL-REVIEW.md",
+      "bytes": 1897,
+      "sha256": "3ccebd2eec0d74202e9369d9c474efde816687e9d6585d5dc7bd13558f8dddee"
+    },
+    {
+      "path": "CLASSIC-CONSUMER-ASSESSMENT.md",
+      "bytes": 2472,
+      "sha256": "d724947b8d82c5ac5a443d12d7d0a22d1b0e9eefce53bbd823c6bbc9ba039583"
+    },
+    {
+      "path": "classic-consumer-review.json",
+      "bytes": 9656,
+      "sha256": "448d7764f6f1c8ce46950b31c5f46f66fb8ab69efe27b75c1398f8873b120965"
+    },
+    {
+      "path": "DIAGNOSTIC-INPUTS.md",
+      "bytes": 2392,
+      "sha256": "1373bad0ef0c06351cb45e54057aa817e858f5ce5b556e354cf38ea02a3f5509"
+    },
+    {
+      "path": "existing-diagnostic-readback-r2.json",
+      "bytes": 28010,
+      "sha256": "646f2443dc2fc3c974f289398dccd64c9bd1e73da6eaf3f0e031980830df1087"
+    },
+    {
+      "path": "existing-diagnostic-readback-r3.json",
+      "bytes": 29639,
+      "sha256": "fff6432a428e8a5fcaa50cb8a47d1219d2e25d4fafb0f695d8e3719334b35faa"
+    },
+    {
+      "path": "existing-diagnostic-readback.json",
+      "bytes": 27604,
+      "sha256": "3ee4fe8754b008beca9d52cc122c8b2d8ca2d598400ee04fe831860688567020"
+    },
+    {
+      "path": "fixtures/issue263-after.py.txt",
+      "bytes": 256,
+      "sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a"
+    },
+    {
+      "path": "fixtures/issue263-before.py.txt",
+      "bytes": 128,
+      "sha256": "1d4fa51e24e0f17f9381cb9b71293e752ca407dfd31f7b388166bc5199d5cc9f"
+    },
+    {
+      "path": "fixtures/issue358-before.py.txt",
+      "bytes": 281,
+      "sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f"
+    },
+    {
+      "path": "fixtures/issue358-empty-old.py.txt",
+      "bytes": 235,
+      "sha256": "5796311a0b088876a58f5ec2e3bc8a6afac259538446de47cd514a67182ec3d5"
+    },
+    {
+      "path": "issue263-consumer-prerequisite.patch",
+      "bytes": 885,
+      "sha256": "38a80af837d99b73e3a9b8e914aa14313779f08add751c5b5332becddcb2624c"
+    },
+    {
+      "path": "MINIMAL-PATCH-PROPOSAL.md",
+      "bytes": 6337,
+      "sha256": "b624a30594e362c51844a6528fafc38122b8ef1d0ba8389919d226c0c67988c4"
+    },
+    {
+      "path": "NEGATIVE-CONTROLS.md",
+      "bytes": 3886,
+      "sha256": "2a36b8afe7c37dab0c38e5f1e84f0cd5ab7e24c09be7d90a2edee2f7a76ec3b7"
+    },
+    {
+      "path": "read_existing_diagnostics.py",
+      "bytes": 12092,
+      "sha256": "46995a2dde6ae9a13a7e262f81d8fa08f14cd4bafc1c1d291cbbc3248b371b2d"
+    },
+    {
+      "path": "readback-r1-preserved/existing-diagnostic-readback.json",
+      "bytes": 27604,
+      "sha256": "3ee4fe8754b008beca9d52cc122c8b2d8ca2d598400ee04fe831860688567020"
+    },
+    {
+      "path": "readback-r1-preserved/reader.py.txt",
+      "bytes": 10963,
+      "sha256": "89f0108de7a4dc0ee1eb973aa17585969571a2b439e31a58412f4cb218578a0e"
+    },
+    {
+      "path": "readback-r2-preserved/existing-diagnostic-readback-r2.json",
+      "bytes": 28010,
+      "sha256": "646f2443dc2fc3c974f289398dccd64c9bd1e73da6eaf3f0e031980830df1087"
+    },
+    {
+      "path": "readback-r2-preserved/reader.py.txt",
+      "bytes": 11559,
+      "sha256": "8129cffd03aa627ba3806ff98da47e1a8665f9611b0affe595f955c7957dd8c9"
+    },
+    {
+      "path": "READBACK.md",
+      "bytes": 3001,
+      "sha256": "bc95af8b68bd3a5f635385d53760e938985b91cb616f99e78cd81b71d66e5fa7"
+    },
+    {
+      "path": "review_classic_consumer.py",
+      "bytes": 9039,
+      "sha256": "ff3b01a95b360cd69cb869d2e736e5b3d26077dd73fec557a74247d57d2fdea0"
+    },
+    {
+      "path": "ROOTCAUSE.md",
+      "bytes": 6410,
+      "sha256": "20eebc534e43aaf85912cd4a67e147cdff0f0e10e71e1ee93a1247d0b17c3d1b"
+    }
+  ],
+  "excludes_itself": true
+}

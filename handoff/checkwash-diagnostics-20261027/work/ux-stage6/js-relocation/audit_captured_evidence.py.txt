@@ -1,0 +1,126 @@
+"""Read captured diagnostic/prototype JSON only; never import analyzer or execute fixtures."""
+from pathlib import Path
+import ast
+import hashlib
+import json
+import zipfile
+
+BASE=Path(r"C:\Users\nelson\Documents\Codex\2026-10-26\1-00-start-here-md-c")
+STAGE=BASE/"work/ux-stage6"; OUT=Path(__file__).parent
+SOURCE="fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+h=lambda raw:hashlib.sha256(raw).hexdigest()
+def load(p): return json.loads(p.read_bytes())
+def save(name,value):
+ p=OUT/name; assert not p.exists();p.write_bytes((json.dumps(value,ensure_ascii=False,indent=2)+"\n").encode())
+def data_expr(node,values):
+ if isinstance(node,ast.Constant): return node.value
+ if isinstance(node,ast.Name): return values[node.id]
+ if isinstance(node,ast.BinOp) and isinstance(node.op,ast.Add): return data_expr(node.left,values)+data_expr(node.right,values)
+ if isinstance(node,(ast.Tuple,ast.List)): return [data_expr(x,values) for x in node.elts]
+ raise ValueError("not a restricted literal fixture expression")
+with zipfile.ZipFile(BASE/"work/ux-stage5/seal/source-fbc9374d.zip") as z:
+ test=z.read("tests/test_js_liveness.py"); original_credit=z.read("src/checkwash/oracle_credit.py")
+values={}
+tree=ast.parse(test)
+for node in tree.body:
+ if isinstance(node,ast.Assign) and len(node.targets)==1 and isinstance(node.targets[0],ast.Name) and node.targets[0].id in {"BODY","UNIT"}:
+  values[node.targets[0].id]=data_expr(node.value,values)
+fn=next(x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name=="test_a_unit_moved_into_a_skipped_block_earns_no_move_credit")
+params=data_expr(fn.decorator_list[0].args[1],values)
+unit=values["UNIT"]+"\n"; wrapped=params[0][0]
+receipt=load(STAGE/"final/bounded-context-r1/receipt.json")
+assert receipt["source_sha"]==receipt["ending_sha"]==SOURCE and receipt["source_files_unchanged"] and receipt["changed_inputs"]==[] and receipt["exit_code"]==0
+assert receipt["validation_kind"]=="FIXED_SOURCE_NOT_RELEASE_BRIDGE"
+rdir=STAGE/"proof-diagnostics-r1"; all_results=load(rdir/"results.json")
+baseline=[]
+for path in sorted(rdir.glob("js-*.json")):
+ raw=path.read_bytes();d=json.loads(raw)
+ assert all_results["files"][path.name]["sha256"]==h(raw)
+ for change in d["changes"]:
+  for field in ("before","after"):
+   value=change[field+"_utf8"];digest=change[field+"_sha256"]
+   assert (value is None and digest is None) or h(value.encode())==digest
+ before=next(u["before"] for f in d["files"] for u in f["units"] if u["before"])
+ after=next(u["after"] for f in d["files"] for u in f["units"] if u["after"])
+ before_text=d["changes"][0]["before_utf8"]; after_text=d["changes"][1]["after_utf8"]
+ def environment(text,span): return (text[:span[0]]+text[span[1]:]).strip()
+ baseline.append({"label":d["label"],"raw_path":path.relative_to(BASE).as_posix(),"raw_sha256":h(raw),
+  "before_utf8":before_text,"after_utf8":after_text,
+  "before_span":before["span"],"after_span":after["span"],
+  "unit_text_equal":before_text[slice(*before["span"])]==after_text[slice(*after["span"])],
+  "derived_outside_environment_before":environment(before_text,before["span"]),
+  "derived_outside_environment_after":environment(after_text,after["span"]),
+  "oracle_context_before":before["oracle_context"],"oracle_context_after":after["oracle_context"],
+  "assertion_map_before":before["oracle_assertion_contexts"],"assertion_map_after":after["oracle_assertion_contexts"],
+  "after_live":next(u["after_live"] for f in d["files"] for u in f["units"] if u["after"]),
+  "verdict":d["verdict"],"full_findings":d["findings"]})
+assert len(baseline)==8
+p1=next(x for x in baseline if x["label"]=="js-bare-to-wrapper")
+raw_p1=load(rdir/"js-bare-to-wrapper.json")
+assert p1["before_utf8"]==unit and p1["after_utf8"]==wrapped
+assert raw_p1["changes"][0]["after_utf8"]=="// moved to b\n"
+assert p1["verdict"]=="block" and p1["full_findings"][0]["severity"]=="high"
+assert p1["oracle_context_before"] and p1["oracle_context_after"] and p1["oracle_context_before"]!=p1["oracle_context_after"]
+proto_receipt=load(STAGE/"final/js-prototype-safety-r1/receipt.json")
+assert proto_receipt["validation_kind"]=="MIXED_RUNTIME_PROTOTYPE_NOT_FBC_QUALIFICATION" and proto_receipt["exit_code"]==0
+assert proto_receipt["source_sha"]==proto_receipt["ending_sha"]==SOURCE and proto_receipt["source_files_unchanged"] and proto_receipt["changed_inputs"]==[]
+pdir=STAGE/"js-prototype-r1/observations"; ps=load(pdir/"results.json")
+prototype=(STAGE/"js-prototype-r1/frozen_prototype.py").read_bytes()
+assert h(prototype)==ps["prototype_sha256"]=="464435753edb7dc6a2dc2c652584f4c1f5b9a675838dd3fd8850da6bcd4ec36d"
+assert h((OUT/"proposed-oracle_credit.py.txt").read_bytes())==h(prototype)
+assert h((OUT/"proposal-oracle-credit.diff").read_bytes())=="75a8d8e4983c15abe159b5e0c7cf8427cd123c67379ceb1fa8db88de813f7b51"
+pairs=[]
+for case in ["native-positive","indirect-title-observer","opaque-title-observer"]:
+ pair={}
+ for implementation in ["baseline_fbc","unapplied_prototype"]:
+  path=pdir/(case+"-"+implementation+".json");raw=path.read_bytes();d=json.loads(raw)
+  before=next(u["before"] for u in d["units"] if u["before"])
+  after=next(u["after"] for u in d["units"] if u["after"])
+  pair[implementation]={"path":path.relative_to(BASE).as_posix(),"sha256":h(raw),
+   "before_utf8":d["before_utf8"],"after_utf8":d["after_utf8"],"before_oracle_context":before["oracle_context"],
+   "after_oracle_context":after["oracle_context"],"before_assertion_map":before["oracle_assertion_contexts"],
+   "after_assertion_map":after["oracle_assertion_contexts"],"body_hash_equal":before["body_hash"]==after["body_hash"],
+   "verdict":d["verdict"],"full_findings":d["findings"]}
+ assert pair["baseline_fbc"]["before_utf8"]==pair["unapplied_prototype"]["before_utf8"]
+ assert pair["baseline_fbc"]["after_utf8"]==pair["unapplied_prototype"]["after_utf8"]
+ assert pair["baseline_fbc"]["verdict"]=="block" and pair["baseline_fbc"]["full_findings"][0]["severity"]=="high"
+ assert pair["unapplied_prototype"]["verdict"]=="pass" and pair["unapplied_prototype"]["full_findings"][0]["severity"]=="info"
+ assert pair["unapplied_prototype"]["full_findings"][0]["deescalators"]==["ASSERTION_MOVED"]
+ assert pair["unapplied_prototype"]["before_oracle_context"]==pair["unapplied_prototype"]["after_oracle_context"]
+ if case!="native-positive":
+  assert pair["unapplied_prototype"]["before_assertion_map"]==pair["unapplied_prototype"]["after_assertion_map"]=={}
+ pairs.append({"case":case,**pair})
+artifact_paths=[STAGE/"probe_contexts.py",STAGE/"probe_js_prototype.py",
+ STAGE/"final/bounded-context-r1/receipt.json",STAGE/"final/bounded-context-r1/stdout.txt",STAGE/"final/bounded-context-r1/stderr.txt",
+ STAGE/"final/js-prototype-safety-r1/receipt.json",STAGE/"final/js-prototype-safety-r1/stdout.txt",STAGE/"final/js-prototype-safety-r1/stderr.txt",
+ rdir/"results.json",pdir/"results.json",STAGE/"js-prototype-r1/frozen_prototype.py"]
+audit={"status":"READ_ONLY_NATIVE_AND_PROTOTYPE_AUDIT_COMPLETE_REJECTED_UNSAFE",
+ "source_sha":SOURCE,"original_fixture_source_sha256":h(test),"oracle_credit_base_sha256":h(original_credit),
+ "native_fixture_match":"P1 bounded-context beforeA/afterAcomment/arrivalB exactly original normaldescribe param; restricted literal AST extraction only",
+ "prototype_native_variant":"Prototype native-positive beforeA/arrivalB match original; deletedA comment is //moved rather than //moved to b, as explicitly encoded in driver. Not claimed identical fullfixture byte set.",
+ "our_11_arm_packet_scope":"Root baseline diagnostic coversP1/P2/P3 exactpositive inputs and5negative family variants; hook/shadow/indent bytes differ from proposedpacket. AdditionalN6/N7/N8 not run. No prototype PASS for unexecutedarms.",
+ "baseline_js_calls":8,"baseline_capture_total_calls":12,"baseline_other4_python":"NOT_AUDITED_HERE",
+ "prototype_calls":6,"prototype_runtime_kind":proto_receipt["validation_kind"],
+ "baseline":baseline,"prototype_pairs":pairs,
+ "root_capture_receipts":{"baseline":receipt,"prototype":proto_receipt},
+ "raw_artifacts":{p.relative_to(BASE).as_posix():{"bytes":p.stat().st_size,"sha256":h(p.read_bytes())} for p in artifact_paths},
+ "analysis":"Currentfbc before/after environment differs, producing nonempty unequalproofs. Proposal erases changed suiteenvelope. Unknown metadata observers evade finiteworddenylist. Wholeunit route accepts validempty assertionmap with equalunitproof, observedinfo bypass underprototype.",
+ "JS_runtime_behavior":"NOT_EXECUTED_NOT_ESTABLISHED; only static analyzer outcomes observed; no claim that realJest/Vitest returnedearly",
+ "child_product_calls":0,"child_pytest_calls":0,"child_fixture_execution":0,
+ "modified_checkout":False,"modified_inert_or_original_raw":False}
+save("captured-evidence-readback.json",audit)
+decision={"status":"REJECTED_UNSAFE_NOT_APPLIED","latest_authoritative_disposition":True,
+ "rejected_raw_patch_sha256":"75a8d8e4983c15abe159b5e0c7cf8427cd123c67379ceb1fa8db88de813f7b51",
+ "rejected_proposed_module_sha256":h(prototype),
+ "reason":"Describe can alter observable suite/name context. Emptywrapper/noothermodule statements do not prove opaque calls independent of thatcontext. Split-string observer andunknown globalobserver both acquireunsound wholeunit credit in actualprototype analysis.",
+ "observed_static_results":"3baseline BLOCK/high ->3unappliedprototype PASS/info/ASSERTION_MOVED; 2unsafe observer arms have empty assertionmaps and identicalfullunit keys",
+ "not_a_product_regression":"This unsafe prototype never applied; frozenfbc correctly withholds these credits",
+ "not_a_gating_fix":"Do not ban all empty maps or change D2/strength/alignment; completeunit compensation legitimately serves othercases. Error is unprovedenvironmentprojection.",
+ "safe_next_step":"RetainD179/currentexpected failure pendingissue570human disposition orclosed interprocedural call-effect/metadata proof. No finiteextra denylist repairs generalunknowncalls; originaltotal() has no implementation infixture.",
+ "maintainer_issue":"https://github.com/taipei49314/checkwash/issues/570",
+ "no_expected_or_contract_change":True,"no_recommended_product_patch":True,
+ "creation_provenance_note":"Originalinert files retain their creation-time metadata. Rootlater executed anexactcopy asMIXED_RUNTIME prototype only; this decision supersedes anyinitial prediction ofsafePASS."}
+save("REJECTED-UNSAFE.json",decision)
+print(json.dumps({"audit_sha256":h((OUT/"captured-evidence-readback.json").read_bytes()),"decision_sha256":h((OUT/"REJECTED-UNSAFE.json").read_bytes()),
+ "status":decision["status"],"original_patch_unchanged":True,"root_issue":570}))
+

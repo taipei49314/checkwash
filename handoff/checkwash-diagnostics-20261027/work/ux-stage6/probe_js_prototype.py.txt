@@ -1,0 +1,69 @@
+"""Compare the unchanged analyzer with an inert proposed proof module.
+
+Only the Python analyzer/prototype runs. JavaScript fixtures are never executed.
+The prototype is not applied to any product checkout.
+"""
+from dataclasses import asdict
+from datetime import date
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+STAGE = ROOT / 'work/ux-stage6'
+REPO = ROOT / 'work/checkwash-ux'
+sys.path.insert(0, str(REPO / 'src'))
+import checkwash.engine as engine
+from checkwash.change import FileChange
+from checkwash.config import Config
+from checkwash.contract import Contract
+
+path = STAGE / 'js-prototype-r1/frozen_prototype.py'
+expected = '464435753edb7dc6a2dc2c652584f4c1f5b9a675838dd3fd8850da6bcd4ec36d'
+assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
+spec = importlib.util.spec_from_file_location('inert_reviewed_prototype', path)
+prototype = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(prototype)
+OUT = STAGE / 'js-prototype-r1/observations'
+OUT.mkdir(exist_ok=False)
+original = engine.mark_contexts
+cases = {
+    'native-positive': 'expect(total()).toBe(5);',
+    'indirect-title-observer': "const s = expect['get' + 'State'](); if (s['current' + 'TestName'].startsWith('moved')) return; expect(total()).toBe(5);",
+    'opaque-title-observer': "if (getTestName().startsWith('moved')) return; expect(total()).toBe(5);",
+}
+rows = []
+try:
+    for name, body in cases.items():
+        unit = 'it("computes", () => { ' + body + ' });'
+        before = unit + '\n'
+        after = 'describe("moved", () => {\n  ' + unit + '\n});\n'
+        changes = [FileChange('tests/a.test.js', 'modified', before.encode(), b'// moved\n'),
+                   FileChange('tests/b.test.js', 'added', None, after.encode())]
+        for kind, marker in [('baseline_fbc', original), ('unapplied_prototype', prototype.mark_contexts)]:
+            engine.mark_contexts = marker
+            ir, findings, verdict = engine.analyze(changes, Config(), Contract(), [], date(2026, 10, 1))
+            record = {'case': name, 'implementation': kind, 'before_utf8': before, 'after_utf8': after,
+                      'verdict': verdict, 'findings': [asdict(f) for f in findings],
+                      'prototype_sha256': expected if kind == 'unapplied_prototype' else None,
+                      'units': [{'path': f.path, 'name': u.qualname,
+                                 'before': asdict(u.before) if u.before else None,
+                                 'after': asdict(u.after) if u.after else None}
+                                for f in ir.files for u in f.units]}
+            (OUT / (name + '-' + kind + '.json')).write_text(json.dumps(record, sort_keys=True, indent=2) + '\n', encoding='utf-8')
+            rows.append({'case': name, 'implementation': kind, 'verdict': verdict,
+                         'findings': [{'rule': f.rule, 'severity': f.severity,
+                                       'deescalators': f.deescalators} for f in findings]})
+finally:
+    engine.mark_contexts = original
+assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
+summary = {'kind': 'STATIC_PROTOTYPE_SAFETY_OBSERVATIONS_NOT_PRODUCT_QUALIFICATION',
+           'baseline_source': 'fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c',
+           'prototype_sha256': expected, 'prototype_applied': False,
+           'static_analyzer_calls': len(rows), 'fixture_program_executions': 0,
+           'pytest_calls': 0, 'cli_calls': 0, 'observations': rows,
+           'limit': 'No JavaScript runtime behavior is claimed; observer behavior is unknown. Optional credit must not assume those observers are inert.'}
+(OUT / 'results.json').write_text(json.dumps(summary, sort_keys=True, indent=2) + '\n', encoding='utf-8')
+print(json.dumps(summary, sort_keys=True))

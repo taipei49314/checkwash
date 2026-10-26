@@ -1,0 +1,61 @@
+{
+  "status": "FROZEN_REJECTED_UNSAFE_NOT_APPLIED",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "evidence_kind": "BASELINE_FIXED_SOURCE_PLUS_SEPARATELY_LABELLED_MIXED_PROTOTYPE",
+  "execution_label": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "maintainer_issue": "https://github.com/taipei49314/checkwash/issues/570",
+  "file_count": 9,
+  "files": [
+    {
+      "path": "audit_captured_evidence.py",
+      "bytes": 10605,
+      "sha256": "55cb51eea670af0bd7ce08535f37db73ac7c10f042bc9427487360ed289d1abd"
+    },
+    {
+      "path": "captured-evidence-readback.json",
+      "bytes": 34410,
+      "sha256": "016fe45e6dc0dd23fc4faa6bf7da1c7e87e3634f08f242ffa839385a37187d99"
+    },
+    {
+      "path": "prepare_inert_proposal.py",
+      "bytes": 6526,
+      "sha256": "5558f0b5904bff943da2b693fb9d991e77a0385d3503c09764fb66a1207b93d6"
+    },
+    {
+      "path": "probe-arms.json",
+      "bytes": 8890,
+      "sha256": "0cfa21a5ad0103df887f044cd69ef06cd5e304cbbe889dec5f6284d056cd868b"
+    },
+    {
+      "path": "proposal-oracle-credit.diff",
+      "bytes": 4306,
+      "sha256": "75a8d8e4983c15abe159b5e0c7cf8427cd123c67379ceb1fa8db88de813f7b51"
+    },
+    {
+      "path": "proposal-provenance.json",
+      "bytes": 1682,
+      "sha256": "7536f36850b34928319bfeedbca07792e292c4526917c5ea67bb2a376a8e6050"
+    },
+    {
+      "path": "proposed-oracle_credit.py.txt",
+      "bytes": 24694,
+      "sha256": "464435753edb7dc6a2dc2c652584f4c1f5b9a675838dd3fd8850da6bcd4ec36d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5839,
+      "sha256": "88e4cb029b277821f329ff35ed048c5375b170cb7d02ad5e05b300b4846735fe"
+    },
+    {
+      "path": "REJECTED-UNSAFE.json",
+      "bytes": 1654,
+      "sha256": "f349843236c6a1bb4ddffdf0ca9913e439cd2debe9c329f1525ca95ccee19ca9"
+    }
+  ],
+  "manifest_excludes_itself": true,
+  "product_modified": false,
+  "expected_labels_modified": false,
+  "child_product_calls": 0,
+  "child_pytest_calls": 0,
+  "child_fixture_execution": 0
+}

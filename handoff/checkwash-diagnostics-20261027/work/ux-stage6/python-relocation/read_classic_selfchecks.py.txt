@@ -1,0 +1,147 @@
+"""Read existing15ac self-checks and verify native spans with read-only Git.
+
+No product/test/pytest/fixture calls and no changes to source, rules or receipts.
+"""
+from collections import Counter
+import ast
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[3]
+HERE = Path(__file__).resolve().parent
+WT = ROOT / "work/checkwash-classic-followup"
+NEW = "15ac804593bc41db8f904e7921667bd6c276fa9a"
+PARENT = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+MAIN = "1ffe283d7d947fecc426dea99323b0a2620a9482"
+checks, inputs, git_rows, cache = [], {}, [], {}
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def read(path):
+    value = path.read_bytes()
+    inputs[path.relative_to(ROOT).as_posix()] = sha(value)
+    return value
+
+
+def require(ok, name):
+    checks.append({"name": name, "passed": bool(ok)})
+    if not ok:
+        raise ValueError(name)
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, ensure_ascii=True)
+
+
+def source_at(commit, path):
+    key = (commit, path)
+    if key not in cache:
+        require(path and not path.startswith(("/", "\\")) and ".." not in Path(path).parts and ":" not in path,
+                "finding path is repository relative")
+        command = ["git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", str(WT), "show", commit + ":" + path]
+        started = datetime.now(timezone.utc).isoformat()
+        value = subprocess.run(command, capture_output=True, check=False)
+        git_rows.append({"command": command, "started_utc": started,
+                         "ended_utc": datetime.now(timezone.utc).isoformat(), "exit_code": value.returncode,
+                         "stdout_sha256": sha(value.stdout), "stderr_sha256": sha(value.stderr)})
+        require(value.returncode == 0, "exact committed finding source exists")
+        cache[key] = value.stdout.decode("utf-8-sig").replace("\r\n", "\n")
+    return cache[key]
+
+
+def main():
+    prior = json.loads(read(ROOT / "work/ux-stage5/selfdogfood-review/candidate-selfdogfood.raw.json"))
+    reviewed = json.loads(read(HERE / "classic-commit-provenance.json"))
+    require(reviewed["new_source_sha"] == NEW, "new commit provenance readback exists")
+    cases = []
+    for label, base, expected_summary in (
+            ("classic-self-parent-r1", PARENT, {"critical": 0, "high": 3, "warn": 0, "info": 0}),
+            ("classic-self-integration-r1", MAIN, {"critical": 0, "high": 3, "warn": 9, "info": 0})):
+        folder = ROOT / "work/ux-stage6/final" / label
+        receipt_raw = read(folder / "receipt.json")
+        receipt = json.loads(receipt_raw)
+        require(receipt["expected_source_sha"] == receipt["source_sha"] == receipt["ending_sha"] == NEW
+                and receipt["validation_kind"] == "FIXED_SOURCE_NOT_RELEASE_BRIDGE"
+                and receipt["source_files_unchanged"] is True and receipt["changed_inputs"] == [], label + " fixed15ac unchanged")
+        require(type(receipt["exit_code"]) is int and receipt["exit_code"] == 1, label + " actual exit1 preserved")
+        require(sha(read(folder / "input-hashes.json")) == receipt["input_manifest_sha256"] == reviewed["input_manifest_sha256"],
+                label + " exact reviewed byte map")
+        require(read(folder / "source.diff") == read(folder / "git-status.txt") == b"", label + " clean fixed source")
+        payload_raw = read(folder / "stdout.txt")
+        payload = json.loads(payload_raw)
+        require(payload["checkwash_findings_version"] == 2 and payload["verdict"] == "block"
+                and payload["summary"] == expected_summary, label + " actual machine schema/verdict/summary")
+        counts = Counter(f["severity"] for f in payload["findings"])
+        require(all(counts[name] == expected_summary[name] for name in expected_summary), label + " exact finding severity counts")
+        require(payload["config_errors"] == [] and payload["skipped_files"] == [], label + " no config/skipped exclusions")
+        require(payload["run"]["base"] == base[:8] and payload["run"]["head"] == NEW[:8]
+                and payload["run"]["checkwash_version"] == "0.10.0", label + " exact range/version")
+        stderr = read(folder / "stderr.txt")
+        header = json.loads(stderr.decode("utf-8").splitlines()[0])
+        require(header["base"] == base and header["source"] == NEW and header["zone"] == "Asia/Taipei"
+                and header["kind"] == "ORDINARY_DOGFOOD_NOT_RELEASE_BRIDGE", label + " retained actual-date command header")
+        require(base + ".." + NEW in header["command"] and "json" in header["command"], label + " actual CLI command range/format")
+        for finding in payload["findings"]:
+            if finding["severity"] != "high":
+                continue  # warnings retain exact prior objects; heterogeneous handler summaries are not assertion spans.
+            for side, revision in (("before", base), ("after", NEW)):
+                evidence = finding.get(side)
+                if evidence is None:
+                    continue
+                text = source_at(revision, finding["path"])
+                lo, hi = evidence["span"]
+                fragment = text[lo:hi]
+                if finding["rule"] == "TEST_DISABLED" and finding.get("shape") == "unit_removed":
+                    unit = ast.parse(fragment)
+                    require(len(unit.body) == 1 and isinstance(unit.body[0], (ast.FunctionDef, ast.AsyncFunctionDef))
+                            and unit.body[0].name == finding["unit"].rsplit(".", 1)[-1],
+                            label + " exact committed removed-unit span " + finding["fingerprint"])
+                    require(any(ast.get_source_segment(fragment, node) == evidence["text"]
+                                for node in ast.walk(unit) if isinstance(node, ast.Assert)),
+                            label + " exact representative assertion inside removed-unit span " + finding["fingerprint"])
+                else:
+                    require(fragment == evidence["text"], label + " exact " + side + " committed assertion span " + finding["fingerprint"])
+        require(all(not f["allowlisted"] and not f["deescalators"] for f in payload["findings"] if f["severity"] == "high"),
+                label + " all highs unallowlisted and uncredited")
+        cases.append({"label": label, "base_sha": base, "head_sha": NEW, "actual_exit_code": receipt["exit_code"],
+                      "receipt_sha256": sha(receipt_raw), "json_sha256": sha(payload_raw), "stderr_sha256": sha(stderr),
+                      "run": payload["run"], "summary": payload["summary"], "verdict": payload["verdict"],
+                      "actual_date_command_header": header, "findings_preserved_exactly": payload["findings"]})
+    parent, integrated = cases
+    require(Counter(f["rule"] for f in parent["findings_preserved_exactly"]) == {"ASSERT_SUBSTITUTED": 2, "EXPECTED_VALUE_CHANGED": 1},
+            "parent range exact2substitution plus1expected-value rules")
+    old_warn = [f for f in prior["findings"] if f["severity"] == "warn"]
+    new_warn = [f for f in integrated["findings_preserved_exactly"] if f["severity"] == "warn"]
+    require(sorted(map(canonical, old_warn)) == sorted(map(canonical, new_warn)), "all nine integrated warning objects unchanged from prior fbc self-check")
+    old266 = [f for f in prior["findings"] if f["severity"] == "high" and "issue266" in f["path"]]
+    new266 = [f for f in integrated["findings_preserved_exactly"] if f["severity"] == "high" and "issue266" in f["path"]]
+    require(sorted(map(canonical, old266)) == sorted(map(canonical, new266)) and len(new266) == 2,
+            "two original issue266 high finding objects unchanged")
+    classic = [f for f in integrated["findings_preserved_exactly"] if f["severity"] == "high" and "classic_raises" in f["path"]]
+    require(len(classic) == 1 and classic[0]["rule"] == "ASSERT_SUBSTITUTED", "integrated classic high is actual substitution, not a green result")
+    for name, digest in list(inputs.items()):
+        require(sha((ROOT / name).read_bytes()) == digest, "original self-check/provenance input preserved: " + name)
+    result = {"review_state": "PASS_BOUNDED_NATIVE_SELFCHECK_READBACK", "new_source_sha": NEW,
+              "actual_product_acceptance_state": "NONPASS_BLOCK_PRESERVED", "cases": cases,
+              "checks": checks, "input_hashes": inputs, "read_only_git_commands": git_rows,
+              "product_calls_by_reader": 0, "pytest_calls_by_reader": 0, "reader_runtime": sys.version,
+              "reader_sha256": sha(Path(__file__).read_bytes()),
+              "not_run_for_new_source": ["full suite", "source/wheel/pyz distribution qualification", "formal release bridge", "published checks"],
+              "evidence_span_scope": "All six high-finding before/after carriers checked against exact Git sources; TEST_DISABLED uses a whole-unit span containing its representative assertion. All nine warning objects are exactly equal to prior fbc native objects; their heterogeneous summary-span semantics are not independently re-proved here.",
+              "interpretation": "Native BLOCKs and every finding object remain intact. The independent ordinary-test semantic contract review does not override checker authority or make15ac accepted. No exemption, strength/gating/alignment or original verdict/golden-label authority was changed. The native-field expected assertion changed from cardinality17 to the complete17-name set, exactly as the native EXPECTED_VALUE_CHANGED finding records; that syntactic change is not hidden by the semantic-contract assessment."}
+    destination = HERE / "classic-selfcheck-readback-r2.json"
+    require(not destination.exists(), "new output path; retain previous receipts")
+    destination.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(json.dumps({"review_state": result["review_state"], "actual_acceptance": result["actual_product_acceptance_state"],
+                      "checks": len(checks), "path": str(destination), "sha256": sha(destination.read_bytes()), "product_calls": 0}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

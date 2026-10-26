@@ -1,0 +1,263 @@
+{
+  "changes": [
+    {
+      "after_sha256": "a61d3700af35c90fff6f050bfdc6998d380793e938e02dbd879c9b71be3f5250",
+      "after_utf8": "// moved to b\n",
+      "before_sha256": "bfe8b87f7994ef0454ee2dab8c70a96ec1d0a0ea58ac2e9f752bbab3e553bdc3",
+      "before_utf8": "it(\"computes\", () => { expect(this.value).toBe(5); });\n",
+      "path": "tests/a.test.js",
+      "status": "modified"
+    },
+    {
+      "after_sha256": "5c2806e960432cbc1cb43b7ae89ef50795f0feb56a430eb35f86f2dd4fc5656d",
+      "after_utf8": "describe(\"moved\", function() {\n  it(\"computes\", () => { expect(this.value).toBe(5); });\n});\n",
+      "before_sha256": null,
+      "before_utf8": null,
+      "path": "tests/b.test.js",
+      "status": "added"
+    }
+  ],
+  "closed_snapshot": false,
+  "date": "2026-10-01",
+  "files": [
+    {
+      "language": "unknown",
+      "path": "tests/a.test.js",
+      "role": "test",
+      "units": [
+        {
+          "after": null,
+          "after_live": null,
+          "before": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "this.value",
+                "left_names": [],
+                "operand_source": "5",
+                "positive": true,
+                "predicate": "eq_strict",
+                "reaching": null,
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "5",
+                "right_value": "5.0",
+                "span": [
+                  23,
+                  49
+                ],
+                "strength": 90,
+                "text": "expect(this.value).toBe(5)",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "30499a4f3a02cd04648f9501c4ff01da2d624ea8c121bc1af300decc98954f29",
+            "calls": [],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [],
+            "markers": [],
+            "oracle_assertion_contexts": {
+              "a0": "f34cfd3bb82cd706b7194b4a808b284125628e00fab3c94c5890e6690e495c81"
+            },
+            "oracle_context": "a9d4dfa6dc83c80fa737ada1d07a5be4cf5dd32b66d5b1146709814653583097",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              0,
+              53
+            ]
+          },
+          "qualname": "computes"
+        }
+      ]
+    },
+    {
+      "language": "unknown",
+      "path": "tests/b.test.js",
+      "role": "test",
+      "units": [
+        {
+          "after": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "this.value",
+                "left_names": [],
+                "operand_source": "5",
+                "positive": true,
+                "predicate": "eq_strict",
+                "reaching": null,
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "5",
+                "right_value": "5.0",
+                "span": [
+                  56,
+                  82
+                ],
+                "strength": 90,
+                "text": "expect(this.value).toBe(5)",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "30499a4f3a02cd04648f9501c4ff01da2d624ea8c121bc1af300decc98954f29",
+            "calls": [],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [],
+            "markers": [],
+            "oracle_assertion_contexts": {
+              "a0": "392227ba877c6e758ef64e1b455909519346c7d2a5d302260ae086aca7b782d0"
+            },
+            "oracle_context": "e59aa65ae27322a5d913d1e308a342db452e4ea35ae2b47242e44073088944ee",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              33,
+              86
+            ]
+          },
+          "after_live": true,
+          "before": null,
+          "qualname": "computes"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          0,
+          53
+        ],
+        "text": "expect(this.value).toBe(5)"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:088bc4d783077ab985baf1452fe4ddf407c2b42a8a14201c0f6cb1a6b6672945",
+      "message": "computes: test unit disappeared",
+      "path": "tests/a.test.js",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "computes"
+    }
+  ],
+  "label": "js-this-negative",
+  "mark_context_calls": [
+    {
+      "language": "unknown",
+      "needed": [
+        "computes"
+      ],
+      "path": "tests/a.test.js",
+      "source_sha256": "bfe8b87f7994ef0454ee2dab8c70a96ec1d0a0ea58ac2e9f752bbab3e553bdc3",
+      "startup": "",
+      "startup_known": true,
+      "units": [
+        {
+          "name": "computes",
+          "oracle_assertion_contexts": {
+            "a0": "f34cfd3bb82cd706b7194b4a808b284125628e00fab3c94c5890e6690e495c81"
+          },
+          "oracle_context": "a9d4dfa6dc83c80fa737ada1d07a5be4cf5dd32b66d5b1146709814653583097",
+          "span": [
+            0,
+            53
+          ]
+        }
+      ]
+    },
+    {
+      "language": "unknown",
+      "needed": [
+        "computes"
+      ],
+      "path": "tests/a.test.js",
+      "source_sha256": "a61d3700af35c90fff6f050bfdc6998d380793e938e02dbd879c9b71be3f5250",
+      "startup": "",
+      "startup_known": true,
+      "units": []
+    },
+    {
+      "language": "unknown",
+      "needed": [
+        "computes"
+      ],
+      "path": "tests/b.test.js",
+      "source_sha256": null,
+      "startup": "",
+      "startup_known": true,
+      "units": []
+    },
+    {
+      "language": "unknown",
+      "needed": [
+        "computes"
+      ],
+      "path": "tests/b.test.js",
+      "source_sha256": "5c2806e960432cbc1cb43b7ae89ef50795f0feb56a430eb35f86f2dd4fc5656d",
+      "startup": "",
+      "startup_known": true,
+      "units": [
+        {
+          "name": "computes",
+          "oracle_assertion_contexts": {
+            "a0": "392227ba877c6e758ef64e1b455909519346c7d2a5d302260ae086aca7b782d0"
+          },
+          "oracle_context": "e59aa65ae27322a5d913d1e308a342db452e4ea35ae2b47242e44073088944ee",
+          "span": [
+            33,
+            86
+          ]
+        }
+      ]
+    }
+  ],
+  "snapshot": {},
+  "startup_lookups": [],
+  "verdict": "block"
+}

@@ -1,0 +1,26 @@
+"""Ordinary self-checks for both parent scopes; no acceptance is implied."""
+import argparse
+from datetime import datetime, timezone, timedelta
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+p = argparse.ArgumentParser()
+p.add_argument('--base', choices=['1ffe283d7d947fecc426dea99323b0a2620a9482',
+                                 'fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c'], required=True)
+a = p.parse_args()
+stage = Path(__file__).resolve().parent
+repo = stage.parent / 'checkwash-classic-followup'
+head = (stage / 'classic-final-source-sha.txt').read_text().strip()
+today = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+env = dict(os.environ)
+env['CHECKWASH_TODAY'] = today
+env.pop('GREENWASH_TODAY', None)
+env['PYTHONPATH'] = str(repo / 'src')
+command = [sys.executable, '-B', '-m', 'checkwash', 'check', a.base + '..' + head,
+           '--repo', str(repo), '--format', 'json']
+print(json.dumps({'date': today, 'zone': 'Asia/Taipei', 'base': a.base, 'source': head,
+                  'command': command, 'kind': 'ORDINARY_DOGFOOD_NOT_RELEASE_BRIDGE'}), file=sys.stderr, flush=True)
+raise SystemExit(subprocess.run(command, cwd=repo, env=env).returncode)

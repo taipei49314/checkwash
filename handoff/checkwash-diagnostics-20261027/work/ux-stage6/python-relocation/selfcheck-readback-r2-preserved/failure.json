@@ -1,0 +1,7 @@
+{
+  "reader_exit_code": 1,
+  "product_calls": 0,
+  "reason": "Reader incorrectly generalized assertion-span text semantics to BROAD_EXCEPT_ADDED handler-summary evidence. Final scope will source-check all six high findings and retain all nine warning objects exactly against the prior fbc JSON.",
+  "failed_check": "classic-self-integration-r1 exact after committed assertion span BROAD_EXCEPT_ADDED/src/checkwash/sweep.py/-/395f9cada265",
+  "raw_selfcheck_inputs_changed": false
+}

@@ -1,0 +1,12 @@
+{
+  "origin": "work/ux-stage5/capture.py",
+  "origin_sha256": "771164a9065b20874ac1732b6b5b1ff40db6d4f58f4f919728ca78ad39733274",
+  "derived": "work/ux-stage6/capture_classic_dev.py",
+  "derived_sha256": "a1cc57f952353c3dd5160edd1490a55051de4e9ddc7235805d12f77ca90d3886",
+  "changes": [
+    "docstring stage6 native-field development",
+    "separate classic followup checkout",
+    "fresh owned temp prefix"
+  ],
+  "baseline_source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+}

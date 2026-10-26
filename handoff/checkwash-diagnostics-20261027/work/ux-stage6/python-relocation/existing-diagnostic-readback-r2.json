@@ -1,0 +1,960 @@
+{
+  "review_state": "PASS_BOUNDED_EXISTING_DIAGNOSTIC_READBACK",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "audit_created_utc": "2026-10-26T22:54:38.939165+00:00",
+  "capture_exit_code": 0,
+  "capture_exit_is_product_pass": false,
+  "product_calls_by_reader": 0,
+  "pytest_calls_by_reader": 0,
+  "fixture_execution_by_reader": 0,
+  "original_test_constructors_byte_exact": true,
+  "original_inputs_preserved": true,
+  "checked_python_observations": [
+    {
+      "label": "263-original",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/263-original.json",
+      "raw_sha256": "2bf217b0ec1e229b9c24f0baf1136e6b22e94ea9330ad37365511e84404be75c",
+      "verdict": "block",
+      "closed_snapshot": false,
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_one/v2:426ee3ff4d0dab4c755f9a18d744ca351f68718a99e9ecb6298328af898aa7b3",
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ]
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_two/v2:3791a1cdd7e2ba33fb3043e0a9f22d7fa1a65c2042270b7f67c87dee2119508b",
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ]
+        }
+      ],
+      "mark_context_calls": [
+        {
+          "language": "python",
+          "needed": [
+            "TestAdd.test_one",
+            "TestAdd.test_two",
+            "test_one",
+            "test_two"
+          ],
+          "path": "tests/test_calc.py",
+          "source_sha256": "1d4fa51e24e0f17f9381cb9b71293e752ca407dfd31f7b388166bc5199d5cc9f",
+          "startup": null,
+          "startup_known": false,
+          "units": [
+            {
+              "name": "test_one",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                42,
+                83
+              ]
+            },
+            {
+              "name": "test_two",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                86,
+                127
+              ]
+            }
+          ]
+        },
+        {
+          "language": "python",
+          "needed": [
+            "TestAdd.test_one",
+            "TestAdd.test_two",
+            "test_one",
+            "test_two"
+          ],
+          "path": "tests/test_calc.py",
+          "source_sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a",
+          "startup": null,
+          "startup_known": false,
+          "units": [
+            {
+              "name": "TestAdd.test_one",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                151,
+                200
+              ]
+            },
+            {
+              "name": "TestAdd.test_two",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                206,
+                255
+              ]
+            }
+          ]
+        }
+      ],
+      "startup_lookups": []
+    },
+    {
+      "label": "263-closed-root",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/263-closed-root.json",
+      "raw_sha256": "9372d6744660282aa539b92cffcdc2c0407329a6e79860dc96fcbbc8fe030f07",
+      "verdict": "block",
+      "closed_snapshot": true,
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_one/v2:426ee3ff4d0dab4c755f9a18d744ca351f68718a99e9ecb6298328af898aa7b3",
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ]
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_two/v2:3791a1cdd7e2ba33fb3043e0a9f22d7fa1a65c2042270b7f67c87dee2119508b",
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ]
+        }
+      ],
+      "mark_context_calls": [
+        {
+          "language": "python",
+          "needed": [
+            "TestAdd.test_one",
+            "TestAdd.test_two",
+            "test_one",
+            "test_two"
+          ],
+          "path": "tests/test_calc.py",
+          "source_sha256": "1d4fa51e24e0f17f9381cb9b71293e752ca407dfd31f7b388166bc5199d5cc9f",
+          "startup": "[]",
+          "startup_known": true,
+          "units": [
+            {
+              "name": "test_one",
+              "oracle_assertion_contexts": {
+                "a0@0": "107893ebadbefd92aa5457c604f5a474496de3f494ed8ac5cca00e4c8de913cb"
+              },
+              "oracle_context": "cb6a2b01b7b110eb6cc1d9a59449b243b571dffce2be47389b0803e8dabf3365",
+              "span": [
+                42,
+                83
+              ]
+            },
+            {
+              "name": "test_two",
+              "oracle_assertion_contexts": {
+                "a0@0": "c82dff1d1b7cf8290fe255963a82aa83564aa43bace20b82a71806b8791fc818"
+              },
+              "oracle_context": "a867786d37772fbaaab95c46cf06b9f12adb2954f83883af06e3822cd2f4a8c4",
+              "span": [
+                86,
+                127
+              ]
+            }
+          ]
+        },
+        {
+          "language": "python",
+          "needed": [
+            "TestAdd.test_one",
+            "TestAdd.test_two",
+            "test_one",
+            "test_two"
+          ],
+          "path": "tests/test_calc.py",
+          "source_sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a",
+          "startup": "[]",
+          "startup_known": true,
+          "units": [
+            {
+              "name": "TestAdd.test_one",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                151,
+                200
+              ]
+            },
+            {
+              "name": "TestAdd.test_two",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                206,
+                255
+              ]
+            }
+          ]
+        }
+      ],
+      "startup_lookups": [
+        {
+          "channel": "ROOT",
+          "path": "tests/conftest.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "conftest.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/__init__.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "__init__.py",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "label": "358-original",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/358-original.json",
+      "raw_sha256": "939044e294a60252ad363528718ccd5256e178cada0b8ed8c7cfb0c5dcce31e7",
+      "verdict": "block",
+      "closed_snapshot": true,
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:a76ebc5a9bd87c2ff6290ec4959aff70ce518d04c765f9508f09dc88f7c7df95",
+          "deescalators": [],
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ]
+        }
+      ],
+      "mark_context_calls": [
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_billing.py",
+          "source_sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+          "startup": "[]",
+          "startup_known": true,
+          "units": [
+            {
+              "name": "test_total",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                235,
+                280
+              ]
+            }
+          ]
+        },
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_billing.py",
+          "source_sha256": "5796311a0b088876a58f5ec2e3bc8a6afac259538446de47cd514a67182ec3d5",
+          "startup": "[]",
+          "startup_known": true,
+          "units": []
+        },
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_other.py",
+          "source_sha256": null,
+          "startup": null,
+          "startup_known": false,
+          "units": []
+        },
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_other.py",
+          "source_sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+          "startup": "[]",
+          "startup_known": true,
+          "units": [
+            {
+              "name": "test_total",
+              "oracle_assertion_contexts": {},
+              "oracle_context": "",
+              "span": [
+                235,
+                280
+              ]
+            }
+          ]
+        }
+      ],
+      "startup_lookups": [
+        {
+          "channel": "ROOT",
+          "path": "tests/conftest.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "conftest.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/.pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/.pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/pyproject.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/tox.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/setup.cfg",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": ".pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": ".pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "pyproject.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tox.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "setup.cfg",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/.pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/.pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/pyproject.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/tox.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/setup.cfg",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": ".pytest.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": ".pytest.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "pyproject.toml",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tox.ini",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "setup.cfg",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/__init__.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "__init__.py",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "label": "358-no-gate-control",
+      "raw_path": "work/ux-stage6/proof-diagnostics-r1/358-no-gate-control.json",
+      "raw_sha256": "6a68211596d73b4d9523c90e86761f8df503912d24c3f95701832fa8b9acc232",
+      "verdict": "pass",
+      "closed_snapshot": true,
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "info",
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:a76ebc5a9bd87c2ff6290ec4959aff70ce518d04c765f9508f09dc88f7c7df95",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ],
+          "escalators": []
+        }
+      ],
+      "mark_context_calls": [
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_billing.py",
+          "source_sha256": "25c8313e223fb25ba14b14289ad0cc23274663963996c2f96ac29ee82a4eb352",
+          "startup": "[]",
+          "startup_known": true,
+          "units": [
+            {
+              "name": "test_total",
+              "oracle_assertion_contexts": {
+                "a0@0": "deb291458a84097ab76630f8a98c68cc8988a394a0a846a7040d498c8c94191a"
+              },
+              "oracle_context": "162e9b0009da65fea414cd439fe3864158cfd42108a9e9bd9f33a673aa2bdb5a",
+              "span": [
+                58,
+                103
+              ]
+            }
+          ]
+        },
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_billing.py",
+          "source_sha256": "7963699d10fe2f4b3dc025aa54f68dcc1982256d64dd9c7d2e8947f0170d3a89",
+          "startup": "[]",
+          "startup_known": true,
+          "units": []
+        },
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_other.py",
+          "source_sha256": null,
+          "startup": null,
+          "startup_known": false,
+          "units": []
+        },
+        {
+          "language": "python",
+          "needed": [
+            "test_total"
+          ],
+          "path": "tests/test_other.py",
+          "source_sha256": "25c8313e223fb25ba14b14289ad0cc23274663963996c2f96ac29ee82a4eb352",
+          "startup": "[]",
+          "startup_known": true,
+          "units": [
+            {
+              "name": "test_total",
+              "oracle_assertion_contexts": {
+                "a0@0": "deb291458a84097ab76630f8a98c68cc8988a394a0a846a7040d498c8c94191a"
+              },
+              "oracle_context": "162e9b0009da65fea414cd439fe3864158cfd42108a9e9bd9f33a673aa2bdb5a",
+              "span": [
+                58,
+                103
+              ]
+            }
+          ]
+        }
+      ],
+      "startup_lookups": [
+        {
+          "channel": "ROOT",
+          "path": "tests/conftest.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "conftest.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "tests/__init__.py",
+          "sha256": null
+        },
+        {
+          "channel": "ROOT",
+          "path": "__init__.py",
+          "sha256": null
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "358 constructor is sole f-string return",
+      "passed": true
+    },
+    {
+      "name": "inert copy exactly equals original test constructor: issue263-before.py.txt",
+      "passed": true
+    },
+    {
+      "name": "inert copy exactly equals original test constructor: issue263-after.py.txt",
+      "passed": true
+    },
+    {
+      "name": "inert copy exactly equals original test constructor: issue358-before.py.txt",
+      "passed": true
+    },
+    {
+      "name": "inert copy exactly equals original test constructor: issue358-empty-old.py.txt",
+      "passed": true
+    },
+    {
+      "name": "root capture fixed fbc",
+      "passed": true
+    },
+    {
+      "name": "root capture unchanged inputs",
+      "passed": true
+    },
+    {
+      "name": "capture completed (not a product PASS)",
+      "passed": true
+    },
+    {
+      "name": "capture input manifest hash",
+      "passed": true
+    },
+    {
+      "name": "capture source diff/status empty",
+      "passed": true
+    },
+    {
+      "name": "root diagnostics identify twelve unchanged-source API observations",
+      "passed": true
+    },
+    {
+      "name": "diagnostic scope records no fixture/pytest/CLI calls",
+      "passed": true
+    },
+    {
+      "name": "263-original declared raw hash/size",
+      "passed": true
+    },
+    {
+      "name": "263-original exact change count",
+      "passed": true
+    },
+    {
+      "name": "263-original path",
+      "passed": true
+    },
+    {
+      "name": "263-original exact before bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "263-original exact after bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "263-original complete exact closed snapshot",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root declared raw hash/size",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root exact change count",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root path",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root exact before bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root exact after bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root snapshot byte hash tests/test_calc.py",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root complete exact closed snapshot",
+      "passed": true
+    },
+    {
+      "name": "358-original declared raw hash/size",
+      "passed": true
+    },
+    {
+      "name": "358-original exact change count",
+      "passed": true
+    },
+    {
+      "name": "358-original path",
+      "passed": true
+    },
+    {
+      "name": "358-original exact before bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-original exact after bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-original path",
+      "passed": true
+    },
+    {
+      "name": "358-original exact before bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-original exact after bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-original snapshot byte hash app/__init__.py",
+      "passed": true
+    },
+    {
+      "name": "358-original snapshot byte hash app/billing.py",
+      "passed": true
+    },
+    {
+      "name": "358-original snapshot byte hash tests/test_billing.py",
+      "passed": true
+    },
+    {
+      "name": "358-original snapshot byte hash tests/test_other.py",
+      "passed": true
+    },
+    {
+      "name": "358-original complete exact closed snapshot",
+      "passed": true
+    },
+    {
+      "name": "358-original absent side has no proof",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control declared raw hash/size",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control exact change count",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control path",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control exact before bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control exact after bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control path",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control exact before bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control exact after bytes/hash",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control snapshot byte hash app/__init__.py",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control snapshot byte hash app/billing.py",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control snapshot byte hash tests/test_billing.py",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control snapshot byte hash tests/test_other.py",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control complete exact closed snapshot",
+      "passed": true
+    },
+    {
+      "name": "358-no-gate-control absent side has no proof",
+      "passed": true
+    },
+    {
+      "name": "263-original actual BLOCK/high without optional credit",
+      "passed": true
+    },
+    {
+      "name": "263-closed-root actual BLOCK/high without optional credit",
+      "passed": true
+    },
+    {
+      "name": "358-original actual BLOCK/high without optional credit",
+      "passed": true
+    },
+    {
+      "name": "358 no-gate observed PASS/info move control",
+      "passed": true
+    },
+    {
+      "name": "263 strict startup known on both sides",
+      "passed": true
+    },
+    {
+      "name": "263 closed root repairs before proof only; after stays unknown",
+      "passed": true
+    },
+    {
+      "name": "358 original known startup still has no unit/assertion proof",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/checkwash-ux/tests/test_issue263_string_conditions.py",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/checkwash-ux/tests/test_issue358_own_mark_guards.py",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/python-relocation/fixtures/issue263-before.py.txt",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/python-relocation/fixtures/issue263-after.py.txt",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/python-relocation/fixtures/issue358-before.py.txt",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/python-relocation/fixtures/issue358-empty-old.py.txt",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/final/bounded-context-r1/receipt.json",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/final/bounded-context-r1/input-hashes.json",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/final/bounded-context-r1/source.diff",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/final/bounded-context-r1/git-status.txt",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/proof-diagnostics-r1/results.json",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/proof-diagnostics-r1/263-original.json",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/proof-diagnostics-r1/263-closed-root.json",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/proof-diagnostics-r1/358-original.json",
+      "passed": true
+    },
+    {
+      "name": "original input preserved: work/ux-stage6/proof-diagnostics-r1/358-no-gate-control.json",
+      "passed": true
+    },
+    {
+      "name": "new readback path (preserve prior results)",
+      "passed": true
+    }
+  ],
+  "inputs": {
+    "work/checkwash-ux/tests/test_issue263_string_conditions.py": {
+      "sha256": "5a1b78dad3cb54bbb9b37cb966c06d60ff625058187b6bb5bdcfb7e3f311a60b",
+      "bytes": 11606
+    },
+    "work/checkwash-ux/tests/test_issue358_own_mark_guards.py": {
+      "sha256": "c1bb1b6fcd49802ad2ffd53b20e68f6121a7c5240677b8203ca7042b929c5772",
+      "bytes": 17899
+    },
+    "work/ux-stage6/python-relocation/fixtures/issue263-before.py.txt": {
+      "sha256": "1d4fa51e24e0f17f9381cb9b71293e752ca407dfd31f7b388166bc5199d5cc9f",
+      "bytes": 128
+    },
+    "work/ux-stage6/python-relocation/fixtures/issue263-after.py.txt": {
+      "sha256": "39226d091018007805520540d365d1a8544ba19aa9d59926db4513f668bd086a",
+      "bytes": 256
+    },
+    "work/ux-stage6/python-relocation/fixtures/issue358-before.py.txt": {
+      "sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+      "bytes": 281
+    },
+    "work/ux-stage6/python-relocation/fixtures/issue358-empty-old.py.txt": {
+      "sha256": "5796311a0b088876a58f5ec2e3bc8a6afac259538446de47cd514a67182ec3d5",
+      "bytes": 235
+    },
+    "work/ux-stage6/final/bounded-context-r1/receipt.json": {
+      "sha256": "06e0d01afc39e92e500384220ff8214a946ee941dde99b8878ef24802cd4eaab",
+      "bytes": 1658
+    },
+    "work/ux-stage6/final/bounded-context-r1/input-hashes.json": {
+      "sha256": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5",
+      "bytes": 385164
+    },
+    "work/ux-stage6/final/bounded-context-r1/source.diff": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "work/ux-stage6/final/bounded-context-r1/git-status.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "work/ux-stage6/proof-diagnostics-r1/results.json": {
+      "sha256": "8120bfec92591c337cfb845a8a52ef0a47ddbb056e3884d4e8d873d0e2ec116f",
+      "bytes": 6538
+    },
+    "work/ux-stage6/proof-diagnostics-r1/263-original.json": {
+      "sha256": "2bf217b0ec1e229b9c24f0baf1136e6b22e94ea9330ad37365511e84404be75c",
+      "bytes": 12996
+    },
+    "work/ux-stage6/proof-diagnostics-r1/263-closed-root.json": {
+      "sha256": "9372d6744660282aa539b92cffcdc2c0407329a6e79860dc96fcbbc8fe030f07",
+      "bytes": 14463
+    },
+    "work/ux-stage6/proof-diagnostics-r1/358-original.json": {
+      "sha256": "939044e294a60252ad363528718ccd5256e178cada0b8ed8c7cfb0c5dcce31e7",
+      "bytes": 12548
+    },
+    "work/ux-stage6/proof-diagnostics-r1/358-no-gate-control.json": {
+      "sha256": "6a68211596d73b4d9523c90e86761f8df503912d24c3f95701832fa8b9acc232",
+      "bytes": 9613
+    }
+  },
+  "reader_sha256": "8129cffd03aa627ba3806ff98da47e1a8665f9611b0affe595f955c7957dd8c9",
+  "interpretation": "Current fbc API observations, not CLI qualification or a changed-judge result. Source branch diagnosis and future projected movement remain separate, unexecuted claims."
+}

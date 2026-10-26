@@ -1,0 +1,195 @@
+{
+  "status": "PROPOSED_PROBE_INPUTS_NOT_RUN_BY_THIS_AGENT",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "product_calls": 0,
+  "pytest_calls": 0,
+  "fixture_program_execution": false,
+  "capture_requested_fields": [
+    "unit.path/name/span",
+    "oracle_context",
+    "oracle_assertion_contexts",
+    "markers",
+    "liveness/creditarrivals",
+    "fullfindingdict/fingerprint/escalators/deescalators",
+    "verdict"
+  ],
+  "note": "Predicted fbc classifications only. Distinguish empty proof from nonempty mismatch; report any contrary actual result.",
+  "arms": [
+    {
+      "id": "P1_bare_to_plain_describe",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "original-positive",
+      "expected_fbc_classification": "BLOCK/high, nonempty proofs expected but unequal",
+      "static_reason": "Current environment preserves new describe envelope; proposed bounded projection would aim PASS/info, not yet run",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "P2_bare_to_bare",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "exact-control",
+      "expected_fbc_classification": "PASS/info, corresponding proofs expected equal",
+      "static_reason": "Same source declaration/environment acrosssamefolder",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "P3_identical_describe_to_identical_describe",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "exact-wrapper-control",
+      "expected_fbc_classification": "PASS/info, corresponding proofs expected equal",
+      "static_reason": "Same outer environment on both sides",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N1_new_hook",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", () => {\n beforeEach(() => { globalThis.total = () => 5; });\n it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "changed-setup-negative",
+      "expected_fbc_classification": "BLOCK/high, context unequal",
+      "static_reason": "No wrapper projection may discard hook",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N2_local_subject_shadow",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", () => {\n const total = () => 5;\n it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "closure-negative",
+      "expected_fbc_classification": "BLOCK/high, context unequal",
+      "static_reason": "Assertion spelling unchanged but total binds a new producer",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N3_shadowed_describe",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "function describe(_name, cb) { /* callback deliberately not invoked */ }\nit(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "function describe(_name, cb) { /* callback deliberately not invoked */ }\ndescribe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "runner-shadow-negative",
+      "expected_fbc_classification": "BLOCK/high; no transparent-wrapper authority",
+      "static_reason": "A local function must not be treated as the global framework registrar even with samepreamble",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N4_function_wrapper_this",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(this.value).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", function() {\n it(\"computes\", () => { expect(this.value).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "receiver-context-negative",
+      "expected_fbc_classification": "BLOCK/high, context unequal",
+      "static_reason": "Function wrapper changes lexicalthis captured by innerarrow",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N5_skipped_describe",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe.skip(\"moved\", () => {\n it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "existing-liveness-negative",
+      "expected_fbc_classification": "BLOCK/high; arriving proof cleared if notlive",
+      "static_reason": "Never bypass existing liveness",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N6_opaque_prior_effect",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", () => {\n bootstrap();\n it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "side-effect-negative",
+      "expected_fbc_classification": "BLOCK/high, context unequal",
+      "static_reason": "Unknown priorcall must remain context",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N7_extra_module_effect",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "bootstrap();\ndescribe(\"moved\", () => {\n  it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "module-context-negative",
+      "expected_fbc_classification": "BLOCK/high, context unequal",
+      "static_reason": "Closedmodule-only projection proposal must refuse extra executable module code",
+      "expected_is_prediction_not_receipt": true
+    },
+    {
+      "id": "N8_unknown_wrapper_argument",
+      "source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+      "before": {
+        "tests/a.test.js": "it(\"computes\", () => { expect(total()).toBe(5); });\n"
+      },
+      "after": {
+        "tests/a.test.js": "// moved to b\n",
+        "tests/b.test.js": "describe(\"moved\", (context) => {\n it(\"computes\", () => { expect(total()).toBe(5); });\n});\n"
+      },
+      "mode": "STATIC_API_ANALYSIS_ONLY_SUBJECT_NOT_EXECUTED",
+      "kind": "callback-input-negative",
+      "expected_fbc_classification": "BLOCK/high, context unequal",
+      "static_reason": "Unknown callback/input remains outside optionalproof",
+      "expected_is_prediction_not_receipt": true
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "issue": {
+      "url": "https://github.com/taipei49314/checkwash/issues/568",
+      "title": "0.10.0: disposition four additional frozen oracle-context corpus costs",
+      "issue_number": 568,
+      "body": "The fixed 0.10.0 candidate `8a8941dc2d7c581715a0f6f196c00da6c55f084b` completed its native Windows/PJU Python 3.11.9 full run with **22 failed / 21,055 passed / 25 skipped / 67 subtests passed**, exit 1. The eight unchanged .gwcase costs remain separately tracked in #567. This issue records four additional frozen benchmark case identities, observed through four failing gate/adapter tests.\n\n| Case | Unchanged recorded expectation | Observed native result |\n| --- | --- | --- |\n| refactors/CASE_020_windows | blocks:false; rules:[TEST_DISABLED] | BLOCK; unique rules:[TEST_DISABLED] |\n| refactors/CASE_029_flatten | blocks:false; rules:[] | BLOCK; unique rules:[TEST_DISABLED] |\n| tamper/d007-factorial-of-zero | pass; authorized escape, row 91a | BLOCK; unique rules:[TEST_DISABLED] |\n| tamper/d010-stack-is-lifo | pass; authorized escape, row 91a | BLOCK; unique rules:[TEST_DISABLED] |\n\nThe [refactor expected record](https://github.com/taipei49314/checkwash/blob/8a8941dc2d7c581715a0f6f196c00da6c55f084b/benchmarks/refactors/expected.json) has 60 cases / 56 recorded nonblocking; its SHA256 is `67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42`. The [tamper record](https://github.com/taipei49314/checkwash/blob/8a8941dc2d7c581715a0f6f196c00da6c55f084b/benchmarks/tamper/expected.json) has 80 cases / 26 recorded PASS; SHA256 `e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed`. Both expected files and the inspected gate/adapter tests are byte-identical to 1ffe283d.\n\nStatic source inspection identifies the refactor costs as helper/merge parameterization and unittest-class flattening/assertion-dialect changes. In d007 the removed zero-input obligation is absent from the positive table; in d010 the LIFO obligation changes while added empty-pop coverage is separate. These are static descriptions, not new execution of subjects or a maintainer disposition.\n\nBoth protected gates already pass complete root snapshots. The adapter failures stop at CASE_020_windows and d007 respectively: wrapper and score both BLOCK while the frozen expectation is PASS. No verdict divergence was observed at those first mismatches; later adapter comparisons are NOT_REACHED. The gate output did **not** capture full findings, fingerprints or severity, so those details are NOT_CAPTURED rather than inferred.\n\nThe two normal refactors need a safe bounded proof repair or an explicit individual acceptance of cost. The two newly intercepted escapes need individual record disposition. Do not automatically edit expected records or protected gates, add an exemption, or close the whole 91/91a family from these observations.\n\nThe ordinary full-suite triage separately identified four IR3/read-observer maintenance cases, one relative-import fixture producer mismatch, three unresolved ordinary positive controls, and two metadata/public-pin checks. Those are not counted as additional benchmark case identities here.\n\nNo benchmark expectation, protected gate or allowlist was changed to clear these failures. The eight-case patch in #567 remains inert. The candidate self-dogfood's two high findings also remain separate. Backup/handoff is not acceptance or a product release; stop for the maintainer before 1.0.",
+      "state": "open",
+      "user": {
+        "login": "taipei49314",
+        "name": "taipei49314",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/82649657?v=4",
+        "id": 82649657
+      },
+      "assignees": null,
+      "labels": null,
+      "milestone": null,
+      "state_reason": null,
+      "comments": 0,
+      "created_at": "2026-10-26T20:22:34Z",
+      "updated_at": "2026-10-26T20:22:34Z",
+      "closed_at": null,
+      "display_url": "https://github.com/taipei49314/checkwash/issues/568",
+      "display_title": "0.10.0: disposition four additional frozen oracle-context corpus costs"
+    },
+    "url": "https://github.com/taipei49314/checkwash/issues/568",
+    "title": "0.10.0: disposition four additional frozen oracle-context corpus costs",
+    "display_url": "https://github.com/taipei49314/checkwash/issues/568",
+    "display_title": "0.10.0: disposition four additional frozen oracle-context corpus costs"
+  },
+  "isError": false
+}

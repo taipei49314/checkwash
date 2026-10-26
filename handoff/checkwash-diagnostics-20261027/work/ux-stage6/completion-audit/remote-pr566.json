@@ -1,0 +1,47 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "url": "https://github.com/taipei49314/checkwash/pull/566",
+    "number": 566,
+    "state": "open",
+    "merged": false,
+    "mergeable": true,
+    "draft": true,
+    "body": "Integrates the CheckWash 0.10.0 repair candidate at **`fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c`** (IR3, findings2). Keep this PR in draft. Fixed-source validation is complete; the candidate remains NONPASS.\n\nThe core repairs bind effective BASE policy and TASK authority, require source/startup context for oracle compensation, pair worktree/Stop pytest evidence, preserve LF/CRLF relocation identity, compare resolved JS expectations behind unchanged names, and retain the preceding UX/output/quality repairs. Decisions D-177 through D-184 and `docs/repair-integration-0.10.0.md` describe the contracts.\n\nSix follow-up commits address seven maintenance failures found at the prior 8a source: synchronize the development-version row; bind Action freshness to `release/advertised.toml` instead of treating every local tag as published; verify all 17 native UnitSide fields plus the separate IR3 enrichment; distinguish startup probes from detector-chain attribution; and make the CI-directory move control refer to the same canonical producer. Two independent negative controls raise the **collected** denominator to 21,104. The public090 pins and preserved unpublished091 tag remain unchanged.\n\nAll 3,084 tracked files at fbc match the maintenance development snapshot byte for byte; that snapshot produced **180 passed, exit 0**. The 212 production-package members, pyproject, golden fixtures, protected gates and benchmark records are byte-identical to 8a. This content-equivalence proof does not relabel 8a qualification as a new fbc runtime result. Fresh sdist/wheel/pyz were built and a new isolated wheel runtime was installed for this source.\n\n### Current-source validation\n\n- The fixed-fbc Python 3.11.9 full suite ended **exit 1: 15 failed / 21,064 passed / 25 skipped / 67 subtests passed**, in 2,859.47 seconds. Independent readback verified 21,104 parent cases versus 21,171 declared XML reports. Relative to 8a, all seven maintenance failures are resolved, there are no new failure IDs, and both new negative controls passed. The remaining 15 failures are eight golden cases, three ordinary positive controls and four protected gate/adapter tests; none is waived.\n- Fresh fbc source, wheel and pyz assertion qualifications each completed **283/283 controls, exit 0**, after the full suite. The wheel console smoke and pyz process qualification also ended exit 0 with the source import environment removed. These are local artifact checks, not formal release-collector acceptance or GitHub check-run publication.\n- Actual-date PR self-dogfood at fbc is **BLOCK / exit 1: 0 critical, 3 high, 9 warn**, with empty config errors and skipped files. Two TEST_DISABLED findings concern the issue266 consumer migration; the additional ASSERT_WEAKENED concerns the classic-raises UnitSide comparison migrated to 17 native fields plus separately asserted IR3 proof fields. All three remain unexempted pending disposition.\n- Other OS, new-source Python 3.12/3.13 and native file-symlink coverage remain NOT_RUN. All executed evidence is actual LAPTOP-01AGNPJU / Windows, marked HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL.\n\n### Preserved baseline and open acceptance\n\nThe complete [8a handoff checkpoint](https://github.com/taipei49314/checkwash/blob/d158ec02aac9c0c19751d0475f935b533e3d03f7/handoff/checkwash-core-010-20261027/00-START-HERE.md) contains five sanitized evidence/source-history archives. All 47 output blob identities and sizes were independently read back from GitHub. Original local archives containing global context were preserved locally; they were not uploaded unchanged.\n\nAt **8a**, each source/wheel/pyz qualification completed 283/283 controls, and the Windows 3.11/3.12 complete findings+IR corpus was byte-identical for 1,117 fixtures. Its native full suite remains **22 failed / 21,055 passed / 25 skipped / 67 subtests passed**, exit 1. Native XML has 21,102 parents / 21,169 reports; integrity audit exit 0 is not suite PASS. The old public v0.9.0 Action's local replay passed at 8a; that does not clear this candidate's self-dogfood.\n\n[#567](https://github.com/taipei49314/checkwash/issues/567) tracks eight unchanged .gwcase expectations. [#568](https://github.com/taipei49314/checkwash/issues/568) tracks four additional frozen benchmark identities behind the protected gate/adapter failures. Three ordinary positive controls also retain unresolved semantic costs. Expected-only proposals remain inert; no protected expectation, gate or allowance was changed to obtain green results. At the first observed adapter mismatches wrapper and score agree BLOCK; later comparisons are NOT_REACHED, and full finding vectors/severity were NOT_CAPTURED there.\n\nBackup timing does not accelerate product acceptance. No formal release-collector acceptance, merge, new tag, Release, PyPI publication or downstream re-pin is claimed. **Stop for Nelson before version 1.0.**\n",
+    "title": "Integrate core repairs toward 0.10.0 (IR3)",
+    "base": "main",
+    "base_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+    "head": "fix/ux-repairs-20261026",
+    "head_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+    "head_repo_id": 1320152564,
+    "head_repo_full_name": "taipei49314/checkwash",
+    "merge_commit_sha": "50df08b520b1dafd69ece0cc085ddd12abee9806",
+    "user": {
+      "login": "taipei49314",
+      "name": "taipei49314",
+      "email": null,
+      "avatar_url": "https://avatars.githubusercontent.com/u/82649657?v=4",
+      "id": 82649657
+    },
+    "requested_reviewers": null,
+    "requested_team_reviewers": null,
+    "diff": null,
+    "comments": null,
+    "created_at": "2026-10-26T10:53:04Z",
+    "updated_at": "2026-10-26T22:31:35Z",
+    "closed_at": null,
+    "merged_at": null,
+    "commits": 42,
+    "changed_files": 95,
+    "additions": 5820,
+    "deletions": 202,
+    "display_url": "https://github.com/taipei49314/checkwash/pull/566",
+    "display_title": "Integrate core repairs toward 0.10.0 (IR3)"
+  },
+  "isError": false
+}

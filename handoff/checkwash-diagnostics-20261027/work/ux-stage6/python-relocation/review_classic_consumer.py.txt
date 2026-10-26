@@ -1,0 +1,152 @@
+"""Read-only AST/byte review of the separate classic ordinary-test worktree.
+
+No product/test import, compile, execution or subprocess. Writes only this
+review's new JSON beside the reader.
+"""
+import ast
+import copy
+import hashlib
+import json
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[3]
+HERE = Path(__file__).resolve().parent
+BASE = ROOT / "work/checkwash-ux"
+WT = ROOT / "work/checkwash-classic-followup"
+RUN = ROOT / "work/ux-stage6/root/classic-targeted-r1"
+PIN = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+TEST = "tests/test_classic_raises_additions.py"
+FUNCTION = "test_added_literal_rows_retain_exception_removal_and_native_units"
+checks, observed = [], {}
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def raw(path):
+    value = path.read_bytes()
+    observed[str(path)] = sha(value)
+    return value
+
+
+def require(ok, name):
+    checks.append({"name": name, "passed": bool(ok)})
+    if not ok:
+        raise ValueError(name)
+
+
+def dump(node):
+    return ast.dump(node, include_attributes=False)
+
+
+def chain(node):
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = chain(node.value)
+        return base + "." + node.attr if base else None
+    return None
+
+
+def main():
+    receipt = json.loads(raw(RUN / "receipt.json"))
+    dev_raw = raw(RUN / "input-hashes.json")
+    dev = json.loads(dev_raw)
+    base_map = json.loads(raw(ROOT / "work/ux-stage5/final/full-suite-311-r1/input-hashes.json"))
+    require(receipt["validation_kind"] == "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION",
+            "preserve development-only identity")
+    require(receipt["source_sha"] == receipt["ending_sha"] == PIN and receipt["source_files_unchanged"] is True
+            and receipt["changed_inputs"] == [] and type(receipt["exit_code"]) is int and receipt["exit_code"] == 0,
+            "native targeted receipt completed unchanged development run")
+    require(sha(dev_raw) == receipt["input_manifest_sha256"], "development input map hash")
+    require(set(dev) == set(base_map), "development membership same as frozen fbc map")
+    differences = sorted(name for name in dev if dev[name] != base_map[name])
+    require(differences == [TEST], "only the ordinary classic test file differs from fbc")
+    require(all(sha((WT / name).read_bytes()) == expected for name, expected in dev.items()),
+            "all current worktree bytes equal captured development map")
+    require(sha(raw(BASE / TEST)) == base_map[TEST], "old comparison is frozen fbc test bytes")
+    before = ast.parse(raw(BASE / TEST))
+    after = ast.parse(raw(WT / TEST))
+    model = ast.parse(raw(BASE / "src/checkwash/ir/model.py"))
+    unit = next(node for node in model.body if isinstance(node, ast.ClassDef) and node.name == "UnitSide")
+    model_fields = [node.target.id for node in unit.body if isinstance(node, ast.AnnAssign)
+                    and isinstance(node.target, ast.Name)]
+    enrichment = {"oracle_context", "oracle_assertion_contexts"}
+    native = [name for name in model_fields if name not in enrichment]
+    require(len(native) == 17 and set(model_fields) == set(native) | enrichment,
+            "derive complete seventeen native fields plus exact two enrichment fields")
+    old_fn = next(node for node in before.body if isinstance(node, ast.FunctionDef) and node.name == FUNCTION)
+    new_fn = next(node for node in after.body if isinstance(node, ast.FunctionDef) and node.name == FUNCTION)
+    guards, equality = [], []
+    for node in new_fn.body:
+        if not isinstance(node, ast.Assert) or not isinstance(node.test, ast.Compare):
+            continue
+        comp = node.test
+        if not (len(comp.ops) == len(comp.comparators) == 1 and isinstance(comp.ops[0], ast.Eq)):
+            continue
+        if isinstance(comp.left, ast.Call) and chain(comp.left.func) == "set" and len(comp.left.args) == 1 \
+                and chain(comp.left.args[0]) == "native_fields" and not comp.left.keywords:
+            require(isinstance(comp.comparators[0], ast.Set), "native membership guard is a full literal set")
+            names = [ast.literal_eval(item) for item in comp.comparators[0].elts]
+            require(len(names) == 17 and len(set(names)) == 17 and set(names) == set(native),
+                    "guard contains every native field exactly once")
+            guards.append(node)
+        left, right = chain(comp.left), chain(comp.comparators[0])
+        if left and left.startswith("preserved.after.") and right and right.startswith("original.side."):
+            name = left.removeprefix("preserved.after.")
+            if name in native:
+                require(right == "original.side." + name, "whole native attribute equality: " + name)
+                equality.append((name, node))
+    require(len(guards) == 1 and [name for name, _node in equality] == native,
+            "exactly one complete set guard and all seventeen whole-value equalities in field order")
+    old_remove = []
+    for node in old_fn.body:
+        if isinstance(node, ast.Assert) and isinstance(node.test, ast.Compare):
+            comp = node.test
+            if isinstance(comp.left, ast.DictComp):
+                old_remove.append(node)
+            elif isinstance(comp.left, ast.Call) and chain(comp.left.func) == "len" \
+                    and len(comp.left.args) == 1 and chain(comp.left.args[0]) == "native_fields":
+                old_remove.append(node)
+    require(len(old_remove) == 2, "old replacement is exactly count and complete dictionary equality")
+    normalized_old, normalized_new = copy.deepcopy(before), copy.deepcopy(after)
+    left_fn = next(node for node in normalized_old.body if isinstance(node, ast.FunctionDef) and node.name == FUNCTION)
+    right_fn = next(node for node in normalized_new.body if isinstance(node, ast.FunctionDef) and node.name == FUNCTION)
+    old_dumps = {dump(node) for node in old_remove}
+    new_dumps = {dump(node) for node in guards} | {dump(node) for _name, node in equality}
+    left_fn.body = [node for node in left_fn.body if dump(node) not in old_dumps]
+    right_fn.body = [node for node in right_fn.body if dump(node) not in new_dumps]
+    require(dump(normalized_old) == dump(normalized_new),
+            "all other AST, enrichments, original exception/BLOCK assertions, fixtures and negative controls exactly unchanged")
+    xml = ET.fromstring(raw(RUN / "junit.xml"))
+    suites = list(xml.iter("testsuite"))
+    require(len(suites) == 1 and suites[0].get("tests") == "31" and suites[0].get("failures") == "0"
+            and suites[0].get("errors") == "0" and suites[0].get("skipped") == "0", "existing native JUnit records 31 passed")
+    require(len(list(xml.iter("testcase"))) == 31, "native testcase parent count 31")
+    require(b"31 passed" in raw(RUN / "stdout.txt") and raw(RUN / "stderr.txt") == b"", "native stdout/stderr agrees")
+    require(sha(raw(RUN / "source.diff")) == receipt["source_diff_sha256"], "captured exact diff hash")
+    for name, digest in list(observed.items()):
+        require(sha(Path(name).read_bytes()) == digest, "review input preserved: " + name)
+    result = {"review_state": "PASS_BOUNDED_ORDINARY_CONSUMER_CONTRACT_REVIEW", "base_source_sha": PIN,
+              "identity": "UNCOMMITTED_WORKTREE_BYTES_NOT_NEW_COMMIT_QUALIFICATION",
+              "host": receipt["host"], "provenance": receipt["provenance"], "reader_runtime": sys.version,
+              "native_fields_exact": native, "enrichment_fields_exact": sorted(enrichment),
+              "development_changed_paths": differences, "current_matches_development_receipt": True,
+              "native_recorded_tests": 31, "native_recorded_exit_code": receipt["exit_code"],
+              "source_diff_sha256": receipt["source_diff_sha256"], "input_manifest_sha256": receipt["input_manifest_sha256"],
+              "checks": checks, "input_hashes": observed, "reader_sha256": sha(Path(__file__).read_bytes()),
+              "product_calls_by_reader": 0, "pytest_calls_by_reader": 0,
+              "semantic_assessment": "Exact native field-name membership plus every whole native attribute equality preserves the prior complete-value conjunction and gives clearer schema/field diagnostics. All enrichment/exception/BLOCK obligations remain; no strength, alignment, severity, gate or expected verdict changed.",
+              "not_established": ["self-dogfood becomes green", "committed-source qualification", "full-suite PASS", "release acceptance"]}
+    destination = HERE / "classic-consumer-review.json"
+    require(not destination.exists(), "new review output; preserve previous receipts")
+    destination.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(json.dumps({"review_state": result["review_state"], "checks": len(checks),
+                      "path": str(destination), "sha256": sha(destination.read_bytes()), "product_calls": 0}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,39 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "issue": {
+      "url": "https://github.com/taipei49314/checkwash/issues/567",
+      "title": "0.10.0: adjudicate eight golden expectations affected by oracle-context credit",
+      "issue_number": 567,
+      "body": "D-179 now requires bounded static source context for oracle relocation/restructuring, rather than text/body/mass/name similarity alone. Eight original `.gwcase` expectations conflict with that contract. Their bytes and labels remain unchanged. PR #566 remains a draft; these failed gates are not waived by the new passing controls or the 0.10.0 version string.\n\nThe [implemented contract and recorded costs](https://github.com/taipei49314/checkwash/blob/1b3668ab287b23926699d32395d9f454c6edc361/docs/oracle-credit-0.10.0.md) describe the source and limits. Six independently reproduced proof defects were fixed and read back against 18 bounded observations. This does not claim universal runtime equivalence.\n\n| Original case | Observed old → new | Reason / remaining conservative cost |\n|---|---|---|\n| `bare_bound_then_used_neg` | pass → block | Output `invoice_total == 105` is replaced by input data equality; a different strong assertion is a different obligation. |\n| `split_rename_genuine_neg` | pass → block | `sorted(options(...))` can conceal container/type/order changes. |\n| `unittest_keyword_split_neg` | pass → block | Keyword operand support remains; the changed sorted subject is not proven equivalent. |\n| `test_split_neg` | pass → block | `make_app()` becomes `make_app(automatic_options=True)` without supplied source/default proof. |\n| `subject_pairing_other_subject_known_limit_pos` | block → block | The original independent block remains; two disappeared-unit warnings become high when changed fixture/setup/input context has no equivalence proof. |\n| `assert_removed_moved_neg` | pass → block | Unknown login calls are reordered across tests; prior/following assertions may have effects. |\n| `js_chai_property_moved_neg` | pass → block | Unknown isPaid/total calls are reordered across callbacks without purity/implementation proof. |\n| `merged_parametrize_neg` | pass → block | Literal table substitution remains; optional `getattr(parse(url), attr)` → attribute equivalence was removed after an independently reproduced builtin-lookup counterexample. |\n\nThese observations come from 16 static API arms on actual LAPTOP-01AGNPJU / Windows / Python 3.11.9, marked `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`: frozen old source `9a5a27f44c895ba2fdee8c83a6313baf0e120873` versus copied development source hashes. Fixture files were checked against their original Git blobs. No subject program was executed, no CLI call belongs to this particular cost experiment, and the copied-source result is not final integration qualification. The immutable register SHA256 is `fb2bd09800319a67aa8e34fd51fd285f8fa8d3d575b87270deb41cea24125adf`.\n\nRequired disposition is individual and explicit: retain the new judgement with reviewed expectations, or provide a bounded safe proof for a legitimate transformation while preserving the adversarial controls. Do not relabel the originals merely to make checks green, restore a mass-only waiver, add exemptions to pass this PR, or turn these reconstructed cases into a natural-repository false-positive rate. Final-source full-suite and artifact evidence will be recorded separately. No merge/tag/publication or 1.0 approval is claimed.",
+      "state": "open",
+      "user": {
+        "login": "taipei49314",
+        "name": "taipei49314",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/82649657?v=4",
+        "id": 82649657
+      },
+      "assignees": null,
+      "labels": null,
+      "milestone": null,
+      "state_reason": null,
+      "comments": 0,
+      "created_at": "2026-10-26T17:49:09Z",
+      "updated_at": "2026-10-26T17:49:09Z",
+      "closed_at": null,
+      "display_url": "https://github.com/taipei49314/checkwash/issues/567",
+      "display_title": "0.10.0: adjudicate eight golden expectations affected by oracle-context credit"
+    },
+    "url": "https://github.com/taipei49314/checkwash/issues/567",
+    "title": "0.10.0: adjudicate eight golden expectations affected by oracle-context credit",
+    "display_url": "https://github.com/taipei49314/checkwash/issues/567",
+    "display_title": "0.10.0: adjudicate eight golden expectations affected by oracle-context credit"
+  },
+  "isError": false
+}

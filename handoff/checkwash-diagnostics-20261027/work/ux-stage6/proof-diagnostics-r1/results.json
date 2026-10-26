@@ -1,0 +1,202 @@
+{
+  "cli_calls": 0,
+  "files": {
+    "263-closed-root.json": {
+      "bytes": 14463,
+      "sha256": "9372d6744660282aa539b92cffcdc2c0407329a6e79860dc96fcbbc8fe030f07"
+    },
+    "263-original.json": {
+      "bytes": 12996,
+      "sha256": "2bf217b0ec1e229b9c24f0baf1136e6b22e94ea9330ad37365511e84404be75c"
+    },
+    "358-no-gate-control.json": {
+      "bytes": 9613,
+      "sha256": "6a68211596d73b4d9523c90e86761f8df503912d24c3f95701832fa8b9acc232"
+    },
+    "358-original.json": {
+      "bytes": 12548,
+      "sha256": "939044e294a60252ad363528718ccd5256e178cada0b8ed8c7cfb0c5dcce31e7"
+    },
+    "js-bare-to-bare-control.json": {
+      "bytes": 7964,
+      "sha256": "f450a20e4b56ef3456966d7b20b6830affc04e9d792753c35e1858eba4971156"
+    },
+    "js-bare-to-wrapper.json": {
+      "bytes": 8005,
+      "sha256": "cf6a430680234adc99c450dfc9f177a6daecfd5984595b7df1d4bbb78edb9ab8"
+    },
+    "js-hook-negative.json": {
+      "bytes": 8042,
+      "sha256": "41b0107289bd9ce9e34f8885de609744d65263ca54c59cc687fdd5ab70891a53"
+    },
+    "js-local-binding-negative.json": {
+      "bytes": 8040,
+      "sha256": "841d9a30d8c37066b509edcbad41688abccf3d5d96e8e7cb8f5851986c459b03"
+    },
+    "js-same-wrapper-control.json": {
+      "bytes": 8041,
+      "sha256": "4cd5df369f010dd37a34de9518f40ce3236630ac59d430e77b309478b1f6cd00"
+    },
+    "js-shadow-negative.json": {
+      "bytes": 8077,
+      "sha256": "9fbfe13a0668ed29eb50eeeefc7a7a7f85576a9ef4a5d247dd1e80d9a720735b"
+    },
+    "js-skipped-negative.json": {
+      "bytes": 8096,
+      "sha256": "9e8eb7c41331b4b5718cfd12504a9af3ce9f06078e98bd819a90b8b63aa8a0c2"
+    },
+    "js-this-negative.json": {
+      "bytes": 8029,
+      "sha256": "93f99072ab5466df204011d5f2d12379526a3bfbb6acc34b5b8a6f7b09eb771b"
+    }
+  },
+  "fixture_program_executions": 0,
+  "observations": [
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_one/v2:426ee3ff4d0dab4c755f9a18d744ca351f68718a99e9ecb6298328af898aa7b3",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        },
+        {
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_two/v2:3791a1cdd7e2ba33fb3043e0a9f22d7fa1a65c2042270b7f67c87dee2119508b",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "263-original",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_one/v2:426ee3ff4d0dab4c755f9a18d744ca351f68718a99e9ecb6298328af898aa7b3",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        },
+        {
+          "fingerprint": "TEST_DISABLED/tests/test_calc.py/test_two/v2:3791a1cdd7e2ba33fb3043e0a9f22d7fa1a65c2042270b7f67c87dee2119508b",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "263-closed-root",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:a76ebc5a9bd87c2ff6290ec4959aff70ce518d04c765f9508f09dc88f7c7df95",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "358-original",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:a76ebc5a9bd87c2ff6290ec4959aff70ce518d04c765f9508f09dc88f7c7df95",
+          "rule": "TEST_DISABLED",
+          "severity": "info"
+        }
+      ],
+      "label": "358-no-gate-control",
+      "verdict": "pass"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "js-bare-to-wrapper",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "info"
+        }
+      ],
+      "label": "js-bare-to-bare-control",
+      "verdict": "pass"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "info"
+        }
+      ],
+      "label": "js-same-wrapper-control",
+      "verdict": "pass"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "js-hook-negative",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "js-local-binding-negative",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "js-shadow-negative",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:088bc4d783077ab985baf1452fe4ddf407c2b42a8a14201c0f6cb1a6b6672945",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "js-this-negative",
+      "verdict": "block"
+    },
+    {
+      "findings": [
+        {
+          "fingerprint": "TEST_DISABLED/tests/a.test.js/computes/v2:5fee61fc239e03723a56ddb8b62aced9e6e45abf987b7ff7ee2c47559e698a8e",
+          "rule": "TEST_DISABLED",
+          "severity": "high"
+        }
+      ],
+      "label": "js-skipped-negative",
+      "verdict": "block"
+    }
+  ],
+  "pytest_calls": 0,
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "static_analyzer_calls": 12,
+  "status": "CAPTURE_COMPLETE_NOT_PRODUCT_ACCEPTANCE"
+}

@@ -1,0 +1,15 @@
+{
+  "status": "REJECTED_UNSAFE_NOT_APPLIED",
+  "latest_authoritative_disposition": true,
+  "rejected_raw_patch_sha256": "75a8d8e4983c15abe159b5e0c7cf8427cd123c67379ceb1fa8db88de813f7b51",
+  "rejected_proposed_module_sha256": "464435753edb7dc6a2dc2c652584f4c1f5b9a675838dd3fd8850da6bcd4ec36d",
+  "reason": "Describe can alter observable suite/name context. Emptywrapper/noothermodule statements do not prove opaque calls independent of thatcontext. Split-string observer andunknown globalobserver both acquireunsound wholeunit credit in actualprototype analysis.",
+  "observed_static_results": "3baseline BLOCK/high ->3unappliedprototype PASS/info/ASSERTION_MOVED; 2unsafe observer arms have empty assertionmaps and identicalfullunit keys",
+  "not_a_product_regression": "This unsafe prototype never applied; frozenfbc correctly withholds these credits",
+  "not_a_gating_fix": "Do not ban all empty maps or change D2/strength/alignment; completeunit compensation legitimately serves othercases. Error is unprovedenvironmentprojection.",
+  "safe_next_step": "RetainD179/currentexpected failure pendingissue570human disposition orclosed interprocedural call-effect/metadata proof. No finiteextra denylist repairs generalunknowncalls; originaltotal() has no implementation infixture.",
+  "maintainer_issue": "https://github.com/taipei49314/checkwash/issues/570",
+  "no_expected_or_contract_change": true,
+  "no_recommended_product_patch": true,
+  "creation_provenance_note": "Originalinert files retain their creation-time metadata. Rootlater executed anexactcopy asMIXED_RUNTIME prototype only; this decision supersedes anyinitial prediction ofsafePASS."
+}

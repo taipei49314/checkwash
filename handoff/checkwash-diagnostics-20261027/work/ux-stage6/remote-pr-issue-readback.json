@@ -1,0 +1,20 @@
+{
+  "classic_pr": {
+    "url": "https://github.com/taipei49314/checkwash/pull/569",
+    "number": 569,
+    "head": "15ac804593bc41db8f904e7921667bd6c276fa9a",
+    "base": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+    "draft": true,
+    "merged": false,
+    "state": "open",
+    "body_exact_match": true,
+    "updated_at": "2026-10-26T23:02:56Z"
+  },
+  "js_issue": {
+    "url": "https://github.com/taipei49314/checkwash/issues/570",
+    "number": 570,
+    "state": "open",
+    "body_exact_match": true,
+    "updated_at": "2026-10-26T23:03:39Z"
+  }
+}

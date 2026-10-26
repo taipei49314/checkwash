@@ -1,0 +1,126 @@
+"""Prepare inert source-only proposal; never import/run the product or fixtures."""
+from pathlib import Path
+import ast
+import difflib
+import hashlib
+import json
+
+BASE = Path(r"C:\Users\nelson\Documents\Codex\2026-10-26\1-00-start-here-md-c")
+REPO = BASE / "work/checkwash-ux"
+OUT = Path(__file__).parent
+SOURCE = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+path = REPO / "src/checkwash/oracle_credit.py"
+before = path.read_bytes()
+text = before.decode("utf-8")
+helper = '''def _javascript_environment_spans(text, units, code):
+    """Project one source-closed plain framework grouping, never its contents.
+
+    Unit declaration/body/assertions still supply the complete proof. Only a
+    module containing one global plain describe with one plain unit, and no
+    other executable/binding context, admits this registration-only envelope.
+    """
+    spans = [side.span for _name, side in units]
+    if len(units) != 1:
+        return spans
+    from checkwash.frontends.javascript.frontend import _declarations, _test_body, file_bindings
+
+    side = units[0][1]
+    if side.markers or side.param_rows_unknown or side.param_rows or side.param_cases is not None:
+        return spans
+    bindings = file_bindings(text.encode("utf-8"))
+    if len(bindings.tokens) > 4096:
+        return spans
+
+    def tokens(first, last):
+        return [value for value, start, end in bindings.tokens if first <= start and end <= last]
+
+    def separators_outside(first, last, envelope_first, envelope_last):
+        return all(value == ";" for value, start, end in bindings.tokens
+                   if first <= start and end <= last
+                   and not (envelope_first <= start and end <= envelope_last))
+
+    def plain(declaration, words):
+        if declaration.call is None or declaration.table or declaration.markers or declaration.focus is not None:
+            return False
+        head = tokens(declaration.start, declaration.opening)
+        if len(head) != 1 or head[0] not in words or not bindings.is_global((head[0],), declaration.start):
+            return False
+        args, _end = declaration.call
+        if len(args) != 2:
+            return False
+        title = tokens(*args[0])
+        if len(title) != 1 or len(title[0]) < 2 or title[0][0] not in "\\\"'" or title[0][-1] != title[0][0]:
+            return False
+        callback = _test_body(text, code, bindings, declaration)
+        return bool(callback and tokens(callback[3][0], callback[0]) == ["(", ")", "=>", "{"])
+
+    declarations = _declarations(text, code, bindings)
+    if len(declarations) != 2:
+        return spans
+    unit_start, unit_end = side.span
+    inner = next((d for d in declarations if d.unit and d.start == unit_start
+                  and d.call is not None and d.call[1] == unit_end), None)
+    if inner is None or not plain(inner, {"it", "test"}):
+        return spans
+    unit_tokens = tokens(unit_start, unit_end)
+    if any(value in {"this", "arguments", "super", "eval", "Function", "getState", "currentTestName"}
+           for value in unit_tokens):
+        return spans
+    if any(unit_tokens[i:i + 3] == ["new", ".", "target"] for i in range(len(unit_tokens) - 2)):
+        return spans
+    for outer in declarations:
+        if outer.unit or not plain(outer, {"describe"}) or bindings.scope(outer.start) != 0:
+            continue
+        callback = _test_body(text, code, bindings, outer)
+        first, last, call_end, _argument = callback
+        if not (first <= unit_start < unit_end <= last):
+            continue
+        if not separators_outside(first, last, unit_start, unit_end):
+            continue
+        if not separators_outside(0, len(text), outer.start, call_end):
+            continue
+        return [(outer.start, call_end)]
+    return spans
+
+
+'''
+anchor="def _javascript_context(source, units, path, needed):\n"
+assert text.count(anchor)==1
+text=text.replace(anchor,helper+anchor,1)
+old='''    ordered = sorted(units, key=lambda item: item[1].span)
+    outside, last = [], 0
+    for _name, side in ordered:
+        start, end = side.span
+'''
+new='''    ordered = sorted(_javascript_environment_spans(text, units, source_code))
+    outside, last = [], 0
+    for start, end in ordered:
+'''
+assert text.count(old)==1
+text=text.replace(old,new,1)
+after=text.encode("utf-8")
+ast.parse(after)  # Static syntax parsing only, not bytecode compilation/import/execution.
+patch="".join(difflib.unified_diff(before.decode().splitlines(keepends=True),text.splitlines(keepends=True),
+                                 fromfile="a/src/checkwash/oracle_credit.py",tofile="b/src/checkwash/oracle_credit.py")).encode()
+h=lambda raw:hashlib.sha256(raw).hexdigest()
+for name,data in [("proposal-oracle-credit.diff",patch),("proposed-oracle_credit.py.txt",after)]:
+ target=OUT/name;assert not target.exists();target.write_bytes(data)
+record={"status":"INERT_NOT_APPLIED_NOT_IMPORTED_NOT_EXECUTED_NOT_ACCEPTED",
+ "source_sha":SOURCE,"product_file":"src/checkwash/oracle_credit.py",
+ "before_sha256":h(before),"proposed_after_sha256":h(after),"raw_patch_sha256":h(patch),
+ "patch_bytes":len(patch),"EOL":"LF raw bytes",
+ "constraints":["Wholemodule exactlyone plain globaldescribe +one plain globalit/test",
+ "Literaltitle, zeroargument nonasyncarrow callbacks, no table/modifiers/options/focus/skip",
+ "No other module/wrapper executable tokens or lexicalbindings; separators/comments only",
+ "No this/arguments/super/eval/Function/new.target/direct testmetadata-sensitive names",
+ "Complete unitbody/assertion context, imported producer resolution, liveness and spentcredits remain existing owners",
+ "No fallback to text/body/mass waiver; all rejected shapes retain exactexisting proof algorithm"],
+ "predicted_movement":"Original bare->plainwrapper positive is candidate PASS/info under frontendframework assumptions; proposed source never executed",
+ "not_modified":["Productcheckout","Tests/fixtures/expected","gating/strength/alignment","SPEC/DECISIONS/contracts","stage5/outputs"],
+ "not_run":["modifiedproduct/API/CLI/pytest","newnegativecontrols onproposedsource"],
+ "actual_fbc_evidence":"Root bounded-context-r1; separate readonly nativeaudit records exact observations",
+ "product_calls_by_preparation":0}
+target=OUT/"proposal-provenance.json";assert not target.exists();target.write_bytes((json.dumps(record,ensure_ascii=False,indent=2)+"\n").encode())
+assert path.read_bytes()==before
+print(json.dumps({"patch_sha256":h(patch),"patch_bytes":len(patch),"proposed_source_sha256":h(after),"base_sha256":h(before)}))
+

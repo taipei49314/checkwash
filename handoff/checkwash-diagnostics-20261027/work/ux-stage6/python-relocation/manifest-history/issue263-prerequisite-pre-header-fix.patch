@@ -1,0 +1,16 @@
+diff --git a/tests/test_issue263_string_conditions.py b/tests/test_issue263_string_conditions.py
+--- a/tests/test_issue263_string_conditions.py
++++ b/tests/test_issue263_string_conditions.py
+@@ -41,9 +41,13 @@ def module(decorator="", imports="import sys\n", constants=""):
+ 
+ def outcome(after, before=None):
+     before = module() if before is None else before
++    # This ordinary fixture describes a closed repository. In-diff BASE
++    # source still comes from FileChange.before; unlisted startup is absent.
++    snapshot = {TEST_PATH: after.encode()}
+     _ir, findings, verdict = analyze(
+         [FileChange(TEST_PATH, "modified", before.encode(), after.encode())],
+         Config(), Contract(), [], datetime.date(2026, 10, 6),
++        head_reader=snapshot.get, root_reader=snapshot.get,
+     )
+     return verdict, [(f.rule, f.severity, f.deescalators) for f in findings]

@@ -1,0 +1,11 @@
+import pytest
+
+from app.calc import add
+
+
+def test_one():
+    assert add(1, 2) == 3
+
+
+def test_two():
+    assert add(2, 2) == 4

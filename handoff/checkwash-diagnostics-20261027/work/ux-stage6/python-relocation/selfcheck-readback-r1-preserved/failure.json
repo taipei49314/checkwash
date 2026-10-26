@@ -1,0 +1,7 @@
+{
+  "reader_exit_code": 1,
+  "product_calls": 0,
+  "reason": "Initial reader wrongly required TEST_DISABLED whole-unit span to equal representative assertion text; native source evidence was not altered.",
+  "failed_check": "classic-self-integration-r1 exact before committed span TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb",
+  "raw_selfcheck_inputs_changed": false
+}

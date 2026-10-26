@@ -1,0 +1,118 @@
+"""Standard-library/read-only Git binding of reviewed bytes to classic commit.
+
+No product/test imports, pytest, fixture execution or Git writes.
+"""
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[3]
+HERE = Path(__file__).resolve().parent
+WT = ROOT / "work/checkwash-classic-followup"
+RUN = ROOT / "work/ux-stage6/final/classic-fixed-tests-r1"
+BASE = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+COMMIT = "15ac804593bc41db8f904e7921667bd6c276fa9a"
+TEST = "tests/test_classic_raises_additions.py"
+checks, inputs, commands = [], {}, []
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def read(path):
+    raw = path.read_bytes()
+    inputs[path.relative_to(ROOT).as_posix()] = sha(raw)
+    return raw
+
+
+def require(ok, name):
+    checks.append({"name": name, "passed": bool(ok)})
+    if not ok:
+        raise ValueError(name)
+
+
+def git(*args):
+    argv = ["git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", str(WT), *args]
+    started = datetime.now(timezone.utc).isoformat()
+    value = subprocess.run(argv, capture_output=True, check=False)
+    commands.append({"command": argv, "started_utc": started,
+                     "ended_utc": datetime.now(timezone.utc).isoformat(), "exit_code": value.returncode,
+                     "stdout_sha256": sha(value.stdout), "stderr_sha256": sha(value.stderr),
+                     "stdout_hex": value.stdout.hex(), "stderr_utf8": value.stderr.decode("utf-8", "backslashreplace")})
+    require(value.returncode == 0, "read-only Git command completed")
+    return value.stdout
+
+
+def main():
+    require(git("rev-parse", "HEAD").decode().strip() == COMMIT, "current classic worktree is exact new commit")
+    require(git("rev-parse", COMMIT + "^").decode().strip() == BASE, "new commit parent is fbc")
+    require(git("status", "--porcelain", "--untracked-files=all") == b"", "classic worktree clean")
+    delta = git("diff-tree", "--no-commit-id", "--name-status", "-r", "-z", BASE, COMMIT).split(b"\0")
+    require(delta == [b"M", TEST.encode(), b""], "commit changes only reviewed ordinary test")
+    review_raw = read(HERE / "classic-consumer-review.json")
+    require(sha(review_raw) == "448d7764f6f1c8ce46950b31c5f46f66fb8ab69efe27b75c1398f8873b120965",
+            "original independent field-contract review bytes preserved")
+    review = json.loads(review_raw)
+    native = json.loads(read(RUN / "receipt.json"))
+    require(native["expected_source_sha"] == native["source_sha"] == native["ending_sha"] == COMMIT
+            and native["validation_kind"] == "FIXED_SOURCE_NOT_RELEASE_BRIDGE"
+            and type(native["exit_code"]) is int and native["exit_code"] == 0
+            and native["source_files_unchanged"] is True and native["changed_inputs"] == [],
+            "new fixed targeted capture source/exit/unchanged binding")
+    manifest_raw = read(RUN / "input-hashes.json")
+    require(sha(manifest_raw) == native["input_manifest_sha256"] == review["input_manifest_sha256"],
+            "new fixed run used exact reviewed development byte map")
+    manifest = json.loads(manifest_raw)
+    entries = git("ls-tree", "-r", "-z", COMMIT).split(b"\0")
+    tree = {}
+    for entry in entries:
+        if not entry:
+            continue
+        metadata, path = entry.split(b"\t", 1)
+        mode, kind, oid = metadata.decode().split()
+        require(kind == "blob" and mode in {"100644", "100755"}, "tracked tree member is regular blob")
+        tree[path.decode()] = {"mode": mode, "git_blob": oid}
+    require(set(tree) == set(manifest), "all captured member paths exactly match new Git tree")
+    mismatches = []
+    for name, expected in manifest.items():
+        data = (WT / name).read_bytes()
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        if sha(data) != expected or blob != tree[name]["git_blob"]:
+            mismatches.append(name)
+    require(not mismatches, "all reviewed physical bytes exactly equal new commit blobs")
+    target_raw = (WT / TEST).read_bytes()
+    require(sha(target_raw) == review["input_hashes"][str(WT / TEST)], "new committed classic file equals AST-reviewed file")
+    xml = ET.fromstring(read(RUN / "junit.xml"))
+    suites = list(xml.iter("testsuite"))
+    require(len(suites) == 1 and suites[0].get("tests") == "31" and suites[0].get("failures") == "0"
+            and suites[0].get("errors") == "0" and suites[0].get("skipped") == "0"
+            and len(list(xml.iter("testcase"))) == 31, "new fixed native JUnit31 with no failure/error/skip")
+    require(b"31 passed" in read(RUN / "stdout.txt") and read(RUN / "stderr.txt") == b"", "new fixed native stdout31/stderr empty")
+    require(read(RUN / "source.diff") == read(RUN / "git-status.txt") == b"", "fixed source diff/status empty")
+    for name, digest in list(inputs.items()):
+        require(sha((ROOT / name).read_bytes()) == digest, "original receipt/review preserved: " + name)
+    output = {"review_state": "PASS_BOUNDED_COMMIT_AND_TARGETED_TEST_PROVENANCE", "base_source_sha": BASE,
+              "new_source_sha": COMMIT, "provenance": native["provenance"], "host": native["host"],
+              "runtime": native["python"], "reviewed_contract_sha256": sha(review_raw),
+              "native_targeted_exit_code": native["exit_code"], "native_targeted_parent_tests": 31,
+              "tracked_files_verified_against_git_blobs": len(tree), "changed_paths": [TEST],
+              "input_manifest_sha256": sha(manifest_raw), "fixed_receipt_sha256": inputs[(RUN / "receipt.json").relative_to(ROOT).as_posix()],
+              "original_inputs_preserved": True, "read_only_git_commands": commands, "input_hashes": inputs,
+              "checks": checks, "product_calls_by_reader": 0, "pytest_calls_by_reader": 0,
+              "reader_runtime": sys.version, "reader_sha256": sha(Path(__file__).read_bytes()),
+              "not_run_for_new_source": ["full suite", "source/wheel/pyz distribution qualification", "formal release bridge", "published checks"],
+              "interpretation": "Only the reviewed ordinary native-field consumer and a fixed31-test run are established. fbc qualifications,15 failures and original self-dogfood are retained as historical source-bound evidence, not qualifications for15ac."}
+    path = HERE / "classic-commit-provenance.json"
+    require(not path.exists(), "new provenance path (preserve prior records)")
+    path.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(json.dumps({"review_state": output["review_state"], "tracked_files": len(tree), "checks": len(checks),
+                      "path": str(path), "sha256": sha(path.read_bytes()), "product_calls": 0}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

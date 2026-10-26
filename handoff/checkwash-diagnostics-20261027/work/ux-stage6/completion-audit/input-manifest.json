@@ -1,0 +1,205 @@
+{
+  "scope": "Hashed consulted requirement, contract and evidence sources. Hash presence does not claim full raw proof replay or full text reading of every contract section.",
+  "files": [
+    {
+      "path": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\new-chat\\outputs\\checkwash-next-session-handoff-20261026\\00-START-HERE.md",
+      "bytes": 4432,
+      "sha256": "6d5ed7285cb847e43fa1e828d73967f8547325d1b7d67678c3590d1727d10e0c"
+    },
+    {
+      "path": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\new-chat\\outputs\\checkwash-next-session-handoff-20261026\\01-修復範圍與優先序.md",
+      "bytes": 7741,
+      "sha256": "56ce9106fe88f90d0d17c0040189d30abeed18a184d28104d04776e9a7bc468b"
+    },
+    {
+      "path": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\new-chat\\outputs\\checkwash-next-session-handoff-20261026\\02-驗收與版本決策.md",
+      "bytes": 4168,
+      "sha256": "3da1de63596587c2fd3700781a21c31b58e6c2a783a85b56814fa1eb1db99f5f"
+    },
+    {
+      "path": "work\\checkwash-ux\\docs\\repair-integration-0.10.0.md",
+      "bytes": 4331,
+      "sha256": "4a605f04a903e2117303f12d6e390ad3daafa4e7945b0ea4b24e6940a007f1a4"
+    },
+    {
+      "path": "work\\checkwash-ux\\docs\\oracle-credit-0.10.0.md",
+      "bytes": 4105,
+      "sha256": "0416dc7af987c9b733e67b1009ae151422a459597b9b9121d0d6bc2ec9dfee8e"
+    },
+    {
+      "path": "work\\checkwash-ux\\STATE.md",
+      "bytes": 219677,
+      "sha256": "9857161728c58a77af41addeee1df7080d6040e954c2a8cc5ee9b8886ed12765"
+    },
+    {
+      "path": "work\\checkwash-ux\\AGENTS.md",
+      "bytes": 1607,
+      "sha256": "808532a67111c07e572a5c7b8b1ef2139b15e1f3648a4f5ac4781c8ceff43bff"
+    },
+    {
+      "path": "work\\checkwash-ux\\SPEC.md",
+      "bytes": 163337,
+      "sha256": "d7a67a76070ad563ffd062a253085e3b9efc38657f1f14c70a27a3cb5bc33fb1"
+    },
+    {
+      "path": "work\\checkwash-ux\\DECISIONS.md",
+      "bytes": 32427,
+      "sha256": "a83d479b850c5e5a2514729261be5455f2cb14e64254590c47975056bbd2a1d6"
+    },
+    {
+      "path": "work\\checkwash-ux\\docs\\stability.md",
+      "bytes": 30297,
+      "sha256": "e830f5fa989fd09567a6a02d22fe79c6f162012361e460f9631bc7b5f2a4e528"
+    },
+    {
+      "path": "work\\checkwash-ux\\docs\\RELEASING.md",
+      "bytes": 73408,
+      "sha256": "befa7092b33f014c1d42b7f7d2caa7e8a45c1234ebf34c8c14fa9a236460530c"
+    },
+    {
+      "path": "work\\ux-stage5\\final\\full-suite-311-r1\\junit.xml",
+      "bytes": 3947511,
+      "sha256": "fa97656f0141bfdfa2c35a7389bc594afd1c3e0c97334663f409f8bcfa6bf10f"
+    },
+    {
+      "path": "work\\ux-stage5\\final\\full-suite-311-r1\\receipt.json",
+      "bytes": 1834,
+      "sha256": "c8d2c8b3a62c1d61aaba6de8f53ede12f4046a6790dc78cbc0fc611db9afe2f0"
+    },
+    {
+      "path": "work\\ux-stage5\\final\\full-suite-311-r1\\independent-readback.json",
+      "bytes": 101303,
+      "sha256": "050bb6876708caecc652017c7479f818ed5ec6d36289c72c4ae320fe1db3a6c6"
+    },
+    {
+      "path": "work\\ux-stage5\\qualification\\TERMINAL-READBACK-SUMMARY.json",
+      "bytes": 9061,
+      "sha256": "524d7864b177f957fcea77325d8190ffcd24eef40ba9e4a7a56e7ea8d76e5c09"
+    },
+    {
+      "path": "work\\ux-stage5\\source-content-equivalence.json",
+      "bytes": 758,
+      "sha256": "503616ebcb1e53d37d66f42717dbd7fa93fd81fd26a2b79918d8ae5c0a37be06"
+    },
+    {
+      "path": "work\\ux-stage5\\full-suite-regression-delta.json",
+      "bytes": 3995,
+      "sha256": "96a39a7d144d1f5ebc5c9bae7ad2885886976d8311567f2d2dfbd0eb46da6fae"
+    },
+    {
+      "path": "work\\ux-stage5\\selfdogfood-review\\review.json",
+      "bytes": 9930,
+      "sha256": "bd92e4c4cfd63adffaf54ae07c9b2f03d529b6c68fe021c5e8bde8a02c009785"
+    },
+    {
+      "path": "work\\ux-stage5\\selfdogfood-review\\README.md",
+      "bytes": 3291,
+      "sha256": "723e5110b10e2bc05db6bcd04880f908684f6957693ed4b96706d9bb545d54c0"
+    },
+    {
+      "path": "work\\ux-stage5\\checkpoint-pack\\remote-state.json",
+      "bytes": 27169,
+      "sha256": "d46a8e6b2f9a259d171aaa03848b3476c52913f522c145f919a8d34dd786a746"
+    },
+    {
+      "path": "work\\ux-stage5\\checkpoint-pack\\pack-receipt.json",
+      "bytes": 1748,
+      "sha256": "1a47172e5ced5814c5415710da36dafc4f0f0069fdce7a45792f9d34c629b4eb"
+    },
+    {
+      "path": "work\\ux-stage5\\checkpoint-pack\\packed-author-readback.json",
+      "bytes": 1254,
+      "sha256": "5491a9a42d5eeabe708d6da87355d1335f41f93295716beef1443235db714a9d"
+    },
+    {
+      "path": "work\\ux-stage4\\policy\\development-report.md",
+      "bytes": 7153,
+      "sha256": "7b3a871f26b9b00cd582b974acfea5b8a18e7ebf8dac1758ddf940bad379894c"
+    },
+    {
+      "path": "work\\ux-stage3\\completion-review\\report.md",
+      "bytes": 18769,
+      "sha256": "4f3719c9384368cdcb19f393f77ece31bd85ba1ee912e7fbf99283067734c4f4"
+    },
+    {
+      "path": "work\\ux-stage3\\report-draft.md",
+      "bytes": 10404,
+      "sha256": "2e3661ddf8f3acba2d12e4a015f1b9fa14c5088e83137e4899c3425fbd72a0de"
+    },
+    {
+      "path": "work\\ux-stage2\\sweep\\report.md",
+      "bytes": 4284,
+      "sha256": "eb89987a2a7e0aa665508773f294285d920e67559f25bfec7141736e6ebe8ed2"
+    },
+    {
+      "path": "work\\gitlink\\report.md",
+      "bytes": 4085,
+      "sha256": "07d3eabe830957801eaa198dd09bb4742a9c9c3893afa0ac2b908f4e51c82616"
+    },
+    {
+      "path": "work\\quality\\report.md",
+      "bytes": 5050,
+      "sha256": "c18c64a0e912a2e3649e5db59c084dc00aef6a57befc60a71699ed89bd29eea5"
+    },
+    {
+      "path": "work\\compat\\report.md",
+      "bytes": 4716,
+      "sha256": "1716276392a66f6d98e6e4d0704b42151fd80fdf717e04e6cf2dafd70e9bac38"
+    },
+    {
+      "path": "work\\ux-stage5\\qualification\\source-r1\\independent-readback.json",
+      "bytes": 3404,
+      "sha256": "82f13b124aba0554eb747639feac616d84a4aa11fff4f155830b9079a5b48f1b"
+    },
+    {
+      "path": "work\\ux-stage5\\final\\source-assertion-qualification-r1\\receipt.json",
+      "bytes": 2108,
+      "sha256": "07e855ebba04be80ba2e50997e3a5e4e322ef0b7424fbd61e934008b5438ee2d"
+    },
+    {
+      "path": "work\\ux-stage5\\qualification\\wheel-r1\\independent-readback.json",
+      "bytes": 4352,
+      "sha256": "5fb2d243ade816d6466d473894c2b646bccb292ec6d55511e641ee4423c7318c"
+    },
+    {
+      "path": "work\\ux-stage5\\final\\wheel-assertion-qualification-r1\\receipt.json",
+      "bytes": 2131,
+      "sha256": "1ec93635165aab6b8ab447c252fcf7bd0f879dca85e20bf729470795bd60fc94"
+    },
+    {
+      "path": "work\\ux-stage5\\qualification\\pyz-r1\\independent-readback.json",
+      "bytes": 3566,
+      "sha256": "b5c661789e01bc85d252692c13b5807085d0f902b40ce27b1d44b5899370d2ce"
+    },
+    {
+      "path": "work\\ux-stage5\\final\\pyz-assertion-qualification-r1\\receipt.json",
+      "bytes": 2093,
+      "sha256": "7ef676f052dfb1811cd26e34d87f463f12e248345ea4a843e1bc2766b2e8fd11"
+    },
+    {
+      "path": "work\\ux-stage6\\completion-audit\\remote-issue567-comments.json",
+      "bytes": 424,
+      "sha256": "6b936607ecfecb3d55d2c987f430ba77d7146e6c354dc0658e4682eaf48bee66"
+    },
+    {
+      "path": "work\\ux-stage6\\completion-audit\\remote-issue567.json",
+      "bytes": 4584,
+      "sha256": "34b57553c81d7ad80b72efdcdc4779b3255a5ebdb3ee1f8b5398adde4b38f91f"
+    },
+    {
+      "path": "work\\ux-stage6\\completion-audit\\remote-issue568-comments.json",
+      "bytes": 424,
+      "sha256": "9604e3f24d3fe36b44cf3654c20d48ce6d7846d0f06085cbec407d792dd74b4e"
+    },
+    {
+      "path": "work\\ux-stage6\\completion-audit\\remote-issue568.json",
+      "bytes": 4579,
+      "sha256": "dd5f159bb649d04ee8e4ce63405ce38ddb6267a42798a144f565949ed197032b"
+    },
+    {
+      "path": "work\\ux-stage6\\completion-audit\\remote-pr566.json",
+      "bytes": 6295,
+      "sha256": "9961bdc7976432866ce63ec067e48251823f07f6fd143173f9dd326485100b20"
+    }
+  ]
+}

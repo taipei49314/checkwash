@@ -1,0 +1,12 @@
+{
+  "origin": "work/ux-stage5/capture_final.py",
+  "origin_sha256": "78bdf1762224daa5b922a725c9403d6ef9f48eaef38f808fb91bf00e10a4b5d0",
+  "derived": "work/ux-stage6/capture_classic_fixed.py",
+  "derived_sha256": "83429ab32dc55de4948052d78e8eaec53c3bbfb04dfb8b6cff654d08dee724a5",
+  "changes": [
+    "docstring identifies separate classic consumer commit",
+    "separate classic followup checkout",
+    "independent classic-final-source PIN",
+    "fresh owned temp prefix"
+  ]
+}

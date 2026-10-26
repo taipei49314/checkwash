@@ -1,0 +1,445 @@
+{
+  "changes": [
+    {
+      "after_sha256": "5796311a0b088876a58f5ec2e3bc8a6afac259538446de47cd514a67182ec3d5",
+      "after_utf8": "import os\n\nimport pytest\n\nfrom app.billing import total\n\n\n@pytest.fixture(autouse=True)\ndef only_slow(request):\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n        pytest.skip('slow tests are off')\n\n\n",
+      "before_sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+      "before_utf8": "import os\n\nimport pytest\n\nfrom app.billing import total\n\n\n@pytest.fixture(autouse=True)\ndef only_slow(request):\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n        pytest.skip('slow tests are off')\n\n\ndef test_total():\n    assert total() == 78.75\n",
+      "path": "tests/test_billing.py",
+      "status": "modified"
+    },
+    {
+      "after_sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+      "after_utf8": "import os\n\nimport pytest\n\nfrom app.billing import total\n\n\n@pytest.fixture(autouse=True)\ndef only_slow(request):\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n        pytest.skip('slow tests are off')\n\n\ndef test_total():\n    assert total() == 78.75\n",
+      "before_sha256": null,
+      "before_utf8": null,
+      "path": "tests/test_other.py",
+      "status": "added"
+    }
+  ],
+  "closed_snapshot": true,
+  "date": "2026-10-08",
+  "files": [
+    {
+      "language": "python",
+      "path": "tests/test_billing.py",
+      "role": "test",
+      "units": [
+        {
+          "after": null,
+          "after_live": null,
+          "before": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "total()",
+                "left_names": [
+                  "total"
+                ],
+                "operand_source": null,
+                "positive": true,
+                "predicate": null,
+                "reaching": {},
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "78.75",
+                "right_value": "78.75",
+                "span": [
+                  257,
+                  280
+                ],
+                "strength": 90,
+                "text": "assert total() == 78.75",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "d8ba61947d7b109065cf47feafe3ce98657f053b16204ef848ffca6b27122967",
+            "calls": [
+              "total"
+            ],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [
+              "total"
+            ],
+            "markers": [],
+            "oracle_assertion_contexts": {},
+            "oracle_context": "",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              235,
+              280
+            ]
+          },
+          "qualname": "test_total"
+        }
+      ]
+    },
+    {
+      "language": "python",
+      "path": "tests/test_other.py",
+      "role": "test",
+      "units": [
+        {
+          "after": {
+            "assertions": [
+              {
+                "bare_expectation": false,
+                "epsilon": null,
+                "epsilon_kind": null,
+                "fixture_reads": [],
+                "form": "compare_eq",
+                "id": "a0",
+                "inherited": false,
+                "left": "total()",
+                "left_names": [
+                  "total"
+                ],
+                "operand_source": null,
+                "positive": true,
+                "predicate": null,
+                "reaching": {},
+                "reaching_sig": "",
+                "resolved_subject": null,
+                "right_depends_on": [],
+                "right_literal": "78.75",
+                "right_value": "78.75",
+                "span": [
+                  257,
+                  280
+                ],
+                "strength": 90,
+                "text": "assert total() == 78.75",
+                "trivial": false,
+                "unbound_operands": false,
+                "unevaluated_expected": null,
+                "via": null
+              }
+            ],
+            "bindings": {},
+            "body_hash": "d8ba61947d7b109065cf47feafe3ce98657f053b16204ef848ffca6b27122967",
+            "calls": [
+              "total"
+            ],
+            "collect_ignored": [],
+            "exclusive_bindings": [],
+            "fixture_producers": [],
+            "handlers": [],
+            "invoked": [
+              "total"
+            ],
+            "markers": [],
+            "oracle_assertion_contexts": {},
+            "oracle_context": "",
+            "param_cases": null,
+            "param_columns": {},
+            "param_rows": [],
+            "param_rows_unknown": false,
+            "params": [],
+            "patches": [],
+            "span": [
+              235,
+              280
+            ]
+          },
+          "after_live": true,
+          "before": null,
+          "qualname": "test_total"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          235,
+          280
+        ],
+        "text": "assert total() == 78.75"
+      },
+      "deescalators": [],
+      "escalators": [
+        "NO_PROD_CHANGE_IN_DIFF"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:a76ebc5a9bd87c2ff6290ec4959aff70ce518d04c765f9508f09dc88f7c7df95",
+      "message": "test_total: test unit disappeared",
+      "path": "tests/test_billing.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_total"
+    }
+  ],
+  "label": "358-original",
+  "mark_context_calls": [
+    {
+      "language": "python",
+      "needed": [
+        "test_total"
+      ],
+      "path": "tests/test_billing.py",
+      "source_sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+      "startup": "[]",
+      "startup_known": true,
+      "units": [
+        {
+          "name": "test_total",
+          "oracle_assertion_contexts": {},
+          "oracle_context": "",
+          "span": [
+            235,
+            280
+          ]
+        }
+      ]
+    },
+    {
+      "language": "python",
+      "needed": [
+        "test_total"
+      ],
+      "path": "tests/test_billing.py",
+      "source_sha256": "5796311a0b088876a58f5ec2e3bc8a6afac259538446de47cd514a67182ec3d5",
+      "startup": "[]",
+      "startup_known": true,
+      "units": []
+    },
+    {
+      "language": "python",
+      "needed": [
+        "test_total"
+      ],
+      "path": "tests/test_other.py",
+      "source_sha256": null,
+      "startup": null,
+      "startup_known": false,
+      "units": []
+    },
+    {
+      "language": "python",
+      "needed": [
+        "test_total"
+      ],
+      "path": "tests/test_other.py",
+      "source_sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+      "startup": "[]",
+      "startup_known": true,
+      "units": [
+        {
+          "name": "test_total",
+          "oracle_assertion_contexts": {},
+          "oracle_context": "",
+          "span": [
+            235,
+            280
+          ]
+        }
+      ]
+    }
+  ],
+  "snapshot": {
+    "app/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "utf8": ""
+    },
+    "app/billing.py": {
+      "sha256": "fc25611db36c09e28b1dc196a32eca573b34c6d7fb5a6f197a0ccd767ae59a56",
+      "utf8": "def total():\n    return 78.75\n"
+    },
+    "tests/test_billing.py": {
+      "sha256": "5796311a0b088876a58f5ec2e3bc8a6afac259538446de47cd514a67182ec3d5",
+      "utf8": "import os\n\nimport pytest\n\nfrom app.billing import total\n\n\n@pytest.fixture(autouse=True)\ndef only_slow(request):\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n        pytest.skip('slow tests are off')\n\n\n"
+    },
+    "tests/test_other.py": {
+      "sha256": "160a24d393aa1a4a50a35d0600c517245a4956599a35437d16c2889dbfeb729f",
+      "utf8": "import os\n\nimport pytest\n\nfrom app.billing import total\n\n\n@pytest.fixture(autouse=True)\ndef only_slow(request):\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n        pytest.skip('slow tests are off')\n\n\ndef test_total():\n    assert total() == 78.75\n"
+    }
+  },
+  "startup_lookups": [
+    {
+      "channel": "ROOT",
+      "path": "tests/conftest.py",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "conftest.py",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/.pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/.pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/pyproject.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/tox.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/setup.cfg",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": ".pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": ".pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "pyproject.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tox.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "setup.cfg",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/.pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/.pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/pyproject.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/tox.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/setup.cfg",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": ".pytest.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": ".pytest.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "pyproject.toml",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tox.ini",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "setup.cfg",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "tests/__init__.py",
+      "sha256": null
+    },
+    {
+      "channel": "ROOT",
+      "path": "__init__.py",
+      "sha256": null
+    }
+  ],
+  "verdict": "block"
+}

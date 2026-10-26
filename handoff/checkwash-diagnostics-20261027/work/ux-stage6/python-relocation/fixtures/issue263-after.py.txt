@@ -1,0 +1,15 @@
+import pytest
+
+from app.calc import add
+
+old_python = pytest.mark.skipif("sys.version_info < (2,6)")
+
+
+class TestAdd:
+    pytestmark = old_python
+
+    def test_one(self):
+        assert add(1, 2) == 3
+
+    def test_two(self):
+        assert add(2, 2) == 4

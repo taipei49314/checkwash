@@ -1,0 +1,243 @@
+{
+  "review_state": "PASS_BOUNDED_ORDINARY_CONSUMER_CONTRACT_REVIEW",
+  "base_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "identity": "UNCOMMITTED_WORKTREE_BYTES_NOT_NEW_COMMIT_QUALIFICATION",
+  "host": "LAPTOP-01AGNPJU",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "reader_runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "native_fields_exact": [
+    "span",
+    "assertions",
+    "calls",
+    "markers",
+    "handlers",
+    "param_cases",
+    "body_hash",
+    "bindings",
+    "param_columns",
+    "param_rows",
+    "param_rows_unknown",
+    "collect_ignored",
+    "invoked",
+    "params",
+    "patches",
+    "exclusive_bindings",
+    "fixture_producers"
+  ],
+  "enrichment_fields_exact": [
+    "oracle_assertion_contexts",
+    "oracle_context"
+  ],
+  "development_changed_paths": [
+    "tests/test_classic_raises_additions.py"
+  ],
+  "current_matches_development_receipt": true,
+  "native_recorded_tests": 31,
+  "native_recorded_exit_code": 0,
+  "source_diff_sha256": "5888786bd6dd52b0b797d9454d31d3c6ac8f5fe39d0811b417409e5e6d0dce59",
+  "input_manifest_sha256": "6580ef369d33c01db0960263bdcce9016980e56ae28529605653775b516915c1",
+  "checks": [
+    {
+      "name": "preserve development-only identity",
+      "passed": true
+    },
+    {
+      "name": "native targeted receipt completed unchanged development run",
+      "passed": true
+    },
+    {
+      "name": "development input map hash",
+      "passed": true
+    },
+    {
+      "name": "development membership same as frozen fbc map",
+      "passed": true
+    },
+    {
+      "name": "only the ordinary classic test file differs from fbc",
+      "passed": true
+    },
+    {
+      "name": "all current worktree bytes equal captured development map",
+      "passed": true
+    },
+    {
+      "name": "old comparison is frozen fbc test bytes",
+      "passed": true
+    },
+    {
+      "name": "derive complete seventeen native fields plus exact two enrichment fields",
+      "passed": true
+    },
+    {
+      "name": "native membership guard is a full literal set",
+      "passed": true
+    },
+    {
+      "name": "guard contains every native field exactly once",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: span",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: assertions",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: calls",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: markers",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: handlers",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: param_cases",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: body_hash",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: bindings",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: param_columns",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: param_rows",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: param_rows_unknown",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: collect_ignored",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: invoked",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: params",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: patches",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: exclusive_bindings",
+      "passed": true
+    },
+    {
+      "name": "whole native attribute equality: fixture_producers",
+      "passed": true
+    },
+    {
+      "name": "exactly one complete set guard and all seventeen whole-value equalities in field order",
+      "passed": true
+    },
+    {
+      "name": "old replacement is exactly count and complete dictionary equality",
+      "passed": true
+    },
+    {
+      "name": "all other AST, enrichments, original exception/BLOCK assertions, fixtures and negative controls exactly unchanged",
+      "passed": true
+    },
+    {
+      "name": "existing native JUnit records 31 passed",
+      "passed": true
+    },
+    {
+      "name": "native testcase parent count 31",
+      "passed": true
+    },
+    {
+      "name": "native stdout/stderr agrees",
+      "passed": true
+    },
+    {
+      "name": "captured exact diff hash",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\receipt.json",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\input-hashes.json",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\final\\full-suite-311-r1\\input-hashes.json",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_classic_raises_additions.py",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup\\tests\\test_classic_raises_additions.py",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\src\\checkwash\\ir\\model.py",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\junit.xml",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\stdout.txt",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\stderr.txt",
+      "passed": true
+    },
+    {
+      "name": "review input preserved: C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\source.diff",
+      "passed": true
+    },
+    {
+      "name": "new review output; preserve previous receipts",
+      "passed": true
+    }
+  ],
+  "input_hashes": {
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\receipt.json": "4c3b17aba9ff1cee7f1febbff5621e56ed5f628eccc3a263b53c81a9a40518a0",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\input-hashes.json": "6580ef369d33c01db0960263bdcce9016980e56ae28529605653775b516915c1",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage5\\final\\full-suite-311-r1\\input-hashes.json": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\tests\\test_classic_raises_additions.py": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-classic-followup\\tests\\test_classic_raises_additions.py": "4be73ac445f82cdda2138769915d17070a4459400951baa2e3f00130eef5fc6b",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux\\src\\checkwash\\ir\\model.py": "77961c9e7139ae9ede4d23f230adb6f702ebeb9ab90396ab6851ecb7a41d826e",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\junit.xml": "3318074c29af54cbdfb8c1b06c8c5fb990102c8dc6fcea736b581f55457b1997",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\stdout.txt": "620a3942c5609650edec700472edb35a114465c663f564c39b432b458e1efa42",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\ux-stage6\\root\\classic-targeted-r1\\source.diff": "5888786bd6dd52b0b797d9454d31d3c6ac8f5fe39d0811b417409e5e6d0dce59"
+  },
+  "reader_sha256": "ff3b01a95b360cd69cb869d2e736e5b3d26077dd73fec557a74247d57d2fdea0",
+  "product_calls_by_reader": 0,
+  "pytest_calls_by_reader": 0,
+  "semantic_assessment": "Exact native field-name membership plus every whole native attribute equality preserves the prior complete-value conjunction and gives clearer schema/field diagnostics. All enrichment/exception/BLOCK obligations remain; no strength, alignment, severity, gate or expected verdict changed.",
+  "not_established": [
+    "self-dogfood becomes green",
+    "committed-source qualification",
+    "full-suite PASS",
+    "release acceptance"
+  ]
+}
