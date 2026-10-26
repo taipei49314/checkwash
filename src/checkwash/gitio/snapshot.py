@@ -294,6 +294,14 @@ class GitSnapshot:
     def _side(self):
         return self.side or str(self.revision)
 
+    def config_modes(self, paths):
+        """Bounded metadata for explicitly requested pytest config evidence."""
+        self.list_paths()
+        selected = sorted(set(paths))
+        if len(selected) > MAX_INVENTORY_PATHS:
+            raise EngineError("strict snapshot config metadata exceeds the path limit")
+        return {path: self._tree_entries.get(path, (None,))[0] for path in selected}
+
     def read_many(self, paths, *, unread_oversized=False, stream_prefix=True):
         """Read selected regular blobs in bounded batches from one frozen tree.
 
@@ -719,6 +727,40 @@ class WorkingTreeSnapshot:
                 if size_total > MAX_BATCH_BYTES:
                     raise _batch_over_limit(path, self.side, size_total)
             result[path] = data
+        return result
+
+    def config_modes(self, paths):
+        """Config metadata only; preserve ordinary source admission and follow no link data."""
+        selected = sorted(set(paths))
+        if len(selected) > MAX_INVENTORY_PATHS:
+            raise EngineError("worktree pytest config metadata exceeds the path limit")
+        result = {}
+        for path in selected:
+            if (not path or path.startswith("/") or ":" in path or "\\" in path
+                    or any(c in path for c in "\r\n\0")
+                    or any(part in {"", ".", ".."} for part in path.split("/"))):
+                raise EngineError(f"worktree pytest config has an unsafe path: path={path!r}")
+            owner = self._symlinked_ancestor(path)
+            if owner is not None:
+                raise opaque_error(owner, f"{path} lies inside it")
+            lexical = self.root / path
+            try:
+                parent = lexical.parent.resolve()
+            except (OSError, RuntimeError) as exc:
+                raise EngineError(f"worktree pytest config metadata unavailable: path={path!r}") from exc
+            if not parent.is_relative_to(self.root):
+                raise EngineError(f"worktree pytest config leaves the repository: path={path!r}; use a repository-owned regular source or a committed range")
+            try:
+                mode = lexical.lstat().st_mode
+            except FileNotFoundError:
+                result[path] = None
+                continue
+            except OSError as exc:
+                raise EngineError(f"worktree pytest config metadata unavailable: path={path!r}") from exc
+            result[path] = (b"120000" if stat.S_ISLNK(mode) else
+                            b"100755" if stat.S_ISREG(mode) and mode & stat.S_IXUSR else
+                            b"100644" if stat.S_ISREG(mode) else
+                            b"040000" if stat.S_ISDIR(mode) else b"nonregular")
         return result
 
     def _symlinked_ancestor(self, path):

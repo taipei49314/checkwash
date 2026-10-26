@@ -431,6 +431,39 @@ negatives. This closes that bounded EOL discrepancy; other native Git
 similarity, parameter and oracle-credit differences are not declared solved
 by the reader change. Existing fixture labels and old receipts remain.
 
+## D-183 (2026-10-27): pair worktree/Stop pytest config evidence without widening source admission
+
+The pre-1.0 repair instruction includes this remaining reader-entry defect.
+Range and sweep already supplied PairedPytestConfigs; worktree/Stop passed None,
+allowing logical pytest config evidence to bypass the consumers' relevance
+gates. The implementation adds metadata-only config mode queries and a read-once
+strict regular worktree adapter, plus fresh pairs for the primary and session
+legs. CLI TASK authority, generic source admission, selection/parser language,
+detector severity and fingerprints are unchanged by this entry.
+
+The preserved pre-D183 working-tree source snapshot reproduced the gap: with a
+real Git BASE120000 blob and trusted fake after-link metadata (no host file
+link), JSON returned0 and hook-json omitted the NOT_ANALYSED warning. The new
+entry refuses before worktree link bytes/targets are read. Native regular
+pyproject selection narrowing has identical complete findings and exit between
+worktree and committed range. Additional tests cover exact SHA1/SHA256 content
+identity, read-once bytes, missing/empty distinction, unsafe paths, mode/source
+inventory drift, captured-diff mismatch and fresh session-base evidence.
+Independent review also reproduced a rename-old-path gap with trusted fake
+config sources: a deleted old config could reappear outside the captured diff.
+Both slash spellings first failed the added author controls; the implementation
+now binds rename absence while preserving explicit old-path after bytes and
+single-use iterable inputs. Its follow-up regression receipt records the
+executed outcome separately; these fake API controls do not claim native
+filesystem race coverage.
+
+All receipts identify PJU and exact working-tree/source snapshot hashes; they
+are not final-source qualification. PJU native file-symlink testing is unavailable
+(WinError1314); fake after-link controls and real Git link blobs do not establish
+native OS link coverage. No host security settings were changed, and analysed
+fixture programs were not executed. Existing golden/corpus labels remain intact.
+The earlier policy/native records and all consumed grants remain historical.
+
 ## D-184 (2026-10-27): compare resolved JS/TS expectations behind stable names
 
 The JS/TS expected-provenance pass skipped an aligned assertion when its

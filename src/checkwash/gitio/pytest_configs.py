@@ -1,12 +1,88 @@
-"""Paired frozen-tree pytest config evidence; never a generic source reader."""
+"""Paired pytest config evidence: frozen Git or read-once regular worktree records."""
 
 from __future__ import annotations
 
+import hashlib
+
 from checkwash.change import EngineError, FileChange
-from checkwash.gitio.snapshot import MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, GitSnapshot
+from checkwash.gitio.snapshot import (MAX_BATCH_BYTES, MAX_INVENTORY_PATHS, MAX_SOURCE_BYTES,
+                                     ConfigSource, GitSnapshot, WorkingTreeSnapshot)
 
 CONFIG_NAMES = frozenset({"pytest.toml", ".pytest.toml", "pytest.ini", ".pytest.ini",
                           "pyproject.toml", "tox.ini", "setup.cfg"})
+
+
+class WorktreePytestConfigs:
+    """One analysis's read-once regular config evidence, not a link-following reader.
+
+    The ordinary working-tree reader keeps all admission checks. Config bytes
+    and modes are retained once read, and changed sources must agree with the
+    captured diff. OIDs describe raw content in this repository's object format;
+    revision='worktree' does not claim that object was committed or stored.
+    """
+
+    def __init__(self, source: WorkingTreeSnapshot, before: GitSnapshot, changes):
+        self.source = source
+        revision = before._rev()
+        if len(revision) not in (40, 64):
+            raise EngineError("worktree pytest config needs a frozen base object identity")
+        self._algorithm = hashlib.sha1 if len(revision) == 40 else hashlib.sha256
+        self._paths = None
+        self._modes = {}
+        self._records = {}
+        self._bytes = 0
+        changes = tuple(changes)
+        self._changes = {change.path.replace("\\", "/"): change.after for change in changes}
+        for change in changes:
+            old_path = (change.old_path or change.path).replace("\\", "/")
+            if old_path != change.path.replace("\\", "/"):
+                self._changes.setdefault(old_path, None)
+
+    def list_paths(self):
+        if self._paths is None:
+            self._paths = tuple(self.source.list_paths())
+        return list(self._paths)
+
+    def config_modes(self, paths):
+        missing = sorted(set(paths) - self._modes.keys())
+        if missing:
+            self._modes.update(self.source.config_modes(missing))
+        return {path: self._modes[path] for path in sorted(set(paths))}
+
+    def read_config_many(self, paths):
+        selected = sorted(set(paths))
+        if len(selected) > MAX_INVENTORY_PATHS or any(path.rsplit("/", 1)[-1] not in CONFIG_NAMES for path in selected):
+            raise EngineError("worktree pytest config received an unregistered request")
+        self.list_paths()
+        modes = self.config_modes(selected)
+        missing = [path for path in selected if path not in self._records]
+        for path in missing:
+            if modes[path] not in {None, b"100644", b"100755"}:
+                raise EngineError(f"worktree pytest config is not a regular source: path={path!r}; use a repository-owned regular source or a committed range")
+        if missing:
+            values = self.source.read_many(missing)
+            if self.source.config_modes(missing) != {path: modes[path] for path in missing}:
+                raise EngineError("worktree pytest config modes changed during analysis")
+            for path in missing:
+                data = values[path]
+                if (data is None) != (modes[path] is None):
+                    raise EngineError(f"worktree pytest config presence changed during analysis: path={path!r}")
+                if (data is not None) != (path in self._paths):
+                    raise EngineError(f"worktree pytest config differs from captured inventory: path={path!r}")
+                if path in self._changes and data != self._changes[path]:
+                    raise EngineError(f"worktree pytest config differs from captured diff: path={path!r}")
+                if data is None:
+                    self._records[path] = None
+                    continue
+                if not isinstance(data, bytes) or len(data) > MAX_SOURCE_BYTES:
+                    raise EngineError(f"worktree pytest config exceeds the source byte limit: path={path!r}")
+                self._bytes += len(data)
+                if self._bytes > MAX_BATCH_BYTES:
+                    raise EngineError("worktree pytest config exceeds the batch byte limit")
+                oid = self._algorithm(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest().encode("ascii")
+                self._records[path] = ConfigSource(path, "worktree", modes[path], oid, data,
+                                                   path, modes[path], oid)
+        return {path: self._records[path] for path in selected}
 
 
 class PairedPytestConfigs:
@@ -19,7 +95,7 @@ class PairedPytestConfigs:
     Each consumer retains its separate selection and ordinary read limits.
     """
 
-    def __init__(self, before: GitSnapshot, after: GitSnapshot):
+    def __init__(self, before: GitSnapshot, after: GitSnapshot | WorktreePytestConfigs):
         self.snapshots = {"before": before, "after": after}
         self.paths = {}
         self.requests = {"before": set(), "after": set()}
@@ -65,9 +141,10 @@ class PairedPytestConfigs:
         # Keep both sides of each recognized path, including old-only ones.
         for side in self.requests:
             self.requests[side].update(candidates)
-        aliases = {path for path in candidates
-                   if any(snapshot._tree_entries.get(path, (None,))[0] == b"120000"
-                          for snapshot in self.snapshots.values())}
+        modes = [snapshot.config_modes(candidates) if hasattr(snapshot, "config_modes") else
+                 {path: snapshot._tree_entries.get(path, (None,))[0] for path in candidates}
+                 for snapshot in self.snapshots.values()]
+        aliases = {path for path in candidates if any(values[path] == b"120000" for values in modes)}
         before = self.read("before", aliases)
         after = self.read("after", aliases)
         for path in sorted(aliases):

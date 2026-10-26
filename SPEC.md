@@ -537,6 +537,44 @@ pytest TOML files withhold the context-dependent proof rather than assuming
 default collection. Invalid encoding/config syntax or an over-limit config
 also withholds proof. Strict selected-source reader failures remain errors.
 
+### Paired live pytest configuration evidence (D-183)
+
+From 0.10.0, worktree checks and the managed Stop's analyses supply paired
+pytest config evidence too. The primary worktree verdict pairs the diff's HEAD
+with working-tree sources. A session-commits note pairs the recorded session
+base with working-tree sources using a new context; it does not reuse the
+primary context or substitute the session's policy-loading base for the
+primary diff's HEAD. Each context is prepared once per analysis.
+
+Working-tree config evidence is a bounded read-once cache of regular sources,
+not an atomic filesystem snapshot. Inventory/mode facts are retained for the
+analysis; selected source presence/modes must remain consistent with that
+inventory and bytes of changed controls must match the captured diff, using
+the engine's same lexical slash spelling for changed-path matching. Rename
+old paths are bound to captured absence unless another explicit change
+in the complete captured change set supplies that old path's after bytes;
+iterable changes are retained before the two passes so generators obey the
+same rule. Explicit old-path changes take priority regardless of ordering. Config
+records retain exact bytes and compute content OIDs in the repository's object
+format, with revision `worktree`; that label makes no committed/stored-object
+claim. Existing per-source, batch and paired evidence limits apply. Config
+records/deltas remain internal to the two pytest-control consumers and do not
+become general Python/provider source or new physical diff entries.
+
+Git BASE/head config evidence retains its existing one-hop same-tree regular
+target capability. Working-tree evidence preserves ordinary source admission:
+it reads regular files only, never follows worktree file/directory symlink data,
+and refuses outside-repository, nonregular, inconsistent or over-limit sources.
+Metadata resolves only the parent for the repository-boundary check and uses
+lstat on the final component, without resolving a final file-link target.
+Recognized logical aliases are considered before relevance gates, so an
+unavailable worktree alias is NOT_ANALYSED rather than silently ignored. The
+regular-only worktree limit is deliberate; it does not claim the frozen Git
+link capability also exists on the live filesystem. Engine errors remain exit2
+in normal formats and the existing Stop systemMessage/no-decision behavior;
+session-note failure preserves the primary verdict and reports unanalysed
+session commits.
+
 ## 3. Assertion strength lattice
 
 **What counts as a unit's assertions (v0.1.26).** The IR records the

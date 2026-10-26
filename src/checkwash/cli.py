@@ -59,7 +59,7 @@ from checkwash.gitio import (
     session_merge_base,
 )
 from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
-from checkwash.gitio.pytest_configs import PairedPytestConfigs
+from checkwash.gitio.pytest_configs import PairedPytestConfigs, WorktreePytestConfigs
 from checkwash.report.jsonout import findings_to_json, ir_to_json, size_refusal_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
@@ -390,9 +390,13 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
         return None
     unread = "checkwash: commits made during this session were not analysed. "
     try:
-        leg = _analyse(args, list_session_changes(args.repo, window.base), window.base,
+        changes = list_session_changes(args.repo, window.base)
+        before = GitSnapshot(args.repo, window.base, side="base")
+        leg_readers = {**readers, "pytest_configs": PairedPytestConfigs(
+            before, WorktreePytestConfigs(readers["root_snapshot"], before, changes))}
+        leg = _analyse(args, changes, window.base,
                        base_label=rev_parse(args.repo, window.base), head_label="worktree",
-                       quiet=True, **readers)
+                       quiet=True, **leg_readers)
     except Exception as exc:  # noqa: BLE001 - leg 1's verdict stands; say what was not analysed
         return unread + f"Engine error: {type(exc).__name__}: {exc}"
     if isinstance(leg, int):
@@ -461,6 +465,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         config_side = base if window is None or window.base is None else window.base
 
         worktree_snapshot = WorkingTreeSnapshot(repo)
+        before = GitSnapshot(repo, base, side="base")
+        pytest_configs = PairedPytestConfigs(before, WorktreePytestConfigs(worktree_snapshot, before, changes))
         head_reader = worktree_snapshot.read
         head_searcher = worktree_snapshot.search
         root_snapshot = worktree_snapshot
