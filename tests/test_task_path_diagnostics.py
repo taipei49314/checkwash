@@ -1,4 +1,4 @@
-"""Expose the existing task path mapping on failure without changing its base."""
+"""Expose repo-relative task mapping on a genuine lookup failure."""
 import json
 import subprocess
 
@@ -25,9 +25,9 @@ def task_repo(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("format", ("json", "hook-json"))
-def test_failed_relative_task_names_current_mapping(task_repo, capsys, format):
+def test_outside_task_names_repo_relative_mapping(task_repo, capsys, format):
     repo, caller = task_repo
-    code = main(["check", "--repo", str(repo), "--task", "TASK.md", "--format", format])
+    code = main(["check", "--repo", str(repo), "--task", "../caller/TASK.md", "--format", format])
     output = capsys.readouterr()
     assert code == (0 if format == "hook-json" else 2)
     assert "TASK path context" in output.err

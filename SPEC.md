@@ -978,7 +978,30 @@ the working-tree copy is a fallback only at the root, for a task file the
 base tree does not hold (below). Otherwise a diff could edit TASK.md to
 disarm E2 and E7 for itself.
 
-From a subdirectory (§9), the task path is mapped lexically: `--task` is taken relative to the directory `--repo` named, Git's `--show-prefix` is prepended, and `.` and `..` are collapsed as text. checkwash resolves no working-tree symlink to compute the path, but Git resolves `--repo` itself: when `--repo` is reached through a directory symlink, the prefix is that of the target, and a `--task` outside `--repo` can map to a path other than the one named. At the root the mapping is unchanged: `--task` relative to `--repo`. The base-side lookup reads the base tree at that lexical path, so a head-side symlink at the task path cannot choose which base file supplies the contract. That guarantee covers the base-side lookup only. From a subdirectory, a task file the base does not hold at that path is an engine error (exit 2, or the non-blocking `hook-json` warning, #414). Git spells the prefix as the directory is on disk, which on a case-insensitive checkout the head can choose, and a symlink or junction on the way to `--repo` moves it too, so the working-tree copy could be the head's contract. At the root, a base miss is an engine error too when the base tree holds, compared with case ignored, a file, a symlink or a submodule at a proper prefix of that path (`ci/TASK.md` over a committed directory symlink `ci`), or the path itself in another case (`task.md` for `TASK.md`); the error names that entry (#500). Git reads no path through such an entry and matches names byte for byte, while the working tree follows the symlink and, on a case-insensitive checkout, matches any case, so the working-tree copy could be the head's contract. Both comparisons are on text, so the result does not depend on the file system: on a case-sensitive checkout an untracked `task.md` beside a committed `TASK.md` is refused too. Otherwise, for a task file the base tree does not hold, the fallback opens `--task` as given, and the operating system follows a symlink there; one stderr line then says the contract was read from the working-tree copy, and changes neither stdout nor the exit code.
+Let R be the directory originally named by `--repo` (default `.`), interpreted
+natively relative to invocation cwd if R is relative. Compute
+`T = os.path.abspath(os.path.join(R, args.task))` once for lookup. Relative
+`--task` therefore belongs to the originally named directory, before Git
+re-roots the review; it is not independently resolved against cwd or the
+re-rooted Git root. From a subdirectory map T relative to R, prepend Git's
+`--show-prefix`, and collapse `.`/`..` lexically. At the root map T relative
+to the repository address. Never call realpath or resolve a HEAD-side task
+alias to select a BASE contract.
+
+Native address rules remain load-bearing: a fully-qualified path supplies
+its own address; on Windows a root-relative task takes its drive/share from
+R and a same-drive `C:TASK.md` joins R. These are native lexical operations,
+not an implicit drive/share mount or alias-canonicalization feature.
+A native relpath failure remains an engine error; it cannot activate fallback.
+
+Read the mapped BASE path even if HEAD rewrites either contract. From a
+subdirectory a BASE miss remains an engine error under #416. At the root,
+#500's case-insensitive task spelling/proper-prefix checks still refuse an
+existing BASE file, symlink or gitlink that the requested disk spelling can
+stand for. Only genuine BASE absence permits opening T from the worktree,
+with the existing disclosure that the change controls that fallback. It is
+not necessary that the path be untracked. The permitted fallback may still
+be followed by the OS; it is never used to rescue a refused BASE alias.
 
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 

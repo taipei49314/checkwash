@@ -39,13 +39,22 @@ ignored scope/freeze settings or act as a complete YAML validator. Review both
 the intended policy and the parsed result before editing a task. Syntax notes
 do not change findings, fingerprints, the JSON/SARIF envelopes or exit policy.
 
-The reviewed base copy supplies the contract. At the repository root, a missing
-base task can still use a working-tree fallback under the existing alias
-restrictions, with a separate warning. That copy is controlled by the change;
-commit a reviewed task before relying on base-owned policy. From a repository
-subdirectory only the base copy is read. Use an absolute repository-owned path
-while the separately documented relative-path contract discrepancy is resolved;
-do not change the path spelling to bypass a base-tree alias refusal.
+`--task` paths are relative to the directory originally named by `--repo`,
+whose default is the invocation directory. For example,
+`--repo pkg --task TASK.md` selects `pkg/TASK.md`, even though CheckWash
+reviews the whole Git repository after finding its root. Use
+`--repo pkg --task ../TASK.md` to select the root contract deliberately, or
+use a fully-qualified repository-owned path. Git's BASE copy supplies policy
+even when HEAD changes that task. At the root only, a genuinely absent BASE
+task may use the working copy with a warning; case/prefix aliases and
+subdirectory BASE misses remain refusals. Do not change spelling or resolve
+a HEAD symlink to bypass those checks.
+
+On Windows the native path rules also apply: a root-relative task uses the
+repo address's drive/share, while same-drive `C:TASK.md` joins that repo
+directory. Use fully-qualified paths when portability is important. These
+rules do not create a drive mapping or make every symlink/UNC topology a
+supported input. The supplied task still uses the restricted front-matter subset.
 
 These task settings apply only when the caller actually supplies `--task`.
 This diagnostic change does not make every managed hook or Action pass a task

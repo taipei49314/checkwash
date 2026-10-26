@@ -177,6 +177,16 @@ def _task_alias_error(task: str, rel: str, alias: TreeAlias) -> str:
             "directory; name the task file by its path in the base tree")
 
 
+def _task_lookup_path(args) -> str:
+    """Bind task input lexically to the directory originally named by --repo.
+
+    Native join/abspath preserve fully qualified addresses and native Windows
+    root/drive-relative rules. Never resolve a HEAD alias to select BASE.
+    """
+    given = getattr(args, "repo_given", args.repo)
+    return os.path.abspath(os.path.join(given, args.task))
+
+
 def _task_path_context(args, mapped) -> str:
     """Describe the invocation's lexical mapping without changing path authority."""
     try:
@@ -184,7 +194,7 @@ def _task_path_context(args, mapped) -> str:
     except OSError:
         cwd = "<unavailable>"
     try:
-        resolved = os.path.abspath(args.task)
+        resolved = _task_lookup_path(args)
     except (OSError, ValueError):
         resolved = "<unavailable>"
     return (f"checkwash: TASK path context: requested={args.task!r}; resolved={resolved!r}; "
@@ -245,14 +255,15 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         # on disk (#500). Nothing checks that the file is untracked.
         prefix = getattr(args, "repo_prefix", "")
         try:
+            task_path = _task_lookup_path(args)
             # Re-rooted (#416): relative to the directory `--repo` named, then
             # into the root with Git's prefix, lexically. Never realpath: a
             # head-side symlink at the task path would choose which base file
             # supplies the contract, or hand the fallback attacker bytes.
             if prefix:
-                rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
+                rel = posixpath.normpath(prefix + os.path.relpath(task_path, args.repo_given).replace("\\", "/"))
             else:
-                rel = os.path.relpath(args.task, repo).replace("\\", "/")
+                rel = os.path.relpath(task_path, repo).replace("\\", "/")
         except ValueError:
             advise(_task_path_context(args, None))
             raise
@@ -294,7 +305,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
                 if quiet:
                     return 2
                 return _engine_error(args, _task_alias_error(args.task, rel, alias))
-            with open(args.task, encoding="utf-8") as fh:
+            with open(task_path, encoding="utf-8") as fh:
                 task_text = fh.read()
                 contract = parse_contract(task_text)
             if not quiet:

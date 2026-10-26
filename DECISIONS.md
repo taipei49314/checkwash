@@ -223,3 +223,30 @@ on actual PJU working-tree hashes. Validation, integration, acceptance and
 publication remain distinct; this entry claims no missing platform, full-suite,
 source/wheel/pyz or release-collector PASS. Required checks remain pending until
 their own final-source receipts exist.
+
+## D-178 (2026-10-27): TASK lookup belongs to the original repo address
+
+Bind `--task` once to the original `--repo` directory, using native lexical
+join/abspath and retaining `args.repo_given` before Git re-rooting. The old
+code passed a raw relative task token to relpath/open, so cwd could choose a
+different existing BASE contract; this caused both PASS-instead-of-freeze
+and BLOCK-against-the-wrong-contract, not merely lookup errors. The lookup,
+root-only genuine-absence fallback and context diagnostic now use the same
+T. BASE authority, #416's nonroot miss refusal and #500's case/prefix alias
+refusal remain. No HEAD realpath is used to determine authority.
+
+This is a minor contract change even when it corrects the previous SPEC
+sentence: actual scope/freeze selection can change both verdict directions
+and SCOPE_DRIFT identity. Existing callers relying on cwd-relative behavior
+must express a path relative to the intended `--repo` directory, or use a
+fully-qualified repository-owned task address. Native Windows rooted/drive-
+relative behavior is explicit; untested UNC/cross-volume forms must remain
+NOT_RUN rather than inheriting a blanket compatibility claim.
+
+Historical 9a observations, forecasts and their corrected raw-vs-LF metadata
+remain preserved. Current development receipts identify their own copied
+working-tree bytes and do not claim that HEAD already contains those edits.
+Native range/worktree controls compare the same intended BASE contract;
+the fixture source itself is never executed. Root records final accepted
+source and validation separately. D-178 does not authorize a 1.0 release or
+revive historical/paid/model/adjudication grants.
