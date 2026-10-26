@@ -516,6 +516,17 @@ def collect(root: Path) -> list[Note]:
             "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
             "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
         ))
+        tracked = _git_query(root, "ls-files", "-z", "--", *hook_paths)
+        indexed_paths = tracked.stdout.split(b"\0") if tracked is not None and not tracked.returncode else []
+        tracked_hooks = [path for path in hook_paths if path.encode("utf-8") in indexed_paths]
+        if tracked_hooks:
+            notes.append(Note(
+                "info", "hook maintenance can change tracked guardrails",
+                "Found tracked Stop-hook settings: " + ", ".join(tracked_hooks) + ". "
+                "Installing or reinstalling the hook can modify these tracked guardrail files. "
+                "Inspect `git diff` before committing and use the existing BASE/review process "
+                "for the change. Doctor does not exempt hook maintenance from guardrail checks.",
+            ))
         missing = [part for part, absent in (
             ("no `checkwash hook session-start` handler", not session_paths),
             ("no Stop handler that passes its hook input (`--hook-input stdin`)", not input_paths),
