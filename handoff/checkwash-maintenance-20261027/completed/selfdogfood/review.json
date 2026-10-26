@@ -1,0 +1,247 @@
+{
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "base_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+  "comparison_scope": "ordinary PR self-check; not release bridge",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "state": "BLOCK_NONPASS_PRESERVED",
+  "exit_code": 1,
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "info": 0,
+    "warn": 9
+  },
+  "config_errors": [],
+  "skipped_files": [],
+  "high_findings_exact": [
+    {
+      "after": {
+        "span": [
+          2097,
+          2128
+        ],
+        "text": "assert len(native_fields) == 17"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          1666,
+          1705
+        ],
+        "text": "assert preserved.after == original.side"
+      },
+      "deescalators": [],
+      "escalators": [
+        "PROD_CHANGE_NOT_EVIDENCE"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:d692f62b20ee000e8f0a3372f2d37e3f3225af7a8926db90ce06fe4e01468d87",
+      "message": "test_added_literal_rows_retain_exception_removal_and_native_units: assertion strength EXACT_VALUE(90) -> TYPE_SHAPE(50)",
+      "path": "tests/test_classic_raises_additions.py",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 50,
+      "strength_drop": 40,
+      "subject_changed": true,
+      "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+    },
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          4413,
+          4512
+        ],
+        "text": "assert outcome(head) == CREDITED"
+      },
+      "deescalators": [],
+      "escalators": [
+        "PROD_CHANGE_NOT_EVIDENCE"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb",
+      "message": "test_a_survivor_the_chain_does_not_skip_is_credited: test unit disappeared",
+      "path": "tests/test_issue266_survivor_conftest_chain.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_a_survivor_the_chain_does_not_skip_is_credited"
+    },
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          5244,
+          5655
+        ],
+        "text": "assert outcome(head, root=False) == CREDITED"
+      },
+      "deescalators": [],
+      "escalators": [
+        "PROD_CHANGE_NOT_EVIDENCE"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before/v2:e132c2bebecb035512ebaa870b40474afd7f1f1707e137e7da08dba600a31941",
+      "message": "test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before: test unit disappeared",
+      "path": "tests/test_issue266_survivor_conftest_chain.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before"
+    }
+  ],
+  "native_json_sha256": "67e316ef340f1e14f2769344f644535ae38552ce309756dc9d9a7862055fbb3a",
+  "native_receipt_sha256": "64c12268a050bfda55070264f45059de2cf6c8ccc1abcdbd975bf0246d06d459",
+  "native_stderr_sha256": "2bd19388247d63074e507e83f82bf17d970ac1512cfc6f4757795434e42c5871",
+  "test_blobs_sha256": {
+    "tests/test_classic_raises_additions.py": {
+      "base": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0",
+      "candidate": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d",
+      "prior8a": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0"
+    },
+    "tests/test_issue266_survivor_conftest_chain.py": {
+      "base": "5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601",
+      "candidate": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f",
+      "prior8a": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f"
+    }
+  },
+  "issue266_candidate_equals_prior8a": true,
+  "read_only_git_commands": [
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_classic_raises_additions.py"
+      ],
+      "started_utc": "2026-10-26T21:07:49.678269+00:00",
+      "ended_utc": "2026-10-26T21:07:50.982343+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c:tests/test_classic_raises_additions.py"
+      ],
+      "started_utc": "2026-10-26T21:07:50.982343+00:00",
+      "ended_utc": "2026-10-26T21:07:51.040809+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/test_classic_raises_additions.py"
+      ],
+      "started_utc": "2026-10-26T21:07:51.040809+00:00",
+      "ended_utc": "2026-10-26T21:07:51.091663+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "diff",
+        "--no-ext-diff",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482",
+        "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "--",
+        "tests/test_classic_raises_additions.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "5537f61825af057152af00ca4cb009dc28228a1fe67ea0ecfacb7ee87d514b26",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482:tests/test_issue266_survivor_conftest_chain.py"
+      ],
+      "started_utc": "2026-10-26T21:07:51.143667+00:00",
+      "ended_utc": "2026-10-26T21:07:51.198305+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c:tests/test_issue266_survivor_conftest_chain.py"
+      ],
+      "started_utc": "2026-10-26T21:07:51.198305+00:00",
+      "ended_utc": "2026-10-26T21:07:51.249487+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "show",
+        "8a8941dc2d7c581715a0f6f196c00da6c55f084b:tests/test_issue266_survivor_conftest_chain.py"
+      ],
+      "started_utc": "2026-10-26T21:07:51.249487+00:00",
+      "ended_utc": "2026-10-26T21:07:51.300475+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-ux",
+        "diff",
+        "--no-ext-diff",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482",
+        "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "--",
+        "tests/test_issue266_survivor_conftest_chain.py"
+      ],
+      "exit_code": 0,
+      "stdout_sha256": "30ec23be2a4e6bfc094f63f608a3af67f6a231d16577afa0814c50c1f5397729",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "exemptions_added": false,
+  "judgment_changed": false,
+  "product_calls": 0,
+  "memo_is_not_acceptance_or_a_fingerprint_waiver": true
+}

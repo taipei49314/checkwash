@@ -1,0 +1,38 @@
+diff --git a/tests/test_classic_raises_additions.py b/tests/test_classic_raises_additions.py
+index 9c4cc2b9..1298c936 100644
+--- a/tests/test_classic_raises_additions.py
++++ b/tests/test_classic_raises_additions.py
+@@ -1,4 +1,7 @@
+ """Additional literal rows cannot hide the removed original exception oracle."""
++from dataclasses import fields
++import re
++
+ import pytest
+ 
+ from checkwash.frontends.python.frontend import parse_python
+@@ -35,7 +38,24 @@ def test_added_literal_rows_retain_exception_removal_and_native_units(after):
+     assert any(f.rule == 'ASSERT_REMOVED' for f in findings)
+     original = next(u for u in parse_python(after.encode(), True).units if u.qualname == 'test_more')
+     preserved = next(u for file in ir.files for u in file.units if u.qualname == 'test_more')
+-    assert preserved.after == original.side
++    # D-179 enriches engine IR after the standalone frontend returns its side.
++    # Preserve every native field, and check enrichment separately without
++    # deleting or blanking the new authority fields on either object.
++    enrichment = {"oracle_context", "oracle_assertion_contexts"}
++    native_fields = [field.name for field in fields(original.side) if field.name not in enrichment]
++    assert len(native_fields) == 17
++    assert {name: getattr(preserved.after, name) for name in native_fields} == {
++        name: getattr(original.side, name) for name in native_fields
++    }
++    assert original.side.oracle_context == ""
++    assert original.side.oracle_assertion_contexts == {}
++    assert re.fullmatch(r"[0-9a-f]{64}", preserved.after.oracle_context)
++    assert original.side.param_cases == 4
++    expected_keys = {f"{assertion.id}@{row}" for assertion in original.side.assertions
++                     for row in range(original.side.param_cases)}
++    assert set(preserved.after.oracle_assertion_contexts) == expected_keys
++    assert all(re.fullmatch(r"[0-9a-f]{64}", value)
++               for value in preserved.after.oracle_assertion_contexts.values())
+ 
+ 
+ @pytest.mark.parametrize('after', [

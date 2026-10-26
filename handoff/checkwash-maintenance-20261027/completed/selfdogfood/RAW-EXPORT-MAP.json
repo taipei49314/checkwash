@@ -1,0 +1,98 @@
+[
+  {
+    "bytes": 2057,
+    "original_path": "raw/test_classic_raises_additions-1ffe-to-fbc.diff",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-1ffe-to-fbc.diff.txt",
+    "sha256": "5537f61825af057152af00ca4cb009dc28228a1fe67ea0ecfacb7ee87d514b26"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_classic_raises_additions-1ffe-to-fbc.diff.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-1ffe-to-fbc.diff.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_classic_raises_additions-base.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-base.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 4596,
+    "original_path": "raw/test_classic_raises_additions-base.stdout",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-base.stdout.txt",
+    "sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_classic_raises_additions-candidate.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-candidate.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 5753,
+    "original_path": "raw/test_classic_raises_additions-candidate.stdout",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-candidate.stdout.txt",
+    "sha256": "99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_classic_raises_additions-prior8a.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-prior8a.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 4596,
+    "original_path": "raw/test_classic_raises_additions-prior8a.stdout",
+    "payload_path": "completed/selfdogfood/raw/test_classic_raises_additions-prior8a.stdout.txt",
+    "sha256": "697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0"
+  },
+  {
+    "bytes": 3086,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff.txt",
+    "sha256": "30ec23be2a4e6bfc094f63f608a3af67f6a231d16577afa0814c50c1f5397729"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-1ffe-to-fbc.diff.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-base.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-base.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 5656,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-base.stdout",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-base.stdout.txt",
+    "sha256": "5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-candidate.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-candidate.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 5779,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-candidate.stdout",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-candidate.stdout.txt",
+    "sha256": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f"
+  },
+  {
+    "bytes": 0,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-prior8a.stderr",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-prior8a.stderr.txt",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "bytes": 5779,
+    "original_path": "raw/test_issue266_survivor_conftest_chain-prior8a.stdout",
+    "payload_path": "completed/selfdogfood/raw/test_issue266_survivor_conftest_chain-prior8a.stdout.txt",
+    "sha256": "745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f"
+  }
+]

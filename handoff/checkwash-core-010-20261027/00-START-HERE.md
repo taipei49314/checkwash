@@ -1,3 +1,10 @@
+> **後續 maintenance 交接入口：source fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c**
+> [開啟後續交接](../checkwash-maintenance-20261027/00-START-HERE.md)。
+> 此連結只接續備份；partial 不代表完整證據包，也不代表產品驗收或發布。
+> 下方 8a 歷史正文逐 byte 保留；1.0 前仍須 Nelson 明確決定。
+
+---
+
 # CheckWash 0.10.0 候選交接
 
 備份時間（UTC）：2026-10-26T20:27:32.269811+00:00。這份資料保存工作進度，不代表產品驗收或發布。

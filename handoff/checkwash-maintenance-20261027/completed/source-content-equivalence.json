@@ -1,0 +1,21 @@
+{
+  "old_source_sha": "8a8941dc2d7c581715a0f6f196c00da6c55f084b",
+  "new_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "changed_paths": [
+    "CONTRIBUTING.md",
+    "README.md",
+    "STATE.md",
+    "docs/launch.md",
+    "tests/test_classic_raises_additions.py",
+    "tests/test_issue223_conftest_request_side.py",
+    "tests/test_js_test_obligations.py",
+    "tests/test_packaging.py",
+    "tests/test_root_oracles.py"
+  ],
+  "tracked_files": 3084,
+  "production_package_members": 212,
+  "all_production_package_bytes_unchanged": true,
+  "all_judge_and_benchmark_bytes_unchanged": true,
+  "all_current_tracked_bytes_equal_180_passed_development_snapshot": true,
+  "new_source_qualification_not_implied_by_equivalence": true
+}
