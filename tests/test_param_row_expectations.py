@@ -12,7 +12,7 @@ import datetime
 import json
 import pathlib
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.detectors.expectation_definition import (
@@ -162,6 +162,7 @@ def _run(name: str):
     snapshot = case_snapshot(case)
     return analyze(
         case_to_changes(case), Config(), Contract(), [], datetime.date(2026, 1, 1),
+        policy_base=case_policy_base(case),
         root_reader=snapshot.get,
         root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )

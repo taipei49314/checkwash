@@ -646,7 +646,9 @@ def apply_gates(
                 # to catch the two-commit plant — at warn it never blocked.
                 created = f.path in ir.globals.guardrail_files_created
                 loosening = f.path in ir.globals.guardrail_configs_created_loosening
-                if created and not loosening:
+                shadow_kind = ir.globals.policy_shadows.get(f.path, {}).get("kind")
+                shadow_guarded = shadow_kind in {"config_relaxation", "config_uncomparable", "allow_rewrite"}
+                if created and not loosening and not shadow_guarded:
                     f.escalators.append("GUARDRAIL_CREATED")
                 else:
                     f.severity = "critical"

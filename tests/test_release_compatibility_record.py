@@ -14,12 +14,15 @@ compare = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(compare)
 
 
-def artifact(version="0.3.3", *, names=("a.gwcase",), optional=False, verdict="pass"):
+def artifact(version="0.3.3", *, names=("a.gwcase",), optional=False, verdict="pass", ir_version=2, proof=None):
     parts = []
     for name in names:
         findings = {"checkwash_findings_version": 2, "findings": [], "summary": {"high": 0},
                     "run": {"checkwash_version": version}, "verdict": verdict}
-        ir = {"version": 2, "files": [], "globals": {"optional": False} if optional else {}}
+        globals_ = {"optional": False} if optional else {}
+        if proof is not None:
+            globals_["policy_shadows"] = proof
+        ir = {"version": ir_version, "files": [], "globals": globals_}
         parts.append("# " + name + "\n" + json.dumps(findings) + "\n" + json.dumps(ir) + "\n")
     return "".join(parts).encode()
 
@@ -295,3 +298,19 @@ def test_cli_never_waives_raw_byte_gate_and_always_retains_receipt(
     assert observed["case_counts"] == {"baseline": 1, "candidate": 1}
     assert len(observed["deltas"]) == (0 if identical else 1)
     assert any(command[:3] == ["git", "worktree", "remove"] for command in calls)
+
+
+
+def test_ir2_to_ir3_transition_keeps_required_proof_and_version_deltas_explicit():
+    old = artifact()
+    outputs = {"baseline": old, "candidate": artifact("0.10.0", ir_version=3, proof={})}
+    parsed, deltas = compare.transition_deltas(outputs)
+    assert outputs["baseline"] == old
+    assert parsed["baseline"]["a.gwcase"]["ir"]["version"] == 2
+    assert "policy_shadows" not in parsed["baseline"]["a.gwcase"]["ir"]["globals"]
+    paths = {(d["artifact"], d["path"]): d for d in deltas}
+    assert paths[("ir", "/version")]["before"] == {"present": True, "value": 2}
+    assert paths[("ir", "/version")]["after"] == {"present": True, "value": 3}
+    assert paths[("ir", "/globals/policy_shadows")]["before"] == {"present": False}
+    assert paths[("ir", "/globals/policy_shadows")]["after"] == {"present": True, "value": {}}
+    assert len(paths) == 3  # IR version, required proof slot, package version.

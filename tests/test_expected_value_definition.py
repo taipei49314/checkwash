@@ -24,7 +24,7 @@ from decimal import Decimal
 
 import pytest
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
@@ -83,6 +83,7 @@ def _outcome(before, after):
         head_reader=head.get,
         head_searcher=lambda needles: [p for p, data in sorted(head.items())
                                        if any(n.encode("utf-8") in data for n in needles)],
+        policy_base=case_policy_base(case),
         root_reader=snapshot.get,
         root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )

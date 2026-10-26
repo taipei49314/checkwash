@@ -15,7 +15,7 @@ import datetime
 import importlib.resources as resources
 import sys
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
@@ -66,6 +66,7 @@ def run(stream=None) -> int:
             head_reader=head.get,
             # A declarative case is a complete snapshot: omitted paths are
             # absent, including for conftest target and root-helper probes.
+            policy_base=case_policy_base(case),
             root_reader=snapshot.get,
             root_searcher=lambda needles: search_source_mapping(snapshot, needles),
             root_path_lister=lambda: sorted(snapshot),

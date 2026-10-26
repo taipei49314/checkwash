@@ -6,7 +6,7 @@ Changing anything here requires a version bump of the affected schema and a
 full fixture re-run. Coding agents have **read-only** authority over this file
 and over `tests/gates/**`; changes are made by the human maintainer only.
 
-Spec version: 2 (IR payload `version: 2`, findings envelope `checkwash_findings_version: 2`; released in v0.3.0, 2026-09-07)
+Spec version: 3 (IR payload `version: 3` with required `globals.policy_shadows`, introduced by the 0.10.0 policy-shadow contract D-177; findings envelope `checkwash_findings_version: 2` retained from v0.3.0). Historical IR2 payloads remain IR2 and carry no newly inferred shadow proof.
 
 ## 1. Analysis unit
 
@@ -787,7 +787,7 @@ detectors can only be disabled whole.
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. In Python (#496), a handler that does not re-raise and whose every assertion is proved to always pass is not inspection either, and it reports its first line followed by a space and `[always-passing assertion]`, compared apart from the plain first line: an `assert` of a literal, of `not` before a literal, of a comparison between literals (`is` and `is not` only against `None`), or of `and`/`or` over these with every operand evaluated on its own; or `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`, `assertEqual` or `assertNotEqual` with literal operands that pass and at most one literal `msg`, called on a method's own receiver, when the first base of the class's local order that the file does not define has a name ending in `TestCase` and no same-file class before it binds the method's name (D-163). An always-failing assertion stays inspection, and so does any assertion the proof cannot read. |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` added, in Python files only. No JS/TS form is read: a test file's `@ts-nocheck` is #366, and ESLint directives are #367, deferred by ruling until after 1.0 |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`), content-classified runner scripts and package manifests whose test command changed (§2), **plus one hop**: a changed script that runs no test runner of its own but invokes another script that does is ci too, resolved against the diff or the head snapshot. Exactly one hop. A shell-script hop must terminate in a real runner — a `ci.sh` calling `compile.sh` stays production, which is the line the content gate has drawn since v0.1.8. A manifest's hop is bounded by where it starts instead: a script that `test` or a `test:*` script names through a script runner is part of the test command whatever it runs, because `npm test` runs `scripts.test` whatever it says (#196 185.2). Test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`, and `--test-only`, under which node's runner runs only the tests marked `only` (#196 187.1, #216)): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. For a package manifest that base side is its base-side test command, not the whole file: a token that only a non-test script carried at base counts once the diff writes it into the test command (#196 185.1). Additionally, literal option/value comparison recognizes newly introduced `--co`/`--collect-only`, `--ignore-glob`, and quoted or unquoted `-k`/`-m` selectors, including a changed value of an existing option. Literal `testpaths` and collection-name lists are narrowing when the new selection is a provable strict subset; additional `norecursedirs` exclusions also count. Restating, reordering or provably broadening a setting is not narrowing it. Identical configuration migration stays quiet, while narrowing during a migration remains visible. First configuration adoption without a base CI surface keeps the syntax scanner at warn; the resolved collection inventory (§2b) still judges a first configuration when it runs. Where it runs, a new root-config selector is judged against the base-suite tests that a run it governs collects: all of them for a run without targets, and those beneath the targets for a run with explicit targets whose discovery finds the same root config on both sides (#196 184.1). `-m`, `-k` and `--co` count whenever such a test exists; `--ignore`, `--ignore-glob` and `--deselect` only when they drop one, and `-p no:` only for a plugin other than `cacheprovider`, `faulthandler`, `pastebin` and `stepwise` (#196 184.2). A positional target in the root config's addopts is an explicit target of every run, read with the one definition of explicit targets a command's arguments use, which knows pytest's own and the common plugins' options that take a value, so `-n auto` or `--cov src` is no target (#173): a run collects beneath its command's targets and the addopts targets together, and when the addopts targets change, a base-suite test the base runs collected and no head run collects is excluded, a weakened command. A target moved between a command and addopts loses nothing. A word in addopts that names no file or directory on its side is no target: it is the value of an option the reader does not know, or a target that fails every run. A head run whose command names a missing path, or that collects no test, fails, and no claim is made for it; ambiguous addopts withholds the inventory. The inventory's settings proof does not reach a run with explicit targets, its command's or its config's addopts'. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests: a runner name anywhere in it, as row 69 reads one, or a runner site in it, live or dead (#216); deleting a runner script or a config file does not — that is consolidation until proven otherwise. A condition, a trigger, a hook inventory or a GitLab job's keys can stop a runner without touching its line (#181, #214), so GitHub workflows, `.pre-commit-config.yaml` and `.gitlab-ci.yml` are also read as an inventory of **runner sites**, each with whether it can execute for a pull request's commits and fail them. A runner site is a workflow step, a pre-commit hook or a command in a GitLab job's `script:` whose own command invokes a test runner, by a whole-word runner name outside the contexts known not to run it (`echo` and `printf` text, heredoc text written out, install commands, comments; #196 191.5), or by one of the runners #216 adds, `node --test`, `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`, `poe test` and `pdm test`, where a command starts: the first word of a simple command, past assignments, wrappers, package launchers, `sh -c` and `eval`, or inside a command substitution or a heredoc a shell reads, and never as a word elsewhere; or it is a `uses:` step whose action name and one of its `with:` inputs both name a runner. The same reading decides whether a runner-shaped script, a manifest script or a one-hop target invokes a test runner (§2); the opaque-exemption denial (THREATMODEL row 87) keeps row 69's names alone. A site is dead only for a static reason: a step or job `if:` that no event able to run the workflow on a pull request can make true, with status functions read as on an otherwise green run; a job that `needs:` a dead job and has no status function to run anyway; a trigger set with no event that runs on a pull request's commits, including activity `types` without `opened`, `synchronize` or `reopened` and a path filter that leaves no file (#196 191.9, 191.2(d)); a hook parked on the `manual` stage; a GitLab job that does not start by itself on a green pipeline (`when: manual`, `when: never`, or `when: on_failure`) or whose failure is allowed (`allow_failure: true`, or `exit_codes`), where each `rules:` entry that may match decides as the job's own keys do (an entry's condition is not evaluated, an entry with none ends the list, and a job no entry adds is not in the pipeline) and the job's `extends:` templates are merged in first; a hidden GitLab job (`.name`) that no job extends; and every GitLab job when `workflow: rules:` can only keep the pipeline from running (#214). There is no global GitLab token: `allow_failure: true` on a job whose `script:` runs no test runner is not a weakening. A runner command that lost a live site and gained a dead one is a disabled suite, and so is a runner reworded as the inventory moves a site from live to dead (#196 191.8); a pre-commit config whose hook entries invoked a recognised runner at base and invoke none at head, whatever its hook ids and names say, has removed its suite (#196 191.7). Both are weakened test commands. A workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader read with at least one live runner site, and whose head side it declines, is out of reach rather than weakened: high under E8, with a reason that names what the reader declined and the runner the base side ran (#196 191.3). A workflow is a `.yml` or `.yaml` file beneath `.github/workflows/`, `.gitlab-ci.yml` or `.pre-commit-config.yaml`; any other file kept beneath `.github/workflows/` is ci-role but not a workflow. A ci-role file that carries test obligations (§2) is reported at warn and is not scanned for swallows, narrowings or runner tokens: its lines are test code, judged by the test rules |
-| `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual) |
+| `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual)  Since 0.10.0, the D-177 policy-shadow exception: a newly winning `.checkwash/config.toml` over an existing selected BASE `.greenwash/config.toml` compares against that effective BASE policy, not defaults; see §6 policy-shadow transitions. |
 | `IMPORT_UNRESOLVED` | new import fails to resolve against lockfile / site-packages |
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |
@@ -1149,6 +1149,78 @@ diff-global test let a single dead constant, a statement reorder, or an edit
 to an unrelated function disarm the gate for the whole run.
 
 ## 6. Exemptions
+
+### Policy-shadow transitions (0.10.0, D-177)
+
+Existing guardrail edits remain critical, except for the append-only ledger
+case below. When no effective BASE predecessor exists, the existing fresh-file
+defaults comparison remains in force. Inactive lower-priority creations keep
+their existing treatment. A newly created `.checkwash/config.toml` that becomes
+selected over an existing BASE `.greenwash/config.toml` compares with that
+effective BASE config, including an existing zero-byte file; absence is None.
+
+- A new disabled-rule name, a rise in the `fail_on` severity threshold, or
+  `on_engine_error: block` becoming `pass_with_warning` makes the new config
+  critical.
+- If both policies parse without warnings, their role tables are equal, the
+  new disable set is a subset of the old one, its threshold does not rise and
+  its engine-error policy does not weaken, the created config stays warn.
+  Equal-policy copies and this bounded tightening are included; arbitrary
+  glob-language inclusion is not inferred.
+- Parse errors, value warnings or differing role tables make the transition
+  uncomparable and critical. This is a conservative maintenance cost, not a
+  proof of malicious intent. Existing loader exceptions remain engine errors.
+- Config and allow precedence remain independent by filename. Evaluation
+  uses selected BASE policy throughout the reviewed diff.
+
+A newly created `.checkwash/allow.toml` selected over an existing BASE
+`.greenwash/allow.toml` uses the effective BASE ledger for the existing parsed
+entry prefix comparison. An equal ledger adds no entries. A preserved prefix
+followed by new records emits EXEMPTION_ADDED only for that suffix. Rewriting
+or removing an existing record, including an empty priority file hiding a
+nonempty BASE ledger, is GUARDRAIL_TOUCHED critical even though the priority
+file is new. Revocation therefore retains its protected maintenance cost even
+when it tightens the gate. The parser's existing ignored-record behavior is
+unchanged.
+
+Shadow GUARDRAIL_TOUCHED fingerprints keep their content-bound v2 outer form
+and additionally bind the selected BASE policy's fixed repository-relative
+path, complete raw-byte SHA256 and bounded transition kind. Physical before
+and after identity remains bound. Exact keys move; old approvals require
+review and are not automatically translated. EXEMPTION_ADDED keeps its key
+formula for actual suffix additions; duplicate visibility for migrated records
+disappears.
+
+IR3 requires `globals.policy_shadows` in every payload, including an empty map
+when none is reported. Each entry has exactly `base_path`, `base_sha256` and
+`kind`; no policy values or arbitrary paths are copied. This required proof
+slot is why IR_VERSION is 3; an omitted slot is not proof of no shadow. Old IR2
+documents remain IR2 without inferred proof. FINDINGS_VERSION remains 2, as
+does its envelope/object field set. Exit meanings remain 0 pass, 1 block and
+2 engine error.
+
+CLI and sweep pass selected BASE path/raw bytes they already read, without a
+new HEAD authority read or widened source admission. Direct build_ir/analyze
+callers creating a priority policy file need PolicyBase provenance for that
+filename, including known absence where applicable. Missing relevant proof
+refuses with EngineError. Closed .gwcase adapters use explicit before policy
+bytes; after-only means absent at BASE. HEAD-only or slash-alias-ambiguous
+context remains unknown by filename through known_names and refuses only when
+that filename's new priority creation needs it. An unrelated unknown allow
+context does not refuse config creation or a test-only change, and vice versa.
+The engine's lexical backslash-to-slash spelling applies before membership,
+filename and suffix comparisons and to policy mapping/case keys. No case-fold,
+dot resolution, realpath or filesystem authority is added. case_snapshot is
+AFTER content and never supplies BASE authority. Golden/demo callers still
+pass allow_entries=[]; fixture ledger bytes never activate exemptions.
+
+This contract does not change directory precedence, existing-file/Git-rename
+policy, copy-plus-delete maintenance, arbitrary role-glob ordering, HEAD-only
+exemption authority, the historical single exemption_ledger_path attribution,
+BASE roles already excluding guardrails, reader admission or hook error rules.
+The implementation was authorized under Nelson's 2026-10-27 pre-1.0 repair
+instruction. Version metadata and this contract are not release qualification
+or publication evidence; stop for Nelson's decision before 1.0.
 
 `.greenwash/allow.toml`, per-fingerprint only (never per-rule):
 

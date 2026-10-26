@@ -49,6 +49,17 @@ the exceptions).
   Pass `--fail-on` yourself if your tool needs to know it, because the
   document does not record it.
 
+## IR payloads (0.10.0)
+
+The findings envelope stays version2; `--emit-ir` is a separate IR3 document.
+Select the decoder from the payload's `version`, never the package string.
+An IR3 decoder requires the `globals.policy_shadows` proof map, even if empty,
+and validates the fixed paths, digest and transition kind in stability.md.
+An IR2-only consumer must refuse IR3, while a historical reader keeps IR2 as
+IR2 with no shadow-proof assertion. Do not insert an empty map, relabel old
+documents or reserialize old receipts to make them look current. Config and
+exemptions remain BASE-side; fixture HEAD context never grants authority.
+
 ## Check the document
 
 - Require `checkwash_findings_version == 2` and refuse any other value. Since

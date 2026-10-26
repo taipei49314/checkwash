@@ -38,6 +38,7 @@ from checkwash.change import SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, contract_diagnostics, parse_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
+from checkwash.policy_shadow import PolicyBase
 from checkwash.engine import analyze
 from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
@@ -349,6 +350,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         root_path_lister=root_snapshot.list_paths,
         root_batch_reader=root_snapshot.read_many,
         pytest_configs=pytest_configs,
+        policy_base=PolicyBase(config_path, config_data, allow_path, allow_data),
     )
     return _Run(ir, findings, verdict, config, diagnostics, report_context, changes)
 

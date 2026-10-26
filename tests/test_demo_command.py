@@ -7,7 +7,7 @@ every tampering case in it must still block. Both are gates, not hopes.
 import datetime
 import io
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.demo import _load_cases, run
@@ -30,6 +30,7 @@ def test_every_tampering_case_blocks_and_honest_passes():
         snapshot = case_snapshot(case)
         _ir, findings, verdict = analyze(
             case_to_changes(case), Config(), contract, [], TODAY,
+            policy_base=case_policy_base(case),
             root_reader=snapshot.get,
             root_searcher=lambda needles: search_source_mapping(snapshot, needles),
         )

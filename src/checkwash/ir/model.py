@@ -1,4 +1,4 @@
-"""IR data model (checkwash_ir_version 2).
+"""IR data model (checkwash_ir_version 3).
 
 Detectors consume this and nothing else. All ordering inside the IR is
 explicit and deterministic; no dict/set iteration order leaks into output.
@@ -525,6 +525,7 @@ class DiffGlobals:
     exemptions_added: list[str] = field(default_factory=list)  # fingerprints appended in head allow.toml
     exemption_ledger_path: str = ".greenwash/allow.toml"  # the ledger those fingerprints were appended to
     guardrail_configs_created_loosening: list[str] = field(default_factory=list)  # created own config that disables a detector or raises fail_on (issue #79)
+    policy_shadows: dict[str, dict[str, str]] = field(default_factory=dict)  # IR3 required proof slot (may be empty); never inferred for IR2
     scope_allow: list[str] = field(default_factory=list)  # contract globs ([] = SCOPE_DRIFT off)
     scope_drift: list[tuple[str, str]] = field(default_factory=list)  # (path, role)
     moved_assertion_texts: list[str] = field(default_factory=list)  # normalized, sorted

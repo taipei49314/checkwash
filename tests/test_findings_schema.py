@@ -32,7 +32,7 @@ import sys
 import textwrap
 
 from checkwash import FINDINGS_VERSION
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.engine import analyze
@@ -395,6 +395,7 @@ def test_corpus_findings_json_matches_schema():
                                   if any(n.encode("utf-8") in data for n in needles)])
                 if head else None
             ),
+            policy_base=case_policy_base(case),
             root_reader=snapshot.get,
             root_searcher=lambda needles: search_source_mapping(snapshot, needles),
         )

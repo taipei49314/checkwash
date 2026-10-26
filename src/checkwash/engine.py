@@ -28,6 +28,7 @@ from checkwash.ci import (
 )
 from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
+from checkwash.policy_shadow import config_transition, shadow_baseline
 from checkwash.collection_inventory import _runner as _collection_runner, collection_inventory_changes, collection_sources, opaque_reached
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
@@ -711,6 +712,7 @@ def build_ir(
     root_path_lister=None,
     root_batch_reader=None,
     pytest_configs=None,
+    policy_base=None,
 ) -> IR:
     changes, unread_changes = _set_aside_unread(changes, config, scope_allow or [], root_reader)
     # Absent from `changes`, a set-aside path would read as unchanged (#415).
@@ -1572,8 +1574,14 @@ def build_ir(
                 ):
                     g.prod_opaque_change = True
         elif role == "guardrail":
+            shadow = shadow_baseline(change, policy_base)
             if path in (".checkwash/allow.toml", ".greenwash/allow.toml"):
-                appended = _classify_allowlist_change(change.before, change.after)
+                before_policy = shadow[0] if shadow is not None else change.before
+                appended = _classify_allowlist_change(before_policy, change.after)
+                if shadow is not None:
+                    g.policy_shadows[path] = {
+                        **shadow[1], "kind": "allow_append" if appended is not None else "allow_rewrite",
+                    }
                 if appended is not None:
                     g.exemptions_added.extend(appended)
                     g.exemption_ledger_path = path
@@ -1581,9 +1589,13 @@ def build_ir(
                     g.guardrail_files_changed.append(path)
             else:
                 g.guardrail_files_changed.append(path)
+                if shadow is not None:
+                    g.policy_shadows[path] = {
+                        **shadow[1], "kind": config_transition(shadow[0], change.after),
+                    }
             if not change.before:
                 g.guardrail_files_created.append(path)
-                if path in _OWN_CONFIG_PATHS and _created_config_loosens(change.after):
+                if shadow is None and path in _OWN_CONFIG_PATHS and _created_config_loosens(change.after):
                     g.guardrail_configs_created_loosening.append(path)
         elif role == "ci" and test_obligations:
             # A JS/TS test kept in a CI directory is test code, and the test
@@ -1879,6 +1891,7 @@ def analyze(
     root_path_lister=None,
     root_batch_reader=None,
     pytest_configs=None,
+    policy_base=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -1896,6 +1909,7 @@ def analyze(
         root_path_lister=root_path_lister,
         root_batch_reader=root_batch_reader,
         pytest_configs=pytest_configs,
+        policy_base=policy_base,
     )
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)

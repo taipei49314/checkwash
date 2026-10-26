@@ -170,3 +170,56 @@ behavior is predicted. None of this is a candidate replay or a zero-cost
 measurement. Route A, other Python Route B and file-scoped credits, JS/TS
 (#212), and unrecognised neutralisation syntax remain. #419 and THREATMODEL
 rows 2, 93, 130 and 131 remain open.
+
+
+## D-177 (2026-10-27): compare newly winning policy files with effective BASE policy
+
+Nelson instructed this repair continuation: 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」.
+Under that instruction this named defect, its necessary protected contract
+and consumer migrations are implemented for the 0.10.0 working-tree candidate.
+The pre-1.0 scope supersedes the earlier UX-only/inert boundary; 1.0 still
+requires Nelson's decision. It does not rewrite old v0.9.1 tags or failed,
+partial and consumed receipts, nor waive validation or publication gates.
+
+Previously, per-filename config/allow lookup already selected `.checkwash/`
+over `.greenwash/`, but guardrail classification compared a new physical path
+with its own absence. Defaults comparison missed a legacy block-on-parse-error
+policy shadowed by a pass-with-warning priority config; it also blocked equal
+or tighter copies of already-disabled policies. New priority ledgers were
+compared with an empty ledger even when they displaced an effective legacy
+ledger. The earlier source-bound PJU observations and inert packet remain
+historical evidence, not validation of this implementation.
+
+The adopted §6 rule compares only a newly winning priority creation with its
+existing selected legacy BASE predecessor. Equal roles, a subset disable set,
+no threshold rise and no engine-error weakening establish nonweakening. Other
+recognized relaxation or an uncomparable policy stays critical. Effective
+ledger prefix additions retain EXEMPTION_ADDED for the true suffix; equality
+adds nothing, and rewrite/revocation stays critical. Authority during the
+reviewed diff still comes from BASE, with config and allow selected separately.
+
+Selected BASE provenance is explicit and content-bound. The engine's lexical
+slash normalization applies before policy classification and to mapping/case
+keys. Ambiguous or HEAD-only context stays unknown per filename, with refusal
+only when its new priority creation needs that proof; unrelated cases retain
+their admission. No HEAD ledger becomes an active fixture exemption.
+
+This changes frozen policy interpretation and shadow GUARDRAIL fingerprints,
+so the candidate is 0.10.0. The required globals.policy_shadows proof slot is
+present even when empty and advances IR to 3; findings remains 2. Historical
+IR2 stays unchanged and gains no inferred proof. Current-source corpus
+validation requires IR3; the historical comparator retains raw IR2 and every
+typed version/key/behavior delta. Existing shadow approvals need review, never
+mechanical translation. Existing golden/corpus expected labels are untouched.
+
+Conservative costs remain for differing role tables, warning-bearing configs,
+ledger revocation and unsupported copy-plus-delete/Git-rename maintenance.
+Inactive-file costs, ignored invalid allow records, multi-ledger attribution
+and BASE role overrides remain separate limitations. This decision changes
+neither general engine-error behavior nor unrelated oracle semantics.
+
+Targeted policy/API/IR3 regression and native comparisons are being recorded
+on actual PJU working-tree hashes. Validation, integration, acceptance and
+publication remain distinct; this entry claims no missing platform, full-suite,
+source/wheel/pyz or release-collector PASS. Required checks remain pending until
+their own final-source receipts exist.

@@ -24,7 +24,7 @@ def context():
     }
 
 
-def payload(names=None, *, label="before"):
+def payload(names=None, *, label="before", ir_version=3, policy_shadows=None):
     names = context()["case_names"] if names is None else names
     findings = {
         "checkwash_findings_version": 2, "verdict": "pass", "findings": [],
@@ -32,7 +32,8 @@ def payload(names=None, *, label="before"):
         "summary": {"critical": 0, "high": 0, "warn": 0, "info": 0},
         "config_errors": [], "skipped_files": [],
     }
-    ir = {"version": 2, "base": label, "head": "after", "files": [], "globals": {}}
+    globals_ = {"policy_shadows": policy_shadows or {}} if ir_version == 3 else {}
+    ir = {"version": ir_version, "base": label, "head": "after", "files": [], "globals": globals_}
     return "".join(f"# {name}\n" + json.dumps(findings) + "\n" + json.dumps(ir) + "\n"
                    for name in names).encode()
 
@@ -133,7 +134,7 @@ def test_invalid_json_envelopes_are_not_complete_payloads(damage):
     data = payload()
     data = {
         "empty-object": b"# first.gwcase\n{}\n{}\n# second.gwcase\n{}\n{}\n",
-        "duplicate-key": data.replace(b'"version": 2', b'"version": 2, "version": 2'),
+        "duplicate-key": data.replace(b'"version": 3', b'"version": 3, "version": 3'),
         "non-finite": data.replace(b'"base": "before"', b'"base": NaN'),
         "crlf": data.replace(b"\n", b"\r\n"),
     }[damage]
@@ -170,3 +171,34 @@ def test_source_context_change_prevents_success_receipt(tmp_path, monkeypatch):
         ARTIFACTS.emit(args)
     assert (tmp_path / "corpus-findings.json").read_bytes() == payload()
     assert not (tmp_path / "receipt.json").exists()
+
+
+def test_current_collector_rejects_historical_ir2_without_rewriting_it():
+    old = payload(ir_version=2)
+    original = bytes(old)
+    with pytest.raises(ValueError, match="IR3"):
+        ARTIFACTS.validate_payload(old, context()["case_names"])
+    assert old == original
+
+
+@pytest.mark.parametrize("replacement", [b'null', b'[]', b'"unknown"'])
+def test_ir3_requires_its_proof_slot_even_when_no_shadow_is_reported(replacement):
+    data = payload().replace(b'"policy_shadows": {}', b'"policy_shadows": ' + replacement)
+    with pytest.raises(ValueError, match="IR3"):
+        ARTIFACTS.validate_payload(data, context()["case_names"])
+    missing = payload().replace(b'"policy_shadows": {}', b'"unrelated": {}')
+    with pytest.raises(ValueError, match="IR3"):
+        ARTIFACTS.validate_payload(missing, context()["case_names"])
+
+
+def test_ir3_proof_has_only_fixed_paths_digest_and_transition_kind():
+    proof = {"base_path": ".greenwash/config.toml", "base_sha256": "a" * 64,
+             "kind": "config_nonweakening"}
+    data = payload(policy_shadows={".checkwash/config.toml": proof})
+    ARTIFACTS.validate_payload(data, context()["case_names"])
+    for broken in ({**proof, "base_path": "/external/secret"},
+                   {**proof, "base_sha256": "short"}, {**proof, "kind": []},
+                   {**proof, "kind": "allow_rewrite"}, {**proof, "extra": "value"}):
+        with pytest.raises(ValueError, match="IR3"):
+            ARTIFACTS.validate_payload(payload(policy_shadows={".checkwash/config.toml": broken}),
+                                       context()["case_names"])

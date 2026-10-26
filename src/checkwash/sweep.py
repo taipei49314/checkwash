@@ -21,6 +21,7 @@ from checkwash.allowlist import load_allowlist
 from checkwash.config import load_config, read_base_config_file
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
+from checkwash.policy_shadow import PolicyBase
 from checkwash.engine import analyze
 from checkwash.gitio import GitSourceOverLimit, grep_head_paths, list_range_changes, read_base_file
 from checkwash.gitio.pytest_configs import PairedPytestConfigs
@@ -209,6 +210,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                 root_path_lister=root_snapshot.list_paths,
                 root_batch_reader=root_snapshot.read_many,
                 pytest_configs=pytest_configs,
+                policy_base=PolicyBase(config_path, config_data, allow_path, allow_data),
             )
         except Exception as exc:  # noqa: BLE001 - a sweep must survive one bad commit
             result.errors += 1

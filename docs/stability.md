@@ -11,15 +11,18 @@ evidence and limitations.
 fingerprints and retire their old path-only exemptions. This intentionally
 moves those namespaces' fingerprints, as a minor release may
 ([fingerprint stability](#fingerprint-stability)); existing v0.2.13
-installations retain their broad keys. IR and findings versions are 2 since
-v0.3.0 and 1 in v0.2.13. Read the [migration procedure and
+installations retain their broad keys. IR and findings versions became 2 in
+v0.3.0 and were 1 in v0.2.13. The 0.10.0 policy-shadow contract
+requires IR3 proof (`globals.policy_shadows`, present even when empty);
+findings remains 2. Read the [migration procedure and
 runtime limits](remediation-upgrade.md) before upgrading.
 
 **Next minor (unreleased, #421):** nine assertion-level oracle rules get
 content-bound v2 fingerprints that bind the after side too, and retire their
 before-only exemptions; TEST_DISABLED does the same in that minor (#512).
 This moves those namespaces' fingerprints as well, as a minor release may;
-IR and findings versions stay 2. The
+Those changes alone keep IR/findings versions 2; the 0.10.0
+policy-shadow contract moves IR to 3 and keeps findings at 2. The
 [assertion-level notes](remediation-upgrade.md#assertion-level-rules-next-minor-421)
 and the [TEST_DISABLED notes](remediation-upgrade.md#test_disabled-next-minor-512)
 list the rules and the re-review step.
@@ -42,7 +45,7 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 | Severity model | `SPEC.md` §5 | Every detector reports at `warn`; only the escalator table promotes to `high`/`critical`. A detector will never start blocking on its own |
 | Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not. Since v0.8.0, in `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`; a usage error such as a malformed range still exits 2. The hook is an author-side check; the required CI check remains the gate, and every other format keeps exit 2 for an engine error ([#414](https://github.com/taipei49314/checkwash/issues/414)). From the next minor (unreleased), one engine error is reported as a block there: a size refusal exits 0 with `decision: block` and a `reason` naming path, side, size and limit, only when it is for a change in the diff that decides the verdict (for the Stop hook, HEAD against the working tree) and that change has a head or worktree side over the limit; `SPEC.md` §9 lists the size refusals that keep the message. Every other engine error still carries no `decision`, and term, json and sarif keep exit 2 for every engine error, this size refusal included ([#456](https://github.com/taipei49314/checkwash/issues/456)). With `--hook-input stdin`, the managed Stop handler's flag, a pass may also carry a non-blocking `systemMessage` about the session's commits, a size refusal in their analysis included, and the flag with another format or a range is a usage error, exit 2. `hook session-start`, the managed SessionStart handler, prints nothing and always exits 0 ([#418](https://github.com/taipei49314/checkwash/issues/418)) |
 | Finding fingerprints | `src/checkwash/findings.py` | Within one minor release line (x.y.0 to x.y.z), a recorded exemption keeps matching. A minor release can move fingerprints in any namespace; its `DECISIONS.md` entry and release notes name the rules and shapes that move ([fingerprint stability](#fingerprint-stability)). v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. The next minor retires the before-only keys of nine assertion-level rules the same way (#421) and TEST_DISABLED's legacy keys (#512), renumbers units that share a name (#424), and no longer gives a dead def a `name#N` place (#499) |
-| IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A shape change bumps the number; see the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
+| IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A required-key or existing-field contract change bumps the affected number; optional additions follow the rules below. See the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | Both `.checkwash/config.toml` and `.greenwash/config.toml` are supported, with the precedence below. A malformed config is reported, never silently ignored |
 | Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. Proved on every push by a job that diffs artifacts from all nine matrix legs |
 | Zero runtime dependencies | `pyproject.toml` | Gated by a test. It is what makes the single-file build possible |
@@ -62,7 +65,9 @@ release does not migrate that default. Protect both directories in
 ## Machine findings contract (`FINDINGS_VERSION` / `IR_VERSION`)
 
 `--format json` is the machine interface. Both numbers are **1 in
-v0.2.13** and **2 since v0.3.0**. The envelope keys
+v0.2.13** and became **2 in v0.3.0**. The 0.10.0 policy-shadow contract
+uses IR3 with a required policy proof slot and findings2 unchanged. Historical
+IR2 remains IR2 without an inferred empty proof. The envelope keys
 below remain; the v0.3.0 IR adds reviewed-change evidence described in the
 [upgrade notes](remediation-upgrade.md#machine-interfaces-and-sarif).
 
@@ -102,6 +107,15 @@ guide for tools that read it.
 `checkwash.IR_VERSION` is `--emit-ir`. The IR is a dataclass tree
 serialized by `to_jsonable` (tuples become lists). A consumer should
 key on `version` inside the payload, not on field order.
+IR3 requires `globals.policy_shadows` as a map in every payload,
+even when empty. Its keys are winning `.checkwash/config.toml` or
+`.checkwash/allow.toml`; each entry requires exactly `base_path` (the matching
+legacy filename), `base_sha256` (64 lowercase hexadecimal characters) and
+`kind` (the bounded config/ledger transition enum in SPEC §6). Missing or
+invalid IR3 proof is an unsupported document, not no shadow. An old IR2
+document has no newly trusted proof; keep its original bytes and version.
+An IR2-only consumer refuses IR3 until explicitly migrated, rather than
+silently discarding this required meaning. See embedding.md's IR guidance.
 
 `--format sarif` is a **projection** of the same findings into SARIF
 2.1.0. It does not bump `FINDINGS_VERSION`. Allowlisted findings are
