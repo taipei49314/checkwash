@@ -273,3 +273,19 @@ unsupported TASK files need canonical rewriting after review. Error projection
 retains exit 2 and the hook's non-blocking NOT_ANALYSED message; no fake clean
 result, guessed YAML coercion or automatic activation is introduced. Targeted
 and final-source checks must identify their own input hashes and actual runs.
+
+## D-182 (2026-10-27): CRLF checkout text may preserve worktree relocation identity
+
+The worktree reader previously paired delete/add only by raw equality, while
+Git can store LF and check out CRLF. Identical textual relocation could lose
+its identity before analysis. Under the same core-repair instruction, 0.10.0
+allows exact UTF-8 CRLF/LF equivalence only during pairing, retaining original
+source bytes. No lossy decode, whitespace/similarity matching, lone-CR folding
+or reader-admission change is made. NUL/invalid UTF-8 use raw equality.
+
+Deterministic tie ordering and one-use matching remain. New controls include
+native staged/untracked CRLF relocation with adjacent weakening and complete
+range/worktree finding comparison, plus content/whitespace/binary/invalid-UTF-8
+negatives. This closes that bounded EOL discrepancy; other native Git
+similarity, parameter and oracle-credit differences are not declared solved
+by the reader change. Existing fixture labels and old receipts remain.

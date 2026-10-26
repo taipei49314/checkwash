@@ -1024,6 +1024,16 @@ not general YAML support. `load_contract` is the authority API. The historical
 best-effort `parse_contract` decoder remains for old case records and must not
 be used to load an unvalidated policy for review.
 
+### Textual worktree relocation (0.10.0, D-182)
+
+Worktree delete/add pairing accepts exact bytes or UTF-8 text differing only
+by CRLF versus LF. It retains the original before/after bytes in the change;
+it does not normalize fingerprint evidence or read additional paths. Binary
+NUL content and invalid UTF-8 require byte equality. Lone CR, whitespace and
+content edits are not equivalent. Equal-content ties retain the existing
+lexical, single-use pairing. Range mode still uses Git similarity; this is
+not a general claim that all range/worktree rename classifications coincide.
+
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 
 | id | condition | effect |

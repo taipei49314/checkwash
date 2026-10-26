@@ -10,6 +10,7 @@ import re
 import hashlib
 import stat
 import subprocess
+from collections import defaultdict, deque
 from dataclasses import dataclass
 
 from checkwash.change import EngineError, FileChange, SourceOverLimit, UnreadSide
@@ -491,8 +492,23 @@ def _worktree_changes(repo: str, base: str, items: list[tuple[str, bool]]) -> li
     return _detect_worktree_renames(changes)
 
 
+def _rename_content_key(data: bytes) -> bytes:
+    """Use only textual CRLF equivalence, keeping original evidence untouched.
+
+    Git can store LF blobs while checking out CRLF. Do not use lossy decoding,
+    whitespace stripping, lone-CR normalization or binary equivalence here.
+    """
+    if b"\0" in data:
+        return data
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+    return data.replace(b"\r\n", b"\n")
+
+
 def _detect_worktree_renames(changes: list[FileChange]) -> list[FileChange]:
-    """Pair identical delete+add halves into renames.
+    """Pair equal delete+add halves, allowing textual CRLF/LF equivalence.
 
     `git status` is asked for --no-renames (its rename detection needs the
     index), so relocation would otherwise look like two unrelated events and
@@ -506,19 +522,22 @@ def _detect_worktree_renames(changes: list[FileChange]) -> list[FileChange]:
 
     paired: dict[int, FileChange] = {}
     used_add: set[int] = set()
+    by_content: dict[bytes, deque[FileChange]] = defaultdict(deque)
+    for a in sorted(added, key=lambda c: c.path):
+        by_content[_rename_content_key(a.after)].append(a)
     for d in sorted(deleted, key=lambda c: c.path):
-        for a in sorted(added, key=lambda c: c.path):
-            if id(a) in used_add or a.after != d.before:
-                continue
-            used_add.add(id(a))
-            paired[id(d)] = FileChange(
-                path=a.path,
-                status="modified",
-                before=d.before,
-                after=a.after,
-                old_path=d.path,
-            )
-            break
+        arrivals = by_content.get(_rename_content_key(d.before))
+        if not arrivals:
+            continue
+        a = arrivals.popleft()
+        used_add.add(id(a))
+        paired[id(d)] = FileChange(
+            path=a.path,
+            status="modified",
+            before=d.before,
+            after=a.after,
+            old_path=d.path,
+        )
 
     result: list[FileChange] = []
     for c in changes:
