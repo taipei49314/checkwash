@@ -251,6 +251,112 @@ the fixture source itself is never executed. Root records final accepted
 source and validation separately. D-178 does not authorize a 1.0 release or
 revive historical/paid/model/adjudication grants.
 
+## D-179 (2026-10-27): bind oracle compensation to static source context
+
+D2 relocation and D5 restructuring/split candidates no longer establish
+oracle preservation from normalized assertion text, body hashes, assertion
+strength, parameter-row counts or name similarity alone. A credit requires
+a bounded two-sided source proof of the same static obligations. Unknown
+context supplies no credit; all other ordinary detector/gating paths still
+run. This does not prohibit renaming or all refactoring.
+
+Python proof binds module/import/class/setup context, complete decorators
+and arguments, parameter inputs/expected values and the assertion's
+straight-line definition/execution context. Prior assertions and following
+execution are retained; an assertion call may mutate state. Only explicitly
+pure literal assertions may be omitted as inert surrounding context.
+Complete-unit equality includes
+the complete function body. Literal parameter tables can be expanded
+statically, up to 64 live combinations, preserving each input/expectation
+pair and multiplicity. `getattr(subject, attr)` is not rewritten to an
+attribute expression: direct namespace writes and opaque prior calls can
+change builtin lookup, so this optional equivalence is deliberately absent.
+It is a visible conservative cost, not repaired by a guessed dependency
+closure. Known ancestor package initializer paths and nonempty raw
+source digests join conftest startup context; read/type/size/budget gaps
+withhold proof, and changed initializers use the existing explicit two sides.
+No repository expression is executed. Unsupported decorators, unresolved
+fixture/callback inputs, generic syntax, unknown startup and unsupported
+control flow do not acquire text-only credit. An exact `monkeypatch` smoke
+unit can retain full-unit credit with its original name and known setup.
+
+JS/TS proof retains the complete declaration and lexical module and
+binding/control context. Unknown callback/context parameters withhold proof,
+including table callback parameters not established by this narrow helper.
+Ordinary strings are data and never rewritten as
+module paths. Only static import specifier tokens already recognized by
+the existing binding reader can be resolved lexically; unknown require or
+dynamic-import cases retain their directory scope. JS runner collection
+and liveness admission remain unchanged. The optional proof budget is
+bounded to 256 KiB/128 units/16,384 AST nodes per file, 4,096 nodes/128
+statements per unit and 64 literal combinations; exceeding that budget
+withholds optional compensation without skipping the ordinary analysis.
+
+Each arriving assertion supplies spendable obligations once across D2
+whole-unit, D2 assertion-text and D5 routes. Complete-unit credit consumes
+its constituent assertion credits too, preventing a single arrival from
+paying once through the body route and again through text. D10 duplicate
+survivors require the same complete oracle context and existing liveness
+checks; a verified surviving copy remains reusable for genuine dedup.
+
+Only a proven complete-unit relocation or complete equivalent duplicate
+can retain its info early return under `oracle_freeze`. Assertion-only D2
+credits still record/spend ASSERTION_MOVED but apply E2 first: high with
+ORACLE_FREEZE. D5 compensations still reach E2. Existing exact eligible
+BASE exemptions retain priority, fingerprints and expiry semantics. No
+new exemption, blanket rewrite waiver or HEAD authority is introduced.
+
+The adjacent JS/TS provenance repair compares resolved two-sided expected
+bindings even when the operand's name spelling is unchanged. It reuses
+EXPECTATION_DEFINITION_CHANGED and its existing identity and repair path;
+the native tolerance owner retains tolerance edits, avoiding duplicate
+findings. Unchanged bindings, unknown resolution and shared-producer
+filters remain their existing controls.
+
+### IR and compatibility
+
+IR3 gains optional `UnitSide.oracle_context` and
+`UnitSide.oracle_assertion_contexts`; empty/missing/malformed proof is
+unknown, never equality. Valid digests are lowercase SHA256 strings.
+Assertion-map keys are assertion IDs, optionally suffixed `@<row ordinal>`
+for concrete parameter combinations. IR3 `duplicate_unit_hashes` now
+contains complete oracle-context hashes. The old moved text/body lists
+remain diagnostic candidates and cannot alone authorize compensation.
+Historical IR2 evidence is not rewritten or promoted into proof.
+
+Serialized AST-derived keys use the repository's stable dump, explicitly
+omit only empty `type_params` added by Python 3.12, and refuse nonempty
+generic parameters. A synthetic AST-field control covers that distinction;
+it is not a claim that Python 3.12/3.13 or other OSes were executed.
+Conftest proof bytes normalize CRLF to LF. Findings envelope2, existing
+finding-key formulas and main/quality trust authority remain unchanged.
+Severity/compensation movements require this minor decision; package
+0.10.0 is a candidate, not release acceptance or authority to reach 1.0.
+
+### Explicit boundaries and costs
+
+This is a bounded static oracle-obligation proof, not universal runtime
+equivalence. External plugins/import hooks and unsupported dynamic context
+remain limits. Existing D1/D3 repair evidence, same-unit rewrite
+compensation, compatibility-gate/production-removal policies, #419,
+alignment thresholds and assertion strength remain separate contracts.
+The change must not be described as closing every oracle escape.
+
+The exact unchanged old corpus labels and observed new costs remain in
+the stage-4 cost table. Some old negatives intentionally assert the former
+mass-only waiver even when expected output, subject normalization or setup
+changes. They remain failing compatibility gates until individually
+disposed of; neither this implementation decision nor the new passing controls
+relabels them, waives those failures or establishes release readiness.
+
+The adjacent unchanged-name JS/TS provenance repair is recorded separately in D-184.
+
+Ordinary test consumers are migrated explicitly: issue219's closed snapshot
+helper supplies root context without changing its assertions. Three issue266
+unit contracts now require UNCREDITED for unknown startup, changed setup or
+missing strict context, with named D-179 explanations. These are reviewed
+minor-contract tests, separate from the eight unchanged .gwcase labels.
+
 ## D-180 (2026-10-27): retain prior-BASE quality maintenance review
 
 Quality policy and exemption maintenance retains prior-BASE authority and

@@ -29,6 +29,7 @@ from checkwash.ci import (
 from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
 from checkwash.policy_shadow import config_transition, shadow_baseline
+from checkwash.oracle_credit import mark_contexts
 from checkwash.collection_inventory import _runner as _collection_runner, collection_inventory_changes, collection_sources, opaque_reached
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
@@ -836,6 +837,7 @@ def build_ir(
         else:
             chain_sides[cpath] = (c.before, c.after)
     chain_levels: dict[tuple[str, int], object] = {}
+    chain_sources: dict[tuple[str, int], bytes | None] = {}
     chain_reads = [0, 0]
     unknown = object()
     mark_config_cache: dict[tuple[str, int], bool] = {}
@@ -904,6 +906,7 @@ def build_ir(
                 if report_context is not None:
                     report_context.snapshot(cpath, 0, data)
                     report_context.snapshot(cpath, 1, data)
+        chain_sources[key] = data
         level = None if data is None else parse_conftest_level(data, cpath)
         chain_levels[key] = unknown if data is not None and level is None else level
         return chain_levels[key]
@@ -1704,6 +1707,65 @@ def build_ir(
                 file.module_constants_before = _canonical_constants(before.constants)
                 _mark_weakened_guards(file)
 
+    relocation_sources = {change.path.replace("\\", "/"): (change.before, change.after) for change in expanded_changes}
+    relocation_initializers = {}
+
+    def _relocation_startup(path, side, data):
+        if data is None:
+            return None
+        proof = []
+        for level in _conftest_chain(path, side, data):
+            if level.star or level.adds_marks:
+                return None
+            source = chain_sources.get((level.path, side if level.path in chain_sides else -1))
+            if source is None or b"request" in source:
+                return None
+            proof.append((level.path, hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()))
+        # Importing the test package executes each ancestor initializer
+        # before the unit. Equal conftest chains alone cannot prove equality.
+        parts = path.split("/")[:-1]
+        if len(parts) > 16 or root_reader is None:
+            return None
+        for depth in range(len(parts), -1, -1):
+            initializer = "/".join([*parts[:depth], "__init__.py"])
+            key = (initializer, side if initializer in relocation_sources else -1)
+            if key not in relocation_initializers:
+                if len(relocation_initializers) >= 64:
+                    return None
+                if initializer in relocation_sources:
+                    source = relocation_sources[initializer][side]
+                else:
+                    try:
+                        source = root_reader(initializer)
+                    except (EngineError, OSError, ValueError, TypeError):
+                        return None
+                if source is not None and (not isinstance(source, bytes) or len(source) > 65536):
+                    return None
+                relocation_initializers[key] = source
+                if source is not None and report_context is not None:
+                    for recorded_side in ((0, 1) if key[1] == -1 else (side,)):
+                        report_context.snapshot(initializer, recorded_side, source)
+            source = relocation_initializers[key]
+            if source:
+                proof.append((initializer, hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()))
+        return repr(proof)
+
+    # Context proofs supplement (never replace) source admission/liveness.
+    # Unknown startup context cannot establish oracle equivalence.
+    for file in ir.files:
+        needed = {unit.qualname for unit in file.units if unit.before is None or unit.after is None
+                  or (unit.delta is not None and (unit.delta.assertions_removed or unit.delta.assertions_added))}
+        if not needed:
+            continue
+        sources = relocation_sources.get(file.path, (None, None))
+        for side_index, field in enumerate(("before", "after")):
+            data = sources[side_index]
+            sides = [(unit.qualname, getattr(unit, field)) for unit in file.units
+                     if getattr(unit, field) is not None]
+            startup = _relocation_startup(file.path, side_index, data) if file.language == "python" else ""
+            mark_contexts(data, sides, file.path, file.language, startup_known=startup is not None,
+                          startup=startup, needed=needed)
+
     # Move credits, counted after the constant environments exist because
     # liveness now consults them. Assertions (and whole units) landing in a
     # unit that does not run never count as "moved" — a sacrificial
@@ -1720,6 +1782,9 @@ def build_ir(
         js_collected = file.path not in js_head_runners or collected(file.path, js_head_runners[file.path])
         for unit in file.units:
             live_after = unit.after is not None and js_collected and unit_is_live(unit.after, constants)
+            if unit.after is not None and not live_after:
+                unit.after.oracle_context = ""
+                unit.after.oracle_assertion_contexts = {}
             if unit.delta is not None and unit.before is not None and unit.after is not None:
                 b_by_id = {a.id: a for a in unit.before.assertions}
                 a_by_id = {a.id: a for a in unit.after.assertions}
@@ -1772,8 +1837,11 @@ def build_ir(
                 continue
             for unit in file.units:
                 if unit.before is not None and unit.after is None and unit.before.body_hash:
-                    h = unit.before.body_hash
-                    if added_units.get(h):
+                    h = unit.before.oracle_context
+                    if not h:
+                        continue
+                    if any(u.before is None and u.after is not None and u.after.oracle_context == h
+                           for candidate in ir.files for u in candidate.units):
                         continue  # relocated within the diff; D2 covers it
                     wanted.add(h)
                     leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
@@ -1800,9 +1868,12 @@ def build_ir(
                 if not parsed.parse_ok:
                     continue
                 consts = _gate_constants(parsed, after_by_path, head_reader)
+                startup = _relocation_startup(path, 1, data)
+                mark_contexts(data, [(pu.qualname, pu.side) for pu in parsed.units], path, "python",
+                              startup_known=startup is not None, startup=startup)
                 for pu in parsed.units:
-                    if pu.side.body_hash in wanted and unit_is_live(pu.side, consts):
-                        found.add(pu.side.body_hash)
+                    if pu.side.oracle_context in wanted and unit_is_live(pu.side, consts):
+                        found.add(pu.side.oracle_context)
             g.duplicate_unit_hashes = sorted(found)
     for path, unit, target, text, span in installation_events(
         ir, changes, config, root_reader=root_reader, root_searcher=root_searcher, root_path_lister=root_path_lister,

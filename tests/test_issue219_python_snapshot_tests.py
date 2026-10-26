@@ -19,6 +19,7 @@ from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.ir.model import judged_as_test
 
 TODAY = datetime.date(2026, 10, 5)
@@ -41,7 +42,8 @@ def run(*changes):
     for change in changes:
         if change.after is not None:
             snapshot[change.path] = change.after
-    ir, findings, verdict = analyze(list(changes), Config(), Contract(), [], TODAY, head_reader=snapshot.get)
+    ir, findings, verdict = analyze(list(changes), Config(), Contract(), [], TODAY, head_reader=snapshot.get,
+        root_reader=snapshot.get, root_searcher=lambda needles: search_source_mapping(snapshot, needles))
     return ir, sorted((f.rule, f.severity, f.path, f.unit) for f in findings), verdict
 
 
@@ -206,7 +208,9 @@ def test_a_copy_pytest_still_collects_keeps_a_deleted_duplicate_running(copy, cr
     kept = b"from app.billing import total\n\n\ndef test_other():\n    assert total() == 78.75\n"
     snapshot = {**HEAD, copy: BODY, "tests/test_x.py": kept}
     _ir, findings, verdict = analyze([FileChange("tests/test_x.py", "modified", BODY, kept)], Config(), Contract(),
-                                     [], TODAY, head_reader=snapshot.get, head_searcher=_search(snapshot))
+                                     [], TODAY, head_reader=snapshot.get, head_searcher=_search(snapshot),
+                                     root_reader=snapshot.get,
+                                     root_searcher=lambda needles: search_source_mapping(snapshot, needles))
     assert [(f.rule, f.unit) for f in findings] == [("TEST_DISABLED", "test_total")]
     assert ("DUPLICATE_REMAINS" in findings[0].deescalators) is credited
     assert verdict == ("pass" if credited else "block")

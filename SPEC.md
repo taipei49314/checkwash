@@ -1047,16 +1047,16 @@ not a general claim that all range/worktree rename classifications coincide.
 | E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file. E7 reads a test role that comes from the path alone (a JS/TS test path, or a file beneath a test-support directory, §2) only when the file declares a test on either side; otherwise it reads the role the §2 table and runner promotion give the path, so production code named like a test is a production touch (#196 186.8), and so is test data or a manual mock (#217). Every other rule keeps the test role | → high |
 | E8 `CI_BECAME_UNANALYSABLE` | a workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader (§4 `CI_WORKFLOW_TOUCHED`) read with at least one live runner site, and whose head side it declines. E6 still applies when the same file also weakens a test command (#196 191.3) | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
-| D2 `ASSERTION_MOVED` | removed assertion's normalized text — or, for a disappeared unit, its whole normalized body — reappears verbatim in a **live** added unit. Live means no disabling marker, or only markers that qualify as D6 compat gates: a test carried across files together with its own `skipif(WIN)` is relocated, not dead, while an unconditional skip or an always-true condition still counts as dead. A JS/TS unit is live only in a file that the file's runner still collects (§2b, from the destination's own source, else the base manifest): a unit that reappears in a file its runner does not collect does not run there (#196 186.7). Credits are a multiset, spent once each | → info |
+| D2 `ASSERTION_MOVED` | a removed oracle has a matching two-sided static context in a live arrival, under D-179 below. Text, body hash, assertion mass and name similarity alone establish no credit. Existing collection/liveness checks remain. Each arriving assertion is spendable once across whole-unit, assertion and D5 routes; a complete-unit credit consumes its assertion credits too. Complete-unit equivalence may return at info; assertion-only credit still applies E2 under oracle_freeze | info, or high/ORACLE_FREEZE for assertion-only credit under freeze |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
-| D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units (liveness as in D2) ≥ the mass lost to disappeared units | hold at warn |
+| D5 `RESTRUCTURED` | within-file oracle mass is a candidate budget only; every lost own assertion must also have a matching static context/multiplicity proof in live arrivals (D-179). Split/renamed candidates use the same proof and shared spendable budget | hold at warn, still subject to E2 |
 | D6 `COMPAT_GATE` | the added skip is a `skipif` or a non-strict `xfail` mark (on the test, on its class, or in a `pytestmark`, which is read as the call it holds: #209 X1), a skip or non-strict `xfail` mark that a `pytestmark` binding carries under recorded guards, judged on the guard and the mark's own condition together (#260 Q2: `if sys.platform == "win32": pytestmark = pytest.mark.skip(...)` holds as its `skipif` spelling does), or an imperative skip (`pytest.skip` / `pytest.xfail` / `self.skipTest`, or a raised `unittest.SkipTest` / `pytest.skip.Exception`, in any import spelling: #220) under recorded `if` guards, in the test body, in the setup the unit runs (#196 183.2), or in a helper either of them calls, same-file or imported (#272). So is a later binding of the test's name that may replace it (`collection.rebound`, §2b), under the condition that binding runs under; one with no condition D6 can read (a loop body, an `except … as` or for target, a `match` case, mid-way through a `try` body) earns nothing (#424). A mark's condition given as a string is the expression pytest compiles from it, read as pytest evaluates it: `os`, `sys` and `platform` are those modules unless the test module binds the name to a constant, and `config` is unknown; a string that does not compile earns nothing (#263). Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it). A suite-level collection control in a `conftest.py` (`collect_ignore`, a collection hook, an `add_marker(...skip)` in one; §2b) is judged on its own guard, which need not name the interpreter or OS but must be able to be false (D-028, #209 Q1). The hold is a fact about the marker the finding reports: every after-side marker of that name must qualify, and a finding with no marker of its own (a unit gone, parametrize rows deleted, a guard weakened or removed) gets none, so a gate lends nothing to another disable on its unit (#208) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ EXACT_VALUE — still inside the exact family; landing at APPROX or below is material (THREATMODEL 13), so 90→70 and 70→60 are not mild | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D5 `SAME_UNIT_REWRITE` (extended) | an `ASSERT_SUBSTITUTED` in a unit that also **deleted** an assertion and **wrote a new strong one** — the private-API-to-public-API rewrite cluster. Crediting the removal at warn while blocking the substitution at high described one edit two ways. A pure substitution removes nothing, so the shape this rule exists for is untouched | hold at warn |
 | D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED`, an `ASSERT_SUBSTITUTED` or an `EXPECTATION_DEFINITION_CHANGED` — those three only; `PACKAGE_REPAIR` (below) takes the first and the third — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and all three credited rules require unweakened strength (an `EXPECTATION_DEFINITION_CHANGED` assertion's text is unchanged) | hold at warn |
-| D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. A survivor is parsed with the conftest files above it at head, as a changed test module is (#223), so a skip in a conftest fixture it reaches counts as its own (#266). Not spent: one survivor covers any number of identical deletions, because it keeps running either way. The search reads Python files only (`.py` paths, `def name(` needles), so no JS/TS unit is ever a survivor (#484) | → info |
+| D10 `DUPLICATE_REMAINS` | a disappeared unit has a proven complete oracle-context equivalent in an unchanged, live, collectable Python survivor. The existing bounded head search (at most eight parsed candidates), conftest liveness (#266) and collection checks remain. Strict startup context is required; an unknown context earns no credit. A verified survivor is reusable for genuine deduplication. JS/TS survivors remain outside this route (#484) | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
 (`benchmarks/triage-2026-07-30.json`). D8–D10 came from the second
@@ -1201,6 +1201,44 @@ package at all, so it cannot excuse the cheat the rule exists to catch.
 Evidence is deliberately **not** "some prod file in this diff changed". That
 diff-global test let a single dead constant, a statement reorder, or an edit
 to an unrelated function disarm the gate for the whole run.
+
+### Oracle-context proof in IR3 (D-179, 0.10.0)
+
+Python relocation proof includes module/import/class context, full decorators
+and arguments, parameter inputs/expectations, the assertion's prior/following
+execution context, conftest startup and ancestor package initializers. Unknown
+assertion calls are retained; only proved pure literal assertions may be inert.
+Literal parameter combinations are expanded statically up to 64 live rows.
+There is no getattr-to-attribute equivalence: opaque prior calls may replace
+builtin lookup. Module/helper metadata and unsupported dynamic contexts supply
+no proof. Exact complete-unit relocation remains available with known context.
+
+JS/TS proof retains declarations/tables, bindings and surrounding execution.
+Ordinary strings are never module paths. Only recognized static import tokens
+may be resolved lexically; bare, dynamic or unknown imports retain their
+directory context. Existing runner/liveness admission is unchanged.
+
+IR3 adds optional UnitSide.oracle_context and oracle_assertion_contexts. Empty,
+missing or malformed proof is unknown; valid values are lowercase SHA256 keys.
+Assertion keys are IDs with an optional @row ordinal. duplicate_unit_hashes now
+contains complete oracle-context keys; moved text/body lists are candidates,
+never authority on their own. Historical IR2 gains no inferred proof. Finding
+envelope2 and existing fingerprint formulas stay unchanged.
+
+Optional proof is bounded to 256 KiB/128 units per file, 16,384 module AST nodes,
+128 statements/4,096 nodes per function, and bounded startup reads (16 ancestor
+levels, 64 initializer records, 64 KiB each). Missing/read/type/size/budget or
+resource gaps withhold compensation without skipping ordinary analysis. Stable
+AST keys omit only empty type_params and reject unsupported generic syntax.
+
+This is bounded static obligation matching, not universal runtime equivalence.
+External plugins/import hooks and unsupported dynamic behavior remain limits.
+D1/D3, same-unit rewrites, compatibility/production-removal policy, strength and
+alignment retain their separate contracts. Complete-unit/duplicate equivalence
+can retain info under freeze; every assertion-only D2 or D5 route still reaches
+E2. Exact eligible BASE exemptions retain priority. Eight historical golden
+expectations remain unresolved compatibility failures; this contract does not
+relabel or waive them. See docs/oracle-credit-0.10.0.md.
 
 ## 6. Exemptions
 
