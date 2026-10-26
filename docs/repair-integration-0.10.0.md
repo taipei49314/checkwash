@@ -27,7 +27,15 @@ v0.9.0 until new public artifacts are actually verified.
 | 11 unknown fingerprints | Distinguish recognized/matchable findings from stored future namespaces, preserving forward compatibility. |
 | 12 quality CRLF/junction/Ruff | Normalize CRLF-only comparisons, recognize exact Python 3.11 junction tags, explain unqualified Ruff ignore inputs. |
 | 13 TASK syntax | Authority loading refuses recognized unsupported or ambiguous policy instead of silently applying partial scope/freeze. The restricted historical decoder remains for old case records. |
-| 14 sweep | Supply paired pytest configuration and retain per-commit error identity without rewriting historical counts. |
+| 14 sweep and live review | Supply paired pytest configuration in range, sweep, worktree and Stop, with fresh primary/session contexts. Retain per-commit error identity without rewriting historical counts; live worktree sources keep strict regular-only admission. |
+
+Core implementation and bounded independent review are integrated. The
+[oracle-credit notes](oracle-credit-0.10.0.md) retain eight unresolved golden
+expectations, individually tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
+Their original inputs/labels are unchanged. New passing controls and a minor
+version do not waive their compatibility failures. Actual final-source results
+belong to the [review candidate](https://github.com/taipei49314/checkwash/pull/566)
+and matching raw task receipts.
 
 Qualification records must name their actual source, host, runtime, command,
 exit and raw output. PJU results carry

@@ -18,6 +18,20 @@ states: the new grant is not a PASS receipt or a waiver of release gates.
 PJU is the authorized execution host; unavailable platform capabilities are
 recorded as NOT_RUN. No new paid/model or historical batch is admitted here.
 
+The core implementation is integrated: D-177 policy/IR3 provenance, D-178 TASK
+addressing, D-179 oracle-context compensation, D-180 retained quality trust,
+D-181 strict TASK authority, D-182 CRLF relocation, D-183 worktree/Stop pytest
+evidence, and D-184 same-name JS expectation provenance. The original repair
+overview is [updated here](docs/repair-integration-0.10.0.md).
+
+Eight original golden expectations remain unchanged and incompatible with
+D-179, tracked individually in [#567](https://github.com/taipei49314/checkwash/issues/567).
+The [draft PR](https://github.com/taipei49314/checkwash/pull/566) and matching
+task receipts carry actual validation state. Implementation, collected test
+counts and bounded review do not waive those failures or establish publication.
+Final-source evidence must identify the exact source and actual capability;
+the existing v0.9.1 tag and historical grants are not reused.
+
 ## 2026-10-26: bounded UX repair candidate
 
 This candidate follows the next-session handoff for individual experience

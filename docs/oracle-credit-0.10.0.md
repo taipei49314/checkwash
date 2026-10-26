@@ -16,6 +16,7 @@ unchanged and failing, under the repository's rule against autonomous fixture
 relabeling. A 0.10.0 version string and the core implementation instruction do
 not turn those failed gates into release acceptance. Final-source checks and
 their exact remaining differences must be recorded separately.
+Individual disposition is tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
 
 ## Unresolved historical fixture movements — exact old/new observations
 

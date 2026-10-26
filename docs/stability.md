@@ -1,11 +1,11 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **v0.8.0 is alpha**. Its versioned interfaces and
+checkwash **is alpha**, including the unreleased 0.10.0 candidate. Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
-[public-launch brief](releases/v0.8.0-public-launch.md) records this release's
-evidence and limitations.
+[v0.8.0 public-launch brief](releases/v0.8.0-public-launch.md) records that historical
+release's evidence and limitations; it does not certify the current candidate.
 
 **v0.3.0 (2026-09-07):** five file-wide rules have content-bound v2
 fingerprints and retire their old path-only exemptions. This intentionally
