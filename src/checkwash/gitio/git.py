@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import re
 import hashlib
+import stat
 import subprocess
 from dataclasses import dataclass
 
@@ -435,6 +436,20 @@ def _worktree_status(repo: str, head: str) -> list[tuple[str, str]]:
     return entries
 
 
+def _indexed_gitlink(repo: str, path: str) -> bool:
+    """Only an exact, unmerged-free index gitlink can stand for no file.
+
+    A dirty submodule is a directory in porcelain status, but its entry is
+    a mode-160000 pointer, as in a commit tree. A directory or nested
+    repository alone is not evidence of that mode. Literal pathspecs and
+    the complete single-record match keep prefixes, globs and conflict
+    stages from granting the same treatment.
+    """
+    raw = _run(repo, ["--literal-pathspecs", "ls-files", "--stage", "-z", "--", path])
+    pattern = rb"160000 (?:[0-9a-f]{40}|[0-9a-f]{64}) 0\t" + re.escape(path.encode("utf-8")) + rb"\0"
+    return re.fullmatch(pattern, raw) is not None
+
+
 def _worktree_changes(repo: str, base: str, items: list[tuple[str, bool]]) -> list[FileChange]:
     """`base`'s blob against the working tree for each (path, deleted) item."""
     changes: list[FileChange] = []
@@ -447,9 +462,19 @@ def _worktree_changes(repo: str, base: str, items: list[tuple[str, bool]]) -> li
         # (confirmed red-team finding).
         after: bytes | UnreadSide | None = None
         if not deleted:
-            after = snapshot.read(path, unread_oversized=True)
-            if after is None:
-                raise GitError("status-present worktree source disappeared")
+            # Do not ask the regular-file reader to open a registered
+            # submodule directory. Its checked-out files remain available
+            # to the context snapshot; this only handles its pointer entry.
+            # A base regular file replaced by a gitlink still has `before`
+            # below, so its removal is not lost.
+            try:
+                directory = stat.S_ISDIR((snapshot.root / path).lstat().st_mode)
+            except FileNotFoundError:
+                directory = False
+            if not (directory and _indexed_gitlink(repo, path)):
+                after = snapshot.read(path, unread_oversized=True)
+                if after is None:
+                    raise GitError("status-present worktree source disappeared")
         if before is None and after is None:
             continue
         if before is None:
