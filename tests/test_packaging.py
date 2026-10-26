@@ -19,6 +19,19 @@ def _pyproject() -> dict:
         return tomllib.load(fh)
 
 
+def _assert_action_pin_matches_verified_release(
+    trusted_tag: str, pin: str, advertised: dict,
+) -> None:
+    # Tag presence is not publication: candidate/paused tags may exist locally.
+    assert trusted_tag == advertised["tag"], (
+        f"trusted {trusted_tag} is not verified advertised release {advertised['tag']}"
+    )
+    assert pin == advertised["commit"], (
+        f"trusted {trusted_tag} pin {pin} differs from verified advertised commit "
+        f"{advertised['commit']}"
+    )
+
+
 def test_version_matches_pyproject():
     assert checkwash.__version__ == _pyproject()["project"]["version"]
 
@@ -185,9 +198,8 @@ def test_readme_action_snippet_is_zizmor_blanket():
         )
 
     # The required-check snippet, self-audit workflow, and doctor's offline
-    # allowlist are one contract. The Greenwash pin intentionally trails by one
-    # release: a commit cannot contain its own SHA, so only an already-existing
-    # stable tag can be verified and embedded.
+    # allowlist are one contract. Their Action pin follows the explicitly
+    # verified advertised release, not the newest tag present locally.
     from checkwash.doctor import _PINS
 
     greenwash = re.search(
@@ -239,19 +251,29 @@ def test_readme_action_snippet_is_zizmor_blanket():
     current_version = version_tuple(_pyproject()["project"]["version"])
     trusted_version = version_tuple(trusted_tag)
     assert trusted_version <= current_version
-    if trusted_version < current_version:
-        released = subprocess.check_output(
-            ["git", "tag", "--list", "v[0-9]*"], cwd=str(ROOT), text=True
-        ).splitlines()
-        prior = [
-            version_tuple(tag)
-            for tag in released
-            if re.fullmatch(r"v\d+\.\d+\.\d+", tag)
-            and version_tuple(tag) < current_version
-        ]
-        assert prior and trusted_version == max(prior), (
-            f"trusted {trusted_tag} is not the newest prior stable tag"
-        )
+    manifest = tomllib.loads((ROOT / "release/advertised.toml").read_text(encoding="utf-8"))
+    _assert_action_pin_matches_verified_release(trusted_tag, pin, manifest["release"])
+
+    # Synthetic peeled local tags model the paused v0.9.1/candidate scenario.
+    # A newer local tag must not promote itself into the verified ledger.
+    import pytest
+
+    local_tags = {"v0.9.0": "a" * 40, "v0.9.1": "b" * 40, "v0.10.0": "c" * 40}
+    verified = {"tag": "v0.9.0", "commit": local_tags["v0.9.0"]}
+    _assert_action_pin_matches_verified_release("v0.9.0", local_tags["v0.9.0"], verified)
+    for unpublished in ("v0.9.1", "v0.10.0"):
+        with pytest.raises(AssertionError, match="not verified advertised release"):
+            _assert_action_pin_matches_verified_release(
+                unpublished, local_tags[unpublished], verified,
+            )
+    with pytest.raises(AssertionError, match="differs from verified advertised commit"):
+        _assert_action_pin_matches_verified_release("v0.9.0", "d" * 40, verified)
+
+    # If a reviewed ledger later advances, the formerly trusted pin is stale.
+    advanced = {"tag": "v0.9.1", "commit": local_tags["v0.9.1"]}
+    _assert_action_pin_matches_verified_release("v0.9.1", local_tags["v0.9.1"], advanced)
+    with pytest.raises(AssertionError, match="not verified advertised release"):
+        _assert_action_pin_matches_verified_release("v0.9.0", local_tags["v0.9.0"], advanced)
 
     assert "cannot embed its own commit SHA" in readme
 
