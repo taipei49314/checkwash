@@ -396,7 +396,7 @@ def test_each_conftest_is_read_once():
 
 
 def test_an_importer_the_engine_adds_unchanged_reads_no_chain():
-    """A root helper's importer joins the analysis unchanged: no module the diff changes (D-093 7)."""
+    """D-093 detector attribution stays unchanged; D-179 startup probes are separate."""
     helper = b"def assert_equal(actual, expected):\n    assert actual == expected\n"
     # No fixture request: a request would also read its conftest for the
     # fixture's own assertions (`_merge_crossfile_oracles`), which is no chain.
@@ -420,9 +420,14 @@ def test_an_importer_the_engine_adds_unchanged_reads_no_chain():
     )
     assert verdict == "block"
     assert any(f.rule == "ASSERT_REMOVED" and f.path == TEST for f in findings)
-    # The helper is itself a module the diff changes (`test_*.py`), so the
-    # root level is read for it; the importer's own level is not.
-    assert TEST in reads and [path for path in reads if path.endswith("conftest.py")] == ["conftest.py"]
+    assert any(f.rule == "ASSERT_REMOVED" and f.path == TEST and f.severity == "high" for f in findings)
+    # The changed helper's ordinary chain reads root conftest.py. Optional
+    # D-179 proof then probes the importer's startup without attaching new
+    # detector skip semantics to that unchanged module.
+    startup_probes = ["tests/conftest.py", "tests/__init__.py", "__init__.py"]
+    assert TEST in reads and reads[-3:] == startup_probes
+    assert [path for path in reads if path.endswith("conftest.py")] == ["conftest.py", "tests/conftest.py"]
+    assert not any(f.rule == "TEST_DISABLED" for f in findings)
 
 
 def test_past_the_read_limit_is_an_engine_error(monkeypatch):

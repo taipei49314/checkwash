@@ -223,11 +223,29 @@ def test_helper_only_assertion_removal_discovers_unchanged_importer():
     assert removed.path == "tests/test_calc.py" and removed.severity == "high"
     assert removed.before.text == "assert_equal(add(2, 3), 5)"
     assert searches == [["test_helpers"]]
-    # `test_helpers.py` is itself a test module the diff changes, so the
-    # conftest above it is read (#223); the unchanged importer reads none.
-    assert reads == ["tests/test_calc.py", "conftest.py", "tests/calc.py", "tests/test_helpers.py",
-                     "test_helpers/__init__.py", "tests/test_helpers/__init__.py"]
+    # The original helper/oracle reads retain their order. D-179 separately
+    # inspects startup for the unchanged importer's optional context proof;
+    # those probes must not add a detector skip to that unchanged importer.
+    oracle_reads = ["tests/test_calc.py", "conftest.py", "tests/calc.py", "tests/test_helpers.py",
+                    "test_helpers/__init__.py", "tests/test_helpers/__init__.py"]
+    startup_probes = ["tests/conftest.py", "tests/__init__.py", "__init__.py"]
+    assert reads == oracle_reads + startup_probes
+    assert not any(f.rule == "TEST_DISABLED" for f in findings)
     assert {f.path for f in ir.files} == {"test_helpers.py", "tests/test_calc.py"}
+
+
+def test_startup_probe_does_not_add_a_detector_skip_to_an_unchanged_importer():
+    conftest = (b"import pytest\n@pytest.fixture(autouse=True)\n"
+                b"def skip_all():\n    pytest.skip('existing startup')\n")
+    (_ir, findings, verdict), _searches, reads = helper_only_change(
+        b"def assert_equal(actual, expected):\n    pass\n",
+        {"tests/test_calc.py": AFTER, "tests/conftest.py": conftest},
+    )
+    assert verdict == "block"
+    assert any(f.rule == "ASSERT_REMOVED" and f.path == "tests/test_calc.py" and f.severity == "high"
+               for f in findings)
+    assert not any(f.rule == "TEST_DISABLED" for f in findings)
+    assert reads.count("tests/conftest.py") == 1
 
 
 def test_helper_only_change_does_not_claim_unchanged_importer_is_out_of_scope():
