@@ -3137,7 +3137,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.9.1 |
+| version | v0.10.0 |
 | last published CLI | v0.9.0 |
 | last published CLI commit | d6eda4f695fabb8e7d138f7a87b099d2028f0294 |
 | detectors | 22 |
