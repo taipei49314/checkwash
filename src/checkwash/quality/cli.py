@@ -7,6 +7,15 @@ from .report import json_report, terminal, sarif
 from .snapshot import Snapshot
 
 
+def usage_error(args, message):
+    if args.format == "term":
+        return "error: " + message + "\n", 2
+    payload = new_payload("HEAD", "worktree")
+    diagnostic(payload, "POLICY_INVALID", message, kind="error")
+    payload, code = finish(payload)
+    return {"json": json_report, "sarif": sarif}[args.format](payload), code
+
+
 def run_setup(args, today):
     from .setup import add_issue, base_result, doctor, draft, render
     try:
@@ -35,14 +44,14 @@ def run(args, today):
     init_flags = any(getattr(args, key, None) is not None for key in ("root", "paths", "tool"))
     details = getattr(args, "details", False)
     if (init_flags and args.range != "init") or (details and args.range != "profiles"):
-        return "error: --root, --paths and --tool are init-only; --details is profiles-only\n", 2
+        return usage_error(args, "--root, --paths and --tool are init-only; --details is profiles-only")
     if args.range in {"init", "doctor"}:
         if args.rule is not None or args.format == "sarif":
-            return "error: quality init/doctor accepts no extra argument or SARIF format\n", 2
+            return usage_error(args, "quality init/doctor accepts no extra argument or SARIF format")
         return run_setup(args, today)
     if args.range == "profiles":
         if args.rule is not None or args.format == "sarif":
-            return "error: quality profiles accepts no rule or SARIF format\n", 2
+            return usage_error(args, "quality profiles accepts no rule or SARIF format")
         try:
             rows = list(available().values())
         except QualityError as exc:
@@ -52,7 +61,7 @@ def run(args, today):
         return json_report({"profiles": rows}), 0
     if args.range == "explain":
         if args.rule not in RULES:
-            return "error: expected a quality rule ID\n", 2
+            return usage_error(args, "expected a quality rule ID")
         explanations = {
             "QW_THRESHOLD_LOWERED": "A resolved integral coverage minimum decreased, for example 85 to 50. Changed precision, measurement context or dynamic values withhold this proof.",
             "QW_RULE_DISABLED": "A previously enabled requirement was removed, for example selecting F401 and then ignoring F401. Gained rules do not cancel losses. Overrides must be resolved.",
