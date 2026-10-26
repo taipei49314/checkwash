@@ -1,5 +1,27 @@
 # Releasing
 
+## Pre-1.0 repair continuation instruction (2026-10-27)
+
+Nelson instructed the current repair goal:
+
+> 我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我
+
+This continuation authorizes completing the remaining core repairs and their
+necessary protected contracts and advancing pre-1.0 versions without repeated
+version-bump questions. The present integration targets 0.10.0, including the
+IR3 policy provenance contract; it is no longer a 0.9.x UX-only patch. Before
+advancing to 1.0, stop and obtain Nelson's decision. This is an agent-written
+scope interpretation of the exact quote, not additional words attributed to him.
+
+Normal independent review, final-source checks, qualification and publication
+gates remain. Version metadata is not evidence of a published release. The
+existing unpublished v0.9.1 tag, failed tag-validation receipts and consumed
+history attempts remain unchanged; this instruction does not resume them or
+admit a new historical/model/paid batch. Actual missing capabilities and
+unexecuted gates must remain visible. Any PyPI environment approval remains
+with the maintainer. Public CLI/Action/advertised pins stay at the verified
+v0.9.0 until a new release's actual public bytes have been verified.
+
 ## v0.9.1 publication instruction (2026-10-24)
 
 After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:

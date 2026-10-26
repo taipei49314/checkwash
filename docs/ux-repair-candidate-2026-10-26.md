@@ -1,5 +1,11 @@
 # Bounded UX repair candidate, 2026-10-26
 
+Historical scope through candidate `5f0af4b4`: the limits and unimplemented
+proposals below describe that stage. Nelson expanded the goal on 2026-10-27
+to complete the core repairs and advance pre-1.0 versions. See the current
+[0.10.0 integration](repair-integration-0.10.0.md) and `STATE.md`; the old
+version/implementation restrictions below do not override that new instruction.
+
 This is a review candidate based on `1ffe283d7d947fecc426dea99323b0a2620a9482`,
 the existing unpublished v0.9.1 source. Public upgrade comparisons also retain
 v0.9.0, `d6eda4f695fabb8e7d138f7a87b099d2028f0294`. There is no version bump,

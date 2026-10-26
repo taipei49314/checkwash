@@ -1,6 +1,22 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-26 (UX repair candidate; v0.9.1 publication paused; v0.9.0 remains the verified public CLI/Action)
+Updated: 2026-10-27 (core repair integration toward 0.10.0; v0.9.0 remains the verified public CLI/Action)
+
+## 2026-10-27: complete the repair goal before 1.0
+
+Nelson's latest instruction is: 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」.
+The existing goal now includes implementation of the remaining policy-shadow,
+TASK authority and oracle-credit core repairs, the necessary protected contract
+and consumer migrations, and pre-1.0 version advances. The integrated candidate
+targets 0.10.0 with IR3 and findings2. This supersedes the earlier UX-only scope
+and undecided-version boundary below. Stop and ask Nelson before 1.0.
+
+The old v0.9.1 tag and all failed/partial/consumed receipts remain immutable.
+Historical entries below describe their own dates, not the current scope.
+Current implementation, validation, acceptance and publication are separate
+states: the new grant is not a PASS receipt or a waiver of release gates.
+PJU is the authorized execution host; unavailable platform capabilities are
+recorded as NOT_RUN. No new paid/model or historical batch is admitted here.
 
 ## 2026-10-26: bounded UX repair candidate
 
