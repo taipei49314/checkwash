@@ -21,6 +21,17 @@ unchanged.
 | Unknown namespace diagnostics | Unknown keys remain stored and eligible under existing rules for newer-engine compatibility. Writer/check/doctor explain that this version emits no matching finding. Doctor distinguishes eligibility from actual use; diagnostic display quotes control characters. |
 | Human decoration | Demo/report-owned symbols, separators and truncation markers use readable ASCII in legacy streams. Source evidence remains visibly escaped by the existing writer; machine UTF-8 bytes are not rewritten. |
 | Sweep pytest configuration input | The sweep analyzer receives the paired pytest configuration context already used by range review. This addresses logical pytest configuration aliases without changing sweep output fields or exit behavior. |
+| Doctor policy sources | When both policy directories contain the same filename, doctor names the per-file working-tree precedence and distinguishes it from the reviewed BASE policy. Resolution and classification remain unchanged. |
+| Quality explain formats | Successful JSON and SARIF explanations contain advisory rule metadata. SARIF has no review results or fabricated invocation; explaining a rule is not a review verdict. |
+| Outside worktree source diagnostics | Existing outside-repository refusals name a safely quoted logical path, side and reader entrypoint, without disclosing the resolved outside target or reading its bytes. |
+| Quality profiles formats | Explicit terminal output is a readable catalog; bare profiles retains its previous JSON bytes and default. No model is newly qualified. |
+| Quality init guidance | Draft TOML comments explain UTF-8 saving and review before installation. JSON points specifically to policy_toml; init errors give operation-specific prerequisites instead of looping back to init. |
+| TASK syntax diagnostics | Advisory stderr notes explain common ignored forms in the restricted parser, including BOM, comments, quoted booleans, flow lists and misplaced headers. The original parser and Contract are unchanged; see [the accepted subset](task-input.md). |
+| Sweep commit diagnostics | Nonempty optional commit_diagnostics records full commit identity, known parent and safe phase/kind/reason for existing config/allow diagnostics or counted exceptions. Existing counters, fallback, denominators and exits remain; ordinary summaries omit the new field and retain their bytes. See [the embedding contract](embedding.md#sweep-summaries). |
+| TASK lookup context | Failed lexical mapping or BASE lookup adds safely quoted requested/resolved/repo/cwd/mapped context on stderr, then retains the original refusal. Cwd-relative resolution is not repaired by this note. |
+| Nonregular worktree source diagnostics | Existing worktree read/batch refusals identify the logical path, side, entrypoint and regular-source recovery. Legacy Git/search helpers retain their messages; no new source is admitted. |
+| Ruff ignore discovery diagnostics | The existing incomplete result identifies the ignore input, side and declared profile. Nonempty ignore files, including comment-only files, remain unqualified; support and enforcement do not expand. |
+| Doctor tracked hook maintenance | Doctor identifies tracked local Stop settings and explains that reinstalling may modify a protected guardrail requiring diff review and the existing BASE process. No managed-upgrade exemption is added. |
 
 ## Validation and limits
 
@@ -37,6 +48,8 @@ native inside/outside junctions. Output controls preserve source evidence,
 future namespaces and the existing schema/exit distinctions. Existing fixture
 labels were not changed. The setup usage test now validates its requested
 machine format while preserving the original exit-2 rejection requirement.
+Four existing diagnostic-only assertions also follow the more contextual
+nonregular refusal text, preserving their exception class and rejection.
 
 An early Action regression run retained seven failures: six selected the WSL
 bash launcher instead of existing Git Bash; one detected a source-copy mismatch
@@ -71,11 +84,12 @@ changed by this work.
   quoted booleans and flow lists are not equivalent to canonical input. Parser
   probes do not establish runtime exploit outcomes. Expanding accepted syntax
   or activating previously ignored policy requires a contract decision.
-- Sweep config/allow diagnostics and exception commit identities are still
-  incomplete. The input-context slice does not repair those diagnostics.
-- Successful quality explain/profiles formatting and init draft guidance,
-  main-reader junction diagnostics and CRLF rename/fingerprint compatibility
-  remain separate follow-up slices.
+- Sweep diagnostics are now retained without changing historical counters;
+  external consumers that reject additional keys must account for the
+  documented optional array. Historical sweep results are not recomputed.
+- Quality format/guidance and main-reader refusal diagnostics are repaired
+  above. Native cross-drive/root-junction coverage, PowerShell 5.1 redirection,
+  and broader CRLF rename/fingerprint compatibility remain unverified.
 
 The bounded candidate may fit a patch release after full compatibility and
 acceptance checks. A complete rename/oracle contract repair belongs to a

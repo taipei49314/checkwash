@@ -19,6 +19,15 @@ fixture label changes in this candidate. PJU receipts describe their actual
 runtime and source; they do not establish unexecuted platform coverage or
 release acceptance.
 
+The second UX batch adds format-aware quality explanations/catalogs/draft
+guidance, policy-source and tracked-hook maintenance notes, safe worktree and
+TASK lookup/syntax diagnostics, Ruff ignore-discovery reasons and optional
+per-commit sweep diagnostics. The original TASK parser, path authority,
+snapshot admission, Ruff qualification, sweep counters and trust policy remain.
+Requested output formats and error text intentionally improve; the optional
+sweep field is documented for external consumers. Existing diagnostic-only
+test assertions follow the new refusal text without relabeling golden verdicts.
+
 ## 2026-10-24: narrow #419 release preparation
 
 Nelson instructed this session to carry the reviewed v0.9.1 scope through
