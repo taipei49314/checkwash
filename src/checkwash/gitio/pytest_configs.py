@@ -27,6 +27,7 @@ class WorktreePytestConfigs:
         if len(revision) not in (40, 64):
             raise EngineError("worktree pytest config needs a frozen base object identity")
         self._algorithm = hashlib.sha1 if len(revision) == 40 else hashlib.sha256
+        self._before = before
         self._paths = None
         self._modes = {}
         self._records = {}
@@ -43,11 +44,33 @@ class WorktreePytestConfigs:
             self._paths = tuple(self.source.list_paths())
         return list(self._paths)
 
+    def config_scope(self):
+        """Config paths known without walking: BASE's tree plus the captured diff.
+
+        Untracked files Git does not ignore are in the captured diff. An
+        ignored file is reached only through a consumer's own full inventory.
+        """
+        if not hasattr(self._before, "list_paths"):
+            return self.list_paths()
+        return sorted({*self._before.list_paths(), *self._changes})
+
     def config_modes(self, paths):
         missing = sorted(set(paths) - self._modes.keys())
         if missing:
-            self._modes.update(self.source.config_modes(missing))
+            self._modes.update(self._source_modes(missing))
         return {path: self._modes[path] for path in sorted(set(paths))}
+
+    def _source_modes(self, paths):
+        """Worktree modes, with a BASE link's regular placeholder kept a link.
+
+        core.symlinks=false checks a link out as a regular file holding the
+        link text; comparing that text with BASE's resolved target hid target
+        edits. It is refused like any worktree link.
+        """
+        modes = self.source.config_modes(paths)
+        base = self._before.config_modes(paths) if hasattr(self._before, "config_modes") else {}
+        return {path: b"120000" if base.get(path) == b"120000" and mode in {b"100644", b"100755"} else mode
+                for path, mode in modes.items()}
 
     def read_config_many(self, paths):
         selected = sorted(set(paths))
@@ -61,7 +84,7 @@ class WorktreePytestConfigs:
                 raise EngineError(f"worktree pytest config is not a regular source: path={path!r}; use a repository-owned regular source or a committed range")
         if missing:
             values = self.source.read_many(missing)
-            if self.source.config_modes(missing) != {path: modes[path] for path in missing}:
+            if self._source_modes(missing) != {path: modes[path] for path in missing}:
                 raise EngineError("worktree pytest config modes changed during analysis")
             for path in missing:
                 data = values[path]
@@ -88,22 +111,44 @@ class WorktreePytestConfigs:
 class PairedPytestConfigs:
     """One analysis's base/head config records and effective config deltas.
 
-    Call prepare once before either consumer's relevance gate. Internal
-    FileChange-shaped deltas go only to config-control comparisons, never
-    into the engine's diff or its Python/provider byte maps.
+    Call prepare once before either consumer's relevance gate. It computes
+    linked-config deltas from paths known without a worktree walk (BASE's tree
+    and the captured diff); the full inventories are listed only when a
+    consumer asks for `paths` or `requests`. A clean, docs-only or JS/TS-only worktree run
+    therefore never walks ignored dependency trees or junctions.
+    Internal FileChange-shaped deltas go only to config-control comparisons,
+    never into the engine's diff or its Python/provider byte maps.
     This cache bounds its own paired config reads, not all analysis reads.
     Each consumer retains its separate selection and ordinary read limits.
     """
 
     def __init__(self, before: GitSnapshot, after: GitSnapshot | WorktreePytestConfigs):
         self.snapshots = {"before": before, "after": after}
-        self.paths = {}
-        self.requests = {"before": set(), "after": set()}
+        self._paths = {}
+        self._requests = {"before": set(), "after": set()}
         self.records = {"before": {}, "after": {}}
-        self.changes = {}
+        self._changes = {}
         self._charged = {}
         self.bytes_read = 0
         self._prepared = False
+        self._linked = False
+        self._listed = False
+
+    @property
+    def changes(self):
+        return self._changes
+
+    @property
+    def paths(self):
+        if self._prepared:
+            self._list()
+        return self._paths
+
+    @property
+    def requests(self):
+        if self._prepared:
+            self._list()
+        return self._requests
 
     def _charge(self, side, path, size):
         key = (side, path)
@@ -120,7 +165,9 @@ class PairedPytestConfigs:
         selected = set(paths)
         # Only existing recognized config names grant this capability.
         # Runner parsing alone does not establish the command's cwd.
-        if not selected <= self.requests[side]:
+        if not selected <= self._requests[side] and self._prepared:
+            self._list()
+        if not selected <= self._requests[side]:
             raise EngineError("pytest config evidence received an unregistered request")
         missing = sorted(selected - self.records[side].keys())
         if missing:
@@ -130,17 +177,31 @@ class PairedPytestConfigs:
             self.records[side].update(values)
         return {path: self.records[side][path] for path in sorted(selected)}
 
-    def prepare(self):
-        if self._prepared:
-            raise EngineError("pytest config context cannot be reused across analyses")
-        for side, snapshot in self.snapshots.items():
-            self.paths[side] = set(snapshot.list_paths())
-            self.requests[side] = {path for path in self.paths[side]
-                                   if path.rsplit("/", 1)[-1] in CONFIG_NAMES}
-        candidates = self.requests["before"] | self.requests["after"]
+    def _register(self, candidates):
         # Keep both sides of each recognized path, including old-only ones.
-        for side in self.requests:
-            self.requests[side].update(candidates)
+        for side in self._requests:
+            self._requests[side].update(candidates)
+
+    def _list(self):
+        if self._listed:
+            return
+        self._listed = True
+        candidates = set()
+        for side, snapshot in self.snapshots.items():
+            self._paths[side] = set(snapshot.list_paths())
+            candidates.update(path for path in self._paths[side]
+                              if path.rsplit("/", 1)[-1] in CONFIG_NAMES)
+        self._register(candidates)
+
+    def _link_changes(self):
+        if self._linked:
+            return
+        self._linked = True
+        candidates = set()
+        for snapshot in self.snapshots.values():
+            scope = snapshot.config_scope() if hasattr(snapshot, "config_scope") else snapshot.list_paths()
+            candidates.update(path for path in scope if path.rsplit("/", 1)[-1] in CONFIG_NAMES)
+        self._register(candidates)
         modes = [snapshot.config_modes(candidates) if hasattr(snapshot, "config_modes") else
                  {path: snapshot._tree_entries.get(path, (None,))[0] for path in candidates}
                  for snapshot in self.snapshots.values()]
@@ -152,9 +213,14 @@ class PairedPytestConfigs:
             new = after[path].data if after[path] is not None else None
             if old != new:
                 status = "added" if old is None else "deleted" if new is None else "modified"
-                self.changes[path] = FileChange(path, status, old, new,
-                                                synthetic="pytest_config_evidence")
+                self._changes[path] = FileChange(path, status, old, new,
+                                                 synthetic="pytest_config_evidence")
+
+    def prepare(self):
+        if self._prepared:
+            raise EngineError("pytest config context cannot be reused across analyses")
         self._prepared = True
+        self._link_changes()
         return self
 
     def sources(self, side, paths):
