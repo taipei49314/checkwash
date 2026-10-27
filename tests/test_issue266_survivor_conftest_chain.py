@@ -84,18 +84,19 @@ def test_every_way_a_survivor_reaches_the_fixture_counts(head):
     assert outcome(head) == UNCREDITED
 
 
-@pytest.mark.parametrize("head", [
+@pytest.mark.parametrize("head,expected", [
     # a conftest beside the survivor's directory is not above it
-    {"other/conftest.py": SKIPPING.replace("@pytest.fixture", "@pytest.fixture(autouse=True)"),
-     "tests/test_copy.py": survivor()},
-    # a skip the fixture runs only on one platform is a compatibility gate (D6)
-    {"tests/conftest.py": SKIPPING.replace(
+    ({"other/conftest.py": SKIPPING.replace("@pytest.fixture", "@pytest.fixture(autouse=True)"),
+      "tests/test_copy.py": survivor()}, CREDITED),
+    # D-179 / 0.10.0: a new fixture/conditional execution context is not
+    # equivalent to the deleted ungated unit, even though it can run.
+    ({"tests/conftest.py": SKIPPING.replace(
         "import pytest\n", "import sys\n\nimport pytest\n").replace(
         "    pytest.skip(", "    if sys.platform == \"win32\":\n        pytest.skip("),
-     "tests/test_copy.py": survivor('@pytest.mark.usefixtures("needs_network")\n')},
+      "tests/test_copy.py": survivor('@pytest.mark.usefixtures("needs_network")\n')}, UNCREDITED),
 ], ids=["sibling_directory", "compat_gate"])
-def test_a_survivor_the_chain_does_not_skip_is_credited(head):
-    assert outcome(head) == CREDITED
+def test_d179_survivor_requires_unchanged_context_besides_liveness(head, expected):
+    assert outcome(head) == expected
 
 
 def test_a_conftest_the_diff_changes_is_read_on_its_head_side():
@@ -106,12 +107,12 @@ def test_a_conftest_the_diff_changes_is_read_on_its_head_side():
     plain = "import pytest\n\n\n@pytest.fixture\ndef needs_network():\n    return None\n"
     verdict, findings = outcome(head, {"tests/conftest.py": (plain, SKIPPING)})
     assert (verdict, [f for f in findings if f[0] == "test_total"]) == UNCREDITED
-    assert outcome({**head, "tests/conftest.py": plain}, {"tests/conftest.py": (SKIPPING, plain)}) == CREDITED
+    # D-179: startup bytes and the fixture execution context changed.
+    assert outcome({**head, "tests/conftest.py": plain}, {"tests/conftest.py": (SKIPPING, plain)}) == UNCREDITED
 
 
-def test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before():
-    """The chain is read from the strict snapshot, as #223 reads it. Without one,
-    no level is known and the survivor keeps the reading it had."""
+def test_d179_without_strict_snapshot_unknown_chain_grants_no_duplicate_proof():
+    """D-179 / 0.10.0: absent strict context is unknown, never equality."""
     head = {"tests/conftest.py": SKIPPING,
             "tests/test_copy.py": survivor('@pytest.mark.usefixtures("needs_network")\n')}
-    assert outcome(head, root=False) == CREDITED
+    assert outcome(head, root=False) == UNCREDITED

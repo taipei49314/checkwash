@@ -1,4 +1,4 @@
-"""IR data model (checkwash_ir_version 2).
+"""IR data model (checkwash_ir_version 3).
 
 Detectors consume this and nothing else. All ordering inside the IR is
 explicit and deterministic; no dict/set iteration order leaks into output.
@@ -286,6 +286,11 @@ class UnitSide:
     # parameter (`Assertion.fixture_reads`). Sorted by parameter. Optional,
     # so IR_VERSION stays 2.
     fixture_producers: tuple[tuple[str, str, tuple[str, ...]], ...] = ()
+    # Optional static relocation proofs (D-179). Empty means unknown, never
+    # equality. Whole-unit identity includes decorator/parameter/module scope;
+    # assertion entries include their execution/definition context.
+    oracle_context: str = ""
+    oracle_assertion_contexts: dict[str, str] = field(default_factory=dict)
 
     @property
     def disabled(self) -> bool:
@@ -525,14 +530,17 @@ class DiffGlobals:
     exemptions_added: list[str] = field(default_factory=list)  # fingerprints appended in head allow.toml
     exemption_ledger_path: str = ".greenwash/allow.toml"  # the ledger those fingerprints were appended to
     guardrail_configs_created_loosening: list[str] = field(default_factory=list)  # created own config that disables a detector or raises fail_on (issue #79)
+    policy_shadows: dict[str, dict[str, str]] = field(default_factory=dict)  # IR3 required proof slot (may be empty); never inferred for IR2
     scope_allow: list[str] = field(default_factory=list)  # contract globs ([] = SCOPE_DRIFT off)
     scope_drift: list[tuple[str, str]] = field(default_factory=list)  # (path, role)
-    moved_assertion_texts: list[str] = field(default_factory=list)  # normalized, sorted
+    moved_assertion_texts: list[str] = field(default_factory=list)  # normalized, sorted candidates; D-179 needs context proof
     # Body hashes of disappeared units that reappear verbatim as live added
     # units — the whole-unit form of the D2 move credit, and the only form an
-    # assertion-less unit can earn. Multiset, spent like the texts above.
+    # assertion-less unit can earn. Retained diagnostic candidates; D-179
+    # spends proven context/constituent assertion credits in gating.
     moved_unit_hashes: list[str] = field(default_factory=list)
-    # Body hashes of disappeared units whose identical, live copy exists at
+    # Oracle-context hashes (IR3 / D-179) of disappeared units whose
+    # identical, live copy exists at
     # head in a file the diff never touched (click 1103c5cac2: the deleted
     # test was a duplicate; the survivor still runs). A set, not a multiset:
     # one live survivor covers any number of identical deletions.

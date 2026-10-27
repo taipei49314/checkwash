@@ -11,8 +11,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from checkwash.config import resolve_config_file
-from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, summarize_allowlist
+from checkwash.config import CONFIG_DIRS, resolve_config_file
+from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, namespace_diagnostics, summarize_allowlist
 from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook, stop_reads_hook_input
 from checkwash.report.textio import write_text
 
@@ -516,6 +516,17 @@ def collect(root: Path) -> list[Note]:
             "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
             "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
         ))
+        tracked = _git_query(root, "ls-files", "-z", "--", *hook_paths)
+        indexed_paths = tracked.stdout.split(b"\0") if tracked is not None and not tracked.returncode else []
+        tracked_hooks = [path for path in hook_paths if path.encode("utf-8") in indexed_paths]
+        if tracked_hooks:
+            notes.append(Note(
+                "info", "hook maintenance can change tracked guardrails",
+                "Found tracked Stop-hook settings: " + ", ".join(tracked_hooks) + ". "
+                "Installing or reinstalling the hook can modify these tracked guardrail files. "
+                "Inspect `git diff` before committing and use the existing BASE/review process "
+                "for the change. Doctor does not exempt hook maintenance from guardrail checks.",
+            ))
         missing = [part for part, absent in (
             ("no `checkwash hook session-start` handler", not session_paths),
             ("no Stop handler that passes its hook input (`--hook-input stdin`)", not input_paths),
@@ -553,6 +564,17 @@ def collect(root: Path) -> list[Note]:
         f"allowlist: {'present (' + allow_rel + ')' if allow.exists() else 'absent'}. A new allowlist entry "
         "takes effect on the next diff and must be committed.",
     ))
+    for name in ("config.toml", "allow.toml"):
+        present = [f"{directory}/{name}" for directory in CONFIG_DIRS
+                   if root.joinpath(directory, name).is_file()]
+        if len(present) > 1:
+            notes.append(Note(
+                "info", "policy file precedence in this working tree",
+                f"For {name}, {present[0]} takes precedence over {', '.join(present[1:])}. "
+                "Precedence is per filename. Review both files before migrating or editing "
+                "a shadowed policy. Doctor describes the working tree; check reads the "
+                "reviewed BASE, whose files may differ.",
+            ))
     ledger_data = allow.read_bytes() if allow.exists() else None
     ledger = summarize_allowlist(ledger_data, datetime.date.today(), path=allow_rel)
     if ledger.parse_error:
@@ -562,6 +584,7 @@ def collect(root: Path) -> list[Note]:
             f"{ledger.entries} entries in {allow_rel}; {ledger.active} active today, "
             f"{ledger.expired} expired, {ledger.over_cap} over the {MAX_EXPIRY_DAYS}-day cap (ignored on read), "
             f"{ledger.retired} retired fingerprint(s), {ledger.invalid} invalid entry/entries."
+            " Active counts describe key/expiry eligibility; a matching finding is still required."
             if ledger.present else
             f"no allow.toml yet. `checkwash allow` writes one; expiry is capped at "
             f"{MAX_EXPIRY_DAYS} days. Commit it and put `{allow_rel.split('/')[0]}/` in CODEOWNERS."
@@ -575,6 +598,10 @@ def collect(root: Path) -> list[Note]:
                 + ". Re-run the intended diff and review a new content-bound fingerprint; "
                 "old approvals cannot be migrated without reviewing the actual change.",
             ))
+        if ledger.present:
+            entries, _error = load_allowlist(ledger_data, path=allow_rel)
+            for message in namespace_diagnostics(entries):
+                notes.append(Note("warn", "unrecognized or wrong-ledger exemption namespace", message))
     notes.append(Note(
         "info", "use a three-dot range for pull requests",
         "`checkwash check BASE...HEAD` resolves through the merge base. A two-dot range drags "

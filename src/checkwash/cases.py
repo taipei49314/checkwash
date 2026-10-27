@@ -115,6 +115,34 @@ def case_snapshot(case: Case) -> dict[str, bytes]:
     return snapshot
 
 
+def case_policy_base(case: Case):
+    """Explicit BASE declarations only; a HEAD snapshot is not BASE proof.
+
+    HEAD-only policy context stays unknown per filename. Refuse only when
+    that filename's new priority creation needs it. Other filenames and
+    test-only cases retain their old behavior. Never activates a ledger:
+    callers still pass [].
+    """
+    from checkwash.change import EngineError
+    from checkwash.policy_shadow import PolicyBase, _policy_mapping
+
+    names = {"config.toml", "allow.toml"}
+    paths = {f"{directory}/{name}" for directory in (".checkwash", ".greenwash") for name in names}
+    before, before_ambiguous = _policy_mapping(case.before)
+    after, after_ambiguous = _policy_mapping(case.after)
+    head, head_ambiguous = _policy_mapping(case.head)
+    unknown = {path.rsplit("/", 1)[1] for path in paths
+               if path in head and path not in before and path not in after}
+    unknown |= before_ambiguous | after_ambiguous | head_ambiguous
+    needed = {name for name in names if f".checkwash/{name}" in after
+              and f".checkwash/{name}" not in before}
+    if needed & unknown:
+        raise EngineError("fixture policy has HEAD-only context without explicit BASE provenance")
+    return PolicyBase.from_mapping({path: source.encode("utf-8")
+                                    for path, source in before.items()},
+                                   known_names=frozenset(names - unknown))
+
+
 def case_to_changes(case: Case) -> list[FileChange]:
     changes: list[FileChange] = []
     for path in sorted(set(case.before) | set(case.after)):

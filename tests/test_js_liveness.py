@@ -231,10 +231,12 @@ def test_focusing_the_only_unit_under_an_unknown_runner_reports_the_suite():
 
 
 @pytest.mark.parametrize("target,outcome", [
-    ('describe("moved", () => {\n  ' + UNIT + "\n});\n", ("pass", "info")),
+    ('describe("moved", () => {\n  ' + UNIT + "\n});\n", ("block", "high")),
     ('describe.skip("moved", () => {\n  ' + UNIT + "\n});\n", ("block", "high")),
 ])
 def test_a_unit_moved_into_a_skipped_block_earns_no_move_credit(target, outcome):
+    # D179: even the plain wrapper supplies no closed total() implementation
+    # or startup inventory. Its liveness alone is not oracle equivalence.
     changes = [
         FileChange("tests/a.test.js", "modified", (UNIT + "\n").encode(), b"// moved to b\n"),
         FileChange("tests/b.test.js", "added", None, target.encode()),
@@ -243,6 +245,8 @@ def test_a_unit_moved_into_a_skipped_block_earns_no_move_credit(target, outcome)
     assert (verdict, [(f.rule, f.severity) for f in findings]) == (
         outcome[0], [("TEST_DISABLED", outcome[1])],
     )
+    assert all(not {"ASSERTION_MOVED", "RESTRUCTURED", "SPLIT_OR_RENAMED", "DUPLICATE_REMAINS"}.intersection(f.deescalators)
+               for f in findings)
 
 
 @pytest.mark.parametrize("before,after", [

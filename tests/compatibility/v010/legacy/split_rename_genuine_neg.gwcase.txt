@@ -1,0 +1,23 @@
+=== meta ===
+rule: TEST_DISABLED
+title: A genuine one-into-two split keeps its de-escalation
+origin: fable audit — guard against the mass rule rejecting real splits
+=== before: tests/test_options.py ===
+from app import options
+
+
+def test_automatic_options_attr():
+    assert options("a") == ["OPTIONS"]
+    assert options("b") == ["GET"]
+=== after: tests/test_options.py ===
+from app import options
+
+
+def test_automatic_options_attr_disable():
+    assert sorted(options("a")) == ["OPTIONS"]
+
+
+def test_automatic_options_attr_enable():
+    assert sorted(options("b")) == ["GET"]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]

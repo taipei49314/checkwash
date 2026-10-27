@@ -1,6 +1,169 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-24 (v0.9.1 preparation; historical disposition pending; v0.9.0 remains the verified public CLI/Action)
+Updated: 2026-10-27 (Claude takeover: review fixes and the PJU release chain for 0.10.0; v0.9.0 remains the verified public CLI/Action)
+
+## 2026-10-27: Claude takeover, review fixes and PJU release chain
+
+Nelson handed the repository to a Claude Code session on LAPTOP-01AGNPJU:
+「Checkwash 一樣給你」「交接 規劃 都寫在上面了」. The pre-1.0 delegation in
+[RELEASING](docs/RELEASING.md) now runs through that session; it still stops
+before 1.0. Codex's earlier entries below keep their own attribution, and its
+F1/F2 packets from LAPTOP-16NUA5I8 remain failed historical records.
+
+A pre-release review of `ad1ebff7` reproduced three defects, fixed here with
+regression tests: whole-tree worktree listing for paired pytest configs (every
+worktree/Stop check could become an engine error on ignored dependency trees
+or junction cycles), an empty-file rename that skipped the D-177 effective-BASE
+comparison, and `str.splitlines()` line numbering in D-179 proofs. The test
+session now removes the source `__pycache__` it creates, the cause of the
+v0.9.1 tag-stage failure. Remaining findings are in
+[KNOWN-ISSUES-v0.10.0](docs/KNOWN-ISSUES-v0.10.0.md).
+
+The engine `src/` tree is now `c02d0c99a6b39a0a3a9f65dfadd28c4395d08310`.
+A same-host R29 differential on LAPTOP-01AGNPJU found all 3,600 members
+identical between the closed `ee6716662fe2` tree and the fixed tree, so the
+closed movement review and cost decision carry over (checkwash-lab
+`bf13bf1a`). The final PR/main/tag/release-event/public-visitor chain runs on
+LAPTOP-01AGNPJU,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; other platforms remain NOT_RUN.
+1.0 is NOT_MET.
+
+## 2026-10-27: frozen development evidence and release-protocol preparation
+
+The frozen core checkpoint `9678e8de564ed47f7ff92867d5c7d09358c04fcb`
+completed Windows/Python3.11.9 development validation: 21,550 passed,
+25 skipped and 67 passed subtests. Every skip is native symlink creation
+unavailable (WinError1314). Source, installed-wheel and actual-pyz controls
+each passed 283/283, with matching observations and all 215 package members.
+The unchanged 185-case verdict contract passed with zero failures and one
+reported Q5a PASS-to-BLOCK. These identify 9678; later heads require their own
+actual stage receipts.
+
+D-186 repairs the prospective tag rule using native public Release identity,
+retaining the failed v0.9.1 tag and genuine v0.9.0 pin. Its 501 targeted tests
+and 36 subtests passed at `071fa76f`, with independent source/metadata review
+and both actual CLI dogfood diagnostics passing. It changes no engine src.
+
+The [D-187 current cost decision](docs/d176-cost-disposition-0.10.0.md)
+separately accepts three source-reviewed D176 false blocks/four occurrences
+and the disclosed remaining-history risk for 0.10 under current delegation.
+The old R4 stays partial and consumed, including its parse omissions and
+6,554 incomplete comparisons. The new six-call targeted observation is not
+a resumed census. The separately admitted R29 attempt B completed all 3,600
+pairs and 7,200 historical CLI calls. Its sealed generic and strict audits
+returned zero; root accepted mechanical closure only, retaining the unexplained
+109.82585-second cross-clock difference. Python has 1,734 pass/pass, 48
+block/block and 18 pass/block; JS/TS has 1,759 pass/pass, 38 block/block,
+one error/block and two unchanged error/error. The exact final 19-movement join
+and delegated current0.10 cost/residual-scope decision are closed in the
+[source-bound comparison record](docs/r29-comparison-0.10.0.md). All87 HIGH
+occurrences and unknown coverage remain literal; this does not label every
+finding true/false or prove full coverage. This is
+in-sample evidence, not a false-positive rate or publication acceptance.
+Engine applicability remains exact src tree
+`ee6716662fe264b5425958f00835567a4ffca4d6`; the final whole-head PR/main/tag/
+release-event/public-visitor chain remains fresh and pending. 1.0 is NOT_MET.
+
+The [0.10 candidate guide](docs/releases/v0.10.0-public-launch.md) distinguishes
+these checkpoints from final PR/main/tag/release/public-visitor acceptance.
+BASE approval [PR573](https://github.com/taipei49314/checkwash/pull/573) merged
+normally as `c9356686`, tree `1181bb39`, after local source4eb/collector061
+validation and native metadata workflow
+[40455493560/1](https://github.com/taipei49314/checkwash/actions/runs/40455493560).
+All four required App15368 checks succeeded and their IDs match the original
+native publication artifact. Receipt commit is `3189b687`; manifest SHA256 is
+`84f7fccf59572cc5591b23a337658fec6e9965a4e83f8e12f99c082b19d73fe4`.
+The qualified PR tree equals the merged tree. This is the four-key BASE
+approval PR, with its own 20,629 passed/25 skipped/67 subtests and 3×283
+receipts, not qualification of later0.10 code.
+
+Candidate checkpoint `72f1c368` incorporates that accepted ledger. Both actual
+published0.9.0 and9678 CLI analyses of `c9356686..72f1c368` passed with19WARN,
+zero HIGH/critical, empty config-errors/skips and unchanged source. The four
+exact approved identities remain reported as allowlisted. PR572 was included
+by ancestry in the draft PR566 branch; its merged UI status does not merge
+the0.10 code into main. Final0.10 stage evidence, tag, public release, PyPI
+approval and public pin promotion remain pending; other platforms remain NOT_RUN.
+
+## 2026-10-27: autonomous continuation and conservative cost dispositions
+
+Nelson instructed this continuation: 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」.
+Codex is continuing the pre-1.0 repair goal under that delegation. It still
+stops before 1.0. Source work and task-local development validation now run on
+actual LAPTOP-16NUA5I8 / Windows / Python 3.11.9, recorded as
+HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL. Historical PJU receipts keep their own
+host/source identity; this new venue is not relabeled PJU or other platforms.
+
+Bounded plain-class and plain-describe proof paths have independent adversarial
+review. They require closed side-correct inputs and preserve unknown contexts,
+liveness and freeze. The old #263/#570 examples provide no called producer or
+closed startup context and retain BLOCK; separate supplied-source controls
+exercise the supported positive domains.
+
+The [D-185 disposition ledger](docs/oracle-context-dispositions-0.10.0.md)
+preserves all old inputs/labels and records the delegated migrations for eight
+goldens and four corpus identities. CASE_020_windows and CASE_029_flatten remain
+known legitimate-refactor false blocks. d007 and d010 are newly caught escapes.
+These are Codex-performed reviews, not Nelson's personal case reviews. Full
+fixed-source validation, receipt-route admission and publication remain separate;
+this checkpoint claims no new public release. Earlier entries retain their dates.
+
+## 2026-10-27: complete the repair goal before 1.0
+
+Nelson's latest instruction is: 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」.
+The existing goal now includes implementation of the remaining policy-shadow,
+TASK authority and oracle-credit core repairs, the necessary protected contract
+and consumer migrations, and pre-1.0 version advances. The integrated candidate
+targets 0.10.0 with IR3 and findings2. This supersedes the earlier UX-only scope
+and undecided-version boundary below. Stop and ask Nelson before 1.0.
+
+The old v0.9.1 tag and all failed/partial/consumed receipts remain immutable.
+Historical entries below describe their own dates, not the current scope.
+Current implementation, validation, acceptance and publication are separate
+states: the new grant is not a PASS receipt or a waiver of release gates.
+PJU is the authorized execution host; unavailable platform capabilities are
+recorded as NOT_RUN. No new paid/model or historical batch is admitted here.
+
+The core implementation is integrated: D-177 policy/IR3 provenance, D-178 TASK
+addressing, D-179 oracle-context compensation, D-180 retained quality trust,
+D-181 strict TASK authority, D-182 CRLF relocation, D-183 worktree/Stop pytest
+evidence, and D-184 same-name JS expectation provenance. The original repair
+overview is [updated here](docs/repair-integration-0.10.0.md).
+
+At this initial integration checkpoint, eight original golden expectations
+remained incompatible with D-179, tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
+The later D-185 entry above records their separate delegated disposition.
+The [draft PR](https://github.com/taipei49314/checkwash/pull/566) and matching
+task receipts carry actual validation state. Implementation, collected test
+counts and bounded review do not waive those failures or establish publication.
+Final-source evidence must identify the exact source and actual capability;
+the existing v0.9.1 tag and historical grants are not reused.
+
+## 2026-10-26: bounded UX repair candidate
+
+This candidate follows the next-session handoff for individual experience
+defects. The 2026-10-26 r65 human pause still governs v0.9.1 publication;
+this work does not resume collectors, automations, tag validation or publication.
+The existing v0.9.1 tag and failed receipts remain unchanged. Package metadata
+stays 0.9.1 while the next version is undecided.
+
+The [candidate scope](docs/ux-repair-candidate-2026-10-26.md) separates narrow
+reader, quality, output and exemption-diagnostic repairs from unresolved
+policy decisions. In particular, rename/decorator and D2/D5 oracle-credit
+changes are reproduced proposals, not implemented policy fixes. No protected
+contract, severity table, strength lattice, alignment parameter or existing
+fixture label changes in this candidate. PJU receipts describe their actual
+runtime and source; they do not establish unexecuted platform coverage or
+release acceptance.
+
+The second UX batch adds format-aware quality explanations/catalogs/draft
+guidance, policy-source and tracked-hook maintenance notes, safe worktree and
+TASK lookup/syntax diagnostics, Ruff ignore-discovery reasons and optional
+per-commit sweep diagnostics. The original TASK parser, path authority,
+snapshot admission, Ruff qualification, sweep counters and trust policy remain.
+Requested output formats and error text intentionally improve; the optional
+sweep field is documented for external consumers. Existing diagnostic-only
+test assertions follow the new refusal text without relabeling golden verdicts.
 
 ## 2026-10-24: narrow #419 release preparation
 
@@ -3081,7 +3244,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.9.1 |
+| version | v0.10.0 |
 | last published CLI | v0.9.0 |
 | last published CLI commit | d6eda4f695fabb8e7d138f7a87b099d2028f0294 |
 | detectors | 22 |

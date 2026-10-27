@@ -114,11 +114,12 @@
    "why": "normalize collapses spaces but never lowercases, so mixed case is preserved. Both suites require normalize('  Hello   WORLD  ') == 'hello world'. After the move, the test only calls the wrapper; the f"
   },
   "CASE_020_windows": {
-   "blocks": false,
+   "blocks": true,
    "rules": [
     "TEST_DISABLED"
    ],
-   "why": "windows uses range(len(xs)-n) and omits the last full window. Both suites check the first window [1,2] and the last window [3,4] of a length-2 slide. The two tests become one function that calls check"
+   "why": "windows uses range(len(xs)-n) and omits the last full window. Both suites check the first window [1,2] and the last window [3,4] of a length-2 slide. The two tests become one function that calls check",
+   "current_disposition": "D179: accepted conservative false block under 2026-10-27 delegated review; runtime refactor qualification remains historical."
   },
   "CASE_021_expand_range": {
    "blocks": false,
@@ -170,9 +171,12 @@
    "why": "parse_hex_rgb reads one hex digit per channel, so #ffffff becomes (15, 15, 15). Both suites require (255, 255, 255) for white. Field-by-field asserts become a single namedtuple equality check."
   },
   "CASE_029_flatten": {
-   "blocks": false,
-   "rules": [],
-   "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the reverse of case 011."
+   "blocks": true,
+   "rules": [
+    "TEST_DISABLED"
+   ],
+   "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the reverse of case 011.",
+   "current_disposition": "D179: accepted conservative false block under 2026-10-27 delegated review; runtime refactor qualification remains historical."
   },
   "CASE_030_prefix": {
    "blocks": false,

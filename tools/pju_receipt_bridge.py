@@ -1,4 +1,4 @@
-"""Validate owner-admitted PJU receipts as data, then publish required Checks.
+"""Validate owner-admitted local receipts as data, then publish required Checks.
 
 This is an evidence bridge, not a hardware attestation service. An authenticated
 repository owner admits an immutable receipt commit and its manifest digest.
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import io
 import json
 import math
@@ -24,8 +25,11 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 REPOSITORY = "taipei49314/checkwash"
-HOST = "LAPTOP-01AGNPJU"
-PROVENANCE = "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL"
+_ROUTE_SPEC = importlib.util.spec_from_file_location("_trusted_receipt_route", Path(__file__).with_name("receipt_execution_route.py"))
+_ROUTE = importlib.util.module_from_spec(_ROUTE_SPEC)
+_ROUTE_SPEC.loader.exec_module(_ROUTE)
+HOST, PROVENANCE = _ROUTE.HOST, _ROUTE.PROVENANCE
+receipt_route = _ROUTE.receipt_route
 ACTION_SHA = "d6eda4f695fabb8e7d138f7a87b099d2028f0294"
 CONTEXTS = ("checkwash", *(f"candidate assertion contract ({d})" for d in ("source", "wheel", "pyz")))
 CONTRACTS = ("tests/data/javascript_assertion_support.json", "tests/data/javascript_foundation_mutations.json")
@@ -39,6 +43,29 @@ MAX_TOTAL = 1024 * 1024 * 1024
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def validate_native_route(check, route):
+    """Bind route data to a native App check after its identity is verified.
+
+    These are the exact headers emitted by the admitted historical/current
+    publishers. The native check's App, source, success and external manifest
+    digest remain independently required by the release-parent verifier.
+    This is authenticated metadata consistency, not hardware attestation or a
+    new signature over the prior report.
+    """
+    output = check.get("output")
+    require(type(output) is dict and type(output.get("summary")) is str,
+            "native check execution route header absent")
+    header, separator, _ = output["summary"].partition("\n\n")
+    headers = {
+        f"Real local execution: {route['host']}; {route['provenance']}.",
+        f"{route['provenance']}; actual host {route['host']}; Windows/Python 3.11.9. Other platforms NOT_RUN.",
+    }
+    if route["host"] == HOST:
+        headers.add(f"Real PJU execution: {HOST}; {PROVENANCE}.")
+    require(separator == "\n\n" and header in headers,
+            "native check execution route header differs")
 
 
 def exact_keys(value, names, label):
@@ -323,27 +350,78 @@ def validate_inventory(packet, value, desc, qualification, qualification_path, d
                 "qualified artifact differs from delivered primary artifact")
 
 
-def validate_junit(raw):
+def pytest_passed_subtests(stdout, version):
+    """Reconcile the one supported pytest producer from original command bytes."""
+    require(version == "9.1.1" and type(stdout) is bytes, "JUnit subtests require pinned pytest 9.1.1 stdout")
+    require(b"\x1b" not in stdout, "colored pytest subtest stdout unsupported")
+    lines = [line.removesuffix(b"\r") for line in stdout.split(b"\n") if line.removesuffix(b"\r")]
+    # Count every summary-shaped outcome, including failed/unknown categories.
+    # Otherwise an earlier failed summary could hide behind the final success.
+    shape = rb"(?:=+ )?[0-9]+ [A-Za-z][A-Za-z ]*(?:, [0-9]+ [A-Za-z][A-Za-z ]*)* in .+"
+    summaries = [line for line in lines if re.fullmatch(shape, line)]
+    require(len(summaries) == 1 and summaries[0] == lines[-1], "JUnit needs one final pytest summary")
+    match = re.fullmatch(rb"([1-9][0-9]*) passed(?:, ([1-9][0-9]*) skipped)?, "
+                         rb"([1-9][0-9]*) subtests passed in ((0|[1-9][0-9]*)\.[0-9]{2})s"
+                         rb"( \([0-9]+:[0-5][0-9]:[0-5][0-9]\))?", summaries[0])
+    require(match is not None, "unsupported pytest subtest summary")
+    elapsed = float(match[4])
+    require(math.isfinite(elapsed) and elapsed > 0, "invalid pytest summary duration")
+    # The seconds field rounds to two decimals, while timedelta floors the
+    # original duration. Thus 60.00s may have no suffix (59.999 seconds), and
+    # 3601.00s (1:00:00) is a genuine formatter boundary (3600.999 seconds).
+    if match[6] is None:
+        require(elapsed <= 60, "pytest summary duration suffix missing")
+    else:
+        hours, minutes, seconds = map(int, match[6][2:-1].split(b":"))
+        whole = hours * 3600 + minutes * 60 + seconds
+        require(whole >= 60 and (whole == int(elapsed)
+                or (elapsed.is_integer() and whole == int(elapsed) - 1)), "pytest summary duration differs")
+    return {"passed": int(match[1]), "skipped": int(match[2] or b"0"), "subtests": int(match[3])}
+
+
+def validate_junit(raw, *, pytest_stdout=None, pytest_version=None):
+    mentioned = type(pytest_stdout) is bytes and b"subtests passed" in pytest_stdout
+    if mentioned:
+        require(b"\0" not in raw, "subtest JUnit must be UTF-8")
+        raw.decode("utf-8")
     require(b"<!DOCTYPE" not in raw.upper() and b"<!ENTITY" not in raw.upper(), "DTD/entity forbidden in JUnit")
     root = ET.fromstring(raw)
     require(root.tag in ("testsuites", "testsuite"), "JUnit root")
     cases = list(root.iter("testcase"))
     require(cases and any(case.find("skipped") is None for case in cases), "empty/all-skipped JUnit")
     require(not list(root.iter("failure")) and not list(root.iter("error")), "JUnit failures/errors")
-    for suite in root.iter("testsuite"):
+    suites = list(root.iter("testsuite"))
+    totals = []
+    for suite in suites:
         direct = list(suite.findall("testcase"))
         require(not suite.findall("testsuite"), "nested JUnit suites unsupported")
-        for attr, expected in (("tests", len(direct)), ("failures", 0), ("errors", 0),
+        declared = suite.get("tests")
+        require(declared is not None and re.fullmatch(r"[0-9]+", declared), "JUnit summary mismatch: tests")
+        totals.append(int(declared))
+        for attr, expected in (("failures", 0), ("errors", 0),
                                ("skipped", sum(case.find("skipped") is not None for case in direct))):
             value = suite.get(attr)
             require(value is not None and re.fullmatch(r"[0-9]+", value) and int(value) == expected, "JUnit summary mismatch: " + attr)
+    subtests = 0
+    if any(total != len(suite.findall("testcase")) for total, suite in zip(totals, suites)) or mentioned:
+        require(len(suites) == 1 and len(suites[0].findall("testcase")) == len(cases)
+                and (root is suites[0] or list(root.findall("testsuite")) == suites), "subtest JUnit must have one direct suite")
+        summary = pytest_passed_subtests(pytest_stdout, pytest_version)
+        skipped = sum(case.find("skipped") is not None for case in cases)
+        require(summary["passed"] + summary["skipped"] == len(cases) and summary["skipped"] == skipped,
+                "pytest/JUnit testcase outcomes differ")
+        subtests = summary["subtests"]
+        require(totals[0] == len(cases) + subtests, "JUnit subtest count differs")
     if root.tag == "testsuites":
-        for attr, expected in (("tests", len(cases)), ("failures", 0), ("errors", 0),
+        for attr, expected in (("tests", len(cases) + subtests), ("failures", 0), ("errors", 0),
                                ("skipped", sum(c.find("skipped") is not None for c in cases))):
             if attr in root.attrib:
                 value = root.attrib[attr]
                 require(re.fullmatch(r"[0-9]+", value) and int(value) == expected, "JUnit aggregate mismatch")
-    return {"tests": len(cases), "skipped": sum(c.find("skipped") is not None for c in cases)}
+    result = {"tests": len(cases), "skipped": sum(c.find("skipped") is not None for c in cases)}
+    if subtests:
+        result.update(reported_tests=len(cases) + subtests, passed_subtests=subtests)
+    return result
 
 
 def action_run_blocks(raw):
@@ -386,11 +464,12 @@ def validate_action(packet, records, head, base, trusted_root, action_sha=None):
     project = tomllib.loads(git(trusted_root, "show", action_sha + ":pyproject.toml").decode("utf-8"))["project"]
     require(identity.get("version") == project["version"], "Action engine version mismatch")
     replay = packet.json(records["action_replay"])
+    route = receipt_route(packet.manifest)
     exact_keys(replay, "schema_version kind provenance status host action_sha action_tree action_yaml_sha256 base_sha head_sha "
                        "fail_on comment_pr steps resolved_outputs files errors", "Action replay")
     require(type(replay["schema_version"]) is int and replay["schema_version"] == 1
-            and replay["kind"] == "checkwash.pju-action-replay.v1" and replay["provenance"] == "PJU_LOCAL_COMPOSITE_REPLAY"
-            and replay["status"] == "completed" and replay["errors"] == [] and replay["host"] == HOST
+            and replay["kind"] == "checkwash.pju-action-replay.v1" and replay["provenance"] == route["action_provenance"]
+            and replay["status"] == "completed" and replay["errors"] == [] and replay["host"] == route["host"]
             and replay["action_sha"] == action_sha and replay["head_sha"] == head and replay["base_sha"] == base
             and replay["fail_on"] == "high" and replay["comment_pr"] is False, "Action replay identity/status")
     require(replay["action_tree"] == git(trusted_root, "rev-parse", action_sha + "^{tree}").decode().strip(), "Action tree mismatch")
@@ -481,8 +560,8 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
     require(manifest["head_sha"] == sha(head, 40) and manifest["base_sha"] == sha(base, 40)
             and manifest["source_tree"] == sha(source_tree, 40), "receipt source identity mismatch")
     require(manifest["collector_source_sha"] == manifest["contract_source_sha"] == sha(collector, 40), "collector admission mismatch")
-    require(manifest["host"] == HOST and manifest["provenance"] == PROVENANCE
-            and manifest["status"] == "completed" and manifest["action_sha"] == ACTION_SHA, "receipt host/scope/status")
+    route = receipt_route(manifest)
+    require(manifest["status"] == "completed" and manifest["action_sha"] == ACTION_SHA, "receipt scope/status")
     runtime = manifest["runtime"]
     exact_keys(runtime, "os python_version python_executable python_sha256 git_executable git_sha256 bash_executable bash_sha256 "
                        "dependencies other_platforms", "runtime")
@@ -520,7 +599,8 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
                               "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
             and argv[17] == "--junitxml" and argv[19] == "tests"
             and argv[18].replace("\\", "/").endswith("/" + records["junit"]), "full pytest command scope differs")
-    junit = validate_junit(packet.raw(records["junit"]))
+    junit = validate_junit(packet.raw(records["junit"]), pytest_stdout=packet.raw(pytest["stdout"]),
+                           pytest_version=runtime["dependencies"].get("pytest"))
     validate_action(packet, records, head, base, trusted_root)
     validate_candidate_action(packet, records, head, base, source_root, trusted_root, collector)
     for distribution in ("source", "wheel", "pyz"):
@@ -529,7 +609,7 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
         validate_qualification(qualification, desc, distribution)
         validate_inventory(packet, packet.json(records["inventories"][distribution]), desc, qualification, qpath, distribution)
     return dict(status="verified", repository=repository, pr_number=pr, head_sha=head, base_sha=base,
-                source_tree=source_tree, collector_source_sha=collector, host=HOST, provenance=PROVENANCE,
+                source_tree=source_tree, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
                 checks=list(CONTEXTS), qualification_cases=len(desc["cases"]), junit=junit,
                 trust="owner-admitted receipt digest; not hardware attestation", other_platforms="NOT_RUN")
 
@@ -580,8 +660,9 @@ def admit_environment(expected_workflow_sha, env):
 def publish(api, report, manifest_sha256, receipt_commit, run_url):
     repository, pr, head, base = (report[k] for k in ("repository", "pr_number", "head_sha", "base_sha"))
     require(report["status"] == "verified" and report["checks"] == list(CONTEXTS), "unverified check publication")
+    route = receipt_route(report)
     ids = []
-    summary = (f"Real PJU execution: {HOST}; {PROVENANCE}.\n\n"
+    summary = (f"Real local execution: {route['host']}; {route['provenance']}.\n\n"
                f"PR #{pr}; head `{head}`; base `{base}`.\n\nReceipt commit `{receipt_commit}`; manifest SHA256 `{manifest_sha256}`.\n\n"
                f"{report['qualification_cases']} exact contract cases per distribution; JUnit {report['junit']}. "
                "Owner-admitted evidence, not hardware attestation. Other platforms: NOT_RUN.")
@@ -590,12 +671,12 @@ def publish(api, report, manifest_sha256, receipt_commit, run_url):
         for name in CONTEXTS:
             check = api.request("POST", f"/repos/{repository}/check-runs", dict(name=name, head_sha=head,
                 status="in_progress", external_id="pju:" + manifest_sha256 + ":" + name, details_url=run_url,
-                output=dict(title="PJU evidence verified; publication in progress", summary=summary)))
+                output=dict(title="Local evidence verified; publication in progress", summary=summary)))
             ids.append(integer(check["id"], "check ID", 1))
         for check_id in ids:
             require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed")
             api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="success",
-                output=dict(title="Exact-source PJU evidence passed", summary=summary)))
+                output=dict(title="Exact-source local evidence passed", summary=summary)))
         require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed after publication")
     except Exception:
         for check_id in ids:

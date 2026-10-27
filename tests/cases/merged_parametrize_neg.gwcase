@@ -33,6 +33,4 @@ from urls import parse
 def test_percent_encoding(url, attr, expected):
     assert getattr(parse(url), attr) == expected
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]},
- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_encoding.py", "unit": "test_fragment_encoding"}, {"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_encoding.py", "unit": "test_path_encoding"}, {"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_encoding.py", "unit": "test_query_encoding"}]

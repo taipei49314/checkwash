@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
@@ -67,6 +67,7 @@ def _findings(name: str) -> list[Finding]:
         Contract(),
         [],
         datetime.date(2026, 1, 1),
+        policy_base=case_policy_base(case),
         root_reader=snapshot.get,
         root_searcher=lambda needles: search_source_mapping(snapshot, needles),
     )

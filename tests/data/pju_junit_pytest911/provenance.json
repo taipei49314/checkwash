@@ -1,0 +1,76 @@
+{
+  "files": {
+    "native-command.receipt.json.gz": {
+      "compression": "gzip, mtime=0; decompression exact original bytes",
+      "original": {
+        "bytes": 1404,
+        "sha256": "a03373b554ca40c75634ae26948c04105757d6768fff2a8538c6460e7f4e7a99"
+      },
+      "original_path": "command/receipt.json",
+      "stored": {
+        "bytes": 668,
+        "sha256": "5156defd48a7616839aad731252eb0c6e554ff112e2d643ea78eb967bd0add7a"
+      }
+    },
+    "real-junit.xml.gz": {
+      "compression": "gzip, mtime=0; decompression exact original bytes",
+      "original": {
+        "bytes": 3831385,
+        "sha256": "20d8d3492a716a11b56cafd58677f94d02a46b75ac5a945ed7614119bab1fd70"
+      },
+      "original_path": "junit.xml",
+      "stored": {
+        "bytes": 281168,
+        "sha256": "65b938e657ddc063c7c76543ce793268ce43983fee5e9310e1d2e66db7f27054"
+      }
+    },
+    "real-stdout.bin.gz": {
+      "compression": "gzip, mtime=0; decompression exact original bytes",
+      "original": {
+        "bytes": 23442,
+        "sha256": "0f4be3fa30c3718711ea2c8060bd4bb835fad8ddd25983183b6d79e0bae9808c"
+      },
+      "original_path": "command/stdout.bin",
+      "stored": {
+        "bytes": 482,
+        "sha256": "27ad16ecd000e9e2710ad217dc02a2eb43d90f53067f40e1fa05935e4bf39afe"
+      }
+    }
+  },
+  "kind": "owned-metadata-regression-fixture-not-new-product-evidence",
+  "observed": {
+    "errors": 0,
+    "failures": 0,
+    "passed_subtests": 67,
+    "reported_tests": 20701,
+    "skipped": 25,
+    "terminal_passed": 20609,
+    "testcase_nodes": 20634
+  },
+  "original_bytes_changed": false,
+  "original_command_receipt": {
+    "bytes": 1404,
+    "sha256": "a03373b554ca40c75634ae26948c04105757d6768fff2a8538c6460e7f4e7a99"
+  },
+  "original_evidence_root": "outputs/pr563-merge-exception-proposal/evidence/fullsuite",
+  "producer_explanation": "junitxml append_pass counts each passed call report including SubtestReport; node_reporter is shared by nodeid/worker, so no extra testcase node. terminal has a separate subtests passed category.",
+  "producer_sources": {
+    "_pytest/junitxml.py": {
+      "bytes": 25961,
+      "sha256": "557b8978c66b8010fafc50ada4bf56333f9927f31b2b5909fe4c1a9df1a3c0f0"
+    },
+    "_pytest/subtests.py": {
+      "bytes": 13507,
+      "sha256": "f514883bad06a84cec0d7ddc1dd8ce8c16e5680597f9fc5a9bd8836b878f92a4"
+    },
+    "_pytest/terminal.py": {
+      "bytes": 65489,
+      "sha256": "28c4a9ebca0243385b154f47ecb83b18a1df415e0b912ebd97079c5ea0036459"
+    }
+  },
+  "product_calls_for_preparation": 0,
+  "pytest_version": "9.1.1",
+  "schema_version": 1,
+  "source_commit": "e462b323907a9c91f88da0270325cc59fb81de2f",
+  "tests_run_for_preparation": 0
+}

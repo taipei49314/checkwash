@@ -1,9 +1,10 @@
 # JS/TS history-replay corpus: results
 
 Every number on this page is **in-sample** and names the two engines it
-compares (SPEC §10.2 rule 1). None is a false-positive rate: no block on this
-set has been adjudicated as a true or a false block. The class is ruled in
-the [selection record](README.md).
+compares (SPEC §10.2 rule 1). None is a false-positive rate. The earlier
+runs below did not adjudicate their block populations as true or false blocks;
+the current0.10 movement and coverage review has its own explicit status and
+scope. The class is ruled in the [selection record](README.md).
 
 Each release compares the previous release with its candidate on these
 1,800 commits before its tag, and every commit whose outcome moves, except
@@ -148,6 +149,46 @@ separate personal acceptance quote is invented. The two errors remain
 recorded-only, not analysed PASS. Blocks remain unadjudicated; these in-sample
 counts do not estimate an FP rate or replace #419's supplementary cost review,
 platform acceptance or normal publication gates.
+
+## Run 5: actual v0.9.0 against the 0.10.0 candidate
+
+The separately admitted attempt `r29-010-b` completed on 2026-10-27 using
+actual published v0.9.0 `d6eda4f695fabb8e7d138f7a87b099d2028f0294` and
+candidate `9678e8de564ed47f7ff92867d5c7d09358c04fcb`, src tree
+`ee6716662fe264b5425958f00835567a4ffca4d6`. Its venue was WSL2/Linux on
+actual LAPTOP-16NUA5I8, `HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL`, not native
+Linux, PJU or EC pool. The [comparison record](../../docs/r29-comparison-0.10.0.md)
+binds the current fixed membership, first-parent inputs, qualified pyz bytes,
+runtime, source/manifest/admission and original complete raw/audit/manual records.
+This does not assert byte identity with unavailable legacy R29 member files.
+
+| v0.9.0 -> candidate | Commits |
+|---|---:|
+| pass -> pass | 1,759 |
+| block -> block | 38 |
+| error -> block | 1 |
+| error -> error | 2 |
+| **total** | **1,800** |
+
+Together with the Python standard set (1,734 pass/pass, 48 block/block and
+18 pass/block), this completes 3,600 pairs and 7,200 historical CLI calls.
+Both sealed audits returned zero and root accepted source-bound mechanical
+completion, retaining the unexplained 109.82585-second cross-clock difference;
+no tolerance or synchronization claim is added. Failed attempt A stays consumed.
+
+TypeORM `1f9d001b752650395796e3865a52397793dfe864` is error-to-block and
+retains the sole paired coverage flag. Its previous exit2/empty stdout has
+unknown config-errors/skipped-files vectors, not an analysed PASS or known
+empty coverage. Across both sets, these vectors are known empty for3,597
+previous-engine pairs/3,598 candidate pairs, with3/2 unknown respectively.
+Apollo-client `8a51ea63` and undici `0f1f8903` remain unchanged errors.
+The complete19-movement final join and Codex's source-reviewed0.10
+cost/residual-scope decision are closed, retaining all87 candidate HIGH
+occurrences across both sets,16 unchanged repair-credit WARNs and unknown
+coverage. Conservative blocking costs are accepted for0.10 without universally
+classifying findings true/false or proving full coverage. These in-sample
+counts are not an adjudicated false-positive rate,
+release acceptance or a replacement for the fresh formal stage chain.
 
 ## What these runs do not show
 

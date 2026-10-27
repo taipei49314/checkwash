@@ -25,4 +25,4 @@ class TestOptions(unittest.TestCase):
     def test_automatic_options_attr_enable(self):
         self.assertEqual(first=sorted(options("b")), second=["GET"])
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_options.py", "unit": "TestOptions.test_automatic_options_attr"}]

@@ -1,4 +1,4 @@
-"""Replay the admitted composite run blocks on PJU; this is not a GitHub runner.
+"""Replay admitted composite blocks on an authorized local Windows host.
 
 Run with an audited Python outside the subject checkout, using -I -B -X utf8.
 Only the frozen, reviewed Action definition below is supported. The comment
@@ -11,10 +11,10 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
-import platform
 import re
 import shutil
 import stat
@@ -22,7 +22,11 @@ import subprocess
 import sys
 import time
 
-HOST = "LAPTOP-01AGNPJU"
+_ROUTE_SPEC = importlib.util.spec_from_file_location("_trusted_receipt_route", Path(__file__).with_name("receipt_execution_route.py"))
+_ROUTE = importlib.util.module_from_spec(_ROUTE_SPEC)
+_ROUTE_SPEC.loader.exec_module(_ROUTE)
+HOST = _ROUTE.HOST
+execution_route = _ROUTE.current_route
 ACTION_SHA = "d6eda4f695fabb8e7d138f7a87b099d2028f0294"
 ACTION_YAML_SHA256 = "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83"
 
@@ -232,7 +236,7 @@ def parse_outputs(raw, expected):
 
 
 def replay(*, source, action, action_sha, base, head, python, git, bash, output, scratch):
-    require(os.name == "nt" and platform.node().upper() == HOST, "PJU Windows only")
+    route = execution_route()
     require(sys.flags.isolated and sys.dont_write_bytecode and sys.flags.utf8_mode,
             "replayer requires -I -B -X utf8")
     require(re.fullmatch(r"[0-9a-f]{40}", base) and re.fullmatch(r"[0-9a-f]{40}", head), "full base/head required")
@@ -247,8 +251,8 @@ def replay(*, source, action, action_sha, base, head, python, git, bash, output,
             and bash == Path(env["ProgramFiles"]) / "Git" / "bin" / "bash.exe", "unexpected Git/Bash installation")
     reader = GitReader(git, env, output / "git-evidence")
     reader.output.mkdir()
-    receipt = dict(schema_version=1, kind="checkwash.pju-action-replay.v1", provenance="PJU_LOCAL_COMPOSITE_REPLAY",
-                   status="failed", host=HOST, action_sha=action_sha, action_tree=None, action_yaml_sha256=None,
+    receipt = dict(schema_version=1, kind="checkwash.pju-action-replay.v1", provenance=route["action_provenance"],
+                   status="failed", host=route["host"], action_sha=action_sha, action_tree=None, action_yaml_sha256=None,
                    base_sha=base, head_sha=head, fail_on="high", comment_pr=False,
                    steps=[], resolved_outputs={}, files={}, errors=[])
     ledger = []

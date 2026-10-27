@@ -2,9 +2,10 @@
 
 Both engines run through the CLI only, as
 ``ABS_PYTHON -B -I ABS.pyz check HEAD~1..HEAD --format json``, inside one fresh
-two-commit repository per case. No network, no test code execution: only git and
-the selected checkwash processes run. Nothing is looked up at run time, so the
-result is a function of the commit and the pinned artifacts.
+two-commit repository per case. Case engines use no network and execute no test
+code: only git and the selected checkwash processes run. A tag run separately
+captures bounded native public Release/tag metadata before applying its baseline
+identity rule; ordinary runs without ``--tag-run`` do no metadata network reads.
 
 Engines
 -------
@@ -114,7 +115,13 @@ The gate fails on:
   lists, on every engine that runs the case); a T1 case without a
   label; drift of the pinned ``baseline_blocked = {count, sha256 of sorted ids}``;
   a canary set mismatch; on a tag-push run, a baseline that is not the highest
-  other ``v*`` tag merged into HEAD, or a HEAD that is not the pushed tag's commit.
+  other published stable Release merged into HEAD, or a HEAD that is not the
+  pushed tag's commit. The tag rule retains complete twice-read public Release
+  catalog bytes/HTTP status/Link/times/hashes and native relevant tag ref/peels.
+  Its baseline's uploaded canonical pyz must match the unchanged artifact pin.
+  Bare tags without a currently public Release remain visible; this is no claim
+  about private drafts or never-published history. Any higher merged published
+  Release, including one with missing or invalid pyz assets, blocks the old pin.
 
 Reported, not failed, in v1: pass -> block, block -> block with a changed set of
 blocking findings, and every ``undecided`` row's verdicts. The issue state behind
@@ -172,6 +179,17 @@ def _load_qualify_assertions():
 
 
 _QA = _load_qualify_assertions()
+
+
+def _load_published_release_identity():
+    spec = importlib.util.spec_from_file_location(
+        "verdict_gate_published_release_identity", Path(__file__).resolve().parent / "published_release_identity.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_PUBLICATION = _load_published_release_identity()
 isolated_env = _QA.isolated_env
 archive_files = _QA.archive_files
 package_files = _QA.package_files
@@ -1561,9 +1579,10 @@ def highest_other_tag(pushed: str, tags: list[str]) -> tuple[str | None, list[st
     return (max(others, key=parsed.__getitem__) if others else None), sorted(ignored)
 
 
-def check_tag_rule(repo: Path, pushed: str, pin: dict) -> tuple[list[str], dict]:
+def check_tag_rule(repo: Path, pushed: str, pin: dict, *, publication: dict | None = None) -> tuple[list[str], dict]:
     errors = []
-    info = {"pushed": pushed, "highest_other": None, "ignored_tags": []}
+    info = {"pushed": pushed, "highest_other": None, "ignored_tags": [],
+            "unpublished_merged_tags": [], "published_unmerged_tags": [], "publication_evidence": None}
     if not _SEMVER_TAG.fullmatch(pushed):
         return [f"pushed tag {pushed!r} is not vX.Y.Z"], info
     try:
@@ -1581,16 +1600,44 @@ def check_tag_rule(repo: Path, pushed: str, pin: dict) -> tuple[list[str], dict]
                 errors.append(f"HEAD {head} is not the commit of the pushed tag {pushed} ({tagged})")
         except GateError as error:
             errors.append(f"pushed tag {pushed}: {error}")
-    highest, info["ignored_tags"] = highest_other_tag(pushed, tags)
-    info["highest_other"] = highest
-    if highest != pin["tag"]:
-        errors.append(f"baseline {pin['tag']} is not the highest other v* tag merged into HEAD ({highest})")
+    info["ignored_tags"] = sorted(tag for tag in tags if not _SEMVER_TAG.fullmatch(tag))
     try:
         commit = _git_text(repo, "rev-parse", "--verify", "--quiet", f"refs/tags/{pin['tag']}^{{commit}}")
         if commit != pin["commit"]:
             errors.append(f"tag {pin['tag']} is {commit}, not the pinned commit {pin['commit']}")
     except GateError:
         errors.append(f"tag {pin['tag']} does not resolve in the checkout")
+    try:
+        # No CLI evidence/URL/ignore override exists. Only trusted in-process
+        # consumers (the native verifier and owned fixtures) inject raw evidence.
+        publication = _PUBLICATION.capture(pin, pushed, merged_tags=tags) if publication is None else publication
+        info["publication_evidence"] = publication
+        projected = _PUBLICATION.validate(publication, pin, pushed, merged_tags=tags)
+        for tag, native in projected["identities"].items():
+            actual = {"tag_object": _git_text(repo, "rev-parse", "--verify", "refs/tags/" + tag),
+                      "commit": _git_text(repo, "rev-parse", "--verify", "refs/tags/" + tag + "^{commit}")}
+            if actual != native:
+                raise GateError("native/local publication tag identity differs: " + tag)
+            if tag != pushed and projected["ancestry"][tag]["merged"] != (tag in tags):
+                raise GateError("native/local publication ancestry differs: " + tag)
+        merged = {tag: release for tag, release in projected["releases"].items() if tag in tags}
+        info["published_unmerged_tags"] = sorted(set(projected["releases"]) - set(merged))
+        info["unpublished_merged_tags"] = sorted(tag for tag in tags if _SEMVER_TAG.fullmatch(tag)
+            and tag != pushed and _PUBLICATION.semver(tag) >= _PUBLICATION.semver(pin["tag"])
+            and tag not in projected["releases"])
+        # Asset failure is an error, never a reason to discard a higher Release.
+        for tag, release in merged.items():
+            try:
+                _PUBLICATION.pyz_asset(release, pin if tag == pin["tag"] else None)
+            except ValueError as error:
+                errors.append("published Release " + tag + ": " + str(error))
+        highest, _ = highest_other_tag(pushed, list(merged))
+        info["highest_other"] = highest
+        if highest != pin["tag"]:
+            errors.append(f"baseline {pin['tag']} is not the highest other published v* Release merged into HEAD ({highest})")
+    except (ValueError, OSError) as error:
+        info["publication_evidence"] = getattr(error, "evidence", None) or publication
+        errors.append("published baseline identity: " + str(error))
     return errors, info
 
 

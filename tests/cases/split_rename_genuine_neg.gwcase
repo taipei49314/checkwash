@@ -20,4 +20,4 @@ def test_automatic_options_attr_disable():
 def test_automatic_options_attr_enable():
     assert sorted(options("b")) == ["GET"]
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_options.py", "unit": "test_automatic_options_attr"}]

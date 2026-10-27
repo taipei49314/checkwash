@@ -231,3 +231,16 @@ an old engine, so downgrading to v0.2.13 is not a safe default rollback.
 The maintainer's SPEC/THREATMODEL/DECISIONS review, release slot, published
 artifact parity, actual Action qualification, and final human acceptance are
 still required. These notes do not announce a release or replace those checks.
+
+
+## Policy-shadow migration in 0.10.0: IR3, findings2
+
+The earlier version2 migration above is historical and remains unchanged.
+The 0.10.0 policy-shadow contract adds a required IR3 proof slot at
+`globals.policy_shadows`, present even when empty, and keeps findings2.
+Upgrade IR decoders and current-source artifact validators explicitly;
+keep old IR2 evidence and its pinned reader unchanged. A missing IR3 slot
+refuses rather than being treated as no shadow. Re-review the moved shadow
+GUARDRAIL approvals; there is no mechanical approval translation. This contract was implemented under the pre-1.0 repair instruction;
+release checks and any publication approval remain separate. Stop for
+Nelson's decision before 1.0.

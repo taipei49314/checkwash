@@ -21,6 +21,7 @@ from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
+from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.frontends.python.frontend import parse_python
 from checkwash.frontends.python.own_marks import UNKNOWN, OwnMarks, adds_marks, reads_marks, resolve
 
@@ -332,6 +333,9 @@ def test_a_test_moved_under_the_gate_keeps_its_move_credit():
         [FileChange(PATH, "modified", module().encode(), after.encode()),
          FileChange(other, "added", None, moved.encode())],
         Config(), Contract(), [], datetime.date(2026, 10, 8), head_reader=snapshot.get, root_reader=snapshot.get,
+        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+        root_path_lister=lambda: sorted(snapshot),
+        root_batch_reader=lambda paths: {path: snapshot.get(path) for path in paths},
     )
     assert verdict == "pass"
     assert not [f for f in findings if f.severity == "high"]

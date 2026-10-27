@@ -147,7 +147,9 @@ def test_working_tree_refusal_names_a_directory(tmp_path):
     with pytest.raises(EngineError) as caught:
         snapshots.WorkingTreeSnapshot(tmp_path).read("configs/pytest.ini")
     assert str(caught.value) == (
-        "strict snapshot cannot inspect nonregular source configs/pytest.ini (a directory)")
+        "strict snapshot cannot inspect nonregular source 'configs/pytest.ini' (a directory); "
+        "side='worktree', entry='worktree/read'. Use a repository-owned regular source at this path; "
+        "a committed range reads committed bytes only.")
 
 
 def test_working_tree_batch_refusal_names_the_symlinked_path(tmp_path):
@@ -160,7 +162,9 @@ def test_working_tree_batch_refusal_names_the_symlinked_path(tmp_path):
     with pytest.raises(EngineError) as caught:
         snapshots.WorkingTreeSnapshot(tmp_path).read_many([NESTED])
     assert str(caught.value) == (
-        "strict snapshot batch cannot inspect nonregular source requirements/pyproject.toml (a symlink)")
+        "strict snapshot batch cannot inspect nonregular source 'requirements/pyproject.toml' (a symlink); "
+        "side='worktree', entry='worktree/read_many'. Use a repository-owned regular source at this path; "
+        "a committed range reads committed bytes only.")
 
 
 def test_a_path_that_would_break_the_line_is_quoted():

@@ -1,5 +1,179 @@
 # Releasing
 
+## Pre-1.0 repair continuation instruction (2026-10-27)
+
+Nelson instructed the current repair goal:
+
+> 我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我
+
+This continuation authorizes completing the remaining core repairs and their
+necessary protected contracts and advancing pre-1.0 versions without repeated
+version-bump questions. The present integration targets 0.10.0, including the
+IR3 policy provenance contract; it is no longer a 0.9.x UX-only patch. Before
+advancing to 1.0, stop and obtain Nelson's decision. This is an agent-written
+scope interpretation of the exact quote, not additional words attributed to him.
+
+Normal independent review, final-source checks, qualification and publication
+gates remain. Version metadata is not evidence of a published release. The
+existing unpublished v0.9.1 tag, failed tag-validation receipts and consumed
+history attempts remain unchanged; this instruction does not resume them or
+admit a new historical/model/paid batch. Actual missing capabilities and
+unexecuted gates must remain visible. PyPI environment review follows the
+version-specific delegation below; its required reviewer protection remains.
+Public CLI/Action/advertised pins stay at the verified
+v0.9.0 until a new release's actual public bytes have been verified.
+
+### Takeover execution and current cost decision
+
+Nelson subsequently instructed this takeover:
+
+> 照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推
+
+Codex applies that delegation to the present 0.10.0 work, including concrete
+source-bound execution and risk decisions after independent review. Exact
+technical source hashes, job bounds and case judgments are Codex decisions;
+the short quote does not claim Nelson typed them or personally reviewed each
+case. The stop before 1.0 and the normal publication requirements remain.
+
+For this 0.10.0 continuation, Codex applies the Chinese instruction above
+(paraphrased in English: stop before 1.0 publication and otherwise advance
+autonomously) as delegating the concrete pre-1.0 publication operations,
+including ordinary deployment review through the
+authenticated eligible maintainer account after all required evidence and
+asset checks pass. This version-specific interpretation supersedes the
+general procedure's older agent-session prohibition for that review only.
+It does not assert that Nelson personally reviewed the source hash, platform
+cells or deployment. Approval comments and publication records must identify
+Codex as the delegate and retain the actual account, environment, run, source,
+request and result identities. Require the live pending deployment to report
+that the authenticated account may approve; retain required reviewers and
+all other protection settings. An eligibility or permission refusal does not
+authorize a bypass or a protection change. This paragraph is a scope decision,
+not a completed deployment approval or a passing receipt.
+
+The new targeted D176 diagnostic completed six actual CLI calls on the three
+previously reported uvloop inputs, on actual16NU/Windows/Python3.11.9. Its
+independent source/raw review and separate Codex risk decision are recorded in
+[the current 0.10 disposition](d176-cost-disposition-0.10.0.md), with the precise
+engine tree and evidence hashes. Three legitimate regression-test additions
+retain four actual HIGH/BLOCK findings. The decision accepts those known costs
+and explicitly unmeasured remaining-history risk for0.10 only. The old R4's
+881 comparisons, three parse-gap members/seven omitted-file occurrences,
+two identical exit2/not-analysed members, one partial and6,553 unattempted
+members keep their historical meanings. This is not history PASS or a resumed
+old grant. #419 remains open.
+
+The separately admitted mandatory R29 attempt B completed 3,600 paired
+members, 7,200 historical CLI calls and all 11,203 native Capture records.
+The exact sealed generic and strict audits returned zero, and root accepted
+mechanical completion with known cleanup only. Python has 1,734 pass/pass,
+48 block/block and 18 pass/block; JS/TS has 1,759 pass/pass, 38 block/block,
+one error/block and two unchanged error/error. All counts are in-sample.
+The [comparison record](r29-comparison-0.10.0.md) retains original sources,
+manifest/admission, raw/audit/manual hashes, omitted/unknown coverage and the
+unexplained 109.82585-second guest-monotonic versus Windows-wall interval
+difference. No clock equality, tolerance or grace period is introduced.
+Attempt A remains consumed and failed before corpus/history.
+
+The final join of all19 required movements and Codex's source-reviewed
+current0.10 cost/residual-scope decision are closed. All87 candidate HIGH
+occurrences,16 unchanged repair-credit WARNs and unknown coverage remain.
+The decision accepts the disclosed conservative blocking costs for0.10,
+without a universal true/false adjudication or full-coverage claim; it closes
+this exact engine's R29 comparison/movement requirement, not the later formal
+release gates. R29 uses actual public v0.9.0 against the frozen9678 candidate,
+src tree `ee6716662fe264b5425958f00835567a4ffca4d6`. A docs-only final freeze
+with that exact src tree can retain this engine applicability, while still
+requiring its own whole-head stage evidence. D-186 leaves the genuine v0.9.0
+pins and existing tags intact. The [candidate guide](releases/v0.10.0-public-launch.md)
+keeps formal final PR/main/tag/release-event/public-visitor gates pending.
+No current tag, Release, PyPI approval, public-byte verification or 1.0 readiness
+is claimed here; 1.0 remains NOT_MET and requires Nelson's decision.
+
+### Claude takeover and review-found fixes (2026-10-27)
+
+Nelson then handed the repository to a Claude Code session on
+LAPTOP-01AGNPJU:
+
+> Checkwash 一樣給你
+>
+> 交接 規劃 都寫在上面了
+
+Agent interpretation: 「一樣」 ("the same") passes the delegation recorded above,
+unchanged, to this Claude session. Claude completes 0.10.0, including normal
+merge and the publication operations, and stops before 1.0 for Nelson's
+decision. The plan he refers to is Codex's closeout handoff, checkwash-lab
+`0582683c`, `notes/release-010-closeout-20261027/HANDOFF.md`. This paragraph
+attributes no further words to Nelson. Where the paragraphs above name Codex
+as the delegate for the remaining 0.10.0 operations (final stage evidence,
+merge, tag, release records and the ordinary `pypi` deployment review),
+Claude performs them, and approval comments and publication records identify
+Claude (Claude Code on LAPTOP-01AGNPJU) as the delegate. Codex's completed
+decisions, D-176 to D-187 and the R29 cost decision, keep Codex's attribution;
+Claude does not re-make them.
+
+Codex's F1/F2 collections and runtimes ran on LAPTOP-16NUA5I8. A release chain
+keeps one execution route from stage to stage, so the final PR, main, tag,
+release-event and public-visitor evidence is collected afresh on
+LAPTOP-01AGNPJU, recorded as `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. The
+16NU F1/F2 packets remain failed historical records. A non-formal check on
+PJU ran the protected timing budgets with wide margins and no CPU-affinity
+condition; the 16NU P-core launcher is not used.
+
+Before collection, an independent review of candidate `ad1ebff7` (six Claude
+area reviewers, each finding checked by two further verifiers, plus Grok
+read-only reviews verified by Claude) reproduced three defects. They are
+fixed in this candidate, each with regression tests that fail on `ad1ebff7`:
+
+1. Worktree and Stop runs listed the whole working tree for paired pytest
+   config evidence, including ignored dependency trees and Windows junctions.
+   A junction cycle, or an ignored tree over the 200,000-path limit, turned
+   every worktree or Stop check into an engine error, including clean,
+   docs-only and JS/TS-only ones; v0.9.0 analysed them. Linked-config deltas
+   now come from BASE's tree and the captured diff, and the full inventory is
+   listed only when a consumer needs it. A BASE config link checked out as a
+   regular placeholder file (`core.symlinks=false`) is refused like a worktree
+   link instead of being compared as text.
+2. D-177: an empty file renamed into `.checkwash/config.toml` or
+   `.checkwash/allow.toml` (Git pairs empty blobs as renames by default)
+   skipped the effective-BASE comparison, so a relaxation was graded as a
+   warning. It is now compared like a plain creation.
+3. D-179: oracle-context proofs split source lines with `str.splitlines()`,
+   which also breaks at form feeds and Unicode line separators. One such
+   character shifted later spans onto another function's proof and could
+   credit a weakened test as relocated. Lines now break where `ast` counts
+   them.
+
+The test session also removes the `src/**/__pycache__` directories it
+creates. The local hook's install probe runs `python -I` bound to the package
+under test, and `-I` ignores `PYTHONDONTWRITEBYTECODE`; those ignored caches
+are what failed the v0.9.1 tag-stage source check. This changes `tests/`
+only, not the hook.
+
+The remaining review findings are disclosed in
+[KNOWN-ISSUES-v0.10.0](KNOWN-ISSUES-v0.10.0.md).
+
+The engine `src/` tree changes from `ee6716662fe264b5425958f00835567a4ffca4d6`
+to `c02d0c99a6b39a0a3a9f65dfadd28c4395d08310`. The fixed-corpus rule requires the comparison to run
+again after a `src/` change. Claude re-ran it as a same-host differential on
+LAPTOP-01AGNPJU: each of the 3,600 R29 members was checked with the closed
+`ee6716…` candidate tree and with the fixed tree, comparing exit codes and
+whole reports except run metadata. The compared new tree was `b66f10123deb3cb72421f0445daf17dc1c03f154`;
+all 3,600 members gave identical exit codes and identical reports apart from
+run metadata (3,493 exit 0, 105 exit 1 and 2 exit 2 with each tree, no
+timeouts). The `ee6716…` verdict counts equal the closed attempt B candidate
+counts: Python 1,734 pass and 66 block; JS/TS 1,759 pass, 39 block and 2
+engine errors. The final tree adds only the CRLF correction `8839f189`, which
+changes the line table for Python text that still holds a carriage return
+after CRLF normalization; a scan of every changed Python file of all 3,600
+members found none. No outcome moves, so attempt B's movement list, its
+review and Codex's current cost decision carry over unchanged, and no new
+movement goes to the owner list. Raw rows, scripts and the scan are in
+checkwash-lab `bf13bf1a` (`notes/r29-differential-010-claude-20261027/`,
+rows SHA256 `9b04bd886cec8a63cd5fc1a02339593e58110611040f078330c9b91a8582baf9`).
+This differential is in-sample between two candidate trees; it is not native
+Linux, a false-positive rate or a new adjudication.
+
 ## v0.9.1 publication instruction (2026-10-24)
 
 After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:
@@ -295,8 +469,14 @@ under the standing route above. A source edit alone is not a passing receipt.
    creating a public tag. Missing, failed or cancelled required evidence stops
    publication; neither a local tag nor an expected red replaces it.
 4. At that commit, `[baseline]` in `tests/verdict_gate/baseline.toml` still pins
-   the previous release required by the tag-push gate: the highest other
-   stable version tag merged into the commit, with its exact peeled commit.
+   the previous published release required by the tag gate: the highest other
+   published stable GitHub Release whose native tag is merged into the commit,
+   with its exact peeled commit and actual pinned public pyz. A bare tag is
+   retained as a tag, not treated as published software. The
+   [native publication identity check](published-release-baseline.md) retains
+   complete public catalog and native tag/ancestry evidence and refreshes it
+   independently in the publisher. Missing or bad assets on a higher published
+   Release block the old baseline; they never remove that Release from selection.
    Do not rotate the baseline to obtain a green release verdict.
 5. Only under the explicit publication grant, and once the fixed-corpus
    comparison (below) has run and the owner has reviewed every commit it

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -20,8 +21,10 @@ from checkwash.allowlist import load_allowlist
 from checkwash.config import load_config, read_base_config_file
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
+from checkwash.policy_shadow import PolicyBase
 from checkwash.engine import analyze
 from checkwash.gitio import GitSourceOverLimit, grep_head_paths, list_range_changes, read_base_file
+from checkwash.gitio.pytest_configs import PairedPytestConfigs
 from checkwash.gitio.snapshot import GitSnapshot
 from checkwash.ir.model import judged_as_test
 from checkwash.pyenv import known_baseline
@@ -47,6 +50,8 @@ class SweepResult:
     # conservative exemption of THREATMODEL #4, so this is the share of the
     # pass rate that rests on a documented blind spot rather than on analysis.
     opaque_prod_change: int = 0
+    # Optional, per-commit observations; neither findings nor successful runs.
+    commit_diagnostics: list[dict] = field(default_factory=list)
 
     def to_json(self) -> str:
         counts: dict[str, dict[str, int]] = {}
@@ -77,7 +82,52 @@ class SweepResult:
                 "checkwash_version": __version__,
             },
         }
+        if self.commit_diagnostics:
+            payload["commit_diagnostics"] = self.commit_diagnostics
         return json.dumps(payload, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
+
+
+def _diagnostic(result, sha, parent, phase, kind, message, **details):
+    event = {"commit": sha, "phase": phase, "kind": kind, "message": message, **details}
+    if parent is not None:
+        event["parent"] = parent
+    result.commit_diagnostics.append(event)
+
+
+def _parse_position(error: str) -> dict:
+    # Only the parser's numeric suffix is retained. Never copy a TOML key,
+    # supplied value or arbitrary exception text into a new output surface.
+    match = re.search(
+        r"\(at line ([0-9]{1,9}), column ([0-9]{1,9})\)\); "
+        r"(?:defaults are in effect|no exemptions are active)$", error[-160:],
+    )
+    return {"line": int(match[1]), "column": int(match[2])} if match else {}
+
+
+def _config_warning(warning: str) -> tuple[str, str]:
+    # load_config's value diagnostics may contain credentials in a supplied
+    # string or role name. Report the fixed setting and fallback, not that value.
+    if warning.startswith("config.toml: gate.fail_on "):
+        return "gate.fail_on", "invalid gate.fail_on; default 'high' is in effect"
+    if warning.startswith("config.toml: gate.on_engine_error "):
+        return "gate.on_engine_error", "invalid gate.on_engine_error; default 'pass_with_warning' is in effect"
+    if warning.startswith("config.toml: unknown role "):
+        return "roles", "unknown role ignored"
+    if warning.startswith("config.toml: roles."):
+        return "roles", "roles entry must be a list of glob strings; ignored"
+    if warning.startswith("config.toml: detectors.disable "):
+        return "detectors.disable", "detectors.disable must be a list of rule IDs; ignored"
+    return "config", "configuration value warning; supplied value omitted"
+
+
+def _exception_details(exc: Exception, phase: str) -> dict:
+    # Do not call str(exc): Git stderr and repository-controlled paths/values
+    # can contain credentials or terminal controls. Even formatting an unknown
+    # exception can fail. The type and phase still locate the failed operation.
+    name = type(exc).__name__
+    name = name if len(name) <= 80 and name.isidentifier() else "Exception"
+    reason = "source byte limit exceeded" if isinstance(exc, GitSourceOverLimit) else "operation could not be completed"
+    return {"exception_type": name, "message": f"{phase}: {reason}; exception text omitted"}
 
 
 def _commit_list(repo: str, revs: str, limit: int) -> list[str]:
@@ -94,6 +144,8 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
         result.corpus_newest = commits[0]
         result.corpus_oldest = commits[-1]
     for sha in commits:
+        parent = None
+        phase = "read_commit"
         try:
             from checkwash.gitio.git import read_commit_parents
 
@@ -102,14 +154,30 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                 result.skipped += 1  # Proven root, never inferred from a read failure.
                 continue
             parent = parents[0]
+            phase = "read_changes"
             changes = list_range_changes(repo, parent, sha)
+            phase = "load_config"
             config_path, config_data = read_base_config_file(repo, parent, "config.toml")
-            config, _err, _warn = load_config(config_data, path=config_path)
+            config, config_error, config_warnings = load_config(config_data, path=config_path)
+            if config_error:
+                _diagnostic(result, sha, parent, phase, "config_parse_error",
+                            f"{config_path}: could not be parsed; defaults are in effect",
+                            path=config_path, **_parse_position(config_error))
+            for warning in config_warnings:
+                setting, message = _config_warning(warning)
+                _diagnostic(result, sha, parent, phase, "config_warning",
+                            f"{config_path}: {message}", path=config_path, field=setting)
             if fail_on:
                 config.fail_on = fail_on
+            phase = "load_allowlist"
             allow_path, allow_data = read_base_config_file(repo, parent, "allow.toml")
-            allow, _aerr = load_allowlist(allow_data, path=allow_path)
+            allow, allow_error = load_allowlist(allow_data, path=allow_path)
+            if allow_error:
+                _diagnostic(result, sha, parent, phase, "allow_parse_error",
+                            f"{allow_path}: could not be parsed; no exemptions are active",
+                            path=allow_path, **_parse_position(allow_error))
 
+            phase = "read_manifests"
             declared: set[str] = set()
             self_modules: set[str] = set()
             found = False
@@ -127,19 +195,26 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                     self_modules |= project_names(manifest, data)
             known = (known_baseline() | declared) if found else None
 
+            phase = "analyze"
             root_snapshot = GitSnapshot(repo, sha, side="head")
+            pytest_configs = PairedPytestConfigs(
+                GitSnapshot(repo, parent, side="base"), root_snapshot,
+            )
             ir, findings, verdict = analyze(
                 changes, config, Contract(), allow, today, base_label=parent,
                 head_label=sha, known_modules=known, self_modules=self_modules,
-                head_reader=lambda p, _sha=sha: read_base_file(repo, _sha, p, side="head"),
+                head_reader=root_snapshot.read,
                 head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
                 root_reader=root_snapshot.read,
                 root_searcher=root_snapshot.search,
                 root_path_lister=root_snapshot.list_paths,
                 root_batch_reader=root_snapshot.read_many,
+                pytest_configs=pytest_configs,
+                policy_base=PolicyBase(config_path, config_data, allow_path, allow_data),
             )
-        except Exception:  # noqa: BLE001 - a sweep must survive one bad commit
+        except Exception as exc:  # noqa: BLE001 - a sweep must survive one bad commit
             result.errors += 1
+            _diagnostic(result, sha, parent, phase, "analysis_exception", **_exception_details(exc, phase))
             continue
 
         result.commits += 1

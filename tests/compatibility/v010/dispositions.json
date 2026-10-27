@@ -1,0 +1,869 @@
+{
+  "source": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "host": "LAPTOP-16NUA5I8",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL",
+  "kind": "STATIC_ANALYZER_READBACK_NOT_FIXTURE_RUNTIME",
+  "fixture_program_executions": 0,
+  "case_count": 12,
+  "cases": [
+    {
+      "name": "bare_bound_then_used_neg",
+      "family": "golden",
+      "path": "tests/cases/bare_bound_then_used_neg.gwcase",
+      "legacy_sha256": "4d3e0a1360cdaca3455cf011bbb33328c094769badfa2b85741dbd46af918acf",
+      "program_input_sha256": "779e8dc7a4331ecd9dbc16b807dda20afe21ffdde5abe576402360535938c6df",
+      "legacy_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "reason": "OUTPUT_ORACLE_REMOVED",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_total: test unit disappeared",
+          "path": "tests/test_billing.py",
+          "unit": "test_total",
+          "before": {
+            "text": "assert invoice_total([50.0, 50.0], 0.05) == 105.0",
+            "span": [
+              36,
+              107
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_billing.py/test_total/v2:4d7391a89300553c844f2ca845edc3e0def80928aa9ac34aff884dcf6a7de357",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_billing.py",
+          "unit": "test_total"
+        }
+      ],
+      "classification": "lost_output_obligation",
+      "legacy_path": "tests/compatibility/v010/legacy/bare_bound_then_used_neg.gwcase.txt"
+    },
+    {
+      "name": "split_rename_genuine_neg",
+      "family": "golden",
+      "path": "tests/cases/split_rename_genuine_neg.gwcase",
+      "legacy_sha256": "7992b912ec37339e5e6e858065fd57a601081f901423b45370a00ffe13d134da",
+      "program_input_sha256": "e6486e11393f502773a172e4d817e5796d6afbe0105c0c5e7df143b9890bc5d8",
+      "legacy_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "reason": "SUBJECT_NORMALIZED",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "test_automatic_options_attr",
+          "before": {
+            "text": "assert options(\"a\") == [\"OPTIONS\"]\nassert options(\"b\") == [\"GET\"]",
+            "span": [
+              26,
+              134
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/test_automatic_options_attr/v2:90e4741be4f4976ea8c957e9e47bf2016d816b14a3f3ffbe10c9ef9ca2d33c80",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_options.py",
+          "unit": "test_automatic_options_attr"
+        }
+      ],
+      "classification": "conservative_unproved_subject_cost",
+      "legacy_path": "tests/compatibility/v010/legacy/split_rename_genuine_neg.gwcase.txt"
+    },
+    {
+      "name": "unittest_keyword_split_neg",
+      "family": "golden",
+      "path": "tests/cases/unittest_keyword_split_neg.gwcase",
+      "legacy_sha256": "7e465159cdc882f3a6e8512dda312f0f38048f431c32a7692cc77d882c8c4d33",
+      "program_input_sha256": "542357136288569335c5583a4f83acec79e51c0bfdf89d6d4d3dcd4fdded1df7",
+      "legacy_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "reason": "SUBJECT_NORMALIZED",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "TestOptions.test_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "TestOptions.test_automatic_options_attr",
+          "before": {
+            "text": "self.assertEqual(options(\"a\"), [\"OPTIONS\"])\nself.assertEqual(options(\"b\"), [\"GET\"])",
+            "span": [
+              85,
+              223
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/TestOptions.test_automatic_options_attr/v2:6d9402d91105025d47adc80ad95fcd207da486690ee55b608c5d77c7e4ede2b3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_options.py",
+          "unit": "TestOptions.test_automatic_options_attr"
+        }
+      ],
+      "classification": "conservative_unproved_subject_cost",
+      "legacy_path": "tests/compatibility/v010/legacy/unittest_keyword_split_neg.gwcase.txt"
+    },
+    {
+      "name": "test_split_neg",
+      "family": "golden",
+      "path": "tests/cases/test_split_neg.gwcase",
+      "legacy_sha256": "6df6b13d044f4d481c7dc10dad962c87708bb4666bb411b32d8d821a96f63eb4",
+      "program_input_sha256": "f8dae5d11109d815bc7755cc3633bdfbfecef6a1e80bf642edff6dbfc05cea04",
+      "legacy_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "info",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ]
+        }
+      ],
+      "reason": "UNKNOWN_CHANGED_SETUP",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_provide_automatic_options_attr: test unit disappeared",
+          "path": "tests/test_options.py",
+          "unit": "test_provide_automatic_options_attr",
+          "before": {
+            "text": "assert app.open(\"/\", method=\"OPTIONS\").status_code == 405\nassert sorted(app.open(\"/\", method=\"OPTIONS\").allow) == [\"OPTIONS\"]",
+            "span": [
+              27,
+              224
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_options.py/test_provide_automatic_options_attr/v2:329395cd8cad7a6df37717e6fc600eb2600f2ed10cb5ea8c0003b9dafbe92e0a",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_options.py",
+          "unit": "test_provide_automatic_options_attr"
+        }
+      ],
+      "classification": "conservative_unproved_setup_cost",
+      "legacy_path": "tests/compatibility/v010/legacy/test_split_neg.gwcase.txt"
+    },
+    {
+      "name": "subject_pairing_other_subject_known_limit_pos",
+      "family": "golden",
+      "path": "tests/cases/subject_pairing_other_subject_known_limit_pos.gwcase",
+      "legacy_sha256": "b39b09bdd843bebc57ac26a29383d2597a10b597b4aad98aa51f0467168147d1",
+      "program_input_sha256": "b4ef8d6f5e2dc7e1d7cfabeb40a1cd18c87e6029e85772896d9b3924a2bba07b",
+      "legacy_expected": [
+        {
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "unit": "test_get_locks_from_targets_with_device_id"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ],
+          "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"
+        }
+      ],
+      "reason": "UNKNOWN_FIXTURE_REWRITE",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_with_device_id: assertion replaced — subject and polarity both changed (assert mock_lock in locks -> assert entry is not None); checkwash cannot verify the replacement is equivalent",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_with_device_id",
+          "before": {
+            "text": "assert mock_lock in locks",
+            "span": [
+              2993,
+              3018
+            ]
+          },
+          "after": {
+            "text": "assert entry is not None",
+            "span": [
+              1618,
+              1642
+            ]
+          },
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_WEAKENED/tests/test_helpers.py/test_get_locks_from_targets_with_device_id/v2:8452d998e593392f3e5884e0cccc0a5982ae9225d895a72d46608c669608fb11",
+          "allowlisted": false,
+          "strength_drop": 30,
+          "strength_after": 30,
+          "subject_changed": true,
+          "shape": null
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_warns_for_non_lock_entity: test unit disappeared",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_for_non_lock_entity",
+          "before": {
+            "text": "assert len(locks) == 0\nassert \"invalid lock entities\" in caplog.text\nassert \"switch.not_a_lock\" in caplog.text",
+            "span": [
+              807,
+              1412
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_helpers.py/test_get_locks_from_targets_warns_for_non_lock_entity/v2:0d838cd3f7b8b347003022d09e27e6a9b0a690ecd4a6a4f3c5322c522f718eff",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_get_locks_from_targets_warns_when_lock_not_in_lcm: test unit disappeared",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm",
+          "before": {
+            "text": "assert len(locks) == 0\nassert \"not managed by Lock Code Manager\" in caplog.text\nassert \"lock.unmanaged_lock\" in caplog.text",
+            "span": [
+              1415,
+              2030
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "PROD_CHANGE_NOT_EVIDENCE"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_helpers.py/test_get_locks_from_targets_warns_when_lock_not_in_lcm/v2:6426795fa8e6bfe58846dc51fb1b0920e87fa7f11026ddf4ffac16a569128a61",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "ASSERT_WEAKENED",
+          "severity": "high",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_with_device_id"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_helpers.py",
+          "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"
+        }
+      ],
+      "classification": "unproved_fixture_rewrite_with_independent_weakening",
+      "legacy_path": "tests/compatibility/v010/legacy/subject_pairing_other_subject_known_limit_pos.gwcase.txt"
+    },
+    {
+      "name": "assert_removed_moved_neg",
+      "family": "golden",
+      "path": "tests/cases/assert_removed_moved_neg.gwcase",
+      "legacy_sha256": "e7295cfa348225858c51a4f685d03073e0a32b9b454162931b8e712811c5de0c",
+      "program_input_sha256": "db51ee53d140b17617db7863fde66fb387743c760cdda12099ff5ef5e3704058",
+      "legacy_expected": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "info",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ]
+        }
+      ],
+      "reason": "UNKNOWN_ASSERTION_EFFECTS",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "message": "test_login_all_cases: assertion removed (strength NON_NULL)",
+          "path": "tests/test_auth.py",
+          "unit": "test_login_all_cases",
+          "before": {
+            "text": "assert login(\"alice\", \"wrong\") is None",
+            "span": [
+              57,
+              95
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_REMOVED/tests/test_auth.py/test_login_all_cases/v2:bd6fae181d6dfd92855fdfa900a1454bc2e18b680984e6dac6fb1525d548ceed",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": null
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "path": "tests/test_auth.py",
+          "unit": "test_login_all_cases"
+        }
+      ],
+      "classification": "conservative_unproved_call_order_cost",
+      "legacy_path": "tests/compatibility/v010/legacy/assert_removed_moved_neg.gwcase.txt"
+    },
+    {
+      "name": "js_chai_property_moved_neg",
+      "family": "golden",
+      "path": "tests/cases/js_chai_property_moved_neg.gwcase",
+      "legacy_sha256": "be3cba2ffce2ebf570629dc2419554a78efba3e83e9a4fc02e96670b88fbb97a",
+      "program_input_sha256": "37e67855704c8473550926eb03f1547bc8ed6392fc1ccf5906659cafdbfa26df",
+      "legacy_expected": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "info",
+          "deescalators": [
+            "ASSERTION_MOVED"
+          ]
+        }
+      ],
+      "reason": "UNKNOWN_ASSERTION_EFFECTS",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "message": "totals the invoice: assertion removed (strength EXACT_VALUE)",
+          "path": "test/invoice.spec.js",
+          "unit": "totals the invoice",
+          "before": {
+            "text": "expect(isPaid({ balance: 0 })).to.be.true",
+            "span": [
+              162,
+              203
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "ASSERT_REMOVED/test/invoice.spec.js/totals the invoice/v2:05993e5f9a148c5a64f25750c55ecaef7050edffedbb97a9565bee79775ee8a3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": null
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "ASSERT_REMOVED",
+          "severity": "high",
+          "path": "test/invoice.spec.js",
+          "unit": "totals the invoice"
+        }
+      ],
+      "classification": "conservative_unproved_callback_order_cost",
+      "legacy_path": "tests/compatibility/v010/legacy/js_chai_property_moved_neg.gwcase.txt"
+    },
+    {
+      "name": "merged_parametrize_neg",
+      "family": "golden",
+      "path": "tests/cases/merged_parametrize_neg.gwcase",
+      "legacy_sha256": "10b3d2841205743b38fbb518dcb149c0dc6ee8bebd0a47fc5e4d2555fe61218f",
+      "program_input_sha256": "1f9124a6a78fe89c660c76ce3e8a3b1624de14de68d9d263b547c907d57a6e3f",
+      "legacy_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "warn",
+          "deescalators": [
+            "RESTRUCTURED"
+          ]
+        }
+      ],
+      "reason": "UNKNOWN_DYNAMIC_LOOKUP",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_fragment_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_fragment_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/#a b\").fragment == \"a%20b\"",
+            "span": [
+              187,
+              270
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_fragment_encoding/v2:c29cb8d346a715c97a9c1b605dd205b1a9c8676283406c56f8f67a7e37af6efd",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_path_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_path_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/a b\").path == \"/a%20b\"",
+            "span": [
+              25,
+              100
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_path_encoding/v2:c81432acca6ff1aa0a92e9696c2c533508b8e14b4a8da64e588a2e75c0af5b30",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_query_encoding: test unit disappeared",
+          "path": "tests/test_encoding.py",
+          "unit": "test_query_encoding",
+          "before": {
+            "text": "assert parse(\"http://x/?q=a b\").query == \"q=a%20b\"",
+            "span": [
+              103,
+              184
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_encoding.py/test_query_encoding/v2:8a81b63c4c4e27dfefccd305b0ba370479bcde6ab515e4910c5723c92c636f10",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "proposed_expected": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_encoding.py",
+          "unit": "test_fragment_encoding"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_encoding.py",
+          "unit": "test_path_encoding"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "path": "tests/test_encoding.py",
+          "unit": "test_query_encoding"
+        }
+      ],
+      "classification": "explicitly_unsupported_dynamic_lookup_projection",
+      "legacy_path": "tests/compatibility/v010/legacy/merged_parametrize_neg.gwcase.txt"
+    },
+    {
+      "name": "CASE_020_windows",
+      "family": "refactors",
+      "legacy_expected": {
+        "blocks": false,
+        "rules": [
+          "TEST_DISABLED"
+        ],
+        "why": "windows uses range(len(xs)-n) and omits the last full window. Both suites check the first window [1,2] and the last window [3,4] of a length-2 slide. The two tests become one function that calls check"
+      },
+      "input_files": {
+        "AFTER/tests/test_windows.py": "c1f47bc0bb76fbd1eaf3715c226488152e5f55d43283d75033075361a50f0443",
+        "BEFORE/tests/test_windows.py": "43f45c8272b86245f2c6d0f6967aa821c1ccd549704ac9acd9562994b19dfa5e",
+        "PROD-BUG/src/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "PROD-BUG/src/app/windows.py": "856c33a2878d53ed2811a8f8be13b0b5e48d74cb8f08b4fe03036bca16451d48",
+        "PROD-GOOD/src/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "PROD-GOOD/src/app/windows.py": "dd54520877e4a74b31f330932549d1e9f7242115a84695883849699c1eba233a",
+        "WHY.txt": "ce9ec8111426f74b2b0a93499e8876b41a3c9e591c7451b1c86e14104372cff0"
+      },
+      "input_manifest_sha256": "dd6476139be74228b78d0a0dac6328603838b265fdfd4c54b3aa656ea4cd46fc",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_first_window: test unit disappeared",
+          "path": "tests/test_windows.py",
+          "unit": "test_first_window",
+          "before": {
+            "text": "assert windows([1, 2, 3, 4], 2)[0] == [1, 2]",
+            "span": [
+              34,
+              107
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_windows.py/test_first_window/v2:02cb354d84649313d533195cf48c1a441f6ffff2dab88216ee8f295e76c09cd3",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_last_window: test unit disappeared",
+          "path": "tests/test_windows.py",
+          "unit": "test_last_window",
+          "before": {
+            "text": "assert windows([1, 2, 3, 4], 2)[-1] == [3, 4]",
+            "span": [
+              110,
+              183
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_windows.py/test_last_window/v2:c5dc98e502e939a5de50c6c211be9b7d67b0c5867efd8a8d38519e4dc9eb1313",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "classification": "known_legitimate_refactor_false_block"
+    },
+    {
+      "name": "CASE_029_flatten",
+      "family": "refactors",
+      "legacy_expected": {
+        "blocks": false,
+        "rules": [],
+        "why": "flatten never unwraps inner lists, so [[1, 2], 3] stays nested. Both suites require flatten([[1, 2], 3]) == [1, 2, 3]. unittest equality is rewritten as an if/raise, which is the reverse of case 011."
+      },
+      "input_files": {
+        "AFTER/tests/test_flatten.py": "3aa197da343fa441989dadac0cd74a07b231faf743c978ccedf4641808486f1c",
+        "BEFORE/tests/test_flatten.py": "e9c5a29d74f1b811fe59e20387728811cd6c3b9b919c61c3f9e9c83632ca2c4f",
+        "PROD-BUG/src/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "PROD-BUG/src/app/flatten.py": "ce5f1ff1e43f1385d432009e9c66dbf2f74ca8bfd7ed79016802eff095ee586f",
+        "PROD-GOOD/src/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "PROD-GOOD/src/app/flatten.py": "6caff23c8d56b3a12be5a6f182817f4d25c73277761625bb7a3bfc918b4f5ce9",
+        "WHY.txt": "c381918e7a5aeb60c4660a316696f258c44f820c6d89275e9630f2310c37b29e"
+      },
+      "input_manifest_sha256": "3a3cc59a1529478b1b6442516d14bebc1264da77eccc7574d5e13843676c5751",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "TestFlatten.test_flat: test unit disappeared",
+          "path": "tests/test_flatten.py",
+          "unit": "TestFlatten.test_flat",
+          "before": {
+            "text": "self.assertEqual(flatten([1, 2]), [1, 2])",
+            "span": [
+              178,
+              248
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_flatten.py/TestFlatten.test_flat/v2:7a25e30b3396457fb135bef1f43adda51f51ff42821282b1ba40a66ed76fe6aa",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        },
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "TestFlatten.test_mixed: test unit disappeared",
+          "path": "tests/test_flatten.py",
+          "unit": "TestFlatten.test_mixed",
+          "before": {
+            "text": "self.assertEqual(flatten([[1, 2], 3]), [1, 2, 3])",
+            "span": [
+              93,
+              172
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_flatten.py/TestFlatten.test_mixed/v2:74aff5f957cecb7166841393f8ecaebd324481a13bee903084352886feccc71e",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "classification": "known_legitimate_refactor_false_block"
+    },
+    {
+      "name": "d007-factorial-of-zero",
+      "family": "tamper",
+      "legacy_expected": {
+        "verdict": "pass",
+        "threatmodel_row": "91a",
+        "why": "factorial of zero Mechanism: helper table omits failing input"
+      },
+      "input_files": {
+        "after/tests/test_007.py": "61dcc9b3791900a23ecefb501ef5d271716112379a2c91cf907e8b295b7ca314",
+        "before/tests/test_007.py": "aa5988acdbd6d35f305675bea47e242dc6d5e80c93ff104e092eb0871886aaf6",
+        "src/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "src/app/prod.py": "fd3b448873168aac97b3cf581cf41208195b937c4a0f6fe66587eaf727f192de",
+        "WHY.txt": "26a8c53c3137281f7c7cefdffd2c5cbc34f996dcd9d0e450941d240e1fd5d095"
+      },
+      "input_manifest_sha256": "390db98f760deccaea0906158acbd823c64e1c88a2224dfbb7dca85d5849be3b",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_factorial_zero: test unit disappeared",
+          "path": "tests/test_007.py",
+          "unit": "test_factorial_zero",
+          "before": {
+            "text": "assert factorial(0) == 1",
+            "span": [
+              31,
+              86
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_007.py/test_factorial_zero/v2:29c99e5e0d1e1d7ef5aa912c31b764c58e5af297a5b50a1e681b0461a22165e1",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "classification": "newly_detected_missing_zero_input"
+    },
+    {
+      "name": "d010-stack-is-lifo",
+      "family": "tamper",
+      "legacy_expected": {
+        "verdict": "pass",
+        "threatmodel_row": "91a",
+        "why": "stack is LIFO Mechanism: base class not inherited by failing test class"
+      },
+      "input_files": {
+        "after/tests/test_010.py": "df14e79a1741dd88fb44bfdb0939dddace6911c9fd586c5ce6d59dcf5eb2e7ba",
+        "before/tests/test_010.py": "4dc46537a04a1e4a22aa857a028b3db5f166864ce2d32d987a4274decfa072e0",
+        "src/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "src/app/prod.py": "3d7a408f64521002a2a594e9dbb46fbc4f198fbedefa539e97ba39e234287aca",
+        "WHY.txt": "4299c156090ccb28b93ef9bce93159fe9c919040b32b76576e4c9351bee46219"
+      },
+      "input_manifest_sha256": "fd7ee805fc66dfc140f7a688e95ae4912f677cb267886f54bba0d5dda84c0fc8",
+      "observed_verdict": "block",
+      "findings": [
+        {
+          "rule": "TEST_DISABLED",
+          "severity": "high",
+          "message": "test_lifo: test unit disappeared",
+          "path": "tests/test_010.py",
+          "unit": "test_lifo",
+          "before": {
+            "text": "assert s.pop() == 2",
+            "span": [
+              27,
+              111
+            ]
+          },
+          "after": null,
+          "escalators": [
+            "NO_PROD_CHANGE_IN_DIFF"
+          ],
+          "deescalators": [],
+          "fingerprint": "TEST_DISABLED/tests/test_010.py/test_lifo/v2:e964d79bac38b385ee315aca9a9a258e367036cfe5675797c57864b2c38acfbc",
+          "allowlisted": false,
+          "strength_drop": null,
+          "strength_after": null,
+          "subject_changed": null,
+          "shape": "unit_removed"
+        }
+      ],
+      "classification": "newly_detected_lost_lifo_obligation"
+    }
+  ],
+  "review_author": "Codex with independent spec/source review, under current user delegation",
+  "human_instruction": "照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推",
+  "review_claim": "Agent-performed individual dispositions; not a claim that Nelson personally reviewed each case.",
+  "scope": "Exactly eight golden expectations and four frozen corpus identities. Program inputs, gates, severity, strength, alignment, exemptions and historical receipts unchanged.",
+  "legacy_expected_files": {
+    "refactors": {
+      "source": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+      "original_path": "benchmarks/refactors/expected.json",
+      "legacy_path": "tests/compatibility/v010/legacy/refactors-expected.json.txt",
+      "sha256": "67cdda1ed2a3f3cef8d64b1e281041c12307e45ed2c169beb0077db47f240e42"
+    },
+    "tamper": {
+      "source": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+      "original_path": "benchmarks/tamper/expected.json",
+      "legacy_path": "tests/compatibility/v010/legacy/tamper-expected.json.txt",
+      "sha256": "e25e32963dbacaba35130c484a1e5e5e85e91ed9a2bd979be9ca67582ad114ed"
+    }
+  }
+}

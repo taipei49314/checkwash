@@ -74,7 +74,9 @@ def test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copie
     assert set(record) == {"before_sha256", "after_sha256", "old_path", "rename_to"}
     assert all(len(record[key]) == 64 for key in ("before_sha256", "after_sha256"))
     assert "Run tests" not in json.dumps(record)
-    assert IR_VERSION == FINDINGS_VERSION == ir.version == 2
+    assert IR_VERSION == ir.version == 3
+    assert FINDINGS_VERSION == 2
+    assert to_jsonable(ir.globals)["policy_shadows"] == {}
 
 
 def test_absent_and_empty_sides_are_not_interchangeable():

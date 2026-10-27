@@ -193,11 +193,13 @@ def check_mutation_case(case: dict) -> None:
     from checkwash.config import Config
     from checkwash.contract import Contract
     from checkwash.engine import FileChange, analyze
+    from checkwash.policy_shadow import PolicyBase
 
     _ir, findings, verdict = analyze(
         [FileChange(case["path"], "modified", case["before"].encode("utf-8"),
                     case["after"].encode("utf-8"))],
         Config(), Contract(), [], datetime.date(2026, 9, 23),
+        policy_base=PolicyBase.from_mapping({case["path"]: case["before"].encode("utf-8")}),
     )
     observed = [(finding.rule, finding.severity) for finding in findings]
     expected = [(case["rule"], case["severity"])] if case["rule"] else []

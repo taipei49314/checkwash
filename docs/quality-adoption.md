@@ -1,8 +1,8 @@
 # Adopt the quality preview
 
-The v0.8.0 package includes this limited preview for coverage, Ruff and mypy
-configuration review alongside the existing test-oracle check. The recommended
-v0.8.0 Action includes it too. Natural-case labels, completeness evaluation
+The package includes this limited preview for coverage, Ruff and mypy
+configuration review alongside the existing test-oracle check. The advertised
+Action includes it too. Natural-case labels, completeness evaluation
 and frozen legacy-byte parity remain separate outstanding conditions;
 publication and these setup commands do not establish production enforcement
 maturity. See the [release evidence](releases/v0.4.0-public-launch.md).
@@ -49,7 +49,54 @@ The generator does not recursively invent independent targets or silently merge
 an existing policy. Add relevant `version_files` after review if version-source
 changes should make later comparisons incomplete.
 
+### Saving drafts in PowerShell
+
+By default, Windows PowerShell 5.1 writes UTF-16LE with `>`; Checkwash's TOML input requires
+UTF-8. Use an explicit encoding when saving a draft. Capture the command's exit
+code before writing, so a failed initialization does not become a policy file:
+
+```powershell
+$draft = checkwash quality init
+if ($LASTEXITCODE -ne 0) { throw 'Quality draft generation failed' }
+$draft | Set-Content -LiteralPath ./quality-draft.toml -Encoding UTF8
+```
+
+The UTF-8 BOM produced by Windows PowerShell 5.1's `Set-Content -Encoding UTF8`
+is accepted. PowerShell 7.6 also accepts this recipe. These commands save only
+the separate draft; inspect it before installing `.checkwash/quality.toml`.
+They do not change your PowerShell profile or encoding defaults. Microsoft
+documents the shell's [encoding and redirection behavior](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding?view=powershell-5.1).
+
+With `--format json`, the whole response is an advisory setup envelope, not
+TOML. Save its `policy_toml` field instead:
+
+```powershell
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+$setup = checkwash quality init --format json | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or $setup.state -ne 'draft') { throw 'Quality draft generation failed' }
+[System.IO.File]::WriteAllText((Join-Path $PWD 'quality-draft.toml'), $setup.policy_toml, (New-Object System.Text.UTF8Encoding($false)))
+```
+
+For native UTF-8 JSON containing non-ASCII metadata, the first line makes the
+current PowerShell process decode native output as UTF-8. It does not control
+`>` file encoding or change the PowerShell profile.
+
 ## 2. Diagnose the local setup
+
+Quality and main-check approvals use separate ledgers. A quality `reported`
+result with exit 0 may include warnings; it does not mean the main `check`
+passed. An edit of an existing quality policy or allow file still requires
+main's guardrail review, even when quality reports an append at warn. Only
+eligible BASE entries affect the current comparison; a new HEAD entry cannot
+approve itself. Review each required check against the intended range.
+
+For maintenance, capture the exact quality identity (including target_id) and
+main GUARDRAIL identity, then use the existing maintainer/BASE review process.
+If that process uses a main exemption, its exact main key must already exist
+in a separately accepted BASE. QW keys belong only in the quality ledger.
+Committing a file or a tool's ownership claim is not evidence of human approval.
+This is the retained trust policy recorded in D-180, without a blanket
+quality-path exemption or automatic key translation.
 
 ```sh
 checkwash quality doctor

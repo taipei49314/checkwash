@@ -49,6 +49,17 @@ the exceptions).
   Pass `--fail-on` yourself if your tool needs to know it, because the
   document does not record it.
 
+## IR payloads (0.10.0)
+
+The findings envelope stays version2; `--emit-ir` is a separate IR3 document.
+Select the decoder from the payload's `version`, never the package string.
+An IR3 decoder requires the `globals.policy_shadows` proof map, even if empty,
+and validates the fixed paths, digest and transition kind in stability.md.
+An IR2-only consumer must refuse IR3, while a historical reader keeps IR2 as
+IR2 with no shadow-proof assertion. Do not insert an empty map, relabel old
+documents or reserialize old receipts to make them look current. Config and
+exemptions remain BASE-side; fixture HEAD context never grants authority.
+
 ## Check the document
 
 - Require `checkwash_findings_version == 2` and refuse any other value. Since
@@ -233,3 +244,53 @@ by that field.
   not see it. A validator that rejects unknown keys meets `unread` only on a
   run that has one. SARIF names each such side in a tool execution
   notification, not a result. `checkwash_findings_version` stays 2.
+
+
+## Sweep summaries
+
+`checkwash sweep HEAD --limit 200` writes a batch summary, not a findings
+document. It has no `checkwash_findings_version`; do not validate it with
+`findings.schema.json` or infer a per-commit pass from the CLI's exit 0.
+Existing summary fields and exit behavior stay unchanged. `engine_errors`
+counts commits whose analysis raised an exception; those commits are excluded
+from `commits_analysed` and its block-rate denominator. A malformed base
+configuration or exemption ledger retains its existing fallback behavior;
+its diagnostic is not a successful policy validation.
+
+An optional `commit_diagnostics` array is emitted only when nonempty. Consumers
+should ignore unknown optional fields. Summaries without a diagnostic retain
+their existing JSON bytes.
+
+Each event has a full `commit` SHA, `phase`, `kind` and display `message`.
+`parent` is present only after that parent was successfully read. Phases are
+`read_commit`, `read_changes`, `load_config`, `load_allowlist`,
+`read_manifests` and `analyze`. Kinds are:
+
+- `config_parse_error`: base configuration could not be parsed; defaults
+  remain in effect.
+- `config_warning`: a base configuration value was rejected or ignored.
+- `allow_parse_error`: base exemption ledger could not be parsed; no
+  exemptions from it are active.
+- `analysis_exception`: an exception counted in `engine_errors`, with
+  `exception_type`; this commit was not added to `commits_analysed`.
+
+Configuration events include their effective base-side `path`; value warnings
+include a fixed setting `field`. Parse events include numeric `line` and
+`column` only when the parser's original diagnostic provides that position.
+No unknown parent or location is invented. Multiple events can concern one
+commit; counting events does not count additional analyzed commits.
+
+Messages are bounded fixed summaries, not the original free-form exception
+or configuration value. Supplied values and unknown role names are omitted
+because they can contain credentials, and arbitrary exception text is not
+copied or formatted. A safe simple exception type name is retained; an unsafe
+or excessive type name is represented by its `Exception` base category.
+JSON escaping protects control characters. This output does not claim to
+retain raw error detail; reproduce the named commit separately when further
+investigation is needed. The existing special skip for an oversized root
+lockfile remains separate from counted analysis exceptions.
+
+The array adds observations only. It does not change findings, fingerprints,
+policy fallback, thresholds, exclusions, counters or exit status. Strict
+batch-summary validators must allow this optional field when adopting the
+version that adds it.

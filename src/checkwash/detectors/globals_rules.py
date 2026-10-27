@@ -181,6 +181,16 @@ def detect_conftest_prod_patch(ir: IR) -> list[Finding]:
 
 
 def _guardrail_message(ir: IR, path: str) -> str:
+    shadow = ir.globals.policy_shadows.get(path)
+    if shadow is not None:
+        descriptions = {
+            "config_relaxation": "relaxes the effective BASE policy",
+            "config_uncomparable": "changes policy whose nonweakening cannot be established",
+            "config_nonweakening": "preserves or tightens the effective BASE policy",
+            "allow_rewrite": "rewrites or revokes the effective BASE exemption ledger",
+        }
+        return (f"guardrail file created ({path}) shadows {shadow['base_path']}: "
+                + descriptions[shadow["kind"]])
     if path in ir.globals.guardrail_configs_created_loosening:
         return (
             f"guardrail file created ({path}) with a detector disabled or fail_on raised"
@@ -207,6 +217,7 @@ def detect_guardrail(ir: IR) -> list[Finding]:
                 {
                     "created": path in ir.globals.guardrail_files_created,
                     "created_loosening": path in ir.globals.guardrail_configs_created_loosening,
+                    **({"policy_shadow": ir.globals.policy_shadows[path]} if path in ir.globals.policy_shadows else {}),
                 },
             ),
         )

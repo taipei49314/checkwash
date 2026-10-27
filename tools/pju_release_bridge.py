@@ -98,6 +98,11 @@ def subject(value):
 
 
 class GitHub(B.GitHub):
+    def publication_response(self, url):
+        # Fixed-origin, no-redirect authenticated metadata read. The helper
+        # retains raw HTTP failures rather than interpreting them as absence.
+        return load_trusted("published_release_identity").request(url, token=self.token)
+
     def binary(self, method, path, raw, content_type="application/octet-stream"):
         require(path.startswith(f"/repos/{REPOSITORY}/releases/") and method == "POST", "unexpected upload path")
         request = urllib.request.Request("https://uploads.github.com" + path, data=raw, method=method,
@@ -299,7 +304,8 @@ def validate_product(packet, source_root, trusted_root, collector):
                               "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
             and argv[17] == "--junitxml" and argv[19] == "tests"
             and argv[18].replace("\\", "/").endswith("/" + records["junit"]), "full pytest scope mismatch")
-    junit = B.validate_junit(packet.raw(records["junit"]))
+    junit = B.validate_junit(packet.raw(records["junit"]), pytest_stdout=packet.raw(exits["pytest"]["stdout"]),
+                             pytest_version=runtime["dependencies"].get("pytest"))
     B.validate_action(packet, records, manifest["head_sha"], manifest["base_sha"], trusted_root)
     B.validate_candidate_action(packet, records, manifest["head_sha"], manifest["base_sha"], source_root, trusted_root, collector)
     artifacts = {}
@@ -338,14 +344,40 @@ def validate_product(packet, source_root, trusted_root, collector):
 
 
 def trusted_verdict(trusted_root, collector):
-    for name in ("verdict_gate.py", "qualify_assertions.py", "assertion_contract.py"):
+    for name in ("verdict_gate.py", "published_release_identity.py", "qualify_assertions.py", "assertion_contract.py"):
         path = Path(trusted_root) / "tools" / name
         B.regular(path)
         require(path.read_bytes() == git(trusted_root, "show", collector + ":tools/" + name), "trusted verdict helper changed")
     return load_trusted("verdict_gate")
 
 
-def validate_verdict(packet, source_root, trusted_root, collector, desc):
+def validate_published_baseline(vg, source_root, tag, pin, value, api, execution):
+    """Re-evaluate retained evidence and independently refresh native metadata."""
+    require(type(value) is dict and type(value.get("publication_evidence")) is dict,
+            "native published baseline evidence absent")
+    retained = value["publication_evidence"]
+    require(utc(execution["started_at"]) <= utc(retained["started_at"])
+            <= utc(retained["finished_at"]) <= utc(execution["finished_at"]),
+            "publication metadata is outside its original gate execution")
+    errors, expected = vg.check_tag_rule(Path(source_root), tag, pin, publication=retained)
+    require(not errors and same(value, expected), "retained published tag baseline rule differs")
+    merged = vg._git_text(Path(source_root), "tag", "--merged", "HEAD", "--list", "v*").split()
+    original = vg._PUBLICATION.validate(retained, pin, tag, merged_tags=merged)
+    fresh = vg._PUBLICATION.capture(pin, tag, merged_tags=merged, fetch=api.publication_response)
+    try:
+        errors, refreshed = vg.check_tag_rule(Path(source_root), tag, pin, publication=fresh)
+        require(not errors, "current native published baseline identity failed: " + "; ".join(errors))
+        require(same(original, vg._PUBLICATION.validate(fresh, pin, tag, merged_tags=merged)),
+                "published baseline catalog/tag identity changed or was omitted")
+        require(same({key: val for key, val in value.items() if key != "publication_evidence"},
+                     {key: val for key, val in refreshed.items() if key != "publication_evidence"}),
+                "current native published baseline selection differs")
+    except ValueError as error:
+        raise vg._PUBLICATION.EvidenceError(str(error), fresh) from None
+    return refreshed
+
+
+def validate_verdict(packet, source_root, trusted_root, collector, desc, api):
     records = packet.manifest["records"]["release"]
     value = packet.json(records["verdict"])
     inventory = packet.json(records["verdict_inventory"])
@@ -469,8 +501,13 @@ def validate_verdict(packet, source_root, trusted_root, collector, desc):
             and type(value["summary"]["t3"]) is int and value["summary"]["t3"] == len(chai)
             and type(value["summary"]["reported"]) is int and value["summary"]["reported"] == len(result["reported"]), "verdict summary differs")
     if packet.manifest["subject"]["stage"] not in ("pr", "main"):
-        errors, tag_rule = vg.check_tag_rule(Path(source_root), packet.manifest["subject"]["tag"], pins["baseline"])
-        require(not errors and same(value["tag_rule"], tag_rule), "tag baseline rule differs")
+        refreshed = validate_published_baseline(vg, source_root, packet.manifest["subject"]["tag"],
+                                                pins["baseline"], value["tag_rule"], api, exits["verdict-gate"])
+        # Preserve the independent native read as well as the original collector
+        # bytes. Download counts and other unrelated mutable fields are excluded
+        # from the positive identity projection, never from raw custody.
+        return {"cases": len(cases), "baseline": pins["baseline"]["tag"], "published_baseline": refreshed}
+    require(value["tag_rule"] is None, "pre-tag verdict carries unexpected tag evidence")
     return {"cases": len(cases), "baseline": pins["baseline"]["tag"]}
 
 
@@ -668,6 +705,7 @@ def validate_parents(packet, api, current):
         exact_keys(parents, "", "PR has no prior release-stage report")
         return None
     exact_keys(parents, expected, "previous stage set")
+    route = B.receipt_route(packet.manifest)
     link = parents[expected]
     exact_keys(link, "report sha256 check_run_id", "previous stage link")
     require(link["report"] == "parents/" + expected + ".json", "previous report path differs")
@@ -675,6 +713,7 @@ def validate_parents(packet, api, current):
     require(digest(raw) == sha(link["sha256"]), "previous report bytes differ")
     report = B.strict_json(raw)
     require(report.get("status") == "verified" and report.get("repository") == REPOSITORY, "previous stage not verified")
+    require(B.receipt_route(report) == route, "previous stage execution route differs")
     manifest_digest = sha(report["manifest_sha256"])
     check = api.request("GET", f"/repos/{REPOSITORY}/check-runs/{positive(link['check_run_id'], 'previous check ID')}")
     require(type(check.get("id")) is int and check.get("id") == link["check_run_id"] and check.get("app", {}).get("id") == ACTION_APP_ID
@@ -686,6 +725,7 @@ def validate_parents(packet, api, current):
         require(report.get("source_tree") == current["source_tree"] and report.get("base_sha") == current["base_sha"]
                 and check.get("name") == "checkwash" and check.get("head_sha") == report.get("head_sha")
                 and check.get("external_id") == "pju:" + manifest_digest + ":checkwash", "PR receipt does not bind this main tree")
+        B.validate_native_route(check, route)
         pr = api.request("GET", f"/repos/{REPOSITORY}/pulls/{positive(report['pr_number'], 'previous PR')}")
         require(pr.get("state") == "closed" and pr.get("merged") is True
                 and pr.get("merge_commit_sha") == current["head_sha"]
@@ -701,6 +741,7 @@ def validate_parents(packet, api, current):
                     and native.get("status") == "completed" and native.get("conclusion") == "success"
                     and native.get("name") in B.CONTEXTS
                     and native.get("external_id") == "pju:" + manifest_digest + ":" + native["name"], "PR native required check mismatch")
+            B.validate_native_route(native, route)
             names.add(native["name"])
         require(names == set(B.CONTEXTS), "PR required context coverage differs")
         stage_check = api.request("GET", f"/repos/{REPOSITORY}/check-runs/{positive(report['check_run_id'], 'PR release-stage check')}")
@@ -708,6 +749,7 @@ def validate_parents(packet, api, current):
                 and stage_check.get("status") == "completed" and stage_check.get("conclusion") == "success"
                 and stage_check.get("name") == context("pr")
                 and stage_check.get("external_id") == f"pju-release:{manifest_digest}:pr", "PR release-stage check missing/mismatched")
+        B.validate_native_route(stage_check, route)
     else:
         prior = report["subject"]
         require(subject(prior) == expected and prior["head_sha"] == current["head_sha"]
@@ -719,6 +761,7 @@ def validate_parents(packet, api, current):
             require(prior["release_id"] == current["release_id"], "public visitor has another release parent")
         require(check.get("name") == context(expected) and check.get("head_sha") == current["head_sha"]
                 and check.get("external_id") == f"pju-release:{manifest_digest}:{expected}", "previous native stage check mismatch")
+        B.validate_native_route(check, route)
     return {"stage": expected, "report_sha256": link["sha256"], "check_run_id": link["check_run_id"]}
 
 
@@ -728,9 +771,9 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
                         "contract_source_sha files records raw_exits status runtime action_sha subject parents", "release manifest")
     require(type(manifest["schema_version"]) is int and manifest["schema_version"] == 1
             and manifest["kind"] == "checkwash.pju-release-receipt.v1"
-            and manifest["repository"] == REPOSITORY and manifest["host"] == HOST
-            and manifest["provenance"] == PROVENANCE and manifest["status"] == "completed"
+            and manifest["repository"] == REPOSITORY and manifest["status"] == "completed"
             and manifest["action_sha"] == B.ACTION_SHA, "release manifest schema/host/status")
+    route = B.receipt_route(manifest)
     current = manifest["subject"]
     stage = subject(current)
     require(all(manifest[key] == current[key] for key in ("head_sha", "base_sha", "source_tree"))
@@ -748,7 +791,7 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
                 and payload["release"].get("tag_name") == current["tag"] and payload["release"].get("draft") is False,
                 "native release payload differs")
     live_subject(api, current)
-    for name in ("tools/verdict_gate.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
+    for name in ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
         require(git(source_root, "show", current["head_sha"] + ":" + name) == git(trusted_root, "show", collector + ":" + name), "candidate differs from audited release helper")
     collection = packet.json("release/collection.json")
     require(collection.get("status") == "completed" and collection.get("errors") == []
@@ -758,11 +801,11 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
             and same(packet.json("release/parents-admission.json"), manifest["parents"]), "previous stage admission differs")
     parent = validate_parents(packet, api, current)
     desc, junit, exits, artifacts = validate_product(packet, source_root, trusted_root, collector)
-    verdict = validate_verdict(packet, source_root, trusted_root, collector, desc)
+    verdict = validate_verdict(packet, source_root, trusted_root, collector, desc, api)
     validate_visitors(packet, source_root, trusted_root, collector, desc, exits, artifacts)
     live_subject(api, current)
     report = dict(schema_version=1, kind="checkwash.pju-release-verification.v1", status="verified", repository=REPOSITORY,
-                subject=current, collector_source_sha=collector, host=HOST, provenance=PROVENANCE,
+                subject=current, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
                 qualification_cases=len(desc["cases"]), junit=junit, verdict=verdict, artifacts=artifacts,
                 previous=parent, checks=[context(stage)], other_platforms="NOT_RUN",
                 trust="owner-admitted immutable receipt; not hardware attestation",
@@ -910,12 +953,13 @@ def publish_check(api, report, run_url):
     current = report["subject"]
     names = [*B.CONTEXTS, context("pr")] if current["stage"] == "pr" else [context(current["stage"])]
     require(report["status"] == "verified" and report["checks"] == names, "unverified stage check publication")
+    route = B.receipt_route(report)
     live_subject(api, current)
     created = []
-    summary = (f"{PROVENANCE}; actual host {HOST}; Windows/Python 3.11.9. Other platforms NOT_RUN.\n\n"
+    summary = (f"{route['provenance']}; actual host {route['host']}; Windows/Python 3.11.9. Other platforms NOT_RUN.\n\n"
                f"Stage {current['stage']}; source {current['head_sha']}; base {current['base_sha']}; tree {current['source_tree']}; receipt {report['receipt_commit']}; "
                f"manifest SHA256 {report['manifest_sha256']}.\n\n"
-               "Full PJU development, source/wheel/pyz qualification/inventory, actual visitor and verdict evidence verified. "
+               "Full local development, source/wheel/pyz qualification/inventory, actual visitor and verdict evidence verified. "
                "This local scope check is not publication authorization or hardware attestation.")
     try:
         for name in names:
@@ -923,12 +967,12 @@ def publish_check(api, report, run_url):
                         else f"pju-release:{report['manifest_sha256']}:{current['stage']}")
             result = api.request("POST", f"/repos/{REPOSITORY}/check-runs", dict(name=name, head_sha=current["head_sha"],
                 status="in_progress", external_id=external, details_url=run_url,
-                output={"title": "PJU release-stage evidence verified; publishing check", "summary": summary}))
+                output={"title": "Local release-stage evidence verified; publishing check", "summary": summary}))
             created.append(positive(result["id"], "stage check ID"))
         for check_id in created:
             live_subject(api, current)
             api.request("PATCH", f"/repos/{REPOSITORY}/check-runs/{check_id}", dict(status="completed", conclusion="success",
-                        output={"title": "Exact-source PJU release-stage evidence passed", "summary": summary}))
+                        output={"title": "Exact-source local release-stage evidence passed", "summary": summary}))
         live_subject(api, current)
         return {"check_run_id": created[-1], "check_run_ids": created[:-1] if current["stage"] == "pr" else []}
     except Exception:
@@ -1049,6 +1093,8 @@ def main(argv=None):
     except (OSError, ValueError, KeyError, TypeError, RecursionError, ET.ParseError,
             subprocess.SubprocessError, zipfile.BadZipFile, tarfile.TarError, urllib.error.URLError) as error:
         report = {"status": "failed", "publication_authorized": False, "error": type(error).__name__ + ": " + str(error)}
+        if getattr(error, "evidence", None) is not None:
+            report["publication_evidence"] = error.evidence
         if args.mode != "capture":
             output.parent.mkdir(parents=True, exist_ok=True)
             with output.open("x", encoding="utf-8") as stream:

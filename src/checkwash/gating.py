@@ -1,8 +1,8 @@
 """Severity gating: the escalator/de-escalator table from SPEC §5.
 
-This file IS the auditable policy. Applied in order: D2, E1, E2, D1, D3.
-(D2 first because a moved assertion is conclusively benign and skips
-escalation entirely; the SPEC table remains the authority on semantics.)
+This file IS the auditable policy. D2 requires static oracle-context proof;
+text/body/mass/name similarity alone grants no oracle credit. Text-only
+relocations still apply E2 before returning. SPEC remains the authority.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_f
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
 from checkwash.ir.model import IR, Assertion, Unit, UnitSide, judged_as_test, normalize_text
+from checkwash.oracle_credit import arrival_credits, assertion_keys, assertions_proven, spend, valid_proof, valid_proof_map
 from checkwash.roles import _is_inert
 ORACLE_RULES = {
     "ASSERT_REMOVED",
@@ -568,6 +569,16 @@ def _shares_prefix(a: str, b: str, min_tokens: int = 3) -> bool:
     return at[:min_tokens] == bt[:min_tokens]
 
 
+def _proven_restructure(unit: Unit, credits) -> bool:
+    """Mass/name triage needs every own context; the selected route spends."""
+    if unit.before is None:
+        return False
+    own = [a for a in unit.before.assertions if a.via is None]
+    keys = assertion_keys(unit.before)
+    needed = collections.Counter(keys)
+    return bool(own) and assertions_proven(unit.before) and all(credits[key] >= count for key, count in needed.items())
+
+
 def apply_gates(
     ir: IR,
     findings: list[Finding],
@@ -582,10 +593,9 @@ def apply_gates(
     from checkwash.detectors.test_disabled import finding_marker
 
     # A multiset of credits: each ASSERTION_MOVED de-escalation spends one, so
-    # two deletions cannot both be excused by a single re-appearance. Whole
-    # units get the same treatment via their body hashes.
+    # two deletions cannot both be excused by a single re-appearance.
+    # Context-bound arrival credits below span whole-unit and text routes.
     moved = collections.Counter(ir.globals.moved_assertion_texts)
-    moved_units = collections.Counter(ir.globals.moved_unit_hashes)
     duplicates = set(ir.globals.duplicate_unit_hashes)
     units = _unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
@@ -596,6 +606,8 @@ def apply_gates(
     # judged as a test too, and must not be mistaken for a Python one (#419).
     python_files = {f.path for f in ir.files if f.language == "python"}
     file_constants = {f.path: f.constants for f in ir.files}
+    proven_assertions, proven_units = arrival_credits(
+        ir, lambda file, side: unit_is_live(side, file_constants.get(file.path)))
     restructured = _file_restructured(ir, file_constants)
     split_renamed = _split_or_renamed(ir, file_constants)
     # Did the diff change a production-role file that can change runtime
@@ -646,7 +658,9 @@ def apply_gates(
                 # to catch the two-commit plant — at warn it never blocked.
                 created = f.path in ir.globals.guardrail_files_created
                 loosening = f.path in ir.globals.guardrail_configs_created_loosening
-                if created and not loosening:
+                shadow_kind = ir.globals.policy_shadows.get(f.path, {}).get("kind")
+                shadow_guarded = shadow_kind in {"config_relaxation", "config_uncomparable", "allow_rewrite"}
+                if created and not loosening and not shadow_guarded:
                     f.escalators.append("GUARDRAIL_CREATED")
                 else:
                     f.severity = "critical"
@@ -694,23 +708,32 @@ def apply_gates(
             f.severity = "info"
             continue
 
-        # D2 ASSERTION_MOVED: conclusively benign, skips escalation. Each
-        # de-escalation *spends* a credit from the multiset.
+        # D2 spends context-bound arrival credits once across every route.
+        # A normalized-text match alone is not a relocated oracle.
         if f.rule == "ASSERT_REMOVED" and f.before is not None:
             key = normalize_text(f.before.text)
-            if moved[key] > 0:
+            proofs = [] if unit is None or unit.before is None else assertion_keys(unit.before,
+                {a.id for a in unit.before.assertions if a.span == f.before.span})
+            if moved[key] > 0 and proofs and spend(proven_assertions, proofs):
                 moved[key] -= 1
                 f.severity = "info"
                 f.deescalators.append("ASSERTION_MOVED")
+                if contract.oracle_freeze:
+                    f.severity = "high"
+                    f.escalators.append("ORACLE_FREEZE")
                 continue
         if f.rule == "TEST_DISABLED" and unit is not None and unit.after is None and unit.before is not None:
             # The whole unit's normalized body reappearing as a live added
             # unit is the strongest form of "moved" — and the only one an
             # assertion-less smoke test can produce (click a391797d00,
             # test_echo_no_streams: nothing in the multiset to match).
-            h = unit.before.body_hash
-            if h and moved_units[h] > 0:
-                moved_units[h] -= 1
+            h = unit.before.oracle_context if (valid_proof(unit.before.oracle_context)
+                and valid_proof_map(unit.before.oracle_assertion_contexts)) else ""
+            keys = assertion_keys(unit.before)
+            needed_keys = collections.Counter(keys)
+            if h and proven_units[h] > 0 and all(proven_assertions[k] >= n for k, n in needed_keys.items()):
+                proven_units[h] -= 1
+                proven_assertions.subtract(needed_keys)
                 f.severity = "info"
                 f.deescalators.append("ASSERTION_MOVED")
                 continue
@@ -725,10 +748,14 @@ def apply_gates(
             # it reached through a helper method add no requirement (306 Sub-Q11).
             texts = [normalize_text(a.text) for a in unit.before.assertions if a.via is None]
             needed = collections.Counter(texts)
-            if texts and all(moved[t] >= n for t, n in needed.items()):
+            if (texts and assertions_proven(unit.before) and all(moved[t] >= n for t, n in needed.items())
+                    and spend(proven_assertions, keys)):
                 moved.subtract(needed)
                 f.severity = "info"
                 f.deescalators.append("ASSERTION_MOVED")
+                if contract.oracle_freeze:
+                    f.severity = "high"
+                    f.escalators.append("ORACLE_FREEZE")
                 continue
 
         # Materiality (ASSERT_WEAKENED only): a 10-point slide inside the
@@ -779,6 +806,7 @@ def apply_gates(
             and unit is not None
             and unit.after is None
             and restructured.get(f.path)
+            and _proven_restructure(unit, proven_assertions)
         ):
             compensation = "RESTRUCTURED"
         elif (
@@ -786,6 +814,7 @@ def apply_gates(
             and unit is not None
             and unit.after is None
             and split_renamed.get((f.path, f.unit or ""))
+            and _proven_restructure(unit, proven_assertions)
         ):
             compensation = "SPLIT_OR_RENAMED"
         elif f.rule == "TEST_DISABLED" and compat_gate_for(unit, file_constants.get(f.path), marker):
@@ -968,6 +997,8 @@ def apply_gates(
         elif dep_drift:
             f.deescalators.append("DEPENDENCY_DRIFT")
         elif compensation is not None:
+            if compensation in {"RESTRUCTURED", "SPLIT_OR_RENAMED"}:
+                spend(proven_assertions, assertion_keys(unit.before))
             f.deescalators.append(compensation)
         elif mild_weakening:
             f.deescalators.append("MILD_WEAKENING")

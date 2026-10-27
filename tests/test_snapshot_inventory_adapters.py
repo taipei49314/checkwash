@@ -11,7 +11,7 @@ import sys
 import pytest
 
 from checkwash import demo
-from checkwash.cases import Case, case_snapshot, case_to_changes
+from checkwash.cases import case_policy_base, Case, case_snapshot, case_to_changes
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
@@ -89,6 +89,7 @@ def test_memory_git_and_worktree_inventory_have_identical_precision(tmp_path, pa
     case = _case(padding)
     snapshot = case_snapshot(case)
     memory = analyze(case_to_changes(case), Config(), Contract(), [], datetime.date(2026, 9, 6),
+                     policy_base=case_policy_base(case),
                      root_reader=snapshot.get, root_searcher=lambda needles: search_source_mapping(snapshot, needles))
     assert memory[2] == expected
     before = {**snapshot, "tests/test_bool.py": BEFORE}

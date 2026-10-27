@@ -1,4 +1,4 @@
-"""Collect real, exact-source CheckWash test receipts on the authorized PJU.
+"""Collect real, exact-source receipts on an authorized local Windows host.
 
 Setup: provide a fresh external Python 3.11 venv with a reviewed dependency
 lock (plain package-name -> version JSON), Git for Windows, and clean frozen
@@ -150,7 +150,7 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
     """
     action = load_replayer()
     require = action.require
-    require(os.name == "nt" and platform.node().upper() == action.HOST, "authorized PJU Windows host required")
+    route = action.execution_route()
     require(sys.version_info[:2] == (3, 11) and sys.flags.isolated and sys.dont_write_bytecode and sys.flags.utf8_mode,
             "collector requires Python 3.11 with -I -B -X utf8")
     require(args.repository == REPOSITORY, "unexpected repository")
@@ -193,7 +193,7 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
     ledger = []
     manifest = dict(schema_version=1, kind="checkwash.pju-receipt.v1", repository=args.repository,
                     pr_number=getattr(args, "pr", None), base_sha=args.base_sha, head_sha=args.head_sha, source_tree=args.source_tree,
-                    host=action.HOST, provenance="HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+                    host=route["host"], provenance=route["provenance"],
                     collector_source_sha=args.collector_source_sha, contract_source_sha=args.collector_source_sha,
                     action_sha=action.ACTION_SHA, status="failed", runtime={}, files=[], raw_exits=ledger,
                     records=dict(dogfood="action/runtime-receipts/check-receipt.json", action_replay="action/replay.json",
@@ -377,8 +377,9 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["--internal-helper"]:
-        if len(argv) < 4 or os.name != "nt" or platform.node().upper() != "LAPTOP-01AGNPJU":
-            raise ValueError("invalid PJU helper invocation")
+        if len(argv) < 4:
+            raise ValueError("invalid local receipt helper invocation")
+        load_replayer().execution_route()
         if not sys.flags.isolated or not sys.flags.utf8_mode or not sys.dont_write_bytecode:
             raise ValueError("helper requires -I -B -X utf8")
         return traced_worker(argv[1], Path(argv[2]), argv[3:])

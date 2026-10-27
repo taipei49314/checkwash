@@ -33,11 +33,12 @@ import sys
 from dataclasses import dataclass
 
 from checkwash import __version__
-from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist
-from checkwash.change import SourceOverLimit, UnreadSide
+from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
+from checkwash.change import EngineError, SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
-from checkwash.contract import Contract, parse_contract
+from checkwash.contract import Contract, contract_diagnostics, load_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
+from checkwash.policy_shadow import PolicyBase
 from checkwash.engine import analyze
 from checkwash.pyenv import known_baseline
 from checkwash.gitio import (
@@ -58,7 +59,7 @@ from checkwash.gitio import (
     session_merge_base,
 )
 from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
-from checkwash.gitio.pytest_configs import PairedPytestConfigs
+from checkwash.gitio.pytest_configs import PairedPytestConfigs, WorktreePytestConfigs
 from checkwash.report.jsonout import findings_to_json, ir_to_json, size_refusal_to_json
 from checkwash.report.sarif import findings_to_sarif
 from checkwash.report.context import ReportContext
@@ -176,6 +177,32 @@ def _task_alias_error(task: str, rel: str, alias: TreeAlias) -> str:
             "directory; name the task file by its path in the base tree")
 
 
+def _task_lookup_path(args) -> str:
+    """Bind task input lexically to the directory originally named by --repo.
+
+    Native join/abspath preserve fully qualified addresses and native Windows
+    root/drive-relative rules. Never resolve a HEAD alias to select BASE.
+    """
+    given = getattr(args, "repo_given", args.repo)
+    return os.path.abspath(os.path.join(given, args.task))
+
+
+def _task_path_context(args, mapped) -> str:
+    """Describe the invocation's lexical mapping without changing path authority."""
+    try:
+        cwd = os.getcwd()
+    except OSError:
+        cwd = "<unavailable>"
+    try:
+        resolved = _task_lookup_path(args)
+    except (OSError, ValueError):
+        resolved = "<unavailable>"
+    return (f"checkwash: TASK path context: requested={args.task!r}; resolved={resolved!r}; "
+            f"repo={args.repo!r}; cwd={cwd!r}; mapped={mapped!r}. "
+            "Retry with an absolute repository-owned task path and review its BASE copy. "
+            "This note does not change path resolution or the original refusal.\n")
+
+
 def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label: str, head_label: str,
              head_reader, head_searcher, root_snapshot, pytest_configs, quiet: bool = False) -> _Run | int:
     """One analysis of `changes` with policy read from `config_side`.
@@ -201,6 +228,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
     # intact and report the ignored base-side keys on stderr in every format.
     for message in fingerprint_diagnostics(allow_entries):
         advise(f"checkwash: {allow_path}: ignored exemption: {message}\n")
+    for message in namespace_diagnostics(allow_entries):
+        advise(f"checkwash: {allow_path}: exemption warning: {message}\n")
     # A config that silently fails to parse used to revert a hardened gate to
     # defaults with no diagnostic anywhere (confirmed red-team finding).
     # Value-level warnings are visible in the same channels but never fatal:
@@ -225,17 +254,30 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         # and only when the base tree holds nothing the path can stand for
         # on disk (#500). Nothing checks that the file is untracked.
         prefix = getattr(args, "repo_prefix", "")
-        if prefix:
+        try:
+            task_path = _task_lookup_path(args)
             # Re-rooted (#416): relative to the directory `--repo` named, then
             # into the root with Git's prefix, lexically. Never realpath: a
             # head-side symlink at the task path would choose which base file
             # supplies the contract, or hand the fallback attacker bytes.
-            rel = posixpath.normpath(prefix + os.path.relpath(args.task, args.repo_given).replace("\\", "/"))
-        else:
-            rel = os.path.relpath(args.task, repo).replace("\\", "/")
-        data = read_base_file(repo, config_side, rel)
+            if prefix:
+                rel = posixpath.normpath(prefix + os.path.relpath(task_path, args.repo_given).replace("\\", "/"))
+            else:
+                rel = os.path.relpath(task_path, repo).replace("\\", "/")
+        except ValueError:
+            advise(_task_path_context(args, None))
+            raise
+        try:
+            data = read_base_file(repo, config_side, rel)
+        except (GitError, SourceOverLimit):
+            advise(_task_path_context(args, rel))
+            raise
         if data is not None:
-            contract = parse_contract(data.decode("utf-8", errors="replace"))
+            try:
+                task_text = data.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise EngineError(f"--task {rel!r} (BASE): UTF-8 required") from exc
+            contract = load_contract(task_text, source=f"--task {rel!r} (BASE)")
         elif prefix:
             # Git spells the prefix as the directory is on disk. On a
             # case-insensitive checkout the head chooses that spelling (`PKG/`
@@ -266,12 +308,16 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
                 if quiet:
                     return 2
                 return _engine_error(args, _task_alias_error(args.task, rel, alias))
-            with open(args.task, encoding="utf-8") as fh:
-                contract = parse_contract(fh.read())
+            with open(task_path, encoding="utf-8") as fh:
+                task_text = fh.read()
+                contract = load_contract(task_text, source=f"--task {rel!r} (working-tree fallback)")
             if not quiet:
                 _advise(f"checkwash: --task {args.task}: the base tree has no file at {rel}, so the "
                         "contract is read from the working-tree copy, which the change controls; "
                         "commit the task file to read it from the base\n")
+        task_source = "BASE" if data is not None else "working-tree fallback"
+        for message in contract_diagnostics(task_text):
+            advise(f"checkwash: --task {rel!r} ({task_source}): {message}\n")
 
     known_modules: set[str] | None = None
     declared: set[str] = set()
@@ -318,6 +364,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         root_path_lister=root_snapshot.list_paths,
         root_batch_reader=root_snapshot.read_many,
         pytest_configs=pytest_configs,
+        policy_base=PolicyBase(config_path, config_data, allow_path, allow_data),
     )
     return _Run(ir, findings, verdict, config, diagnostics, report_context, changes)
 
@@ -343,9 +390,13 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
         return None
     unread = "checkwash: commits made during this session were not analysed. "
     try:
-        leg = _analyse(args, list_session_changes(args.repo, window.base), window.base,
+        changes = list_session_changes(args.repo, window.base)
+        before = GitSnapshot(args.repo, window.base, side="base")
+        leg_readers = {**readers, "pytest_configs": PairedPytestConfigs(
+            before, WorktreePytestConfigs(readers["root_snapshot"], before, changes))}
+        leg = _analyse(args, changes, window.base,
                        base_label=rev_parse(args.repo, window.base), head_label="worktree",
-                       quiet=True, **readers)
+                       quiet=True, **leg_readers)
     except Exception as exc:  # noqa: BLE001 - leg 1's verdict stands; say what was not analysed
         return unread + f"Engine error: {type(exc).__name__}: {exc}"
     if isinstance(leg, int):
@@ -414,6 +465,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         config_side = base if window is None or window.base is None else window.base
 
         worktree_snapshot = WorkingTreeSnapshot(repo)
+        before = GitSnapshot(repo, base, side="base")
+        pytest_configs = PairedPytestConfigs(before, WorktreePytestConfigs(worktree_snapshot, before, changes))
         head_reader = worktree_snapshot.read
         head_searcher = worktree_snapshot.search
         root_snapshot = worktree_snapshot
@@ -596,10 +649,22 @@ def _toml_str(value: str) -> str:
 
 
 def _cmd_allow(args: argparse.Namespace) -> int:
+    from checkwash.quality.model import ALLOW_PATH as QUALITY_ALLOW_PATH, RULES as QUALITY_RULES
+
+    if args.fingerprint.split("/", 1)[0] in QUALITY_RULES:
+        write_text(
+            f"error: quality fingerprints do not belong in check's allow.toml; "
+            f"review {QUALITY_ALLOW_PATH} with its target_id and quality exemption schema. "
+            "Only supported strong quality findings can be exempted; see docs/quality.md.\n",
+            sys.stderr,
+        )
+        return 2
     issue = fingerprint_issue(args.fingerprint)
     if issue is not None:
         write_text(f"error: {issue}\n", sys.stderr)
         return 2
+    for message in namespace_diagnostics([AllowEntry(args.fingerprint, "", "", "", "", "")]):
+        write_text(f"warning: {message}\n", sys.stderr)
     if not args.reason.strip():
         write_text("error: --reason must not be empty\n", sys.stderr)
         return 2
@@ -656,7 +721,8 @@ def build_parser() -> argparse.ArgumentParser:
     quality = sub.add_parser("quality", help="review bounded quality configuration weakening")
     quality.add_argument("range", nargs="?", help="BASE..HEAD, BASE...HEAD, init, doctor, profiles or explain")
     quality.add_argument("rule", nargs="?", help="rule ID for quality explain")
-    quality.add_argument("--format", choices=["term", "json", "sarif"], default="term")
+    quality.add_argument("--format", choices=["term", "json", "sarif"], default=None,
+                         help="output format (default: JSON for profiles; terminal otherwise)")
     quality.add_argument("--repo", default=".", help=_REPO_HELP + " (not for profiles or explain)")
     quality.add_argument("--root", help="init only: repository-relative target root")
     quality.add_argument("--paths", action="append", help="init only: literal source file or directory ending /; repeatable")
@@ -870,6 +936,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "quality":
             from checkwash.quality.cli import run as run_quality
 
+            if args.format is None:
+                args.format = "json" if args.range == "profiles" else "term"
             # profiles and explain read no repository, so they never ask Git.
             # Elsewhere an unanswered root keeps `--repo`, and quality's own
             # JSON error reporting applies as before (#416).

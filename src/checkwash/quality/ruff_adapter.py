@@ -99,7 +99,14 @@ def _ruff_flat(snapshot, target, side, profile):
                 record, data = source(snapshot, side, candidate, "context")
                 result.sources.append(record)
                 if data and data.strip():
-                    raise QualityError("CONTEXT_UNRESOLVED", "Ruff gitignore discovery is not qualified")
+                    raise QualityError(
+                        "CONTEXT_UNRESOLVED",
+                        f"Non-empty ignore input {candidate!r} on {side!r}: Ruff ignore-file discovery and matching "
+                        f"are not qualified by profile {profile['id']!r}, so ruff.scope is unknown. "
+                        "Review 'checkwash quality profiles --details' and "
+                        "'checkwash quality explain QW_ANALYSIS_INCOMPLETE'; retain the ignore rules "
+                        "and request qualification for this context.",
+                    )
         # Native defaults do not match the accepted user-pattern grammar;
         # qualification supplies their known path-segment exclusions.
         value = scope(snapshot, target, strings(scope_raw.get("exclude", [])) + strings(scope_raw.get("extend-exclude", [])), profile, result, side, "lint")

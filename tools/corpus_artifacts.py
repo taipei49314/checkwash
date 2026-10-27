@@ -90,6 +90,27 @@ def source_context(checkout_sha, candidate_head, run_id, attempt):
     }
 
 
+def _valid_policy_shadows(ir):
+    """IR3 requires a typed proof slot; IR2 never receives an inferred one."""
+    globals_ = ir.get("globals")
+    if not isinstance(globals_, dict) or not isinstance(globals_.get("policy_shadows"), dict):
+        return False
+    predecessors = {".checkwash/config.toml": ".greenwash/config.toml",
+                    ".checkwash/allow.toml": ".greenwash/allow.toml"}
+    kinds = {".checkwash/config.toml": {"config_relaxation", "config_nonweakening", "config_uncomparable"},
+             ".checkwash/allow.toml": {"allow_append", "allow_rewrite"}}
+    for path, proof in globals_["policy_shadows"].items():
+        if (path not in predecessors or not isinstance(proof, dict)
+                or set(proof) != {"base_path", "base_sha256", "kind"}):
+            return False
+        if (proof["base_path"] != predecessors[path]
+                or not isinstance(proof["base_sha256"], str)
+                or re.fullmatch(r"[0-9a-f]{64}", proof["base_sha256"]) is None
+                or not isinstance(proof["kind"], str) or proof["kind"] not in kinds[path]):
+            return False
+    return True
+
+
 def validate_payload(data, names):
     """Require each expected fixture's complete findings envelope and IR JSON."""
     require(0 < len(data) <= MAX_BYTES and b"\r" not in data, "empty, oversized or non-LF corpus")
@@ -114,8 +135,9 @@ def validate_payload(data, names):
                 and isinstance(findings.get("summary"), dict)
                 and isinstance(findings.get("config_errors"), list)
                 and isinstance(findings.get("skipped_files"), list), f"invalid findings envelope for {name}")
-        require(ir.get("version") == 2 and isinstance(ir.get("files"), list)
-                and isinstance(ir.get("globals"), dict), f"invalid IR envelope for {name}")
+        require(type(ir.get("version")) is int and ir["version"] == 3
+                and isinstance(ir.get("files"), list) and _valid_policy_shadows(ir),
+                f"invalid IR3 envelope or required policy proof slot for {name}")
         for finding in findings["findings"]:
             require(isinstance(finding, dict)
                     and all(isinstance(finding.get(key), str) for key in ("rule", "path", "message"))

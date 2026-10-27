@@ -42,7 +42,10 @@ class Snapshot:
                 dirs[:] = sorted(d for d in dirs if d != ".git")
                 for name in list(dirs):
                     path = Path(directory, name)
-                    if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
+                    # Path.is_junction is unavailable on supported Python 3.11.
+                    # Match its mount-point tag, rather than every reparse point.
+                    junction = getattr(path.lstat(), "st_reparse_tag", 0) == getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", 0xA0000003)
+                    if path.is_symlink() or junction:
                         modes[path.relative_to(self.repo).as_posix()] = "120000"
                         dirs.remove(name)
                 for name in sorted(files):

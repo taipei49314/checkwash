@@ -6,7 +6,7 @@ Changing anything here requires a version bump of the affected schema and a
 full fixture re-run. Coding agents have **read-only** authority over this file
 and over `tests/gates/**`; changes are made by the human maintainer only.
 
-Spec version: 2 (IR payload `version: 2`, findings envelope `checkwash_findings_version: 2`; released in v0.3.0, 2026-09-07)
+Spec version: 3 (IR payload `version: 3` with required `globals.policy_shadows`, introduced by the 0.10.0 policy-shadow contract D-177; findings envelope `checkwash_findings_version: 2` retained from v0.3.0). Historical IR2 payloads remain IR2 and carry no newly inferred shadow proof.
 
 ## 1. Analysis unit
 
@@ -537,6 +537,44 @@ pytest TOML files withhold the context-dependent proof rather than assuming
 default collection. Invalid encoding/config syntax or an over-limit config
 also withholds proof. Strict selected-source reader failures remain errors.
 
+### Paired live pytest configuration evidence (D-183)
+
+From 0.10.0, worktree checks and the managed Stop's analyses supply paired
+pytest config evidence too. The primary worktree verdict pairs the diff's HEAD
+with working-tree sources. A session-commits note pairs the recorded session
+base with working-tree sources using a new context; it does not reuse the
+primary context or substitute the session's policy-loading base for the
+primary diff's HEAD. Each context is prepared once per analysis.
+
+Working-tree config evidence is a bounded read-once cache of regular sources,
+not an atomic filesystem snapshot. Inventory/mode facts are retained for the
+analysis; selected source presence/modes must remain consistent with that
+inventory and bytes of changed controls must match the captured diff, using
+the engine's same lexical slash spelling for changed-path matching. Rename
+old paths are bound to captured absence unless another explicit change
+in the complete captured change set supplies that old path's after bytes;
+iterable changes are retained before the two passes so generators obey the
+same rule. Explicit old-path changes take priority regardless of ordering. Config
+records retain exact bytes and compute content OIDs in the repository's object
+format, with revision `worktree`; that label makes no committed/stored-object
+claim. Existing per-source, batch and paired evidence limits apply. Config
+records/deltas remain internal to the two pytest-control consumers and do not
+become general Python/provider source or new physical diff entries.
+
+Git BASE/head config evidence retains its existing one-hop same-tree regular
+target capability. Working-tree evidence preserves ordinary source admission:
+it reads regular files only, never follows worktree file/directory symlink data,
+and refuses outside-repository, nonregular, inconsistent or over-limit sources.
+Metadata resolves only the parent for the repository-boundary check and uses
+lstat on the final component, without resolving a final file-link target.
+Recognized logical aliases are considered before relevance gates, so an
+unavailable worktree alias is NOT_ANALYSED rather than silently ignored. The
+regular-only worktree limit is deliberate; it does not claim the frozen Git
+link capability also exists on the live filesystem. Engine errors remain exit2
+in normal formats and the existing Stop systemMessage/no-decision behavior;
+session-note failure preserves the primary verdict and reports unanalysed
+session commits.
+
 ## 3. Assertion strength lattice
 
 **What counts as a unit's assertions (v0.1.26).** The IR records the
@@ -787,7 +825,7 @@ detectors can only be disabled whole.
 | `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. In Python (#496), a handler that does not re-raise and whose every assertion is proved to always pass is not inspection either, and it reports its first line followed by a space and `[always-passing assertion]`, compared apart from the plain first line: an `assert` of a literal, of `not` before a literal, of a comparison between literals (`is` and `is not` only against `None`), or of `and`/`or` over these with every operand evaluated on its own; or `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`, `assertEqual` or `assertNotEqual` with literal operands that pass and at most one literal `msg`, called on a method's own receiver, when the first base of the class's local order that the file does not define has a name ending in `TestCase` and no same-file class before it binds the method's name (D-163). An always-failing assertion stays inspection, and so does any assertion the proof cannot read. |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` added, in Python files only. No JS/TS form is read: a test file's `@ts-nocheck` is #366, and ESLint directives are #367, deferred by ruling until after 1.0 |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`), content-classified runner scripts and package manifests whose test command changed (§2), **plus one hop**: a changed script that runs no test runner of its own but invokes another script that does is ci too, resolved against the diff or the head snapshot. Exactly one hop. A shell-script hop must terminate in a real runner — a `ci.sh` calling `compile.sh` stays production, which is the line the content gate has drawn since v0.1.8. A manifest's hop is bounded by where it starts instead: a script that `test` or a `test:*` script names through a script runner is part of the test command whatever it runs, because `npm test` runs `scripts.test` whatever it says (#196 185.2). Test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`, and `--test-only`, under which node's runner runs only the tests marked `only` (#196 187.1, #216)): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. For a package manifest that base side is its base-side test command, not the whole file: a token that only a non-test script carried at base counts once the diff writes it into the test command (#196 185.1). Additionally, literal option/value comparison recognizes newly introduced `--co`/`--collect-only`, `--ignore-glob`, and quoted or unquoted `-k`/`-m` selectors, including a changed value of an existing option. Literal `testpaths` and collection-name lists are narrowing when the new selection is a provable strict subset; additional `norecursedirs` exclusions also count. Restating, reordering or provably broadening a setting is not narrowing it. Identical configuration migration stays quiet, while narrowing during a migration remains visible. First configuration adoption without a base CI surface keeps the syntax scanner at warn; the resolved collection inventory (§2b) still judges a first configuration when it runs. Where it runs, a new root-config selector is judged against the base-suite tests that a run it governs collects: all of them for a run without targets, and those beneath the targets for a run with explicit targets whose discovery finds the same root config on both sides (#196 184.1). `-m`, `-k` and `--co` count whenever such a test exists; `--ignore`, `--ignore-glob` and `--deselect` only when they drop one, and `-p no:` only for a plugin other than `cacheprovider`, `faulthandler`, `pastebin` and `stepwise` (#196 184.2). A positional target in the root config's addopts is an explicit target of every run, read with the one definition of explicit targets a command's arguments use, which knows pytest's own and the common plugins' options that take a value, so `-n auto` or `--cov src` is no target (#173): a run collects beneath its command's targets and the addopts targets together, and when the addopts targets change, a base-suite test the base runs collected and no head run collects is excluded, a weakened command. A target moved between a command and addopts loses nothing. A word in addopts that names no file or directory on its side is no target: it is the value of an option the reader does not know, or a target that fails every run. A head run whose command names a missing path, or that collects no test, fails, and no claim is made for it; ambiguous addopts withholds the inventory. The inventory's settings proof does not reach a run with explicit targets, its command's or its config's addopts'. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests: a runner name anywhere in it, as row 69 reads one, or a runner site in it, live or dead (#216); deleting a runner script or a config file does not — that is consolidation until proven otherwise. A condition, a trigger, a hook inventory or a GitLab job's keys can stop a runner without touching its line (#181, #214), so GitHub workflows, `.pre-commit-config.yaml` and `.gitlab-ci.yml` are also read as an inventory of **runner sites**, each with whether it can execute for a pull request's commits and fail them. A runner site is a workflow step, a pre-commit hook or a command in a GitLab job's `script:` whose own command invokes a test runner, by a whole-word runner name outside the contexts known not to run it (`echo` and `printf` text, heredoc text written out, install commands, comments; #196 191.5), or by one of the runners #216 adds, `node --test`, `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`, `poe test` and `pdm test`, where a command starts: the first word of a simple command, past assignments, wrappers, package launchers, `sh -c` and `eval`, or inside a command substitution or a heredoc a shell reads, and never as a word elsewhere; or it is a `uses:` step whose action name and one of its `with:` inputs both name a runner. The same reading decides whether a runner-shaped script, a manifest script or a one-hop target invokes a test runner (§2); the opaque-exemption denial (THREATMODEL row 87) keeps row 69's names alone. A site is dead only for a static reason: a step or job `if:` that no event able to run the workflow on a pull request can make true, with status functions read as on an otherwise green run; a job that `needs:` a dead job and has no status function to run anyway; a trigger set with no event that runs on a pull request's commits, including activity `types` without `opened`, `synchronize` or `reopened` and a path filter that leaves no file (#196 191.9, 191.2(d)); a hook parked on the `manual` stage; a GitLab job that does not start by itself on a green pipeline (`when: manual`, `when: never`, or `when: on_failure`) or whose failure is allowed (`allow_failure: true`, or `exit_codes`), where each `rules:` entry that may match decides as the job's own keys do (an entry's condition is not evaluated, an entry with none ends the list, and a job no entry adds is not in the pipeline) and the job's `extends:` templates are merged in first; a hidden GitLab job (`.name`) that no job extends; and every GitLab job when `workflow: rules:` can only keep the pipeline from running (#214). There is no global GitLab token: `allow_failure: true` on a job whose `script:` runs no test runner is not a weakening. A runner command that lost a live site and gained a dead one is a disabled suite, and so is a runner reworded as the inventory moves a site from live to dead (#196 191.8); a pre-commit config whose hook entries invoked a recognised runner at base and invoke none at head, whatever its hook ids and names say, has removed its suite (#196 191.7). Both are weakened test commands. A workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader read with at least one live runner site, and whose head side it declines, is out of reach rather than weakened: high under E8, with a reason that names what the reader declined and the runner the base side ran (#196 191.3). A workflow is a `.yml` or `.yaml` file beneath `.github/workflows/`, `.gitlab-ci.yml` or `.pre-commit-config.yaml`; any other file kept beneath `.github/workflows/` is ci-role but not a workflow. A ci-role file that carries test obligations (§2) is reported at warn and is not scanned for swallows, narrowings or runner tokens: its lines are test code, judged by the test rules |
-| `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual) |
+| `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual)  Since 0.10.0, the D-177 policy-shadow exception: a newly winning `.checkwash/config.toml` over an existing selected BASE `.greenwash/config.toml` compares against that effective BASE policy, not defaults; see §6 policy-shadow transitions. |
 | `IMPORT_UNRESOLVED` | new import fails to resolve against lockfile / site-packages |
 | `SCOPE_DRIFT` | changed file outside contract globs (disabled without a manifest) |
 | `HIDDEN_UNICODE` | zero-width / bidi control characters in changed lines → high |
@@ -978,7 +1016,61 @@ the working-tree copy is a fallback only at the root, for a task file the
 base tree does not hold (below). Otherwise a diff could edit TASK.md to
 disarm E2 and E7 for itself.
 
-From a subdirectory (§9), the task path is mapped lexically: `--task` is taken relative to the directory `--repo` named, Git's `--show-prefix` is prepended, and `.` and `..` are collapsed as text. checkwash resolves no working-tree symlink to compute the path, but Git resolves `--repo` itself: when `--repo` is reached through a directory symlink, the prefix is that of the target, and a `--task` outside `--repo` can map to a path other than the one named. At the root the mapping is unchanged: `--task` relative to `--repo`. The base-side lookup reads the base tree at that lexical path, so a head-side symlink at the task path cannot choose which base file supplies the contract. That guarantee covers the base-side lookup only. From a subdirectory, a task file the base does not hold at that path is an engine error (exit 2, or the non-blocking `hook-json` warning, #414). Git spells the prefix as the directory is on disk, which on a case-insensitive checkout the head can choose, and a symlink or junction on the way to `--repo` moves it too, so the working-tree copy could be the head's contract. At the root, a base miss is an engine error too when the base tree holds, compared with case ignored, a file, a symlink or a submodule at a proper prefix of that path (`ci/TASK.md` over a committed directory symlink `ci`), or the path itself in another case (`task.md` for `TASK.md`); the error names that entry (#500). Git reads no path through such an entry and matches names byte for byte, while the working tree follows the symlink and, on a case-insensitive checkout, matches any case, so the working-tree copy could be the head's contract. Both comparisons are on text, so the result does not depend on the file system: on a case-sensitive checkout an untracked `task.md` beside a committed `TASK.md` is refused too. Otherwise, for a task file the base tree does not hold, the fallback opens `--task` as given, and the operating system follows a symlink there; one stderr line then says the contract was read from the working-tree copy, and changes neither stdout nor the exit code.
+Let R be the directory originally named by `--repo` (default `.`), interpreted
+natively relative to invocation cwd if R is relative. Compute
+`T = os.path.abspath(os.path.join(R, args.task))` once for lookup. Relative
+`--task` therefore belongs to the originally named directory, before Git
+re-roots the review; it is not independently resolved against cwd or the
+re-rooted Git root. From a subdirectory map T relative to R, prepend Git's
+`--show-prefix`, and collapse `.`/`..` lexically. At the root map T relative
+to the repository address. Never call realpath or resolve a HEAD-side task
+alias to select a BASE contract.
+
+Native address rules remain load-bearing: a fully-qualified path supplies
+its own address; on Windows a root-relative task takes its drive/share from
+R and a same-drive `C:TASK.md` joins R. These are native lexical operations,
+not an implicit drive/share mount or alias-canonicalization feature.
+A native relpath failure remains an engine error; it cannot activate fallback.
+
+Read the mapped BASE path even if HEAD rewrites either contract. From a
+subdirectory a BASE miss remains an engine error under #416. At the root,
+#500's case-insensitive task spelling/proper-prefix checks still refuse an
+existing BASE file, symlink or gitlink that the requested disk spelling can
+stand for. Only genuine BASE absence permits opening T from the worktree,
+with the existing disclosure that the change controls that fallback. It is
+not necessary that the path be untracked. The permitted fallback may still
+be followed by the OS; it is never used to rescue a refused BASE alias.
+
+### TASK policy syntax validation (0.10.0, D-181)
+
+Authority readers validate the restricted front-matter subset before applying
+any TASK contract. BASE bytes require strict UTF-8 decoding; NUL text refuses
+instead of silently treating UTF-16-like input as an absent contract.
+Recognized unsupported forms (including BOM, an unclosed
+front matter, commented/indented contract headers, noncanonical booleans,
+inline scope/list forms and trailing scope comments) are engine errors rather
+than advisory-only partial policies. Duplicate blocks/fields, unknown or
+misplaced fields within a recognized block, malformed glob quoting and
+inconsistent field/list nesting also refuse. The error names the TASK source
+and explains that no TASK policy was applied. Existing engine-error projection
+applies: exit 2 for term/JSON/SARIF and NOT_ANALYSED for the Stop hook (§9).
+
+Canonical block forms, the legacy greenwash header, case-insensitive bare
+true/false, literal fully quoted globs, unrelated front-matter metadata,
+ordinary prose and existing empty-scope semantics remain. This is validation,
+not general YAML support. `load_contract` is the authority API. The historical
+best-effort `parse_contract` decoder remains for old case records and must not
+be used to load an unvalidated policy for review.
+
+### Textual worktree relocation (0.10.0, D-182)
+
+Worktree delete/add pairing accepts exact bytes or UTF-8 text differing only
+by CRLF versus LF. It retains the original before/after bytes in the change;
+it does not normalize fingerprint evidence or read additional paths. Binary
+NUL content and invalid UTF-8 require byte equality. Lone CR, whitespace and
+content edits are not equivalent. Equal-content ties retain the existing
+lexical, single-use pairing. Range mode still uses Git similarity; this is
+not a general claim that all range/worktree rename classifications coincide.
 
 ## 5. Escalators / de-escalators (applied in order, all deterministic)
 
@@ -993,16 +1085,16 @@ From a subdirectory (§9), the task path is mapped lexically: `--task` is taken 
 | E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file. E7 reads a test role that comes from the path alone (a JS/TS test path, or a file beneath a test-support directory, §2) only when the file declares a test on either side; otherwise it reads the role the §2 table and runner promotion give the path, so production code named like a test is a production touch (#196 186.8), and so is test data or a manual mock (#217). Every other rule keeps the test role | → high |
 | E8 `CI_BECAME_UNANALYSABLE` | a workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader (§4 `CI_WORKFLOW_TOUCHED`) read with at least one live runner site, and whose head side it declines. E6 still applies when the same file also weakens a test command (#196 191.3) | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
-| D2 `ASSERTION_MOVED` | removed assertion's normalized text — or, for a disappeared unit, its whole normalized body — reappears verbatim in a **live** added unit. Live means no disabling marker, or only markers that qualify as D6 compat gates: a test carried across files together with its own `skipif(WIN)` is relocated, not dead, while an unconditional skip or an always-true condition still counts as dead. A JS/TS unit is live only in a file that the file's runner still collects (§2b, from the destination's own source, else the base manifest): a unit that reappears in a file its runner does not collect does not run there (#196 186.7). Credits are a multiset, spent once each | → info |
+| D2 `ASSERTION_MOVED` | a removed oracle has a matching two-sided static context in a live arrival, under D-179 below. Text, body hash, assertion mass and name similarity alone establish no credit. Existing collection/liveness checks remain. Each arriving assertion is spendable once across whole-unit, assertion and D5 routes; a complete-unit credit consumes its assertion credits too. Complete-unit equivalence may return at info; assertion-only credit still applies E2 under oracle_freeze | info, or high/ORACLE_FREEZE for assertion-only credit under freeze |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
-| D5 `RESTRUCTURED` | within one test file, the oracle mass added by new live units (liveness as in D2) ≥ the mass lost to disappeared units | hold at warn |
+| D5 `RESTRUCTURED` | within-file oracle mass is a candidate budget only; every lost own assertion must also have a matching static context/multiplicity proof in live arrivals (D-179). Split/renamed candidates use the same proof and shared spendable budget | hold at warn, still subject to E2 |
 | D6 `COMPAT_GATE` | the added skip is a `skipif` or a non-strict `xfail` mark (on the test, on its class, or in a `pytestmark`, which is read as the call it holds: #209 X1), a skip or non-strict `xfail` mark that a `pytestmark` binding carries under recorded guards, judged on the guard and the mark's own condition together (#260 Q2: `if sys.platform == "win32": pytestmark = pytest.mark.skip(...)` holds as its `skipif` spelling does), or an imperative skip (`pytest.skip` / `pytest.xfail` / `self.skipTest`, or a raised `unittest.SkipTest` / `pytest.skip.Exception`, in any import spelling: #220) under recorded `if` guards, in the test body, in the setup the unit runs (#196 183.2), or in a helper either of them calls, same-file or imported (#272). So is a later binding of the test's name that may replace it (`collection.rebound`, §2b), under the condition that binding runs under; one with no condition D6 can read (a loop body, an `except … as` or for target, a `match` case, mid-way through a `try` body) earns nothing (#424). A mark's condition given as a string is the expression pytest compiles from it, read as pytest evaluates it: `os`, `sys` and `platform` are those modules unless the test module binds the name to a constant, and `config` is unknown; a string that does not compile earns nothing (#263). Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it). A suite-level collection control in a `conftest.py` (`collect_ignore`, a collection hook, an `add_marker(...skip)` in one; §2b) is judged on its own guard, which need not name the interpreter or OS but must be able to be false (D-028, #209 Q1). The hold is a fact about the marker the finding reports: every after-side marker of that name must qualify, and a finding with no marker of its own (a unit gone, parametrize rows deleted, a guard weakened or removed) gets none, so a gate lends nothing to another disable on its unit (#208) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ EXACT_VALUE — still inside the exact family; landing at APPROX or below is material (THREATMODEL 13), so 90→70 and 70→60 are not mild | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D5 `SAME_UNIT_REWRITE` (extended) | an `ASSERT_SUBSTITUTED` in a unit that also **deleted** an assertion and **wrote a new strong one** — the private-API-to-public-API rewrite cluster. Crediting the removal at warn while blocking the substitution at high described one edit two ways. A pure substitution removes nothing, so the shape this rule exists for is untouched | hold at warn |
 | D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED`, an `ASSERT_SUBSTITUTED` or an `EXPECTATION_DEFINITION_CHANGED` — those three only; `PACKAGE_REPAIR` (below) takes the first and the third — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and all three credited rules require unweakened strength (an `EXPECTATION_DEFINITION_CHANGED` assertion's text is unchanged) | hold at warn |
-| D10 `DUPLICATE_REMAINS` | a disappeared unit whose identical normalized body still exists at head as a **live**, collectable unit in a file the diff never touched (deleting one of two identical copies leaves the oracle running). Found by a bounded needle search — one batched `git grep` at head, at most eight candidate files parsed — with liveness as in D2. A survivor is parsed with the conftest files above it at head, as a changed test module is (#223), so a skip in a conftest fixture it reaches counts as its own (#266). Not spent: one survivor covers any number of identical deletions, because it keeps running either way. The search reads Python files only (`.py` paths, `def name(` needles), so no JS/TS unit is ever a survivor (#484) | → info |
+| D10 `DUPLICATE_REMAINS` | a disappeared unit has a proven complete oracle-context equivalent in an unchanged, live, collectable Python survivor. The existing bounded head search (at most eight parsed candidates), conftest liveness (#266) and collection checks remain. Strict startup context is required; an unknown context earns no credit. A verified survivor is reusable for genuine deduplication. JS/TS survivors remain outside this route (#484) | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
 (`benchmarks/triage-2026-07-30.json`). D8–D10 came from the second
@@ -1148,7 +1240,129 @@ Evidence is deliberately **not** "some prod file in this diff changed". That
 diff-global test let a single dead constant, a statement reorder, or an edit
 to an unrelated function disarm the gate for the whole run.
 
+### Oracle-context proof in IR3 (D-179, 0.10.0)
+
+Python relocation proof includes module/import/class context, full decorators
+and arguments, parameter inputs/expectations, the assertion's prior/following
+execution context, conftest startup and ancestor package initializers. Unknown
+assertion calls are retained; only proved pure literal assertions may be inert.
+Literal parameter combinations are expanded statically up to 64 live rows.
+There is no getattr-to-attribute equivalence: opaque prior calls may replace
+builtin lookup. Module/helper metadata and unsupported dynamic contexts supply
+no proof. Exact complete-unit relocation remains available with known context.
+
+JS/TS proof retains declarations/tables, bindings and surrounding execution.
+Ordinary strings are never module paths. Only recognized static import tokens
+may be resolved lexically; bare, dynamic or unknown imports retain their
+directory context. Existing runner/liveness admission is unchanged.
+
+IR3 adds optional UnitSide.oracle_context and oracle_assertion_contexts. Empty,
+missing or malformed proof is unknown; valid values are lowercase SHA256 keys.
+Assertion keys are IDs with an optional @row ordinal. duplicate_unit_hashes now
+contains complete oracle-context keys; moved text/body lists are candidates,
+never authority on their own. Historical IR2 gains no inferred proof. Finding
+envelope2 and existing fingerprint formulas stay unchanged.
+
+Optional proof is bounded to 256 KiB/128 units per file, 16,384 module AST nodes,
+128 statements/4,096 nodes per function, and bounded startup reads (16 ancestor
+levels, 64 initializer records, 64 KiB each). Missing/read/type/size/budget or
+resource gaps withhold compensation without skipping ordinary analysis. Stable
+AST keys omit only empty type_params and reject unsupported generic syntax.
+
+This is bounded static obligation matching, not universal runtime equivalence.
+External plugins/import hooks and unsupported dynamic behavior remain limits.
+D1/D3, same-unit rewrites, compatibility/production-removal policy, strength and
+alignment retain their separate contracts. Complete-unit/duplicate equivalence
+can retain info under freeze; every assertion-only D2 or D5 route still reaches
+E2. Exact eligible BASE exemptions retain priority. The original eight golden
+expectations were unresolved compatibility failures at the initial integration.
+The later delegated dispositions in D-185 preserve their old bytes and migrate
+their expectations to the retained blocking obligations; they do not restore
+text-only credit. See docs/oracle-context-dispositions-0.10.0.md.
+
 ## 6. Exemptions
+
+### Quality policy maintenance (D-180)
+
+Main and quality exemption lanes are independent. Edits of existing quality
+policy/allow files retain main's guardrail review. Quality `reported`/0 can
+include policy warnings and is not a main-check pass. Only eligible entries
+in the selected BASE quality policy/ledger can affect that quality comparison;
+new HEAD entries and tool-generated ownership claims grant no authority.
+Precise maintenance uses the existing prior-BASE review route, without a
+blanket quality-path exception or automatic main/quality key translation.
+
+### Policy-shadow transitions (0.10.0, D-177)
+
+Existing guardrail edits remain critical, except for the append-only ledger
+case below. When no effective BASE predecessor exists, the existing fresh-file
+defaults comparison remains in force. Inactive lower-priority creations keep
+their existing treatment. A newly created `.checkwash/config.toml` that becomes
+selected over an existing BASE `.greenwash/config.toml` compares with that
+effective BASE config, including an existing zero-byte file; absence is None.
+
+- A new disabled-rule name, a rise in the `fail_on` severity threshold, or
+  `on_engine_error: block` becoming `pass_with_warning` makes the new config
+  critical.
+- If both policies parse without warnings, their role tables are equal, the
+  new disable set is a subset of the old one, its threshold does not rise and
+  its engine-error policy does not weaken, the created config stays warn.
+  Equal-policy copies and this bounded tightening are included; arbitrary
+  glob-language inclusion is not inferred.
+- Parse errors, value warnings or differing role tables make the transition
+  uncomparable and critical. This is a conservative maintenance cost, not a
+  proof of malicious intent. Existing loader exceptions remain engine errors.
+- Config and allow precedence remain independent by filename. Evaluation
+  uses selected BASE policy throughout the reviewed diff.
+
+A newly created `.checkwash/allow.toml` selected over an existing BASE
+`.greenwash/allow.toml` uses the effective BASE ledger for the existing parsed
+entry prefix comparison. An equal ledger adds no entries. A preserved prefix
+followed by new records emits EXEMPTION_ADDED only for that suffix. Rewriting
+or removing an existing record, including an empty priority file hiding a
+nonempty BASE ledger, is GUARDRAIL_TOUCHED critical even though the priority
+file is new. Revocation therefore retains its protected maintenance cost even
+when it tightens the gate. The parser's existing ignored-record behavior is
+unchanged.
+
+Shadow GUARDRAIL_TOUCHED fingerprints keep their content-bound v2 outer form
+and additionally bind the selected BASE policy's fixed repository-relative
+path, complete raw-byte SHA256 and bounded transition kind. Physical before
+and after identity remains bound. Exact keys move; old approvals require
+review and are not automatically translated. EXEMPTION_ADDED keeps its key
+formula for actual suffix additions; duplicate visibility for migrated records
+disappears.
+
+IR3 requires `globals.policy_shadows` in every payload, including an empty map
+when none is reported. Each entry has exactly `base_path`, `base_sha256` and
+`kind`; no policy values or arbitrary paths are copied. This required proof
+slot is why IR_VERSION is 3; an omitted slot is not proof of no shadow. Old IR2
+documents remain IR2 without inferred proof. FINDINGS_VERSION remains 2, as
+does its envelope/object field set. Exit meanings remain 0 pass, 1 block and
+2 engine error.
+
+CLI and sweep pass selected BASE path/raw bytes they already read, without a
+new HEAD authority read or widened source admission. Direct build_ir/analyze
+callers creating a priority policy file need PolicyBase provenance for that
+filename, including known absence where applicable. Missing relevant proof
+refuses with EngineError. Closed .gwcase adapters use explicit before policy
+bytes; after-only means absent at BASE. HEAD-only or slash-alias-ambiguous
+context remains unknown by filename through known_names and refuses only when
+that filename's new priority creation needs it. An unrelated unknown allow
+context does not refuse config creation or a test-only change, and vice versa.
+The engine's lexical backslash-to-slash spelling applies before membership,
+filename and suffix comparisons and to policy mapping/case keys. No case-fold,
+dot resolution, realpath or filesystem authority is added. case_snapshot is
+AFTER content and never supplies BASE authority. Golden/demo callers still
+pass allow_entries=[]; fixture ledger bytes never activate exemptions.
+
+This contract does not change directory precedence, existing-file/Git-rename
+policy, copy-plus-delete maintenance, arbitrary role-glob ordering, HEAD-only
+exemption authority, the historical single exemption_ledger_path attribution,
+BASE roles already excluding guardrails, reader admission or hook error rules.
+The implementation was authorized under Nelson's 2026-10-27 pre-1.0 repair
+instruction. Version metadata and this contract are not release qualification
+or publication evidence; stop for Nelson's decision before 1.0.
 
 `.greenwash/allow.toml`, per-fingerprint only (never per-rule):
 
@@ -1559,3 +1773,24 @@ under `benchmarks/` do that, and they are in-sample by construction. It does
 not make the in-sample rate wrong: 46/1800 (v0.3.0, 2026-09-07) is the honest answer to "how often
 does it block the repositories it knows best", and it stays published as
 exactly that.
+
+### 10.5 Published identity of the release-regression baseline (D-186)
+
+The previous-release verdict corpus compares against actual published software,
+not an undelivered tag. On a tag-stage run, the baseline remains the highest
+other published stable GitHub Release whose native tag is merged into the exact
+pushed commit. Complete bounded public Release catalog evidence, native tag
+object/peel and ancestry, and the baseline's uploaded canonical pyz identity
+must agree with its existing source/byte pin. A higher merged published Release
+with missing or bad assets blocks; it is never silently excluded. Bare tags
+remain recorded, including failed unpublished tags. Catalog absence describes
+current public metadata, not never-published history or private drafts.
+
+The gate captures two complete consistent catalog traversals and original
+response bytes/status/Link/times/hashes. The native publisher independently
+refreshes and re-evaluates relevant published fields and native tag identities.
+Failed, capped, partial, drifting or unbound metadata is not absence or PASS.
+The pushed tag still points exactly to HEAD and is excluded from previous-release
+selection. No tag, baseline pin, case, label, acceptance entry, baseline-blocked
+set, T3 map or canary pair changes merely to obtain a passing tag check. Ordinary
+case engines remain zero-network; this is a separate tag metadata preflight.

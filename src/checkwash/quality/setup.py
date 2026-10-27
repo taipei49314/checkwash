@@ -15,7 +15,15 @@ TOOLS = ("coverage", "ruff", "mypy")
 TRANSIENT = {".git", ".venv", "venv", ".tox", ".nox", "node_modules", "build", "dist", "__pycache__"}
 
 
-def advice(code):
+def advice(code, *, operation=None):
+    if operation == "init":
+        prerequisites = {
+            "NO_BASE_TARGETS": "Add supported coverage, Ruff or mypy configuration at the requested --root, or correct --root/--tool before generating another draft. Tool defaults are not inferred.",
+            "CONTEXT_UNRESOLVED": "Provide configuration for every requested tool at the selected --root, or select only configured tools with --tool. No partial draft is produced.",
+            "POLICY_INVALID": "Check the command arguments and --root/--tool/--paths. If a quality policy already exists, use checkwash quality doctor and edit it deliberately; init never overwrites it.",
+        }
+        if code in prerequisites:
+            return prerequisites[code]
     return {
         "NO_BASE_TARGETS": "Generate a draft with checkwash quality init, review its models/paths, then commit the policy before expecting PR enforcement.",
         "UNKNOWN_PROFILE": "Use checkwash quality profiles --details to inspect supported models; select the model matching the tool version you actually run.",
@@ -41,7 +49,8 @@ def base_result(operation):
 
 
 def add_issue(result, code, message, target_id=None):
-    result["diagnostics"].append({"code": code, "message": message, "target_id": target_id, "remediation": advice(code)})
+    result["diagnostics"].append({"code": code, "message": message, "target_id": target_id,
+                                  "remediation": advice(code, operation=result.get("operation"))})
 
 
 def matching_sources(snapshot, paths, *, tracked=False):
@@ -107,9 +116,11 @@ def draft(snapshot, *, root=".", tools=None, paths=None, profiles=None):
     if not targets or result["diagnostics"]:
         if not targets:
             add_issue(result, "NO_BASE_TARGETS", "No configured supported tools found at the requested root")
-        result["next_steps"] = ["Review the repository root and requested tools; no partial policy draft was produced."]
+        result["next_steps"] = ["Add missing supported tool configuration at the selected root, or correct --root/--tool; no partial policy draft was produced."]
         return result, 2
-    lines = ["# Draft only: review tool versions, target paths and configuration selection.",
+    lines = ["# Draft only: stdout contains this draft; no file was written.",
+             "# Save as UTF-8 quality-draft.toml; review it before installing .checkwash/quality.toml.",
+             "# Review tool versions, target paths and configuration selection.",
              "# Model IDs declare assumptions; tool execution and CI protection were not verified.",
              "# Commit the reviewed policy before expecting it to govern a later PR.",
              'schema_version = 1', 'mode = "report"']
@@ -121,7 +132,7 @@ def draft(snapshot, *, root=".", tools=None, paths=None, profiles=None):
     load_policy(text.encode())  # The printed draft must satisfy the actual policy parser.
     snapshot.verify()
     result.update(state="draft", policy_toml=text)
-    result["next_steps"] = ["Save this output as quality-draft.toml and review it before installing .checkwash/quality.toml.",
+    result["next_steps"] = ["Save the policy_toml draft as UTF-8 quality-draft.toml; review it before installing .checkwash/quality.toml.",
                             "Confirm the exact tool versions and intended source paths; then run checkwash quality doctor.",
                             "Keep report mode for initial observation. Enforce requires a separate reviewed base policy and a required CI status."]
     return result, 0

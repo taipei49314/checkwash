@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case  # noqa: E402
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case  # noqa: E402
 from checkwash.config import Config  # noqa: E402
 from checkwash.contract import Contract, parse_contract  # noqa: E402
 from checkwash.engine import analyze  # noqa: E402
@@ -53,6 +53,7 @@ def main() -> None:
                                            if any(n.encode("utf-8") in data for n in needles)])
                 if head else None
             ),
+            policy_base=case_policy_base(case),
             root_reader=snapshot.get,
             root_searcher=lambda needles, _snapshot=snapshot: search_source_mapping(_snapshot, needles),
         )

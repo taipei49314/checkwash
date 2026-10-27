@@ -38,6 +38,13 @@ def new_payload(base_label, head_label):
             "targets": [], "findings": [], "diagnostics": [], "summary": {}}
 
 
+def same_source(before, after):
+    """Match source digests' CRLF boundary without equating absence and bytes."""
+    if before is None or after is None:
+        return before is after
+    return before.replace(b"\r\n", b"\n") == after.replace(b"\r\n", b"\n")
+
+
 def finish(payload):
     status = [t["status"] for t in payload["targets"]]
     hard_error = any(d["kind"] == "error" for d in payload["diagnostics"])
@@ -92,7 +99,7 @@ def _analyze(payload, base, head, today, profiles):
     for path in (POLICY_PATH, ALLOW_PATH):
         records = [source(snap, side, path, "policy")[0] for snap, side in ((base, "base"), (head, "head"))]
         before, after = base.read(path), head.read(path)
-        if before == after:
+        if same_source(before, after):
             continue
         severity = "critical"
         if path == ALLOW_PATH:
@@ -119,7 +126,7 @@ def _analyze(payload, base, head, today, profiles):
             for path in target.version_files:
                 for snap, side in ((base, "base"), (head, "head")):
                     row["sources"].append(source(snap, side, path, "version")[0])
-                if base.read(path) != head.read(path):
+                if not same_source(base.read(path), head.read(path)):
                     raise QualityError("TOOL_VERSION_UNRESOLVED", "Tracked version source changed; target version is unresolved")
             common = set(base.tracked) & set(head.tracked) & set(base.paths) & set(head.paths)
             options = {"common_paths": common} if target.tool == "ruff" else {}

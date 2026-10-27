@@ -8,7 +8,7 @@ negative fixture is an unbounded false-positive risk. This gate is what keeps
 import datetime
 import pathlib
 
-from checkwash.cases import case_snapshot, case_to_changes, parse_case
+from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case
 from checkwash.config import Config
 from checkwash.contract import Contract, parse_contract
 from checkwash.detectors import REGISTRY
@@ -34,6 +34,7 @@ def _all_findings():
         snapshot = case_snapshot(case)
         _ir, findings, _verdict = analyze(
             case_to_changes(case), Config(), contract, [], TODAY, known_modules=known,
+            policy_base=case_policy_base(case),
             root_reader=snapshot.get,
             root_searcher=lambda needles: search_source_mapping(snapshot, needles),
         )

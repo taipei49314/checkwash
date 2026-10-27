@@ -59,6 +59,7 @@ def _pipeline(location: str, terms: int, change: str) -> dict[str, object]:
     from checkwash.config import Config
     from checkwash.contract import Contract
     from checkwash.engine import analyze
+    from checkwash.policy_shadow import PolicyBase
     from checkwash.gitio.snapshot import search_source_mapping
 
     before, after = pair(location, terms, change)
@@ -68,6 +69,7 @@ def _pipeline(location: str, terms: int, change: str) -> dict[str, object]:
     ir, findings, verdict = analyze(
         changes, Config(), Contract(), [], datetime.date(2026, 10, 12),
         known_modules={"app"}, self_modules={"app"},
+        policy_base=PolicyBase.from_mapping(before),
         head_reader=after.get, head_searcher=lambda needles: search_source_mapping(after, needles),
         root_reader=after.get, root_searcher=lambda needles: search_source_mapping(after, needles),
         root_path_lister=lambda: sorted(after),
