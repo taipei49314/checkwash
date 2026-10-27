@@ -1,0 +1,450 @@
+[
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.031000000000858563,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.027980+00:00",
+    "started_at": "2026-10-27T15:53:43.000777+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 0,
+      "path": "stdout.bin",
+      "sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "rev-parse",
+      "--verify",
+      "HEAD^{tree}"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.057367+00:00",
+    "started_at": "2026-10-27T15:53:43.028995+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 41,
+      "path": "stdout.bin",
+      "sha256": "95c9227e1c29b6676df294bc4c8ebd672c5e13276f6c50cc2e5187735fad47dc"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "rev-parse",
+      "--verify",
+      "refs/tags/v0.9.0"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.031000000000858563,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.085462+00:00",
+    "started_at": "2026-10-27T15:53:43.058379+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 82,
+      "path": "stdout.bin",
+      "sha256": "75298aef9ec6c4956cf946787fbbcf49d36040b74e30437ac9d44f69b9ca6cf6"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "rev-parse",
+      "--verify",
+      "refs/tags/v0.9.0^{commit}"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.113116+00:00",
+    "started_at": "2026-10-27T15:53:43.086454+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 123,
+      "path": "stdout.bin",
+      "sha256": "e5e629a9516a9d9aa66da318a7d2a88fd884de19eb9abd4ad000f9aa5f432a2a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "ls-remote",
+      "--exit-code",
+      "--",
+      "https://github.com/taipei49314/checkwash.git",
+      "refs/tags/v0.9.0",
+      "refs/tags/v0.9.0^{}"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.625,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.730208+00:00",
+    "started_at": "2026-10-27T15:53:43.113116+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 119,
+      "offset": 164,
+      "path": "stdout.bin",
+      "sha256": "bba9791f57f10097203cd483315e6b80802e3069612faa8afb404444ded5d0d6"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "show",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294:pyproject.toml"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.756375+00:00",
+    "started_at": "2026-10-27T15:53:43.730208+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1434,
+      "offset": 283,
+      "path": "stdout.bin",
+      "sha256": "1436b1393f8da8d60686154ca98774c7b53abf2bd327070a0e8e6dc176fe176f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "show",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294:src/checkwash/__init__.py"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.015000000001236913,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.786442+00:00",
+    "started_at": "2026-10-27T15:53:43.760467+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 163,
+      "offset": 1717,
+      "path": "stdout.bin",
+      "sha256": "98afd250b6db0528636f35fb47d48b80294984fffd3453372ea2127ec3dde54c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "ls-tree",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "--",
+      "src"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.814005+00:00",
+    "started_at": "2026-10-27T15:53:43.787435+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 57,
+      "offset": 1880,
+      "path": "stdout.bin",
+      "sha256": "71391b4b6b874d088f0b11b6f181942d580a5294453efa46d488bdd0e382a226"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "ls-tree",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "--",
+      "pyproject.toml"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.031000000000858563,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.840378+00:00",
+    "started_at": "2026-10-27T15:53:43.815004+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 68,
+      "offset": 1937,
+      "path": "stdout.bin",
+      "sha256": "a3e9fa206e51fb73e4e2b356aa7b1c41b47428433054444165996318765c0c75"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "ls-tree",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "--",
+      "action"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.867921+00:00",
+    "started_at": "2026-10-27T15:53:43.840378+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 60,
+      "offset": 2005,
+      "path": "stdout.bin",
+      "sha256": "aa760585b94263b1151385fe14e672f1ebc0bc02b91947bc4d193d2a0bb3d1a9"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "ls-tree",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "--",
+      ".pre-commit-hooks.yaml"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.031000000000858563,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.896544+00:00",
+    "started_at": "2026-10-27T15:53:43.868923+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 76,
+      "offset": 2065,
+      "path": "stdout.bin",
+      "sha256": "4df07f2aef342e1e3875e08d224b1a75d8fa6d640717b662e86b46a8766c3768"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "diff",
+      "--exit-code",
+      "--no-ext-diff",
+      "--no-textconv",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "--",
+      "src/",
+      "pyproject.toml",
+      "action/",
+      ".pre-commit-hooks.yaml"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.923129+00:00",
+    "started_at": "2026-10-27T15:53:43.896544+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 2141,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10pr1\\p",
+      "status",
+      "--porcelain=v1",
+      "--untracked-files=all",
+      "--ignored=matching",
+      "--",
+      "src/",
+      "pyproject.toml",
+      "action/",
+      ".pre-commit-hooks.yaml"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10pr1\\s",
+    "duration_seconds": 0.04700000000048021,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T15:53:43.961004+00:00",
+    "started_at": "2026-10-27T15:53:43.923129+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 2141,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  }
+]
