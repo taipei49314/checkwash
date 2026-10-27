@@ -269,7 +269,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             output = fixture.root / "out"
             output.mkdir()
             (output / "artifacts").mkdir()
-            ctx = dict(output=output, project={"version": "0.9.1"}, manifest={"records": {}})
+            ctx = dict(output=output, scratch=fixture.root / "scratch", project={"version": "0.9.1"}, manifest={"records": {}})
             collection.initialize(ctx)
             release = dict(id=42, tag_name="v0.9.1", draft=False, prerelease=False, assets=[])
             pypi = dict(info={"version": "0.9.1"}, urls=[])
@@ -281,12 +281,24 @@ class ReleaseCollectorTests(unittest.TestCase):
                         url="https://files.pythonhosted.org/owned/" + name, yanked=False,
                         packagetype="bdist_wheel" if name.endswith(".whl") else "sdist"))
             def fetch(name, url, maximum, *, origins):
-                if name == "github-release": return encoded(release)
-                if name == "pypi-version": return encoded(pypi)
-                return fixture.artifacts[url.rsplit("/", 1)[1]]
+                raw = (encoded(release) if name == "github-release" else encoded(pypi) if name == "pypi-version"
+                       else fixture.artifacts[url.rsplit("/", 1)[1]])
+                path = output / "release/network" / (name + ".bin")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(raw)
+                collection.network.rows.append(dict(name=name, path=path.relative_to(output).as_posix(), sha256=COLLECT.digest(raw)))
+                return raw
             with patch.object(collection.network, "fetch", side_effect=fetch):
                 collection.public_artifacts(ctx)
             self.assertEqual(len(collection.publication["downloads"]), 5)
+            # The verifier finds artifact bytes by basename across the packet.
+            names = [path.name for path in output.rglob("*") if path.is_file()]
+            self.assertEqual(len(names), len(set(names)))
+            for item in collection.publication["downloads"]:
+                if item["channel"] == "pypi":
+                    self.assertTrue(item["path"].startswith("release/network/pypi-"))
+                    self.assertEqual((output / item["path"]).read_bytes(), fixture.artifacts[item["name"]])
+            self.assertTrue(collection.public_paths["pypi-wheel"].is_relative_to(ctx["scratch"]))
             self.assertEqual(collection.publication["status"], "failed")
             self.assertEqual(len(collection.public_paths), 5)
             for name, raw in fixture.artifacts.items():

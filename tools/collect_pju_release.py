@@ -305,12 +305,17 @@ class ReleaseCollection:
                     and package["digests"]["sha256"] == wanted["sha256"], "PyPI metadata differs")
             role = "wheel" if name.endswith(".whl") else "sdist"
             require(package["packagetype"] == ("bdist_wheel" if role == "wheel" else "sdist"), "PyPI package type differs")
-            path = self.download(ctx, "pypi-" + role, package["url"], wanted, output / "public/pypi" / name,
+            # The install copy stays in scratch: a second packet file named like
+            # artifacts/<name> made the verifier's basename lookup ambiguous.
+            # The packet keeps the PyPI bytes as this read's network raw.
+            path = self.download(ctx, "pypi-" + role, package["url"], wanted, ctx["scratch"] / "public-pypi" / name,
                                  origins={"files.pythonhosted.org"})
+            read = self.network.rows[-1]
+            require(read["name"] == "pypi-" + role and read["sha256"] == wanted["sha256"], "PyPI network raw missing")
             require(path.read_bytes() == (output / "artifacts" / name).read_bytes(), "GitHub/PyPI bytes differ")
             self.public_paths["pypi-" + role] = path
             self.publication["downloads"].append(dict(channel="pypi", name=name, url=package["url"],
-                path=path.relative_to(output).as_posix(), bytes=wanted["bytes"], sha256=wanted["sha256"]))
+                path=read["path"], bytes=wanted["bytes"], sha256=wanted["sha256"]))
             self.save_publication(output)
 
     def save_publication(self, output):
