@@ -1,5 +1,11 @@
 # CheckWash test execution on PJU
 
+The current 2026-10-27 repair task also has a
+[task-specific 16NU receipt route](local-receipt-route-20261027.md), under the
+latest continuation instruction and the recorded agent interpretation. It
+records the actual local host; the PJU default and historical provenance below
+are retained. The route extension itself is not a passing receipt.
+
 On 2026-10-23, after the host and conflict with the general work-machine rule
 were identified, Nelson explicitly instructed: all CheckWash tests run on
 this PJU, make it a standing rule, and keep other projects' rules unchanged.

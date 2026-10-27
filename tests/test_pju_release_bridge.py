@@ -35,6 +35,7 @@ def report(stage):
     result = dict(schema_version=1, kind="checkwash.pju-release-verification.v1", status="verified",
                   repository=R.REPOSITORY, subject=value, manifest_sha256="1" * 64,
                   receipt_commit="2" * 40, collector_source_sha="3" * 40,
+                  host=R.HOST, provenance=R.PROVENANCE,
                   checks=[R.context(stage)], publication_authorized=False)
     if stage == "pr":
         result.update(pr_number=value["pr_number"], head_sha=value["head_sha"], base_sha=value["base_sha"],
@@ -324,11 +325,13 @@ class ParentStageTests(unittest.TestCase):
             prior.pop("subject")
             prior.pop("kind")
         packet = MemoryPacket()
+        packet.manifest.update(host=R.HOST, provenance=R.PROVENANCE)
         packet.put_json("parents/pr.json", prior)
         packet.manifest["parents"] = {"pr": dict(report="parents/pr.json", sha256=R.digest(packet.raw("parents/pr.json")), check_run_id=1)}
         for index, name in enumerate([*R.B.CONTEXTS, R.context("pr")], 1):
             api.data[api.prefix + f"/check-runs/{index}"] = dict(id=index, app={"id": 15368}, name=name,
                 status="completed", conclusion="success", head_sha="9" * 40,
+                output={"summary": f"{R.PROVENANCE}; actual host {R.HOST}; Windows/Python 3.11.9. Other platforms NOT_RUN.\n\nOwned prior release-stage check."},
                 external_id="pju:" + prior["manifest_sha256"] + ":" + name if index < 5 else "pju-release:" + prior["manifest_sha256"] + ":pr")
         api.data[api.prefix + "/pulls/70"] = dict(state="closed", merged=True, merge_commit_sha=current["head_sha"], head={"sha": "9" * 40, "repo": {"full_name": R.REPOSITORY}})
         return packet, api, current

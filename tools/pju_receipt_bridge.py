@@ -1,4 +1,4 @@
-"""Validate owner-admitted PJU receipts as data, then publish required Checks.
+"""Validate owner-admitted local receipts as data, then publish required Checks.
 
 This is an evidence bridge, not a hardware attestation service. An authenticated
 repository owner admits an immutable receipt commit and its manifest digest.
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import io
 import json
 import math
@@ -24,8 +25,11 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 REPOSITORY = "taipei49314/checkwash"
-HOST = "LAPTOP-01AGNPJU"
-PROVENANCE = "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL"
+_ROUTE_SPEC = importlib.util.spec_from_file_location("_trusted_receipt_route", Path(__file__).with_name("receipt_execution_route.py"))
+_ROUTE = importlib.util.module_from_spec(_ROUTE_SPEC)
+_ROUTE_SPEC.loader.exec_module(_ROUTE)
+HOST, PROVENANCE = _ROUTE.HOST, _ROUTE.PROVENANCE
+receipt_route = _ROUTE.receipt_route
 ACTION_SHA = "d6eda4f695fabb8e7d138f7a87b099d2028f0294"
 CONTEXTS = ("checkwash", *(f"candidate assertion contract ({d})" for d in ("source", "wheel", "pyz")))
 CONTRACTS = ("tests/data/javascript_assertion_support.json", "tests/data/javascript_foundation_mutations.json")
@@ -39,6 +43,29 @@ MAX_TOTAL = 1024 * 1024 * 1024
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def validate_native_route(check, route):
+    """Bind route data to a native App check after its identity is verified.
+
+    These are the exact headers emitted by the admitted historical/current
+    publishers. The native check's App, source, success and external manifest
+    digest remain independently required by the release-parent verifier.
+    This is authenticated metadata consistency, not hardware attestation or a
+    new signature over the prior report.
+    """
+    output = check.get("output")
+    require(type(output) is dict and type(output.get("summary")) is str,
+            "native check execution route header absent")
+    header, separator, _ = output["summary"].partition("\n\n")
+    headers = {
+        f"Real local execution: {route['host']}; {route['provenance']}.",
+        f"{route['provenance']}; actual host {route['host']}; Windows/Python 3.11.9. Other platforms NOT_RUN.",
+    }
+    if route["host"] == HOST:
+        headers.add(f"Real PJU execution: {HOST}; {PROVENANCE}.")
+    require(separator == "\n\n" and header in headers,
+            "native check execution route header differs")
 
 
 def exact_keys(value, names, label):
@@ -437,11 +464,12 @@ def validate_action(packet, records, head, base, trusted_root, action_sha=None):
     project = tomllib.loads(git(trusted_root, "show", action_sha + ":pyproject.toml").decode("utf-8"))["project"]
     require(identity.get("version") == project["version"], "Action engine version mismatch")
     replay = packet.json(records["action_replay"])
+    route = receipt_route(packet.manifest)
     exact_keys(replay, "schema_version kind provenance status host action_sha action_tree action_yaml_sha256 base_sha head_sha "
                        "fail_on comment_pr steps resolved_outputs files errors", "Action replay")
     require(type(replay["schema_version"]) is int and replay["schema_version"] == 1
-            and replay["kind"] == "checkwash.pju-action-replay.v1" and replay["provenance"] == "PJU_LOCAL_COMPOSITE_REPLAY"
-            and replay["status"] == "completed" and replay["errors"] == [] and replay["host"] == HOST
+            and replay["kind"] == "checkwash.pju-action-replay.v1" and replay["provenance"] == route["action_provenance"]
+            and replay["status"] == "completed" and replay["errors"] == [] and replay["host"] == route["host"]
             and replay["action_sha"] == action_sha and replay["head_sha"] == head and replay["base_sha"] == base
             and replay["fail_on"] == "high" and replay["comment_pr"] is False, "Action replay identity/status")
     require(replay["action_tree"] == git(trusted_root, "rev-parse", action_sha + "^{tree}").decode().strip(), "Action tree mismatch")
@@ -532,8 +560,8 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
     require(manifest["head_sha"] == sha(head, 40) and manifest["base_sha"] == sha(base, 40)
             and manifest["source_tree"] == sha(source_tree, 40), "receipt source identity mismatch")
     require(manifest["collector_source_sha"] == manifest["contract_source_sha"] == sha(collector, 40), "collector admission mismatch")
-    require(manifest["host"] == HOST and manifest["provenance"] == PROVENANCE
-            and manifest["status"] == "completed" and manifest["action_sha"] == ACTION_SHA, "receipt host/scope/status")
+    route = receipt_route(manifest)
+    require(manifest["status"] == "completed" and manifest["action_sha"] == ACTION_SHA, "receipt scope/status")
     runtime = manifest["runtime"]
     exact_keys(runtime, "os python_version python_executable python_sha256 git_executable git_sha256 bash_executable bash_sha256 "
                        "dependencies other_platforms", "runtime")
@@ -581,7 +609,7 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
         validate_qualification(qualification, desc, distribution)
         validate_inventory(packet, packet.json(records["inventories"][distribution]), desc, qualification, qpath, distribution)
     return dict(status="verified", repository=repository, pr_number=pr, head_sha=head, base_sha=base,
-                source_tree=source_tree, collector_source_sha=collector, host=HOST, provenance=PROVENANCE,
+                source_tree=source_tree, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
                 checks=list(CONTEXTS), qualification_cases=len(desc["cases"]), junit=junit,
                 trust="owner-admitted receipt digest; not hardware attestation", other_platforms="NOT_RUN")
 
@@ -632,8 +660,9 @@ def admit_environment(expected_workflow_sha, env):
 def publish(api, report, manifest_sha256, receipt_commit, run_url):
     repository, pr, head, base = (report[k] for k in ("repository", "pr_number", "head_sha", "base_sha"))
     require(report["status"] == "verified" and report["checks"] == list(CONTEXTS), "unverified check publication")
+    route = receipt_route(report)
     ids = []
-    summary = (f"Real PJU execution: {HOST}; {PROVENANCE}.\n\n"
+    summary = (f"Real local execution: {route['host']}; {route['provenance']}.\n\n"
                f"PR #{pr}; head `{head}`; base `{base}`.\n\nReceipt commit `{receipt_commit}`; manifest SHA256 `{manifest_sha256}`.\n\n"
                f"{report['qualification_cases']} exact contract cases per distribution; JUnit {report['junit']}. "
                "Owner-admitted evidence, not hardware attestation. Other platforms: NOT_RUN.")
@@ -642,12 +671,12 @@ def publish(api, report, manifest_sha256, receipt_commit, run_url):
         for name in CONTEXTS:
             check = api.request("POST", f"/repos/{repository}/check-runs", dict(name=name, head_sha=head,
                 status="in_progress", external_id="pju:" + manifest_sha256 + ":" + name, details_url=run_url,
-                output=dict(title="PJU evidence verified; publication in progress", summary=summary)))
+                output=dict(title="Local evidence verified; publication in progress", summary=summary)))
             ids.append(integer(check["id"], "check ID", 1))
         for check_id in ids:
             require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed")
             api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="success",
-                output=dict(title="Exact-source PJU evidence passed", summary=summary)))
+                output=dict(title="Exact-source local evidence passed", summary=summary)))
         require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed after publication")
     except Exception:
         for check_id in ids:
