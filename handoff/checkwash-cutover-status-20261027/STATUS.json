@@ -1,0 +1,100 @@
+{
+  "snapshot_utc": "2026-10-27T01:36:56.117048+00:00",
+  "status": "HUMAN_CLOSEOUT_COMPLETED_WORK_SAVED_VALIDATION_INTERRUPTED",
+  "human_instruction": "差不多了 該推的推上去",
+  "candidate_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "artifact_checkpoint_parent": "5875f4d5b3d48e0c21e3ace75d12d6ba29def2b2",
+  "fixed_source_tests": {
+    "passed": 323,
+    "exit_code": 0,
+    "input_manifest_sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732"
+  },
+  "self_parent": {
+    "verdict": "pass",
+    "exit_code": 0,
+    "high": 0,
+    "warn": 3
+  },
+  "self_integration": {
+    "verdict": "block",
+    "exit_code": 1,
+    "high": 3,
+    "warn": 12
+  },
+  "artifact_bundle": {
+    "sha256": "eba17306f0e3d221677e1483e464ed25c992b9e021a03c0e71a590c63ec7537f",
+    "bytes": 13769469,
+    "members": 125,
+    "completed_build_install_smoke_jobs": 9
+  },
+  "full_suite": {
+    "state": "INTERRUPTED_FOR_HUMAN_HANDOFF_NOT_ACCEPTED",
+    "actual_exit_code": 1,
+    "source_files_unchanged": true,
+    "terminal_receipt_sha256": "3d3b6adf23db7f215f645ecb92d0d2dcd9dd935cc7f018e4b46ea287569724b9",
+    "no_full_suite_pass_claim": true
+  },
+  "qualifications": {
+    "state": "INTERRUPTED_FOR_HUMAN_HANDOFF_NOT_ACCEPTED",
+    "arms": [
+      {
+        "kind": "source",
+        "state": "INTERRUPTED_FOR_HUMAN_HANDOFF_NOT_ACCEPTED",
+        "observed_case_cli_calls_not_pass": 219,
+        "recorded_nested_commands": 1103,
+        "actual_native_child_exit": 4294967295,
+        "outer_tool_exit": 1,
+        "metadata_audit_exit": 1,
+        "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+        "ending_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+        "source_files_unchanged": true,
+        "changed_inputs": [],
+        "native_receipt_sha256": "b08a68a469d8e120b13872888f4b65c917af1fd30fa4fccfb9f23cd2824b634e",
+        "metadata_receipt_sha256": "b27997abdd8f1fd6773bcbcff87155900346d8c7a60b4795ac559e0783670fdd",
+        "complete_qualification_json_present": false,
+        "qualification_passed": false
+      },
+      {
+        "kind": "wheel",
+        "state": "INTERRUPTED_FOR_HUMAN_HANDOFF_NOT_ACCEPTED",
+        "observed_case_cli_calls_not_pass": 175,
+        "recorded_nested_commands": 884,
+        "actual_native_child_exit": 4294967295,
+        "outer_tool_exit": 1,
+        "metadata_audit_exit": 1,
+        "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+        "ending_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+        "source_files_unchanged": true,
+        "changed_inputs": [],
+        "native_receipt_sha256": "8cd5d597e97739313bf449db6704f759919eb7eba3741c6d0615715c2150918b",
+        "metadata_receipt_sha256": "34c1eb740e7291816a8433b8efe61a39e13ffc458f098a41279219f59e8d58ee",
+        "complete_qualification_json_present": false,
+        "qualification_passed": false
+      },
+      {
+        "kind": "pyz",
+        "state": "INTERRUPTED_FOR_HUMAN_HANDOFF_NOT_ACCEPTED",
+        "observed_case_cli_calls_not_pass": 170,
+        "recorded_nested_commands": 858,
+        "actual_native_child_exit": 4294967295,
+        "outer_tool_exit": 1,
+        "metadata_audit_exit": 1,
+        "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+        "ending_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+        "source_files_unchanged": true,
+        "changed_inputs": [],
+        "native_receipt_sha256": "7a603c8d3835f1d74612cc731c8a4aa76c0607a3077eaf13cd38cdda328d9561",
+        "metadata_receipt_sha256": "2848ae1188e62c47618c75c9f2fe5ce47e7ede7e41d2f106f461b2570d38441d",
+        "complete_qualification_json_present": false,
+        "qualification_passed": false
+      }
+    ],
+    "cross_format": "NOT_RUN_INCOMPLETE_QUALIFICATIONS",
+    "no_complete_283_arm": true
+  },
+  "all_product_validation_workers_stopped": true,
+  "full_partial_raw_and_qualification_prefixes_retained_locally": true,
+  "repair_goal_complete": false,
+  "release_or_tag_or_merge_performed": false,
+  "before_1_0_requires_Nelson_decision": true
+}

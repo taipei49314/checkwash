@@ -1,0 +1,78 @@
+{
+  "status": "INTERRUPTED_FOR_HUMAN_HANDOFF_NOT_ACCEPTED",
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "host": "LAPTOP-01AGNPJU",
+  "reason": "Human requested wind-down and pushing completed work; incomplete long validation stopped",
+  "recorded_utc": "2026-10-27T01:30:55.7270742Z",
+  "capture_wrapper_pid": 41620,
+  "wrapper_retained_to_record_actual_exit": true,
+  "pytest_root_pid": 5576,
+  "targets": [
+    {
+      "pid": 50148,
+      "parent_pid": 65388,
+      "name": "git.exe"
+    },
+    {
+      "pid": 65388,
+      "parent_pid": 32868,
+      "name": "python.exe"
+    },
+    {
+      "pid": 32868,
+      "parent_pid": 54984,
+      "name": "python.exe"
+    },
+    {
+      "pid": 54984,
+      "parent_pid": 53780,
+      "name": "python.exe"
+    },
+    {
+      "pid": 53780,
+      "parent_pid": 2504,
+      "name": "python.exe"
+    },
+    {
+      "pid": 32260,
+      "parent_pid": 3536,
+      "name": "git.exe"
+    },
+    {
+      "pid": 3536,
+      "parent_pid": 37412,
+      "name": "git.exe"
+    },
+    {
+      "pid": 37412,
+      "parent_pid": 6904,
+      "name": "python.exe"
+    },
+    {
+      "pid": 6904,
+      "parent_pid": 28452,
+      "name": "python.exe"
+    },
+    {
+      "pid": 28452,
+      "parent_pid": 22268,
+      "name": "python.exe"
+    },
+    {
+      "pid": 22268,
+      "parent_pid": 2504,
+      "name": "python.exe"
+    },
+    {
+      "pid": 2504,
+      "parent_pid": 5576,
+      "name": "python.exe"
+    },
+    {
+      "pid": 5576,
+      "parent_pid": 41620,
+      "name": "python.exe"
+    }
+  ],
+  "completion_claim": false
+}

@@ -1,0 +1,57 @@
+{
+  "candidate_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "parent_checkpoint": "5875f4d5b3d48e0c21e3ace75d12d6ba29def2b2",
+  "files": [
+    {
+      "path": "00-START-HERE.md",
+      "bytes": 2186,
+      "sha256": "663ad02d5b3c08c5ab3f84ed8b6748284fda1c2e47598418c0fe7a91b33aedfb"
+    },
+    {
+      "path": "full-suite-interruption.json",
+      "bytes": 1652,
+      "sha256": "b76ac78908202dcbd8f3b1754dc23bccec9d2c74863f5a1f691af82239d17d67"
+    },
+    {
+      "path": "full-suite-partial-stdout.txt",
+      "bytes": 15599,
+      "sha256": "2fb81370bbb9342935fe93bbe426ed1b7c7855b4ae4a1be35b830c461a8d0614"
+    },
+    {
+      "path": "full-suite-receipt.json",
+      "bytes": 1954,
+      "sha256": "3d3b6adf23db7f215f645ecb92d0d2dcd9dd935cc7f018e4b46ea287569724b9"
+    },
+    {
+      "path": "pyz-qualification-receipt.json",
+      "bytes": 2239,
+      "sha256": "7a603c8d3835f1d74612cc731c8a4aa76c0607a3077eaf13cd38cdda328d9561"
+    },
+    {
+      "path": "qualification-interruption.json",
+      "bytes": 3910,
+      "sha256": "7d775c3ac87b33d9deba64f4371f05de19ed22a4dfeb36f3989f188e4ce6e048"
+    },
+    {
+      "path": "qualification-interruption.md",
+      "bytes": 3008,
+      "sha256": "36ad834647d19295709faae6cbd499133903dff70747d8303e321984c61f69e0"
+    },
+    {
+      "path": "source-qualification-receipt.json",
+      "bytes": 2108,
+      "sha256": "b08a68a469d8e120b13872888f4b65c917af1fd30fa4fccfb9f23cd2824b634e"
+    },
+    {
+      "path": "STATUS.json",
+      "bytes": 4029,
+      "sha256": "94ec5cf63950b58917f0e00b2aa13ce84e024caeda0a1a40ad541d99196380b2"
+    },
+    {
+      "path": "wheel-qualification-receipt.json",
+      "bytes": 2277,
+      "sha256": "8cd5d597e97739313bf449db6704f759919eb7eba3741c6d0615715c2150918b"
+    }
+  ],
+  "manifest_excludes_itself": true
+}
