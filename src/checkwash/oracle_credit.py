@@ -381,9 +381,28 @@ def mark_contexts(source, units, path, language, *, startup_known=True, startup=
     try:
         if language == "python":
             _python_context(source, units, path, startup, needed, source_reader, source_searcher, source_path_lister)
+            if (len(source) <= 65536 and source_reader is not None
+                    and source_searcher is not None and source_path_lister is not None):
+                from checkwash.oracle_class_credit import prove_plain_class_units
+                text = source.decode("utf-8-sig").replace("\r\n", "\n")
+                tree = ast.parse(text)
+                lines = text.splitlines(keepends=True)
+                offsets, total = [], 0
+                for line in lines:
+                    offsets.append(total)
+                    total += len(line)
+                nodes = {_span(node, lines, offsets): node for node in ast.walk(tree)
+                         if isinstance(node, ast.FunctionDef)}
+                functions = {name: nodes[side.span] for name, side in units if side.span in nodes}
+                certificates = prove_plain_class_units(source, tree, functions, path=path, read=source_reader,
+                                                        search=source_searcher, path_lister=source_path_lister)
+                for name, side in units:
+                    if name in certificates and (needed is None or name in needed):
+                        side.oracle_context = _key("python-closed-class-unit-v1", startup, certificates[name])
+                        side.oracle_assertion_contexts = {}  # complete units only; no assertion-only credit.
         elif path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
             _javascript_context(source, units, path, needed)
-    except (RecursionError, MemoryError, ValueError, TypeError):
+    except (RecursionError, MemoryError, ValueError, TypeError, SyntaxError):
         # This optional proof is not analysis admission. A gap withholds
         # every partial credit; the ordinary detectors still run.
         for _name, side in units:
