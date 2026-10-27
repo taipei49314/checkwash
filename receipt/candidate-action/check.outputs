@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\dev\cw10main\s\candidate-action\checkwash-action-tv7ux_vm\check-receipt.json
+base=c9356686b4a9b3a6f0cd714c66d952891cffdd70
+head=100699796d942af30644738ffbcd1f1c939411c5
+fail_on=high
