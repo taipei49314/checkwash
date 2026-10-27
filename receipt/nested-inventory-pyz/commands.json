@@ -1,0 +1,6410 @@
+[
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\t",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:33.867725+00:00",
+    "started_at": "2026-10-27T20:25:33.841114+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 0,
+      "path": "stdout.bin",
+      "sha256": "269db47ccf9558ad92b5c16ab4555fd38f401a3893474b623d8bc3905cba96a8"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "rev-parse",
+      "HEAD"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:33.894822+00:00",
+    "started_at": "2026-10-27T20:25:33.868733+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 41,
+      "path": "stdout.bin",
+      "sha256": "8f95a136919c8c0be261afb6ed75e2c9d73f4f08c2b2a2a2bac1aa2e5a6ccc65"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "diff",
+      "HEAD",
+      "--",
+      "src",
+      "pyproject.toml"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:33.932420+00:00",
+    "started_at": "2026-10-27T20:25:33.895821+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 82,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "ls-tree",
+      "-r",
+      "-z",
+      "100699796d942af30644738ffbcd1f1c939411c5:src"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:33.961067+00:00",
+    "started_at": "2026-10-27T20:25:33.933420+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 20155,
+      "offset": 82,
+      "path": "stdout.bin",
+      "sha256": "054e3ea24e267d76ff528fc057fc102ccf62f743c244d39efdaf351860fb172e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f0769cde489b9dc991d2391e75c6f533976a656f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:33.989731+00:00",
+    "started_at": "2026-10-27T20:25:33.962066+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 164,
+      "offset": 20237,
+      "path": "stdout.bin",
+      "sha256": "9d818929b8f4251630654f400866d75fd8eb63c16c8714ddb1380605203df4f8"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "40d3f4032fced36f69b2f970c66b261fa047bd58"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.017881+00:00",
+    "started_at": "2026-10-27T20:25:33.989731+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 57,
+      "offset": 20401,
+      "path": "stdout.bin",
+      "sha256": "1533c4066ad0fbdbf9a68dc0c155b32d015d4a26d0b3cb8a971d86638752450f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "263c65a2a973cb55b42dfc61a067e0fbe990892c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.047459+00:00",
+    "started_at": "2026-10-27T20:25:34.018394+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6834,
+      "offset": 20458,
+      "path": "stdout.bin",
+      "sha256": "9e9c4ee80dc8a1b3b03b8eaa563bcbff0e34a42f1173a27ae9a52f769dcc1337"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a8c73fefac6d29b9ce0ddadae72ae3dbf87c3bbc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.074972+00:00",
+    "started_at": "2026-10-27T20:25:34.048460+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11266,
+      "offset": 27292,
+      "path": "stdout.bin",
+      "sha256": "ddd5fbae03556139adb3b6ddc784bae54763b56a94785ca5d16581e008769080"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ad8613bdf6987e0a3a9753728ad11e3d3546f8bf"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.103541+00:00",
+    "started_at": "2026-10-27T20:25:34.075972+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7942,
+      "offset": 38558,
+      "path": "stdout.bin",
+      "sha256": "2ef73a005310770fbcc76ef087cb6c8195c5c01e4c967c7fdccf38f054229601"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9e4de5b9be5916225036a7cfa71dc5a371332785"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.132182+00:00",
+    "started_at": "2026-10-27T20:25:34.104542+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2766,
+      "offset": 46500,
+      "path": "stdout.bin",
+      "sha256": "0d9477fa34bc275fcaff2fff304f8ef02aaad314aba4376d825ce0938ba5f02d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "4c7369ab1d3a195c3755e910d5c5047097955852"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.161188+00:00",
+    "started_at": "2026-10-27T20:25:34.133183+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 14125,
+      "offset": 49266,
+      "path": "stdout.bin",
+      "sha256": "1d55ead4ed1829a4e006a5be4257879cfbd7e38b56f373c0bb5ed16840020fcf"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "55ccb5689b63993026307894618390d3aa1eec12"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.189028+00:00",
+    "started_at": "2026-10-27T20:25:34.162188+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 52112,
+      "offset": 63391,
+      "path": "stdout.bin",
+      "sha256": "9c917a8c2fa3446b32edb939528b3999b15220064919ef7c24b4022994d33ae1"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f125d06a2c50085de9c073f7bf07383e7511b1f0"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.217146+00:00",
+    "started_at": "2026-10-27T20:25:34.190029+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 50773,
+      "offset": 115503,
+      "path": "stdout.bin",
+      "sha256": "bfc0c4ed84a07b4ca457a3da290998e7d6ad2ccad78aa4693f769b77cbcb0023"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "02bba2fec70172c206143f8c8c7d78cc8bb3aac9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0470000000022992,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.255481+00:00",
+    "started_at": "2026-10-27T20:25:34.218650+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 33659,
+      "offset": 166276,
+      "path": "stdout.bin",
+      "sha256": "3228f95adb96321d64f74f4015da9a588ea5a42161df415d513fc04933e3b104"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b350e993585e57d08eff2a76097cb13e4545f07b"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.284483+00:00",
+    "started_at": "2026-10-27T20:25:34.256481+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 22435,
+      "offset": 199935,
+      "path": "stdout.bin",
+      "sha256": "37c3b68b344cc117ddbdbe04342abac31292dff98482260fd8015572b5e3cb88"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ed848197cdadd784e02bc507f0d9b46dbb424875"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.313503+00:00",
+    "started_at": "2026-10-27T20:25:34.285483+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10130,
+      "offset": 222370,
+      "path": "stdout.bin",
+      "sha256": "3b06ca62a98d6cbefda180d61c0af6834d0630c6ac178fd10ada2c26602a39fa"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "c8ec8be1234c8abccf182f5d187aa8a187485dde"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.343435+00:00",
+    "started_at": "2026-10-27T20:25:34.314501+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2268,
+      "offset": 232500,
+      "path": "stdout.bin",
+      "sha256": "5af8a2a5fbf49fa9245e3e29b7fb9c5be2c284e182904c50bed25453fdee4e74"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8dd7e3a22d943a02c6f34202fec8c583626a5231"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.373949+00:00",
+    "started_at": "2026-10-27T20:25:34.344435+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10635,
+      "offset": 234768,
+      "path": "stdout.bin",
+      "sha256": "934fa7ca49a23ecd38a8e53a2a8d6041fbb82fe08c4eacf4e8d93d8e2549b373"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "dfd42d10873ddbf8babccebe7ab1d5f42bab9f89"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.402676+00:00",
+    "started_at": "2026-10-27T20:25:34.374949+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3990,
+      "offset": 245403,
+      "path": "stdout.bin",
+      "sha256": "60baa5838ff02c94579f6f6056fb138ab9fc165c5ea7518d112e6035346f27c1"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "627ab48fe6faa62b254b1f0a52fcca79d7cc9d89"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.432200+00:00",
+    "started_at": "2026-10-27T20:25:34.403675+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 593,
+      "offset": 249393,
+      "path": "stdout.bin",
+      "sha256": "572920d58d065eba38aa1e86d8751e69b9498ce1d5e5a1c6505b3cab4c91fce0"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8b97a0eec69bef9771e4390f09a10082833911b0"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.462200+00:00",
+    "started_at": "2026-10-27T20:25:34.433200+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 735,
+      "offset": 249986,
+      "path": "stdout.bin",
+      "sha256": "a1811eb7be65f86044d2348b937858d71f6e03ff9faa187f945c69c74e739a5f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "58fed4c1f0190dae349310aec37691a7df8b4503"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.492205+00:00",
+    "started_at": "2026-10-27T20:25:34.463200+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 620,
+      "offset": 250721,
+      "path": "stdout.bin",
+      "sha256": "c014077aa3a38b97bc96ce589a4a135488ee014d01bb9c78cceb085f62f1c0b4"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "1e81ba8d6a1b7537e7a6063ff6b38b76ea2938ad"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.522700+00:00",
+    "started_at": "2026-10-27T20:25:34.493708+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 643,
+      "offset": 251341,
+      "path": "stdout.bin",
+      "sha256": "f8698caa8d88a9e72171dd7617cb7a1c7fef117c15f736a18cd044d108e7849d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "3c616b3a103838981a1a1d9d328d21498a0a0bdc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.554708+00:00",
+    "started_at": "2026-10-27T20:25:34.523702+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 786,
+      "offset": 251984,
+      "path": "stdout.bin",
+      "sha256": "2ee1c7e152d84477422b1f09dce019c042b234c98842e7a49b2afce07ccb953c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2ad3600c64159203f128d43670152acd91ee0f9a"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.583285+00:00",
+    "started_at": "2026-10-27T20:25:34.555706+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 522,
+      "offset": 252770,
+      "path": "stdout.bin",
+      "sha256": "4add35e61cb94d0bbbe470fc5b18a151906647180ea396c854595ee8f042f299"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "5dfa52549051d93e964b7dc71e7655b032f2c3d3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.613723+00:00",
+    "started_at": "2026-10-27T20:25:34.584291+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 489,
+      "offset": 253292,
+      "path": "stdout.bin",
+      "sha256": "382288b08a7d4941be501123adcb9dd3ad97ac8a1adc34369b2d18b8453a6d61"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "497728a0b902b870f2940aa30505a77e683f79e1"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.645236+00:00",
+    "started_at": "2026-10-27T20:25:34.614724+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 411,
+      "offset": 253781,
+      "path": "stdout.bin",
+      "sha256": "b5dd6c9c3a68bd6634aec362fac72993bcc5a660a49d4611f1d92472f9a1dfc7"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "aba3d0871743ecb01cd751ba31e9d125c3be768f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.676235+00:00",
+    "started_at": "2026-10-27T20:25:34.647236+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 776,
+      "offset": 254192,
+      "path": "stdout.bin",
+      "sha256": "6b39f8c072d453e362e521b1bb9afd917a0d38fbb843103d0e516bf6734be27b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d31aa9aef0aefd8f780e8d8c6ab3c7725bb1d442"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.706742+00:00",
+    "started_at": "2026-10-27T20:25:34.677234+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8544,
+      "offset": 254968,
+      "path": "stdout.bin",
+      "sha256": "d67916fa6f7e3558fd80981f789fb2e77f30d3da25eb4c3d2d5ad7912a5bd63f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e9d314fe7156708ed1468290a15727a2cf31a611"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.737859+00:00",
+    "started_at": "2026-10-27T20:25:34.708747+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1891,
+      "offset": 263512,
+      "path": "stdout.bin",
+      "sha256": "ffb8a7b81b9a5f80db0b52c15da8237180861d2ec63e5862062b1c67208d1202"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2d2e9115feb24535359fc6c1f1c8158799b36bb0"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.767935+00:00",
+    "started_at": "2026-10-27T20:25:34.738858+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3123,
+      "offset": 265403,
+      "path": "stdout.bin",
+      "sha256": "1f73486cd6d51a76243dd43b979158b664a4c4bbbbf8c5aa8a6ed8e5d3b2fbcf"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2dc82c474a61477550f556ef992a19c1a2cab5b9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.798478+00:00",
+    "started_at": "2026-10-27T20:25:34.769941+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 9351,
+      "offset": 268526,
+      "path": "stdout.bin",
+      "sha256": "db0eecc14cd38012fcb0cf7bbb49d2f62db7274b85e194cecfbbc3a440456083"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f252ab4042cedd0077a74c4ced250e74252650fa"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.827844+00:00",
+    "started_at": "2026-10-27T20:25:34.799477+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 21714,
+      "offset": 277877,
+      "path": "stdout.bin",
+      "sha256": "c9db6d171b02b15d1730d5cdda7a31fdf91e10fa062fcee521065372d8f8f390"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f9385f100dfbd9b4957cb25a05c77cf38c32bf30"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.857395+00:00",
+    "started_at": "2026-10-27T20:25:34.828844+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 25746,
+      "offset": 299591,
+      "path": "stdout.bin",
+      "sha256": "5e02edd5d2ec670f3547dc8a8aa4193e137e85b5507c87f169572c46c9f9f31d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a876da6e704cac0e2c66bc3c0c3da9ae779bb18a"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.887313+00:00",
+    "started_at": "2026-10-27T20:25:34.859395+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 17708,
+      "offset": 325337,
+      "path": "stdout.bin",
+      "sha256": "c3f2b102323b020541493ae5fc92ec6b94071396bca7620251a83d135f08fd85"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ae38d72b48743488da3eec8f9c84ae68a7365476"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.918332+00:00",
+    "started_at": "2026-10-27T20:25:34.889316+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3492,
+      "offset": 343045,
+      "path": "stdout.bin",
+      "sha256": "d4a4977ec7517c6fd381cbca51de58e4f67c1a0519f5b3efd644c0d2764b4540"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a48ecc1d8fe39859c7831afa832dc1aca8a0c323"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.946309+00:00",
+    "started_at": "2026-10-27T20:25:34.919333+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4461,
+      "offset": 346537,
+      "path": "stdout.bin",
+      "sha256": "1d7072eeeb10fa6a886734cec0dd1afaed907b6bc958dcf58bcdf88ee2cf9c2f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "27367044cf76970c8f2c360913fa79d3fee74855"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:34.977052+00:00",
+    "started_at": "2026-10-27T20:25:34.947309+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11643,
+      "offset": 350998,
+      "path": "stdout.bin",
+      "sha256": "44a6e5890184977c9eb8bd22f9d2e2e5c4252d83fafc354be534b8ec8a5b2def"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a29ef879bc3af0ad454f527c7084ed6b7b9fc489"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.006880+00:00",
+    "started_at": "2026-10-27T20:25:34.978054+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2613,
+      "offset": 362641,
+      "path": "stdout.bin",
+      "sha256": "a36f989c219509b39bb48dba4fe624f2cc49f2cbcf2aad145b9ee188ba4dbf44"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9b1615592f26f478f2bb0f1d0051fcbea00f7a4c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.037643+00:00",
+    "started_at": "2026-10-27T20:25:35.008008+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 18165,
+      "offset": 365254,
+      "path": "stdout.bin",
+      "sha256": "e85f47b747e46b67306e4196077ecf212741f01f3820ba274ca9fda47d829513"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "56def2195d4a358fa0fbcc6a743b768b8bcfd7b8"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.068236+00:00",
+    "started_at": "2026-10-27T20:25:35.039693+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8664,
+      "offset": 383419,
+      "path": "stdout.bin",
+      "sha256": "164fedfe6dd750dd710c9be846089bb3b01387a1f07c3017269b1661374639ce"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "15da4ed9e26aac1aa0202f05af8c7c0fd73d8054"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.099332+00:00",
+    "started_at": "2026-10-27T20:25:35.070235+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 23733,
+      "offset": 392083,
+      "path": "stdout.bin",
+      "sha256": "090815f0db9503de83a1eb3ff28d76dbb25536ecad99f15733a15657ff673908"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "53a07547b72681a38342cbda593bc98ec320b7d9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.129903+00:00",
+    "started_at": "2026-10-27T20:25:35.100332+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 9275,
+      "offset": 415816,
+      "path": "stdout.bin",
+      "sha256": "317f0557c00ec93affd2ec7569d08a4b83b7a09a0d735842f1d58050a6254865"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b6e4c9fe2e61a321fd254545a96fb7cab7303a34"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.162906+00:00",
+    "started_at": "2026-10-27T20:25:35.131905+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10007,
+      "offset": 425091,
+      "path": "stdout.bin",
+      "sha256": "243e78517d2e642bcaafc61e2180fdec71cf272d90c6937ddfa0b0cb1b601326"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "533ab3e5ff246be3d00907cc12fc775adbc40ee5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.195117+00:00",
+    "started_at": "2026-10-27T20:25:35.164906+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 28081,
+      "offset": 435098,
+      "path": "stdout.bin",
+      "sha256": "f17975e94b7015eaead556bd524dbb138d61e3f2ba8f9e96f546cae282390648"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "5130c42da2a5a7d646892e8c19ffaac2adc78830"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.227439+00:00",
+    "started_at": "2026-10-27T20:25:35.196114+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 115599,
+      "offset": 463179,
+      "path": "stdout.bin",
+      "sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "6ad3df4a89e212b1064449634ab5ec069997f74e"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.260191+00:00",
+    "started_at": "2026-10-27T20:25:35.229439+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11390,
+      "offset": 578778,
+      "path": "stdout.bin",
+      "sha256": "f0dce6275bb6ff50c3beeac1cc6d08495569f55e6b66b4653ac062e8878791a3"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a14337c828a1234fd45cf5d4305d26c6f79fd1bf"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.17199999999866122,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.432023+00:00",
+    "started_at": "2026-10-27T20:25:35.262190+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 18208,
+      "offset": 590168,
+      "path": "stdout.bin",
+      "sha256": "64c60ea0980b94abb2d75707f87f0c48bcf9db60a0bef9a5b6e8f0f41fe4c1ef"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.462574+00:00",
+    "started_at": "2026-10-27T20:25:35.434022+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 608376,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e2adbcf74c318f40bec5418b8d86763e13e37b3f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.494091+00:00",
+    "started_at": "2026-10-27T20:25:35.464575+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 176,
+      "offset": 608376,
+      "path": "stdout.bin",
+      "sha256": "dc2d250d2a65c5decfc1c41da72610093795b76c458982fb94f71af03952b510"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "08cc14b85358cafe3f9bf48b435a9165786f4e62"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.526243+00:00",
+    "started_at": "2026-10-27T20:25:35.496089+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6040,
+      "offset": 608552,
+      "path": "stdout.bin",
+      "sha256": "e01f7647eb4b30c31772fdb799bd787913fdcf0b5096174131955571ed9cc11c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ae5695614f6179e765164619de32776f669510d5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.558401+00:00",
+    "started_at": "2026-10-27T20:25:35.528244+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 76434,
+      "offset": 614592,
+      "path": "stdout.bin",
+      "sha256": "d08b1252740ddb1f5e32a2677193f558f024ca002dc48145a8fe2f4ef9193ee2"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "67a3d061cecb9ad09813063febb7a76e6e5383d4"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.590047+00:00",
+    "started_at": "2026-10-27T20:25:35.559415+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5714,
+      "offset": 691026,
+      "path": "stdout.bin",
+      "sha256": "99ce4b233c7ebfd025e379a89264011725faf3d7e6c622dd571ed9d003c43f64"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "eeee5e850131b0b362bda20621b7674a6a60e274"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.621950+00:00",
+    "started_at": "2026-10-27T20:25:35.592048+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 22188,
+      "offset": 696740,
+      "path": "stdout.bin",
+      "sha256": "bbaa4488d66f9292917a6704ea53d2e7419d3f43f1c2a145d3045f993bedb5e5"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b924f1f174b6349c74ed31b483d88ca34d9bbd60"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.651008+00:00",
+    "started_at": "2026-10-27T20:25:35.623455+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10347,
+      "offset": 718928,
+      "path": "stdout.bin",
+      "sha256": "0e3fe1cd8870e9c332b9f8116de732da530eb87f3d7368e6b1dbdc638084a6c3"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2484233a8cc79ed0bbd595b26b0d7b89b3e44818"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.684009+00:00",
+    "started_at": "2026-10-27T20:25:35.653009+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 147989,
+      "offset": 729275,
+      "path": "stdout.bin",
+      "sha256": "33652ac7a4b8caee732a5a0fdc8861973afba4ca979467f3e1d04a47e7325258"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "26814e128a1a1cf8975044de729fc5fdc5ab5c27"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.715028+00:00",
+    "started_at": "2026-10-27T20:25:35.686009+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 48242,
+      "offset": 877264,
+      "path": "stdout.bin",
+      "sha256": "15300472dfb2be3407e3b14882ff848051c8df2926128b579e68a1689f7e5b1f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2fba61971345d86685d4b221c2a5aaf8be644a69"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.745646+00:00",
+    "started_at": "2026-10-27T20:25:35.717027+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 52761,
+      "offset": 925506,
+      "path": "stdout.bin",
+      "sha256": "cf2ffd2281e7b675bb1273cff60bf7027b016d04add307d1b32d326f29326315"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b160a04820aabf900267d1eb69e07cbf724d5699"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.776639+00:00",
+    "started_at": "2026-10-27T20:25:35.746646+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5726,
+      "offset": 978267,
+      "path": "stdout.bin",
+      "sha256": "bc52af4a9e1068f667955db789fe1ff431fc9f71df95971b20d883e60216dd56"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "cb9282ca1305420be395315e2429a7fe9c32250c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.806326+00:00",
+    "started_at": "2026-10-27T20:25:35.777641+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 50084,
+      "offset": 983993,
+      "path": "stdout.bin",
+      "sha256": "26808aaa329f960b46fb3afab195a5ac6dccbb4f835049e0b4ade6d186f7253a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e1980d0979d80348c350689d0dfa6b9529cf8d81"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.838769+00:00",
+    "started_at": "2026-10-27T20:25:35.808839+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 13956,
+      "offset": 1034077,
+      "path": "stdout.bin",
+      "sha256": "b18c4a9b2c1ad2f835596ca8ff86e6e5b831627134f1b54ae840585bf9f2419a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a13130e5224b019abb9d1f904c82e4b7d3924873"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.869703+00:00",
+    "started_at": "2026-10-27T20:25:35.839768+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 9201,
+      "offset": 1048033,
+      "path": "stdout.bin",
+      "sha256": "0de1d23ed56372c32891eb2a1811d7ec2fcba5a4961475eae63b56ca97fa0e34"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "db761d5b36ffa6d41b9d6c61947dd1d54f933512"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.901846+00:00",
+    "started_at": "2026-10-27T20:25:35.871286+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 141,
+      "offset": 1057234,
+      "path": "stdout.bin",
+      "sha256": "8343db47bb3b225db240e5916211528a7f05ad6e6f924947eafadddbb59b47c0"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "6d365318daabfc3a8f4015dc31a238d298ec1ddc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.931998+00:00",
+    "started_at": "2026-10-27T20:25:35.902851+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4147,
+      "offset": 1057375,
+      "path": "stdout.bin",
+      "sha256": "005ea1dae58e986f5a4e70d6fb8fe8afd71723576541ce047c3aeda5918eddd3"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7f37e8cbc79853aed4b9ffce54528cdf7cbf4167"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.963005+00:00",
+    "started_at": "2026-10-27T20:25:35.933998+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3187,
+      "offset": 1061522,
+      "path": "stdout.bin",
+      "sha256": "b5288ae4889b44fe96eeeef32cd84f0a54c70c356312a822fba37fb9632fccb0"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "1123aeed07062da4d33b88a97750770b68469d45"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:35.993159+00:00",
+    "started_at": "2026-10-27T20:25:35.964005+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6199,
+      "offset": 1064709,
+      "path": "stdout.bin",
+      "sha256": "4da45fe84af49d75b483c5afef89b57809b4444ff22e38df57c4b90fed363769"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "0822abd3452d635a87a561b3adb1b28fd5abaf02"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.022407+00:00",
+    "started_at": "2026-10-27T20:25:35.994158+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5492,
+      "offset": 1070908,
+      "path": "stdout.bin",
+      "sha256": "9cf913d2d5be76034696cdb706d77685f336cf11408bbb0c8f5334233007c13a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "6ff67cf1366a65ae8a1c06fb4386e4f6bf3eae9c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.051759+00:00",
+    "started_at": "2026-10-27T20:25:36.024408+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11076,
+      "offset": 1076400,
+      "path": "stdout.bin",
+      "sha256": "dfeb632a4fe1dc299e6a5c14d43d1bf118d92ad97b91a2e1a49defd73735aca2"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ffc0d02fc506072e46910862297c46ed1fcd2ee2"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.081763+00:00",
+    "started_at": "2026-10-27T20:25:36.053760+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4119,
+      "offset": 1087476,
+      "path": "stdout.bin",
+      "sha256": "707a77b5895fdbfac33590d8e0fe2786adc3a34838934c7d79b343f5d94c6b63"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "04858e9780d90b31b25edf401b74716eb19daca3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.109981+00:00",
+    "started_at": "2026-10-27T20:25:36.083269+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6185,
+      "offset": 1091595,
+      "path": "stdout.bin",
+      "sha256": "f374b15726b800fafe6f7db263253cbfed6b3f6aa35f0ac3d18b7ea7de58ae00"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "41a68e91a2b9938f3e4a07c8cf764e4a7b9bdca2"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.141120+00:00",
+    "started_at": "2026-10-27T20:25:36.112491+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4145,
+      "offset": 1097780,
+      "path": "stdout.bin",
+      "sha256": "c64fe884d240ce18558ceb8098ba276401b17b6511cc2b5cf1cf78caa773ff36"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "534f67d9c8d4596f52b7837393641f32470097bf"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.169636+00:00",
+    "started_at": "2026-10-27T20:25:36.142118+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 23661,
+      "offset": 1101925,
+      "path": "stdout.bin",
+      "sha256": "ec0743545e382bb117d33455c61937503baaeaa9a99e48ec16903c4049f94d50"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e398256515038037dd1844e440fbb0e4c00c7abd"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.198185+00:00",
+    "started_at": "2026-10-27T20:25:36.171670+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6677,
+      "offset": 1125586,
+      "path": "stdout.bin",
+      "sha256": "c1d794f69fd621092240659da16b17d3f22ef01dbcb4be5c5fc266f2ad6b0b74"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f8e5cf3a94005e0f27c7d01675d5e4e54e843bfd"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.228524+00:00",
+    "started_at": "2026-10-27T20:25:36.200185+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12962,
+      "offset": 1132263,
+      "path": "stdout.bin",
+      "sha256": "e8626d9983bd1799593a13c11c55325148e4900a0f313b321b53f4ce6b375598"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f24c3ba1dcd433b6b141c6c6057a8696e39a1445"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.258592+00:00",
+    "started_at": "2026-10-27T20:25:36.229523+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5127,
+      "offset": 1145225,
+      "path": "stdout.bin",
+      "sha256": "2acb2343d56cc466e6d36eef7fada8fa1d26468f407a7bac7e67a4226423685e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b0a75d114e207a5aeb457e5e7273a94c263a41c6"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.287592+00:00",
+    "started_at": "2026-10-27T20:25:36.259593+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2348,
+      "offset": 1150352,
+      "path": "stdout.bin",
+      "sha256": "607277648fa5d7c43eba4705a4c601afd6df4744eddf4c650ac97e2c25196179"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "02c6d00df46d4da483d408db1ef2a730c18ca5d3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.316619+00:00",
+    "started_at": "2026-10-27T20:25:36.289593+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4986,
+      "offset": 1152700,
+      "path": "stdout.bin",
+      "sha256": "a5dcea97a862653f4e80157b533df2fa1a3cd5ac68843acf7468e221d7b9777e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e312a3422a7595e277af757df6df92fafd514c51"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.345153+00:00",
+    "started_at": "2026-10-27T20:25:36.318618+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4560,
+      "offset": 1157686,
+      "path": "stdout.bin",
+      "sha256": "4a2d4a522240ad046cd7423caba72ac56017a24d8d3656f886eaf556458691f0"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f21fea71e58f9c1a1d22d51965d8ba3889e4d23e"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.376266+00:00",
+    "started_at": "2026-10-27T20:25:36.347153+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 16086,
+      "offset": 1162246,
+      "path": "stdout.bin",
+      "sha256": "2afac71c29316d53b3a0b9ff40078b12ec61b5b77a6a30b4af3a3a79f8dea560"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "5b863c3caaa47f8a1b813a4e636a9529914f7eb7"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.404367+00:00",
+    "started_at": "2026-10-27T20:25:36.378263+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4871,
+      "offset": 1178332,
+      "path": "stdout.bin",
+      "sha256": "71bef361210f5c6eb0924a8a6298a3b787c71cdc5f3f25dd9b72544e4dc544df"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "601811c66f46caa05bf8de79f590f640cd649f86"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.434066+00:00",
+    "started_at": "2026-10-27T20:25:36.406366+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5328,
+      "offset": 1183203,
+      "path": "stdout.bin",
+      "sha256": "d307e2414cdb775c4dce578a65343fe8cbb0bd144d0e1fe96e29508651db85da"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "61879a4dd469a72a16beff50ec4e0702c8c30c31"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.464074+00:00",
+    "started_at": "2026-10-27T20:25:36.436064+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10040,
+      "offset": 1188531,
+      "path": "stdout.bin",
+      "sha256": "3ff60e5bf82f6b01ccf1da4d83988220d3e3a22367172bbc1cbda8abdabd8947"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "34e522ebdb28018b67cb3a6b458829504d89e522"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.493571+00:00",
+    "started_at": "2026-10-27T20:25:36.466066+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6607,
+      "offset": 1198571,
+      "path": "stdout.bin",
+      "sha256": "afa12d0d6302db54de190218b7a2f9696230d35af1457192ae732fbc4505a9a9"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "494bdaf567158e3e6f0bcde807ecb6f04850c1a1"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.523103+00:00",
+    "started_at": "2026-10-27T20:25:36.495575+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5044,
+      "offset": 1205178,
+      "path": "stdout.bin",
+      "sha256": "8c566a76ff58a1836a9e92627f326144c27bd0f4a7cf749744684f6a968af243"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b1b6f19a0046ab73f3de6b980aa34276f346ca63"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.552662+00:00",
+    "started_at": "2026-10-27T20:25:36.525104+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10369,
+      "offset": 1210222,
+      "path": "stdout.bin",
+      "sha256": "3dd52bc1acf53c7b26944ff6e6b1cebaf567ae7aca95157c0081339a2e3cf579"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e3f678d5334e77709c3304388bd6b6268b37ecd7"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.582257+00:00",
+    "started_at": "2026-10-27T20:25:36.554660+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 50970,
+      "offset": 1220591,
+      "path": "stdout.bin",
+      "sha256": "fd572884602c6617d778047ef3264237584b46d598b34bdce2b1ba0129651b25"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "bccbabb53122d06d02fdb99776ebabae408a6de5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.611415+00:00",
+    "started_at": "2026-10-27T20:25:36.584262+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 17388,
+      "offset": 1271561,
+      "path": "stdout.bin",
+      "sha256": "0695bd834e9a3107c003253bd3479a03cb2d8ff547c3c96b1b3ae12d60ed9038"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7b04587c99a749b7e259b766bc8561191e8d4caf"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.641557+00:00",
+    "started_at": "2026-10-27T20:25:36.613415+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7008,
+      "offset": 1288949,
+      "path": "stdout.bin",
+      "sha256": "40200cc07ac270844b042077bb025ae60c94c417bc5a388a8d7653cba1544a58"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "c6ecc678cf575a3b347106430bf4a406f7bd37ad"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.671104+00:00",
+    "started_at": "2026-10-27T20:25:36.644103+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 33988,
+      "offset": 1295957,
+      "path": "stdout.bin",
+      "sha256": "3c875c225d055c7cb136997f7e86723632b1b00407c932cce9487ada61e557a5"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b0de8bbde792a2631b8bf4b05bcc4f96f1949b30"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.701107+00:00",
+    "started_at": "2026-10-27T20:25:36.673102+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3661,
+      "offset": 1329945,
+      "path": "stdout.bin",
+      "sha256": "8a188610b0a8a77adea9b49ef3b968ad82022b8881205d0cdc754cf08554f279"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b70f08623066419a40ab2dd7c99c1da3c0763f81"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.730196+00:00",
+    "started_at": "2026-10-27T20:25:36.703108+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6354,
+      "offset": 1333606,
+      "path": "stdout.bin",
+      "sha256": "4357bc0c107656ac6a527de4a34b1ccb701cb7f51b311a911a1e82b6fbabfcaf"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "4d5fa7f2db1144e04c41804a4168d6ede4c0b4fa"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.761644+00:00",
+    "started_at": "2026-10-27T20:25:36.733199+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7698,
+      "offset": 1339960,
+      "path": "stdout.bin",
+      "sha256": "990df4f96d0df96d78e10fde1a13b62ef5f6b5fe5b4801b59f69bfbaf883b73a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d8b947860c48ddf11f89d08b7e3a792cae07e549"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.793957+00:00",
+    "started_at": "2026-10-27T20:25:36.764642+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 16345,
+      "offset": 1347658,
+      "path": "stdout.bin",
+      "sha256": "ace2995fd830afebe08827f0b937382692407f4412b880d7f34945662a27188f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2b5ff9fc0733c8c77c407cfae9b27f70c7c4d5dd"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.830674+00:00",
+    "started_at": "2026-10-27T20:25:36.797466+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3526,
+      "offset": 1364003,
+      "path": "stdout.bin",
+      "sha256": "06b35d505de2900c9aad0005a6ea4e977c40b9ea445a3627ccb193ee7b6fd71f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7a91e08c83af412f278db77582002e48e850a8df"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.862378+00:00",
+    "started_at": "2026-10-27T20:25:36.832673+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 252746,
+      "offset": 1367529,
+      "path": "stdout.bin",
+      "sha256": "3a840d60c22693ac71c75da990180bb48e4438b562cfda9512506e39e38379d7"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "3deb14fedcd35c4b7f3d561a37d3ba40d1431e6e"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.893973+00:00",
+    "started_at": "2026-10-27T20:25:36.864884+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5783,
+      "offset": 1620275,
+      "path": "stdout.bin",
+      "sha256": "96b0f9795ce83b23a49f38c1982faff9a97eb309e02b5a07fcf8ae404f20fffb"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "14e2d8d5c3f01c72632edee738cbeb81572d2cd4"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.924780+00:00",
+    "started_at": "2026-10-27T20:25:36.896064+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7549,
+      "offset": 1626058,
+      "path": "stdout.bin",
+      "sha256": "579e38b33e1662d8000fb8e6e1952a1acedabe2c5685bbdc67476a0496f12007"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "26820ab2837463be220818880dbba7347a72f615"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.956064+00:00",
+    "started_at": "2026-10-27T20:25:36.927779+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3316,
+      "offset": 1633607,
+      "path": "stdout.bin",
+      "sha256": "1f63fadf51c5934fe36733f7bce3f5821cbe0a438101a3a518cdf83f4b02572b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9a533b799be77692be2e186da965880762792801"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:36.988179+00:00",
+    "started_at": "2026-10-27T20:25:36.959067+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 22741,
+      "offset": 1636923,
+      "path": "stdout.bin",
+      "sha256": "7f88d0c84bf06b58f879de381ab0fcbe6af18bfdc49b13f61b46a8bae3314994"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2f4c51c23e597ab8f39c1decc29c8a87adfee926"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.019726+00:00",
+    "started_at": "2026-10-27T20:25:36.990178+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8494,
+      "offset": 1659664,
+      "path": "stdout.bin",
+      "sha256": "21d18ab4e28f0e0ae303dc44498b793f9ed93dd09c2cabb4e1e3914441c0554c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f59cf3db7bc8f18b3a8d517e748f571866483ec6"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.049175+00:00",
+    "started_at": "2026-10-27T20:25:37.021731+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 31971,
+      "offset": 1668158,
+      "path": "stdout.bin",
+      "sha256": "7668a7b212e9a5c4a9a326c6cc5c333063ed51d6ce4cf647d77ccbcb3b4d7d7d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "812f19d4d3fb2818daf283b6209a393aea5c069d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.081372+00:00",
+    "started_at": "2026-10-27T20:25:37.051684+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6018,
+      "offset": 1700129,
+      "path": "stdout.bin",
+      "sha256": "a2d91c64c664c8cc90ab2d48e4a3ade24acdbd6783b9c6fbfde5d2a411ccb895"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b1be850e27c9e66d28b99e2f2197823ec143becc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.111614+00:00",
+    "started_at": "2026-10-27T20:25:37.083371+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4165,
+      "offset": 1706147,
+      "path": "stdout.bin",
+      "sha256": "1dcc24a1ebe2ac27952ef3d6e71fc3bc5b43d6f7de5c414174abb2af735dffc7"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "3962988f6aec71281d3c484c3a54d222d7afaf35"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.144033+00:00",
+    "started_at": "2026-10-27T20:25:37.114716+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 715,
+      "offset": 1710312,
+      "path": "stdout.bin",
+      "sha256": "f8e9728d98201192a4ca846b30e6aab566ac8ad515a30bd6f738cbb8ecaa0176"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "eabf44ddf61003e5b5f300906352478038ec05af"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.175968+00:00",
+    "started_at": "2026-10-27T20:25:37.147034+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5602,
+      "offset": 1711027,
+      "path": "stdout.bin",
+      "sha256": "a7b07a16ea5f1f13d12bdd21473f3f92ffc5400c0ec353ef18e6e5933d54e3ec"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d05db42a486b20d05ff646692959084cecc65003"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.206096+00:00",
+    "started_at": "2026-10-27T20:25:37.178574+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8186,
+      "offset": 1716629,
+      "path": "stdout.bin",
+      "sha256": "3b7fee49a01055cd738c821122e47717952c3be070099e532d917153fa209e07"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ef4cc343c2a2acfbc56da7668beca7bd2b2efb48"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.236948+00:00",
+    "started_at": "2026-10-27T20:25:37.208121+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5835,
+      "offset": 1724815,
+      "path": "stdout.bin",
+      "sha256": "0a09134884e46764a6394d59f90890945edfdcf4ec185e575b25094743818e29"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "422ddf5e629cab0b9d8d8bac4100623e56d75ee5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.268458+00:00",
+    "started_at": "2026-10-27T20:25:37.239949+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2551,
+      "offset": 1730650,
+      "path": "stdout.bin",
+      "sha256": "9b01cb8a910293a5e5e1cb67ad9eba309cc291e9a0a66a427085ff35e1a4dd28"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ec6d6fbf516ae73bb1d098cabcd939f374451489"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.299461+00:00",
+    "started_at": "2026-10-27T20:25:37.270459+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6893,
+      "offset": 1733201,
+      "path": "stdout.bin",
+      "sha256": "b532fed786de895b63ab07c4c6e5fc160a25579c5fcbea2fb17d48ddc2f27737"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "af2d1b06abef717ff79215d2c8bc7f19134116bc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.329649+00:00",
+    "started_at": "2026-10-27T20:25:37.302461+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7374,
+      "offset": 1740094,
+      "path": "stdout.bin",
+      "sha256": "ff975e5aafee897dd45ede09cff68dbd0bd6d4e9f075531e6784c76d5563dea7"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e1ca347cf06cec4f3bb1f5f7d5d39fe85fd814cb"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.360799+00:00",
+    "started_at": "2026-10-27T20:25:37.332238+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8657,
+      "offset": 1747468,
+      "path": "stdout.bin",
+      "sha256": "e671d536fec21d7d4cdbde3ce5b1ff40f6d2569a630a1e13042a463c775b1701"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "271cf8aec30642ad41a6a464a68d3966b7ef8b40"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.391411+00:00",
+    "started_at": "2026-10-27T20:25:37.363306+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7147,
+      "offset": 1756125,
+      "path": "stdout.bin",
+      "sha256": "960b153a48bead2c7b2d42042e68d6d395a423f128b0e9238f35de0dc4b08e18"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e0667593960e1f656c9aad407ed330b078ad48d5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.422920+00:00",
+    "started_at": "2026-10-27T20:25:37.394413+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1673,
+      "offset": 1763272,
+      "path": "stdout.bin",
+      "sha256": "8ee48026594eb08249bbcba1550968b071f99261b53d11ef62ccc1c2ddda2b91"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9d2d966d6b7701011e5337a3f558ef01324fd814"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.452850+00:00",
+    "started_at": "2026-10-27T20:25:37.425918+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2077,
+      "offset": 1764945,
+      "path": "stdout.bin",
+      "sha256": "26532c839c044f12d91374ab991760a5e8906678cf9fec7f24a9e42689c56d1d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "32c754fd72ce1035346bda7b00d84fd79ae89a52"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.485854+00:00",
+    "started_at": "2026-10-27T20:25:37.456849+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2812,
+      "offset": 1767022,
+      "path": "stdout.bin",
+      "sha256": "7a7fe49addb5d30a1d723da0e46ee6484bd5981b21ef22dec531960999c24e39"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "52703dfeecc73147c3b1f73123b5b141720ff9e9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.514522+00:00",
+    "started_at": "2026-10-27T20:25:37.487852+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8660,
+      "offset": 1769834,
+      "path": "stdout.bin",
+      "sha256": "89fa23f63cce05b823cd101476eac0e155d9aa0eba3433b66a0341603dc4c96b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ac6df0ad5375012dce7a595142a2cd1dfbe5e235"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.547618+00:00",
+    "started_at": "2026-10-27T20:25:37.518538+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10554,
+      "offset": 1778494,
+      "path": "stdout.bin",
+      "sha256": "381bc1d7c20bf74580284426fbb991e0f2d8c80a6fa69f9fde2d8a04ee163dbd"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "be2d00db00c0a7546efe673dada60a9db57a326f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.577128+00:00",
+    "started_at": "2026-10-27T20:25:37.549624+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7354,
+      "offset": 1789048,
+      "path": "stdout.bin",
+      "sha256": "aefdac49d15edce68ddd47ed9d4b078cc71ab641c4f434e7264cb7d14f7061db"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9714c7e2dc8f171655e1c47430c72144f490f7ba"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.609236+00:00",
+    "started_at": "2026-10-27T20:25:37.580128+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8614,
+      "offset": 1796402,
+      "path": "stdout.bin",
+      "sha256": "f723b45cfc79c225f4cd78a24bca4bbeb9aac3cebdbe0d2479fa667743a2dd59"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "6b78816bca9f99ce9614afcfafd1b7a3192eeed7"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.640771+00:00",
+    "started_at": "2026-10-27T20:25:37.611743+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7988,
+      "offset": 1805016,
+      "path": "stdout.bin",
+      "sha256": "9cc0a6512367cdd3fcad757a6bb17d2d1db8745380f1f277479693f9477b98f3"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "52750aa9ee73bf81aaed66913dd5b7c7e3e23082"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.672772+00:00",
+    "started_at": "2026-10-27T20:25:37.644772+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12951,
+      "offset": 1813004,
+      "path": "stdout.bin",
+      "sha256": "b9e0f57bc7684a4474f965c07acf2e2907a2811ef85dad8ec895bd3f79e4d409"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2a65042f51db96fe6b5889342e33de031f9407d5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.703777+00:00",
+    "started_at": "2026-10-27T20:25:37.675778+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 14598,
+      "offset": 1825955,
+      "path": "stdout.bin",
+      "sha256": "5326c19d72935fd1b0352d77d74f357eef95488eecb73767d3cb789251187110"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7d79a14f5183a913af7105e6b6ea0e4e646269ae"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.736660+00:00",
+    "started_at": "2026-10-27T20:25:37.707791+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12331,
+      "offset": 1840553,
+      "path": "stdout.bin",
+      "sha256": "1e529661f23e10b18fbde65972e94ec55c288fc28088790e86c3347fc41f3af8"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "176950eb0a7e22b4ce42dc90b29f694afcd269ed"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.768283+00:00",
+    "started_at": "2026-10-27T20:25:37.739661+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5141,
+      "offset": 1852884,
+      "path": "stdout.bin",
+      "sha256": "28267f8a97a2f37a6a7c19c21152093655acc5bed2fb15a66dbe0f0068cea1e4"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "076acacbc139517e45286c2504be965cefea2d1a"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.798412+00:00",
+    "started_at": "2026-10-27T20:25:37.770290+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 16353,
+      "offset": 1858025,
+      "path": "stdout.bin",
+      "sha256": "ea74345415929cb72493f8bca7d1d3813eb3e115a53fdcdc9cff2897e1609f3a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "89068458cf31932c126b2213f4c666dbe7bcb988"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.829384+00:00",
+    "started_at": "2026-10-27T20:25:37.801415+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1151,
+      "offset": 1874378,
+      "path": "stdout.bin",
+      "sha256": "98d2d3185bb31a5b97cb894e23c64ec67db1c5da3002abdfee31bd5a46d7a928"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e527e1b20728b0e638f7e57b0d46e133802799e6"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0470000000022992,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.865188+00:00",
+    "started_at": "2026-10-27T20:25:37.832889+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1346,
+      "offset": 1875529,
+      "path": "stdout.bin",
+      "sha256": "a331bf83c3f2b42b7803c7226e11ba59f256a2257c27e483510f35863a19f49c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "38624601cd4fbcced117ff3470b624d54d44d0e6"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.896323+00:00",
+    "started_at": "2026-10-27T20:25:37.868193+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7217,
+      "offset": 1876875,
+      "path": "stdout.bin",
+      "sha256": "d0220753da8b4e127da76d7938334224531b9cb4bee06e00c6a59e5f4883f7ff"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "20108b91573c53b6a99356410d150085ab961504"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.926388+00:00",
+    "started_at": "2026-10-27T20:25:37.898322+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8777,
+      "offset": 1884092,
+      "path": "stdout.bin",
+      "sha256": "33708718d4600c8d4d14f0e990aa26d9789c52b5df135684bcb7d9da6c992f9e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a8002b0a2fb1a1901c24e29019080fd1ad5dbf7e"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.955972+00:00",
+    "started_at": "2026-10-27T20:25:37.928983+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 28019,
+      "offset": 1892869,
+      "path": "stdout.bin",
+      "sha256": "a76bb0826ed8e479802734035b23848c4a0fa1ecbe35f15180efb20ad1ef6e78"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ea3de2574e4f5e6c6a33bfdf65e961a7559efb72"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:37.986490+00:00",
+    "started_at": "2026-10-27T20:25:37.958975+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 32184,
+      "offset": 1920888,
+      "path": "stdout.bin",
+      "sha256": "96393d6fd5405018e95a8b37ac272c14aa8c31b234245c811cb8fcb771924fcb"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e47588e41299c7842047fc6d98c8043ca942d137"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.017921+00:00",
+    "started_at": "2026-10-27T20:25:37.990488+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5963,
+      "offset": 1953072,
+      "path": "stdout.bin",
+      "sha256": "bd024820833873488c56359c8ae5a439998beb0d2fb3a4a7d4dab8daac293f75"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b9fc9c30b2311d8130350c7277c4e8ee5932ef0d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.048527+00:00",
+    "started_at": "2026-10-27T20:25:38.021475+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6642,
+      "offset": 1959035,
+      "path": "stdout.bin",
+      "sha256": "e5bdd6d41ffb662073df4b1dac58054d15befc1170de7eac28beca28d5206b45"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "1d019920365a89c2ca1adac20eca7065dbc80d88"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.079527+00:00",
+    "started_at": "2026-10-27T20:25:38.051527+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6294,
+      "offset": 1965677,
+      "path": "stdout.bin",
+      "sha256": "af4f10e73ac5858d19e755c3bbcf8a0681c2429071c4bdeaeddfaa6a1855a306"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "6f3a7572bfbe1a2828b984feedf3acdd9ea37f73"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.111038+00:00",
+    "started_at": "2026-10-27T20:25:38.082526+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7735,
+      "offset": 1971971,
+      "path": "stdout.bin",
+      "sha256": "b8acf85cccddd613313ddb98c64e61493c091fc4f68f3de6378ab255159a420b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8e25a72d844cc778b1dac0e56b0228f266cae352"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.141671+00:00",
+    "started_at": "2026-10-27T20:25:38.114138+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3795,
+      "offset": 1979706,
+      "path": "stdout.bin",
+      "sha256": "ea388b8285a950c817683893564d26035b85ab13dcb42385e46ba15b3ae63cd5"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8338e0f370d55cda2d1a798c668e4207e361bd9c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.171674+00:00",
+    "started_at": "2026-10-27T20:25:38.143681+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5606,
+      "offset": 1983501,
+      "path": "stdout.bin",
+      "sha256": "4f66a777e9c8037dbc341e195d343ea3c9777684decbe162a60efc7782034e88"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e152c11a195b2c627a032d7710a57a56d4033ca6"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.203855+00:00",
+    "started_at": "2026-10-27T20:25:38.175180+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7004,
+      "offset": 1989107,
+      "path": "stdout.bin",
+      "sha256": "2b6c36e390fe37c559614b01bba57b8e5ed9c17833a908cf3e280d261dcd164d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "161e9ac0d468c6cde7a65b741dd3b29719dfd0d7"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.233448+00:00",
+    "started_at": "2026-10-27T20:25:38.206854+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 46699,
+      "offset": 1996111,
+      "path": "stdout.bin",
+      "sha256": "49fb46603f81702ea93f09062e60fa4975a5be65bf0dc833962b5e992f88d86e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "cfa00217fa0ca69b7f7c3da29e9e25d5fad5d38c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.265854+00:00",
+    "started_at": "2026-10-27T20:25:38.236747+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7963,
+      "offset": 2042810,
+      "path": "stdout.bin",
+      "sha256": "43c29fbc013347e616d1bd1c5021b84e521c4988519b41ee5263f4270c554813"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "c8399376eb0badf855c99c2236340501a6a4e896"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.295845+00:00",
+    "started_at": "2026-10-27T20:25:38.268848+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2436,
+      "offset": 2050773,
+      "path": "stdout.bin",
+      "sha256": "5e9bcf25ed309c3160694dca369861992bea62fc0952223ae630b5515ff7b7a7"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2b4eb29f41e604e482059c367bf1feca8cf9cc9d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.325864+00:00",
+    "started_at": "2026-10-27T20:25:38.298848+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11129,
+      "offset": 2053209,
+      "path": "stdout.bin",
+      "sha256": "0a91a278c9d50638082b87520ecc84f667c153bdedff8bd51a0ed6b6a95e9060"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "4d84bd125e4c077847d79c60e9aa78c4cc4e1ddb"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.357996+00:00",
+    "started_at": "2026-10-27T20:25:38.328385+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 29257,
+      "offset": 2064338,
+      "path": "stdout.bin",
+      "sha256": "ecfdd3320d35989c04686ddbcd0e88c2c7d1bbb8da107ab948102b69e465cddb"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "0819bced9c8db9f56bc20f337a69696f4e59d7cc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.389106+00:00",
+    "started_at": "2026-10-27T20:25:38.360006+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 37974,
+      "offset": 2093595,
+      "path": "stdout.bin",
+      "sha256": "4090dcdd622358c45d8efc97d0421bf777035d36ee367b8f071753b67f14a915"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d340ceb37b5026fbef79f2f23eafc036d75f470d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.421309+00:00",
+    "started_at": "2026-10-27T20:25:38.392106+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 52982,
+      "offset": 2131569,
+      "path": "stdout.bin",
+      "sha256": "7d92c618db050bc1c14ee5783d7496c38d35138edbf335a23ea639e08750ad1c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8791a15979c89517a0d3c7e4ee6d91844fe78004"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.451190+00:00",
+    "started_at": "2026-10-27T20:25:38.423822+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8990,
+      "offset": 2184551,
+      "path": "stdout.bin",
+      "sha256": "88f815c32e795d9019be2f328d3af6d2d3c5b8f8d930c89b6f30a35693211987"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "545c546bae1a66abcde5be845cf0c90b1a5f91af"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0470000000022992,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.492192+00:00",
+    "started_at": "2026-10-27T20:25:38.453192+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 66290,
+      "offset": 2193541,
+      "path": "stdout.bin",
+      "sha256": "765734e41fc30992fff2928a98f3d7d7774bdc04dc273bcca2b50a95fd2b2b5d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a548baa90f3c8643e00c028541962716721fbf18"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.525839+00:00",
+    "started_at": "2026-10-27T20:25:38.495700+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 34713,
+      "offset": 2259831,
+      "path": "stdout.bin",
+      "sha256": "406111b8b6a3f26cd1e5b573bab04cce79174943149f6ea1d6246aa4ff322349"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b689354c7ee2db4bb676ef4f4946e17ecceb6cae"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.557840+00:00",
+    "started_at": "2026-10-27T20:25:38.528839+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5785,
+      "offset": 2294544,
+      "path": "stdout.bin",
+      "sha256": "f55513a099fd50476c7345d12dc34370d30027403368c4a8b1226468d53f445c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "05d2286399d43f86c8696800c0d862d82f419b56"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.590002+00:00",
+    "started_at": "2026-10-27T20:25:38.561843+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8731,
+      "offset": 2300329,
+      "path": "stdout.bin",
+      "sha256": "50734125cc0b25168e99749c28d211eb340312a8981e22551d2b5cdbaa4bd165"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f275d181aed3fca9bb91896da5150e8f3fe2f0fc"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.621618+00:00",
+    "started_at": "2026-10-27T20:25:38.592011+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12165,
+      "offset": 2309060,
+      "path": "stdout.bin",
+      "sha256": "d37bfa7a35486f95778a362ede2d7629aee718c01eb330d4723f13f310076073"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "5fb9c56c5752684caeef0e1df998c59009dad5c3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.654488+00:00",
+    "started_at": "2026-10-27T20:25:38.624450+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 97588,
+      "offset": 2321225,
+      "path": "stdout.bin",
+      "sha256": "d54146f24452af893beb15473770cc9afc91bb02603ff0f57d58d5d0674aa5e2"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d320248ce113327742d50b1a36017c7d1aefe215"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.686075+00:00",
+    "started_at": "2026-10-27T20:25:38.658119+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 10209,
+      "offset": 2418813,
+      "path": "stdout.bin",
+      "sha256": "e1ca9bc172011812a62c12d56c515eb1b6b96bc78eb6de7edf5100ecd105e198"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "679696c4feff347050bac4c6e3d3b5341f6c6896"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.718545+00:00",
+    "started_at": "2026-10-27T20:25:38.689233+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7927,
+      "offset": 2429022,
+      "path": "stdout.bin",
+      "sha256": "e21b4bd8d19b9d13b9dff72edb117430e9495979ad44ab5aa5186d72fe5aa322"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2072e640a5ac4eca2da1b1836c0e5392a5f0a3ec"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.750390+00:00",
+    "started_at": "2026-10-27T20:25:38.721250+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 9464,
+      "offset": 2436949,
+      "path": "stdout.bin",
+      "sha256": "3facaae6eeefcde24e5ba53563d4183024c0e415987f346bf74f1bc4534146b9"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "cd1f7f83d71f86766c86868492f2fe2a18253b1c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.782554+00:00",
+    "started_at": "2026-10-27T20:25:38.754395+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8157,
+      "offset": 2446413,
+      "path": "stdout.bin",
+      "sha256": "abbcb9f7b4545cf3ed228461654c447be51773c176c5442f9abf34bc6d70a206"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7beac0722679ec35948f1b8bc5c9f65adfd0a08d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.813136+00:00",
+    "started_at": "2026-10-27T20:25:38.785559+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5091,
+      "offset": 2454570,
+      "path": "stdout.bin",
+      "sha256": "513bf345e826476f9d18e04fd3deb1f1c631c368eb5986e4b5c3e87c1d9c456e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "cf8986a6e0ecc537ac60888ed51a812b3373b172"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.845396+00:00",
+    "started_at": "2026-10-27T20:25:38.817134+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8545,
+      "offset": 2459661,
+      "path": "stdout.bin",
+      "sha256": "f44f8f34a26096f51a5dc48888033d4aa6e443de6877a260ec63c41f9cd1ee6a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "3c90c2d21010dc74ced4d216ff16d1575da54457"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.876397+00:00",
+    "started_at": "2026-10-27T20:25:38.848400+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8035,
+      "offset": 2468206,
+      "path": "stdout.bin",
+      "sha256": "d9c6dd5452b157dd1632aeb1c8a8aed3d6805d220140f852a917ade2b417b6c2"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "40d7269ebb15731c8f7c756a512629b57e921ff5"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.909998+00:00",
+    "started_at": "2026-10-27T20:25:38.879398+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4049,
+      "offset": 2476241,
+      "path": "stdout.bin",
+      "sha256": "5dd76883b39f6a522f8f8cac7906c02af237b8cef26fbc4c2f00e21feea2f655"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7f7077834b9cd6947db655323fe4653beb727085"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.940736+00:00",
+    "started_at": "2026-10-27T20:25:38.912603+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 54077,
+      "offset": 2480290,
+      "path": "stdout.bin",
+      "sha256": "2a84a2018fa5dbcb4f2e0506b10a9e0cb931779c6aab236c4bdbccf3308ad7ec"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b36ef8e3a016bf893e1b9ac8f632efe20b405eac"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:38.975132+00:00",
+    "started_at": "2026-10-27T20:25:38.944736+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 747,
+      "offset": 2534367,
+      "path": "stdout.bin",
+      "sha256": "c010ec7754efe516f5b4d6cf311f67d1bdea905bea3c786ab04fe1bccd07865e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "88f04d4e67c205f76f4058de8654eef57f4bbfd1"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.007752+00:00",
+    "started_at": "2026-10-27T20:25:38.979133+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 24372,
+      "offset": 2535114,
+      "path": "stdout.bin",
+      "sha256": "d67c3a0ce2e0c2c23fda1ab89cece895dd0ab64cb4f1d5b318d5ade6c3040389"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "98431a154e3dcf5d2cd9b1379843d3b0546d0cfd"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.038671+00:00",
+    "started_at": "2026-10-27T20:25:39.011255+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12281,
+      "offset": 2559486,
+      "path": "stdout.bin",
+      "sha256": "81ab511ac8c7af940f98866a62408f8766da379a16b02cb803cc58b27763ab9e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a549415170a6019a00273849feec3be1b6878041"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.072273+00:00",
+    "started_at": "2026-10-27T20:25:39.042676+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 42240,
+      "offset": 2571767,
+      "path": "stdout.bin",
+      "sha256": "1262d04b8dc2bf5c27184425d4ecb38292e5c007a5609c563471fb66c31611e5"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7c9c6b3a6906a52864eedbc912909ebd48b8d351"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.104555+00:00",
+    "started_at": "2026-10-27T20:25:39.075273+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 13748,
+      "offset": 2614007,
+      "path": "stdout.bin",
+      "sha256": "b80bb6ff8be49fc6eef6e1df2af1f3a2c7774319bff5db29ca25c099f7371a15"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.134569+00:00",
+    "started_at": "2026-10-27T20:25:39.107462+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 2627755,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "fe00a4ad63afcffa305a3ea35dfb5e0c0bc5221f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.164572+00:00",
+    "started_at": "2026-10-27T20:25:39.137569+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3705,
+      "offset": 2627755,
+      "path": "stdout.bin",
+      "sha256": "c8e860b3dcd972c3e556dcbf32ca932a9fdb8ae3b58ca9ad4678188c3e159360"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9e52d0d8040ef888a9fef7293f20027fe984ca68"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.196634+00:00",
+    "started_at": "2026-10-27T20:25:39.167572+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 13515,
+      "offset": 2631460,
+      "path": "stdout.bin",
+      "sha256": "b451241bccd6b5627a82260744990073b79276d8f5ce2c339ced07abaff24d93"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "21b5545e5cd245a49354130f91e6134a88825db3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.227979+00:00",
+    "started_at": "2026-10-27T20:25:39.199641+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 30083,
+      "offset": 2644975,
+      "path": "stdout.bin",
+      "sha256": "d81ea67b85fa9406f824e6b1457bf9da26ceffdcce5c1fe1f8a623aaad2adf28"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8e8a32d5ca734013bf8883dda7e1d0d5339df1f9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.259057+00:00",
+    "started_at": "2026-10-27T20:25:39.230978+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1082,
+      "offset": 2675058,
+      "path": "stdout.bin",
+      "sha256": "21685e6e146ff7c40ca7bdb5e370a47eb00b5da047caf75ce15100852e1ad44f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "999e3a19f07ff6416cb92b8186fa9cbcbd4299b8"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.291060+00:00",
+    "started_at": "2026-10-27T20:25:39.263058+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2488,
+      "offset": 2676140,
+      "path": "stdout.bin",
+      "sha256": "613822787f346ecdac861b4320d0bb15055bbc69a93e598e8d9e34a0bb577056"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "61bf8d1210512c3bedc24e881aa3460cc37e3106"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.321611+00:00",
+    "started_at": "2026-10-27T20:25:39.294059+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7095,
+      "offset": 2678628,
+      "path": "stdout.bin",
+      "sha256": "82992693309e1b1be8e74708a4abd0298f2bb8b73387b8c7cbb964da62416d93"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "5b6a873510546ed00b25aa8b002b8dca262e1e5c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.354356+00:00",
+    "started_at": "2026-10-27T20:25:39.325195+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 38735,
+      "offset": 2685723,
+      "path": "stdout.bin",
+      "sha256": "77961c9e7139ae9ede4d23f230adb6f702ebeb9ab90396ab6851ecb7a41d826e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d7771a98e6d3167ea941d2bee5e318370e6992d3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.384484+00:00",
+    "started_at": "2026-10-27T20:25:39.357363+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12405,
+      "offset": 2724458,
+      "path": "stdout.bin",
+      "sha256": "4953a1a424467925fa257a1d835d91ec3419360785c62ad7f273c858753c448e"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "0ce1ba1ec7ad18cce0f991b611f1bf6adbd7ea3d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.415240+00:00",
+    "started_at": "2026-10-27T20:25:39.388152+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 737,
+      "offset": 2736863,
+      "path": "stdout.bin",
+      "sha256": "88f5425ca634ba0dbe0cd1c93a061380d141d8ae3840fe02cf4d8adab940a0e2"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8c69eaba00be4bf8d1c7a0dada45f0ed2f07fda9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.447911+00:00",
+    "started_at": "2026-10-27T20:25:39.418790+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3900,
+      "offset": 2737600,
+      "path": "stdout.bin",
+      "sha256": "cc109aa82b908535436370e5a53a25764b5a079f5583d86ed2cd5d441ab4ba7d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "0c4e1c4954c3d855eacb8f25342f6b3f36ef8a2f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.481184+00:00",
+    "started_at": "2026-10-27T20:25:39.451913+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2666,
+      "offset": 2741500,
+      "path": "stdout.bin",
+      "sha256": "24c899bc95934cb90de420c9cb9c94390bad1baac5372c880b1ebfaeccb2d57c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f19f325bcfd3a9b42a5fa35ab5292c6fdfc30f9b"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.515334+00:00",
+    "started_at": "2026-10-27T20:25:39.484184+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11099,
+      "offset": 2744166,
+      "path": "stdout.bin",
+      "sha256": "89b23f7d5f6424026786f69f769d50c4d5bb6d264d9e24af1e7c33631e13b515"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "2eba194fce72d20665bc8d559a487290ecd96df9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.548446+00:00",
+    "started_at": "2026-10-27T20:25:39.518836+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 25288,
+      "offset": 2755265,
+      "path": "stdout.bin",
+      "sha256": "da4d95d47782347cffeeb786e1939aaa18c839612f93a948cfc948a92368a585"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "114d7f68c0b61d2e97678ba05841b612b58063c4"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.578956+00:00",
+    "started_at": "2026-10-27T20:25:39.550445+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7670,
+      "offset": 2780553,
+      "path": "stdout.bin",
+      "sha256": "663f5b192b2bef2623d680800d76e5a10f21dc0600b13cfdfc2d36e30c1dae9d"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "02618afe0b51264b36db391ed490dee6f37049ed"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.609975+00:00",
+    "started_at": "2026-10-27T20:25:39.581963+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 30663,
+      "offset": 2788223,
+      "path": "stdout.bin",
+      "sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "14c2f21a6bd2c15e119fae52d038ee7d6b0cfb3f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.642017+00:00",
+    "started_at": "2026-10-27T20:25:39.612498+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4023,
+      "offset": 2818886,
+      "path": "stdout.bin",
+      "sha256": "72728d7a6bd90dab90f1b656778e912f9350e8656c0e857208f6a8654e1ea557"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "02e977c8939d59298466fceafa1eaae8caab74db"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.673021+00:00",
+    "started_at": "2026-10-27T20:25:39.645021+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3399,
+      "offset": 2822909,
+      "path": "stdout.bin",
+      "sha256": "f75d915de657921945206e0086895f175052619d7a57ac3372071753f245de15"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "44dc5b0e4e07da4216f96462c849d932b27cfef3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.705026+00:00",
+    "started_at": "2026-10-27T20:25:39.676022+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 13257,
+      "offset": 2826308,
+      "path": "stdout.bin",
+      "sha256": "dd3f91a6d8ed7cbaabf670a9e24b4bb8728790ba81cf98ab3fb7c1caf6f113c7"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "4fb848ef5a1f2287a064d1ebf2f75107c25b605b"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.736081+00:00",
+    "started_at": "2026-10-27T20:25:39.708025+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 97,
+      "offset": 2839565,
+      "path": "stdout.bin",
+      "sha256": "938af2f1a273e11707f087567b12b532efc77078e6519d1a88ec66d5ffff5197"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "9399468f4f76e250bf3716cfb644f598625c1568"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.766131+00:00",
+    "started_at": "2026-10-27T20:25:39.738089+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 244,
+      "offset": 2839662,
+      "path": "stdout.bin",
+      "sha256": "d0c1cac21fd02d79965fef4d8f1c96dbc0625a867953757b8f63568435aeeb07"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e3e27fcbb93c60d67fd78b419c890ccc9df6044f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.798254+00:00",
+    "started_at": "2026-10-27T20:25:39.770132+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6452,
+      "offset": 2839906,
+      "path": "stdout.bin",
+      "sha256": "06dcea5903fd8ffffaabfe3cd5df866de04ea687bb498918845938dcba3f8eea"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "fb3f265dfc2147800fbdef5a0c1f2935c2280195"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.832326+00:00",
+    "started_at": "2026-10-27T20:25:39.802255+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2315,
+      "offset": 2846358,
+      "path": "stdout.bin",
+      "sha256": "a74171be442bb0d81997157aeae4baa376992e7586cf5cf836cba00cb53ce621"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "4072ac99d44b95c73982670274d4708d5af6d212"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.863277+00:00",
+    "started_at": "2026-10-27T20:25:39.835327+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 14708,
+      "offset": 2848673,
+      "path": "stdout.bin",
+      "sha256": "85058dc6dc7d8fff5adbe9de7f2f5ae9fa2a183695b719561331b9cc47d966ac"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f96479edb172ded504a1d961d4a487916dcba6f7"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.894932+00:00",
+    "started_at": "2026-10-27T20:25:39.867277+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3402,
+      "offset": 2863381,
+      "path": "stdout.bin",
+      "sha256": "22cbe30979c629dd142866ade8e6bbbb183723d498ca85e810f4755693de3a6a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "990dc1b5ae0df3f97843b150ea78779313616714"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.927293+00:00",
+    "started_at": "2026-10-27T20:25:39.898633+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3244,
+      "offset": 2866783,
+      "path": "stdout.bin",
+      "sha256": "aa590215939f8a8e2a3afae2a1ad468e00f731618fe6285b9f99118f114837ed"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "0d7b2102f0c435a7b93fb5a5a54c430b24625791"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.963964+00:00",
+    "started_at": "2026-10-27T20:25:39.931895+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 4409,
+      "offset": 2870027,
+      "path": "stdout.bin",
+      "sha256": "b428dbca45b48edcc52336a267b5dddf4428990bf04b65e653a2e158f760c74a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "129e750a43705ceeb76f882188f782dee678b28d"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:39.994890+00:00",
+    "started_at": "2026-10-27T20:25:39.966968+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2484,
+      "offset": 2874436,
+      "path": "stdout.bin",
+      "sha256": "b0451478224c2d68a9da6b37e8708496d08f0910ab4dbefa377025506787aa55"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "efdf3e01dc909f31bc94631bc9769a1ef54236ad"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.025084+00:00",
+    "started_at": "2026-10-27T20:25:39.997894+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3771,
+      "offset": 2876920,
+      "path": "stdout.bin",
+      "sha256": "dc09c4f1ba5fe86ebc3faba69aadc269343f5c98781401408945f3c4004196d6"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "64115d5ddb6808a95db6d9dd3819a24e3f1fa3b1"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.055961+00:00",
+    "started_at": "2026-10-27T20:25:40.028917+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 23868,
+      "offset": 2880691,
+      "path": "stdout.bin",
+      "sha256": "bdf3433ca51d55bef78f0a28482d7cdff72b1fc468f654ef11f1d57d2d85e531"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "133f6c85c0a02b5318fabfc866df61391c0f34f9"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.087973+00:00",
+    "started_at": "2026-10-27T20:25:40.059960+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1132,
+      "offset": 2904559,
+      "path": "stdout.bin",
+      "sha256": "ca73d14805d18cc7dc28c6ec204fa3836ad34fb6cacc4e8e299559d776d16d5c"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b65af9eabb75fa0583ee97dc315ef3e8c97519b3"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.119145+00:00",
+    "started_at": "2026-10-27T20:25:40.090972+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 17247,
+      "offset": 2905691,
+      "path": "stdout.bin",
+      "sha256": "41be3398711535feb4fcca6a3693e9cef8f3df62df7439750184ab825c5a000b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d57cb3d258640bf52e94b0547964ce40aa992c22"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.149206+00:00",
+    "started_at": "2026-10-27T20:25:40.121662+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 7231,
+      "offset": 2922938,
+      "path": "stdout.bin",
+      "sha256": "e3af8d55ac5052256d9df173e6e5e59da1b93ba1cfcb9080f7377749d08ab534"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7c0928cced90e985eb2c786dbad20baf0c0b6349"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.182869+00:00",
+    "started_at": "2026-10-27T20:25:40.153208+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5723,
+      "offset": 2930169,
+      "path": "stdout.bin",
+      "sha256": "c1682ddaef393aae67b60855b890bd8d07e87a96518958d58c3f8467e7727172"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "1c9563d541c5233604a0b774f2e98cd8b60c81c0"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.216836+00:00",
+    "started_at": "2026-10-27T20:25:40.186868+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8590,
+      "offset": 2935892,
+      "path": "stdout.bin",
+      "sha256": "49acb64b9e7adc8cd3339dec16013c4615c81f8e64cea7e569a17041185415ea"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ce14e6b422e7e96957e206eddb742b60b23f958c"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.247848+00:00",
+    "started_at": "2026-10-27T20:25:40.219832+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 9949,
+      "offset": 2944482,
+      "path": "stdout.bin",
+      "sha256": "769534c1273de785c4bbe417a3d3b153ea4feb0d65d0ff402c7d8ab78954ade8"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "50a799074440431dfd0cec05a3cff8553c48c37e"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.279795+00:00",
+    "started_at": "2026-10-27T20:25:40.250845+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1739,
+      "offset": 2954431,
+      "path": "stdout.bin",
+      "sha256": "50e74160253dd771de9d3f5089442c75bbde13b701557618708397e268d4e929"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "d3e27f48166da5066508ead872e41a16c05a4724"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.310802+00:00",
+    "started_at": "2026-10-27T20:25:40.283797+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 12561,
+      "offset": 2956170,
+      "path": "stdout.bin",
+      "sha256": "6ac61841bbabf5985eceb7aaad22e4cc8300a974017e00380fd10a8adcd5581b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7272cebf6c249ac091fd2a176be21995a5691836"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.341425+00:00",
+    "started_at": "2026-10-27T20:25:40.314316+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5783,
+      "offset": 2968731,
+      "path": "stdout.bin",
+      "sha256": "9235cb49484aaae84e320719785bc6fdb1550d18c0db7ee201d4e13a664b1a40"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.373429+00:00",
+    "started_at": "2026-10-27T20:25:40.345424+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 2974514,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "f8ae088b312aecef0fbd1bd97eac8375605f7f78"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.406850+00:00",
+    "started_at": "2026-10-27T20:25:40.377937+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3376,
+      "offset": 2974514,
+      "path": "stdout.bin",
+      "sha256": "31624acb1139ffd8837f85ddcac91c0c5742d66c2973371db1459b3af87d0e77"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "949902035983a3bf95e2a457848ff689224eaae0"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.0319999999992433,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.437970+00:00",
+    "started_at": "2026-10-27T20:25:40.409850+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 859,
+      "offset": 2977890,
+      "path": "stdout.bin",
+      "sha256": "309f05d9f9022ec9ef22f1f88e924007b64017839af1a4edbe311879e2b962c9"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "a915a9a040caba393b344bc68711994fd17e712f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.470182+00:00",
+    "started_at": "2026-10-27T20:25:40.441965+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2474,
+      "offset": 2978749,
+      "path": "stdout.bin",
+      "sha256": "fe4a7ec589c381eb2d15a012903ab2f8af85850cdfc9539a33579f988317462b"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "7e291122447d3f166f778cbd95f6dfa3f71b43cd"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.505219+00:00",
+    "started_at": "2026-10-27T20:25:40.475179+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 5845,
+      "offset": 2981223,
+      "path": "stdout.bin",
+      "sha256": "85e1aeb24c160d7276e08fb6d60bd01905cf558ed732340b68ece9c372d71a39"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "435428727e3c6622eb2c3c14048cc9e57cd05a5b"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.537076+00:00",
+    "started_at": "2026-10-27T20:25:40.509219+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 6525,
+      "offset": 2987068,
+      "path": "stdout.bin",
+      "sha256": "ceeb0076c398e1ca570fa6873f395852edfcbe82c911497ef8f83e62ab8c98a4"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "bc99c339c42fcbae8d4a05710e5585513903534f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.569080+00:00",
+    "started_at": "2026-10-27T20:25:40.542077+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1344,
+      "offset": 2993593,
+      "path": "stdout.bin",
+      "sha256": "ca5393e9e9fe203f228f25d85f93475a03c701c668a70e3d890a706b5e2b108a"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "5f3c91e9455409cf2150927259066f3401c0db28"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.600172+00:00",
+    "started_at": "2026-10-27T20:25:40.572079+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2051,
+      "offset": 2994937,
+      "path": "stdout.bin",
+      "sha256": "00e9cf1aaf4b5b9ef96a4b299123ac7afe97d4dd132ed40d9007f4bdff2d897f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "dcc27c868922e619a877af8d8da659bd9e1d247f"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.631314+00:00",
+    "started_at": "2026-10-27T20:25:40.603284+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 25861,
+      "offset": 2996988,
+      "path": "stdout.bin",
+      "sha256": "ee4c4665f886d13b70af4391027ab51aa88bfc8f549454c68ba1e40251eb5eca"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "ed1053867c8bf01840b3d2d506390ad83d2badf4"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.663921+00:00",
+    "started_at": "2026-10-27T20:25:40.636103+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 29211,
+      "offset": 3022849,
+      "path": "stdout.bin",
+      "sha256": "2dab8d5b4531312102213d7ca8af44d35b35742cd041786bf8fc817e14a25020"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "8284cb58c4607e3072f08bf79ec4451aca3aecf1"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.697927+00:00",
+    "started_at": "2026-10-27T20:25:40.668925+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 8792,
+      "offset": 3052060,
+      "path": "stdout.bin",
+      "sha256": "7718c1299e09b4f87b24d1efe00728a6c7345aeb43a934bf37dec91d365bfaa5"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "b7da98497b1f3c584b0531059d03352daa084027"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.729550+00:00",
+    "started_at": "2026-10-27T20:25:40.700927+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 125593,
+      "offset": 3060852,
+      "path": "stdout.bin",
+      "sha256": "ec3cb59caf9300546c862c6cc9ae106b974db7e34f7e721faf9a003d818750ce"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "90a09e22037d94de8075252cd876537203a238c1"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.03200000000288128,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.763227+00:00",
+    "started_at": "2026-10-27T20:25:40.734553+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 11773,
+      "offset": 3186445,
+      "path": "stdout.bin",
+      "sha256": "af48f1bda9aefbe5fd5fd52a553d78a8a99f99e5b10c26cdc77c110371bc4091"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "cat-file",
+      "blob",
+      "01944c223fc93f4919c9dfc00eb2307efb0d54ba"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.794772+00:00",
+    "started_at": "2026-10-27T20:25:40.766226+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 236,
+      "offset": 3198218,
+      "path": "stdout.bin",
+      "sha256": "2ddbdfe554c04d4efb3d49b04a79f54140c50ef7a7d7a26231f655db1e45bddf"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "rev-parse",
+      "100699796d942af30644738ffbcd1f1c939411c5^{tree}"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.829487+00:00",
+    "started_at": "2026-10-27T20:25:40.799773+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 3198454,
+      "path": "stdout.bin",
+      "sha256": "c43faf152a2ae26274cdfe863cb5577dacef7265b44e037de5a8b5ba024fa652"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw10rel\\c",
+      "rev-parse",
+      "100699796d942af30644738ffbcd1f1c939411c5:src"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10rel\\s",
+    "duration_seconds": 0.014999999999417923,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T20:25:40.863522+00:00",
+    "started_at": "2026-10-27T20:25:40.833992+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 3198495,
+      "path": "stdout.bin",
+      "sha256": "9a65e4744a05a879653b498a3dce13451b9d73fc96dee8b114d935a26bf709e7"
+    },
+    "timed_out": false
+  }
+]

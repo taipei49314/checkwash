@@ -1,0 +1,14 @@
+{
+ "kind": "checkwash.release-one-time-authorization.v1",
+ "status": "authorized",
+ "tag": "v0.10.0",
+ "max_attempts": 1,
+ "version": "0.10.0",
+ "source_sha": "100699796d942af30644738ffbcd1f1c939411c5",
+ "maintainer": "Nelson",
+ "human_quote": "「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」; 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」; to Claude: 「Checkwash 一樣給你」「交接 規劃 都寫在上面了」",
+ "human_evidence_reference": "https://github.com/taipei49314/checkwash/blob/100699796d942af30644738ffbcd1f1c939411c5/docs/RELEASING.md (sections 'Pre-1.0 repair continuation instruction (2026-10-27)', 'Takeover execution and current cost decision' and 'Claude takeover and review-found fixes (2026-10-27)')",
+ "decision_mode": "PRE_1_0_DELEGATION",
+ "delegate": "Claude (Claude Code, LAPTOP-01AGNPJU)",
+ "personal_review_claimed": false
+}

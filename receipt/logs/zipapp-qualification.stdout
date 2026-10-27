@@ -1,0 +1,1 @@
+zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0

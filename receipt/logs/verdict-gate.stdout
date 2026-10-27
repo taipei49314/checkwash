@@ -1,0 +1,21 @@
+{
+ "failures": [],
+ "mode": "gate",
+ "status": "passed",
+ "summary": {
+  "cases": 185,
+  "failures": 0,
+  "reported": 1,
+  "t1": 159,
+  "t3": 26,
+  "transitions": {
+   "block->block": 159,
+   "canary block->block": 45,
+   "canary block->pass": 71,
+   "canary pass->block": 6,
+   "canary pass->pass": 37,
+   "pass->block": 1,
+   "pass->pass": 25
+  }
+ }
+}

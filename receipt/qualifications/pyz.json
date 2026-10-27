@@ -1,0 +1,5453 @@
+{
+  "artifact_sha256": "9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a",
+  "cases": [
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.assert.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.assert.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.deepEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.deepEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.deepEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.deepStrictEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.deepStrictEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.deepStrictEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.equal.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.equal.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.equal.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.ok.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.ok.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.strictEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.strictEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.strictEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.equal.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.equal.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.equal.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.strictEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.strictEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.strictEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.deepEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.deepEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.deepEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.deepStrictEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.deepStrictEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.deepStrictEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.ok.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.ok.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-default-legacy.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-default-legacy.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-bare-module.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-bare-module.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-bare-strict.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-bare-strict.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-strict-named.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-strict-named.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-namespace.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-namespace.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-node.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-node.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-node-strict.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-node-strict.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-strict-member.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-strict-member.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-bare.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-bare.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBe.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBe.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBe.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBe.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBe.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toStrictEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toStrictEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toStrictEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toStrictEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toStrictEqual.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeCloseTo.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeCloseTo.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeCloseTo.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeCloseTo.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeCloseTo.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toContain.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toContain.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toContain.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toContain.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toContain.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toMatch.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toMatch.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toMatch.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toMatch.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toMatch.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeTruthy.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeTruthy.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeTruthy.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeTruthy.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeFalsy.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeFalsy.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeFalsy.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeFalsy.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeDefined.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeDefined.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeDefined.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeDefined.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeUndefined.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeUndefined.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeUndefined.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeUndefined.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeNull.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeNull.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeNull.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeNull.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeGreaterThan.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeGreaterThan.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeGreaterThan.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeGreaterThan.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeGreaterThan.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeGreaterThanOrEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeGreaterThanOrEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeGreaterThanOrEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeGreaterThanOrEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeLessThan.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeLessThan.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeLessThan.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeLessThan.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.toBeLessThanOrEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.toBeLessThanOrEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.not.toBeLessThanOrEqual.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.not.toBeLessThanOrEqual.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "vitest.direct.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "vitest.direct.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.nested-arguments.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.nested-arguments.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.spec.cjs.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.spec.cjs",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.spec.cjs.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.test.mjs.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.mjs",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.test.mjs.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.test.ts.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.ts",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.test.ts.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.test.tsx.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.tsx",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.test.tsx.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.spec.jsx.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.spec.jsx",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.spec.jsx.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "control.comments-only",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "control.literal-only",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.callable-to-ok",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.whitespace",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.strict-scalar-strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.strict-structure-strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.scalar-strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "mixed.node-and-jest",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-renamed-default.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-renamed-default.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-renamed-default.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-renamed-default.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-named-method.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-named-method.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-named-method.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-named-method.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-renamed-named.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-renamed-named.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-renamed-named.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-renamed-named.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-destructured.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-destructured.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-destructured.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-destructured.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-renamed.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-renamed.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-renamed.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-renamed.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.strict-member.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.strict-member.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.strict-member.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.strict-member.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.import.expect-alias.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.import.expect-alias.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.import.expect-alias.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.import.expect-alias.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-renamed-namespace.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-renamed-namespace.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-renamed-namespace.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-renamed-namespace.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-strict-renamed.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-strict-renamed.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.esm-strict-renamed.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.esm-strict-renamed.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-renamed-destructured.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-renamed-destructured.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-renamed-destructured.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-renamed-destructured.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-strict-destructured.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-strict-destructured.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-strict-destructured.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-strict-destructured.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-strict-renamed.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-strict-renamed.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.cjs-strict-renamed.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.cjs-strict-renamed.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.local-method-alias.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.local-method-alias.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.import.local-method-alias.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.import.local-method-alias.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.import.cjs-expect-alias.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.import.cjs-expect-alias.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.import.cjs-expect-alias.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.import.cjs-expect-alias.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.import.namespace.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.import.namespace.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "jest.import.namespace.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "jest.import.namespace.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "vitest.import.esm-expect-alias.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "vitest.import.esm-expect-alias.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "vitest.import.esm-expect-alias.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "vitest.import.esm-expect-alias.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "vitest.import.cjs-expect-alias.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "vitest.import.cjs-expect-alias.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "vitest.import.cjs-expect-alias.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "vitest.import.cjs-expect-alias.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.renamed-arrow.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.renamed-arrow.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.renamed-arrow.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.renamed-arrow.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.renamed-function.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.renamed-function.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.renamed-function.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.renamed-function.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.cjs-renamed.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.cjs-renamed.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.context.cjs-renamed.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "node.context.cjs-renamed.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-directory-js.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/example.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-directory-js.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-directory-js.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/example.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-directory-js.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-filename-js.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-filename-js.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-filename-js.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-filename-js.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-prefix-cjs.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test-total.cjs",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-prefix-cjs.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-prefix-cjs.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test-total.cjs",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-prefix-cjs.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-underscore-mjs.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "total_test.mjs",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-underscore-mjs.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-underscore-mjs.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "total_test.mjs",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-underscore-mjs.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-dash-ts.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "nested/total-test.ts",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-dash-ts.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-dash-ts.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "nested/total-test.ts",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-dash-ts.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-suffix-cts.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "nested/total.test.cts",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-suffix-cts.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-suffix-cts.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "nested/total.test.cts",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-suffix-cts.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-nested-directory-mts.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "packages/api/test/example.mts",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-nested-directory-mts.comment",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "syntax.path.node-test-nested-directory-mts.truthiness",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "packages/api/test/example.mts",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "syntax.path.node-test-nested-directory-mts.strengthening",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.binding.local-standin.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.binding.callback-parameter.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "node.binding.named-alias-parameter.remove",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/contract.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.number-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.vitest.string-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.ts",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.boolean-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.spec.ts",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.number-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/foundation.mjs",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.deep-string-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.cjs",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.context-boolean-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/foundation.ts",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.null-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.equivalent-number",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.equivalent-quotes",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.multiline-format",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.node.message-preserved",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.equivalent-string-escape",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.truthy-to-exact",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.node.truthy-to-exact",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "TOLERANCE_LOOSENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.precision-decreased",
+      "kind": "tolerance_weakened",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "TOLERANCE_LOOSENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "TOLERANCE_LOOSENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.vitest.default-precision-decreased",
+      "kind": "tolerance_weakened",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.ts",
+            "rule": "TOLERANCE_LOOSENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.explicit-default-precision",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.precision-increased",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.outside-callback-cannot-replace",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_REMOVED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.outside-callback-cannot-replace",
+      "kind": "removal",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/foundation.mjs",
+            "rule": "ASSERT_REMOVED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "ASSERT_WEAKENED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.outside-callback-cannot-strengthen",
+      "kind": "weakening",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "ASSERT_WEAKENED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.outside-callback-is-unrepresented",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.node.coercive-to-strict-same-expected",
+      "kind": "strengthening",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.parenthesized-scalar-preserved",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "EXPECTED_VALUE_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.nested-subject-rewrite",
+      "kind": "expected_rewrite",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.ts",
+            "rule": "EXPECTED_VALUE_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.optional-chain-quote-formatting",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.optional-chain-unicode-formatting",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.jest.optional-chain-number-formatting",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": null,
+        "severity": null,
+        "verdict": "pass"
+      },
+      "id": "foundation.node.optional-chain-quote-formatting",
+      "kind": "preserving",
+      "observed": {
+        "exit": 0,
+        "findings": [],
+        "verdict": "pass"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "SUBJECT_NORMALIZED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.wrapper-with-number-formatting",
+      "kind": "subject_wrapped",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "SUBJECT_NORMALIZED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "SUBJECT_NORMALIZED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.wrapper-with-unicode-formatting",
+      "kind": "subject_wrapped",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.ts",
+            "rule": "SUBJECT_NORMALIZED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "SUBJECT_NORMALIZED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.wrapper-with-quote-formatting",
+      "kind": "subject_wrapped",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/foundation.js",
+            "rule": "SUBJECT_NORMALIZED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "SUBJECT_INPUT_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.input-change-with-number-formatting",
+      "kind": "subject_input_changed",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.js",
+            "rule": "SUBJECT_INPUT_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "SUBJECT_INPUT_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.jest.input-change-with-unicode-formatting",
+      "kind": "subject_input_changed",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "tests/foundation.test.ts",
+            "rule": "SUBJECT_INPUT_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    },
+    {
+      "errors": [],
+      "expected": {
+        "rule": "SUBJECT_INPUT_CHANGED",
+        "severity": "high",
+        "verdict": "block"
+      },
+      "id": "foundation.node.input-change-with-quote-formatting",
+      "kind": "subject_input_changed",
+      "observed": {
+        "exit": 1,
+        "findings": [
+          {
+            "path": "test/foundation.js",
+            "rule": "SUBJECT_INPUT_CHANGED",
+            "severity": "high"
+          }
+        ],
+        "verdict": "block"
+      },
+      "status": "passed"
+    }
+  ],
+  "distribution": "pyz",
+  "errors": [],
+  "inventories": [
+    {
+      "mutations": 248,
+      "path": "tests/data/javascript_assertion_support.json",
+      "sha256": "f23a9278c7d8fc96ebbb89d8aaf6c1ff439564114e09f5de4d8adaeddc060c9d"
+    },
+    {
+      "mutations": 35,
+      "path": "tests/data/javascript_foundation_mutations.json",
+      "sha256": "d3d422f7172fb14f19ef2f6f3d05aa348b7f83249190a844c9423a08c3bb9774"
+    }
+  ],
+  "schema_version": 1,
+  "source_commit": "100699796d942af30644738ffbcd1f1c939411c5",
+  "source_package_dirty": false,
+  "source_package_sha256": "d4f0cbb52d2afde098ae67f94cbd3c3a0db710d2eacd9389108742632194c082",
+  "status": "passed",
+  "suite_sha256": "2a8f8a0d40964c36563d737534965c4769ebc0b08d3fdd6bfa011f4b32f4c311",
+  "summary": {
+    "executed": 283,
+    "failed": 0,
+    "total": 283
+  },
+  "version": "checkwash 0.10.0"
+}
