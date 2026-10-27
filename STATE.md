@@ -2,6 +2,29 @@
 
 Updated: 2026-10-27 (core repair integration toward 0.10.0; v0.9.0 remains the verified public CLI/Action)
 
+## 2026-10-27: autonomous continuation and conservative cost dispositions
+
+Nelson instructed this continuation: 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」.
+Codex is continuing the pre-1.0 repair goal under that delegation. It still
+stops before 1.0. Source work and task-local development validation now run on
+actual LAPTOP-16NUA5I8 / Windows / Python 3.11.9, recorded as
+HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL. Historical PJU receipts keep their own
+host/source identity; this new venue is not relabeled PJU or other platforms.
+
+Bounded plain-class and plain-describe proof paths have independent adversarial
+review. They require closed side-correct inputs and preserve unknown contexts,
+liveness and freeze. The old #263/#570 examples provide no called producer or
+closed startup context and retain BLOCK; separate supplied-source controls
+exercise the supported positive domains.
+
+The [D-185 disposition ledger](docs/oracle-context-dispositions-0.10.0.md)
+preserves all old inputs/labels and records the delegated migrations for eight
+goldens and four corpus identities. CASE_020_windows and CASE_029_flatten remain
+known legitimate-refactor false blocks. d007 and d010 are newly caught escapes.
+These are Codex-performed reviews, not Nelson's personal case reviews. Full
+fixed-source validation, receipt-route admission and publication remain separate;
+this checkpoint claims no new public release. Earlier entries retain their dates.
+
 ## 2026-10-27: complete the repair goal before 1.0
 
 Nelson's latest instruction is: 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」.
@@ -24,8 +47,9 @@ D-181 strict TASK authority, D-182 CRLF relocation, D-183 worktree/Stop pytest
 evidence, and D-184 same-name JS expectation provenance. The original repair
 overview is [updated here](docs/repair-integration-0.10.0.md).
 
-Eight original golden expectations remain unchanged and incompatible with
-D-179, tracked individually in [#567](https://github.com/taipei49314/checkwash/issues/567).
+At this initial integration checkpoint, eight original golden expectations
+remained incompatible with D-179, tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
+The later D-185 entry above records their separate delegated disposition.
 The [draft PR](https://github.com/taipei49314/checkwash/pull/566) and matching
 task receipts carry actual validation state. Implementation, collected test
 counts and bounded review do not waive those failures or establish publication.

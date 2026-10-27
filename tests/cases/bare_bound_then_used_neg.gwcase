@@ -19,4 +19,4 @@ def test_restructured():
     total = invoice_total(data, 0.05)
     assert data == [50.0, 50.0]
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_billing.py", "unit": "test_total"}]

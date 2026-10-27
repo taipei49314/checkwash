@@ -184,6 +184,4 @@ async def test_get_locks_from_targets_with_device_id(
     lock = next(iter(locks))
     assert lock.lock.entity_id == LOCK_1_ENTITY_ID
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["PROD_CHANGE_NOT_EVIDENCE"], "unit": "test_get_locks_from_targets_with_device_id"},
- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"], "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"},
- {"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["RESTRUCTURED"], "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "path": "tests/test_helpers.py", "unit": "test_get_locks_from_targets_with_device_id"}, {"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_helpers.py", "unit": "test_get_locks_from_targets_warns_for_non_lock_entity"}, {"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_helpers.py", "unit": "test_get_locks_from_targets_warns_when_lock_not_in_lcm"}]

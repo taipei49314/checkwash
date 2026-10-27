@@ -33,4 +33,4 @@ describe("invoice", function () {
   });
 });
 === expect ===
-[{"rule": "ASSERT_REMOVED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]
+[{"rule": "ASSERT_REMOVED", "severity": "high", "path": "test/invoice.spec.js", "unit": "totals the invoice"}]

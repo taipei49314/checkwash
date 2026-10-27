@@ -483,3 +483,30 @@ D-179 separately governs oracle relocation and compensation.
 Six new JS/TS controls and the existing expected-provenance module passed on
 recorded development source hashes (71 checks total). Final-source validation
 remains separate. Original golden fixture labels and failed receipts remain.
+
+## D-185 (2026-10-27): delegated conservative oracle-context dispositions
+
+Nelson instructed: 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」.
+Codex interpreted the current delegation as authority to complete the pre-1.0
+repair, including independently reviewed, individually recorded expectation
+migrations. The human did not personally perform the case reviews described
+here. No 1.0 publication is authorized.
+
+Keep D-179's source-context contract. The eight historical golden programs and
+four frozen corpus programs remain byte-identical; full original golden files,
+old expected tables and input maps are retained in tests/compatibility/v010.
+The [case dispositions](docs/oracle-context-dispositions-0.10.0.md) name each
+lost or unproved obligation and retain all original finding identities. New
+expectations require BLOCK without move/restructure/split/duplicate credit.
+The focused audit checks these absences explicitly rather than relying on the
+golden subset matcher. No gate script, severity, strength, alignment or
+exemption changes to obtain PASS.
+
+The two newly blocked disguised-refactor escapes remove the factorial-zero
+input or LIFO obligation. The two honest corpus refactors remain false blocks;
+this disposition does not misclassify them as cheating or prove universal
+precision. The original class/string-mark and plain-describe consumers also
+lack their called producers and complete startup evidence and retain BLOCK.
+Separate closed-source positive domains do not invent missing fixture inputs.
+Historical receipts and pre-disposition failures remain immutable. Current
+source qualification and publication are separate requirements.

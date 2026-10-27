@@ -30,10 +30,11 @@ v0.9.0 until new public artifacts are actually verified.
 | 14 sweep and live review | Supply paired pytest configuration in range, sweep, worktree and Stop, with fresh primary/session contexts. Retain per-commit error identity without rewriting historical counts; live worktree sources keep strict regular-only admission. |
 
 Core implementation and bounded independent review are integrated. The
-[oracle-credit notes](oracle-credit-0.10.0.md) retain eight unresolved golden
-expectations, individually tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
-Their original inputs/labels are unchanged. New passing controls and a minor
-version do not waive their compatibility failures. Actual final-source results
+[oracle-credit notes](oracle-credit-0.10.0.md) retain the eight original golden
+observations, initially tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
+The later [D-185 dispositions](oracle-context-dispositions-0.10.0.md) preserve
+all program bytes and full legacy expectations while migrating the expected
+blocking obligations. Known legitimate-refactor costs stay explicit. Actual final-source results
 belong to the [review candidate](https://github.com/taipei49314/checkwash/pull/566)
 and matching raw task receipts.
 

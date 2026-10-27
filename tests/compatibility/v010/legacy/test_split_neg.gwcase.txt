@@ -1,0 +1,26 @@
+=== meta ===
+rule: TEST_DISABLED
+note: triage cluster (flask e82db2ca) — one test split into two whose names
+note2: extend the original; holds at warn, does not block
+=== before: tests/test_options.py ===
+from app import make_app
+
+
+def test_provide_automatic_options_attr():
+    app = make_app()
+    assert app.open("/", method="OPTIONS").status_code == 405
+    assert sorted(app.open("/", method="OPTIONS").allow) == ["OPTIONS"]
+=== after: tests/test_options.py ===
+from app import make_app
+
+
+def test_provide_automatic_options_attr_disable():
+    app = make_app()
+    assert app.open("/", method="OPTIONS").status_code == 405
+
+
+def test_provide_automatic_options_attr_enable():
+    app = make_app(automatic_options=True)
+    assert sorted(app.open("/", method="OPTIONS").allow) == ["OPTIONS"]
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]

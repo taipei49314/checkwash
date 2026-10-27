@@ -11,14 +11,16 @@ Six independently reproduced proof defects were fixed and read back against
 checks; its source map is distinct from final integration qualification. These
 results neither prove universal runtime equivalence nor accept historical cost.
 
-The original corpus still has eight incompatible expectations. They remain
-unchanged and failing, under the repository's rule against autonomous fixture
-relabeling. A 0.10.0 version string and the core implementation instruction do
-not turn those failed gates into release acceptance. Final-source checks and
-their exact remaining differences must be recorded separately.
-Individual disposition is tracked in [#567](https://github.com/taipei49314/checkwash/issues/567).
+The initial integration retained eight incompatible old expectations. A later
+2026-10-27 delegation led to the independently reviewed, case-specific
+[D-185 dispositions](oracle-context-dispositions-0.10.0.md): all represented
+program inputs and full old fixture bytes are preserved, while the new
+expectations retain the unproved obligations as BLOCK. Two legitimate corpus
+refactors remain explicit false blocks. This is not a precision measurement or
+release acceptance; final-source checks remain separate. The initial issue is
+[#567](https://github.com/taipei49314/checkwash/issues/567).
 
-## Unresolved historical fixture movements — exact old/new observations
+## Historical pre-disposition movements — exact old/new observations
 
 HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL. 16 static API arms, zero CLI calls; fixture programs were never run.
 Old source is frozen 9a5a. Candidate is the copied development working-tree source map in results.json, not a HEAD qualification.
@@ -36,6 +38,8 @@ Original .gwcase bytes equal their 9a5a Git blobs. Labels and raw are unchanged;
 | merged_parametrize_neg | pass → block | UNKNOWN_DYNAMIC_LOOKUP: literal table/input substitution is retained, but getattr(parse(url), attr) is not assumed identical to direct attribute access; opaque calls can alter builtin lookup. Optional getattr projection was removed after a real independent API counterexample. |
 
 Every row retains exact old/new finding dictionaries, fingerprints, escalators/de-escalators, raw stream hashes and original expectations in immutable-cost-register.json/results.json.
-These are unresolved compatibility failures, not adopted relabels, reviewer-approved FP rates or release acceptance.
+These were unresolved compatibility failures at that historical checkpoint;
+the later D-185 ledger records their separate delegated disposition without
+rewriting these original observations or claiming a reviewer-approved FP rate.
 New bad/legitimate controls remain separately in tests/test_oracle_credit_context.py; their passing results do not waive these historical gates.
 The earlier cost-r1 pre-execution source-map failure is retained with ABORT.md; it ran no API arm.

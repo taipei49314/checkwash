@@ -1274,9 +1274,11 @@ External plugins/import hooks and unsupported dynamic behavior remain limits.
 D1/D3, same-unit rewrites, compatibility/production-removal policy, strength and
 alignment retain their separate contracts. Complete-unit/duplicate equivalence
 can retain info under freeze; every assertion-only D2 or D5 route still reaches
-E2. Exact eligible BASE exemptions retain priority. Eight historical golden
-expectations remain unresolved compatibility failures; this contract does not
-relabel or waive them. See docs/oracle-credit-0.10.0.md.
+E2. Exact eligible BASE exemptions retain priority. The original eight golden
+expectations were unresolved compatibility failures at the initial integration.
+The later delegated dispositions in D-185 preserve their old bytes and migrate
+their expectations to the retained blocking obligations; they do not restore
+text-only credit. See docs/oracle-context-dispositions-0.10.0.md.
 
 ## 6. Exemptions
 

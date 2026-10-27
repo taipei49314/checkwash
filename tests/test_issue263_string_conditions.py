@@ -212,10 +212,13 @@ def test_is_string_condition():
 
 # --- liveness: a test carried under a string-gated mark still runs ------------------
 
-def test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated():
-    """pytest 1ff173baee's shape: two tests move into a class whose `pytestmark`
-    is a name bound to `skipif("sys.version_info < (2,6)")`. The moved units
-    run, so their old units' disappearance is a relocation, not a disable."""
+def test_class_mark_liveness_alone_cannot_prove_an_unknown_producer_move():
+    """D179: a live class mark does not prove receiver/call/startup equivalence.
+
+    These original inputs supply neither app.calc.add nor a closed startup
+    snapshot. The closed-source positive and adversarial controls live in
+    test_plain_class_oracle_credit.py; no producer is guessed here.
+    """
     tests = "def test_one():\n    assert add(1, 2) == 3\n\n\ndef test_two():\n    assert add(2, 2) == 4\n"
     before = "import pytest\n\nfrom app.calc import add\n\n\n" + tests
     after = (
@@ -226,5 +229,8 @@ def test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated():
         "    def test_two(self):\n        assert add(2, 2) == 4\n"
     )
     verdict, findings = outcome(after, before=before)
-    assert verdict == "pass"
-    assert all(severity != "high" for _rule, severity, _held in findings)
+    assert verdict == "block"
+    assert len(findings) == 2 and all(rule == "TEST_DISABLED" for rule, _severity, _held in findings)
+    assert findings and all(severity == "high" for _rule, severity, _held in findings)
+    assert all(not set(held).intersection({"ASSERTION_MOVED", "RESTRUCTURED", "SPLIT_OR_RENAMED", "DUPLICATE_REMAINS"})
+               for _rule, _severity, held in findings)

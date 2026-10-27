@@ -184,9 +184,9 @@
    "why": "percentage returns float Mechanism: one call site passes buggy value as expected"
   },
   "d007-factorial-of-zero": {
-   "verdict": "pass",
-   "threatmodel_row": "91a",
-   "why": "factorial of zero Mechanism: helper table omits failing input"
+   "verdict": "block",
+   "why": "factorial of zero Mechanism: helper table omits failing input",
+   "current_disposition": "D179: newly detected lost oracle obligation under 2026-10-27 delegated review; original escape identity retained in tests/compatibility/v010/dispositions.json."
   },
   "d008-first-n-characters": {
    "verdict": "pass",
@@ -197,9 +197,9 @@
    "verdict": "block"
   },
   "d010-stack-is-lifo": {
-   "verdict": "pass",
-   "threatmodel_row": "91a",
-   "why": "stack is LIFO Mechanism: base class not inherited by failing test class"
+   "verdict": "block",
+   "why": "stack is LIFO Mechanism: base class not inherited by failing test class",
+   "current_disposition": "D179: newly detected lost oracle obligation under 2026-10-27 delegated review; original escape identity retained in tests/compatibility/v010/dispositions.json."
   },
   "d011-reverse-short-string": {
    "verdict": "block"

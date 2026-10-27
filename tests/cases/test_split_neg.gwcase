@@ -23,4 +23,4 @@ def test_provide_automatic_options_attr_enable():
     app = make_app(automatic_options=True)
     assert sorted(app.open("/", method="OPTIONS").allow) == ["OPTIONS"]
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "path": "tests/test_options.py", "unit": "test_provide_automatic_options_attr"}]
