@@ -317,8 +317,14 @@ under the standing route above. A source edit alone is not a passing receipt.
    creating a public tag. Missing, failed or cancelled required evidence stops
    publication; neither a local tag nor an expected red replaces it.
 4. At that commit, `[baseline]` in `tests/verdict_gate/baseline.toml` still pins
-   the previous release required by the tag-push gate: the highest other
-   stable version tag merged into the commit, with its exact peeled commit.
+   the previous published release required by the tag gate: the highest other
+   published stable GitHub Release whose native tag is merged into the commit,
+   with its exact peeled commit and actual pinned public pyz. A bare tag is
+   retained as a tag, not treated as published software. The
+   [native publication identity check](published-release-baseline.md) retains
+   complete public catalog and native tag/ancestry evidence and refreshes it
+   independently in the publisher. Missing or bad assets on a higher published
+   Release block the old baseline; they never remove that Release from selection.
    Do not rotate the baseline to obtain a green release verdict.
 5. Only under the explicit publication grant, and once the fixed-corpus
    comparison (below) has run and the owner has reviewed every commit it

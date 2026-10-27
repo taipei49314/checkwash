@@ -833,7 +833,7 @@ def test_highest_other_tag(pushed, tags, highest):
     assert ignored == sorted(tag for tag in tags if not VG._SEMVER_TAG.fullmatch(tag))
 
 
-def test_tag_rule_reads_merged_tags(tmp_path):
+def test_tag_rule_reads_merged_tags(tmp_path, monkeypatch):
     repo = tmp_path / "repo"
     repo.mkdir()
     VG._git(repo, "init", "-q", "-b", "main")
@@ -845,10 +845,12 @@ def test_tag_rule_reads_merged_tags(tmp_path):
         VG._git(repo, "tag", tag)
         commits[tag] = VG._git_text(repo, "rev-parse", "HEAD")
     pin = {**PIN, "commit": commits["v0.5.0"]}
+    from published_release_fixtures import native_fetch
+    monkeypatch.setattr(VG._PUBLICATION, "request", native_fetch(VG, repo, pin))
     assert VG.check_tag_rule(repo, "v0.6.0", pin)[0] == []
     errors, info = VG.check_tag_rule(repo, "v0.6.0", {**PIN, "tag": "v0.4.2", "commit": commits["v0.4.2"]})
     assert info["highest_other"] == "v0.5.0"
-    assert any("is not the highest other v* tag" in error for error in errors)
+    assert any("is not the highest other published v* Release" in error for error in errors)
     assert any("not the pinned commit" in error for error in VG.check_tag_rule(repo, "v0.6.0",
                                                                                {**PIN, "commit": "d" * 40})[0])
     assert any("not merged into HEAD" in error for error in VG.check_tag_rule(repo, "v0.7.0", pin)[0])
@@ -1224,7 +1226,7 @@ def test_gate_runs_no_case_when_an_identity_fails(tmp_path):
         "baseline": {"sha256": inputs.baseline.pin["sha256"], "size": inputs.baseline.pin["size"]}}
 
 
-def test_gate_records_unparseable_cases_and_the_tag_rule(tmp_path):
+def test_gate_records_unparseable_cases_and_the_tag_rule(tmp_path, monkeypatch):
     inputs = e2e_inputs(tmp_path, red=True)
     write(inputs.cases / "i900/BAD.vgcase", "=== bogus ===\n")
     # Identity fails on purpose (pinned sha256 differs): neither wiring depends on a case run.
@@ -1238,6 +1240,8 @@ def test_gate_records_unparseable_cases_and_the_tag_rule(tmp_path):
         VG._git(repo, "add", "--all")
         VG._git(repo, "commit", "-q", "-m", tag)
         VG._git(repo, "tag", tag)
+    from published_release_fixtures import native_fetch
+    monkeypatch.setattr(VG._PUBLICATION, "request", native_fetch(VG, repo, inputs.baseline.pin))
     engines = {"baseline": (inputs.baseline.pyz, inputs.baseline.source),
                "candidate": (inputs.candidate.pyz, inputs.candidate.source),
                "canary-old": (inputs.baseline.pyz, inputs.baseline.source),
@@ -1251,7 +1255,7 @@ def test_gate_records_unparseable_cases_and_the_tag_rule(tmp_path):
     assert any(item["code"] == "case-invalid" and item["message"].startswith("i900/BAD:")
                for item in receipt["failures"])
     tag_messages = [item["message"] for item in receipt["failures"] if item["code"] == "tag-baseline"]
-    assert any("is not the highest other v* tag merged into HEAD (v0.6.0)" in message for message in tag_messages)
+    assert any("is not the highest other published v* Release merged into HEAD (v0.6.0)" in message for message in tag_messages)
     assert any("not the pinned commit" in message for message in tag_messages)
     assert receipt["tag_rule"]["highest_other"] == "v0.6.0"
     assert "i900/BAD" not in [item["id"] for item in receipt["cases"]]

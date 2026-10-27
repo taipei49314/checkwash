@@ -98,6 +98,11 @@ def subject(value):
 
 
 class GitHub(B.GitHub):
+    def publication_response(self, url):
+        # Fixed-origin, no-redirect authenticated metadata read. The helper
+        # retains raw HTTP failures rather than interpreting them as absence.
+        return load_trusted("published_release_identity").request(url, token=self.token)
+
     def binary(self, method, path, raw, content_type="application/octet-stream"):
         require(path.startswith(f"/repos/{REPOSITORY}/releases/") and method == "POST", "unexpected upload path")
         request = urllib.request.Request("https://uploads.github.com" + path, data=raw, method=method,
@@ -339,14 +344,40 @@ def validate_product(packet, source_root, trusted_root, collector):
 
 
 def trusted_verdict(trusted_root, collector):
-    for name in ("verdict_gate.py", "qualify_assertions.py", "assertion_contract.py"):
+    for name in ("verdict_gate.py", "published_release_identity.py", "qualify_assertions.py", "assertion_contract.py"):
         path = Path(trusted_root) / "tools" / name
         B.regular(path)
         require(path.read_bytes() == git(trusted_root, "show", collector + ":tools/" + name), "trusted verdict helper changed")
     return load_trusted("verdict_gate")
 
 
-def validate_verdict(packet, source_root, trusted_root, collector, desc):
+def validate_published_baseline(vg, source_root, tag, pin, value, api, execution):
+    """Re-evaluate retained evidence and independently refresh native metadata."""
+    require(type(value) is dict and type(value.get("publication_evidence")) is dict,
+            "native published baseline evidence absent")
+    retained = value["publication_evidence"]
+    require(utc(execution["started_at"]) <= utc(retained["started_at"])
+            <= utc(retained["finished_at"]) <= utc(execution["finished_at"]),
+            "publication metadata is outside its original gate execution")
+    errors, expected = vg.check_tag_rule(Path(source_root), tag, pin, publication=retained)
+    require(not errors and same(value, expected), "retained published tag baseline rule differs")
+    merged = vg._git_text(Path(source_root), "tag", "--merged", "HEAD", "--list", "v*").split()
+    original = vg._PUBLICATION.validate(retained, pin, tag, merged_tags=merged)
+    fresh = vg._PUBLICATION.capture(pin, tag, merged_tags=merged, fetch=api.publication_response)
+    try:
+        errors, refreshed = vg.check_tag_rule(Path(source_root), tag, pin, publication=fresh)
+        require(not errors, "current native published baseline identity failed: " + "; ".join(errors))
+        require(same(original, vg._PUBLICATION.validate(fresh, pin, tag, merged_tags=merged)),
+                "published baseline catalog/tag identity changed or was omitted")
+        require(same({key: val for key, val in value.items() if key != "publication_evidence"},
+                     {key: val for key, val in refreshed.items() if key != "publication_evidence"}),
+                "current native published baseline selection differs")
+    except ValueError as error:
+        raise vg._PUBLICATION.EvidenceError(str(error), fresh) from None
+    return refreshed
+
+
+def validate_verdict(packet, source_root, trusted_root, collector, desc, api):
     records = packet.manifest["records"]["release"]
     value = packet.json(records["verdict"])
     inventory = packet.json(records["verdict_inventory"])
@@ -470,8 +501,13 @@ def validate_verdict(packet, source_root, trusted_root, collector, desc):
             and type(value["summary"]["t3"]) is int and value["summary"]["t3"] == len(chai)
             and type(value["summary"]["reported"]) is int and value["summary"]["reported"] == len(result["reported"]), "verdict summary differs")
     if packet.manifest["subject"]["stage"] not in ("pr", "main"):
-        errors, tag_rule = vg.check_tag_rule(Path(source_root), packet.manifest["subject"]["tag"], pins["baseline"])
-        require(not errors and same(value["tag_rule"], tag_rule), "tag baseline rule differs")
+        refreshed = validate_published_baseline(vg, source_root, packet.manifest["subject"]["tag"],
+                                                pins["baseline"], value["tag_rule"], api, exits["verdict-gate"])
+        # Preserve the independent native read as well as the original collector
+        # bytes. Download counts and other unrelated mutable fields are excluded
+        # from the positive identity projection, never from raw custody.
+        return {"cases": len(cases), "baseline": pins["baseline"]["tag"], "published_baseline": refreshed}
+    require(value["tag_rule"] is None, "pre-tag verdict carries unexpected tag evidence")
     return {"cases": len(cases), "baseline": pins["baseline"]["tag"]}
 
 
@@ -755,7 +791,7 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
                 and payload["release"].get("tag_name") == current["tag"] and payload["release"].get("draft") is False,
                 "native release payload differs")
     live_subject(api, current)
-    for name in ("tools/verdict_gate.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
+    for name in ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
         require(git(source_root, "show", current["head_sha"] + ":" + name) == git(trusted_root, "show", collector + ":" + name), "candidate differs from audited release helper")
     collection = packet.json("release/collection.json")
     require(collection.get("status") == "completed" and collection.get("errors") == []
@@ -765,7 +801,7 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
             and same(packet.json("release/parents-admission.json"), manifest["parents"]), "previous stage admission differs")
     parent = validate_parents(packet, api, current)
     desc, junit, exits, artifacts = validate_product(packet, source_root, trusted_root, collector)
-    verdict = validate_verdict(packet, source_root, trusted_root, collector, desc)
+    verdict = validate_verdict(packet, source_root, trusted_root, collector, desc, api)
     validate_visitors(packet, source_root, trusted_root, collector, desc, exits, artifacts)
     live_subject(api, current)
     report = dict(schema_version=1, kind="checkwash.pju-release-verification.v1", status="verified", repository=REPOSITORY,
@@ -1057,6 +1093,8 @@ def main(argv=None):
     except (OSError, ValueError, KeyError, TypeError, RecursionError, ET.ParseError,
             subprocess.SubprocessError, zipfile.BadZipFile, tarfile.TarError, urllib.error.URLError) as error:
         report = {"status": "failed", "publication_authorized": False, "error": type(error).__name__ + ": " + str(error)}
+        if getattr(error, "evidence", None) is not None:
+            report["publication_evidence"] = error.evidence
         if args.mode != "capture":
             output.parent.mkdir(parents=True, exist_ok=True)
             with output.open("x", encoding="utf-8") as stream:
