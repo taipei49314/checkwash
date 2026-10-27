@@ -1,0 +1,74 @@
+{
+  "artifacts": {
+    "checkwash-0.10.0-py3-none-any.whl": {
+      "bytes": 973990,
+      "sha256": "3522d641d589ff9b75ad5e2f510d0884ca2520c32265d8397f0fcef226bc1171"
+    },
+    "checkwash-0.10.0.tar.gz": {
+      "bytes": 5044922,
+      "sha256": "391eb893537f344b05c002358f47f6d89f17c85b9f1f61c1df801fd82360f944"
+    },
+    "checkwash.pyz": {
+      "bytes": 952399,
+      "sha256": "43c95f6a558b8e6e1db9f296a9733e9f3776def9184a5eba77689c5f81c05258"
+    }
+  },
+  "check_run_id": 122362496335,
+  "check_run_ids": [],
+  "checks": [
+    "PJU release evidence (main)"
+  ],
+  "collector_source_sha": "071fa76f9d343c76541aabeff6ef00f8344a30b2",
+  "host": "LAPTOP-01AGNPJU",
+  "junit": {
+    "passed_subtests": 67,
+    "reported_tests": 21719,
+    "skipped": 25,
+    "tests": 21652
+  },
+  "kind": "checkwash.pju-release-verification.v1",
+  "manifest_sha256": "b586e06c5edae9522a105afb697ceef4189816bfda17fdf7e963ad8b2715708e",
+  "other_platforms": "NOT_RUN",
+  "previous": {
+    "check_run_id": 122302935813,
+    "report_sha256": "cf3175ee76f737ca071200e58dfb0dbcb48dfe906959a1eebadb66f088214a35",
+    "stage": "pr"
+  },
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "publication_authorized": false,
+  "qualification_cases": 283,
+  "receipt_commit": "2d883402171d8d658981299f863dddd86c2df47c",
+  "repository": "taipei49314/checkwash",
+  "schema_version": 1,
+  "status": "verified",
+  "subject": {
+    "base_sha": "c9356686b4a9b3a6f0cd714c66d952891cffdd70",
+    "event": {
+      "created_at": "2026-10-27T16:14:28Z",
+      "name": "workflow_dispatch",
+      "payload_sha256": "96343ae3f8e79a06930388868cb22ba35dee80e9c5b5b18fe7acbabc8d9d3c07",
+      "run_attempt": 1,
+      "run_id": 40538951840,
+      "workflow_sha": "071fa76f9d343c76541aabeff6ef00f8344a30b2"
+    },
+    "head_sha": "100699796d942af30644738ffbcd1f1c939411c5",
+    "kind": "checkwash.pju-release-subject.v1",
+    "release_id": null,
+    "repository": "taipei49314/checkwash",
+    "schema_version": 1,
+    "source_tree": "9201a7f2f755c848b487077f5392a0c5088bf896",
+    "stage": "main",
+    "tag": null,
+    "tag_object": null
+  },
+  "trust": "owner-admitted immutable receipt; not hardware attestation",
+  "verdict": {
+    "baseline": "v0.9.0",
+    "cases": 185
+  },
+  "verification_run": {
+    "attempt": 1,
+    "id": 40552762753
+  },
+  "workflow_sha": "071fa76f9d343c76541aabeff6ef00f8344a30b2"
+}

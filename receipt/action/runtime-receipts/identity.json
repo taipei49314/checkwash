@@ -1,0 +1,13 @@
+{
+  "base_python": "C:\\Users\\nelson\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "bytecode_writes_disabled": true,
+  "isolated": true,
+  "package_root": "C:\\Users\\nelson\\dev\\cw10tag\\s\\action\\checkwash-action-usngaxda\\environment\\Lib\\site-packages\\checkwash",
+  "python": "C:\\Users\\nelson\\dev\\cw10tag\\s\\action\\checkwash-action-usngaxda\\environment\\Scripts\\python.exe",
+  "python_version": "3.11.9",
+  "runtime_files": 210,
+  "source_digest": "cb398f9fc05563a19fff443e235a30d98c25684a8d6d68752df6a246e2823717",
+  "source_root": "C:\\Users\\nelson\\dev\\cw10tag\\p",
+  "utf8": true,
+  "version": "0.9.0"
+}

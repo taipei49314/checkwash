@@ -1,0 +1,525 @@
+[
+  {
+    "argv": [
+      "git",
+      "init",
+      "-b",
+      "main"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.046999999998661224,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:30.414526+00:00",
+    "started_at": "2026-10-27T18:43:30.378847+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 109,
+      "offset": 0,
+      "path": "stdout.bin",
+      "sha256": "000863c04939326ca7eff572bde80f89893a5689582304749818d0fd4eb30604"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "config",
+      "user.name",
+      "checkwash zipapp qualification"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.030999999999039574,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:30.443135+00:00",
+    "started_at": "2026-10-27T18:43:30.415524+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 109,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "config",
+      "user.email",
+      "zipapp@example.invalid"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.01599999999962165,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:30.470736+00:00",
+    "started_at": "2026-10-27T18:43:30.443135+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 109,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "config",
+      "commit.gpgsign",
+      "false"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:30.498226+00:00",
+    "started_at": "2026-10-27T18:43:30.470736+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 109,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "--version"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.7189999999973224,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:31.220186+00:00",
+    "started_at": "2026-10-27T18:43:30.499230+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 18,
+      "offset": 109,
+      "path": "stdout.bin",
+      "sha256": "f8b4fc8c39553a1e8ba096a685e15f7467b6a82ed9a7115e3ae0b54f8ee51f36"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "demo"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.7340000000003783,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:31.957674+00:00",
+    "started_at": "2026-10-27T18:43:31.221186+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2377,
+      "offset": 127,
+      "path": "stdout.bin",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "add",
+      "billing.py",
+      "tests/test_billing.py"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.031000000002677552,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:31.991109+00:00",
+    "started_at": "2026-10-27T18:43:31.958674+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 2504,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "commit",
+      "-m",
+      "baseline exact assertion"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.046999999998661224,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:32.047366+00:00",
+    "started_at": "2026-10-27T18:43:31.991109+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 161,
+      "offset": 2504,
+      "path": "stdout.bin",
+      "sha256": "827bf37a83dd74aaa8441c0f3597c3a210952b29c5b2e442fa5d6fde454d6539"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD..HEAD",
+      "--format",
+      "json"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 1.8909999999996217,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:33.939129+00:00",
+    "started_at": "2026-10-27T18:43:32.047366+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 302,
+      "offset": 2665,
+      "path": "stdout.bin",
+      "sha256": "2275a2ce6a3664aa7066751504fdb1fbd689afe10adf5e1aa06aea6a9691a708"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD..HEAD",
+      "--format",
+      "hook-json"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 1.8590000000003783,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:35.789623+00:00",
+    "started_at": "2026-10-27T18:43:33.940649+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 3,
+      "offset": 2967,
+      "path": "stdout.bin",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "add",
+      "tests/test_billing.py"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.046999999998661224,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:35.838609+00:00",
+    "started_at": "2026-10-27T18:43:35.796622+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 2970,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "commit",
+      "-m",
+      "weaken assertion"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.062000000001717126,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:35.896172+00:00",
+    "started_at": "2026-10-27T18:43:35.840608+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 79,
+      "offset": 2970,
+      "path": "stdout.bin",
+      "sha256": "13356d26495697df8a807df6c3cf389e4f34a37a20ff4bf4a1dbeef457725d59"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD~1..HEAD",
+      "--format",
+      "json"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 2.125,
+    "error": null,
+    "exit_code": 1,
+    "finished_at": "2026-10-27T18:43:38.026386+00:00",
+    "started_at": "2026-10-27T18:43:35.897728+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1185,
+      "offset": 3049,
+      "path": "stdout.bin",
+      "sha256": "ca1288a449639b9c9ee990ba6c51d5b2a62699c55ac9da4c8eebe2e6ddf85c16"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD~1..HEAD",
+      "--format",
+      "term"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 2.110000000000582,
+    "error": null,
+    "exit_code": 1,
+    "finished_at": "2026-10-27T18:43:40.142080+00:00",
+    "started_at": "2026-10-27T18:43:38.027386+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 720,
+      "offset": 4234,
+      "path": "stdout.bin",
+      "sha256": "ddd1341a62c51bad21a32a7086c68c61d16574e57cbeeaa67231a77eeec53095"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD~1..HEAD",
+      "--format",
+      "sarif"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 2.139999999999418,
+    "error": null,
+    "exit_code": 1,
+    "finished_at": "2026-10-27T18:43:42.281523+00:00",
+    "started_at": "2026-10-27T18:43:40.144069+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 1397,
+      "offset": 4954,
+      "path": "stdout.bin",
+      "sha256": "f79f1515cfb0e6b09ce75b97847ea092e9bc36ac20d9991fd0398b084a28b5bc"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD~1..HEAD",
+      "--format",
+      "hook-json"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 2.125,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T18:43:44.405295+00:00",
+    "started_at": "2026-10-27T18:43:42.281523+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 424,
+      "offset": 6351,
+      "path": "stdout.bin",
+      "sha256": "b66338d7f49c7d92f78bc57665c64048e2df37891e93d56d9612d192ddddb7bb"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "MISSING_REF..HEAD",
+      "--format",
+      "json"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.75,
+    "error": null,
+    "exit_code": 2,
+    "finished_at": "2026-10-27T18:43:45.160851+00:00",
+    "started_at": "2026-10-27T18:43:44.406679+00:00",
+    "stderr": {
+      "bytes": 88,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e0162a91457becce6be65a05e5c32c56b44902ae2a7b94920c59f25a94efe03d"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 6775,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "check",
+      "HEAD"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.6869999999980791,
+    "error": null,
+    "exit_code": 2,
+    "finished_at": "2026-10-27T18:43:45.858223+00:00",
+    "started_at": "2026-10-27T18:43:45.161851+00:00",
+    "stderr": {
+      "bytes": 45,
+      "offset": 88,
+      "path": "stderr.bin",
+      "sha256": "07736d588d1c2f3ffaa8254c30833c79ca06c94be44f61bf29c4f6d477fae54d"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 6775,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Users\\nelson\\dev\\cw10tag\\dev\\Scripts\\python.exe",
+      "C:\\Users\\nelson\\dev\\cw10tag\\r\\artifacts\\checkwash.pyz",
+      "chek"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw10tag\\s\\checkwash-pyz-qualification-1rmnqnb7",
+    "duration_seconds": 0.7040000000015425,
+    "error": null,
+    "exit_code": 2,
+    "finished_at": "2026-10-27T18:43:46.563359+00:00",
+    "started_at": "2026-10-27T18:43:45.859224+00:00",
+    "stderr": {
+      "bytes": 54,
+      "offset": 133,
+      "path": "stderr.bin",
+      "sha256": "31562d84ba407cf6a8555d9b2b67ec2ddec48963bed17128808ad29ab5d2bf77"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 6775,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  }
+]

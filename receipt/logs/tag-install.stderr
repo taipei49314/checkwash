@@ -1,0 +1,2 @@
+  Running command git clone --filter=blob:none --quiet https://github.com/taipei49314/checkwash.git 'C:\Users\nelson\dev\cw10tag\s\pip-req-build-h_rc0l_u'
+  Running command git checkout -q 90210d81dd714f49e3ee6e2b1ccbb7c7428fe15b
