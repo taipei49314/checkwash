@@ -538,3 +538,34 @@ stage chain and exact-source evidence requirements remain. Owned positive and
 adversarial metadata tests qualify this protocol; they are not a real tag event,
 Release or publication acceptance. The selected protocol and source review are
 Codex-performed work, not Nelson's personal case reviews or deployment approval.
+
+## D-187 (2026-10-27): current 0.10 D176 cost and incomplete-history disposition
+
+Under the exact current continuation quoted in D-186, Codex separately admitted
+and completed one new three-member/six-CLI diagnostic, then obtained independent
+raw/source and proposal review. The actual published v0.9.0 pyz and frozen9678
+engine compare the original first parents of uvloop `7b202ccf`, `2081db89`
+and `9cba7493`. They retain three PASS-to-BLOCK movements and four HIGH
+`BROAD_EXCEPT_ADDED` occurrences. Source reading follows the caught callback
+or thread assertion failures through the awaited Future paths. It does not
+execute uvloop or prove represented runtime behavior.
+
+Codex accepts these precise legitimate-test false-block costs and the
+explicitly unmeasured remaining-history risk for **0.10 only**. This is Codex's
+delegated decision, not Nelson's personal per-case review. The narrow D176
+refusal and the actual E1 `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` findings remain;
+E2/`ORACLE_FREEZE` is a separate mechanism. The old five-rule blanket remains
+off. No severity, strength, alignment, label, allowance or verdict changes to
+obtain PASS, and #419 remains open.
+
+The [full disposition](docs/d176-cost-disposition-0.10.0.md) records exact
+source/input identities, proposals/reviews/decision hashes and applicability
+to engine tree `ee6716662fe264b5425958f00835567a4ffca4d6`. The old R4 remains
+partial/consumed:881 completed comparisons include879 returned envelopes and
+two identical exit2/not-analysed members; three returned-envelope members retain
+seven omitted-file occurrences; one partial plus6,553 unattempted members
+leave6,554 incomplete old-run comparisons. This new job observes three old
+prefix members, not the other878. Future R29 overlap is joined separately by
+exact member/source. No full census, history PASS or current adjudicated rate
+is inferred. Mandatory R29 and all normal release-stage evidence remain
+required; this risk decision grants no1.0 release or technical PyPI approval.

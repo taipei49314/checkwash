@@ -2,6 +2,36 @@
 
 Updated: 2026-10-27 (core repair integration toward 0.10.0; v0.9.0 remains the verified public CLI/Action)
 
+## 2026-10-27: frozen development evidence and release-protocol preparation
+
+The frozen core checkpoint `9678e8de564ed47f7ff92867d5c7d09358c04fcb`
+completed Windows/Python3.11.9 development validation: 21,550 passed,
+25 skipped and 67 passed subtests. Every skip is native symlink creation
+unavailable (WinError1314). Source, installed-wheel and actual-pyz controls
+each passed 283/283, with matching observations and all 215 package members.
+The unchanged 185-case verdict contract passed with zero failures and one
+reported Q5a PASS-to-BLOCK. These identify 9678; later heads require their own
+actual stage receipts.
+
+D-186 repairs the prospective tag rule using native public Release identity,
+retaining the failed v0.9.1 tag and genuine v0.9.0 pin. Its 501 targeted tests
+and 36 subtests passed at `071fa76f`, with independent source/metadata review
+and both actual CLI dogfood diagnostics passing. It changes no engine src.
+
+The [D-187 current cost decision](docs/d176-cost-disposition-0.10.0.md)
+separately accepts three source-reviewed D176 false blocks/four occurrences
+and the disclosed remaining-history risk for 0.10 under current delegation.
+The old R4 stays partial and consumed, including its parse omissions and
+6,554 incomplete comparisons. The new six-call targeted observation is not
+a resumed census. The mandatory fixed two-set R29 remains NOT_RUN here;
+its new source-bound execution proposal is under review, not admitted.
+
+The [0.10 candidate guide](docs/releases/v0.10.0-public-launch.md) distinguishes
+these checkpoints from final PR/main/tag/release/public-visitor acceptance.
+BASE approval [PR573](https://github.com/taipei49314/checkwash/pull/573) has its
+own exact-source validation in progress. No new merge, tag, public release,
+PyPI approval, platform certification or public pin promotion is claimed.
+
 ## 2026-10-27: autonomous continuation and conservative cost dispositions
 
 Nelson instructed this continuation: 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」.

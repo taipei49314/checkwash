@@ -22,6 +22,40 @@ unexecuted gates must remain visible. Any PyPI environment approval remains
 with the maintainer. Public CLI/Action/advertised pins stay at the verified
 v0.9.0 until a new release's actual public bytes have been verified.
 
+### Takeover execution and current cost decision
+
+Nelson subsequently instructed this takeover:
+
+> 照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推
+
+Codex applies that delegation to the present 0.10.0 work, including concrete
+source-bound execution and risk decisions after independent review. Exact
+technical source hashes, job bounds and case judgments are Codex decisions;
+the short quote does not claim Nelson typed them or personally reviewed each
+case. The stop before 1.0 and the normal publication requirements remain.
+
+The new targeted D176 diagnostic completed six actual CLI calls on the three
+previously reported uvloop inputs, on actual16NU/Windows/Python3.11.9. Its
+independent source/raw review and separate Codex risk decision are recorded in
+[the current 0.10 disposition](d176-cost-disposition-0.10.0.md), with the precise
+engine tree and evidence hashes. Three legitimate regression-test additions
+retain four actual HIGH/BLOCK findings. The decision accepts those known costs
+and explicitly unmeasured remaining-history risk for0.10 only. The old R4's
+881 comparisons, three parse-gap members/seven omitted-file occurrences,
+two identical exit2/not-analysed members, one partial and6,553 unattempted
+members keep their historical meanings. This is not history PASS or a resumed
+old grant. #419 remains open.
+
+The separate mandatory R29 is NOT_RUN at this preparation checkpoint. A new
+fixed-source/venue/bounds proposal is under independent review; none of its
+historical CLI calls is admitted by this paragraph. The tag still waits for
+the actual complete comparison and required movement review. D-186's native
+published-baseline repair leaves the real v0.9.0 pins and all existing tags
+intact. The [candidate guide](releases/v0.10.0-public-launch.md) distinguishes
+the completed9678 development diagnostics from the still-pending final stage
+chain. No current tag, Release, PyPI approval or public-byte verification is
+claimed here.
+
 ## v0.9.1 publication instruction (2026-10-24)
 
 After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:
