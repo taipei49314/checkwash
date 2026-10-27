@@ -13,6 +13,9 @@ from checkwash.cli import main
     ("a\nb\n", ["a\n", "b\n"]),
     ("a\fb\vc\x1cd\x85e f g\nh", ["a\fb\vc\x1cd\x85e f g\n", "h"]),
     ("a\rb\n", ["a\r", "b\n"]),
+    ("a\r\nb", ["a\r\n", "b"]),
+    ("x\r\r\ny", ["x\r", "\r\n", "y"]),
+    ("\n", ["\n"]),
 ])
 def test_source_lines_split_only_where_ast_counts_a_line(text, expected):
     from checkwash.oracle_credit import _source_lines

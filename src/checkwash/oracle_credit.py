@@ -44,12 +44,12 @@ def _literal(node):
 
 
 def _source_lines(text):
-    """Lines as ast and the frontend count them: only \n and a lone \r end one.
+    """Lines as ast counts them: \r\n, a lone \r or \n ends one.
 
     str.splitlines() also breaks at form feeds and Unicode separators, which
     shifted every later span onto another function's proof.
     """
-    return re.split(r"(?<=[\r\n])(?!$)", text) if text else []
+    return re.findall(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+\Z", text)
 
 
 def _span(node, lines, offsets):
