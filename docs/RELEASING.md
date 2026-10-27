@@ -90,6 +90,90 @@ keeps formal final PR/main/tag/release-event/public-visitor gates pending.
 No current tag, Release, PyPI approval, public-byte verification or 1.0 readiness
 is claimed here; 1.0 remains NOT_MET and requires Nelson's decision.
 
+### Claude takeover and review-found fixes (2026-10-27)
+
+Nelson then handed the repository to a Claude Code session on
+LAPTOP-01AGNPJU:
+
+> Checkwash 一樣給你
+>
+> 交接 規劃 都寫在上面了
+
+Agent interpretation: 「一樣」 ("the same") passes the delegation recorded above,
+unchanged, to this Claude session. Claude completes 0.10.0, including normal
+merge and the publication operations, and stops before 1.0 for Nelson's
+decision. The plan he refers to is Codex's closeout handoff, checkwash-lab
+`0582683c`, `notes/release-010-closeout-20261027/HANDOFF.md`. This paragraph
+attributes no further words to Nelson. Where the paragraphs above name Codex
+as the delegate for the remaining 0.10.0 operations (final stage evidence,
+merge, tag, release records and the ordinary `pypi` deployment review),
+Claude performs them, and approval comments and publication records identify
+Claude (Claude Code on LAPTOP-01AGNPJU) as the delegate. Codex's completed
+decisions, D-176 to D-187 and the R29 cost decision, keep Codex's attribution;
+Claude does not re-make them.
+
+Codex's F1/F2 collections and runtimes ran on LAPTOP-16NUA5I8. A release chain
+keeps one execution route from stage to stage, so the final PR, main, tag,
+release-event and public-visitor evidence is collected afresh on
+LAPTOP-01AGNPJU, recorded as `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. The
+16NU F1/F2 packets remain failed historical records. A non-formal check on
+PJU ran the protected timing budgets with wide margins and no CPU-affinity
+condition; the 16NU P-core launcher is not used.
+
+Before collection, an independent review of candidate `ad1ebff7` (six Claude
+area reviewers, each finding checked by two further verifiers, plus Grok
+read-only reviews verified by Claude) reproduced three defects. They are
+fixed in this candidate, each with regression tests that fail on `ad1ebff7`:
+
+1. Worktree and Stop runs listed the whole working tree for paired pytest
+   config evidence, including ignored dependency trees and Windows junctions.
+   A junction cycle, or an ignored tree over the 200,000-path limit, turned
+   every worktree or Stop check into an engine error, including clean,
+   docs-only and JS/TS-only ones; v0.9.0 analysed them. Linked-config deltas
+   now come from BASE's tree and the captured diff, and the full inventory is
+   listed only when a consumer needs it. A BASE config link checked out as a
+   regular placeholder file (`core.symlinks=false`) is refused like a worktree
+   link instead of being compared as text.
+2. D-177: an empty file renamed into `.checkwash/config.toml` or
+   `.checkwash/allow.toml` (Git pairs empty blobs as renames by default)
+   skipped the effective-BASE comparison, so a relaxation was graded as a
+   warning. It is now compared like a plain creation.
+3. D-179: oracle-context proofs split source lines with `str.splitlines()`,
+   which also breaks at form feeds and Unicode line separators. One such
+   character shifted later spans onto another function's proof and could
+   credit a weakened test as relocated. Lines now break where `ast` counts
+   them.
+
+The test session also removes the `src/**/__pycache__` directories it
+creates. The local hook's install probe runs `python -I` bound to the package
+under test, and `-I` ignores `PYTHONDONTWRITEBYTECODE`; those ignored caches
+are what failed the v0.9.1 tag-stage source check. This changes `tests/`
+only, not the hook.
+
+The remaining review findings are disclosed in
+[KNOWN-ISSUES-v0.10.0](KNOWN-ISSUES-v0.10.0.md).
+
+The engine `src/` tree changes from `ee6716662fe264b5425958f00835567a4ffca4d6`
+to `c02d0c99a6b39a0a3a9f65dfadd28c4395d08310`. The fixed-corpus rule requires the comparison to run
+again after a `src/` change. Claude re-ran it as a same-host differential on
+LAPTOP-01AGNPJU: each of the 3,600 R29 members was checked with the closed
+`ee6716…` candidate tree and with the fixed tree, comparing exit codes and
+whole reports except run metadata. The compared new tree was `b66f10123deb3cb72421f0445daf17dc1c03f154`;
+all 3,600 members gave identical exit codes and identical reports apart from
+run metadata (3,493 exit 0, 105 exit 1 and 2 exit 2 with each tree, no
+timeouts). The `ee6716…` verdict counts equal the closed attempt B candidate
+counts: Python 1,734 pass and 66 block; JS/TS 1,759 pass, 39 block and 2
+engine errors. The final tree adds only the CRLF correction `8839f189`, which
+changes the line table for Python text that still holds a carriage return
+after CRLF normalization; a scan of every changed Python file of all 3,600
+members found none. No outcome moves, so attempt B's movement list, its
+review and Codex's current cost decision carry over unchanged, and no new
+movement goes to the owner list. Raw rows, scripts and the scan are in
+checkwash-lab `bf13bf1a` (`notes/r29-differential-010-claude-20261027/`,
+rows SHA256 `9b04bd886cec8a63cd5fc1a02339593e58110611040f078330c9b91a8582baf9`).
+This differential is in-sample between two candidate trees; it is not native
+Linux, a false-positive rate or a new adjudication.
+
 ## v0.9.1 publication instruction (2026-10-24)
 
 After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:

@@ -1,6 +1,32 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-27 (core repair integration toward 0.10.0; v0.9.0 remains the verified public CLI/Action)
+Updated: 2026-10-27 (Claude takeover: review fixes and the PJU release chain for 0.10.0; v0.9.0 remains the verified public CLI/Action)
+
+## 2026-10-27: Claude takeover, review fixes and PJU release chain
+
+Nelson handed the repository to a Claude Code session on LAPTOP-01AGNPJU:
+「Checkwash 一樣給你」「交接 規劃 都寫在上面了」. The pre-1.0 delegation in
+[RELEASING](docs/RELEASING.md) now runs through that session; it still stops
+before 1.0. Codex's earlier entries below keep their own attribution, and its
+F1/F2 packets from LAPTOP-16NUA5I8 remain failed historical records.
+
+A pre-release review of `ad1ebff7` reproduced three defects, fixed here with
+regression tests: whole-tree worktree listing for paired pytest configs (every
+worktree/Stop check could become an engine error on ignored dependency trees
+or junction cycles), an empty-file rename that skipped the D-177 effective-BASE
+comparison, and `str.splitlines()` line numbering in D-179 proofs. The test
+session now removes the source `__pycache__` it creates, the cause of the
+v0.9.1 tag-stage failure. Remaining findings are in
+[KNOWN-ISSUES-v0.10.0](docs/KNOWN-ISSUES-v0.10.0.md).
+
+The engine `src/` tree is now `c02d0c99a6b39a0a3a9f65dfadd28c4395d08310`.
+A same-host R29 differential on LAPTOP-01AGNPJU found all 3,600 members
+identical between the closed `ee6716662fe2` tree and the fixed tree, so the
+closed movement review and cost decision carry over (checkwash-lab
+`bf13bf1a`). The final PR/main/tag/release-event/public-visitor chain runs on
+LAPTOP-01AGNPJU,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; other platforms remain NOT_RUN.
+1.0 is NOT_MET.
 
 ## 2026-10-27: frozen development evidence and release-protocol preparation
 
