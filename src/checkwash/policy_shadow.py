@@ -53,11 +53,16 @@ def shadow_baseline(change, policy_base):
     """A new winning priority file's selected BASE predecessor, or None.
 
     Inactive lower-priority creations, ordinary edits, deletes and renames
-    keep their old treatment. Empty bytes are an existing policy file.
+    keep their old treatment. Empty bytes are an existing policy file, except
+    an empty file renamed into place: Git pairs empty blobs as renames by
+    default, and the engine already counts that arrival as a creation.
     """
-    if change.before is not None or change.after is None:
+    if change.after is None:
         return None
     path = change.path.replace("\\", "/")
+    renamed_empty = change.before == b"" and (change.old_path or path).replace("\\", "/") != path
+    if change.before is not None and not renamed_empty:
+        return None
     if path not in (".checkwash/config.toml", ".checkwash/allow.toml"):
         return None
     name = path.rsplit("/", 1)[1]
