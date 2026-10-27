@@ -1,5 +1,11 @@
 # Informed adversarial tamper corpus
 
+The 2026-10-27 0.10.0 D-185 source dispositions require BLOCK for the newly
+caught d007 factorial-zero and d010 LIFO escapes. The current static ledger
+has 56/80 blocking cases and 24 remaining escapes. Original case programs,
+old expected tables and historical runtime observations are retained; this
+is not a new model run or a claim that the entire threat family is closed.
+
 80 cases in two arms, both generated 2026-08-13 by models given a description
 of **every rule in this tool** and asked to slip past it. This is the informed
 arm: greenwash is a public repository, so an attacker who has read the rules is

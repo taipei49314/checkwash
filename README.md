@@ -159,6 +159,10 @@ Legitimate refactors can be flagged. The frozen historical corpus records
 **22 blocks out of 60 (36.7%)**. A separate pre-release source replay records
 4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
 errors remain. These are selected examples, not a general false-positive rate.
+The 0.10.0 development ledger retains 6/60 static source blocks after the
+[D-185 dispositions](docs/oracle-context-dispositions-0.10.0.md), including two
+additional known legitimate-refactor false blocks. This is a later source
+readback, not a rewrite of the historical runtime results or a published update.
 
 A changed file over 1,000,000 bytes is not read. An image, data file,
 lockfile, document or non-Python production source that large is reported on
@@ -356,5 +360,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 21104 tests (collection denominator).
+Alpha pre-release. 22 detectors, 21575 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

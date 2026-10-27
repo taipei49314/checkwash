@@ -1,5 +1,12 @@
 # Legitimate-refactor corpus — the false-positive side
 
+The 2026-10-27 0.10.0 D-185 source dispositions now retain six blocking cases
+out of 60, including the additional known legitimate-refactor false blocks
+CASE_020_windows and CASE_029_flatten. This is a static source readback of the
+current ledger, not fresh runtime qualification or a general false-positive
+rate. Full old expected tables and program hashes are retained in
+`tests/compatibility/v010`; historical measurements below keep their dates.
+
 60 test-suite refactors assembled as the historical false-positive arm. Each
 ships a particular bug that the original and refactored tests are meant to catch.
 The execution qualification below checks that claim; human review must still

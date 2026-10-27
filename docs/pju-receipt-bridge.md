@@ -1,5 +1,12 @@
 # PJU receipts and required checks
 
+The current pre-1.0 repair task also supports the exact
+[16NU local route](local-receipt-route-20261027.md), selected from the actual
+Windows hostname. New reports bind the same admitted route across manifests,
+both Action replays and authenticated native prior-stage check headers. The
+historical PJU execution statements below retain their original scope; the
+extension does not relabel 16NU as PJU or claim unexecuted platforms.
+
 Nelson instructed on 2026-10-23: “把 PJU 測試收據接上必過檢查，處理 #561 的 dogfood 阻擋，檢查通過後合併，再繼續收斂剩下的 issue。”
 This implements the standing CheckWash/PJU rule recorded in
 [EC T-606 POLICY](https://github.com/taipei49314/estate-consolidation/blob/e9ce2342fc4834f5b5d580461b26f8784b64481a/POLICY.md).
