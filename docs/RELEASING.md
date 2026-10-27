@@ -35,9 +35,10 @@ technical source hashes, job bounds and case judgments are Codex decisions;
 the short quote does not claim Nelson typed them or personally reviewed each
 case. The stop before 1.0 and the normal publication requirements remain.
 
-For this 0.10.0 continuation, Codex interprets "1.0 before publication is my
-only hold; advance the rest autonomously" as delegating the concrete pre-1.0
-publication operations, including ordinary deployment review through the
+For this 0.10.0 continuation, Codex applies the Chinese instruction above
+(paraphrased in English: stop before 1.0 publication and otherwise advance
+autonomously) as delegating the concrete pre-1.0 publication operations,
+including ordinary deployment review through the
 authenticated eligible maintainer account after all required evidence and
 asset checks pass. This version-specific interpretation supersedes the
 general procedure's older agent-session prohibition for that review only.
@@ -62,15 +63,32 @@ two identical exit2/not-analysed members, one partial and6,553 unattempted
 members keep their historical meanings. This is not history PASS or a resumed
 old grant. #419 remains open.
 
-The separate mandatory R29 is NOT_RUN at this preparation checkpoint. A new
-fixed-source/venue/bounds proposal is under independent review; none of its
-historical CLI calls is admitted by this paragraph. The tag still waits for
-the actual complete comparison and required movement review. D-186's native
-published-baseline repair leaves the real v0.9.0 pins and all existing tags
-intact. The [candidate guide](releases/v0.10.0-public-launch.md) distinguishes
-the completed9678 development diagnostics from the still-pending final stage
-chain. No current tag, Release, PyPI approval or public-byte verification is
-claimed here.
+The separately admitted mandatory R29 attempt B completed 3,600 paired
+members, 7,200 historical CLI calls and all 11,203 native Capture records.
+The exact sealed generic and strict audits returned zero, and root accepted
+mechanical completion with known cleanup only. Python has 1,734 pass/pass,
+48 block/block and 18 pass/block; JS/TS has 1,759 pass/pass, 38 block/block,
+one error/block and two unchanged error/error. All counts are in-sample.
+The [comparison record](r29-comparison-0.10.0.md) retains original sources,
+manifest/admission, raw/audit/manual hashes, omitted/unknown coverage and the
+unexplained 109.82585-second guest-monotonic versus Windows-wall interval
+difference. No clock equality, tolerance or grace period is introduced.
+Attempt A remains consumed and failed before corpus/history.
+
+The final join of all19 required movements and Codex's source-reviewed
+current0.10 cost/residual-scope decision are closed. All87 candidate HIGH
+occurrences,16 unchanged repair-credit WARNs and unknown coverage remain.
+The decision accepts the disclosed conservative blocking costs for0.10,
+without a universal true/false adjudication or full-coverage claim; it closes
+this exact engine's R29 comparison/movement requirement, not the later formal
+release gates. R29 uses actual public v0.9.0 against the frozen9678 candidate,
+src tree `ee6716662fe264b5425958f00835567a4ffca4d6`. A docs-only final freeze
+with that exact src tree can retain this engine applicability, while still
+requiring its own whole-head stage evidence. D-186 leaves the genuine v0.9.0
+pins and existing tags intact. The [candidate guide](releases/v0.10.0-public-launch.md)
+keeps formal final PR/main/tag/release-event/public-visitor gates pending.
+No current tag, Release, PyPI approval, public-byte verification or 1.0 readiness
+is claimed here; 1.0 remains NOT_MET and requires Nelson's decision.
 
 ## v0.9.1 publication instruction (2026-10-24)
 

@@ -23,8 +23,20 @@ separately accepts three source-reviewed D176 false blocks/four occurrences
 and the disclosed remaining-history risk for 0.10 under current delegation.
 The old R4 stays partial and consumed, including its parse omissions and
 6,554 incomplete comparisons. The new six-call targeted observation is not
-a resumed census. The mandatory fixed two-set R29 remains NOT_RUN here;
-its new source-bound execution proposal is under review, not admitted.
+a resumed census. The separately admitted R29 attempt B completed all 3,600
+pairs and 7,200 historical CLI calls. Its sealed generic and strict audits
+returned zero; root accepted mechanical closure only, retaining the unexplained
+109.82585-second cross-clock difference. Python has 1,734 pass/pass, 48
+block/block and 18 pass/block; JS/TS has 1,759 pass/pass, 38 block/block,
+one error/block and two unchanged error/error. The exact final 19-movement join
+and delegated current0.10 cost/residual-scope decision are closed in the
+[source-bound comparison record](docs/r29-comparison-0.10.0.md). All87 HIGH
+occurrences and unknown coverage remain literal; this does not label every
+finding true/false or prove full coverage. This is
+in-sample evidence, not a false-positive rate or publication acceptance.
+Engine applicability remains exact src tree
+`ee6716662fe264b5425958f00835567a4ffca4d6`; the final whole-head PR/main/tag/
+release-event/public-visitor chain remains fresh and pending. 1.0 is NOT_MET.
 
 The [0.10 candidate guide](docs/releases/v0.10.0-public-launch.md) distinguishes
 these checkpoints from final PR/main/tag/release/public-visitor acceptance.

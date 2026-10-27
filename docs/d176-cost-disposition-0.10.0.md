@@ -5,9 +5,10 @@ This is a new, source-bound Codex decision under Nelson's current continuation:
 > 照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推
 
 Codex interprets this as authority to complete the pre-1.0 work and make the
-concrete version-specific decisions below after independent review. Nelson
-did not personally review these three cases or type the technical hashes and
-limits. Normal release gates remain; the decision does not authorize 1.0.
+concrete version-specific decisions below after independent review. This
+record does not claim Nelson personally reviewed these three cases or typed
+the technical hashes and limits. Normal release gates remain; the decision
+does not authorize 1.0.
 
 ## New targeted observation and source review
 
@@ -51,12 +52,24 @@ returned-envelope members retain seven omitted-file occurrences. One partial plu
 6,553 unattempted members leave 6,554 incomplete comparisons in that old run.
 Only three members of its completed prefix have this new targeted current
 replay; the other 878 did not gain a current observation through this job.
-Future R29 overlap is joined by exact member and source separately. A new
-observation cannot rewrite the old run or turn omitted files into analysis.
+The actual R29 [comparison record](r29-comparison-0.10.0.md) joins exact
+member/parent/source identities. One of nine retained old identity fragments
+occurs in B: Apollo8a51, old ordinal593, still native exit2/not analysed.
+The full old ledger is unavailable, so further cross-run overlap remains
+unknown. New observations cannot rewrite the old run or turn omissions into
+analysis; this diagnostic still establishes no current observation for the
+other878 through its own six calls.
 
 This is a release-specific risk decision, not history PASS, a completed
 census, an adjudicated rate, a standing waiver, or a resumed R1/R2/R3/R4 grant.
-The mandatory two-set R29 remains required and **NOT_RUN** at this checkpoint.
+The separately admitted two-set R29 attempt B completed 3,600 pairs/7,200
+historical CLI calls. Both sealed audits and root's explicit manual review
+accept mechanical completion only, with the unexplained cross-clock difference
+retained. Its separate final19-movement join and delegated current0.10
+cost/residual-scope decision are now closed, retaining all87 native HIGH
+occurrences and unknown coverage. That decision does not establish full
+coverage or waive formal release gates; this D176 decision does not substitute
+for it.
 The exact engine applicability is `src/` tree
 `ee6716662fe264b5425958f00835567a4ffca4d6`, with only the documented sole
 version-literal equivalence permitted. Later tool/document sources need their
