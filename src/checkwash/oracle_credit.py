@@ -78,7 +78,8 @@ def _rows(side):
     return result
 
 
-def _python_context(source, units, path, startup, needed):
+def _python_context(source, units, path, startup, needed, source_reader=None, source_searcher=None,
+                    source_path_lister=None):
     try:
         text = source.decode("utf-8-sig").replace("\r\n", "\n")
         tree = ast.parse(text)
@@ -89,7 +90,7 @@ def _python_context(source, units, path, startup, needed):
     if sum(1 for _ in ast.walk(tree)) > 16384:
         return
     if any((isinstance(node, ast.Name) and node.id in {
-                "request", "__name__", "__file__", "__package__", "__spec__", "__loader__",
+                "__name__", "__file__", "__package__", "__spec__", "__loader__",
                 "__builtins__", "globals", "locals", "vars", "eval", "exec"})
            or (isinstance(node, ast.Attribute) and node.attr in {
                 "__name__", "__file__", "__module__", "__qualname__", "__code__", "__globals__", "__closure__",
@@ -105,6 +106,17 @@ def _python_context(source, units, path, startup, needed):
              if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) }
     selected = {id(nodes[side.span]) for _name, side in units if side.span in nodes}
     test_names = {nodes[side.span].name for _name, side in units if side.span in nodes}
+    fixture_context = None
+    if source_reader is not None and any(isinstance(node, ast.Name) and node.id == "request"
+                                         for node in ast.walk(tree)):
+        from checkwash.oracle_fixture_credit import prove_inactive_fixtures
+        functions = {name: nodes[side.span] for name, side in units if side.span in nodes}
+        fixture_context = prove_inactive_fixtures(source, tree, functions, path=path, read=source_reader,
+                                                search=source_searcher, path_lister=source_path_lister)
+    allowed_request = fixture_context.request_node_ids if fixture_context is not None else frozenset()
+    if any(isinstance(node, ast.Name) and node.id == "request" and id(node) not in allowed_request
+           for node in ast.walk(tree)):
+        return  # Unproved request/helper/default identity still supplies no credit.
 
     def context_statements(statements):
         result = []
@@ -131,7 +143,8 @@ def _python_context(source, units, path, startup, needed):
                     clone.level = 0
                 result.append(_dump(clone))
             elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if statement.decorator_list or any(not _literal(default) for default in (
+                inactive = fixture_context is not None and id(statement) in fixture_context.fixture_node_ids
+                if (statement.decorator_list and not inactive) or any(not _literal(default) for default in (
                         *statement.args.defaults, *(d for d in statement.args.kw_defaults if d is not None))):
                     return None
                 result.append(_dump(statement))
@@ -149,6 +162,12 @@ def _python_context(source, units, path, startup, needed):
     for qualname, side in units:
         if needed is not None and qualname not in needed:
             continue
+        fixture_scope = ()
+        if fixture_context is not None:
+            certificate = fixture_context.certificates.get(qualname)
+            if not valid_proof(certificate):
+                continue  # Another unit's inactive fixture never authorizes this unit.
+            fixture_scope = (("inactive-pytest-fixtures-v1", certificate),)
         function = nodes.get(side.span)
         if function is None or not function.name.startswith("test"):
             continue
@@ -185,7 +204,7 @@ def _python_context(source, units, path, startup, needed):
             if not any("id='pytest'" in item for item in others):
                 own_environment = others
         scope = (own_environment, startup, class_name, _dump(args), [_dump(d) for d in function.decorator_list],
-                 [asdict(row) for row in side.param_rows], side.param_cases)
+                 [asdict(row) for row in side.param_rows], side.param_cases, *fixture_scope)
         side.oracle_context = _key("python-unit-v1", scope, _dump(declaration))
         if fixture_parameters:
             continue  # exact standard-fixture smoke relocation only, no text credit.
@@ -202,7 +221,7 @@ def _python_context(source, units, path, startup, needed):
                    for part in [*function.body, *other_decorators] for n in ast.walk(part)):
             assertion_environment = [item for item in environment if item != pytest_import]
         assertion_scope = (assertion_environment, startup, class_name, _dump(concrete_args),
-                           [_dump(d) for d in other_decorators])
+                           [_dump(d) for d in other_decorators], *fixture_scope)
         rows = _rows(side)
         prefix = []
         from checkwash.frontends.python.snapshot_context import _literal_expression
@@ -351,7 +370,8 @@ def _javascript_context(source, units, path, needed):
                     [asdict(row) for row in side.param_rows], side.param_cases)
 
 
-def mark_contexts(source, units, path, language, *, startup_known=True, startup="", needed=None):
+def mark_contexts(source, units, path, language, *, startup_known=True, startup="", needed=None,
+                  source_reader=None, source_searcher=None, source_path_lister=None):
     """Attach optional proofs; missing source/setup knowledge leaves them empty."""
     for _name, side in units:
         side.oracle_context = ""
@@ -360,7 +380,7 @@ def mark_contexts(source, units, path, language, *, startup_known=True, startup=
         return
     try:
         if language == "python":
-            _python_context(source, units, path, startup, needed)
+            _python_context(source, units, path, startup, needed, source_reader, source_searcher, source_path_lister)
         elif path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
             _javascript_context(source, units, path, needed)
     except (RecursionError, MemoryError, ValueError, TypeError):

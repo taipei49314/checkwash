@@ -1709,6 +1709,158 @@ def build_ir(
 
     relocation_sources = {change.path.replace("\\", "/"): (change.before, change.after) for change in expanded_changes}
     relocation_initializers = {}
+    relocation_context_sources = {}
+    relocation_context_bytes = 0
+    relocation_context_unknown = object()
+    relocation_context_inventory = {}
+    relocation_context_paths = {}
+    relocation_side_observations = {}
+    rename_sources = {(change.old_path or change.path).replace("\\", "/") for change in changes
+                      if change.old_path and change.old_path.replace("\\", "/") != change.path.replace("\\", "/")}
+    for change in changes:
+        path = change.path.replace("\\", "/")
+        old = (change.old_path or path).replace("\\", "/")
+        if old != path:
+            observations = ((old, 0, change.before, False), (path, 1, change.after, False),
+                            (path, 0, None, True), (old, 1, None, True))
+        else:
+            # An added record can describe a recreated rename source. Its
+            # missing local before field does not erase the rename's bytes.
+            inferred = change.status == "added" and path in rename_sources and change.before is None
+            observations = ((path, 0, change.before, inferred), (path, 1, change.after, False))
+        for candidate, side, data, inferred in observations:
+            relocation_side_observations.setdefault((candidate, side), []).append((data, inferred))
+
+    def _relocation_observed_source(candidate, side):
+        observations = relocation_side_observations[(candidate, side)]
+        actual = [data for data, inferred in observations if not inferred]
+        if not actual:
+            return None
+        value = actual[0]
+        if any(data != value for data in actual[1:]):
+            raise ValueError("conflicting optional oracle-context source observations")
+        return value
+
+    def _relocation_context_source(candidate, side):
+        """Optional proof reads use their actual side; unchanged paths use HEAD."""
+        nonlocal relocation_context_bytes
+        if (not isinstance(candidate, str) or not candidate or "\\" in candidate or ":" in candidate
+                or "\0" in candidate or any(part in {"", ".", ".."} for part in candidate.split("/"))):
+            raise ValueError("invalid optional oracle-context source path")
+        if root_reader is None:
+            raise ValueError("optional oracle context requires a strict snapshot")
+        changed = (candidate, side) in relocation_side_observations
+        key = (candidate, side if changed else -1)
+        if key not in relocation_context_sources:
+            if len(relocation_context_sources) >= 256:
+                raise ValueError("optional oracle-context source read budget exhausted")
+            # Charge attempts before calling an external reader. A refused,
+            # invalid or oversized path remains unknown and is never reread.
+            relocation_context_sources[key] = relocation_context_unknown
+            if relocation_context_bytes >= 2 * 1024 * 1024:
+                raise ValueError("optional oracle-context source byte budget exhausted")
+            data = _relocation_observed_source(candidate, side) if changed else root_reader(candidate)
+            if data is not None and not isinstance(data, bytes):
+                raise ValueError("optional oracle-context source is unknown or too large")
+            if data is not None:
+                relocation_context_bytes += len(data)
+                if len(data) > 65536:
+                    raise ValueError("optional oracle-context source is unknown or too large")
+                if relocation_context_bytes > 2 * 1024 * 1024:
+                    raise ValueError("optional oracle-context source byte budget exhausted")
+                if report_context is not None:
+                    for recorded_side in ((0, 1) if key[1] == -1 else (side,)):
+                        report_context.snapshot(candidate, recorded_side, data)
+            relocation_context_sources[key] = data
+        if relocation_context_sources[key] is relocation_context_unknown:
+            raise ValueError("optional oracle-context source remains unknown")
+        return relocation_context_sources[key]
+
+    def _relocation_context_search(needles, side):
+        """Reconstruct the complete nonempty Python inventory on the actual side."""
+        if needles != [""] or root_searcher is None:
+            raise ValueError("optional oracle context requires a strict source inventory")
+        if side not in relocation_context_inventory:
+            relocation_context_inventory[side] = relocation_context_unknown
+            if -1 not in relocation_context_inventory:
+                # Reserve the failed state before discovery: a failure must
+                # not repeatedly invoke an external snapshot searcher.
+                relocation_context_inventory[-1] = relocation_context_unknown
+                paths = root_searcher([""])
+                if not isinstance(paths, (list, tuple)) or len(paths) >= 64:
+                    raise ValueError("optional oracle-context inventory is unknown or too large")
+                normalized = set()
+                for candidate in paths:
+                    if not isinstance(candidate, str):
+                        raise ValueError("invalid optional oracle-context inventory path")
+                    candidate = candidate.replace("\\", "/")
+                    if (not candidate.endswith(".py") or ":" in candidate or "\0" in candidate
+                            or any(part in {"", ".", ".."} or any(ord(c) < 32 for c in part)
+                                   for part in candidate.split("/")) or candidate in normalized):
+                        raise ValueError("invalid optional oracle-context inventory path")
+                    normalized.add(candidate)
+                relocation_context_inventory[-1] = frozenset(normalized)
+            paths = relocation_context_inventory[-1]
+            if paths is relocation_context_unknown:
+                raise ValueError("optional oracle-context inventory remains unknown")
+            selected = set(paths)
+            # HEAD discovery alone is never BASE authority. Observed source
+            # records account for additions, deletions and both rename ends;
+            # conflicts withhold this optional proof independently of order.
+            changed_paths = {candidate for candidate, observed_side in relocation_side_observations
+                             if observed_side == side and candidate.endswith(".py")}
+            for candidate in sorted(changed_paths):
+                data = _relocation_context_source(candidate, side)
+                selected.discard(candidate)
+                if data:
+                    selected.add(candidate)
+            if len(selected) >= 64:
+                raise ValueError("optional oracle-context inventory is too large")
+            relocation_context_inventory[side] = tuple(sorted(selected))
+        if relocation_context_inventory[side] is relocation_context_unknown:
+            raise ValueError("optional oracle-context inventory remains unknown")
+        return list(relocation_context_inventory[side])
+
+    def _relocation_context_path_list(side):
+        """Complete side-correct entry names also cover non-Python aliases."""
+        if root_path_lister is None:
+            raise ValueError("optional oracle context requires complete path metadata")
+        if side not in relocation_context_paths:
+            relocation_context_paths[side] = relocation_context_unknown
+            if -1 not in relocation_context_paths:
+                relocation_context_paths[-1] = relocation_context_unknown
+                paths = root_path_lister()
+                if not isinstance(paths, (list, tuple)) or len(paths) > 512:
+                    raise ValueError("optional oracle-context path metadata is unknown or too large")
+                normalized = set()
+                for candidate in paths:
+                    if not isinstance(candidate, str):
+                        raise ValueError("invalid optional oracle-context metadata path")
+                    candidate = candidate.replace("\\", "/")
+                    if (":" in candidate or any(part in {"", ".", ".."} or any(ord(c) < 32 for c in part)
+                                                for part in candidate.split("/")) or candidate in normalized):
+                        raise ValueError("invalid optional oracle-context metadata path")
+                    normalized.add(candidate)
+                relocation_context_paths[-1] = frozenset(normalized)
+            paths = relocation_context_paths[-1]
+            if paths is relocation_context_unknown:
+                raise ValueError("optional oracle-context path metadata remains unknown")
+            selected = set(paths)
+            for candidate, observed_side in sorted(relocation_side_observations):
+                if observed_side != side:
+                    continue
+                data = _relocation_observed_source(candidate, side)
+                if data is not None and not isinstance(data, bytes):
+                    raise ValueError("optional oracle-context entry presence is unknown")
+                selected.discard(candidate)
+                if data is not None:  # Empty files still exist in the complete entry inventory.
+                    selected.add(candidate)
+            if len(selected) > 512:
+                raise ValueError("optional oracle-context path metadata is too large")
+            relocation_context_paths[side] = tuple(sorted(selected))
+        if relocation_context_paths[side] is relocation_context_unknown:
+            raise ValueError("optional oracle-context path metadata remains unknown")
+        return list(relocation_context_paths[side])
 
     def _relocation_startup(path, side, data):
         if data is None:
@@ -1764,7 +1916,13 @@ def build_ir(
                      if getattr(unit, field) is not None]
             startup = _relocation_startup(file.path, side_index, data) if file.language == "python" else ""
             mark_contexts(data, sides, file.path, file.language, startup_known=startup is not None,
-                          startup=startup, needed=needed)
+                          startup=startup, needed=needed,
+                          source_reader=(lambda candidate, side=side_index: _relocation_context_source(candidate, side))
+                          if root_reader is not None else None,
+                          source_searcher=(lambda needles, side=side_index: _relocation_context_search(needles, side))
+                          if root_searcher is not None else None,
+                          source_path_lister=(lambda side=side_index: _relocation_context_path_list(side))
+                          if root_path_lister is not None else None)
 
     # Move credits, counted after the constant environments exist because
     # liveness now consults them. Assertions (and whole units) landing in a
@@ -1870,7 +2028,13 @@ def build_ir(
                 consts = _gate_constants(parsed, after_by_path, head_reader)
                 startup = _relocation_startup(path, 1, data)
                 mark_contexts(data, [(pu.qualname, pu.side) for pu in parsed.units], path, "python",
-                              startup_known=startup is not None, startup=startup)
+                              startup_known=startup is not None, startup=startup,
+                              source_reader=(lambda candidate: _relocation_context_source(candidate, 1))
+                              if root_reader is not None else None,
+                              source_searcher=(lambda needles: _relocation_context_search(needles, 1))
+                              if root_searcher is not None else None,
+                              source_path_lister=(lambda: _relocation_context_path_list(1))
+                              if root_path_lister is not None else None)
                 for pu in parsed.units:
                     if pu.side.oracle_context in wanted and unit_is_live(pu.side, consts):
                         found.add(pu.side.oracle_context)
