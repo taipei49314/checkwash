@@ -152,6 +152,8 @@ class _Program:
             self.take(")")
             self.take(";")
             assertions += 1
+            if assertions > 128:
+                raise _Unknown  # D-179's per-unit statement budget is independent of tokens.
         self.take("}")
         unit_end = self.take(")")[2]
         self.take(";")

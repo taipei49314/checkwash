@@ -243,3 +243,19 @@ def test_closed_source_proof_budget_does_not_expand_to_large_or_multi_unit_progr
     assert proof(IMPORT + producers + UNIT.replace("total()", "producer0()")) is None
     unit = UNIT.replace("expect(total()).toBe(5);", "expect(total()).toBe(5);" * 512)
     assert proof(IMPORT + PRODUCER + unit) is None
+
+
+@pytest.mark.parametrize("count", [128, 129])
+@pytest.mark.parametrize("freeze", [False, True])
+def test_statement_budget_has_an_independent_128_boundary(count, freeze):
+    unit = UNIT.replace("expect(total()).toBe(5);", "expect(total()).toBe(5);" * count)
+    before, after = IMPORT + PRODUCER + unit, IMPORT + PRODUCER + wrapped(unit)
+    assert (proof(before) is not None) == (count == 128)
+    assert (proof(after) is not None) == (count == 128)
+    ir, findings, verdict = move(before, after, freeze=freeze)
+    assert len(ir.files[0].units[0].before.assertions) == count
+    assert verdict == ("pass" if count == 128 else "block")
+    assert [(finding.rule, finding.severity) for finding in findings] == [
+        ("TEST_DISABLED", "info" if count == 128 else "high")]
+    assert ("ASSERTION_MOVED" in findings[0].deescalators) == (count == 128)
+    assert ("ORACLE_FREEZE" in findings[0].escalators) == (count == 129 and freeze)
