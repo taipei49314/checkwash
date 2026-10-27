@@ -1,0 +1,10 @@
+fix: prove inactive function-fixture relocation (#358)
+
+Require side-correct strict source, Python inventory and full entry metadata.
+Certify plain units only after closed sibling, fixture and producer proofs;
+unknown startup, protocol, alias, plugin or binding evidence earns no credit.
+
+Validation: PJU Python 3.11.9 development targeted suite 323 passed / exit0;
+independent bounded source review has no remaining identified blocker.
+Full suite and source/wheel/pyz qualification at this commit: NOT_RUN.
+Protected gates and existing expected outputs unchanged; no release acceptance.

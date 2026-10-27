@@ -1,0 +1,11 @@
+{
+  "capture_origin_sha256": "63b6bab97a60d37beef8b73dd779c25f0f89ad4faaeed034d9af733e51457fb6",
+  "capture_derived_sha256": "8d83df38d957a2aa213cfcb6980567e3f48ba06cf4721388170cde165c6bcf63",
+  "selfdogfood_origin_sha256": "4bb7d18dbd10f3dc04b7470b5890d114399340ffaecba865eb5fd2bd4e38817f",
+  "selfdogfood_derived_sha256": "1018a931d8959264889a07ca5ebbec5d1a4dc84bbc58bf29a87742b5c5972766",
+  "changes": [
+    "exact inactive-fixture repo and fresh source pin",
+    "fresh fixed temp prefix",
+    "truthful controller description"
+  ]
+}

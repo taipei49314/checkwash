@@ -1,0 +1,44 @@
+FFF....................................................................  [100%]
+================================== FAILURES ===================================
+______ test_closed_unmarked_move_preserves_the_original_358_expectation _______
+
+    def test_closed_unmarked_move_preserves_the_original_358_expectation():
+        _ir, findings, verdict = moved()
+>       assert verdict == "pass"
+E       AssertionError: assert 'block' == 'pass'
+E         
+E         - pass
+E         + block
+
+..\checkwash-inactive-fixture\tests\test_inactive_fixture_oracle_credit.py:76: AssertionError
+_____ test_one_inactive_fixture_can_certify_each_unmarked_unit_separately _____
+
+    def test_one_inactive_fixture_can_certify_each_unmarked_unit_separately():
+        units = UNIT + "\ndef test_second():\n    assert total() == 78.75\n"
+        _ir, findings, verdict = moved(before_tests=units)
+>       assert verdict == "pass"
+E       AssertionError: assert 'block' == 'pass'
+E         
+E         - pass
+E         + block
+
+..\checkwash-inactive-fixture\tests\test_inactive_fixture_oracle_credit.py:85: AssertionError
+____ test_a_live_sibling_cannot_lend_its_certificate_to_a_newly_slow_unit _____
+
+    def test_a_live_sibling_cannot_lend_its_certificate_to_a_newly_slow_unit():
+        units = UNIT + "\ndef test_second():\n    assert total() == 78.75\n"
+        arrival = UNIT + "\n@pytest.mark.slow\ndef test_second():\n    assert total() == 78.75\n"
+        result = moved(before_tests=units, after_tests=arrival)
+        assert_blocked(result, unit="test_second")
+>       assert any(finding.unit == "test_total" and finding.severity == "info"
+                   and "ASSERTION_MOVED" in finding.deescalators
+                   for finding in result[1] if finding.rule == "TEST_DISABLED")
+E       assert False
+E        +  where False = any(<generator object test_a_live_sibling_cannot_lend_its_certificate_to_a_newly_slow_unit.<locals>.<genexpr> at 0x0000017C19EC9BE0>)
+
+..\checkwash-inactive-fixture\tests\test_inactive_fixture_oracle_credit.py:97: AssertionError
+=========================== short test summary info ===========================
+FAILED ::test_closed_unmarked_move_preserves_the_original_358_expectation - A...
+FAILED ::test_one_inactive_fixture_can_certify_each_unmarked_unit_separately
+FAILED ::test_a_live_sibling_cannot_lend_its_certificate_to_a_newly_slow_unit
+3 failed, 68 passed in 1.89s

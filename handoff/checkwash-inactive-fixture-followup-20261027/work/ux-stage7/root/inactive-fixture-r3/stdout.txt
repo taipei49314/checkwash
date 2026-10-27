@@ -1,0 +1,35 @@
+...........................................F............................ [ 22%]
+........................................................................ [ 44%]
+........................................................................ [ 66%]
+........................................................................ [ 89%]
+...................................                                      [100%]
+================================== FAILURES ===================================
+_____ test_a_bare_parametrize_sibling_cannot_certify_the_unmarked_arrival _____
+
+    def test_a_bare_parametrize_sibling_cannot_certify_the_unmarked_arrival():
+        arrival = (UNIT + "\n@pytest.mark.parametrize\ndef test_second():\n"
+                   "    assert total() + 0 == 78.75\n")
+        # This marker lacks the mandatory argnames/argvalues. Collection of the
+        # sibling is not established just because its own assertion is closed.
+>       assert_blocked(moved(before_tests=UNIT, after_tests=arrival), unit="test_total")
+
+tests\test_inactive_fixture_oracle_credit.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+result = (IR(base='base', head='head', files=[FileIR(path='tests/test_billing.py', language='python', role='test', status='modi...f95', allowlisted=False, strength_drop=None, strength_after=None, subject_changed=None, shape='unit_removed')], 'pass')
+unit = 'test_total'
+
+    def assert_blocked(result, *, unit="test_total"):
+        _ir, findings, verdict = result
+        disabled = [finding for finding in findings
+                    if finding.rule == "TEST_DISABLED" and finding.path == OLD and finding.unit == unit]
+>       assert verdict == "block"
+E       AssertionError: assert 'pass' == 'block'
+E         
+E         - block
+E         + pass
+
+tests\test_inactive_fixture_oracle_credit.py:78: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_inactive_fixture_oracle_credit.py::test_a_bare_parametrize_sibling_cannot_certify_the_unmarked_arrival
+1 failed, 322 passed in 3.66s

@@ -1,0 +1,43 @@
+{
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "parent": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "branch": "fix/inactive-fixture-oracle-proof-20261027",
+  "changed_files": [
+    {
+      "path": "src/checkwash/engine.py",
+      "bytes": 115599,
+      "sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff"
+    },
+    {
+      "path": "src/checkwash/oracle_credit.py",
+      "bytes": 23030,
+      "sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7"
+    },
+    {
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "bytes": 30663,
+      "sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de"
+    },
+    {
+      "path": "tests/test_inactive_fixture_context_reader.py",
+      "bytes": 15495,
+      "sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2"
+    },
+    {
+      "path": "tests/test_inactive_fixture_oracle_credit.py",
+      "bytes": 17916,
+      "sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80"
+    },
+    {
+      "path": "tests/test_issue358_own_mark_guards.py",
+      "bytes": 18175,
+      "sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b"
+    }
+  ],
+  "physical_source_unchanged_from_development_r4": true,
+  "development_input_manifest_sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732",
+  "host": "LAPTOP-01AGNPJU",
+  "commit_hooks": "EMPTY_OWNED_DIRECTORY_MANUAL_SELFDOGFOOD_PENDING",
+  "release_acceptance": false,
+  "time": "2026-10-27T00:36:47.691180+00:00"
+}

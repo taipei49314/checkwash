@@ -1,0 +1,30 @@
+--- r1/tests/test_inactive_fixture_oracle_credit.py
++++ r2/tests/test_inactive_fixture_oracle_credit.py
+@@ -129,7 +129,18 @@
+ ])
+ def test_two_pure_producer_sources_are_not_the_same_source_certificate(after):
+     change = FileChange(PRODUCER, "modified", APP[PRODUCER], after)
+-    assert_blocked(moved(changed_files=[change]))
++    ir, findings, _verdict = moved(changed_files=[change])
++    disabled = [finding for finding in findings
++                if finding.rule == "TEST_DISABLED" and finding.path == OLD and finding.unit == "test_total"]
++    assert disabled
++    assert all(not MOVE_CREDIT.intersection(finding.deescalators) for finding in disabled)
++    before = next(unit.before for file in ir.files if file.path == OLD
++                  for unit in file.units if unit.qualname == "test_total" and unit.before is not None)
++    arrival = next(unit.after for file in ir.files if file.path == NEW
++                   for unit in file.units if unit.qualname == "test_total" and unit.after is not None)
++    assert not before.oracle_context or not arrival.oracle_context or before.oracle_context != arrival.oracle_context
++    # D1 repair evidence for the changed production source is independent
++    # of D2 relocation proof; its existing verdict/de-escalation is retained.
+ 
+ 
+ @pytest.mark.parametrize("path", ["app/__init__.py", "tests/__init__.py", "__init__.py"])
+@@ -170,6 +181,7 @@
+     GATE.replace("    if request", "    touch()\n    if request"),
+     GATE.replace("        pytest.skip('slow tests are off')", "        pytest.skip('slow tests are off')\n    touch()"),
+     GATE.replace("        pytest.skip('slow tests are off')", "        yield 1"),
++    GATE.replace("        pytest.skip('slow tests are off')", "        yield from ()"),
+     "@other\n" + GATE,
+     GATE.replace("autouse=True", "autouse=True, scope='module'"),
+     GATE.replace("autouse=True", "autouse=True, scope='class'"),

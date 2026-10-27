@@ -1,0 +1,88 @@
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/oracle_fixture_credit.py/-/8b79769e2552",
+      "message": "broad exception handler added (exceptExceptionasexc:)",
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/oracle_fixture_credit.py/-/8b79769e2552",
+      "message": "broad exception handler added (exceptExceptionasexc:)",
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/oracle_fixture_credit.py/-/8b79769e2552",
+      "message": "broad exception handler added (exceptExceptionasexc:)",
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    }
+  ],
+  "run": {
+    "base": "fbc9374d",
+    "checkwash_version": "0.10.0",
+    "head": "1be28ce5"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "info": 0,
+    "warn": 3
+  },
+  "verdict": "pass"
+}

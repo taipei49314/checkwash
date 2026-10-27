@@ -1,0 +1,488 @@
+"""Plan/prepare one frozen diagnostic supplement; publish only a reviewed digest.
+
+No product/fixture/test is imported or run. Signed stage5 metadata controllers
+provide the unchanged privacy and Git/source guards. No qualification is rerun.
+"""
+from __future__ import annotations
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import sys
+import xml.etree.ElementTree as ET
+import zipfile
+
+HERE = Path(__file__).resolve().parent
+SESSION = HERE.parents[2]
+STAGE = SESSION / "work/ux-stage7"
+OUT = SESSION / "outputs/checkwash-inactive-fixture-followup-20261027"
+SOURCE = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+CANDIDATE = "1be28ce5de72dcb617818077aaf11e3b1cf7a976"
+CANDIDATE_REPO = SESSION / "work/checkwash-inactive-fixture"
+CANDIDATE_GITDIR = Path("C:/Users/nelson/dev/checkwash/.git/worktrees/checkwash-inactive-fixture")
+CANDIDATE_INPUTS = SESSION / "work/ux-stage7/final/inactive-fixture-fixed-targeted-r1/input-hashes.json"
+CANDIDATE_INPUTS_SHA256 = "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732"
+LIVE_FULL_SUITE = "work/ux-stage7/final/inactive-fixture-full-suite-311-r1"
+PARENT = "4fc76cca99b4f19dedd26ee94da202daf85d5142"
+BRANCH = "handoff/core-010-pju-20261027-8a8941dc"
+PREFIX = "handoff/checkwash-inactive-fixture-followup-20261027"
+PURPOSE = "COMMITTED_INACTIVE_FIXTURE_FOLLOWUP_BACKUP_NOT_ACCEPTANCE_NOT_RELEASE"
+HELPERS = {
+    "privacy": ("work/ux-stage5/checkpoint-pack/pack_checkpoint.py",
+                "ab1ab82cb38f8271a7b8bcbded31f35cc7f43e752a1e5ed7c8c0b9aba2a08928"),
+    "publisher": ("work/ux-stage5/checkpoint-pack/publish_checkpoint.py",
+                  "9b559a07f3e46fdb2b4bf8614a06c9aa135d7bb5aafb37b60bba9f6a4be4b7be"),
+}
+EXCLUDED = {"checkpoint-pack", ".git", ".venv", "venv", "site-packages",
+            "__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache",
+            "node_modules", "tmp", "temp", "owned-tmp", "pytest-temp", "runtime",
+            "runs", "cache", "caches", "temps"}
+EXPORT_SUFFIXES = {".md", ".json", ".patch", ".txt"}
+MAX_FILE = 16 * 1024 * 1024
+MAX_TOTAL = 64 * 1024 * 1024
+
+
+def require(value, message):
+    if not value:
+        raise ValueError(message)
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def encoded(value):
+    return (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+
+
+def read_regular(path):
+    path = Path(os.path.abspath(path))
+    require(path.is_relative_to(SESSION), "input outside this task")
+    current = SESSION
+    for part in (None,) + path.relative_to(SESSION).parts:
+        if part is not None:
+            current /= part
+        info = current.lstat()
+        require(not stat.S_ISLNK(info.st_mode) and not getattr(info, "st_file_attributes", 0) & 1024,
+                "link/reparse input refused")
+        require(stat.S_ISDIR(info.st_mode) if current != path else stat.S_ISREG(info.st_mode),
+                "nonregular input refused")
+    before = path.stat()
+    require(before.st_size <= MAX_FILE, "diagnostic input exceeds16MiB")
+    raw = path.read_bytes()
+    after = path.stat()
+    require((before.st_size, before.st_mtime_ns, before.st_ino) ==
+            (after.st_size, after.st_mtime_ns, after.st_ino) and len(raw) == before.st_size,
+            "diagnostic input changed during read")
+    return raw
+
+
+def helpers():
+    result = {}
+    for kind, (name, expected) in HELPERS.items():
+        path = SESSION / name
+        raw = read_regular(path)
+        require(sha(raw) == expected, "reviewed metadata helper changed: " + kind)
+        # Execute exactly the already reviewed metadata bytes, not a later reread.
+        # The __main__ CLI guard stays false; these helpers import only stdlib.
+        namespace = {"__name__": "signed_diagnostic_metadata_" + kind, "__file__": str(path)}
+        exec(compile(raw, str(path), "exec"), namespace)
+        result[kind] = namespace
+    return result
+
+
+def content_guard(raw, name, privacy, denied, synthetic):
+    raw.decode("utf-8")
+    require(b"\0" not in raw and not zipfile.is_zipfile(io.BytesIO(raw)), "binary/archive diagnostic refused")
+    # No allow_reviewed_header_literals argument: the default remains false.
+    reason = privacy["inspect"](raw, name, denied, synthetic)
+    require(reason is None, "diagnostic privacy guard refused " + name + ": " + str(reason))
+
+
+def directory_chain(path, create=False):
+    path = Path(os.path.abspath(path))
+    require(path.is_relative_to(SESSION), "directory outside this task")
+    current = SESSION
+    for part in (None,) + path.relative_to(SESSION).parts:
+        if part is not None:
+            current /= part
+        try:
+            info = current.lstat()
+        except FileNotFoundError:
+            require(create, "required directory is missing")
+            current.mkdir()
+            info = current.lstat()
+        require(stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode)
+                and not getattr(info, "st_file_attributes", 0) & 1024,
+                "directory link/reparse refused before writing")
+
+
+def evidence_guard(files):
+    """Read actual frozen native outcomes; an audit exit is not a suite exit."""
+    root = "work/ux-stage7/final/"
+    observed = {}
+    for role, label, exit_code in (("fixed_targeted", "inactive-fixture-fixed-targeted-r1", 0),
+                                  ("self_parent", "inactive-self-parent-r1", 0),
+                                  ("self_integration", "inactive-self-integration-r1", 1)):
+        name = root + label + "/receipt.json"
+        raw = files[name]
+        receipt = json.loads(raw)
+        require(receipt["source_sha"] == receipt["ending_sha"] == CANDIDATE
+                and receipt["expected_source_sha"] == CANDIDATE
+                and receipt["source_files_unchanged"] is True and receipt["changed_inputs"] == []
+                and receipt["input_manifest_sha256"] == CANDIDATE_INPUTS_SHA256
+                and type(receipt["exit_code"]) is int and receipt["exit_code"] == exit_code
+                and bool(receipt["ended_utc"]), "candidate native evidence is not exact terminal source")
+        observed[role] = {"receipt": name, "receipt_sha256": sha(raw), "exit_code": receipt["exit_code"]}
+    junit = ET.fromstring(files[root + "inactive-fixture-fixed-targeted-r1/junit.xml.txt"])
+    suites = list(junit.iter("testsuite"))
+    require(len(suites) == 1 and suites[0].attrib.get("tests") == "323"
+            and all(suites[0].attrib.get(key) == "0" for key in ("errors", "failures", "skipped"))
+            and len(list(suites[0].iter("testcase"))) == 323,
+            "fixed targeted native JUnit differs")
+    observed["fixed_targeted"]["tests"] = 323
+    for role, label, base, verdict, high, warn in (
+            ("self_parent", "inactive-self-parent-r1", "fbc9374d", "pass", 0, 3),
+            ("self_integration", "inactive-self-integration-r1", "1ffe283d", "block", 3, 12)):
+        result = json.loads(files[root + label + "/stdout.txt"])
+        require(result["run"]["head"] == CANDIDATE[:8] and result["run"]["base"] == base
+                and result["verdict"] == verdict
+                and result["summary"] == {"critical": 0, "high": high, "info": 0, "warn": warn},
+                "candidate raw self-check differs")
+        observed[role].update(verdict=verdict, high=high, warn=warn)
+    intent = json.loads(files["work/ux-stage7/full-suite-intent.json"])
+    require(intent["source_sha"] == CANDIDATE and intent["input_manifest_sha256"] == CANDIDATE_INPUTS_SHA256
+            and intent["kind"] == "LAUNCH_INTENT_NOT_COMPLETION" and intent["output"] == LIVE_FULL_SUITE,
+            "fixed full-suite intent differs")
+    observed.update(full_suite={"state": "IN_PROGRESS", "reason": "NO_TERMINAL_RECEIPT_IN_THIS_SNAPSHOT"},
+                    artifact_qualification={"state": "IN_PROGRESS",
+                                            "reason": "SEPARATE_STAGE9_WORK_NO_TERMINAL_RECEIPTS_SELECTED"})
+    return observed
+
+
+def payload(selection_path, pub, privacy):
+    selection_raw = read_regular(selection_path)
+    selection = json.loads(selection_raw)
+    require(set(selection) == {"source_sha", "candidate_sha", "purpose", "root_frozen", "snapshot_utc", "files"}, "unexpected selection schema")
+    require(selection["source_sha"] == SOURCE and selection["purpose"] == PURPOSE
+            and selection["candidate_sha"] == CANDIDATE
+            and selection["root_frozen"] is True, "root's fixed-source frozen selection required")
+    require(isinstance(selection["snapshot_utc"], str)
+            and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\+00:00", selection["snapshot_utc"]),
+            "explicit UTC snapshot time required")
+    require(isinstance(selection["files"], list) and bool(selection["files"]), "empty selection")
+    seal = json.loads(read_regular(SESSION / "work/ux-stage5/seal/source-seal.json"))
+    denied, synthetic = privacy["guards"]({r["path"]: r["sha256"] for r in seal["files"]})
+    files, inputs = {}, []
+    for row in selection["files"]:
+        require(set(row) == {"source", "export", "bytes", "sha256"}, "unexpected selected-row schema")
+        source = pub["logical"](row["source"])
+        target = pub["logical"](row["export"])
+        require(source.startswith("work/ux-stage7/") and target in {source, source + ".txt"},
+                "selection must preserve stage7 task layout")
+        require(source != LIVE_FULL_SUITE and not source.startswith(LIVE_FULL_SUITE + "/"),
+                "live full-suite evidence is excluded from this fixed snapshot")
+        parts = Path(source).parts
+        require(not any(p.lower() in EXCLUDED or p.lower().endswith("-runtime") for p in parts),
+                "runtime/cache/temp/controller source refused")
+        require(Path(target).suffix.lower() in EXPORT_SUFFIXES, "unsupported diagnostic export suffix")
+        require(not source.lower().endswith((".zip", ".whl", ".pyz", ".tar", ".gz", ".exe", ".dll", ".pyd")),
+                "archive/runtime source refused")
+        if source.lower().endswith(".py"):
+            require(target == source + ".txt", "Python source must be exported as .py.txt")
+        if source.lower().endswith((".xml", ".diff")):
+            require(target == source + ".txt", "XML/diff source must be exported as text transport")
+        raw = read_regular(SESSION / source)
+        require(type(row["bytes"]) is int and len(raw) == row["bytes"]
+                and re.fullmatch(r"[0-9a-f]{64}", row["sha256"])
+                and sha(raw) == row["sha256"], "frozen diagnostic bytes differ: " + source)
+        content_guard(raw, source, privacy, denied, synthetic)
+        require(target not in files, "duplicate diagnostic export")
+        files[target] = raw
+        inputs.append(row)
+    for original, target in ((HERE / "diagnostic_checkpoint.py", "TOOLS/diagnostic_checkpoint.py.txt"),
+                             (HERE / "README.md", "TOOLS/README.md")):
+        raw = read_regular(original)
+        content_guard(raw, target, privacy, denied, synthetic)
+        files[target] = raw
+    files["SELECTION.json"] = selection_raw
+    validation = evidence_guard(files)
+    files["checkpoint.json"] = encoded({
+        "source_sha": SOURCE, "candidate_sha": CANDIDATE, "snapshot_utc": selection["snapshot_utc"],
+        "source_role": "PRIOR_FBC_BACKUP_BASELINE_ONLY", "candidate_state": "COMMITTED_SEPARATE_FOLLOWUP",
+        "purpose": PURPOSE, "kind": "FROZEN_DIAGNOSTIC_SUPPLEMENT",
+        "acceptance_state": "NONPASS_NOT_REASSESSED", "previous_complete_backup": PARENT,
+        "goal_state": "INCOMPLETE", "draft_pull_request": "https://github.com/taipei49314/checkwash/pull/572",
+        "validation": validation,
+        "product_publication_performed": False, "version_1_0_requires_human_decision": True,
+        "product_fixture_test_model_calls_by_backup_tool": 0,
+        "note": "Copied diagnostic outcomes/proposals keep their recorded state; no all-tests-PASS assertion is made.",
+    })
+    files["00-START-HERE.md"] = (
+        "# CheckWash inactive-fixture followup backup\n\n"
+        "Snapshot UTC: `" + selection["snapshot_utc"] + "`. Purpose: `" + PURPOSE + "`.\n\n"
+        "Committed candidate: **`" + CANDIDATE + "`**, separate from the prior fbc baseline.\n"
+        "[PR 572](https://github.com/taipei49314/checkwash/pull/572) is a draft. The repair goal remains incomplete.\n"
+        "The fixed candidate has 323 targeted tests passing (exit 0). Parent-range self-check: PASS, exit 0,\n"
+        "0 high / 3 warn. Integration-range self-check: **BLOCK, exit 1, 3 high / 12 warn**.\n\n"
+        "Full suite: **IN_PROGRESS / NO_TERMINAL_RECEIPT in this snapshot**. Its live directory is wholly\n"
+        "excluded; only the frozen intent may be included. Separate stage9 source/wheel/pyz qualification\n"
+        "work is **IN_PROGRESS / NO_TERMINAL_RECEIPTS_SELECTED** as a combined followup effort. This does\n"
+        "not claim every worker has started. No stage9 live partial/result is included and none is called PASS.\n"
+        "Prior fbc qualifications do not qualify changed candidate bytes.\n"
+        "Historical PR-body and WIP records retain their own dates and failed/unsafe/uncommitted states.\n\n"
+        "Backup/source-guard baseline only: `" + SOURCE + "`. Previous evidence checkpoint: `" + PARENT + "`.\n"
+        "The handoff metadata tree inherits its parent's product root and is **not** the candidate source.\n"
+        "Restore the separate candidate commit 1be28ce5de72dcb617818077aaf11e3b1cf7a976 for candidate work.\n"
+        "The frozen [stage7 continuation](work/ux-stage7/00-CONTINUE.md) and per-run receipts provide\n"
+        "source-specific evidence; original fbc/stage5 and historical prototype evidence stay immutable.\n\n"
+        "This backup performs no merge, tag, release or qualification and grants no product acceptance.\n"
+        "No new 1.0 authorization is granted: Nelson must decide before 1.0. No historical/model batch is admitted.\n"
+        "MANIFEST.json binds all exported raw bytes. Python, XML and diff inputs use text transport\n"
+        "suffixes and are not automatically executed. No ZIP/runtime is included. The exact stage5\n"
+        "metadata helper pins remain required for this preservation tool.\n"
+    ).encode("utf-8")
+    require(len({name.casefold() for name in files}) == len(files), "casefold export collision")
+    rows = [{"path": name, "bytes": len(raw), "sha256": sha(raw)} for name, raw in sorted(files.items())]
+    manifest = {"source_sha": SOURCE, "candidate_sha": CANDIDATE, "purpose": PURPOSE, "selection_sha256": sha(selection_raw),
+                "original_inputs": inputs, "files": rows, "manifest_excludes_itself": True,
+                "metadata_helper_pins": HELPERS, "producer_sha256": sha(read_regular(Path(__file__))),
+                "product_fixture_test_model_calls_by_tool": 0, "new_acceptance_claim": False}
+    files["MANIFEST.json"] = encoded(manifest)
+    for name, raw in files.items():
+        content_guard(raw, name, privacy, denied, synthetic)
+    require(sum(map(len, files.values())) <= MAX_TOTAL, "diagnostic payload exceeds64MiB")
+    return files, sha(selection_raw)
+
+
+def disk_payload(pub):
+    require(OUT.exists(), "prepare the fixed output first")
+    directory_chain(OUT)
+    files = {}
+    for folder, dirs, names in os.walk(OUT, followlinks=False):
+        for name in dirs:
+            info = (Path(folder) / name).lstat()
+            require(stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode)
+                    and not getattr(info, "st_file_attributes", 0) & 1024, "output link/reparse directory")
+        for name in names:
+            path = Path(folder) / name
+            relative = pub["logical"](path.relative_to(OUT).as_posix())
+            files[relative] = read_regular(path)
+    return files
+
+
+def prepare(files):
+    # Fresh files only. Existing identical bytes are harmless; no replacement.
+    directory_chain(OUT, create=True)
+    for name, raw in sorted(files.items()):
+        target = OUT / name
+        directory_chain(target.parent, create=True)
+        if target.exists():
+            require(read_regular(target) == raw, "existing diagnostic payload differs")
+            continue
+        with target.open("xb") as stream:
+            stream.write(raw)
+        require(read_regular(target) == raw, "prepared diagnostic bytes differ")
+
+
+def parent_guard(git):
+    allowed = {"https://github.com/taipei49314/checkwash.git", "git@github.com:taipei49314/checkwash.git",
+               "ssh://git@github.com/taipei49314/checkwash.git"}
+    require(git.run("remote", "get-url", "origin").decode().strip() in allowed, "unexpected fetch origin")
+    pushes = git.run("remote", "get-url", "--push", "--all", "origin").decode().splitlines()
+    require(len(pushes) == 1 and pushes[0] in allowed, "unexpected/multiple effective push origins")
+    tip = git.run("ls-remote", "--heads", "origin", "refs/heads/" + BRANCH).decode().split()
+    require(tip == [PARENT, "refs/heads/" + BRANCH], "handoff parent moved; reconcile instead of retrying")
+    require(git.run("cat-file", "-t", PARENT).strip() == b"commit", "exact evidence parent missing")
+    require(not git.run("ls-tree", "-r", "--name-only", PARENT, "--", PREFIX), "diagnostic prefix already exists")
+
+
+def candidate_index(path):
+    """One exact external Git index; no general outside-task input exception."""
+    path = Path(os.path.abspath(path))
+    require(path == CANDIDATE_GITDIR / "index", "unexpected candidate index path")
+    current = Path(path.anchor)
+    for part in (None,) + path.parts[1:]:
+        if part is not None:
+            current /= part
+        info = current.lstat()
+        require(not stat.S_ISLNK(info.st_mode) and not getattr(info, "st_file_attributes", 0) & 1024,
+                "candidate Git index link/reparse refused")
+        require(stat.S_ISDIR(info.st_mode) if current != path else stat.S_ISREG(info.st_mode),
+                "nonregular candidate Git index")
+    before = path.stat()
+    require(before.st_size <= MAX_FILE, "candidate Git index too large")
+    raw = path.read_bytes()
+    after = path.stat()
+    require((before.st_size, before.st_mtime_ns, before.st_ino) ==
+            (after.st_size, after.st_mtime_ns, after.st_ino) and len(raw) == before.st_size,
+            "candidate index changed during read")
+    return raw
+
+
+def candidate_guard(git, pub):
+    """Verify the separate committed candidate without replacing fbc guards."""
+    directory_chain(CANDIDATE_REPO)
+
+    def candidate_git(*args):
+        # Fixed read-only commands through the unchanged reviewed Git wrapper.
+        # Do not alter its REPO global: the original fbc guard still uses it.
+        return git.run("-C", str(CANDIDATE_REPO), *args)
+
+    require(Path(candidate_git("rev-parse", "--show-toplevel").decode().strip()) == CANDIDATE_REPO,
+            "candidate worktree root differs")
+    require(candidate_git("rev-parse", "HEAD").decode().strip() == CANDIDATE, "candidate HEAD changed")
+    require(Path(candidate_git("rev-parse", "--absolute-git-dir").decode().strip()) == CANDIDATE_GITDIR,
+            "candidate Git directory differs")
+    require(not candidate_git("status", "--porcelain=v1", "-z", "--untracked-files=all"),
+            "candidate checkout is not clean")
+    index = Path(candidate_git("rev-parse", "--git-path", "index").decode().strip())
+    if not index.is_absolute():
+        index = CANDIDATE_REPO / index
+    index_raw = candidate_index(index)
+    inputs_raw = read_regular(CANDIDATE_INPUTS)
+    require(sha(inputs_raw) == CANDIDATE_INPUTS_SHA256, "fixed candidate input map changed")
+    expected = json.loads(inputs_raw)
+    require(type(expected) is dict and len(expected) == 3087, "unexpected candidate tracked count")
+    for name, digest in expected.items():
+        require(pub["logical"](name) == name and type(digest) is str
+                and re.fullmatch(r"[0-9a-f]{64}", digest), "invalid candidate input row")
+    tree_raw = candidate_git("ls-tree", "-r", "-z", CANDIDATE)
+    tree = {}
+    for row in tree_raw.rstrip(b"\0").split(b"\0"):
+        metadata, raw_name = row.split(b"\t", 1)
+        mode, kind, oid = metadata.split(b" ")
+        name = pub["logical"](raw_name.decode("utf-8"))
+        require(mode in (b"100644", b"100755") and kind == b"blob"
+                and re.fullmatch(rb"[0-9a-f]{40}", oid) and name not in tree,
+                "candidate tree contains nonregular/duplicate entries")
+        tree[name] = (mode, oid)
+    stage = {}
+    for row in candidate_git("ls-files", "--stage", "-z").rstrip(b"\0").split(b"\0"):
+        metadata, raw_name = row.split(b"\t", 1)
+        mode, oid, number = metadata.split(b" ")
+        name = pub["logical"](raw_name.decode("utf-8"))
+        require(number == b"0" and name not in stage, "candidate index is not unique stage 0")
+        stage[name] = (mode, oid)
+    require(set(tree) == set(expected) and stage == tree, "candidate HEAD/index/input membership differs")
+    observed = []
+    for name in sorted(expected):
+        raw = read_regular(CANDIDATE_REPO / name)
+        require(sha(raw) == expected[name], "candidate physical bytes differ: " + name)
+        blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+        require(blob.encode() == tree[name][1], "candidate physical bytes differ from Git blob: " + name)
+        observed.append({"path": name, "bytes": len(raw), "sha256": sha(raw), "git_blob": blob})
+    refs = candidate_git("for-each-ref", "--format=%(refname) %(objectname)", "refs/heads/main", "refs/tags")
+    require(candidate_index(index) == index_raw, "read-only candidate guard changed index bytes")
+    return ({"candidate_sha": CANDIDATE, "candidate_worktree": "work/checkwash-inactive-fixture",
+             "tracked_files": len(observed), "source_digest": sha(encoded(observed)),
+             "fixed_input_manifest_sha256": sha(inputs_raw), "head_tree_sha256": sha(tree_raw),
+             "candidate_index_sha256": sha(index_raw), "local_main_tags_sha256": sha(refs)}, index_raw)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--selection", type=Path, required=True)
+    parser.add_argument("--label", required=True)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--prepare", action="store_true", help="Write only the new diagnostic output payload")
+    mode.add_argument("--publish", action="store_true", help="Requires explicit reviewed plan digest")
+    parser.add_argument("--expect-plan-sha256")
+    args = parser.parse_args()
+    require(re.fullmatch(r"[a-z0-9][a-z0-9-]{0,47}", args.label), "invalid label")
+    require(not args.publish or re.fullmatch(r"[0-9a-f]{64}", args.expect_plan_sha256 or ""),
+            "publish requires the reviewed digest")
+    helper = helpers()
+    pub, privacy = helper["publisher"], helper["privacy"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    run = HERE / "runs" / (stamp + "-" + args.label)
+    run.mkdir(parents=True, exist_ok=False)
+    (run / "no-hooks").mkdir()
+    git = pub["Git"](run)
+    before, index_before = pub["source_guard"](git)
+    candidate_before, candidate_index_before = candidate_guard(git, pub)
+    parent_guard(git)
+    files, selection_sha = payload(args.selection, pub, privacy)
+    if args.prepare:
+        prepare(files)
+    if args.prepare or args.publish:
+        require(disk_payload(pub) == files, "output payload is not the exact frozen selection")
+    rows = [{"path": n, "bytes": len(b), "sha256": sha(b)} for n, b in sorted(files.items())]
+    plan = {"source_sha": SOURCE, "candidate_sha": CANDIDATE, "purpose": PURPOSE, "parent": PARENT, "branch": BRANCH,
+            "prefix": PREFIX, "files": rows, "bytes": sum(map(len, files.values())),
+            "selection_sha256": selection_sha, "source_guard": before, "candidate_guard": candidate_before,
+            "tool_sha256": sha(read_regular(Path(__file__))), "helper_pins": HELPERS,
+            "acceptance_state": "NONPASS_NOT_REASSESSED", "publication_performed": False}
+    plan_sha = sha(encoded(plan))
+    (run / "plan.json").write_bytes(encoded(plan))
+    (run / "plan.sha256").write_text(plan_sha + "\n", encoding="ascii")
+    again, index_again = pub["source_guard"](git)
+    candidate_again, candidate_index_again = candidate_guard(git, pub)
+    require(again == before and index_again == index_before
+            and candidate_again == candidate_before and candidate_index_again == candidate_index_before
+            and payload(args.selection, pub, privacy) == (files, selection_sha), "source/inputs changed during plan")
+    if not args.publish:
+        print(json.dumps({"mode": "PREPARED_NO_GIT_WRITES" if args.prepare else "PLAN_ONLY_NO_GIT_WRITES",
+                          "plan": str(run / "plan.json"), "plan_sha256": plan_sha,
+                          "files": len(files), "bytes": plan["bytes"]}, indent=2))
+        return
+    require(args.expect_plan_sha256 == plan_sha, "reviewed plan changed; do not publish")
+    alternate = run / "alternate.index"
+    git.write_enabled = True
+    git.run("read-tree", PARENT, alternate=alternate, writes=True)
+    staged = []
+    for row in rows:
+        oid = git.run("hash-object", "-w", "--stdin", data=files[row["path"]],
+                      alternate=alternate, writes=True).decode().strip()
+        target = PREFIX + "/" + row["path"]
+        git.run("update-index", "--add", "--cacheinfo", "100644", oid, target,
+                alternate=alternate, writes=True)
+        staged.append({**row, "path": target, "git_blob": oid})
+    tree = git.run("write-tree", alternate=alternate, writes=True).decode().strip()
+    commit = git.run("commit-tree", tree, "-p", PARENT, data=("checkpoint: committed inactive-fixture followup evidence\n\n" + PURPOSE + "\n").encode(),
+                     alternate=alternate, writes=True).decode().strip()
+    changes = [x.decode() for x in git.run("diff-tree", "--no-commit-id", "--no-renames", "--name-status", "-r", "-z", PARENT, commit).split(b"\0") if x]
+    require(len(changes) == 2 * len(files), "unexpected prepared diagnostic delta")
+    require(all(status == "A" and name.startswith(PREFIX + "/")
+                for status, name in zip(changes[::2], changes[1::2])), "delta outside new prefix or deletion/modification")
+    prepared = {**plan, "plan_sha256": plan_sha, "checkpoint_commit": commit, "tree": tree,
+                "files": staged, "remote_ref_verified": False}
+    (run / "prepared-commit.json").write_bytes(encoded(prepared))
+    prepush, prepush_index = pub["source_guard"](git)
+    candidate_prepush, candidate_prepush_index = candidate_guard(git, pub)
+    require(prepush == before and prepush_index == index_before
+            and candidate_prepush == candidate_before and candidate_prepush_index == candidate_index_before
+            and payload(args.selection, pub, privacy) == (files, selection_sha)
+            and disk_payload(pub) == files, "source/input/output changed before push")
+    parent_guard(git)
+    git.run("push", "--porcelain", "--no-follow-tags", "--recurse-submodules=no", "origin",
+            commit + ":refs/heads/" + BRANCH, writes=True, timeout=180)
+    tip = git.run("ls-remote", "--heads", "origin", "refs/heads/" + BRANCH).decode().split()
+    require(tip == [commit, "refs/heads/" + BRANCH], "unknown push outcome; preserve prepared receipt and reconcile")
+    final, final_index = pub["source_guard"](git)
+    candidate_final, candidate_final_index = candidate_guard(git, pub)
+    require(final == before and final_index == index_before
+            and candidate_final == candidate_before and candidate_final_index == candidate_index_before
+            and payload(args.selection, pub, privacy) == (files, selection_sha)
+            and disk_payload(pub) == files, "source/input/output changed after push")
+    result = {**prepared, "remote_ref_verified": True, "product_index_unchanged": True,
+              "product_source_bytes_unchanged": True, "local_main_tags_unchanged": True,
+              "candidate_index_unchanged": True, "candidate_source_bytes_unchanged": True,
+              "product_fixture_test_model_calls_by_tool": 0, "publication_performed": False}
+    (run / "push-receipt.json").write_bytes(encoded(result))
+    (HERE / "remote-state.json").write_bytes(encoded(result))
+    print(json.dumps({"checkpoint_commit": commit, "source_sha": SOURCE, "candidate_sha": CANDIDATE, "purpose": PURPOSE,
+                      "remote_ref_verified": True, "files": len(staged)}, indent=2))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print("Diagnostic supplement stopped: " + type(error).__name__ + ": " + str(error), file=sys.stderr)
+        raise SystemExit(1)

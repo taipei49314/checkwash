@@ -1,0 +1,323 @@
+"""The optional context reader preserves captured sides and bounds failed reads.
+
+The proof function is a recorder here; it never grants credit. These controls
+assert reader bytes/provenance, not a verdict that could erase valid D1 repair.
+Represented repository programs are static bytes and are never executed.
+"""
+from collections import Counter
+import datetime
+
+import pytest
+
+from checkwash.change import FileChange
+from checkwash.config import Config
+from checkwash.contract import Contract
+import checkwash.engine as engine
+from checkwash.report.context import ReportContext
+
+
+TODAY = datetime.date(2026, 10, 27)
+PRODUCER = "app/billing.py"
+ARCHIVE = "app/archive.py"
+PROBE = "oracle_probe/extra.py"
+OLD_PRODUCER = b"def total():\n    return 78.75\n"
+NEW_PRODUCER = b"def total():\n    return 0\n"
+GATE = (
+    "import os\nimport pytest\nfrom app.billing import total\n"
+    "@pytest.fixture(autouse=True)\n"
+    "def only_slow(request):\n"
+    "    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n"
+    "        pytest.skip('off')\n"
+)
+UNIT = "def test_total():\n    assert total() == 78.75\n"
+
+
+def recorded(monkeypatch, support=(), *, queries=(PRODUCER,), head=None, fault=None,
+             probe_inventory=False, inventory=None, inventory_fault=None, search_available=True,
+             probe_paths=False, paths=None, path_fault=None, path_list_available=True):
+    before = ("# reader-phase-base\n" + GATE + UNIT).encode()
+    after = ("# reader-phase-head\n" + GATE + UNIT).encode()
+    old_after = (GATE + "\n").encode()
+    snapshot = {"app/__init__.py": b"", PRODUCER: OLD_PRODUCER,
+                "tests/test_old.py": old_after, "tests/test_new.py": after,
+                **(head or {})}
+    root_reads = Counter()
+    events = []
+    inventory_events = []
+    inventory_searches = [0]
+    inventory_probe_active = [False]
+    path_events = []
+    path_lists = [0]
+    path_probe_active = [False]
+    context = ReportContext()
+
+    def root_read(path):
+        root_reads[path] += 1
+        if path == PROBE and fault is not None:
+            if fault == "oversize":
+                return b"#" * 65537
+            if fault == "invalid-type":
+                return "not source bytes"
+            if fault == "io-error":
+                raise OSError("owned optional-reader control")
+        return snapshot.get(path)
+
+    def root_search(needles):
+        complete = sorted(path for path, data in snapshot.items() if path.endswith(".py") and data)
+        if inventory_probe_active[0] and needles == [""]:
+            inventory_searches[0] += 1
+            if inventory_fault == "io-error":
+                raise OSError("owned strict inventory control")
+            if inventory_fault == "invalid-type":
+                return None
+            if inventory is not None:
+                return inventory
+        return complete if needles == [""] else []
+
+    def root_paths():
+        if path_probe_active[0]:
+            path_lists[0] += 1
+            if path_fault == "io-error":
+                raise OSError("owned complete entry metadata control")
+            if path_fault == "invalid-type":
+                return None
+            if paths is not None:
+                return paths
+        return sorted(path for path, data in snapshot.items() if data is not None)
+
+    def capture(source, units, path, language, *, source_reader=None, source_searcher=None,
+                source_path_lister=None, **_kwargs):
+        for _name, side in units:
+            side.oracle_context = ""
+            side.oracle_assertion_contexts = {}
+        if language != "python" or not any(name == "test_total" for name, _side in units):
+            return
+        assert callable(source_reader)
+        side = 0 if b"reader-phase-base" in source else 1
+        if probe_inventory:
+            if source_searcher is None:
+                inventory_events.append((side, "MISSING_SEARCH", None))
+            else:
+                for _repeat in range(2):
+                    inventory_probe_active[0] = True
+                    try:
+                        found = source_searcher([""])
+                    except (ValueError, OSError) as error:
+                        inventory_events.append((side, "ERROR", type(error).__name__))
+                    else:
+                        inventory_events.append((side, "OK", found))
+                    finally:
+                        inventory_probe_active[0] = False
+        if probe_paths:
+            if source_path_lister is None:
+                path_events.append((side, "MISSING_PATH_LIST", None))
+            else:
+                for _repeat in range(2):
+                    path_probe_active[0] = True
+                    try:
+                        found = source_path_lister()
+                    except (ValueError, OSError) as error:
+                        path_events.append((side, "ERROR", type(error).__name__))
+                    else:
+                        path_events.append((side, "OK", found))
+                    finally:
+                        path_probe_active[0] = False
+        for query in queries:
+            try:
+                data = source_reader(query)
+            except (ValueError, OSError) as error:
+                events.append((side, query, type(error).__name__, None))
+            else:
+                events.append((side, query, data, context._sources.get((query, side))))
+
+    monkeypatch.setattr(engine, "mark_contexts", capture)
+    engine.analyze(
+        [FileChange("tests/test_old.py", "modified", before, old_after),
+         FileChange("tests/test_new.py", "added", None, after), *support],
+        Config(), Contract(), [], TODAY,
+        root_reader=root_read, head_reader=snapshot.get,
+        root_searcher=root_search if search_available else None, report_context=context,
+        root_path_lister=root_paths if path_list_available else None,
+    )
+    if probe_paths:
+        return sorted(path_events, key=lambda event: event[0]), path_lists[0]
+    if probe_inventory:
+        return sorted(inventory_events, key=lambda event: event[0]), inventory_searches[0]
+    # File traversal is deliberately irrelevant to side correctness.
+    return sorted(events, key=lambda event: (event[0], event[1])), root_reads
+
+
+@pytest.mark.parametrize("reversed_records", [False, True])
+@pytest.mark.parametrize("backslash", [False, True])
+def test_rename_source_resurrection_keeps_both_captured_sides(monkeypatch, reversed_records, backslash):
+    old = PRODUCER.replace("/", "\\") if backslash else PRODUCER
+    records = [FileChange(ARCHIVE, "modified", OLD_PRODUCER, OLD_PRODUCER, old_path=old),
+               FileChange(PRODUCER, "added", None, NEW_PRODUCER)]
+    if reversed_records:
+        records.reverse()
+    events, _reads = recorded(monkeypatch, records,
+                              head={PRODUCER: NEW_PRODUCER, ARCHIVE: OLD_PRODUCER})
+    assert events == [(0, PRODUCER, OLD_PRODUCER, OLD_PRODUCER.decode()),
+                      (1, PRODUCER, NEW_PRODUCER, NEW_PRODUCER.decode())]
+
+
+@pytest.mark.parametrize("reversed_records", [False, True])
+def test_conflicting_actual_before_bytes_withhold_only_optional_read(monkeypatch, reversed_records):
+    records = [FileChange(ARCHIVE, "modified", OLD_PRODUCER, OLD_PRODUCER, old_path=PRODUCER),
+               FileChange(PRODUCER, "modified", b"def total():\n    return 9\n", NEW_PRODUCER)]
+    if reversed_records:
+        records.reverse()
+    events, _reads = recorded(monkeypatch, records,
+                              head={PRODUCER: NEW_PRODUCER, ARCHIVE: OLD_PRODUCER})
+    assert events[0][:3] == (0, PRODUCER, "ValueError")
+    assert events[1][:3] == (1, PRODUCER, NEW_PRODUCER)
+
+
+@pytest.mark.parametrize("reversed_records", [False, True])
+def test_explicit_destination_absence_cannot_be_erased_by_rename(monkeypatch, reversed_records):
+    records = [FileChange(ARCHIVE, "modified", OLD_PRODUCER, OLD_PRODUCER, old_path=PRODUCER),
+               FileChange(ARCHIVE, "deleted", b"def stale():\n    return 1\n", None)]
+    if reversed_records:
+        records.reverse()
+    events, _reads = recorded(monkeypatch, records, queries=(ARCHIVE,), head={ARCHIVE: OLD_PRODUCER})
+    assert events[1][:3] == (1, ARCHIVE, "ValueError")
+
+
+@pytest.mark.parametrize("fault", ["oversize", "invalid-type", "io-error"])
+def test_refused_unchanged_source_is_negative_cached_across_sides(monkeypatch, fault):
+    events, reads = recorded(monkeypatch, queries=(PROBE, PROBE), fault=fault)
+    assert len(events) == 4 and all(event[2] in {"ValueError", "OSError"} for event in events)
+    assert reads[PROBE] == 1
+
+
+def test_unchanged_valid_bytes_are_read_once_and_reported_on_both_sides(monkeypatch):
+    raw = b"# owned context\n"
+    events, reads = recorded(monkeypatch, queries=(PROBE, PROBE), head={PROBE: raw})
+    assert reads[PROBE] == 1
+    assert events == [(side, PROBE, raw, raw.decode()) for side in (0, 1) for _repeat in range(2)]
+
+
+@pytest.mark.parametrize("reversed_records", [False, True])
+def test_strict_inventory_reconstructs_each_captured_side(monkeypatch, reversed_records):
+    original, renamed = "extra/original.py", "extra/renamed.py"
+    added, deleted, emptied = "extra/added.py", "extra/deleted.py", "extra/empty.py"
+    records = [FileChange(renamed, "modified", b"# original\n", b"# moved\n", old_path=original),
+               FileChange(original, "added", None, b"# recreated\n"),
+               FileChange(added, "added", None, b"# added\n"),
+               FileChange(deleted, "deleted", b"# deleted\n", None),
+               FileChange(emptied, "modified", b"# was nonempty\n", b"")]
+    if reversed_records:
+        records.reverse()
+    events, searches = recorded(
+        monkeypatch, records, queries=(), probe_inventory=True,
+        head={original: b"# recreated\n", renamed: b"# moved\n", added: b"# added\n",
+              deleted: None, emptied: b""},
+    )
+    expected = {
+        0: sorted([PRODUCER, "tests/test_old.py", original, deleted, emptied]),
+        1: sorted([PRODUCER, "tests/test_old.py", "tests/test_new.py", original, renamed, added]),
+    }
+    assert events == [(side, "OK", expected[side]) for side in (0, 1) for _repeat in range(2)]
+    assert searches == 1
+
+
+@pytest.mark.parametrize("inventory_fault", ["io-error", "invalid-type"])
+def test_failed_strict_inventory_is_cached_once_not_empty_success(monkeypatch, inventory_fault):
+    events, searches = recorded(monkeypatch, queries=(), probe_inventory=True, inventory_fault=inventory_fault)
+    assert searches == 1
+    assert len(events) == 4 and all(event[1] == "ERROR" for event in events)
+
+
+@pytest.mark.parametrize("inventory", [
+    ["tests/duplicate.py", "tests/duplicate.py"],
+    ["tests/duplicate.py", "tests\\duplicate.py"],
+    ["vendor/submodule/"],
+    ["tests/../unsafe.py"],
+    [123],
+    [f"tests/test_{number}.py" for number in range(64)],
+])
+def test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown(monkeypatch, inventory):
+    events, searches = recorded(monkeypatch, queries=(), probe_inventory=True, inventory=inventory)
+    assert searches == 1
+    assert len(events) == 4 and all(event[1] == "ERROR" for event in events)
+
+
+def test_missing_strict_inventory_does_not_invent_an_empty_snapshot(monkeypatch):
+    events, searches = recorded(monkeypatch, queries=(), probe_inventory=True, search_available=False)
+    assert events == [(0, "MISSING_SEARCH", None), (1, "MISSING_SEARCH", None)]
+    assert searches == 0
+
+
+@pytest.mark.parametrize("reversed_records", [False, True])
+@pytest.mark.parametrize("backslash", [False, True])
+def test_complete_path_metadata_preserves_empty_and_nonpython_entries_on_each_side(
+        monkeypatch, reversed_records, backslash):
+    original, renamed = "extra/original.toml", "extra/renamed.toml"
+    added, deleted, emptied = "extra/added.ini", "extra/deleted.cfg", "extra/empty.py"
+    old = original.replace("/", "\\") if backslash else original
+    records = [FileChange(renamed, "modified", b"# original\n", b"# moved\n", old_path=old),
+               FileChange(original, "added", None, b""),
+               FileChange(added, "added", None, b""),
+               FileChange(deleted, "deleted", b"# deleted\n", None),
+               FileChange(emptied, "modified", b"# was nonempty\n", b"")]
+    if reversed_records:
+        records.reverse()
+    events, lists = recorded(
+        monkeypatch, records, queries=(), probe_paths=True,
+        head={original: b"", renamed: b"# moved\n", added: b"", deleted: None,
+              emptied: b"", "extra/already-empty.ini": b""},
+    )
+    common = ["app/__init__.py", PRODUCER, "tests/test_old.py", "extra/already-empty.ini", original, emptied]
+    expected = {0: sorted([*common, deleted]), 1: sorted([*common, "tests/test_new.py", renamed, added])}
+    assert events == [(side, "OK", expected[side]) for side in (0, 1) for _repeat in range(2)]
+    assert lists == 1
+
+
+@pytest.mark.parametrize("path_fault", ["io-error", "invalid-type"])
+def test_failed_complete_path_metadata_is_cached_once_across_sides(monkeypatch, path_fault):
+    events, lists = recorded(monkeypatch, queries=(), probe_paths=True, path_fault=path_fault)
+    assert lists == 1
+    assert len(events) == 4 and all(event[1] == "ERROR" for event in events)
+
+
+@pytest.mark.parametrize("paths", [
+    ["tests/duplicate.py", "tests/duplicate.py"],
+    ["tests/duplicate.py", "tests\\duplicate.py"],
+    ["vendor/submodule/"],
+    ["tests/../unsafe.py"],
+    ["/absolute.py"],
+    [123],
+    [f"data/entry-{number}.txt" for number in range(513)],
+])
+def test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown(monkeypatch, paths):
+    events, lists = recorded(monkeypatch, queries=(), probe_paths=True, paths=paths)
+    assert lists == 1
+    assert len(events) == 4 and all(event[1] == "ERROR" for event in events)
+
+
+def test_exact_complete_path_metadata_budget_is_allowed(monkeypatch):
+    paths = [f"data/entry-{number}.txt" for number in range(510)] + ["tests/test_old.py", "tests/test_new.py"]
+    events, lists = recorded(monkeypatch, queries=(), probe_paths=True, paths=paths)
+    expected = {0: sorted(set(paths) - {"tests/test_new.py"}), 1: sorted(paths)}
+    assert events == [(side, "OK", expected[side]) for side in (0, 1) for _repeat in range(2)]
+    assert lists == 1
+
+
+@pytest.mark.parametrize("reversed_records", [False, True])
+def test_conflicting_actual_presence_withholds_only_affected_side_metadata(monkeypatch, reversed_records):
+    records = [FileChange(ARCHIVE, "modified", OLD_PRODUCER, OLD_PRODUCER, old_path=PRODUCER),
+               FileChange(PRODUCER, "modified", b"def total():\n    return 9\n", NEW_PRODUCER)]
+    if reversed_records:
+        records.reverse()
+    events, lists = recorded(monkeypatch, records, queries=(), probe_paths=True,
+                              head={PRODUCER: NEW_PRODUCER, ARCHIVE: OLD_PRODUCER})
+    assert len(events) == 4
+    assert all(event[1] == "ERROR" for event in events if event[0] == 0)
+    assert all(event[1] == "OK" for event in events if event[0] == 1)
+    assert lists == 1
+
+
+def test_missing_complete_path_metadata_never_becomes_known_absence(monkeypatch):
+    events, lists = recorded(monkeypatch, queries=(), probe_paths=True, path_list_available=False)
+    assert events == [(0, "MISSING_PATH_LIST", None), (1, "MISSING_PATH_LIST", None)]
+    assert lists == 0

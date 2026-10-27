@@ -1,0 +1,410 @@
+{
+  "checkwash_findings_version": 2,
+  "config_errors": [],
+  "findings": [
+    {
+      "after": {
+        "span": [
+          2097,
+          2128
+        ],
+        "text": "assert len(native_fields) == 17"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          1666,
+          1705
+        ],
+        "text": "assert preserved.after == original.side"
+      },
+      "deescalators": [],
+      "escalators": [
+        "PROD_CHANGE_NOT_EVIDENCE"
+      ],
+      "fingerprint": "ASSERT_WEAKENED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:d692f62b20ee000e8f0a3372f2d37e3f3225af7a8926db90ce06fe4e01468d87",
+      "message": "test_added_literal_rows_retain_exception_removal_and_native_units: assertion strength EXACT_VALUE(90) -> TYPE_SHAPE(50)",
+      "path": "tests/test_classic_raises_additions.py",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "high",
+      "shape": null,
+      "strength_after": 50,
+      "strength_drop": 40,
+      "subject_changed": true,
+      "unit": "test_added_literal_rows_retain_exception_removal_and_native_units"
+    },
+    {
+      "after": {
+        "span": [
+          11588,
+          11633
+        ],
+        "text": "assert reads == oracle_reads + startup_probes"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          11248,
+          11426
+        ],
+        "text": "assert reads == [\"tests/test_calc.py\", \"conftest.py\", \"tests/calc.py\", \"tests/test_helpers.py\",\n                     \"test_helpers/__init__.py\", \"tests/test_helpers/__init__.py\"]"
+      },
+      "deescalators": [
+        "REPAIR_EVIDENCE"
+      ],
+      "escalators": [],
+      "fingerprint": "ASSERT_WEAKENED/tests/test_root_oracles.py/test_helper_only_assertion_removal_discovers_unchanged_importer/v2:d91f646debb4912aee4bfa0c547cacdf4525d3b7629ffaac3bacf976018ced85",
+      "message": "test_helper_only_assertion_removal_discovers_unchanged_importer: assertion strength EXACT_STRUCT(100) -> EXACT_VALUE(90)",
+      "path": "tests/test_root_oracles.py",
+      "rule": "ASSERT_WEAKENED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": 90,
+      "strength_drop": 10,
+      "subject_changed": false,
+      "unit": "test_helper_only_assertion_removal_discovers_unchanged_importer"
+    },
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          4413,
+          4512
+        ],
+        "text": "assert outcome(head) == CREDITED"
+      },
+      "deescalators": [],
+      "escalators": [
+        "PROD_CHANGE_NOT_EVIDENCE"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb",
+      "message": "test_a_survivor_the_chain_does_not_skip_is_credited: test unit disappeared",
+      "path": "tests/test_issue266_survivor_conftest_chain.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_a_survivor_the_chain_does_not_skip_is_credited"
+    },
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": {
+        "span": [
+          5244,
+          5655
+        ],
+        "text": "assert outcome(head, root=False) == CREDITED"
+      },
+      "deescalators": [],
+      "escalators": [
+        "PROD_CHANGE_NOT_EVIDENCE"
+      ],
+      "fingerprint": "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before/v2:e132c2bebecb035512ebaa870b40474afd7f1f1707e137e7da08dba600a31941",
+      "message": "test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before: test unit disappeared",
+      "path": "tests/test_issue266_survivor_conftest_chain.py",
+      "rule": "TEST_DISABLED",
+      "severity": "high",
+      "shape": "unit_removed",
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before"
+    },
+    {
+      "after": {
+        "span": [
+          3053,
+          3089
+        ],
+        "text": "assert IR_VERSION == ir.version == 3"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          3053,
+          3109
+        ],
+        "text": "assert IR_VERSION == FINDINGS_VERSION == ir.version == 2"
+      },
+      "deescalators": [
+        "REPAIR_EVIDENCE"
+      ],
+      "escalators": [],
+      "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_fingerprint_scope.py/test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copies/v2:fc0f76995a45ed984540c07880b07cd0aec19cee0564bed3592254671136f6d2",
+      "message": "test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copies: expected value rewritten 2 -> 3 with no change in assertion strength",
+      "path": "tests/test_fingerprint_scope.py",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_only_crlf_is_canonicalized_and_ir_contains_digests_not_new_source_copies"
+    },
+    {
+      "after": {
+        "span": [
+          5326,
+          5434
+        ],
+        "text": "assert outcome({**head, \"tests/conftest.py\": plain}, {\"tests/conftest.py\": (SKIPPING, plain)}) == UNCREDITED"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          5135,
+          5241
+        ],
+        "text": "assert outcome({**head, \"tests/conftest.py\": plain}, {\"tests/conftest.py\": (SKIPPING, plain)}) == CREDITED"
+      },
+      "deescalators": [
+        "REPAIR_EVIDENCE"
+      ],
+      "escalators": [],
+      "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_issue266_survivor_conftest_chain.py/test_a_conftest_the_diff_changes_is_read_on_its_head_side/v2:82039d198e96068f1570f97003741d8b91abc4a8e6a3d86c85fe369298c7a2ae",
+      "message": "test_a_conftest_the_diff_changes_is_read_on_its_head_side: expected call rewritten to a different call ['CREDITED'] -> ['UNCREDITED'] with no change in assertion strength",
+      "path": "tests/test_issue266_survivor_conftest_chain.py",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_a_conftest_the_diff_changes_is_read_on_its_head_side"
+    },
+    {
+      "after": {
+        "span": [
+          6924,
+          7227
+        ],
+        "text": "assert str(caught.value) == (\n        \"strict snapshot batch cannot inspect nonregular source 'requirements/pyproject.toml' (a symlink); \"\n        \"side='worktree', entry='worktree/read_many'. Use a repository-owned regular source at this path; \"\n        \"a committed range reads committed bytes only.\")"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          6761,
+          6896
+        ],
+        "text": "assert str(caught.value) == (\n        \"strict snapshot batch cannot inspect nonregular source requirements/pyproject.toml (a symlink)\")"
+      },
+      "deescalators": [
+        "REPAIR_EVIDENCE"
+      ],
+      "escalators": [],
+      "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_issue346_config_reads.py/test_working_tree_batch_refusal_names_the_symlinked_path/v2:5320a2b4ec2f30fa45b20e82c82b719f86eaec380e8acad891bf4e1acaddf29a",
+      "message": "test_working_tree_batch_refusal_names_the_symlinked_path: expected value rewritten 'strict snapshot batch cannot inspect nonregular source requirements/pyproject.toml (a symlink)' -> \"strict snapshot batch cannot inspect nonregular source 'requirements/pyproject.toml' (a symlink); side='worktree', entry='worktree/read_many'. Use a repository-owned regular source at this path; a committed range reads committed bytes only.\" with no change in assertion strength",
+      "path": "tests/test_issue346_config_reads.py",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_working_tree_batch_refusal_names_the_symlinked_path"
+    },
+    {
+      "after": {
+        "span": [
+          6158,
+          6443
+        ],
+        "text": "assert str(caught.value) == (\n        \"strict snapshot cannot inspect nonregular source 'configs/pytest.ini' (a directory); \"\n        \"side='worktree', entry='worktree/read'. Use a repository-owned regular source at this path; \"\n        \"a committed range reads committed bytes only.\")"
+      },
+      "allowlisted": false,
+      "before": {
+        "span": [
+          6158,
+          6280
+        ],
+        "text": "assert str(caught.value) == (\n        \"strict snapshot cannot inspect nonregular source configs/pytest.ini (a directory)\")"
+      },
+      "deescalators": [
+        "REPAIR_EVIDENCE"
+      ],
+      "escalators": [],
+      "fingerprint": "EXPECTED_VALUE_CHANGED/tests/test_issue346_config_reads.py/test_working_tree_refusal_names_a_directory/v2:de34bcaea03015343d5026b1f6e601473f69901873ed54eb237249408daa7a2a",
+      "message": "test_working_tree_refusal_names_a_directory: expected value rewritten 'strict snapshot cannot inspect nonregular source configs/pytest.ini (a directory)' -> \"strict snapshot cannot inspect nonregular source 'configs/pytest.ini' (a directory); side='worktree', entry='worktree/read'. Use a repository-owned regular source at this path; a committed range reads committed bytes only.\" with no change in assertion strength",
+      "path": "tests/test_issue346_config_reads.py",
+      "rule": "EXPECTED_VALUE_CHANGED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": "test_working_tree_refusal_names_a_directory"
+    },
+    {
+      "after": null,
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "CI_WORKFLOW_TOUCHED/pyproject.toml/-/v2:b3c5ef5b1c7070f8720fe3357018b5d1fa082ec78271f85ef589cb1d7af1be87",
+      "message": "CI configuration changed",
+      "path": "pyproject.toml",
+      "rule": "CI_WORKFLOW_TOUCHED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/oracle_fixture_credit.py/-/8b79769e2552",
+      "message": "broad exception handler added (exceptExceptionasexc:)",
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/oracle_fixture_credit.py/-/8b79769e2552",
+      "message": "broad exception handler added (exceptExceptionasexc:)",
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/oracle_fixture_credit.py/-/8b79769e2552",
+      "message": "broad exception handler added (exceptExceptionasexc:)",
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "exceptExceptionasexc:#noqa:BLE001-asweepmustsurviveonebadcommit"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "BROAD_EXCEPT_ADDED/src/checkwash/sweep.py/-/395f9cada265",
+      "message": "broad exception handler added (exceptExceptionasexc:#noqa:BLE001-asweepmustsurviveonebadcommit)",
+      "path": "src/checkwash/sweep.py",
+      "rule": "BROAD_EXCEPT_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "except Exception as exc:  # noqa: BLE001 - a sweep must survive one bad commit"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "SUPPRESSION_ADDED/src/checkwash/sweep.py/-/cef10e013fe8",
+      "message": "lint/type suppression added (except Exception as exc:  # noqa: BLE001 - a sweep must survive one bad commit)",
+      "path": "src/checkwash/sweep.py",
+      "rule": "SUPPRESSION_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    },
+    {
+      "after": {
+        "span": [
+          0,
+          0
+        ],
+        "text": "from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case  # noqa: E402"
+      },
+      "allowlisted": false,
+      "before": null,
+      "deescalators": [],
+      "escalators": [],
+      "fingerprint": "SUPPRESSION_ADDED/tools/emit_corpus.py/-/0aca1b5978ab",
+      "message": "lint/type suppression added (from checkwash.cases import case_policy_base, case_snapshot, case_to_changes, parse_case  # noqa: E402)",
+      "path": "tools/emit_corpus.py",
+      "rule": "SUPPRESSION_ADDED",
+      "severity": "warn",
+      "shape": null,
+      "strength_after": null,
+      "strength_drop": null,
+      "subject_changed": null,
+      "unit": null
+    }
+  ],
+  "run": {
+    "base": "1ffe283d",
+    "checkwash_version": "0.10.0",
+    "head": "1be28ce5"
+  },
+  "skipped_files": [],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "info": 0,
+    "warn": 12
+  },
+  "verdict": "block"
+}

@@ -1,0 +1,8 @@
+{
+  "commit_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "scope": "pull-request-triggered workflow runs first page only",
+  "result": {
+    "workflow_runs": []
+  },
+  "no_pass_inference_from_empty_result": true
+}

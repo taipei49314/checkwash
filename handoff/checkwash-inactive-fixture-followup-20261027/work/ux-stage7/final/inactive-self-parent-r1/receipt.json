@@ -1,0 +1,33 @@
+{
+  "label": "inactive-self-parent-r1",
+  "host": "LAPTOP-01AGNPJU",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "expected_source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "validation_kind": "FIXED_SOURCE_NOT_RELEASE_BRIDGE",
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "ending_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "input_manifest_sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732",
+  "source_files_unchanged": true,
+  "changed_inputs": [],
+  "command": [
+    "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+    "-I",
+    "-B",
+    "-X",
+    "utf8",
+    "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage7/inactive_selfdogfood.py",
+    "--base",
+    "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+  ],
+  "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+  "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-fixed-438b6acb",
+  "harness_sha256": "8d83df38d957a2aa213cfcb6980567e3f48ba06cf4721388170cde165c6bcf63",
+  "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+  "started_utc": "2026-10-27T00:37:01.626948+00:00",
+  "ended_utc": "2026-10-27T00:37:31.113723+00:00",
+  "exit_code": 0
+}

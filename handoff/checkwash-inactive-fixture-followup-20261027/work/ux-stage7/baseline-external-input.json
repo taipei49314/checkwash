@@ -1,0 +1,9 @@
+{
+  "path": "work/checkwash-inactive-fixture/tests/test_inactive_fixture_oracle_credit.py",
+  "bytes": 11868,
+  "sha256": "f8f5d54dacd3d1bd789563e513b7d5bc370ebdda7122b9613ddb9d57a0f10eca",
+  "role": "EXTERNAL_NEW_CONTROLS_AGAINST_UNCHANGED_FBC_NOT_PART_OF_OLD_3084_MANIFEST",
+  "pytest_pythonpath": "work/checkwash-ux/src",
+  "pytest_configuration": "work/checkwash-ux/pyproject.toml",
+  "conftest_discovery": "DISABLED_FOR_EXTERNAL_SELF_CONTAINED_MODULE"
+}

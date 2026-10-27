@@ -1,0 +1,19 @@
+# INERT SOURCE COUNTEREXAMPLE. NOT_EXECUTED. Do not import this file.
+# e13b helper _module permits the bare special mark below; pytest collection
+# requires parametrize argnames/argvalues. This sibling must withhold the
+# enclosing module proof even though test_total itself has no marker.
+import os
+import pytest
+from app.billing import total
+
+@pytest.fixture(autouse=True)
+def only_slow(request):
+    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):
+        pytest.skip('off')
+
+def test_total():
+    assert total() == 78.75
+
+@pytest.mark.parametrize
+def test_collection_error():
+    assert total() == 78.75

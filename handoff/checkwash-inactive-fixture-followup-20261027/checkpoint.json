@@ -1,0 +1,49 @@
+{
+  "acceptance_state": "NONPASS_NOT_REASSESSED",
+  "candidate_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "candidate_state": "COMMITTED_SEPARATE_FOLLOWUP",
+  "draft_pull_request": "https://github.com/taipei49314/checkwash/pull/572",
+  "goal_state": "INCOMPLETE",
+  "kind": "FROZEN_DIAGNOSTIC_SUPPLEMENT",
+  "note": "Copied diagnostic outcomes/proposals keep their recorded state; no all-tests-PASS assertion is made.",
+  "previous_complete_backup": "4fc76cca99b4f19dedd26ee94da202daf85d5142",
+  "product_fixture_test_model_calls_by_backup_tool": 0,
+  "product_publication_performed": false,
+  "purpose": "COMMITTED_INACTIVE_FIXTURE_FOLLOWUP_BACKUP_NOT_ACCEPTANCE_NOT_RELEASE",
+  "snapshot_utc": "2026-10-27T00:47:29.907029+00:00",
+  "source_role": "PRIOR_FBC_BACKUP_BASELINE_ONLY",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "validation": {
+    "artifact_qualification": {
+      "reason": "SEPARATE_STAGE9_WORK_NO_TERMINAL_RECEIPTS_SELECTED",
+      "state": "IN_PROGRESS"
+    },
+    "fixed_targeted": {
+      "exit_code": 0,
+      "receipt": "work/ux-stage7/final/inactive-fixture-fixed-targeted-r1/receipt.json",
+      "receipt_sha256": "9125c4adbcf2d5b494efbfc57f2ed0300c40dab505f4d2b205f54ff8d9016436",
+      "tests": 323
+    },
+    "full_suite": {
+      "reason": "NO_TERMINAL_RECEIPT_IN_THIS_SNAPSHOT",
+      "state": "IN_PROGRESS"
+    },
+    "self_integration": {
+      "exit_code": 1,
+      "high": 3,
+      "receipt": "work/ux-stage7/final/inactive-self-integration-r1/receipt.json",
+      "receipt_sha256": "d9144b61308667be69b88762f811f9d52b810da24ddfa608c586dedf01c4763a",
+      "verdict": "block",
+      "warn": 12
+    },
+    "self_parent": {
+      "exit_code": 0,
+      "high": 0,
+      "receipt": "work/ux-stage7/final/inactive-self-parent-r1/receipt.json",
+      "receipt_sha256": "d1b1ce196d093dba1acc9debfef9ebf679d9d7d97375ad49102d82ed4d058db9",
+      "verdict": "pass",
+      "warn": 3
+    }
+  },
+  "version_1_0_requires_human_decision": true
+}

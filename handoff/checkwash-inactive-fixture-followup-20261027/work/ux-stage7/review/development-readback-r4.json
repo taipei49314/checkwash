@@ -1,0 +1,1613 @@
+{
+  "all_other_current_tracked_fbc_sources_verified_count": 3081,
+  "base_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "execution_label": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "helper_diff_path": "work/ux-stage7/review/development-readback-r4.helper-diff.txt",
+  "helper_diff_sha256": "f3cbdcfd30dce900467d8ea2ad1273167fc97545a86903cec742bd75dd130818",
+  "live_r4_six_source_files_match_recorded_copies": true,
+  "only_r3_r4_changed_path": "src/checkwash/oracle_fixture_credit.py",
+  "ordinary358_expected_and_all_assertion_asts_unchanged": true,
+  "product_fixture_pytest_model_calls_by_auditor": 0,
+  "protected_contracts_gating_strength_golden_fixtures_unchanged": true,
+  "r2_disposition": "143 actual failures retained, all raised the unchanged paired path/byte-reader guard; caller plumbing was corrected, product guard was not weakened",
+  "r3_helper_sha256": "e13b2ed785958dc56745b7097a806443e638722c0178bd62116cb8a81d448e93",
+  "r3_r4_disposition": "Same source.diff hash does not mean identical input source: untracked helper differs; full six-file copies/input manifests prove exact one-line rejection of bare parametrize",
+  "r4_helper_sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de",
+  "raw_receipts_or_sources_modified_by_auditor": false,
+  "runs": [
+    {
+      "actual_exit": 0,
+      "all_other_recorded_fbc_sources_unchanged": true,
+      "development_manifest_sha256": "e2ff2e225b14b4f9c6a70f85d3daacc72f754c172e7456993af42121fe55c996",
+      "errors": 0,
+      "failed": 0,
+      "failures": [],
+      "input_manifest_sha256": "b9c9934fdde45cb30a992de075174bd05634ce8b5a39e2f0a99ab142458a40a1",
+      "ordinary358_ast_check": {
+        "added_context_keywords": [
+          "root_searcher"
+        ],
+        "all_assertion_asts_identical_to_fbc": true,
+        "assertion_count": 35,
+        "entire_module_ast_identical_after_only_added_import_and_context_keywords_removed": true
+      },
+      "passed": 274,
+      "raw_artifacts": {
+        "git-status.txt": {
+          "bytes": 242,
+          "sha256": "0131fdc13a5e4a2dbba79161cfa2d9bb11ec8dfb7ba8f18d005cd066c5f0fcfc"
+        },
+        "input-hashes.json": {
+          "bytes": 385513,
+          "sha256": "b9c9934fdde45cb30a992de075174bd05634ce8b5a39e2f0a99ab142458a40a1"
+        },
+        "junit.xml": {
+          "bytes": 55010,
+          "sha256": "bcb59af5016887977d2c60d715441f1e87ff248c0373ce98f3543e7cdf36d70d"
+        },
+        "receipt.json": {
+          "bytes": 1967,
+          "sha256": "e9747d446c8aa914c80a22afc09c1aa3d3ec3eb63743cede2ef1a25d9ca5ff2d"
+        },
+        "source.diff": {
+          "bytes": 16879,
+          "sha256": "05147a772ad15af922fe87ff2f33d99a8751a514a0fdfe12e4dc33ac1a8bb5f3"
+        },
+        "stderr.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout.txt": {
+          "bytes": 345,
+          "sha256": "43ec92c30f5751268151f9f99af81868938472315f069fe05685d503f22b2f34"
+        }
+      },
+      "receipt": {
+        "changed_inputs": [],
+        "command": [
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+          "-m",
+          "pytest",
+          "tests/test_inactive_fixture_context_reader.py",
+          "tests/test_inactive_fixture_oracle_credit.py",
+          "tests/test_issue358_own_mark_guards.py",
+          "tests/test_oracle_credit_context.py",
+          "-o",
+          "addopts=",
+          "-q",
+          "--basetemp",
+          "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-732a52da\\p",
+          "--junitxml",
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage7/root/inactive-fixture-r1/junit.xml"
+        ],
+        "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "ended_utc": "2026-10-27T00:24:23.277336+00:00",
+        "ending_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "exit_code": 0,
+        "harness_sha256": "67140c68b914243631f6204bfa53112d1579cbd854f38b02739d9f2b8d671ffc",
+        "host": "LAPTOP-01AGNPJU",
+        "input_manifest_sha256": "b9c9934fdde45cb30a992de075174bd05634ce8b5a39e2f0a99ab142458a40a1",
+        "label": "inactive-fixture-r1",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+        "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+        "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+        "source_diff_sha256": "05147a772ad15af922fe87ff2f33d99a8751a514a0fdfe12e4dc33ac1a8bb5f3",
+        "source_files_unchanged": true,
+        "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "started_utc": "2026-10-27T00:24:19.194218+00:00",
+        "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-732a52da",
+        "validation_kind": "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION"
+      },
+      "recorded_paths_different_from_fbc": [
+        "src/checkwash/engine.py",
+        "src/checkwash/oracle_credit.py",
+        "src/checkwash/oracle_fixture_credit.py",
+        "tests/test_inactive_fixture_context_reader.py",
+        "tests/test_inactive_fixture_oracle_credit.py",
+        "tests/test_issue358_own_mark_guards.py"
+      ],
+      "run": 1,
+      "six_full_copies_verified": [
+        {
+          "bytes": 112610,
+          "path": "src/checkwash/engine.py",
+          "sha256": "5a33064d1b9125c448ea543082ab84160f25e7db6c6235aeabf5cef2eb1bc78d"
+        },
+        {
+          "bytes": 22908,
+          "path": "src/checkwash/oracle_credit.py",
+          "sha256": "51744826c900b8db401b64e652dcb4b63641c273d94f66b85d055ed4c9bb4580"
+        },
+        {
+          "bytes": 26675,
+          "path": "src/checkwash/oracle_fixture_credit.py",
+          "sha256": "a2f61f9a6d84a045bc7698e848426ac95376a8e50b334f47384e4a9bf112e982"
+        },
+        {
+          "bytes": 10038,
+          "path": "tests/test_inactive_fixture_context_reader.py",
+          "sha256": "5f7de44dc7706ebec05f6db3f99012f229122f87fea857096b8e982092886014"
+        },
+        {
+          "bytes": 14878,
+          "path": "tests/test_inactive_fixture_oracle_credit.py",
+          "sha256": "60cd63ea48f7c385f96e1e690433f091d7563e9e27c3f49b3394d198ffbc3e52"
+        },
+        {
+          "bytes": 18038,
+          "path": "tests/test_issue358_own_mark_guards.py",
+          "sha256": "f356314c5c42668dc2b428785bc3a7aae00888c8246234bf64373bd6cd94d1b4"
+        }
+      ],
+      "skipped": 0,
+      "source_diff_sha256": "05147a772ad15af922fe87ff2f33d99a8751a514a0fdfe12e4dc33ac1a8bb5f3",
+      "unique_class_name_pairs": 274,
+      "xml_parent_tests": 274,
+      "xml_suite_attributes": [
+        {
+          "errors": "0",
+          "failures": "0",
+          "hostname": "LAPTOP-01AGNPJU",
+          "name": "pytest",
+          "skipped": "0",
+          "tests": "274",
+          "time": "3.012",
+          "timestamp": "2026-10-27T08:24:19.646356+08:00"
+        }
+      ],
+      "xml_testcase_count": 274
+    },
+    {
+      "actual_exit": 1,
+      "all_other_recorded_fbc_sources_unchanged": true,
+      "development_manifest_sha256": "a4238b50cc751dd80b52d4a04cf9668debe5f05e93e36aea0f20efd290540f43",
+      "errors": 0,
+      "failed": 143,
+      "failures": [
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rename_source_resurrection_keeps_both_captured_sides[False-False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "05944e80f9d9f078197593940fc227211cb722a2cde15cceddebdf26402d428d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rename_source_resurrection_keeps_both_captured_sides[False-True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "dafa82856ecd58c22c5d20dd7e79b2052404abbe5b2caffac802c51ae2a0417d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rename_source_resurrection_keeps_both_captured_sides[True-False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "ee5b2aff69d979f0123a100b33cd9a238f7853af35c0d955a91846281c295f22"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rename_source_resurrection_keeps_both_captured_sides[True-True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "aaf76dc101e633c5be1db3bd9e12e01001ea700582204257edc62ca56fc90dab"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_conflicting_actual_before_bytes_withhold_only_optional_read[False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a016afb72b7dcc1bbd7be372dc643c65961ee7f7e382c6ca7a97be071b1959fc"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_conflicting_actual_before_bytes_withhold_only_optional_read[True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a864c1da9e6732c96b4ba619a27002c50c6067fa76d865bdc492a44cd9da3972"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_explicit_destination_absence_cannot_be_erased_by_rename[False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "c6a784f6c25b861f88da1e1d956c07939267f0e721099fd5ef9401a63fb0a28a"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_explicit_destination_absence_cannot_be_erased_by_rename[True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "ee31ef516e43ea86b92936afc431b360e3cb33c3ce9ec08d029e6d2930237ecb"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_refused_unchanged_source_is_negative_cached_across_sides[oversize]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "f0d2c5af2183655893e1466c9c0acd6535d2fe12a1c8614bbf9e46e20f9de1da"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_refused_unchanged_source_is_negative_cached_across_sides[invalid-type]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "62c4d33992bb32346c480ec33673b2f0cc97515bc056fef49f9ebc7582802dc2"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_refused_unchanged_source_is_negative_cached_across_sides[io-error]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "e51426c78ee13cfbdee4bb77cc2311f3aabbce3536e8e0f60c609c45498b5d70"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unchanged_valid_bytes_are_read_once_and_reported_on_both_sides",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "26b5ab0fd34cb7fa05a084160c3199541cf51631c0ffca59335be6c46ff3bd01"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_strict_inventory_reconstructs_each_captured_side[False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "ba32d693331b497d669167480e43641f2150c41ec351c204ed9b9adbbe302a1d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_strict_inventory_reconstructs_each_captured_side[True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "581f07d26628b3375d7afabfe46fbefdc1c26b4cda47a5e8bd55f1d7e997398d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_failed_strict_inventory_is_cached_once_not_empty_success[io-error]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d17ef24b399b1565191605968a7ec46ab7b8ca6f73f1a4645f5b03277223d57f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_failed_strict_inventory_is_cached_once_not_empty_success[invalid-type]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "16cd64f5c0512bc7f9812a411ff0a3864c13f1c8340ef4c7cb945735538087c4"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown[inventory0]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "5e33f6237103f979a18136c7d58bc49b47612ddfcce0416b141de2cb97083495"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown[inventory1]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b8109dd9c4c77d0309a09b488b50f45e7d30a3566574da9896fbb4d4243e76cb"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown[inventory2]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "91e071da762fda3f050074558ca3465cd6db8c2c92147ae6cd781cb63a8cbab8"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown[inventory3]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "88007c2f3b572f8d3bcc2563e1400e4ee26b2f8096eee6f22d1e1addf3e7d0fb"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown[inventory4]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "79e4b07c0915f9046cf0ead754f2f4b262f4912bf6bcd361da332aba4172e198"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_inventory_is_unknown[inventory5]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "fac8769e96435975e2db540763f56b562fbc7b5f9b2f37aaf4354eac020054c0"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_missing_strict_inventory_does_not_invent_an_empty_snapshot",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "c1ebdcebee6ade54accc42c1ef39ac95a73989ce0695b7781065f3ced970dd69"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_complete_path_metadata_preserves_empty_and_nonpython_entries_on_each_side[False-False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "5afbc861cb394939ce1d497ba6b0863a4b6c4ec89df28d59a43324794bc97a49"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_complete_path_metadata_preserves_empty_and_nonpython_entries_on_each_side[False-True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "30f8ac83a2b0add0e76346f0cc6598b6f95547ef3c88405b728f6aff8bb4caef"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_complete_path_metadata_preserves_empty_and_nonpython_entries_on_each_side[True-False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "76a23a6b63f9c734819fa248669b974c2255b9392504ce226f6436b823931800"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_complete_path_metadata_preserves_empty_and_nonpython_entries_on_each_side[True-True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "e2f114aa5382d0d0c7280c1b02c577d09de9919c26766afd8df53c5e46d3158f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_failed_complete_path_metadata_is_cached_once_across_sides[io-error]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "afbf2ad742495dcd359ba3c6182a272b9eafe0baa1f4e3d661a1fae3fb688393"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_failed_complete_path_metadata_is_cached_once_across_sides[invalid-type]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "25a270dde7de882b0488f3a864bf39376bc514233a8447d27d7307ddec3e609d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths0]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "e38962c9ecd0587751b7dab9aa931b0f7416053ba9a63ed5380c0d93da6ac22a"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths1]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "84900823001e581f3645f99529c58e5939d770f14d826d850a32ba76fb193275"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths2]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d443182c4b75f7d3c0d63a4ad86424d3dd945804848928d615a339661dc21d5f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths3]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "7b89be17f9173b088632bd66b5486f0412030bdd83d41c973665294f7694a362"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths4]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d73914f35a0dbdaa5c3a5406e6e76847ffeb2c28c9abee07f0962cbcea8cde74"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths5]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b121cf09fe42cf0dd039e40fcc666972c4d901977a7d99ac257e52e666730eaa"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_invalid_opaque_duplicate_or_overbudget_complete_path_metadata_is_unknown[paths6]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "59790a769cfd54d0febd6bc4f282a354449dde6e32a2550bfb3c5792e3806fe1"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_exact_complete_path_metadata_budget_is_allowed",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "78bf601d7b5da76842e075f3949689cc346ee1a182e208a3616c517618c1a67b"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_conflicting_actual_presence_withholds_only_affected_side_metadata[False]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "620e42e39cbce9293628f63dce6c06859a22430d80ff73b26a1854b747e1ba88"
+        },
+        {
+          "class": "tests.test_inactive_fixture_context_reader",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_conflicting_actual_presence_withholds_only_affected_side_metadata[True]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "7b2eb70b2cf1fba9690e5e75582a11608e4215e2b156e103f153f21e3be5732a"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_closed_unmarked_move_preserves_the_original_358_expectation",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "01d7a14e0c8890db07a0f97593de20e265e26779cedf537e000dd42a8869ed24"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_one_inactive_fixture_can_certify_each_unmarked_unit_separately",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "fde47c9e16aa398e1eddc3a5ce32d49568ed380ffde2e9ff710702aacdb0d409"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_live_sibling_cannot_lend_its_certificate_to_a_newly_slow_unit",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b520b5055635c814c3721b3fbf7c87806c15e1aa23d3f281954ec29e315f15d5"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_marked_sibling_can_evaluate_an_unknown_fixture_tail_before_the_unmarked_unit",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "753b5932dd2ab2963d7753ab54a47866dbbc49c772239c0fc5d444dd0e0ef36e"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_marks_cannot_borrow_an_inactive_certificate[pytestmark = make_marks()\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "feac3b84ced123924ebde72311bab5479d6266de5bb32fa96709fda1fa96d7b7"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_marks_cannot_borrow_an_inactive_certificate[pytestmark = []\\npytestmark.append(pytest.mark.slow)\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "3d9cd4be30082d0b3167d43d7fc072112ecd1f384049216ed22dbe3ba2bb5f9e"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_marks_cannot_borrow_an_inactive_certificate[def pytest_generate_tests(metafunc):\\n    pass\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a4efc7ce230ed33ab76c9b32580d7ce2a647e6e582480926dad58fc2e8c8f0bc"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_marks_cannot_borrow_an_inactive_certificate[def pytest_collection_modifyitems(items):\\n    pass\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "9b253fdf80c3d65b73f23b3d23cbc6b793c9cd53f8db53b25d32a9681e17d7ac"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_newly_slow_arrival_has_no_inactive_fixture_credit",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "2d13e14bd438298bfd84968e1ac5c91717dbb2ccd64a0f019ada1803a48d6b8c"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_or_frame_observing_producer_is_not_an_oracle_proof[from helpers import opaque\\ndef total():\\n    return opaque()\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "472e944fe7618a69f7cb49a4c7924624fb28e28845bbd4e329de820edb949546"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_or_frame_observing_producer_is_not_an_oracle_proof[import inspect\\ndef total():\\n    return inspect.currentframe().f_back.f_code.co_filename\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "03b03dc38ae0cdf1166ed974d3d4839e2d6d869b5e4532d0b27c9e6339db9ed1"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_or_frame_observing_producer_is_not_an_oracle_proof[def total():\\n    return __import__('sys')._getframe(1).f_code.co_name\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "4346e94b97782d090745cecc72cdc19d1b523b642b4690e5ae7e6bae50501bac"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_or_frame_observing_producer_is_not_an_oracle_proof[def total():\\n    return getattr(__import__('builtins'), 'value', 78.75)\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "940267054d35ce1b29e9f49c4911debe7a5ec85e664c8d1861983675836934b7"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_unknown_or_frame_observing_producer_is_not_an_oracle_proof[def total(__debug__=78.75):\\n    return __debug__\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "0f073ccc40eb5fbc71f9853df4d6cdd81e444dfeee930cebf3f9e3cd26f6c190"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_two_pure_producer_sources_are_not_the_same_source_certificate[def total():\\n    return 0\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "31ed6ea46a13662f9c5d0dbdba56ee78770b244858c68e320626f5de5e98c59e"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_two_pure_producer_sources_are_not_the_same_source_certificate[def total():\\n    return 78.75 + 0\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "45046c4728b67f986bb7097e89aa5d33635a3c4c6178232ba1f3d454e213ab34"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_initializer_changes_on_either_side_are_not_hidden_by_head_reads[app/__init__.py]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d0cfa863da5f67ccb82b8e83f8644f507895faa32b6f88734b5e155d7e273734"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_initializer_changes_on_either_side_are_not_hidden_by_head_reads[tests/__init__.py]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "6080ec96b39100f87c148bdc2e9ce2b983517840f587a7d8481e6e7d4e19065d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_initializer_changes_on_either_side_are_not_hidden_by_head_reads[__init__.py]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d4c3cdbeeef4b37e271fe1a42a87149ec52847373a3dec318c17f714706e1508"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[total = lambda: 78.75\\n-def test_total():\\n    assert total() == 78.75\\n-def total():\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "8a09fb93c8503d6de3c0167052b1d71370cefff7611b34bbbb4dc40e63594c29"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[from helpers import total\\n-def test_total():\\n    assert total() == 78.75\\n-def total():\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "0e88062e35932b54b804c208a926eca454abff9c946a37587a8ebdb2d6fb9683"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[-def test_total():\\n    total = lambda: 78.75\\n    assert total() == 78.75\\n-def total():\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "2fb7eb6436e11edbbb3372c4df87fa6ae5c8b110dbd4fb2b23a2ff917053d65b"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[-def test_total(total):\\n    assert total() == 78.75\\n-def total():\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "67a6f65e7b5addcf75c8ef6e5dc51d553ee3e5670d8e932deb576413bf0fae80"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[-def test_total():\\n    assert total(1, x=2) == 78.75\\n-def total(x):\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "1fcecd77f0ca6240af6fb1ea27186b77ab56453df3d9c215d1ebea6c0fb51214"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[-def test_total():\\n    assert total(1) == 78.75\\n-def total():\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "398116f90ee7991641f62ee48eba34e00241ed927888ce275487a95052ce3faf"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit[-def test_total():\\n    assert total(extra=1) == 78.75\\n-def total():\\n    return 78.75\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "2ca28dc259fde9a870536f5f5f5a1bc1959ca4f4f8dcf19e774543dc97b127be"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[pytest.py-def fixture(**kwargs):\\n    return lambda f: f\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "ee9fa90da8edb1b0e6de2f66431b5586f3394f0c16bb64d2baaa66978b6f677b"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[tests/pytest.py-def fixture(**kwargs):\\n    return lambda f: f\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "9a8d01e8de478d20675b73cf6e163844263b332f2a896262731db973713855de"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[os.py-environ = {}\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "f62c221da0c1c85030847c7e74deed12e67bcbbfa78a50b72a91b28af292d6a6"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[tests/os.py-environ = {}\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "478ceb0579f8ae3d1802092458d3fbfd53169f7b3435e0f272ade993e2c02a5a"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[pytest.ini-[pytest]\\naddopts = -p tests.marking\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "5a03cdd4f527bdc5cc235800a9ff97f1c241b5356d6b57bbe88e4d3fb62fc189"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[pyproject.toml-[project.entry-points.pytest11]\\nmarking = 'tests.marking'\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "506dd3e20f14f63a23c4f5314e8e0b5d10e28c8f094d7de1090b55028ec06487"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[tests/conftest.py-def pytest_collection_modifyitems(items):\\n    pass\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "9ae4f46f92cea5c106780e986fd67419adde089a300ba3413c156adbfb9449d0"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[conftest.py-import pytest\\n@pytest.fixture(autouse=True)\\ndef setup(request):\\n    request.applymarker(pytest.mark.slow)\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "25a9fc304cb57c8124b9f796eebf32590b27206962f745158bf99792211400f1"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_shadow_plugin_and_test_bootstrap_sources_remain_unknown[tests/__init__.py-import builtins\\nbuiltins.getattr = lambda *args: 0\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "0dc0c50837dcee833373594398bae7e7c075285306d957aa6219762374add049"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_repository_distribution_entry_points_cannot_hide_a_pytest_plugin[demo.egg-info]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "4fc3de062e53132a59bf09468026886c4c07c86018d0956fe378c2a50bea8da7"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_repository_distribution_entry_points_cannot_hide_a_pytest_plugin[demo.dist-info]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "62285a48e61766d9750990797bd9bc5b15d42fac9fef5735b8f6114d48ed3e2d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_nonancestor_conftest_can_mark_units_when_its_sibling_is_collected",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "9909150a0e85ae3e15f98f09da2984120f50b31bec778693424f29d9954cacd9"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_collectable_sibling_can_rebind_the_imported_producer_before_tests_run",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "73b7b981b8a75ea76f3f841b0431f33fb24f669bad61c066f8409827a5951170"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[pytest_plugins]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "66925dbc9eb70ab09e2769707e14c70a91fb41258c5f5c3950de94833ac2a404"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[pytestmark]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "31c3b30e70a7203a7d66c6c137fb008ff03044ce2f3b65c06ac8e310822e9aa8"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[setup_module]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b08b086f3c91210d34dd4285d656d7322f4f2c2fac33f4253525c7af13bc1c7a"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[teardown_module]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "18b2b8f6aab2c43c9a6bf9a51585b9cad3b244550904c02509aba43dc24b8e4d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[setUpModule]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "3e304c5b332de8c1d0061c3dcc7b46ce1cec43d74850dcb87242a66e40aa48a3"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[tearDownModule]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "aed63ffe38a963060ce4af8a0167b3d3caaac932bae913446b170813e7b4f700"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[setup_function]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "3135cad25ffa43694c63586b8e0a9c03e04528db4928c368309883137acaab4b"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[teardown_function]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "e09df585e636fd3fb64cb1c152921c75295188eeb7557a9f3c66f77be2145ce2"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[setup_class]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "f122bb5fcc509b3f68f35df82bb73b889649cfaf84f8dcf78247c2e66304811c"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[teardown_class]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "7bbc339fc03d06111be6960be4900e519cc12082eb1b6604b43b3b819f6c4338"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[setup_method]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "0fbac89564dadcee256eb4094f3cba880c650bda823f2bc20e086445b4a23d51"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_fixture_named_as_a_pytest_protocol_binding_has_no_inactive_credit[teardown_method]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d97824b6b3fc58f4457ef94be66e0adcdee86025bb157250b1b9f0338f1503b5"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[pytest_plugins]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "725c6183ec74ebc11498f8ae38ec714b1877a017a80d6af9e181662449d59ed4"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[pytestmark]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "56fe6119e058093095254a479dd05cbfdf5ee9f7c7a8a641e45ced9efcd5d08f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[setup_module]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "051533d7ef4111cc34cd6b09cd803ebdd67d0e4cbdd8dfec31974a64e4cb59c2"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[teardown_module]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "51d7d89115ffe5ebdf1dc4dff50ccc711ec24d9e476880ce3e7c2a9238a6a63a"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[setUpModule]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "71d90002852f3cfbada393032158843e851666819fad06ebf413eb00ac474f89"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[tearDownModule]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "192b313d66f19a8f4fc02ceefba34a240d6cd00c4333b919785ae4aab42295dd"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[setup_function]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "cc1adee432351e3fdbf5c51b49a76a2d1f84a586eb2841558fd8b45ed196f9ae"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[teardown_function]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "59c193dc5c817a335f1529f790a8e4a7215fd42e8c7beae7452fc5339ef5ca10"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[setup_class]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "543182c6f95c51f9a0057b32c1c9b442a7098e1b47c43de0ace56c639defe86f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[teardown_class]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "bfc509bfb1af1009227e1b58128fbc5cb831971bdb0ff873a155141afa9f608f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[setup_method]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "3a223fb325a989958412f92d7c30f8b2bca3796c6a5da85e22d48d1e83898d64"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_pure_import_alias_cannot_supply_a_pytest_protocol_binding[teardown_method]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "1a18b7507f8f76106a901746b357ccbf03f82441e2e925b94411ae299a29c275"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_case_preserving_aliases_cannot_prove_a_canonical_startup_path_absent[tests/Conftest.py-def pytest_collection_modifyitems(items):\\n    for item in items:\\n        item.add_marker('slow')\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b52e5050ac92bf89a4c2afefa9dc8a6ed3f0342e8a60431341a55d0475bf39c9"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_case_preserving_aliases_cannot_prove_a_canonical_startup_path_absent[tests/Conftest.PY-def pytest_collection_modifyitems(items):\\n    for item in items:\\n        item.add_marker('slow')\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a4aa9e618596942794aafdd474d2ae96d8e8d22aa49226b125bd1a86f2122b46"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_case_preserving_aliases_cannot_prove_a_canonical_startup_path_absent[PYTEST.INI-[pytest]\\naddopts = -p tests.marking\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "fbe10f96114d5c3dd465e01b80bcd8eb1df377a7fe12375d75b21892ff42a942"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_case_preserving_aliases_cannot_prove_a_canonical_startup_path_absent[tests/__INIT__.py-import builtins\\nbuiltins.getattr = lambda *args: 0\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "d765e9e838f252bb6e7db18d76afdfa0fe7e047fc32b9db95d1a2b91532cbcbf"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    touch()\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "c15a96721c3dbec686a35abe8a451626e5194a3ce4d37c6bcde580bdefe3a14d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n    touch()\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "23c6d6411cab92397e2176c42bf101b066d5df2c42b1b40d8b5ae3105e977852"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        yield 1\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "917a8ae760652752e4eba02a5b962dc0a67614bee01a7b0b6dbfa5a19848a3d6"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        yield from ()\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "38b5b4676a17d23f86d7f3ad93275a21200bfbb1327bfec1571a47abce866f90"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@other\\n@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "6cff86f87d367af8f1e639512d2cb57a5b1caac3d1c5da5b369dfe17dc3d49f9"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True, scope='module')\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b0b269cb49eea626e873a98441d94db6f33beebdc0429015bed2381406a80221"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True, scope='class')\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "5ef3b8205cb5c1e0c4f076103ef4e78519f1a26b595e599e57a3f2c588bbfafe"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True, scope=SCOPE)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a0086f1b060096546a0979608dc4aa8345a606a6357d6ac9329120583de664e5"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=False)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "9f586dd511fd8c58ce04590689767de5ceff6aabca5310071b00282f3f0d0ae7"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True, params=[1])\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "b70f9dec392e07a3af7b3068f19410fc314b785c17fbd5ea390a8aaf193a791d"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\nasync def only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "37b3002ce2f393d48023c2eca1f2a1a125d8ca8610a18475f3a34e8e95e0bef9"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request, other):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "9a24e9fcf4652b379cdb78b42ccb0b0dd110ca39ce598859a222577f22c03c32"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request=None):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "e46d4f85685e97b66e1d05a758ae9ced0c984cba56a697f95070d6abb4b244c4"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request=make_request()):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "723a51ac498d1575dc9e2f08f8c49fc09907b1461c3f202ba5016dc5b92c9791"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request: Other):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "4773c127ba053c46e906ae8d25ed52d273a3aa219adcd531f58b3ad664e5e5d9"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(*request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "3ef9f43ecf7b722a918b42111fbbbe1e1dd5d01b42216af77f256f3a097b646b"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(**request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "7c0de7127f98f2d1cdc25ab5192c5221ba4a362d39ccf1ee800d1296bf5808a3"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow():\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "ec6cc8762e370067ac6d42d54f1244a05b1ea77467fd58a117f30d2f5251a657"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef request(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "59d2b90da4e3e0dc3f2541426af2e1f2a87ce9b43bc75e72752799aa958d5358"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(other):\\n    if other.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "6525fa557d9ff39afa63dc6be822f6def76b0a11659a8f7338f75aa7e06201ca"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    request = other\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "17a256034477c14747ccb2959632e5db2ac826b99cb75813a9bee202fa232e2c"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker(marker_name) and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a97c96ff6684701b3c82fc184ea6d8e4e482800ac8b33ac36fd54e3ef6bc7bd3"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker(make_name()) and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "2efcf9048035d7388efa647a736d785c164f2fcee978864e98fac26c4977b190"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow', extra()) and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "f3ab4b3e914e2dd4c3b4c00bf42349c547cebd96771f84d6963f62ae9573aa66"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker(name='slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "ae05bd31baf158ce25ae7b15389823992f51378e4225c3781732df96b06b1c37"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if touch() and request.node.get_closest_marker('slow'):\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "f70b88ed496961def7e06648d72c85332721d8044140379ac83d2c2338ad6d68"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') or touch():\\n        pytest.skip('slow tests are off')\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "2413be0385cc0f58d921db8879be48bc6ba7d2975b03271f29da5df89549874f"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_noncanonical_or_effectful_fixture_cannot_be_erased[@pytest.fixture(autouse=True)\\ndef only_slow(request):\\n    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\\n        pytest.skip('slow tests are off')\\n    else:\\n        touch()\\n\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "a58687ccfefe298f39853acf6960e5bda8b619e4d2a12724c4a838f2ccc5ff95"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_framework_and_request_binding_changes_do_not_prove_a_fixture_inactive[pytest = framework\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "bff77714f082485dadc88849868b29f4061c65d01ee2c077ceb03a285ecf472c"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_framework_and_request_binding_changes_do_not_prove_a_fixture_inactive[os = platform\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "f7efc6a3435fe6bf52346ab1bd2ef379da15d42fe4b29ee573dc2b7a3a39be97"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_framework_and_request_binding_changes_do_not_prove_a_fixture_inactive[from helpers import pytest\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "6f3be58ca5b875155c293ea55e3c6af449570044459c5daecc55d0ea0947f944"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_framework_and_request_binding_changes_do_not_prove_a_fixture_inactive[from helpers import os\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "8441f5652ba80a806b74880c2c9963c1ec84c87001405fcbc09a4f76786bc540"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_framework_and_request_binding_changes_do_not_prove_a_fixture_inactive[request = other\\n]",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "1f480e1e9054db59e774ba6b4e9ec5e20a348a98a545abc722b13431d5a0467e"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_missing_strict_root_cannot_establish_producer_or_startup_authority",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "8d3560f1a5053dad9e2339e67dfd579f8e6bfd8efc9f037cff1e87afad5dda7e"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_missing_source_inventory_cannot_establish_fixture_bootstrap_authority",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "4f05895247bd2648600e61d356358d0268a3e0ef1806f08639c003d1497973ad"
+        },
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_module_ast_budget_exhaustion_does_not_erase_the_request_context",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "797575d0dd42d6611f15d650fea9d65bf101d90b789666b0d2e8912e5018dedf"
+        },
+        {
+          "class": "tests.test_issue358_own_mark_guards",
+          "message": "checkwash.change.EngineError: runtime-shadow inventory requires both path and byte readers",
+          "name": "test_a_test_moved_under_the_gate_keeps_its_move_credit",
+          "paired_reader_contract_failure": true,
+          "text_sha256": "cf2bab9c8cf225afc79e4e819318f84e136d6253f049189f32c6b34e45b00543"
+        }
+      ],
+      "input_manifest_sha256": "fc01f4ac000c58004b0e1f06ba3a40a9290b6cf7933c986b6063b6628bf03ef5",
+      "ordinary358_ast_check": {
+        "added_context_keywords": [
+          "root_searcher",
+          "root_path_lister"
+        ],
+        "all_assertion_asts_identical_to_fbc": true,
+        "assertion_count": 35,
+        "entire_module_ast_identical_after_only_added_import_and_context_keywords_removed": true
+      },
+      "passed": 179,
+      "raw_artifacts": {
+        "git-status.txt": {
+          "bytes": 242,
+          "sha256": "0131fdc13a5e4a2dbba79161cfa2d9bb11ec8dfb7ba8f18d005cd066c5f0fcfc"
+        },
+        "input-hashes.json": {
+          "bytes": 385513,
+          "sha256": "fc01f4ac000c58004b0e1f06ba3a40a9290b6cf7933c986b6063b6628bf03ef5"
+        },
+        "junit.xml": {
+          "bytes": 592219,
+          "sha256": "fea44e5daac0bb7a0cbc14d0f3afd4da6b5de151da2ced2d867b7adf57fa34c5"
+        },
+        "receipt.json": {
+          "bytes": 1967,
+          "sha256": "f7a77c965737ea73823d0abd683cb64932786596fcdf7c91d576aff2fc172357"
+        },
+        "source.diff": {
+          "bytes": 20089,
+          "sha256": "3ee9ee2b6cdce3250c8645872a9dec96d21f389900960a95e3e74c4c5bb5b4ee"
+        },
+        "stderr.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout.txt": {
+          "bytes": 551917,
+          "sha256": "fa1c5f726acc8bded9c0cda619f51c22638594b2de761a3c137240c4a0815762"
+        }
+      },
+      "receipt": {
+        "changed_inputs": [],
+        "command": [
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+          "-m",
+          "pytest",
+          "tests/test_inactive_fixture_context_reader.py",
+          "tests/test_inactive_fixture_oracle_credit.py",
+          "tests/test_issue358_own_mark_guards.py",
+          "tests/test_oracle_credit_context.py",
+          "-o",
+          "addopts=",
+          "-q",
+          "--basetemp",
+          "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-8d2e9cee\\p",
+          "--junitxml",
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage7/root/inactive-fixture-r2/junit.xml"
+        ],
+        "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "ended_utc": "2026-10-27T00:29:47.512707+00:00",
+        "ending_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "exit_code": 1,
+        "harness_sha256": "67140c68b914243631f6204bfa53112d1579cbd854f38b02739d9f2b8d671ffc",
+        "host": "LAPTOP-01AGNPJU",
+        "input_manifest_sha256": "fc01f4ac000c58004b0e1f06ba3a40a9290b6cf7933c986b6063b6628bf03ef5",
+        "label": "inactive-fixture-r2",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+        "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+        "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+        "source_diff_sha256": "3ee9ee2b6cdce3250c8645872a9dec96d21f389900960a95e3e74c4c5bb5b4ee",
+        "source_files_unchanged": true,
+        "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "started_utc": "2026-10-27T00:29:34.520055+00:00",
+        "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-8d2e9cee",
+        "validation_kind": "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION"
+      },
+      "recorded_paths_different_from_fbc": [
+        "src/checkwash/engine.py",
+        "src/checkwash/oracle_credit.py",
+        "src/checkwash/oracle_fixture_credit.py",
+        "tests/test_inactive_fixture_context_reader.py",
+        "tests/test_inactive_fixture_oracle_credit.py",
+        "tests/test_issue358_own_mark_guards.py"
+      ],
+      "run": 2,
+      "six_full_copies_verified": [
+        {
+          "bytes": 115599,
+          "path": "src/checkwash/engine.py",
+          "sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff"
+        },
+        {
+          "bytes": 23030,
+          "path": "src/checkwash/oracle_credit.py",
+          "sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7"
+        },
+        {
+          "bytes": 30632,
+          "path": "src/checkwash/oracle_fixture_credit.py",
+          "sha256": "e13b2ed785958dc56745b7097a806443e638722c0178bd62116cb8a81d448e93"
+        },
+        {
+          "bytes": 15358,
+          "path": "tests/test_inactive_fixture_context_reader.py",
+          "sha256": "fba5a242a71b90eb2cead0cb9aff0c798abc3a6ccd5297528e8d4b5eab5d2e0d"
+        },
+        {
+          "bytes": 17288,
+          "path": "tests/test_inactive_fixture_oracle_credit.py",
+          "sha256": "dda66bd9dd7eb96caf90a48a7ee702c6b0ff4e2fe43024d6df9c21e67b122d7b"
+        },
+        {
+          "bytes": 18089,
+          "path": "tests/test_issue358_own_mark_guards.py",
+          "sha256": "2c258cbec1cdae0c865e2ac4cface27e078edb1ded9cdc52fc562abe2ac0e6b0"
+        }
+      ],
+      "skipped": 0,
+      "source_diff_sha256": "3ee9ee2b6cdce3250c8645872a9dec96d21f389900960a95e3e74c4c5bb5b4ee",
+      "unique_class_name_pairs": 322,
+      "xml_parent_tests": 322,
+      "xml_suite_attributes": [
+        {
+          "errors": "0",
+          "failures": "143",
+          "hostname": "LAPTOP-01AGNPJU",
+          "name": "pytest",
+          "skipped": "0",
+          "tests": "322",
+          "time": "11.659",
+          "timestamp": "2026-10-27T08:29:34.884750+08:00"
+        }
+      ],
+      "xml_testcase_count": 322
+    },
+    {
+      "actual_exit": 1,
+      "all_other_recorded_fbc_sources_unchanged": true,
+      "development_manifest_sha256": "c96c01f07519cae8d86fbf7e44a3deb135c7d52ca89e33aef4e484b7c00ba61b",
+      "errors": 0,
+      "failed": 1,
+      "failures": [
+        {
+          "class": "tests.test_inactive_fixture_oracle_credit",
+          "message": "AssertionError: assert 'pass' == 'block'\n  \n  - block\n  + pass",
+          "name": "test_a_bare_parametrize_sibling_cannot_certify_the_unmarked_arrival",
+          "paired_reader_contract_failure": false,
+          "text_sha256": "72e2326e3939cdd631259999b4ba7844913ce32ee8fa3d1a8dace43fd7d5da11"
+        }
+      ],
+      "input_manifest_sha256": "f5fe44b291abad6e48e277344ce1fa315f464ef8d909e629d10ea219679bf8b1",
+      "ordinary358_ast_check": {
+        "added_context_keywords": [
+          "root_searcher",
+          "root_path_lister",
+          "root_batch_reader"
+        ],
+        "all_assertion_asts_identical_to_fbc": true,
+        "assertion_count": 35,
+        "entire_module_ast_identical_after_only_added_import_and_context_keywords_removed": true
+      },
+      "passed": 322,
+      "raw_artifacts": {
+        "git-status.txt": {
+          "bytes": 242,
+          "sha256": "0131fdc13a5e4a2dbba79161cfa2d9bb11ec8dfb7ba8f18d005cd066c5f0fcfc"
+        },
+        "input-hashes.json": {
+          "bytes": 385513,
+          "sha256": "f5fe44b291abad6e48e277344ce1fa315f464ef8d909e629d10ea219679bf8b1"
+        },
+        "junit.xml": {
+          "bytes": 65063,
+          "sha256": "f6f23abf42142467eb0d0ebac046874670beaad8434b73f26d2563f922fc28df"
+        },
+        "receipt.json": {
+          "bytes": 1967,
+          "sha256": "c112a2adacfb824c2c7182b516bb0444320831954c995329602e5a31a8cd8c63"
+        },
+        "source.diff": {
+          "bytes": 20176,
+          "sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c"
+        },
+        "stderr.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout.txt": {
+          "bytes": 2136,
+          "sha256": "80608f8236cfd2d628e0d8460a754369e4d9b5193848a2da0f0059fb9a7d8520"
+        }
+      },
+      "receipt": {
+        "changed_inputs": [],
+        "command": [
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+          "-m",
+          "pytest",
+          "tests/test_inactive_fixture_context_reader.py",
+          "tests/test_inactive_fixture_oracle_credit.py",
+          "tests/test_issue358_own_mark_guards.py",
+          "tests/test_oracle_credit_context.py",
+          "-o",
+          "addopts=",
+          "-q",
+          "--basetemp",
+          "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-52c9f2c7\\p",
+          "--junitxml",
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage7/root/inactive-fixture-r3/junit.xml"
+        ],
+        "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "ended_utc": "2026-10-27T00:33:29.114383+00:00",
+        "ending_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "exit_code": 1,
+        "harness_sha256": "67140c68b914243631f6204bfa53112d1579cbd854f38b02739d9f2b8d671ffc",
+        "host": "LAPTOP-01AGNPJU",
+        "input_manifest_sha256": "f5fe44b291abad6e48e277344ce1fa315f464ef8d909e629d10ea219679bf8b1",
+        "label": "inactive-fixture-r3",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+        "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+        "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+        "source_diff_sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c",
+        "source_files_unchanged": true,
+        "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "started_utc": "2026-10-27T00:33:24.518283+00:00",
+        "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-52c9f2c7",
+        "validation_kind": "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION"
+      },
+      "recorded_paths_different_from_fbc": [
+        "src/checkwash/engine.py",
+        "src/checkwash/oracle_credit.py",
+        "src/checkwash/oracle_fixture_credit.py",
+        "tests/test_inactive_fixture_context_reader.py",
+        "tests/test_inactive_fixture_oracle_credit.py",
+        "tests/test_issue358_own_mark_guards.py"
+      ],
+      "run": 3,
+      "six_full_copies_verified": [
+        {
+          "bytes": 115599,
+          "path": "src/checkwash/engine.py",
+          "sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff"
+        },
+        {
+          "bytes": 23030,
+          "path": "src/checkwash/oracle_credit.py",
+          "sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7"
+        },
+        {
+          "bytes": 30632,
+          "path": "src/checkwash/oracle_fixture_credit.py",
+          "sha256": "e13b2ed785958dc56745b7097a806443e638722c0178bd62116cb8a81d448e93"
+        },
+        {
+          "bytes": 15495,
+          "path": "tests/test_inactive_fixture_context_reader.py",
+          "sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2"
+        },
+        {
+          "bytes": 17916,
+          "path": "tests/test_inactive_fixture_oracle_credit.py",
+          "sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80"
+        },
+        {
+          "bytes": 18175,
+          "path": "tests/test_issue358_own_mark_guards.py",
+          "sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b"
+        }
+      ],
+      "skipped": 0,
+      "source_diff_sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c",
+      "unique_class_name_pairs": 323,
+      "xml_parent_tests": 323,
+      "xml_suite_attributes": [
+        {
+          "errors": "0",
+          "failures": "1",
+          "hostname": "LAPTOP-01AGNPJU",
+          "name": "pytest",
+          "skipped": "0",
+          "tests": "323",
+          "time": "3.635",
+          "timestamp": "2026-10-27T08:33:24.874911+08:00"
+        }
+      ],
+      "xml_testcase_count": 323
+    },
+    {
+      "actual_exit": 0,
+      "all_other_recorded_fbc_sources_unchanged": true,
+      "development_manifest_sha256": "d7406a73116b0d2c81341d8dc86a3406156e4a7c2d0a562acbead99f048a543b",
+      "errors": 0,
+      "failed": 0,
+      "failures": [],
+      "input_manifest_sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732",
+      "ordinary358_ast_check": {
+        "added_context_keywords": [
+          "root_searcher",
+          "root_path_lister",
+          "root_batch_reader"
+        ],
+        "all_assertion_asts_identical_to_fbc": true,
+        "assertion_count": 35,
+        "entire_module_ast_identical_after_only_added_import_and_context_keywords_removed": true
+      },
+      "passed": 323,
+      "raw_artifacts": {
+        "git-status.txt": {
+          "bytes": 242,
+          "sha256": "0131fdc13a5e4a2dbba79161cfa2d9bb11ec8dfb7ba8f18d005cd066c5f0fcfc"
+        },
+        "input-hashes.json": {
+          "bytes": 385513,
+          "sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732"
+        },
+        "junit.xml": {
+          "bytes": 63617,
+          "sha256": "dbbca2a512f6364108c6e61723107417c66b385a02298262b08d0e29e38f3410"
+        },
+        "receipt.json": {
+          "bytes": 1967,
+          "sha256": "46502e670d447bdea0f498f30576ab3e8af12762339e3f8292d60fe334326148"
+        },
+        "source.diff": {
+          "bytes": 20176,
+          "sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c"
+        },
+        "stderr.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout.txt": {
+          "bytes": 426,
+          "sha256": "387d058ca62b6138c2119e23c5a1a822865bef340ae2615cc7c2054e0add8622"
+        }
+      },
+      "receipt": {
+        "changed_inputs": [],
+        "command": [
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+          "-m",
+          "pytest",
+          "tests/test_inactive_fixture_context_reader.py",
+          "tests/test_inactive_fixture_oracle_credit.py",
+          "tests/test_issue358_own_mark_guards.py",
+          "tests/test_oracle_credit_context.py",
+          "-o",
+          "addopts=",
+          "-q",
+          "--basetemp",
+          "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-e18b834a\\p",
+          "--junitxml",
+          "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage7/root/inactive-fixture-r4/junit.xml"
+        ],
+        "cwd": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "ended_utc": "2026-10-27T00:34:08.095216+00:00",
+        "ending_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "executable": "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\test-runtime\\Scripts\\python.exe",
+        "exit_code": 0,
+        "harness_sha256": "67140c68b914243631f6204bfa53112d1579cbd854f38b02739d9f2b8d671ffc",
+        "host": "LAPTOP-01AGNPJU",
+        "input_manifest_sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732",
+        "label": "inactive-fixture-r4",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+        "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+        "replayer_sha256": "39c52c655643f68bef2bb0c1d2f918b168784ce88372b6767b4a5a97ce196d0d",
+        "source_diff_sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c",
+        "source_files_unchanged": true,
+        "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+        "started_utc": "2026-10-27T00:34:03.421051+00:00",
+        "temp_root": "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-e18b834a",
+        "validation_kind": "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION"
+      },
+      "recorded_paths_different_from_fbc": [
+        "src/checkwash/engine.py",
+        "src/checkwash/oracle_credit.py",
+        "src/checkwash/oracle_fixture_credit.py",
+        "tests/test_inactive_fixture_context_reader.py",
+        "tests/test_inactive_fixture_oracle_credit.py",
+        "tests/test_issue358_own_mark_guards.py"
+      ],
+      "run": 4,
+      "six_full_copies_verified": [
+        {
+          "bytes": 115599,
+          "path": "src/checkwash/engine.py",
+          "sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff"
+        },
+        {
+          "bytes": 23030,
+          "path": "src/checkwash/oracle_credit.py",
+          "sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7"
+        },
+        {
+          "bytes": 30663,
+          "path": "src/checkwash/oracle_fixture_credit.py",
+          "sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de"
+        },
+        {
+          "bytes": 15495,
+          "path": "tests/test_inactive_fixture_context_reader.py",
+          "sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2"
+        },
+        {
+          "bytes": 17916,
+          "path": "tests/test_inactive_fixture_oracle_credit.py",
+          "sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80"
+        },
+        {
+          "bytes": 18175,
+          "path": "tests/test_issue358_own_mark_guards.py",
+          "sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b"
+        }
+      ],
+      "skipped": 0,
+      "source_diff_sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c",
+      "unique_class_name_pairs": 323,
+      "xml_parent_tests": 323,
+      "xml_suite_attributes": [
+        {
+          "errors": "0",
+          "failures": "0",
+          "hostname": "LAPTOP-01AGNPJU",
+          "name": "pytest",
+          "skipped": "0",
+          "tests": "323",
+          "time": "3.443",
+          "timestamp": "2026-10-27T08:34:04.092338+08:00"
+        }
+      ],
+      "xml_testcase_count": 323
+    }
+  ],
+  "runs_not_unique_cases": true,
+  "runtime_scope": "Actual PJU Windows/Python3.11.9 working-tree development; not a fixed-commit full suite, qualification or acceptance",
+  "status": "PASS_INDEPENDENT_RECORDED_DEVELOPMENT_READBACK"
+}

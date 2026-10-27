@@ -1,0 +1,635 @@
+"""Optional per-unit proof for one inactive, function-scoped pytest fixture.
+
+This is a deliberately small source grammar, not a runtime equivalence claim.
+The caller must already have a known, side-correct startup snapshot. Every read
+here must distinguish known absence from failure. Missing knowledge returns
+None and must never become relocation credit. Nothing in the analyzed source
+is imported, compiled or executed.
+"""
+from __future__ import annotations
+
+import ast
+import configparser
+from dataclasses import dataclass
+import hashlib
+import json
+from pathlib import PurePosixPath
+import tomllib
+
+from checkwash.change import EngineError
+from checkwash.frontends.python.oracle_purity import (
+    _pure_module,
+    primitive_literal_result,
+    pure_imported_calls,
+)
+from checkwash.frontends.python.own_marks import OwnMarks, UNKNOWN
+from checkwash.frontends.python.snapshot_context import _default_collection_config
+from checkwash.ir.astutil import stable_dump
+from checkwash.roles import collectable
+
+
+MAX_PATHS = 128
+MAX_FILE_BYTES = 65_536
+MAX_TOTAL_BYTES = 1_048_576
+MAX_AST_NODES = 4096
+MAX_FILE_PATHS = 256
+_CONFIGS = ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg",
+            "pytest.toml", ".pytest.toml")
+_NAMES = frozenset({"__name__", "__file__", "__package__", "__spec__", "__loader__",
+                    "__builtins__", "globals", "locals", "vars", "eval", "exec",
+                    "getattr", "setattr", "delattr"})
+_ATTRIBUTES = frozenset({"__name__", "__file__", "__module__", "__qualname__", "__code__",
+                         "__globals__", "__closure__", "currentframe", "_getframe",
+                         "getframeinfo", "getmodule", "stack", "f_code", "f_globals", "f_locals"})
+
+
+@dataclass(frozen=True)
+class InactiveFixtures:
+    fixture_node_ids: frozenset[int]
+    request_node_ids: frozenset[int]
+    certificates: dict[str, str]
+
+
+class _Unavailable(Exception):
+    pass
+
+
+def _path(value):
+    if not isinstance(value, str):
+        raise _Unavailable
+    value = value.replace("\\", "/")
+    parts = value.split("/")
+    if (not value or value.startswith("/") or ":" in value or len(parts) > 16
+            or any(part in {"", ".", ".."} or any(ord(c) < 32 for c in part) for part in parts)):
+        raise _Unavailable
+    return value
+
+
+class _Paths:
+    """Complete file authority, independent of Python text-search hits."""
+    def __init__(self, path_lister):
+        try:
+            paths = path_lister()
+        except Exception as exc:
+            raise _Unavailable from exc
+        if type(paths) not in (list, tuple) or len(paths) > MAX_FILE_PATHS:
+            raise _Unavailable
+        normalized = [_path(candidate) for candidate in paths]
+        if len(normalized) != len(set(normalized)):
+            raise _Unavailable
+        self.files = frozenset(normalized)
+        self.folded_files, self.folded_directories = {}, {}
+        canonical = {name.casefold(): name for name in (*_CONFIGS, "conftest.py", "__init__.py")}
+        for candidate in normalized:
+            if any(part.casefold().endswith((".egg-info", ".dist-info")) for part in candidate.split("/")):
+                # Repository-visible distribution metadata can register a
+                # pytest11 plugin even without a pytest config/import here.
+                raise _Unavailable
+            base = PurePosixPath(candidate).name
+            if ((base.casefold().endswith(".py") and not base.endswith(".py"))
+                    or base.casefold() in canonical and base != canonical[base.casefold()]):
+                raise _Unavailable
+            folded = candidate.casefold()
+            if folded in self.folded_files:
+                raise _Unavailable
+            self.folded_files[folded] = candidate
+            parts = candidate.split("/")
+            for depth in range(1, len(parts)):
+                directory = "/".join(parts[:depth])
+                previous = self.folded_directories.setdefault(directory.casefold(), directory)
+                if previous != directory:
+                    raise _Unavailable
+        if self.folded_files.keys() & self.folded_directories.keys():
+            raise _Unavailable
+
+    def check(self, name):
+        parts = name.split("/")
+        for depth in range(1, len(parts) + 1):
+            prefix = "/".join(parts[:depth])
+            file = self.folded_files.get(prefix.casefold())
+            directory = self.folded_directories.get(prefix.casefold())
+            if depth != len(parts):
+                if file is not None or directory is not None and directory != prefix:
+                    raise _Unavailable  # existing file or a case alias at an ancestor.
+            elif (file is not None and file != name) or directory is not None:
+                raise _Unavailable  # a case alias or a directory is not known absence.
+        return name in self.files
+
+
+class _Reader:
+    def __init__(self, reader, paths, path, source):
+        self.reader = reader
+        self.paths = paths
+        if not paths.check(path):
+            raise _Unavailable
+        self.cache = {path: source}
+        self.total = len(source)
+
+    def __call__(self, name):
+        name = _path(name)
+        present = self.paths.check(name)
+        if name not in self.cache:
+            if len(self.cache) >= MAX_PATHS:
+                raise _Unavailable
+            try:
+                value = self.reader(name)
+            except Exception as exc:
+                # A callback is an external capability boundary. Its failure
+                # withholds this optional proof, never known absence.
+                raise _Unavailable from exc
+            if value is not None and type(value) is not bytes:
+                raise _Unavailable
+            if present != (value is not None):
+                raise _Unavailable
+            if value is not None:
+                if len(value) > MAX_FILE_BYTES:
+                    raise _Unavailable
+                self.total += len(value)
+                if self.total > MAX_TOTAL_BYTES:
+                    raise _Unavailable
+            self.cache[name] = value
+        return self.cache[name]
+
+    def identities(self, consumers):
+        # These consumer modules were read and fully checked by _module.
+        # Their declarations and closed primitive assertions have no external
+        # write/callback effects. Their names/count/source bytes are not an
+        # execution dependency of another unit; including them would make an
+        # actual move differ from the retained, fixture-only old module.
+        # Producers, startup files, configs and absence probes remain bound.
+        return [(name, None if value is None else hashlib.sha256(value).hexdigest())
+                for name, value in sorted(self.cache.items()) if name not in consumers]
+
+
+def _inventory(search):
+    try:
+        paths = search([""])
+    except Exception as exc:
+        raise _Unavailable from exc
+    # This is the strict empty-needle Python inventory, not a text search
+    # whose hits may be truncated. The source adapters refuse at 64 hits.
+    if type(paths) not in (list, tuple) or len(paths) >= 64:
+        raise _Unavailable
+    normalized = [_path(candidate) for candidate in paths]
+    if (len(normalized) != len(set(normalized))
+            or any(not candidate.endswith(".py") for candidate in normalized)):
+        raise _Unavailable
+    return frozenset(normalized)
+
+
+def _tree(source):
+    if type(source) is not bytes or len(source) > MAX_FILE_BYTES:
+        raise _Unavailable
+    tree = ast.parse(source)
+    if sum(1 for _ in ast.walk(tree)) > MAX_AST_NODES:
+        raise _Unavailable
+    return tree
+
+
+def _inert(node):
+    return isinstance(node, ast.Pass) or (isinstance(node, ast.Expr)
+                                         and isinstance(node.value, ast.Constant)
+                                         and type(node.value.value) is str)
+
+
+def _inert_source(source):
+    return source is None or all(_inert(node) for node in _tree(source).body)
+
+
+def _dotted(node):
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = _dotted(node.value)
+        return parent + "." + node.attr if parent else None
+    return None
+
+
+def _literal(node):
+    if any(isinstance(part, (ast.Call, ast.Name, ast.Starred)) for part in ast.walk(node)):
+        return False
+    try:
+        ast.literal_eval(node)
+        return True
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return False
+
+
+def _no_parameters(args):
+    return not (args.posonlyargs or args.args or args.kwonlyargs or args.vararg or args.kwarg
+                or args.defaults or args.kw_defaults)
+
+
+def _bare_mark(node):
+    # No decorator call, unknown alias or plugin callback is executed here.
+    return (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Attribute)
+            and isinstance(node.value.value, ast.Name) and node.value.value.id == "pytest"
+            and node.value.attr == "mark" and node.attr.isidentifier()
+            and not node.attr.startswith("_"))
+
+
+def _ordinary_binding(name, *, fixture=False):
+    folded = name.casefold()
+    return (name.isidentifier() and not name.startswith("_")
+            and folded != "request" and not folded.startswith(("pytest", "setup", "teardown"))
+            and (not fixture or not folded.startswith("test")))
+
+
+def _compiler_bindings(tree):
+    """ast.parse alone does not reject the compiler-reserved __debug__."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and node.id == "__debug__":
+            return False
+        if isinstance(node, ast.arg) and node.arg == "__debug__":
+            return False
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == "__debug__":
+            return False
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                bound = alias.asname or (alias.name.split(".")[0] if isinstance(node, ast.Import) else alias.name)
+                if bound == "__debug__":
+                    return False
+        if isinstance(node, ast.ExceptHandler) and node.name == "__debug__":
+            return False
+        if isinstance(node, (ast.Global, ast.Nonlocal)) and "__debug__" in node.names:
+            return False
+    return True
+
+
+def _guard_value(node):
+    """A live marked sibling may only read a literal environment guard.
+
+    The first marker lookup proves selected units inactive, but other units
+    may carry the marker. Their tail cannot mutate a producer or pytest.
+    """
+    if isinstance(node, ast.Constant):
+        return type(node.value) is bool
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return _guard_value(node.operand)
+    if isinstance(node, ast.BoolOp) and isinstance(node.op, (ast.And, ast.Or)):
+        return all(_guard_value(value) for value in node.values)
+    return (isinstance(node, ast.Call) and _dotted(node.func) == "os.environ.get"
+            and not node.keywords and len(node.args) in (1, 2)
+            and isinstance(node.args[0], ast.Constant) and type(node.args[0].value) is str
+            and bool(node.args[0].value) and len(node.args[0].value) <= 128
+            and all(_literal(value) for value in node.args[1:]))
+
+
+def _fixture(node):
+    if (not isinstance(node, ast.FunctionDef) or len(node.decorator_list) != 1
+            or not _ordinary_binding(node.name, fixture=True)):
+        return None
+    if (node.returns is not None or getattr(node, "type_params", ())
+            or any(isinstance(part, (ast.Yield, ast.YieldFrom, ast.Await, ast.AsyncFunctionDef,
+                                     ast.Global, ast.Nonlocal, ast.NamedExpr, ast.Lambda, ast.ClassDef))
+                   for part in ast.walk(node))
+            or any(isinstance(part, ast.FunctionDef) and part is not node for part in ast.walk(node))):
+        return None
+    args = node.args
+    if (args.posonlyargs or args.kwonlyargs or args.vararg or args.kwarg or args.defaults or args.kw_defaults
+            or len(args.args) != 1 or args.args[0].arg != "request" or args.args[0].annotation is not None):
+        return None
+    decorator = node.decorator_list[0]
+    if not isinstance(decorator, ast.Call) or _dotted(decorator.func) != "pytest.fixture" or decorator.args:
+        return None
+    options = {}
+    for keyword in decorator.keywords:
+        if keyword.arg not in {"autouse", "scope"} or keyword.arg in options or not isinstance(keyword.value, ast.Constant):
+            return None
+        options[keyword.arg] = keyword.value.value
+    if options.get("autouse") is not True or options.get("scope", "function") != "function":
+        return None
+    if len(node.body) != 1 or not isinstance(node.body[0], ast.If) or node.body[0].orelse:
+        return None
+    branch = node.body[0]
+    if not isinstance(branch.test, ast.BoolOp) or not isinstance(branch.test.op, ast.And) or len(branch.test.values) < 2:
+        return None
+    first = branch.test.values[0]
+    if (not isinstance(first, ast.Call) or _dotted(first.func) != "request.node.get_closest_marker"
+            or first.keywords or len(first.args) != 1 or not isinstance(first.args[0], ast.Constant)
+            or type(first.args[0].value) is not str or not first.args[0].value or len(first.args[0].value) > 128):
+        return None
+    if not all(_guard_value(value) for value in branch.test.values[1:]):
+        return None
+    # The initial domain is exactly a skip-only body, with no teardown or
+    # hidden executable statement. A future broader no-effect grammar needs
+    # its own proof; first-false is not a license to ignore compiler effects.
+    if (len(branch.body) != 1 or not isinstance(branch.body[0], ast.Expr)
+            or not isinstance(branch.body[0].value, ast.Call)):
+        return None
+    skip = branch.body[0].value
+    if (_dotted(skip.func) != "pytest.skip" or skip.keywords or len(skip.args) != 1
+            or not isinstance(skip.args[0], ast.Constant) or type(skip.args[0].value) is not str):
+        return None
+    requests = [part for part in ast.walk(node) if isinstance(part, ast.Name) and part.id == "request"]
+    expected = first.func.value.value
+    if len(requests) != 1 or requests[0] is not expected or not isinstance(expected.ctx, ast.Load):
+        return None
+    return first.args[0].value, frozenset({id(expected)})
+
+
+def _startup(path, inventory, read):
+    # Every collectable sibling can run before the selected unit. Every
+    # conftest, including a nonancestor one, can install a global collection
+    # hook. Do not hide these files behind an ancestor-only read view.
+    relevant = {path, *(candidate for candidate in inventory
+                       if collectable(candidate) or PurePosixPath(candidate).name == "conftest.py")}
+    directories = {"", "src"}
+    config_directories = set()
+    for candidate in {path, *inventory}:
+        parts = PurePosixPath(candidate).parts
+        for depth in range(len(parts)):
+            directory = "/".join(parts[:depth])
+            config_directories.add(directory)
+            if candidate in relevant:
+                directories.add(directory)
+    for candidate in inventory:
+        if PurePosixPath(candidate).name == "conftest.py":
+            data = read(candidate)
+            if data is None or not _inert_source(data):
+                return False
+    for directory in sorted(directories):
+        prefix = directory + "/" if directory else ""
+        for filename in ("__init__.py", "conftest.py", "sitecustomize.py", "usercustomize.py"):
+            if not _inert_source(read(prefix + filename)):
+                return False
+        for name in ("pytest", "os", "sitecustomize", "usercustomize"):
+            for suffix in (".py", "/__init__.py"):
+                data = read(prefix + name + suffix)
+                if name in {"pytest", "os"}:
+                    if data is not None:
+                        return False
+                elif not _inert_source(data):
+                    return False
+    for directory in sorted(config_directories | directories):
+        prefix = directory + "/" if directory else ""
+        for filename in _CONFIGS:
+            data = read(prefix + filename)
+            if data is None:
+                continue
+            if not _default_collection_config(data, filename, test_path=path,
+                                              directory=PurePosixPath(directory or ".")):
+                return False
+            # Package/plugin metadata can cause additional mark injection.
+            # Reject structured plugin keys even outside a pytest stanza.
+            if filename.endswith(".toml"):
+                parsed = tomllib.loads(data.decode("utf-8-sig"))
+                pending = [parsed]
+                while pending:
+                    item = pending.pop()
+                    if isinstance(item, dict):
+                        if any(str(key).lower() in {"pytest11", "pytest_plugins"} for key in item):
+                            return False
+                        pending.extend(item.values())
+                    elif isinstance(item, list):
+                        pending.extend(item)
+            else:
+                parsed = configparser.ConfigParser(interpolation=None)
+                parsed.read_string(data.decode("utf-8-sig"))
+                if parsed.defaults() or any(key.lower() in {"pytest11", "pytest_plugins"}
+                                            for section in parsed.sections() for key in parsed[section]):
+                    return False
+    return True
+
+
+def _definition(source, target, _call):
+    tree = _tree(source)
+    # No runtime name/callback lookup, including builtin calls. This stricter
+    # first domain avoids borrowing identities of externally mutable builtins.
+    # The existing purity grammar still supplies its full primitive dataflow
+    # obligations; this extra filter is a conservative restriction, not a
+    # replacement based on apparent return type.
+    if (not _compiler_bindings(tree)
+            or any(isinstance(part, (ast.Call, ast.Import, ast.ImportFrom)) for part in ast.walk(tree))):
+        return False
+    return _pure_module(source, target)
+
+
+def _bind(source, target, call):
+    if not _definition(source, target, call) or not primitive_literal_result(source, target, call):
+        return None
+    functions = [node for node in _tree(source).body if isinstance(node, ast.FunctionDef) and node.name == target]
+    if len(functions) != 1:
+        return None
+    args = functions[0].args
+    if args.posonlyargs or args.kwonlyargs or args.vararg or args.kwarg:
+        return None
+    names = [arg.arg for arg in args.args]
+    if len(names) != len(set(names)) or len(call.args) > len(names):
+        return None
+    values = {}
+    for name, value in zip(names, call.args):
+        if not _literal(value):
+            return None
+        values[name] = stable_dump(value)
+    for keyword in call.keywords:
+        if keyword.arg not in names or keyword.arg in values or not _literal(keyword.value):
+            return None
+        values[keyword.arg] = stable_dump(keyword.value)
+    defaults = dict(zip(names[len(names) - len(args.defaults):], args.defaults))
+    for name in names:
+        if name not in values:
+            if name not in defaults or not _literal(defaults[name]):
+                return None
+            values[name] = stable_dump(defaults[name])
+    return [(name, values[name]) for name in names]
+
+
+def _expression(node, imports, calls):
+    if isinstance(node, ast.Constant):
+        return type(node.value) in (type(None), bool, int, float, str, bytes)
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_expression(part, imports, calls) for part in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(key is not None and _expression(key, imports, calls) and _expression(value, imports, calls)
+                   for key, value in zip(node.keys, node.values))
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.Not, ast.UAdd, ast.USub, ast.Invert)):
+        return _expression(node.operand, imports, calls)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod)):
+        return _expression(node.left, imports, calls) and _expression(node.right, imports, calls)
+    if isinstance(node, ast.BoolOp):
+        return all(_expression(value, imports, calls) for value in node.values)
+    if isinstance(node, ast.Compare):
+        return (all(isinstance(op, (ast.Eq, ast.NotEq, ast.Is, ast.IsNot, ast.Lt, ast.LtE,
+                                    ast.Gt, ast.GtE, ast.In, ast.NotIn)) for op in node.ops)
+                and _expression(node.left, imports, calls)
+                and all(_expression(value, imports, calls) for value in node.comparators))
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in imports:
+        if not all(_literal(arg) for arg in node.args) or any(keyword.arg is None or not _literal(keyword.value)
+                                                            for keyword in node.keywords):
+            return False
+        calls.append(node)
+        return True
+    return False
+
+
+def _module(source, tree, *, path, read, functions=None):
+    """Prove this complete test module has no unbounded external effects.
+
+    This check is shared by the selected module and *actual* inventoried
+    siblings. It never supplies a projected source or filtered inventory to
+    another proof. Fixture-only retained modules and literal-only padding
+    tests may be inert siblings without earning any per-unit certificate.
+    """
+    if not _compiler_bindings(tree):
+        return None
+    imports, declared, framework, fixtures, units = {}, set(), set(), [], {}
+    for statement in tree.body:
+        if _inert(statement):
+            continue
+        if isinstance(statement, ast.Import):
+            if len(statement.names) != 1 or statement.names[0].name not in {"pytest", "os"} or statement.names[0].asname:
+                return None
+            name = statement.names[0].name
+            framework.add(name)
+        elif isinstance(statement, ast.ImportFrom):
+            if (statement.level or not statement.module or not all(part.isidentifier() for part in statement.module.split("."))
+                    or any(alias.name == "*" or not alias.name.isidentifier() for alias in statement.names)):
+                return None
+            for alias in statement.names:
+                name = alias.asname or alias.name
+                if not _ordinary_binding(name) or name in declared or name in {"pytest", "os"} or name in _NAMES:
+                    return None
+                declared.add(name)
+                imports[name] = (statement.module, alias.name)
+            continue
+        elif isinstance(statement, ast.FunctionDef):
+            name = statement.name
+            fixture = _fixture(statement)
+            if fixture is not None:
+                if "pytest" not in framework:
+                    return None  # the decorator executes at definition time.
+                fixtures.append((statement, fixture))
+            elif name.startswith("test") and (functions is None or functions.get(name) is statement):
+                if (not _ordinary_binding(name) or statement.returns is not None or getattr(statement, "type_params", ())
+                        or not _no_parameters(statement.args) or not all(_bare_mark(d) for d in statement.decorator_list)):
+                    return None
+                if statement.decorator_list and "pytest" not in framework:
+                    return None
+                units[name] = statement
+            else:
+                return None
+        else:
+            return None
+        if name in declared:
+            return None
+        declared.add(name)
+    if (len(fixtures) > 1 or (fixtures or any(unit.decorator_list for unit in units.values()))
+            and "pytest" not in framework):
+        return None
+    fixture, mark, request_ids = None, None, frozenset()
+    if fixtures:
+        fixture, (mark, request_ids) = fixtures[0]
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            if node.id in _NAMES or node.id == "request" and id(node) not in request_ids:
+                return None
+            if node.id in {"os", "pytest"} and node.id not in framework:
+                return None
+        if isinstance(node, ast.Attribute) and node.attr in _ATTRIBUTES:
+            return None
+        if isinstance(node, ast.Call):
+            keys = [keyword.arg for keyword in node.keywords if keyword.arg is not None]
+            if len(keys) != len(set(keys)):
+                return None  # compile errors remain errors even in a dead branch.
+    # Validate every producer import, including unused imports that execute
+    # before fixture registration. The nonempty synthetic call is for module
+    # startup proof only; actual invocation binding is checked separately.
+    for name in sorted(imports):
+        synthetic = ast.Call(func=ast.Name(id=name, ctx=ast.Load()), args=[], keywords=[])
+        if not pure_imported_calls(source, [synthetic], path=path, read=read, result_proof=_definition):
+            return None
+    per_unit = {}
+    marks = OwnMarks(tree)
+    for name, function in sorted(units.items()):
+        calls = []
+        for statement in function.body:
+            if _inert(statement):
+                continue
+            if (not isinstance(statement, ast.Assert) or not _expression(statement.test, imports, calls)
+                    or statement.msg is not None and not _literal(statement.msg)):
+                return None  # unknown sibling execution can affect the selected unit too.
+        if not calls:
+            continue  # literal-only sibling is inert, not an imported-call proof.
+        bindings = []
+
+        def result_proof(data, target, call):
+            binding = _bind(data, target, call)
+            if binding is None:
+                return False
+            bindings.append((call.func.id, target, binding))
+            return True
+
+        if not pure_imported_calls(source, calls, path=path, read=read, result_proof=result_proof):
+            return None
+        carried = marks.of(function)
+        if fixture is None or function.decorator_list or carried is UNKNOWN or mark in carried:
+            continue
+        per_unit[name] = bindings
+    return fixture, mark, request_ids, per_unit
+
+
+def prove_inactive_fixtures(source: bytes, tree: ast.Module, functions: dict[str, ast.FunctionDef],
+                            *, path: str, read, search=None, path_lister=None) -> InactiveFixtures | None:
+    """Return certificates for individually proved inactive plain units only.
+
+    Node ids refer to ``tree`` and are never certificate inputs. The caller
+    must require that unit's name in ``certificates`` before using either id
+    whitelist. A marked or unknown sibling cannot borrow another unit's proof.
+    ``read`` and ``search([""])`` must be side-correct strict snapshot
+    capabilities, including a complete nonempty-Python inventory. Missing
+    inventory never means there are no siblings. All source reads share the
+    bounded cache; search is called once and no proof recurses.
+    ``path_lister()`` must independently enumerate all files, including empty
+    sources and non-Python configs. It guards every exact read against case
+    aliases and file ancestors; no callback introspection supplies authority.
+    External import hooks/plugins remain outside this bounded source model.
+    """
+    try:
+        path = _path(path)
+        parsed = _tree(source)
+        if (not isinstance(tree, ast.Module) or type(functions) is not dict or not functions or len(functions) > 128
+                or not callable(read) or not callable(search) or not callable(path_lister) or not collectable(path)
+                or stable_dump(parsed) != stable_dump(tree)):
+            return None
+        inventory = _inventory(search)
+        paths = _Paths(path_lister)
+        python_paths = {candidate for candidate in paths.files if candidate.endswith(".py")}
+        if path not in inventory or not inventory <= python_paths:
+            return None
+        bounded = _Reader(read, paths, path, source)
+        for candidate in sorted(python_paths):
+            # The independent all-file authority must agree with the strict
+            # nonempty-Python search. A missing search hit is not an inert
+            # module merely because its exact-case read returned None.
+            if bool(bounded(candidate)) != (candidate in inventory):
+                return None
+        if not _startup(path, python_paths, bounded):
+            return None
+        selected = _module(source, tree, path=path, read=bounded, functions=functions)
+        if selected is None:
+            return None
+        fixture, mark, request_ids, per_unit = selected
+        if fixture is None or not per_unit:
+            return None
+        consumers = {candidate for candidate in python_paths if collectable(candidate)}
+        if len({PurePosixPath(candidate).name for candidate in consumers}) != len(consumers):
+            # Without a separate package/import-mode proof, same-basename
+            # test modules may cause pytest's import-file mismatch error.
+            return None
+        for candidate in sorted(consumers - {path}):
+            data = bounded(candidate)
+            if data is None or _module(data, _tree(data), path=candidate, read=bounded) is None:
+                return None
+        identities = bounded.identities(consumers)
+        fixture_shape = (fixture.name, mark, stable_dump(fixture.decorator_list[0]), stable_dump(fixture.body[0]))
+        certificates = {}
+        for name, bindings in per_unit.items():
+            payload = ("inactive-function-fixture-closed-file-authority-v1", fixture_shape, bindings, identities)
+            certificates[name] = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=True).encode()).hexdigest()
+        return InactiveFixtures(frozenset({id(fixture)}), request_ids, certificates)
+    except (_Unavailable, EngineError, OSError, ValueError, TypeError, SyntaxError,
+            UnicodeError, RecursionError, MemoryError, configparser.Error):
+        # Optional proof only. Reader failures/types, syntax, bounds, unknown
+        # package authority and unexpected source constructs all withhold it.
+        return None

@@ -1,0 +1,152 @@
+{
+  "kind": "INDEPENDENT_BOUNDED_SOURCE_REVIEW_AND_EXISTING_RESULT_READBACK",
+  "state": "PASS_NO_REMAINING_BLOCKERS_BOUNDED_SOURCE_REVIEW",
+  "remaining_blocking_findings": [],
+  "baseline": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "host": "LAPTOP-01AGNPJU",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "metadata_runtime": "PowerShell 7.6.5",
+  "recorded_utc": "2026-10-27T00:36:04.5468926Z",
+  "helper_e13b_to_d3f3_exact_one_line": true,
+  "source_checks": [
+    {
+      "path": "src/checkwash/engine.py",
+      "sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff",
+      "bytes": 115599,
+      "history_sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff",
+      "snapshot_copy_sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff",
+      "input_sha256": "881325f81c6b79dc98f0dfa54dd9026a956efc6ab8e71d6616da3d545efecaff",
+      "matches": true
+    },
+    {
+      "path": "src/checkwash/oracle_credit.py",
+      "sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7",
+      "bytes": 23030,
+      "history_sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7",
+      "snapshot_copy_sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7",
+      "input_sha256": "bca94a04bc2f881a5b7adf8db8a94c992b622b70d10915bc1639d49034f31db7",
+      "matches": true
+    },
+    {
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de",
+      "bytes": 30663,
+      "history_sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de",
+      "snapshot_copy_sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de",
+      "input_sha256": "d3f3be535ebf6deb360d013eb7d0565e3878b73049b5d93a18298fe5ef6a52de",
+      "matches": true
+    },
+    {
+      "path": "tests/test_inactive_fixture_context_reader.py",
+      "sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2",
+      "bytes": 15495,
+      "history_sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2",
+      "snapshot_copy_sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2",
+      "input_sha256": "2f1e07c7a89ceb93075b8e86e59d4b03af54a1f86533df492627803ff57390d2",
+      "matches": true
+    },
+    {
+      "path": "tests/test_inactive_fixture_oracle_credit.py",
+      "sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80",
+      "bytes": 17916,
+      "history_sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80",
+      "snapshot_copy_sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80",
+      "input_sha256": "e6c0520a9b9a35ae8387afd9cba21543e3610dae7ed9c108fc1d9055b703ba80",
+      "matches": true
+    },
+    {
+      "path": "tests/test_issue358_own_mark_guards.py",
+      "sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b",
+      "bytes": 18175,
+      "history_sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b",
+      "snapshot_copy_sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b",
+      "input_sha256": "a008186708b6dcd46d166446f7320a948326d987fd409137900606bbf5f6622b",
+      "matches": true
+    }
+  ],
+  "addressed_findings": [
+    "B1_side_observations",
+    "B2_rejected_read_cache",
+    "B3_reserved_fixture_request_and_protocol_bindings",
+    "B4_debug_compile_binding",
+    "B5_nonancestor_repo_collection_hook",
+    "B6_case_alias_all_file_authority",
+    "B7_bare_parametrize_collection_failure"
+  ],
+  "root_actual_result": {
+    "receipt": "work/ux-stage7/root/inactive-fixture-r4/receipt.json",
+    "kind": "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION",
+    "source_sha_is_base_only": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+    "started_utc": "2026-10-27T08:34:03.421051+08:00",
+    "ended_utc": "2026-10-27T08:34:08.095216+08:00",
+    "exit_code": 0,
+    "passed_testcases": 323,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "input_manifest_hash_matches": true,
+    "source_files_unchanged": true,
+    "changed_inputs": [],
+    "command": [
+      "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/test-runtime/Scripts/python.exe",
+      "-m",
+      "pytest",
+      "tests/test_inactive_fixture_context_reader.py",
+      "tests/test_inactive_fixture_oracle_credit.py",
+      "tests/test_issue358_own_mark_guards.py",
+      "tests/test_oracle_credit_context.py",
+      "-o",
+      "addopts=",
+      "-q",
+      "--basetemp",
+      "C:\\Users\\nelson\\AppData\\Local\\Temp\\cwf7-dev-e18b834a\\p",
+      "--junitxml",
+      "C:/Users/nelson/Documents/Codex/2026-10-26/1-00-start-here-md-c/work/ux-stage7/root/inactive-fixture-r4/junit.xml"
+    ]
+  },
+  "raw_files": [
+    {
+      "path": "work/ux-stage7/root/inactive-fixture-r4/receipt.json",
+      "bytes": 1967,
+      "sha256": "46502e670d447bdea0f498f30576ab3e8af12762339e3f8292d60fe334326148"
+    },
+    {
+      "path": "work/ux-stage7/root/inactive-fixture-r4/stdout.txt",
+      "bytes": 426,
+      "sha256": "387d058ca62b6138c2119e23c5a1a822865bef340ae2615cc7c2054e0add8622"
+    },
+    {
+      "path": "work/ux-stage7/root/inactive-fixture-r4/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "work/ux-stage7/root/inactive-fixture-r4/junit.xml",
+      "bytes": 63617,
+      "sha256": "dbbca2a512f6364108c6e61723107417c66b385a02298262b08d0e29e38f3410"
+    },
+    {
+      "path": "work/ux-stage7/root/inactive-fixture-r4/source.diff",
+      "bytes": 20176,
+      "sha256": "46f4a756d362cb159d537effae93619740f925e79a0a449513afbf76df161d3c"
+    },
+    {
+      "path": "work/ux-stage7/root/inactive-fixture-r4/input-hashes.json",
+      "bytes": 385513,
+      "sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732"
+    }
+  ],
+  "report_sha256": "a51e7f1901486de78fc8448d258506430baba265583afc9cf287619b6c3aff1b",
+  "product_import_compile_exec_pytest_prototype_calls_by_reviewer": 0,
+  "represented_fixture_executions_by_reviewer": 0,
+  "full_suite_of_current_bytes": "NOT_RUN",
+  "qualification_of_current_bytes": "NOT_RUN",
+  "cross_platform": "NOT_RUN",
+  "native_case_alias_fixture": "NOT_RUN",
+  "limitations": [
+    "Bounded source domain only; no release/acceptance claim",
+    "Installed external plugin/import-hook state outside bounded source model",
+    "D158 casefold/OS spelling residuals preserved",
+    "Root authored and executed development capture; reviewer read existing evidence only"
+  ]
+}

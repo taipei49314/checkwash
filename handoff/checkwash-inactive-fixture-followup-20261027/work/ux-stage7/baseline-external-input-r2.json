@@ -1,0 +1,10 @@
+{
+  "path": "work/checkwash-inactive-fixture/tests/test_inactive_fixture_oracle_credit.py",
+  "sha256": "6183818236e4be92c02a1fb3cc1add3719aca14296fdf52118455fd103de4ca4",
+  "preserved": "work/ux-stage7/external-test-history/test_inactive_fixture_oracle_credit-6183.py.txt",
+  "baseline_source": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "purpose": "EXTERNAL_NEW_CONTROLS_NOT_ORIGINAL_FULL_SUITE",
+  "configuration": "work/checkwash-ux/pyproject.toml",
+  "pythonpath": "work/checkwash-ux/src",
+  "conftest_discovery": "DISABLED_FOR_SELF_CONTAINED_EXTERNAL_MODULE"
+}

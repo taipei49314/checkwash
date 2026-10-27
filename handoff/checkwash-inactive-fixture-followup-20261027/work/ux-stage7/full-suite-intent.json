@@ -1,0 +1,12 @@
+{
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "input_manifest_sha256": "256074c9d24bc24c0cfc91aea7d3bce49bb5bf14250abe397ecc9fe788261732",
+  "kind": "LAUNCH_INTENT_NOT_COMPLETION",
+  "host": "LAPTOP-01AGNPJU",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "runtime": "Python 3.11.9 / pytest 9.1.1 / xdist 3.8.0",
+  "scope": "complete repository pytest suite; two workers; worksteal",
+  "output": "work/ux-stage7/final/inactive-fixture-full-suite-311-r1",
+  "acceptance": "No completion or PASS claim without a terminal receipt and raw readback",
+  "shutdown_behavior": "A missing terminal receipt remains incomplete, never PASS; all previous results stay immutable"
+}

@@ -1,0 +1,30 @@
+{
+  "status": "RECONSTRUCTED_BYTE_IDENTICAL_TO_PRE_RECORDED_SHA",
+  "not_a_preexisting_copy": true,
+  "method": "Exact raw-byte inversion of only the r2 D2 assertion replacement and YieldFrom row; write guarded by previously recorded r1 SHA-256",
+  "r1": {
+    "path": "test_inactive_fixture_oracle_credit-f8f5.py.txt",
+    "bytes": 11868,
+    "sha256": "f8f5d54dacd3d1bd789563e513b7d5bc370ebdda7122b9613ddb9d57a0f10eca"
+  },
+  "r2": {
+    "path": "work/checkwash-inactive-fixture/tests/test_inactive_fixture_oracle_credit.py",
+    "bytes": 12851,
+    "sha256": "6183818236e4be92c02a1fb3cc1add3719aca14296fdf52118455fd103de4ca4"
+  },
+  "exact_forward_diff": {
+    "path": "r1-to-r2.diff",
+    "bytes": 1920,
+    "sha256": "cd91b9860e63ecb1c14f236039aa78815c1e7ce3b461c5afc37981a0b7d37eb0"
+  },
+  "baseline_analyzer_source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "baseline_external_file_at_execution": "r1 hash was recorded before execution; external full bytes were not copied until this reconstruction",
+  "baseline_record": "work/ux-stage7/baseline-external-input.json",
+  "baseline_records_modified": false,
+  "r2_file_modified": false,
+  "reconstruction_script_sha256": "5c47041445ee4ab677c3847ab8342897a1819a325367b235e126d81ef12b9415",
+  "product_calls": 0,
+  "pytest_calls": 0,
+  "fixture_execution": 0,
+  "execution_label": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL"
+}

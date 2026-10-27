@@ -1,0 +1,315 @@
+diff --git a/src/checkwash/engine.py b/src/checkwash/engine.py
+index eb03e863..5130c42d 100644
+--- a/src/checkwash/engine.py
++++ b/src/checkwash/engine.py
+@@ -1709,6 +1709,158 @@ def build_ir(
+ 
+     relocation_sources = {change.path.replace("\\", "/"): (change.before, change.after) for change in expanded_changes}
+     relocation_initializers = {}
++    relocation_context_sources = {}
++    relocation_context_bytes = 0
++    relocation_context_unknown = object()
++    relocation_context_inventory = {}
++    relocation_context_paths = {}
++    relocation_side_observations = {}
++    rename_sources = {(change.old_path or change.path).replace("\\", "/") for change in changes
++                      if change.old_path and change.old_path.replace("\\", "/") != change.path.replace("\\", "/")}
++    for change in changes:
++        path = change.path.replace("\\", "/")
++        old = (change.old_path or path).replace("\\", "/")
++        if old != path:
++            observations = ((old, 0, change.before, False), (path, 1, change.after, False),
++                            (path, 0, None, True), (old, 1, None, True))
++        else:
++            # An added record can describe a recreated rename source. Its
++            # missing local before field does not erase the rename's bytes.
++            inferred = change.status == "added" and path in rename_sources and change.before is None
++            observations = ((path, 0, change.before, inferred), (path, 1, change.after, False))
++        for candidate, side, data, inferred in observations:
++            relocation_side_observations.setdefault((candidate, side), []).append((data, inferred))
++
++    def _relocation_observed_source(candidate, side):
++        observations = relocation_side_observations[(candidate, side)]
++        actual = [data for data, inferred in observations if not inferred]
++        if not actual:
++            return None
++        value = actual[0]
++        if any(data != value for data in actual[1:]):
++            raise ValueError("conflicting optional oracle-context source observations")
++        return value
++
++    def _relocation_context_source(candidate, side):
++        """Optional proof reads use their actual side; unchanged paths use HEAD."""
++        nonlocal relocation_context_bytes
++        if (not isinstance(candidate, str) or not candidate or "\\" in candidate or ":" in candidate
++                or "\0" in candidate or any(part in {"", ".", ".."} for part in candidate.split("/"))):
++            raise ValueError("invalid optional oracle-context source path")
++        if root_reader is None:
++            raise ValueError("optional oracle context requires a strict snapshot")
++        changed = (candidate, side) in relocation_side_observations
++        key = (candidate, side if changed else -1)
++        if key not in relocation_context_sources:
++            if len(relocation_context_sources) >= 256:
++                raise ValueError("optional oracle-context source read budget exhausted")
++            # Charge attempts before calling an external reader. A refused,
++            # invalid or oversized path remains unknown and is never reread.
++            relocation_context_sources[key] = relocation_context_unknown
++            if relocation_context_bytes >= 2 * 1024 * 1024:
++                raise ValueError("optional oracle-context source byte budget exhausted")
++            data = _relocation_observed_source(candidate, side) if changed else root_reader(candidate)
++            if data is not None and not isinstance(data, bytes):
++                raise ValueError("optional oracle-context source is unknown or too large")
++            if data is not None:
++                relocation_context_bytes += len(data)
++                if len(data) > 65536:
++                    raise ValueError("optional oracle-context source is unknown or too large")
++                if relocation_context_bytes > 2 * 1024 * 1024:
++                    raise ValueError("optional oracle-context source byte budget exhausted")
++                if report_context is not None:
++                    for recorded_side in ((0, 1) if key[1] == -1 else (side,)):
++                        report_context.snapshot(candidate, recorded_side, data)
++            relocation_context_sources[key] = data
++        if relocation_context_sources[key] is relocation_context_unknown:
++            raise ValueError("optional oracle-context source remains unknown")
++        return relocation_context_sources[key]
++
++    def _relocation_context_search(needles, side):
++        """Reconstruct the complete nonempty Python inventory on the actual side."""
++        if needles != [""] or root_searcher is None:
++            raise ValueError("optional oracle context requires a strict source inventory")
++        if side not in relocation_context_inventory:
++            relocation_context_inventory[side] = relocation_context_unknown
++            if -1 not in relocation_context_inventory:
++                # Reserve the failed state before discovery: a failure must
++                # not repeatedly invoke an external snapshot searcher.
++                relocation_context_inventory[-1] = relocation_context_unknown
++                paths = root_searcher([""])
++                if not isinstance(paths, (list, tuple)) or len(paths) >= 64:
++                    raise ValueError("optional oracle-context inventory is unknown or too large")
++                normalized = set()
++                for candidate in paths:
++                    if not isinstance(candidate, str):
++                        raise ValueError("invalid optional oracle-context inventory path")
++                    candidate = candidate.replace("\\", "/")
++                    if (not candidate.endswith(".py") or ":" in candidate or "\0" in candidate
++                            or any(part in {"", ".", ".."} or any(ord(c) < 32 for c in part)
++                                   for part in candidate.split("/")) or candidate in normalized):
++                        raise ValueError("invalid optional oracle-context inventory path")
++                    normalized.add(candidate)
++                relocation_context_inventory[-1] = frozenset(normalized)
++            paths = relocation_context_inventory[-1]
++            if paths is relocation_context_unknown:
++                raise ValueError("optional oracle-context inventory remains unknown")
++            selected = set(paths)
++            # HEAD discovery alone is never BASE authority. Observed source
++            # records account for additions, deletions and both rename ends;
++            # conflicts withhold this optional proof independently of order.
++            changed_paths = {candidate for candidate, observed_side in relocation_side_observations
++                             if observed_side == side and candidate.endswith(".py")}
++            for candidate in sorted(changed_paths):
++                data = _relocation_context_source(candidate, side)
++                selected.discard(candidate)
++                if data:
++                    selected.add(candidate)
++            if len(selected) >= 64:
++                raise ValueError("optional oracle-context inventory is too large")
++            relocation_context_inventory[side] = tuple(sorted(selected))
++        if relocation_context_inventory[side] is relocation_context_unknown:
++            raise ValueError("optional oracle-context inventory remains unknown")
++        return list(relocation_context_inventory[side])
++
++    def _relocation_context_path_list(side):
++        """Complete side-correct entry names also cover non-Python aliases."""
++        if root_path_lister is None:
++            raise ValueError("optional oracle context requires complete path metadata")
++        if side not in relocation_context_paths:
++            relocation_context_paths[side] = relocation_context_unknown
++            if -1 not in relocation_context_paths:
++                relocation_context_paths[-1] = relocation_context_unknown
++                paths = root_path_lister()
++                if not isinstance(paths, (list, tuple)) or len(paths) > 512:
++                    raise ValueError("optional oracle-context path metadata is unknown or too large")
++                normalized = set()
++                for candidate in paths:
++                    if not isinstance(candidate, str):
++                        raise ValueError("invalid optional oracle-context metadata path")
++                    candidate = candidate.replace("\\", "/")
++                    if (":" in candidate or any(part in {"", ".", ".."} or any(ord(c) < 32 for c in part)
++                                                for part in candidate.split("/")) or candidate in normalized):
++                        raise ValueError("invalid optional oracle-context metadata path")
++                    normalized.add(candidate)
++                relocation_context_paths[-1] = frozenset(normalized)
++            paths = relocation_context_paths[-1]
++            if paths is relocation_context_unknown:
++                raise ValueError("optional oracle-context path metadata remains unknown")
++            selected = set(paths)
++            for candidate, observed_side in sorted(relocation_side_observations):
++                if observed_side != side:
++                    continue
++                data = _relocation_observed_source(candidate, side)
++                if data is not None and not isinstance(data, bytes):
++                    raise ValueError("optional oracle-context entry presence is unknown")
++                selected.discard(candidate)
++                if data is not None:  # Empty files still exist in the complete entry inventory.
++                    selected.add(candidate)
++            if len(selected) > 512:
++                raise ValueError("optional oracle-context path metadata is too large")
++            relocation_context_paths[side] = tuple(sorted(selected))
++        if relocation_context_paths[side] is relocation_context_unknown:
++            raise ValueError("optional oracle-context path metadata remains unknown")
++        return list(relocation_context_paths[side])
+ 
+     def _relocation_startup(path, side, data):
+         if data is None:
+@@ -1764,7 +1916,13 @@ def build_ir(
+                      if getattr(unit, field) is not None]
+             startup = _relocation_startup(file.path, side_index, data) if file.language == "python" else ""
+             mark_contexts(data, sides, file.path, file.language, startup_known=startup is not None,
+-                          startup=startup, needed=needed)
++                          startup=startup, needed=needed,
++                          source_reader=(lambda candidate, side=side_index: _relocation_context_source(candidate, side))
++                          if root_reader is not None else None,
++                          source_searcher=(lambda needles, side=side_index: _relocation_context_search(needles, side))
++                          if root_searcher is not None else None,
++                          source_path_lister=(lambda side=side_index: _relocation_context_path_list(side))
++                          if root_path_lister is not None else None)
+ 
+     # Move credits, counted after the constant environments exist because
+     # liveness now consults them. Assertions (and whole units) landing in a
+@@ -1870,7 +2028,13 @@ def build_ir(
+                 consts = _gate_constants(parsed, after_by_path, head_reader)
+                 startup = _relocation_startup(path, 1, data)
+                 mark_contexts(data, [(pu.qualname, pu.side) for pu in parsed.units], path, "python",
+-                              startup_known=startup is not None, startup=startup)
++                              startup_known=startup is not None, startup=startup,
++                              source_reader=(lambda candidate: _relocation_context_source(candidate, 1))
++                              if root_reader is not None else None,
++                              source_searcher=(lambda needles: _relocation_context_search(needles, 1))
++                              if root_searcher is not None else None,
++                              source_path_lister=(lambda: _relocation_context_path_list(1))
++                              if root_path_lister is not None else None)
+                 for pu in parsed.units:
+                     if pu.side.oracle_context in wanted and unit_is_live(pu.side, consts):
+                         found.add(pu.side.oracle_context)
+diff --git a/src/checkwash/oracle_credit.py b/src/checkwash/oracle_credit.py
+index adedaba2..f771b69e 100644
+--- a/src/checkwash/oracle_credit.py
++++ b/src/checkwash/oracle_credit.py
+@@ -78,7 +78,8 @@ def _rows(side):
+     return result
+ 
+ 
+-def _python_context(source, units, path, startup, needed):
++def _python_context(source, units, path, startup, needed, source_reader=None, source_searcher=None,
++                    source_path_lister=None):
+     try:
+         text = source.decode("utf-8-sig").replace("\r\n", "\n")
+         tree = ast.parse(text)
+@@ -89,7 +90,7 @@ def _python_context(source, units, path, startup, needed):
+     if sum(1 for _ in ast.walk(tree)) > 16384:
+         return
+     if any((isinstance(node, ast.Name) and node.id in {
+-                "request", "__name__", "__file__", "__package__", "__spec__", "__loader__",
++                "__name__", "__file__", "__package__", "__spec__", "__loader__",
+                 "__builtins__", "globals", "locals", "vars", "eval", "exec"})
+            or (isinstance(node, ast.Attribute) and node.attr in {
+                 "__name__", "__file__", "__module__", "__qualname__", "__code__", "__globals__", "__closure__",
+@@ -105,6 +106,17 @@ def _python_context(source, units, path, startup, needed):
+              if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) }
+     selected = {id(nodes[side.span]) for _name, side in units if side.span in nodes}
+     test_names = {nodes[side.span].name for _name, side in units if side.span in nodes}
++    fixture_context = None
++    if source_reader is not None and any(isinstance(node, ast.Name) and node.id == "request"
++                                         for node in ast.walk(tree)):
++        from checkwash.oracle_fixture_credit import prove_inactive_fixtures
++        functions = {name: nodes[side.span] for name, side in units if side.span in nodes}
++        fixture_context = prove_inactive_fixtures(source, tree, functions, path=path, read=source_reader,
++                                                search=source_searcher, path_lister=source_path_lister)
++    allowed_request = fixture_context.request_node_ids if fixture_context is not None else frozenset()
++    if any(isinstance(node, ast.Name) and node.id == "request" and id(node) not in allowed_request
++           for node in ast.walk(tree)):
++        return  # Unproved request/helper/default identity still supplies no credit.
+ 
+     def context_statements(statements):
+         result = []
+@@ -131,7 +143,8 @@ def _python_context(source, units, path, startup, needed):
+                     clone.level = 0
+                 result.append(_dump(clone))
+             elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+-                if statement.decorator_list or any(not _literal(default) for default in (
++                inactive = fixture_context is not None and id(statement) in fixture_context.fixture_node_ids
++                if (statement.decorator_list and not inactive) or any(not _literal(default) for default in (
+                         *statement.args.defaults, *(d for d in statement.args.kw_defaults if d is not None))):
+                     return None
+                 result.append(_dump(statement))
+@@ -149,6 +162,12 @@ def _python_context(source, units, path, startup, needed):
+     for qualname, side in units:
+         if needed is not None and qualname not in needed:
+             continue
++        fixture_scope = ()
++        if fixture_context is not None:
++            certificate = fixture_context.certificates.get(qualname)
++            if not valid_proof(certificate):
++                continue  # Another unit's inactive fixture never authorizes this unit.
++            fixture_scope = (("inactive-pytest-fixtures-v1", certificate),)
+         function = nodes.get(side.span)
+         if function is None or not function.name.startswith("test"):
+             continue
+@@ -185,7 +204,7 @@ def _python_context(source, units, path, startup, needed):
+             if not any("id='pytest'" in item for item in others):
+                 own_environment = others
+         scope = (own_environment, startup, class_name, _dump(args), [_dump(d) for d in function.decorator_list],
+-                 [asdict(row) for row in side.param_rows], side.param_cases)
++                 [asdict(row) for row in side.param_rows], side.param_cases, *fixture_scope)
+         side.oracle_context = _key("python-unit-v1", scope, _dump(declaration))
+         if fixture_parameters:
+             continue  # exact standard-fixture smoke relocation only, no text credit.
+@@ -202,7 +221,7 @@ def _python_context(source, units, path, startup, needed):
+                    for part in [*function.body, *other_decorators] for n in ast.walk(part)):
+             assertion_environment = [item for item in environment if item != pytest_import]
+         assertion_scope = (assertion_environment, startup, class_name, _dump(concrete_args),
+-                           [_dump(d) for d in other_decorators])
++                           [_dump(d) for d in other_decorators], *fixture_scope)
+         rows = _rows(side)
+         prefix = []
+         from checkwash.frontends.python.snapshot_context import _literal_expression
+@@ -351,7 +370,8 @@ def _javascript_context(source, units, path, needed):
+                     [asdict(row) for row in side.param_rows], side.param_cases)
+ 
+ 
+-def mark_contexts(source, units, path, language, *, startup_known=True, startup="", needed=None):
++def mark_contexts(source, units, path, language, *, startup_known=True, startup="", needed=None,
++                  source_reader=None, source_searcher=None, source_path_lister=None):
+     """Attach optional proofs; missing source/setup knowledge leaves them empty."""
+     for _name, side in units:
+         side.oracle_context = ""
+@@ -360,7 +380,7 @@ def mark_contexts(source, units, path, language, *, startup_known=True, startup=
+         return
+     try:
+         if language == "python":
+-            _python_context(source, units, path, startup, needed)
++            _python_context(source, units, path, startup, needed, source_reader, source_searcher, source_path_lister)
+         elif path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
+             _javascript_context(source, units, path, needed)
+     except (RecursionError, MemoryError, ValueError, TypeError):
+diff --git a/tests/test_issue358_own_mark_guards.py b/tests/test_issue358_own_mark_guards.py
+index edb1d610..c878a687 100644
+--- a/tests/test_issue358_own_mark_guards.py
++++ b/tests/test_issue358_own_mark_guards.py
+@@ -21,6 +21,7 @@ from checkwash.change import FileChange
+ from checkwash.config import Config
+ from checkwash.contract import Contract
+ from checkwash.engine import analyze
++from checkwash.gitio.snapshot import search_source_mapping
+ from checkwash.frontends.python.frontend import parse_python
+ from checkwash.frontends.python.own_marks import UNKNOWN, OwnMarks, adds_marks, reads_marks, resolve
+ 
+@@ -332,6 +333,8 @@ def test_a_test_moved_under_the_gate_keeps_its_move_credit():
+         [FileChange(PATH, "modified", module().encode(), after.encode()),
+          FileChange(other, "added", None, moved.encode())],
+         Config(), Contract(), [], datetime.date(2026, 10, 8), head_reader=snapshot.get, root_reader=snapshot.get,
++        root_searcher=lambda needles: search_source_mapping(snapshot, needles),
++        root_path_lister=lambda: sorted(snapshot),
+     )
+     assert verdict == "pass"
+     assert not [f for f in findings if f.severity == "high"]

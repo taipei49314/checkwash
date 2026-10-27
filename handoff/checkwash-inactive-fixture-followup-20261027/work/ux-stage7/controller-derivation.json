@@ -1,0 +1,14 @@
+{
+  "baseline_origin": "work/ux-stage5/capture_final.py",
+  "baseline_origin_sha256": "78bdf1762224daa5b922a725c9403d6ef9f48eaef38f808fb91bf00e10a4b5d0",
+  "baseline_derived_sha256": "63b6bab97a60d37beef8b73dd779c25f0f89ad4faaeed034d9af733e51457fb6",
+  "development_origin": "work/ux-stage5/capture.py",
+  "development_origin_sha256": "771164a9065b20874ac1732b6b5b1ff40db6d4f58f4f919728ca78ad39733274",
+  "development_derived_sha256": "67140c68b914243631f6204bfa53112d1579cbd854f38b02739d9f2b8d671ffc",
+  "changes": [
+    "new diagnostic docstrings",
+    "fresh owned temp prefixes",
+    "development-only separate inactive-fixture checkout"
+  ],
+  "product_sources_unchanged": true
+}

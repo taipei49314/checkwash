@@ -1,0 +1,38 @@
+{
+  "status": "UNCOMMITTED_INTERMEDIATE_NOT_EXECUTED",
+  "base_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "time": "2026-10-27T00:22:39.175178+00:00",
+  "host": "LAPTOP-01AGNPJU",
+  "files": [
+    {
+      "path": "src/checkwash/engine.py",
+      "bytes": 112610,
+      "sha256": "5a33064d1b9125c448ea543082ab84160f25e7db6c6235aeabf5cef2eb1bc78d"
+    },
+    {
+      "path": "src/checkwash/oracle_credit.py",
+      "bytes": 22908,
+      "sha256": "51744826c900b8db401b64e652dcb4b63641c273d94f66b85d055ed4c9bb4580"
+    },
+    {
+      "path": "src/checkwash/oracle_fixture_credit.py",
+      "bytes": 26178,
+      "sha256": "64ee631f33723de35f68597156fe2f971e36813067c341bef72b0c8bd16c11ea"
+    },
+    {
+      "path": "tests/test_inactive_fixture_context_reader.py",
+      "bytes": 10038,
+      "sha256": "5f7de44dc7706ebec05f6db3f99012f229122f87fea857096b8e982092886014"
+    },
+    {
+      "path": "tests/test_inactive_fixture_oracle_credit.py",
+      "bytes": 14229,
+      "sha256": "01e480e73568ccbc2004ed29f4616007e2c66b7cdb2f7d508228364b5530e4d7"
+    },
+    {
+      "path": "tests/test_issue358_own_mark_guards.py",
+      "bytes": 18038,
+      "sha256": "f356314c5c42668dc2b428785bc3a7aae00888c8246234bf64373bd6cd94d1b4"
+    }
+  ]
+}

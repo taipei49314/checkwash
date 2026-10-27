@@ -1,0 +1,177 @@
+"""Independent stdlib-only readback of recorded development runs and source bytes."""
+from pathlib import Path
+import ast
+import copy
+import difflib
+import hashlib
+import json
+import xml.etree.ElementTree as ET
+import zipfile
+
+BASE = Path(r"C:\Users\nelson\Documents\Codex\2026-10-26\1-00-start-here-md-c")
+STAGE = BASE / "work/ux-stage7"
+HERE = Path(__file__).parent
+SOURCE = "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+sha = lambda raw: hashlib.sha256(raw).hexdigest()
+def read(path):
+    return path.read_bytes()
+def load(path):
+    return json.loads(read(path))
+seal_path = BASE / "work/ux-stage5/seal/source-seal.json"
+seal = load(seal_path)
+assert seal["source_sha"] == SOURCE
+sealed = {row["path"]: row["sha256"] for row in seal["files"]}
+assert len(sealed) == 3084
+owned = {"src/checkwash/engine.py", "src/checkwash/oracle_credit.py", "src/checkwash/oracle_fixture_credit.py",
+         "tests/test_inactive_fixture_context_reader.py", "tests/test_inactive_fixture_oracle_credit.py",
+         "tests/test_issue358_own_mark_guards.py"}
+ordinary = "tests/test_issue358_own_mark_guards.py"
+with zipfile.ZipFile(BASE / "work/ux-stage5/seal/source-fbc9374d.zip") as archive:
+    original_ordinary = archive.read(ordinary)
+    original_shadow = archive.read("src/checkwash/shadow.py")
+    assert b"runtime-shadow inventory requires both path and byte readers" in original_shadow
+    original_tree = ast.parse(original_ordinary)
+
+def ordinary_check(raw):
+    tree = ast.parse(raw)
+    assertions = [ast.dump(node) for node in ast.walk(tree) if isinstance(node, ast.Assert)]
+    before_assertions = [ast.dump(node) for node in ast.walk(original_tree) if isinstance(node, ast.Assert)]
+    assert assertions == before_assertions
+    normalized = copy.deepcopy(tree)
+    added_imports = [node for node in normalized.body if isinstance(node, ast.ImportFrom)
+                     and node.module == "checkwash.gitio.snapshot"]
+    assert len(added_imports) == 1
+    assert [(alias.name, alias.asname) for alias in added_imports[0].names] == [("search_source_mapping", None)]
+    normalized.body.remove(added_imports[0])
+    fn = next(node for node in normalized.body if isinstance(node, ast.FunctionDef)
+              and node.name == "test_a_test_moved_under_the_gate_keeps_its_move_credit")
+    calls = [node for node in ast.walk(fn) if isinstance(node, ast.Call)
+             and isinstance(node.func, ast.Name) and node.func.id == "analyze"]
+    assert len(calls) == 1
+    added_keywords = [keyword.arg for keyword in calls[0].keywords
+                      if keyword.arg in {"root_searcher", "root_path_lister", "root_batch_reader"}]
+    calls[0].keywords = [keyword for keyword in calls[0].keywords if keyword.arg not in added_keywords]
+    assert ast.dump(normalized) == ast.dump(original_tree)
+    return {"all_assertion_asts_identical_to_fbc": True, "assertion_count": len(assertions),
+            "entire_module_ast_identical_after_only_added_import_and_context_keywords_removed": True,
+            "added_context_keywords": added_keywords}
+
+runs = []
+history = {}
+expected = {1: (274, 0, 0), 2: (179, 143, 1), 3: (322, 1, 1), 4: (323, 0, 0)}
+for number in range(1, 5):
+    run = STAGE / "root" / f"inactive-fixture-r{number}"
+    historical = STAGE / "wip-history" / f"development-r{number}"
+    receipt_raw = read(run / "receipt.json")
+    receipt = json.loads(receipt_raw)
+    manifest_raw = read(historical / "manifest.json")
+    manifest = json.loads(manifest_raw)
+    input_raw = read(run / "input-hashes.json")
+    inputs = json.loads(input_raw)
+    assert sha(input_raw) == receipt["input_manifest_sha256"]
+    assert receipt["source_sha"] == receipt["ending_sha"] == SOURCE
+    assert receipt["source_files_unchanged"] is True and receipt["changed_inputs"] == []
+    assert receipt["validation_kind"] == "WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION"
+    assert manifest["base_sha"] == SOURCE and {row["path"] for row in manifest["files"]} == owned
+    copies = {}
+    for row in manifest["files"]:
+        raw = read(historical / (row["path"] + ".txt"))
+        assert len(raw) == row["bytes"] and sha(raw) == row["sha256"] == inputs[row["path"]]
+        copies[row["path"]] = raw
+    history[number] = copies
+    different = {path for path, digest in inputs.items() if sealed.get(path) != digest}
+    removed = set(sealed) - set(inputs)
+    assert not removed and different <= owned
+    # Every other recorded source, including protected files/goldens, is
+    # byte-identical to the fixed fbc seal. New paths may only be owned six.
+    for path, digest in sealed.items():
+        if path not in owned:
+            assert inputs[path] == digest
+    xml_raw = read(run / "junit.xml")
+    xml = ET.fromstring(xml_raw)
+    suites = list(xml.iter("testsuite"))
+    cases = list(xml.iter("testcase"))
+    failed = [case for case in cases if case.find("failure") is not None]
+    errors = [case for case in cases if case.find("error") is not None]
+    skipped = [case for case in cases if case.find("skipped") is not None]
+    passed = len(cases) - len(failed) - len(errors) - len(skipped)
+    wanted_passed, wanted_failed, wanted_exit = expected[number]
+    assert (passed, len(failed), len(errors), len(skipped), receipt["exit_code"]) == (wanted_passed, wanted_failed, 0, 0, wanted_exit)
+    assert sum(int(suite.attrib["tests"]) for suite in suites) == len(cases)
+    assert sum(int(suite.attrib["failures"]) for suite in suites) == len(failed)
+    assert sum(int(suite.attrib["errors"]) for suite in suites) == len(errors)
+    assert sum(int(suite.attrib["skipped"]) for suite in suites) == len(skipped)
+    stdout = read(run / "stdout.txt").decode()
+    assert f"{passed} passed" in stdout
+    if failed:
+        assert f"{len(failed)} failed" in stdout
+    failures = []
+    for case in failed:
+        failure = case.find("failure")
+        body = failure.text or ""
+        failures.append({"class": case.attrib.get("classname"), "name": case.attrib.get("name"),
+                         "message": failure.attrib.get("message"), "text_sha256": sha(body.encode()),
+                         "paired_reader_contract_failure": "runtime-shadow inventory requires both path and byte readers" in body})
+    if number == 2:
+        assert len(failures) == 143 and all(row["paired_reader_contract_failure"] for row in failures)
+    if number == 3:
+        assert len(failures) == 1 and failures[0]["name"] == "test_a_bare_parametrize_sibling_cannot_certify_the_unmarked_arrival"
+    diff_raw = read(run / "source.diff")
+    assert sha(diff_raw) == receipt["source_diff_sha256"]
+    ordinary_result = ordinary_check(copies[ordinary])
+    artifacts = {name: {"bytes": len(read(run / name)), "sha256": sha(read(run / name))}
+                 for name in ["receipt.json", "input-hashes.json", "junit.xml", "stdout.txt", "stderr.txt", "source.diff", "git-status.txt"]}
+    runs.append({"run": number, "actual_exit": receipt["exit_code"], "passed": passed, "failed": len(failed),
+                 "errors": len(errors), "skipped": len(skipped), "xml_parent_tests": sum(int(s.attrib["tests"]) for s in suites),
+                 "xml_testcase_count": len(cases), "unique_class_name_pairs": len({(case.attrib.get("classname"), case.attrib.get("name")) for case in cases}),
+                 "xml_suite_attributes": [suite.attrib for suite in suites],
+                 "input_manifest_sha256": sha(input_raw), "source_diff_sha256": sha(diff_raw),
+                 "development_manifest_sha256": sha(manifest_raw), "six_full_copies_verified": manifest["files"],
+                 "ordinary358_ast_check": ordinary_result, "failures": failures,
+                 "all_other_recorded_fbc_sources_unchanged": True, "recorded_paths_different_from_fbc": sorted(different),
+                 "raw_artifacts": artifacts, "receipt": receipt})
+
+changed_r3_r4 = [path for path in sorted(owned) if history[3][path] != history[4][path]]
+assert changed_r3_r4 == ["src/checkwash/oracle_fixture_credit.py"]
+before, after = history[3][changed_r3_r4[0]], history[4][changed_r3_r4[0]]
+old = b'and not node.attr.startswith("_"))'
+new = b'and not node.attr.startswith("_") and node.attr != "parametrize")'
+assert before.count(old) == 1 and before.replace(old, new, 1) == after
+assert runs[2]["source_diff_sha256"] == runs[3]["source_diff_sha256"]
+assert runs[2]["input_manifest_sha256"] != runs[3]["input_manifest_sha256"]
+delta = "".join(difflib.unified_diff(before.decode().splitlines(True), after.decode().splitlines(True),
+                                 fromfile="development-r3/oracle_fixture_credit.py", tofile="development-r4/oracle_fixture_credit.py")).encode()
+delta_path = HERE / "development-readback-r4.helper-diff.txt"
+assert not delta_path.exists()
+delta_path.write_bytes(delta)
+live = BASE / "work/checkwash-inactive-fixture"
+assert all(read(live / path) == raw for path, raw in history[4].items())
+unchanged_current = 0
+for path, digest in sealed.items():
+    if path not in owned:
+        assert sha(read(live / path)) == digest
+        unchanged_current += 1
+report = {
+    "status": "PASS_INDEPENDENT_RECORDED_DEVELOPMENT_READBACK",
+    "base_sha": SOURCE,
+    "runtime_scope": "Actual PJU Windows/Python3.11.9 working-tree development; not a fixed-commit full suite, qualification or acceptance",
+    "runs": runs, "runs_not_unique_cases": True,
+    "r2_disposition": "143 actual failures retained, all raised the unchanged paired path/byte-reader guard; caller plumbing was corrected, product guard was not weakened",
+    "r3_r4_disposition": "Same source.diff hash does not mean identical input source: untracked helper differs; full six-file copies/input manifests prove exact one-line rejection of bare parametrize",
+    "r3_helper_sha256": sha(before), "r4_helper_sha256": sha(after), "only_r3_r4_changed_path": changed_r3_r4[0],
+    "helper_diff_path": delta_path.relative_to(BASE).as_posix(), "helper_diff_sha256": sha(delta),
+    "ordinary358_expected_and_all_assertion_asts_unchanged": True,
+    "all_other_current_tracked_fbc_sources_verified_count": unchanged_current,
+    "protected_contracts_gating_strength_golden_fixtures_unchanged": True,
+    "live_r4_six_source_files_match_recorded_copies": True,
+    "product_fixture_pytest_model_calls_by_auditor": 0,
+    "raw_receipts_or_sources_modified_by_auditor": False,
+    "execution_label": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+}
+dest = HERE / "development-readback-r4.json"
+assert not dest.exists()
+dest.write_bytes((json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode())
+print(json.dumps({"status": report["status"], "report_sha256": sha(read(dest)),
+                  "current_other_fbc_files_verified": unchanged_current,
+                  "runs": [{key: row[key] for key in ["run", "passed", "failed", "xml_parent_tests", "xml_testcase_count", "actual_exit"]} for row in runs],
+                  "r3_helper": sha(before), "r4_helper": sha(after), "helper_delta_sha256": sha(delta)}))

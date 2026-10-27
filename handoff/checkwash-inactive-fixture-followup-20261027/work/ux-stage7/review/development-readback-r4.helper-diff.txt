@@ -1,0 +1,11 @@
+--- development-r3/oracle_fixture_credit.py
++++ development-r4/oracle_fixture_credit.py
+@@ -225,7 +225,7 @@
+     return (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Attribute)
+             and isinstance(node.value.value, ast.Name) and node.value.value.id == "pytest"
+             and node.value.attr == "mark" and node.attr.isidentifier()
+-            and not node.attr.startswith("_"))
++            and not node.attr.startswith("_") and node.attr != "parametrize")
+ 
+ 
+ def _ordinary_binding(name, *, fixture=False):
