@@ -299,7 +299,8 @@ def validate_product(packet, source_root, trusted_root, collector):
                               "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
             and argv[17] == "--junitxml" and argv[19] == "tests"
             and argv[18].replace("\\", "/").endswith("/" + records["junit"]), "full pytest scope mismatch")
-    junit = B.validate_junit(packet.raw(records["junit"]))
+    junit = B.validate_junit(packet.raw(records["junit"]), pytest_stdout=packet.raw(exits["pytest"]["stdout"]),
+                             pytest_version=runtime["dependencies"].get("pytest"))
     B.validate_action(packet, records, manifest["head_sha"], manifest["base_sha"], trusted_root)
     B.validate_candidate_action(packet, records, manifest["head_sha"], manifest["base_sha"], source_root, trusted_root, collector)
     artifacts = {}
