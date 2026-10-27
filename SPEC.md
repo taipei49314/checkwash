@@ -1773,3 +1773,24 @@ under `benchmarks/` do that, and they are in-sample by construction. It does
 not make the in-sample rate wrong: 46/1800 (v0.3.0, 2026-09-07) is the honest answer to "how often
 does it block the repositories it knows best", and it stays published as
 exactly that.
+
+### 10.5 Published identity of the release-regression baseline (D-186)
+
+The previous-release verdict corpus compares against actual published software,
+not an undelivered tag. On a tag-stage run, the baseline remains the highest
+other published stable GitHub Release whose native tag is merged into the exact
+pushed commit. Complete bounded public Release catalog evidence, native tag
+object/peel and ancestry, and the baseline's uploaded canonical pyz identity
+must agree with its existing source/byte pin. A higher merged published Release
+with missing or bad assets blocks; it is never silently excluded. Bare tags
+remain recorded, including failed unpublished tags. Catalog absence describes
+current public metadata, not never-published history or private drafts.
+
+The gate captures two complete consistent catalog traversals and original
+response bytes/status/Link/times/hashes. The native publisher independently
+refreshes and re-evaluates relevant published fields and native tag identities.
+Failed, capped, partial, drifting or unbound metadata is not absence or PASS.
+The pushed tag still points exactly to HEAD and is excluded from previous-release
+selection. No tag, baseline pin, case, label, acceptance entry, baseline-blocked
+set, T3 map or canary pair changes merely to obtain a passing tag check. Ordinary
+case engines remain zero-network; this is a separate tag metadata preflight.

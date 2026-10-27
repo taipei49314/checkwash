@@ -433,7 +433,7 @@ class ReleaseCollection:
             require(self.action.snapshot(ctx["reader"], source, commit) == before, "verdict pinned source changed")
 
     def preflight(self, ctx):
-        for path in ("tools/verdict_gate.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
+        for path in ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
             require(ctx["source_before"][path] == ctx["trusted_before"][path], "candidate differs from audited release helper: " + path)
         if self.subject["stage"] != "pr":
             require(ctx["reader"].text(ctx["source"], "rev-parse", self.subject["head_sha"] + "^1") == self.subject["base_sha"],

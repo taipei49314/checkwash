@@ -359,6 +359,13 @@ event-after fresh build/qualification; actual assets; Nelson's PyPI approval;
 real public downloads/installations. R29's two fixed 1,800-member sets and owner
 review remain separate from verdict cases and #419 history.
 
+Tag-stage verdicts also retain [native published-baseline identity](published-release-baseline.md).
+The gate separately captures complete public Release catalog and native tag/peel/
+ancestry metadata; this verifier refreshes authenticated metadata independently.
+An undelivered tag does not replace the real published baseline, and failed or
+incomplete higher published assets cannot be silently excluded. Ordinary verdict
+runs without a tag subject retain their zero-network case-engine contract.
+
 PyPI retains filename `release.yml`, `environment: pypi`,
 `vars.PYPI_ENABLED == 'true'` and per-job `id-token: write`. It depends on
 successful actual GitHub asset readback, then repeats verification after Nelson

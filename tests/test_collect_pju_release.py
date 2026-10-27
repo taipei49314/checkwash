@@ -154,7 +154,7 @@ class ReleaseCollectorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             collection = Fixture(Path(folder)).collection()
             helpers = {path: {"sha256": "owned"} for path in
-                       ("tools/verdict_gate.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py")}
+                       ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py")}
             ctx = dict(source_before=helpers, trusted_before=helpers, source=Path(folder),
                        reader=SimpleNamespace(text=lambda *args: "9" * 40), project={"version": "0.9.1"})
             with self.assertRaisesRegex(ValueError, "first parent"):
@@ -165,7 +165,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             fixture = Fixture(Path(folder), "pr")
             collection = fixture.collection()
             helpers = {path: {"sha256": "owned"} for path in
-                       ("tools/verdict_gate.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py")}
+                       ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py")}
             def unexpected(*args):
                 self.fail("PR preflight must not replace actual live base with first parent")
             context = dict(source_before=helpers, trusted_before=helpers, reader=SimpleNamespace(text=unexpected),

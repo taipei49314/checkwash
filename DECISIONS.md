@@ -510,3 +510,31 @@ lack their called producers and complete startup evidence and retain BLOCK.
 Separate closed-source positive domains do not invent missing fixture inputs.
 Historical receipts and pre-disposition failures remain immutable. Current
 source qualification and publication are separate requirements.
+
+## D-186 (2026-10-27): bind the regression baseline to native published software
+
+Nelson's current instruction remains 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」.
+Codex applied that delegation to this narrow release-protocol repair after
+independent read-only audit found the failed unpublished v0.9.1 tag already
+merged into the 0.10 candidate. The old highest-merged-tag predicate selected
+that tag despite the absence of a delivered baseline artifact. Its tag and failed
+receipts remain unchanged, as do the real published v0.9.0 source/byte pins.
+
+Tag-stage baseline selection now requires complete native published stable
+Release identity, the canonical uploaded pinned pyz, native ref/peel/ancestry
+binding and exact pushed-tag HEAD. A bare tag remains reported without being
+called published software. A genuinely higher merged published Release blocks
+the old pin even when its asset is incomplete or invalid. Failed metadata,
+permissions/rate errors, partial pagination or cap exhaustion never establish
+absence. Original bytes/status/Link/times/hashes for two complete consistent
+catalog traversals are retained. The data-only bridge independently refreshes
+authenticated native metadata and rejects a forged or stale higher omission.
+
+This interprets current public identity rather than claiming no private draft
+exists or that an absent Release was never published. PyPI deployment protection
+and actual public delivery remain separate. The case engines, source tree under
+src/, labels, acceptance ledger, pins, baseline-blocked/T3/canary authenticity,
+stage chain and exact-source evidence requirements remain. Owned positive and
+adversarial metadata tests qualify this protocol; they are not a real tag event,
+Release or publication acceptance. The selected protocol and source review are
+Codex-performed work, not Nelson's personal case reviews or deployment approval.
