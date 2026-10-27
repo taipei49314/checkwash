@@ -18,8 +18,9 @@ gates remain. Version metadata is not evidence of a published release. The
 existing unpublished v0.9.1 tag, failed tag-validation receipts and consumed
 history attempts remain unchanged; this instruction does not resume them or
 admit a new historical/model/paid batch. Actual missing capabilities and
-unexecuted gates must remain visible. Any PyPI environment approval remains
-with the maintainer. Public CLI/Action/advertised pins stay at the verified
+unexecuted gates must remain visible. PyPI environment review follows the
+version-specific delegation below; its required reviewer protection remains.
+Public CLI/Action/advertised pins stay at the verified
 v0.9.0 until a new release's actual public bytes have been verified.
 
 ### Takeover execution and current cost decision
@@ -33,6 +34,21 @@ source-bound execution and risk decisions after independent review. Exact
 technical source hashes, job bounds and case judgments are Codex decisions;
 the short quote does not claim Nelson typed them or personally reviewed each
 case. The stop before 1.0 and the normal publication requirements remain.
+
+For this 0.10.0 continuation, Codex interprets "1.0 before publication is my
+only hold; advance the rest autonomously" as delegating the concrete pre-1.0
+publication operations, including ordinary deployment review through the
+authenticated eligible maintainer account after all required evidence and
+asset checks pass. This version-specific interpretation supersedes the
+general procedure's older agent-session prohibition for that review only.
+It does not assert that Nelson personally reviewed the source hash, platform
+cells or deployment. Approval comments and publication records must identify
+Codex as the delegate and retain the actual account, environment, run, source,
+request and result identities. Require the live pending deployment to report
+that the authenticated account may approve; retain required reviewers and
+all other protection settings. An eligibility or permission refusal does not
+authorize a bypass or a protection change. This paragraph is a scope decision,
+not a completed deployment approval or a passing receipt.
 
 The new targeted D176 diagnostic completed six actual CLI calls on the three
 previously reported uvloop inputs, on actual16NU/Windows/Python3.11.9. Its
