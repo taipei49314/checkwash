@@ -1,0 +1,77 @@
+{
+  "kind": "INDEPENDENT_READ_ONLY_SOURCE_REVIEW_NOT_TEST_RESULT",
+  "source_baseline": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "reviewed_helper_sha256": "57b9e6566b3037f6fce122f80d7c5c4e468f133217d713c7a6fe28178cbde5c2",
+  "recorded_utc": "2026-10-27T00:13:14.458947+00:00",
+  "host": "LAPTOP-01AGNPJU",
+  "metadata_runtime": "3.11.9",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "state": "BLOCKED_ON_SOURCE_FINDINGS_NOT_A_PASS",
+  "findings": {
+    "B1_side_observations": "SOURCE_FIX_READ_BACK_PENDING_AUTHOR_TESTS",
+    "B2_rejected_read_cache": "SOURCE_FIX_READ_BACK_PENDING_AUTHOR_TESTS",
+    "B3_reserved_fixture_request": "OPEN_HELPER_R2_FIX_REQUESTED",
+    "B4_debug_compile_binding": "OPEN_HELPER_R2_FIX_REQUESTED_SOURCE_ONLY",
+    "B5_nonancestor_repo_collection_hook": "OPEN_BLOCKING_MISSING_CLOSED_INVENTORY"
+  },
+  "source_observations": [
+    {
+      "source": "work\\checkwash-inactive-fixture\\src\\checkwash\\engine.py",
+      "bytes": 109248,
+      "sha256": "e0dbaaf1af41708a65f6eb295d7571a2f582bf8a25bd47c4e35eb1b9562f6718",
+      "copy": "source-observations\\engine-e0dbaaf1af41.py.txt",
+      "stable_during_read": true
+    },
+    {
+      "source": "work\\checkwash-inactive-fixture\\src\\checkwash\\oracle_credit.py",
+      "bytes": 22775,
+      "sha256": "bf41a339c2e18064a974ff05e5b189324aafe4bea5a5870babda6b1fb47cfc4b",
+      "copy": "source-observations\\oracle_credit-bf41a339c2e1.py.txt",
+      "stable_during_read": true
+    },
+    {
+      "source": "work\\checkwash-inactive-fixture\\src\\checkwash\\oracle_fixture_credit.py",
+      "bytes": 20047,
+      "sha256": "57b9e6566b3037f6fce122f80d7c5c4e468f133217d713c7a6fe28178cbde5c2",
+      "copy": "source-observations\\oracle_fixture_credit-57b9e6566b30.py.txt",
+      "stable_during_read": true
+    },
+    {
+      "source": "work\\checkwash-inactive-fixture\\tests\\test_inactive_fixture_context_reader.py",
+      "bytes": 5968,
+      "sha256": "9d102a7a2fff14324bd4f234394a6672699018f46f1458a60e49ca4fd4502545",
+      "copy": "source-observations\\test_inactive_fixture_context_reader-9d102a7a2fff.py.txt",
+      "stable_during_read": true
+    }
+  ],
+  "installed_pytest_primary_sources": [
+    {
+      "path": "C:\\Users\\nelson\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\_pytest\\fixtures.py",
+      "sha256": "f5d4d3f848d97411e456d50400d3aaecc19a9b0c90def9151e395ee8952042b7",
+      "read_only": true,
+      "source_copied": false
+    },
+    {
+      "path": "C:\\Users\\nelson\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\_pytest\\main.py",
+      "sha256": "8ee2725057ff1811e2ae9ebdf1befb7518195f8f333f9f8ca024d76a4b80780e",
+      "read_only": true,
+      "source_copied": false
+    }
+  ],
+  "primary_document_links": [
+    "https://docs.python.org/3.11/reference/simple_stmts.html#the-assert-statement",
+    "https://docs.python.org/3.11/library/ast.html#ast.parse",
+    "https://github.com/python/cpython/blob/v3.11.9/Python/compile.c#L2380"
+  ],
+  "report_sha256": "d76b532dd5839d29ff7fc04d875864252b82a73a6a49d3d3c9e40969b92dbfce",
+  "owned_new_reader_test_status": "WRITTEN_WITH_ROOT_AUTHORIZATION_NOT_RUN_BY_REVIEWER; no worktree file edits after freeze acknowledgment",
+  "product_import_compile_exec_pytest_prototype_calls": 0,
+  "represented_fixture_executions": 0,
+  "old_source_test_expected_protected_output_edits": 0,
+  "new_owned_test_files_written": 1,
+  "limitations": [
+    "Source reasoning only, no verdict escape or native execution is claimed",
+    "Root owns any development captures and their source drift reporting",
+    "Helper and integration still require revised-source independent review and actual controls"
+  ]
+}

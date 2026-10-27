@@ -1,0 +1,57 @@
+{
+  "kind": "READ_ONLY_PRE_IMPLEMENTATION_OBLIGATIONS_NOT_A_PASS",
+  "source_baseline": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "recorded_utc": "2026-10-26T23:43:25.161439+00:00",
+  "host": "LAPTOP-01AGNPJU",
+  "runtime_for_metadata": "3.11.9",
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "state": "AWAITING_NEW_HELPER_AND_ENGINE_ORACLE_SOURCE",
+  "source_files_read": [
+    {
+      "path": "work/checkwash-ux/src/checkwash/frontends/python/oracle_purity.py",
+      "bytes": 16353,
+      "sha256": "ea74345415929cb72493f8bca7d1d3813eb3e115a53fdcdc9cff2897e1609f3a"
+    },
+    {
+      "path": "work/checkwash-ux/src/checkwash/frontends/python/snapshot_context.py",
+      "bytes": 8990,
+      "sha256": "88f815c32e795d9019be2f328d3af6d2d3c5b8f8d930c89b6f30a35693211987"
+    },
+    {
+      "path": "work/checkwash-ux/src/checkwash/frontends/python/own_marks.py",
+      "bytes": 28019,
+      "sha256": "a76bb0826ed8e479802734035b23848c4a0fa1ecbe35f15180efb20ad1ef6e78"
+    },
+    {
+      "path": "work/checkwash-ux/src/checkwash/frontends/python/setup_skip_controls.py",
+      "bytes": 52982,
+      "sha256": "7d92c618db050bc1c14ee5783d7496c38d35138edbf335a23ea639e08750ad1c"
+    },
+    {
+      "path": "work/checkwash-ux/src/checkwash/oracle_credit.py",
+      "bytes": 21418,
+      "sha256": "dae96be0b17b411dfbdd3e44f03aafbebbfd87ecefbbeacee1d483b44de20155"
+    },
+    {
+      "path": "work/checkwash-ux/src/checkwash/engine.py",
+      "bytes": 104893,
+      "sha256": "f3ad9f34db31dc168a119a788ace37dbea60e8b834cf175b1ca5165384b8096d"
+    },
+    {
+      "path": "work/ux-stage6/python-relocation/MINIMAL-PATCH-PROPOSAL.md",
+      "bytes": 7570,
+      "sha256": "551e1bf06fb876f85fcae8ce8269bb0a1db5e504a54ccb2785fdc7c0324ab2a7"
+    },
+    {
+      "path": "work/ux-stage6/python-relocation/ROOTCAUSE.md",
+      "bytes": 6728,
+      "sha256": "470e8d6584a2a2ae8ebad35963b4bf9d1b1e9bf798c569cd4f3fd1fc9c3ae070"
+    }
+  ],
+  "primary_issue571_fetch_sha256": "9ece589a75f73a44d1c0962bd699c871225e57161d1035a699a180c5c6a604bc",
+  "checklist_sha256": "c351d62f5378fd8ae809a03915d78f0080d58871f8070046857d2a9194c946b7",
+  "product_import_exec_compile_pytest_prototype_calls": 0,
+  "fixture_execution": 0,
+  "product_test_protected_or_old_output_edits": 0,
+  "review_conclusion": "Checklist and existing helper contracts only; no implementation accepted or empirical controls run."
+}

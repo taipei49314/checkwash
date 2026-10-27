@@ -1,0 +1,11 @@
+{
+  "acceptance_state": "NONPASS_NOT_REASSESSED",
+  "kind": "FROZEN_DIAGNOSTIC_SUPPLEMENT",
+  "note": "Copied diagnostic outcomes/proposals keep their recorded state; no all-tests-PASS assertion is made.",
+  "previous_complete_backup": "e52db89c1d717ce92d46b1dca6d3eb1c98821ef8",
+  "product_fixture_test_model_calls_by_backup_tool": 0,
+  "product_publication_performed": false,
+  "purpose": "UNCOMMITTED_INACTIVE_FIXTURE_PROTOTYPE_NOT_ACCEPTED",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "version_1_0_requires_human_decision": true
+}

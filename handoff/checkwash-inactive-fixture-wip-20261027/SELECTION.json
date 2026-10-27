@@ -1,0 +1,253 @@
+{
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "purpose": "UNCOMMITTED_INACTIVE_FIXTURE_PROTOTYPE_NOT_ACCEPTED",
+  "root_frozen": true,
+  "files": [
+    {
+      "source": "work/ux-stage7/00-CONTINUE.md",
+      "export": "work/ux-stage7/00-CONTINUE.md",
+      "bytes": 2789,
+      "sha256": "908f19eaa80bf614d6c2f2123a177e139336ee50ea9e89a3fbff018da51534cf"
+    },
+    {
+      "source": "work/ux-stage7/capture_baseline.py",
+      "export": "work/ux-stage7/capture_baseline.py.txt",
+      "bytes": 4107,
+      "sha256": "63b6bab97a60d37beef8b73dd779c25f0f89ad4faaeed034d9af733e51457fb6"
+    },
+    {
+      "source": "work/ux-stage7/capture_dev.py",
+      "export": "work/ux-stage7/capture_dev.py.txt",
+      "bytes": 3795,
+      "sha256": "67140c68b914243631f6204bfa53112d1579cbd854f38b02739d9f2b8d671ffc"
+    },
+    {
+      "source": "work/ux-stage7/controller-derivation.json",
+      "export": "work/ux-stage7/controller-derivation.json",
+      "bytes": 699,
+      "sha256": "1f757011f2a1598f03d6fefaa6b0ec5a107c70e456a3a5ce6fecc546955d5ca8"
+    },
+    {
+      "source": "work/ux-stage7/final-source-sha.txt",
+      "export": "work/ux-stage7/final-source-sha.txt",
+      "bytes": 42,
+      "sha256": "e7a2e900fa0f17592ce9c2a2755a394cc211127dcd0920b76137b75c30a95ee4"
+    },
+    {
+      "source": "work/ux-stage7/baseline-external-input.json",
+      "export": "work/ux-stage7/baseline-external-input.json",
+      "bytes": 468,
+      "sha256": "94ed192f417f3541b0a389019bee5e0daf7ca6de7e32219050bf0a6f5fb70d11"
+    },
+    {
+      "source": "work/ux-stage7/baseline-external-input-r2.json",
+      "export": "work/ux-stage7/baseline-external-input-r2.json",
+      "bytes": 580,
+      "sha256": "d83459f4687bb3ddd47c37bc1521377fed268a776f7966b66b1bcf0ace0bcfaf"
+    },
+    {
+      "source": "work/ux-stage7/wip-history/pre-inventory-r1/manifest.json",
+      "export": "work/ux-stage7/wip-history/pre-inventory-r1/manifest.json",
+      "bytes": 1103,
+      "sha256": "688a47734cf7b0e2cec77c2bf961c8e129e0729812956bfba89fa3cd5e9d3c83"
+    },
+    {
+      "source": "work/ux-stage7/wip-history/pre-inventory-r1/src/checkwash/engine.py.txt",
+      "export": "work/ux-stage7/wip-history/pre-inventory-r1/src/checkwash/engine.py.txt",
+      "bytes": 109248,
+      "sha256": "e0dbaaf1af41708a65f6eb295d7571a2f582bf8a25bd47c4e35eb1b9562f6718"
+    },
+    {
+      "source": "work/ux-stage7/wip-history/pre-inventory-r1/src/checkwash/oracle_credit.py.txt",
+      "export": "work/ux-stage7/wip-history/pre-inventory-r1/src/checkwash/oracle_credit.py.txt",
+      "bytes": 22775,
+      "sha256": "bf41a339c2e18064a974ff05e5b189324aafe4bea5a5870babda6b1fb47cfc4b"
+    },
+    {
+      "source": "work/ux-stage7/wip-history/pre-inventory-r1/src/checkwash/oracle_fixture_credit.py.txt",
+      "export": "work/ux-stage7/wip-history/pre-inventory-r1/src/checkwash/oracle_fixture_credit.py.txt",
+      "bytes": 20047,
+      "sha256": "57b9e6566b3037f6fce122f80d7c5c4e468f133217d713c7a6fe28178cbde5c2"
+    },
+    {
+      "source": "work/ux-stage7/wip-history/pre-inventory-r1/tests/test_inactive_fixture_context_reader.py.txt",
+      "export": "work/ux-stage7/wip-history/pre-inventory-r1/tests/test_inactive_fixture_context_reader.py.txt",
+      "bytes": 5968,
+      "sha256": "9d102a7a2fff14324bd4f234394a6672699018f46f1458a60e49ca4fd4502545"
+    },
+    {
+      "source": "work/ux-stage7/wip-history/pre-inventory-r1/tests/test_inactive_fixture_oracle_credit.py.txt",
+      "export": "work/ux-stage7/wip-history/pre-inventory-r1/tests/test_inactive_fixture_oracle_credit.py.txt",
+      "bytes": 12851,
+      "sha256": "6183818236e4be92c02a1fb3cc1add3719aca14296fdf52118455fd103de4ca4"
+    },
+    {
+      "source": "work/ux-stage7/external-test-history/provenance.json",
+      "export": "work/ux-stage7/external-test-history/provenance.json",
+      "bytes": 1387,
+      "sha256": "b4e7adec8fcb62035a3e917980d8177ef06050ca013b4cad09ac952845057a69"
+    },
+    {
+      "source": "work/ux-stage7/external-test-history/r1-to-r2.diff",
+      "export": "work/ux-stage7/external-test-history/r1-to-r2.diff.txt",
+      "bytes": 1920,
+      "sha256": "cd91b9860e63ecb1c14f236039aa78815c1e7ce3b461c5afc37981a0b7d37eb0"
+    },
+    {
+      "source": "work/ux-stage7/external-test-history/reconstruct_r1.py",
+      "export": "work/ux-stage7/external-test-history/reconstruct_r1.py.txt",
+      "bytes": 4047,
+      "sha256": "5c47041445ee4ab677c3847ab8342897a1819a325367b235e126d81ef12b9415"
+    },
+    {
+      "source": "work/ux-stage7/external-test-history/test_inactive_fixture_oracle_credit-6183.py.txt",
+      "export": "work/ux-stage7/external-test-history/test_inactive_fixture_oracle_credit-6183.py.txt",
+      "bytes": 12851,
+      "sha256": "6183818236e4be92c02a1fb3cc1add3719aca14296fdf52118455fd103de4ca4"
+    },
+    {
+      "source": "work/ux-stage7/external-test-history/test_inactive_fixture_oracle_credit-f8f5.py.txt",
+      "export": "work/ux-stage7/external-test-history/test_inactive_fixture_oracle_credit-f8f5.py.txt",
+      "bytes": 11868,
+      "sha256": "f8f5d54dacd3d1bd789563e513b7d5bc370ebdda7122b9613ddb9d57a0f10eca"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/git-status.txt",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/git-status.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/input-hashes.json",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/input-hashes.json",
+      "bytes": 385164,
+      "sha256": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/junit.xml",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/junit.xml.txt",
+      "bytes": 19803,
+      "sha256": "a40028bfb998b390dff1f9062dd4db368628307595d54dcdb8c146d538f4a79e"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/receipt.json",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/receipt.json",
+      "bytes": 2230,
+      "sha256": "3cd1d3e17a0adbcf3d6d2c1f0dbf826f191a99d7e332b0e2e3a435c802deae85"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/source.diff",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/source.diff.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/stderr.txt",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r1/stdout.txt",
+      "export": "work/ux-stage7/final/new-controls-baseline-r1/stdout.txt",
+      "bytes": 5532,
+      "sha256": "d8642444f2adc8cf4d5f84ddb021f3ebb7d81541974d6b3c86e9552966aba965"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/git-status.txt",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/git-status.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/input-hashes.json",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/input-hashes.json",
+      "bytes": 385164,
+      "sha256": "51836ac93ce5670644a050f8e3ced2390d377b63bff4b956cc52741b291f9ee5"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/junit.xml",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/junit.xml.txt",
+      "bytes": 17179,
+      "sha256": "026666b27844f86445a9bf7f4f5d5b49d37f885644adf6a4a9b240ac1b63314a"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/receipt.json",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/receipt.json",
+      "bytes": 2230,
+      "sha256": "5a2a4720bfbbf4f79c7714249fc5914730844d858cf00d8047731a5acd282f5b"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/source.diff",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/source.diff.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/stderr.txt",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "work/ux-stage7/final/new-controls-baseline-r2/stdout.txt",
+      "export": "work/ux-stage7/final/new-controls-baseline-r2/stdout.txt",
+      "bytes": 2440,
+      "sha256": "d4a12ae775f3f1960c5a392a0a36ff2c06ed5dd22ab5a0fa6c3a063b76158efc"
+    },
+    {
+      "source": "work/ux-stage7/review/findings-r1.md",
+      "export": "work/ux-stage7/review/findings-r1.md",
+      "bytes": 6834,
+      "sha256": "d76b532dd5839d29ff7fc04d875864252b82a73a6a49d3d3c9e40969b92dbfce"
+    },
+    {
+      "source": "work/ux-stage7/review/issue571.json",
+      "export": "work/ux-stage7/review/issue571.json",
+      "bytes": 28163,
+      "sha256": "9ece589a75f73a44d1c0962bd699c871225e57161d1035a699a180c5c6a604bc"
+    },
+    {
+      "source": "work/ux-stage7/review/obligations.md",
+      "export": "work/ux-stage7/review/obligations.md",
+      "bytes": 8342,
+      "sha256": "c351d62f5378fd8ae809a03915d78f0080d58871f8070046857d2a9194c946b7"
+    },
+    {
+      "source": "work/ux-stage7/review/pre-implementation-audit.json",
+      "export": "work/ux-stage7/review/pre-implementation-audit.json",
+      "bytes": 2396,
+      "sha256": "f3875dec757f45634fdf0b0c4706b155d5a1ae2048f6a135ca13236ca1061295"
+    },
+    {
+      "source": "work/ux-stage7/review/source-observations/engine-e0dbaaf1af41.py.txt",
+      "export": "work/ux-stage7/review/source-observations/engine-e0dbaaf1af41.py.txt",
+      "bytes": 109248,
+      "sha256": "e0dbaaf1af41708a65f6eb295d7571a2f582bf8a25bd47c4e35eb1b9562f6718"
+    },
+    {
+      "source": "work/ux-stage7/review/source-observations/oracle_credit-bf41a339c2e1.py.txt",
+      "export": "work/ux-stage7/review/source-observations/oracle_credit-bf41a339c2e1.py.txt",
+      "bytes": 22775,
+      "sha256": "bf41a339c2e18064a974ff05e5b189324aafe4bea5a5870babda6b1fb47cfc4b"
+    },
+    {
+      "source": "work/ux-stage7/review/source-observations/oracle_fixture_credit-57b9e6566b30.py.txt",
+      "export": "work/ux-stage7/review/source-observations/oracle_fixture_credit-57b9e6566b30.py.txt",
+      "bytes": 20047,
+      "sha256": "57b9e6566b3037f6fce122f80d7c5c4e468f133217d713c7a6fe28178cbde5c2"
+    },
+    {
+      "source": "work/ux-stage7/review/source-observations/test_inactive_fixture_context_reader-9d102a7a2fff.py.txt",
+      "export": "work/ux-stage7/review/source-observations/test_inactive_fixture_context_reader-9d102a7a2fff.py.txt",
+      "bytes": 5968,
+      "sha256": "9d102a7a2fff14324bd4f234394a6672699018f46f1458a60e49ca4fd4502545"
+    },
+    {
+      "source": "work/ux-stage7/review/source-review-r1.json",
+      "export": "work/ux-stage7/review/source-review-r1.json",
+      "bytes": 3699,
+      "sha256": "3ff533a489bdab3f1b593ac9f8f7118250e4747e57b51b77e4d0b98569256a6f"
+    }
+  ]
+}

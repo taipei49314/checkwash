@@ -1,0 +1,241 @@
+"""Closed inactive-fixture proofs must preserve the actual oracle obligation.
+
+All subject programs below are source bytes for static analysis, never executed.
+The ordinary #358 expectation is retained in its original test file. These
+controls exercise the same move through complete, separate BASE/HEAD sources.
+"""
+import datetime
+
+import pytest
+
+from checkwash.change import EngineError, FileChange
+from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import analyze
+
+
+TODAY = datetime.date(2026, 10, 27)
+OLD = "tests/test_billing.py"
+NEW = "tests/test_other.py"
+PRODUCER = "app/billing.py"
+APP = {"app/__init__.py": b"", PRODUCER: b"def total():\n    return 78.75\n"}
+GATE = (
+    "@pytest.fixture(autouse=True)\n"
+    "def only_slow(request):\n"
+    "    if request.node.get_closest_marker('slow') and not os.environ.get('SLOW'):\n"
+    "        pytest.skip('slow tests are off')\n\n"
+)
+UNIT = "def test_total():\n    assert total() == 78.75\n"
+MOVE_CREDIT = {"ASSERTION_MOVED", "RESTRUCTURED", "SPLIT_OR_RENAMED", "DUPLICATE_REMAINS"}
+
+
+def module(tests=UNIT, *, gate=GATE, prelude=""):
+    return "import os\nimport pytest\nfrom app.billing import total\n\n" + prelude + "\n" + gate + tests
+
+
+def moved(*, before_tests=UNIT, after_tests=None, gate=GATE, before_gate=None,
+          prelude="", before_prelude=None, files=None, changed_files=(),
+          root=True, root_override=None, head_override=None):
+    """A retained fixture, a removed real test and its proposed live arrival.
+
+    Every changed support source carries its actual two sides in FileChange;
+    strict readers supply only unchanged HEAD sources. No HEAD-only snapshot
+    is presented as BASE authority for a changed producer or initializer.
+    """
+    if after_tests is None:
+        after_tests = before_tests
+    before = module(before_tests, gate=gate if before_gate is None else before_gate,
+                    prelude=prelude if before_prelude is None else before_prelude)
+    old_after = module("", gate=gate, prelude=prelude)
+    arrival = module(after_tests, gate=gate, prelude=prelude)
+    changes = [FileChange(OLD, "modified", before.encode(), old_after.encode()),
+               FileChange(NEW, "added", None, arrival.encode()), *changed_files]
+    snapshot = {**APP, OLD: old_after.encode(), NEW: arrival.encode(), **(files or {})}
+    for change in changed_files:
+        if change.after is None:
+            snapshot.pop(change.path, None)
+        else:
+            snapshot[change.path] = change.after
+    return analyze(changes, Config(), Contract(), [], TODAY,
+                   head_reader=head_override or snapshot.get,
+                   root_reader=(root_override or snapshot.get) if root else None,
+                   root_searcher=lambda _query: [])
+
+
+def assert_blocked(result, *, unit="test_total"):
+    _ir, findings, verdict = result
+    disabled = [finding for finding in findings
+                if finding.rule == "TEST_DISABLED" and finding.path == OLD and finding.unit == unit]
+    assert verdict == "block"
+    assert disabled and all(finding.severity == "high" for finding in disabled)
+    assert all(not MOVE_CREDIT.intersection(finding.deescalators) for finding in disabled)
+
+
+def test_closed_unmarked_move_preserves_the_original_358_expectation():
+    _ir, findings, verdict = moved()
+    assert verdict == "pass"
+    disabled = [finding for finding in findings if finding.rule == "TEST_DISABLED"]
+    assert disabled and all(finding.severity == "info" for finding in disabled)
+    assert all("ASSERTION_MOVED" in finding.deescalators for finding in disabled)
+
+
+def test_one_inactive_fixture_can_certify_each_unmarked_unit_separately():
+    units = UNIT + "\ndef test_second():\n    assert total() == 78.75\n"
+    _ir, findings, verdict = moved(before_tests=units)
+    assert verdict == "pass"
+    disabled = [finding for finding in findings if finding.rule == "TEST_DISABLED"]
+    assert {finding.unit for finding in disabled} == {"test_total", "test_second"}
+    assert all(finding.severity == "info" and "ASSERTION_MOVED" in finding.deescalators
+               for finding in disabled)
+
+
+def test_a_live_sibling_cannot_lend_its_certificate_to_a_newly_slow_unit():
+    units = UNIT + "\ndef test_second():\n    assert total() == 78.75\n"
+    arrival = UNIT + "\n@pytest.mark.slow\ndef test_second():\n    assert total() == 78.75\n"
+    result = moved(before_tests=units, after_tests=arrival)
+    assert_blocked(result, unit="test_second")
+    assert any(finding.unit == "test_total" and finding.severity == "info"
+               and "ASSERTION_MOVED" in finding.deescalators
+               for finding in result[1] if finding.rule == "TEST_DISABLED")
+
+
+@pytest.mark.parametrize("prelude", [
+    "pytestmark = make_marks()\n",
+    "pytestmark = []\npytestmark.append(pytest.mark.slow)\n",
+    "def pytest_generate_tests(metafunc):\n    pass\n",
+    "def pytest_collection_modifyitems(items):\n    pass\n",
+])
+def test_unknown_marks_cannot_borrow_an_inactive_certificate(prelude):
+    assert_blocked(moved(prelude=prelude, before_prelude=""))
+
+
+def test_a_newly_slow_arrival_has_no_inactive_fixture_credit():
+    assert_blocked(moved(after_tests="@pytest.mark.slow\n" + UNIT))
+
+
+@pytest.mark.parametrize("producer", [
+    b"from helpers import opaque\ndef total():\n    return opaque()\n",
+    b"import inspect\ndef total():\n    return inspect.currentframe().f_back.f_code.co_filename\n",
+    b"def total():\n    return __import__('sys')._getframe(1).f_code.co_name\n",
+    b"def total():\n    return getattr(__import__('builtins'), 'value', 78.75)\n",
+])
+def test_unknown_or_frame_observing_producer_is_not_an_oracle_proof(producer):
+    assert_blocked(moved(files={PRODUCER: producer}))
+
+
+@pytest.mark.parametrize("after", [
+    b"def total():\n    return 0\n",
+    b"def total():\n    return 78.75 + 0\n",
+])
+def test_two_pure_producer_sources_are_not_the_same_source_certificate(after):
+    change = FileChange(PRODUCER, "modified", APP[PRODUCER], after)
+    assert_blocked(moved(changed_files=[change]))
+
+
+@pytest.mark.parametrize("path", ["app/__init__.py", "tests/__init__.py", "__init__.py"])
+def test_initializer_changes_on_either_side_are_not_hidden_by_head_reads(path):
+    change = FileChange(path, "modified", b"", b"FLAG = True\n")
+    assert_blocked(moved(changed_files=[change]))
+
+
+@pytest.mark.parametrize("prelude,unit,producer", [
+    ("total = lambda: 78.75\n", UNIT, APP[PRODUCER]),
+    ("from helpers import total\n", UNIT, APP[PRODUCER]),
+    ("", "def test_total():\n    total = lambda: 78.75\n    assert total() == 78.75\n", APP[PRODUCER]),
+    ("", "def test_total(total):\n    assert total() == 78.75\n", APP[PRODUCER]),
+    ("", "def test_total():\n    assert total(1, x=2) == 78.75\n", b"def total(x):\n    return 78.75\n"),
+    ("", "def test_total():\n    assert total(1) == 78.75\n", APP[PRODUCER]),
+    ("", "def test_total():\n    assert total(extra=1) == 78.75\n", APP[PRODUCER]),
+])
+def test_rebinding_fixture_inputs_and_invalid_argument_binding_do_not_earn_credit(prelude, unit, producer):
+    assert_blocked(moved(prelude=prelude, before_tests=unit, files={PRODUCER: producer}))
+
+
+@pytest.mark.parametrize("path,source", [
+    ("pytest.py", b"def fixture(**kwargs):\n    return lambda f: f\n"),
+    ("tests/pytest.py", b"def fixture(**kwargs):\n    return lambda f: f\n"),
+    ("os.py", b"environ = {}\n"),
+    ("tests/os.py", b"environ = {}\n"),
+    ("pytest.ini", b"[pytest]\naddopts = -p tests.marking\n"),
+    ("pyproject.toml", b"[project.entry-points.pytest11]\nmarking = 'tests.marking'\n"),
+    ("tests/conftest.py", b"def pytest_collection_modifyitems(items):\n    pass\n"),
+    ("conftest.py", b"import pytest\n@pytest.fixture(autouse=True)\ndef setup(request):\n    request.applymarker(pytest.mark.slow)\n"),
+    ("tests/__init__.py", b"import builtins\nbuiltins.getattr = lambda *args: 0\n"),
+])
+def test_shadow_plugin_and_test_bootstrap_sources_remain_unknown(path, source):
+    assert_blocked(moved(files={path: source}))
+
+
+@pytest.mark.parametrize("gate", [
+    GATE.replace("    if request", "    touch()\n    if request"),
+    GATE.replace("        pytest.skip('slow tests are off')", "        pytest.skip('slow tests are off')\n    touch()"),
+    GATE.replace("        pytest.skip('slow tests are off')", "        yield 1"),
+    "@other\n" + GATE,
+    GATE.replace("autouse=True", "autouse=True, scope='module'"),
+    GATE.replace("autouse=True", "autouse=True, scope='class'"),
+    GATE.replace("autouse=True", "autouse=True, scope=SCOPE"),
+    GATE.replace("autouse=True", "autouse=False"),
+    GATE.replace("autouse=True", "autouse=True, params=[1]"),
+    GATE.replace("def only_slow(request):", "async def only_slow(request):"),
+    GATE.replace("def only_slow(request):", "def only_slow(request, other):"),
+    GATE.replace("def only_slow(request):", "def only_slow(request=None):"),
+    GATE.replace("def only_slow(request):", "def only_slow(request=make_request()):"),
+    GATE.replace("def only_slow(request):", "def only_slow(request: Other):"),
+    GATE.replace("def only_slow(request):", "def only_slow(*request):"),
+    GATE.replace("def only_slow(request):", "def only_slow(**request):"),
+    GATE.replace("def only_slow(request):", "def only_slow():"),
+    GATE.replace("request.node", "other.node").replace("(request):", "(other):"),
+    GATE.replace("    if request", "    request = other\n    if request"),
+    GATE.replace("get_closest_marker('slow')", "get_closest_marker(marker_name)"),
+    GATE.replace("get_closest_marker('slow')", "get_closest_marker(make_name())"),
+    GATE.replace("get_closest_marker('slow')", "get_closest_marker('slow', extra())"),
+    GATE.replace("get_closest_marker('slow')", "get_closest_marker(name='slow')"),
+    GATE.replace("request.node.get_closest_marker('slow') and not os.environ.get('SLOW')",
+                 "touch() and request.node.get_closest_marker('slow')"),
+    GATE.replace("request.node.get_closest_marker('slow') and not os.environ.get('SLOW')",
+                 "request.node.get_closest_marker('slow') or touch()"),
+    GATE.replace("        pytest.skip('slow tests are off')", "        pytest.skip('slow tests are off')\n    else:\n        touch()"),
+])
+def test_noncanonical_or_effectful_fixture_cannot_be_erased(gate):
+    assert_blocked(moved(gate=gate))
+
+
+@pytest.mark.parametrize("prelude", [
+    "pytest = framework\n",
+    "os = platform\n",
+    "from helpers import pytest\n",
+    "from helpers import os\n",
+    "request = other\n",
+])
+def test_framework_and_request_binding_changes_do_not_prove_a_fixture_inactive(prelude):
+    assert_blocked(moved(prelude=prelude))
+
+
+def test_missing_strict_root_cannot_establish_producer_or_startup_authority():
+    assert_blocked(moved(root=False))
+
+
+@pytest.mark.parametrize("failure", ["exception", "nonbytes", "missing-producer", "oversize-producer"])
+def test_untrusted_or_bounded_out_source_reading_never_produces_move_credit(failure):
+    def read(path):
+        if path == PRODUCER:
+            if failure == "exception":
+                raise EngineError("synthetic unavailable strict source")
+            if failure == "nonbytes":
+                return "def total(): return 78.75\n"
+            if failure == "missing-producer":
+                return None
+            return APP[PRODUCER] + b"#" * 65_537
+        return APP.get(path)
+    try:
+        result = moved(root_override=read, head_override=read)
+    except EngineError:
+        # The public strict-reader refusal is also a fail-closed result;
+        # it must not become successful relocation evidence.
+        return
+    assert_blocked(result)
+
+
+def test_module_ast_budget_exhaustion_does_not_erase_the_request_context():
+    prelude = "\n".join(f"CONSTANT_{index} = {index}" for index in range(4_200)) + "\n"
+    assert_blocked(moved(prelude=prelude))

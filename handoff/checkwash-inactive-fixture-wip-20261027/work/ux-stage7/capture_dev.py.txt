@@ -1,0 +1,73 @@
+"""Record stage-7 inactive-fixture development snapshots; preserve original bytes and input identities."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import platform
+import subprocess
+import sys
+import tempfile
+
+p = argparse.ArgumentParser()
+p.add_argument("label")
+p.add_argument("command", nargs=argparse.REMAINDER)
+a = p.parse_args()
+ROOT = Path(__file__).resolve().parents[2]
+REPO = ROOT / "work/checkwash-inactive-fixture"
+OUT = Path(__file__).resolve().parent / "root" / a.label
+OUT.mkdir(parents=True, exist_ok=False)
+temporary = Path(tempfile.gettempdir()) / ("cwf7-dev-" + hashlib.sha256(a.label.encode()).hexdigest()[:8])
+temporary.mkdir(exist_ok=False)
+trusted = ROOT / "work/trusted/replay_pju_action.py"
+spec = importlib.util.spec_from_file_location("trusted_replay", trusted)
+replay = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(replay)
+env = replay.clean_environment(Path(sys.executable), Path(r"C:\Program Files\Git\cmd\git.exe"),
+                               Path(r"C:\Program Files\Git\bin\bash.exe"), temporary)
+env["PYTHONPATH"] = str(REPO / "src")
+env["PYTHONDONTWRITEBYTECODE"] = "1"
+template = temporary / "git-template"
+template.mkdir()
+env["GIT_TEMPLATE_DIR"] = str(template)
+
+def git(*args):
+    return subprocess.run(["git", *args], cwd=REPO, capture_output=True, check=True).stdout
+def snapshot():
+    names = git("ls-files", "-c", "-o", "--exclude-standard", "-z").decode("utf-8").split("\0")
+    return {name:hashlib.sha256((REPO / name).read_bytes()).hexdigest()
+            for name in sorted(set(names)) if name and (REPO / name).is_file()}
+before = snapshot()
+head = git("rev-parse", "HEAD").decode().strip()
+diff = git("diff", "HEAD", "--binary")
+(OUT / "source.diff").write_bytes(diff)
+manifest = json.dumps(before, sort_keys=True, indent=2).encode()
+(OUT / "input-hashes.json").write_bytes(manifest)
+(OUT / "git-status.txt").write_bytes(git("status", "--short"))
+safe_basetemp = temporary / "p"
+assert not safe_basetemp.exists()
+a.command = [str(safe_basetemp) if arg == "__PJU_BASETEMP__" else arg for arg in a.command]
+started = datetime.now(timezone.utc).isoformat()
+with (OUT / "stdout.txt").open("wb") as stdout, (OUT / "stderr.txt").open("wb") as stderr:
+    result = subprocess.run(a.command, cwd=REPO, env=env, stdout=stdout, stderr=stderr)
+after = snapshot()
+record = dict(label=a.label, host=platform.node(), provenance="HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+              python=sys.version, executable=sys.executable, platform=platform.platform(),
+              validation_kind="WORKING_TREE_DEVELOPMENT_NOT_COMMIT_QUALIFICATION",
+              source_sha=head, ending_sha=git("rev-parse", "HEAD").decode().strip(),
+              source_diff_sha256=hashlib.sha256(diff).hexdigest(),
+              input_manifest_sha256=hashlib.sha256(manifest).hexdigest(),
+              source_files_unchanged=before==after,
+              changed_inputs=sorted(name for name in before.keys()|after.keys() if before.get(name)!=after.get(name)),
+              command=a.command, cwd=str(REPO), temp_root=str(temporary),
+              harness_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              replayer_sha256=hashlib.sha256(trusted.read_bytes()).hexdigest(),
+              started_utc=started, ended_utc=datetime.now(timezone.utc).isoformat(), exit_code=result.returncode)
+(OUT / "receipt.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+print(json.dumps(record, indent=2))
+for name in ("stdout.txt", "stderr.txt"):
+    text = (OUT / name).read_bytes().decode("utf-8", errors="backslashreplace")
+    print(text[-3500:].encode("ascii", errors="backslashreplace").decode())
+sys.exit(result.returncode)
