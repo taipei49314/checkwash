@@ -1,0 +1,40 @@
+{
+  "archive_exception": "SINGLE_EXACT_FROZEN_125_MEMBER_ARCHIVE",
+  "archive_sha256": "eba17306f0e3d221677e1483e464ed25c992b9e021a03c0e71a590c63ec7537f",
+  "candidate_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "changed_functions": [
+    "payload",
+    "main"
+  ],
+  "derived_sha256": "e0c7516617b20e81d663c0dccc6fde9f935c7452ae72fcf02f6a98d63bdc8b7b",
+  "diff_sha256": "678d61d63be8084d1128ca2c2c1c59021f1aaffc2db15ef39e25f79643d39189",
+  "new_functions": [
+    "archive_guard",
+    "local_wrapper"
+  ],
+  "original_sha256": "36606ae79ffa445548a532cdfc62e82b2da2dc354b9fd6c2d366498a00c937b7",
+  "pack_plan_sha256": "308aea36abb7e200745166e7f0255814b8275332fca2ab3bb44b0993327ee1bb",
+  "product_calls": 0,
+  "publication_performed": false,
+  "removed_function": [
+    "evidence_guard"
+  ],
+  "revision": "R3_METADATA_PARENT_WORDING_ONLY_PLUS_FRESH_PREPARED_AND_LOCAL_WRAPPER_NAMES",
+  "sidecar_binding": "EXACT_ORIGINAL_WINDOWS_CRLF_BYTES_AND_RAW_SHA256",
+  "sidecar_sha256": "0b47455a73b909ed57c3d75bc4761385a190aa89d6e27731f82cb7b3d768e53b",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "unchanged_core_function_bodies": [
+    "require",
+    "sha",
+    "encoded",
+    "read_regular",
+    "helpers",
+    "content_guard",
+    "directory_chain",
+    "disk_payload",
+    "prepare",
+    "parent_guard",
+    "candidate_index",
+    "candidate_guard"
+  ]
+}

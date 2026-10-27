@@ -1,0 +1,65 @@
+{
+  "all125_member_raw_hashes_and_sizes_verified": true,
+  "archive": "checkwash-1be28ce5-artifact-checkpoint.zip",
+  "archive_bytes": 13769469,
+  "archive_extracted_to_disk": false,
+  "archive_outputs_or_selected_inputs_modified": false,
+  "archive_sha256": "eba17306f0e3d221677e1483e464ed25c992b9e021a03c0e71a590c63ec7537f",
+  "audit_script_sha256": "7e1554ee014d0081787d34facbfdf38e8339cffa590eb85695b1ff3451caea85",
+  "eligible112_originals_match_live_raw": true,
+  "execution_label": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "fixed1980_regular0644_deflate_sorted": true,
+  "inner_archive_checks": [
+    {
+      "bytes": 944675,
+      "matched_source_members": 213,
+      "members": 214,
+      "raw_and_closure_unchanged": true,
+      "role": "pyz",
+      "sha256": "526807199ebf7fbc948327c1fb2c4bed51c0ba0abde94c13f090ce7354fc8f9e"
+    },
+    {
+      "bytes": 4663415,
+      "matched_source_members": 3087,
+      "members": 3088,
+      "raw_and_closure_unchanged": true,
+      "role": "sdist",
+      "sha256": "663be3ce65dccabedfe1cad8b00c6afb16d52423b826ccd461372dce89825c01"
+    },
+    {
+      "bytes": 5972055,
+      "matched_source_members": 3087,
+      "members": 3087,
+      "raw_and_closure_unchanged": true,
+      "role": "source_archive",
+      "sha256": "75525d80efa6052aa493ce30461c88f256616f841ab7961189871d09cb521554"
+    },
+    {
+      "bytes": 966064,
+      "matched_source_members": 213,
+      "members": 218,
+      "raw_and_closure_unchanged": true,
+      "role": "wheel",
+      "sha256": "f03725f152165b6f6a525d59ed43c840e8e3300cd1d0a5fe2881347a19b9499a"
+    }
+  ],
+  "later_public_repository_wrapper_clarification_required": true,
+  "manifest_controller7_verified": true,
+  "metadata13_match_frozen_plan": true,
+  "nine_selected_actual_terminal0_source1be": true,
+  "outer_crc": "PASS",
+  "outer_entry_and_manifest_equal_bundle": true,
+  "outer_safe_unique_regular_paths": true,
+  "pack_receipt_sha256": "c2b76ae9016cfccc167c933b251e722f9c1c346ea930891a1845ad46f983dce8",
+  "pack_restarted": false,
+  "package_members": 213,
+  "plan_sha256": "308aea36abb7e200745166e7f0255814b8275332fca2ab3bb44b0993327ee1bb",
+  "privacy_scope": "125 raw members equal the independently reviewed/scanned plan; no second dynamic privacy scan was performed by this postpack readback",
+  "private_label_not_acl": true,
+  "product_fixture_pytest_model_calls": 0,
+  "qualification_full_suite_or_acceptance_claim": false,
+  "sidecar_matches": true,
+  "source_members": 3087,
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "status": "PASS_INDEPENDENT_POSTPACK_RAW_MEMBER_AND_INNER_ARCHIVE_READBACK"
+}

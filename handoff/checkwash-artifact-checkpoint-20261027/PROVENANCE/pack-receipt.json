@@ -1,0 +1,97 @@
+{
+  "archive": "checkwash-1be28ce5-artifact-checkpoint.zip",
+  "bundle_members": 125,
+  "bytes": 13769469,
+  "file_count": 112,
+  "host": "LAPTOP-01AGNPJU",
+  "plan_sha256": "308aea36abb7e200745166e7f0255814b8275332fca2ab3bb44b0993327ee1bb",
+  "previous_checkpoint": "815dc12b7786783a7f6004d5360640d37ee49309",
+  "product_fixture_test_model_calls": 0,
+  "publication_performed": false,
+  "python": "3.11.9",
+  "qualification_and_full_suite_results_included": false,
+  "selected_validation": {
+    "all_selected_jobs_terminal": true,
+    "interpretation": "Build/install/smoke/identity completion only. The separate full suite and three assertion qualifications remain outside this package; no acceptance or publication is asserted.",
+    "jobs": [
+      {
+        "ended_utc": "2026-10-27T00:44:18.029095+00:00",
+        "exit_code": 0,
+        "label": "seal-source-r1",
+        "receipt": "work/ux-stage9/final/seal-source-r1/receipt.json",
+        "sha256": "7a355f00cd3234c7a7053238e596eca51bedd195feef3bf3391b02d1efb63788",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:45:05.013732+00:00",
+        "exit_code": 0,
+        "label": "prepare-build-source-r1",
+        "receipt": "work/ux-stage9/final/prepare-build-source-r1/receipt.json",
+        "sha256": "545056f886cb85a4d058a30c7fb07fef804c9c7613f6de6e060171024669fea2",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:45:24.591271+00:00",
+        "exit_code": 0,
+        "label": "build-artifacts-r1",
+        "receipt": "work/ux-stage9/final/build-artifacts-r1/receipt.json",
+        "sha256": "9722a298759220b2fec4192956d86e4bcfc77bf04560278d66162175f1e86500",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:46:06.985079+00:00",
+        "exit_code": 0,
+        "label": "build-pyz-r1",
+        "receipt": "work/ux-stage9/final/build-pyz-r1/receipt.json",
+        "sha256": "ffb702f4cd4ef9bf98129d9e379f69a9e9843cfca2594e5ed93f0b37064ce91a",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:46:15.029663+00:00",
+        "exit_code": 0,
+        "label": "prepare-wheel-runtime-r1",
+        "receipt": "work/ux-stage9/final/prepare-wheel-runtime-r1/receipt.json",
+        "sha256": "e38e3fd7868e1a0ab793badce68c79e7f914ba1020fdd82c70d854cb4bcac0c2",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:46:45.988972+00:00",
+        "exit_code": 0,
+        "label": "install-wheel-r1",
+        "receipt": "work/ux-stage9/final/install-wheel-r1/receipt.json",
+        "sha256": "beca945afe5d8a585f244d82fd0c59f787320e8f55a510a0d80facd56504b141",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:47:19.918846+00:00",
+        "exit_code": 0,
+        "label": "artifact-identity-r1",
+        "receipt": "work/ux-stage9/final/artifact-identity-r1/receipt.json",
+        "sha256": "673bf4a3cdf5d430d8259663ed8de8b9fdf7503ab6bce023ccb4c68295807f8b",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:47:37.500082+00:00",
+        "exit_code": 0,
+        "label": "wheel-console-smoke-r1",
+        "receipt": "work/ux-stage9/final/wheel-console-smoke-r1/receipt.json",
+        "sha256": "271cc3de2ec52bf72719fccbb6ca22b5a8b2be43eadb648ac0367fe221446219",
+        "state": "TERMINAL"
+      },
+      {
+        "ended_utc": "2026-10-27T00:48:42.928523+00:00",
+        "exit_code": 0,
+        "label": "pyz-process-smoke-r1",
+        "receipt": "work/ux-stage9/final/pyz-process-smoke-r1/receipt.json",
+        "sha256": "c23a1c38a9d5bfda857c8bcc2d61e25c57c438ca1962d199328eb953b39370b0",
+        "state": "TERMINAL"
+      }
+    ],
+    "kind": "SELECTED_COMPLETED_ARTIFACT_JOBS_ONLY",
+    "qualification_and_full_suite_results_included": false,
+    "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976"
+  },
+  "sha256": "eba17306f0e3d221677e1483e464ed25c992b9e021a03c0e71a590c63ec7537f",
+  "source_and_inputs_unchanged": true,
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976"
+}

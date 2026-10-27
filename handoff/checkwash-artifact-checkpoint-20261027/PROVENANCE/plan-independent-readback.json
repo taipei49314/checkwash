@@ -1,0 +1,246 @@
+{
+  "all_13_metadata_raw_hashes_reconstructed": true,
+  "all_original_raw_bytes_unchanged": true,
+  "artifacts_independently_read": {
+    "artifacts": {
+      "pyz": {
+        "archive_members": 226,
+        "bytes": 944675,
+        "generated_members": {
+          "__main__.py": "90569f34ff4d92c246952053b80352a504d79c4ee225adecfdf09a5ff5bbf273"
+        },
+        "matched_source_members": 213,
+        "path": "work/ux-stage9/artifacts/checkwash.pyz",
+        "regular_members": 214,
+        "sha256": "526807199ebf7fbc948327c1fb2c4bed51c0ba0abde94c13f090ce7354fc8f9e"
+      },
+      "sdist": {
+        "archive_members": 3088,
+        "bytes": 4663415,
+        "generated_members": {
+          "PKG-INFO": "24291e00c6598b18a349229f5287be97c47818d4716be73fde0023d4ae24e290"
+        },
+        "matched_source_members": 3087,
+        "path": "work/ux-stage9/artifacts/checkwash-0.10.0.tar.gz",
+        "regular_members": 3088,
+        "sha256": "663be3ce65dccabedfe1cad8b00c6afb16d52423b826ccd461372dce89825c01"
+      },
+      "source_archive": {
+        "archive_members": 3087,
+        "bytes": 5972055,
+        "generated_members": {},
+        "matched_source_members": 3087,
+        "path": "work/ux-stage9/seal/source-1be28ce5.zip",
+        "regular_members": 3087,
+        "sha256": "75525d80efa6052aa493ce30461c88f256616f841ab7961189871d09cb521554"
+      },
+      "wheel": {
+        "archive_members": 218,
+        "bytes": 966064,
+        "generated_members": {
+          "checkwash-0.10.0.dist-info/METADATA": "24291e00c6598b18a349229f5287be97c47818d4716be73fde0023d4ae24e290",
+          "checkwash-0.10.0.dist-info/RECORD": "9e7874b46de8dd2efb41612ed28412d00b150d8ab287f3cf8309eac0e09b52d8",
+          "checkwash-0.10.0.dist-info/WHEEL": "5b77e4a649bbfb07fdbc123967eeecd1e5a478cfaca6eefc23c35e6fdf037848",
+          "checkwash-0.10.0.dist-info/entry_points.txt": "39d81bacadd88ea26c27f540b6d0eecfe85691cd481ddec7b4ffcecd681064a5",
+          "checkwash-0.10.0.dist-info/licenses/LICENSE": "f78c9af3e3183e6db4d8bc8c661900c8827a3c5a9a19b9c82599b018aeecca7a"
+        },
+        "matched_source_members": 213,
+        "path": "work/ux-stage9/artifacts/checkwash-0.10.0-py3-none-any.whl",
+        "regular_members": 218,
+        "sha256": "f03725f152165b6f6a525d59ed43c840e8e3300cd1d0a5fe2881347a19b9499a"
+      }
+    },
+    "identity_record_sha256": "47ee9a9e00b6a9c74020c7dcaf23d07a0f92368c82be722013b2da8dbe986157",
+    "kind": "READ_ONLY_ARCHIVE_BYTE_CLOSURE_NOT_QUALIFICATION",
+    "product_imports_or_execution": 0,
+    "source_members": 213,
+    "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+    "tracked_files": 3087
+  },
+  "audit_script_sha256": "fbd988433b81c811a2cb240205fd2ce1af474755e72cb64299bdfc3a7e5fa28e",
+  "bundle_members_reconstructed_verified": 125,
+  "controller_sha256": "b4203819fa6788cfb084be0925ec7f4ed7f1336b8aeb30378508a29415d67edf",
+  "eligible_inputs_verified": 112,
+  "eligible_sha256": "bed93c947942edebd3836ced59b3af5af9ee16fa019eecaefc3a10e86c6fe901",
+  "execution_label": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "network_calls_or_uploads": 0,
+  "new_acceptance_or_publication_claim": false,
+  "new_packer_executed": false,
+  "original_12_core_functions_text_exact": [
+    "encoded",
+    "digest",
+    "logical",
+    "regular",
+    "read",
+    "dir_reason",
+    "private_name",
+    "git_read",
+    "guards",
+    "inspect",
+    "external_closure",
+    "zip_write"
+  ],
+  "pack_archive_created": false,
+  "plan_sha256": "308aea36abb7e200745166e7f0255814b8275332fca2ab3bb44b0993327ee1bb",
+  "planned_uncompressed_bytes": 17596553,
+  "previous_checkpoint_not_fresh_remote_assertion": "815dc12b7786783a7f6004d5360640d37ee49309",
+  "privacy": {
+    "all112_originals_and_six_generated_metadata_scanned": true,
+    "controllers": "Seven separate-provenance files checked stable/hash/key/full-global-header; original source exact ab1. This is not an arbitrary payload exception or complete secret-free guarantee.",
+    "payload_exceptions": [],
+    "recursive_four_archive_scan": true,
+    "scanner_default_header_exception_false": true,
+    "scanner_execution_scope": "Pinned original stdlib metadata helper loaded with main disabled; only guards and inspect invoked. No new packer main, inventory, pack or product call.",
+    "scanner_source_sha256": "ab1ab82cb38f8271a7b8bcbded31f35cc7f43e752a1e5ed7c8c0b9aba2a08928"
+  },
+  "product_fixture_pytest_model_calls": 0,
+  "public_repository_clarification": "Root primary GitHub get_repo confirms public. PRIVATE/private_checkpoint wording is a preserved historical local-artifact/nonrelease label, not access control. Later publication wrapper must clearly state public visibility/no access restriction before upload; this audit did not modify frozen bytes or visibility.",
+  "qualification_full_suite_live_results_excluded": true,
+  "selected_source_or_producer_modified": false,
+  "selected_terminal_jobs_verified": [
+    {
+      "ended_utc": "2026-10-27T00:44:18.029095+00:00",
+      "exit_code": 0,
+      "label": "seal-source-r1",
+      "receipt": "work/ux-stage9/final/seal-source-r1/receipt.json",
+      "sha256": "7a355f00cd3234c7a7053238e596eca51bedd195feef3bf3391b02d1efb63788",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:45:05.013732+00:00",
+      "exit_code": 0,
+      "label": "prepare-build-source-r1",
+      "receipt": "work/ux-stage9/final/prepare-build-source-r1/receipt.json",
+      "sha256": "545056f886cb85a4d058a30c7fb07fef804c9c7613f6de6e060171024669fea2",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:45:24.591271+00:00",
+      "exit_code": 0,
+      "label": "build-artifacts-r1",
+      "receipt": "work/ux-stage9/final/build-artifacts-r1/receipt.json",
+      "sha256": "9722a298759220b2fec4192956d86e4bcfc77bf04560278d66162175f1e86500",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:46:06.985079+00:00",
+      "exit_code": 0,
+      "label": "build-pyz-r1",
+      "receipt": "work/ux-stage9/final/build-pyz-r1/receipt.json",
+      "sha256": "ffb702f4cd4ef9bf98129d9e379f69a9e9843cfca2594e5ed93f0b37064ce91a",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:46:15.029663+00:00",
+      "exit_code": 0,
+      "label": "prepare-wheel-runtime-r1",
+      "receipt": "work/ux-stage9/final/prepare-wheel-runtime-r1/receipt.json",
+      "sha256": "e38e3fd7868e1a0ab793badce68c79e7f914ba1020fdd82c70d854cb4bcac0c2",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:46:45.988972+00:00",
+      "exit_code": 0,
+      "label": "install-wheel-r1",
+      "receipt": "work/ux-stage9/final/install-wheel-r1/receipt.json",
+      "sha256": "beca945afe5d8a585f244d82fd0c59f787320e8f55a510a0d80facd56504b141",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:47:19.918846+00:00",
+      "exit_code": 0,
+      "label": "artifact-identity-r1",
+      "receipt": "work/ux-stage9/final/artifact-identity-r1/receipt.json",
+      "sha256": "673bf4a3cdf5d430d8259663ed8de8b9fdf7503ab6bce023ccb4c68295807f8b",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:47:37.500082+00:00",
+      "exit_code": 0,
+      "label": "wheel-console-smoke-r1",
+      "receipt": "work/ux-stage9/final/wheel-console-smoke-r1/receipt.json",
+      "sha256": "271cc3de2ec52bf72719fccbb6ca22b5a8b2be43eadb648ac0367fe221446219",
+      "state": "TERMINAL"
+    },
+    {
+      "ended_utc": "2026-10-27T00:48:42.928523+00:00",
+      "exit_code": 0,
+      "label": "pyz-process-smoke-r1",
+      "receipt": "work/ux-stage9/final/pyz-process-smoke-r1/receipt.json",
+      "sha256": "c23a1c38a9d5bfda857c8bcc2d61e25c57c438ca1962d199328eb953b39370b0",
+      "state": "TERMINAL"
+    }
+  ],
+  "source_git_physical_and_seal_members_verified": 3087,
+  "source_readonly_git_commands": [
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit": 0,
+      "stdout_bytes": 41,
+      "stdout_sha256": "d8795cc0aec5487ed4e8cd77e55c490d687a397bf7782a75cca66518ca7b80ce"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      ],
+      "exit": 0,
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "rev-parse",
+        "1ffe283d7d947fecc426dea99323b0a2620a9482^{commit}"
+      ],
+      "exit": 0,
+      "stdout_bytes": 41,
+      "stdout_sha256": "46c4c15eb28ab08eaacc315f461df11431723125556d8ad1cb98d60a53bac6b9"
+    },
+    {
+      "command": [
+        "git",
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        "C:\\Users\\nelson\\Documents\\Codex\\2026-10-26\\1-00-start-here-md-c\\work\\checkwash-inactive-fixture",
+        "ls-tree",
+        "-r",
+        "-z",
+        "1be28ce5de72dcb617818077aaf11e3b1cf7a976"
+      ],
+      "exit": 0,
+      "stdout_bytes": 323771,
+      "stdout_sha256": "80970649b2f129332b5380b138146dbb2119cdf44f80cca473855976083b678d"
+    }
+  ],
+  "source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "stage10_files": {
+    "count": 7,
+    "state": "READ_ONLY_NOT_IMPLEMENTED"
+  },
+  "status": "PASS_BOUNDED_INDEPENDENT_PLAN_AUDIT_NO_BLOCKER"
+}

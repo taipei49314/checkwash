@@ -1,0 +1,26 @@
+{
+  "acceptance_state": "NONPASS_NOT_REASSESSED",
+  "artifact_archive": {
+    "bytes": 13769469,
+    "filename": "checkwash-1be28ce5-artifact-checkpoint.zip",
+    "members": 125,
+    "pack_plan_sha256": "308aea36abb7e200745166e7f0255814b8275332fca2ab3bb44b0993327ee1bb",
+    "sha256": "eba17306f0e3d221677e1483e464ed25c992b9e021a03c0e71a590c63ec7537f"
+  },
+  "candidate_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "code_source_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "full_suite_snapshot": "IN_PROGRESS_NO_TERMINAL_ACCEPTANCE_INCLUDED",
+  "goal_state": "INCOMPLETE",
+  "previous_checkpoint": "815dc12b7786783a7f6004d5360640d37ee49309",
+  "private_label_meaning": "NONRELEASE_ONLY_NO_ACCESS_RESTRICTION",
+  "product_fixture_test_model_calls_by_backup_tool": 0,
+  "product_publication_performed": false,
+  "purpose": "PUBLIC_REPOSITORY_WORKING_BACKUP_NOT_ACCEPTANCE_NOT_RELEASE",
+  "qualification_snapshot": "IN_PROGRESS_NO_TERMINAL_ACCEPTANCE_INCLUDED",
+  "repository_visibility": "public",
+  "snapshot_utc": "2026-10-27T01:22:11.561222+00:00",
+  "source_role": "PRIOR_FBC_SOURCE_GUARD_BASELINE_ONLY",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c",
+  "stage10": "READ_ONLY_NOT_IMPLEMENTED",
+  "version_1_0_requires_human_decision": true
+}

@@ -1,0 +1,12 @@
+{
+  "archive_sha256": "eba17306f0e3d221677e1483e464ed25c992b9e021a03c0e71a590c63ec7537f",
+  "candidate_sha": "1be28ce5de72dcb617818077aaf11e3b1cf7a976",
+  "full_suite_snapshot": "IN_PROGRESS_NO_TERMINAL_ACCEPTANCE_INCLUDED",
+  "purpose": "PUBLIC_REPOSITORY_WORKING_BACKUP_NOT_ACCEPTANCE_NOT_RELEASE",
+  "qualification_snapshot": "IN_PROGRESS_NO_TERMINAL_ACCEPTANCE_INCLUDED",
+  "repository_visibility": "public",
+  "root_confirmed_pack": true,
+  "root_frozen": true,
+  "snapshot_utc": "2026-10-27T01:22:11.561222+00:00",
+  "source_sha": "fbc9374dc3bcbfc47f403aec0c36e6b51dd7b86c"
+}
