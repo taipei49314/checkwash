@@ -28,9 +28,24 @@ its new source-bound execution proposal is under review, not admitted.
 
 The [0.10 candidate guide](docs/releases/v0.10.0-public-launch.md) distinguishes
 these checkpoints from final PR/main/tag/release/public-visitor acceptance.
-BASE approval [PR573](https://github.com/taipei49314/checkwash/pull/573) has its
-own exact-source validation in progress. No new merge, tag, public release,
-PyPI approval, platform certification or public pin promotion is claimed.
+BASE approval [PR573](https://github.com/taipei49314/checkwash/pull/573) merged
+normally as `c9356686`, tree `1181bb39`, after local source4eb/collector061
+validation and native metadata workflow
+[40455493560/1](https://github.com/taipei49314/checkwash/actions/runs/40455493560).
+All four required App15368 checks succeeded and their IDs match the original
+native publication artifact. Receipt commit is `3189b687`; manifest SHA256 is
+`84f7fccf59572cc5591b23a337658fec6e9965a4e83f8e12f99c082b19d73fe4`.
+The qualified PR tree equals the merged tree. This is the four-key BASE
+approval PR, with its own 20,629 passed/25 skipped/67 subtests and 3×283
+receipts, not qualification of later0.10 code.
+
+Candidate checkpoint `72f1c368` incorporates that accepted ledger. Both actual
+published0.9.0 and9678 CLI analyses of `c9356686..72f1c368` passed with19WARN,
+zero HIGH/critical, empty config-errors/skips and unchanged source. The four
+exact approved identities remain reported as allowlisted. PR572 was included
+by ancestry in the draft PR566 branch; its merged UI status does not merge
+the0.10 code into main. Final0.10 stage evidence, tag, public release, PyPI
+approval and public pin promotion remain pending; other platforms remain NOT_RUN.
 
 ## 2026-10-27: autonomous continuation and conservative cost dispositions
 
