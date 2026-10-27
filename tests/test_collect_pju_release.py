@@ -118,6 +118,21 @@ class ReleaseCollectorTests(unittest.TestCase):
                 with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, "digest/size"):
                     fixture.collection()
 
+    def test_tag_report_with_raw_published_baseline_is_admitted_as_a_parent(self):
+        # A real v0.10.0 tag report was 4,408,656 bytes; the old 2 MiB JSON
+        # limit refused it before the release-event collection started.
+        with tempfile.TemporaryDirectory() as folder:
+            fixture = Fixture(Path(folder), "release-event")
+            raw = encoded({"publication_evidence": "x" * (COLLECT.MAX_JSON + 1)})
+            (fixture.root / "parents/tag.json").write_bytes(raw)
+            fixture.parents["tag"]["sha256"] = COLLECT.digest(raw)
+            fixture.args.parents.write_bytes(encoded(fixture.parents))
+            fixture.args.parents_sha256 = COLLECT.digest(encoded(fixture.parents))
+            self.assertEqual(fixture.collection().parent_files["parents/tag.json"], raw)
+            (fixture.root / "parents/tag.json").write_bytes(raw + b" ")
+            with self.assertRaisesRegex(ValueError, "digest/size"):
+                fixture.collection()
+
     def test_external_authority_records_are_copied_as_data_not_self_authorized(self):
         with tempfile.TemporaryDirectory() as folder:
             fixture = Fixture(Path(folder), "release-event")
