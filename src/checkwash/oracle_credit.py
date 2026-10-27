@@ -254,7 +254,7 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
                 break  # No text-only credit through unknown control flow.
 
 
-def _javascript_context(source, units, path, needed):
+def _javascript_context(source, units, path, needed, source_reader=None, source_path_lister=None):
     try:
         text = source.decode("utf-8-sig").replace("\r\n", "\n")
     except UnicodeError:
@@ -274,6 +274,9 @@ def _javascript_context(source, units, path, needed):
         last = end
     outside.append(text[last:])
     environment = "".join(outside)
+    from checkwash.oracle_describe_credit import closed_describe_environment
+    closed_environment = closed_describe_environment(source, units, path=path,
+        read=source_reader, path_lister=source_path_lister)
     # Ordinary strings are data, including './...' strings. Canonicalize
     # only specifier tokens in static imports the existing frontend bound.
     # Unknown require/dynamic-import resolution binds the original directory.
@@ -310,6 +313,10 @@ def _javascript_context(source, units, path, needed):
     relative_import = unresolved_import or any(code[m.start()] for m in re.finditer(
         r"\b(?:from\s*|require\s*\(\s*|import\s*(?:\(\s*)?)(['\"])\.{1,2}/", environment))
     environment_key = (environment.strip(), posixpath.dirname(path) if relative_import else "")
+    if closed_environment is not None:
+        # Separate proof domains: ordinary source spelling a certificate's
+        # JSON data must never stand in for the closed program it describes.
+        environment_key = ("closed-plain-describe-v1", closed_environment, posixpath.dirname(path))
     for name, side in units:
         if needed is not None and name not in needed:
             continue
@@ -401,7 +408,7 @@ def mark_contexts(source, units, path, language, *, startup_known=True, startup=
                         side.oracle_context = _key("python-closed-class-unit-v1", startup, certificates[name])
                         side.oracle_assertion_contexts = {}  # complete units only; no assertion-only credit.
         elif path.lower().endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
-            _javascript_context(source, units, path, needed)
+            _javascript_context(source, units, path, needed, source_reader, source_path_lister)
     except (RecursionError, MemoryError, ValueError, TypeError, SyntaxError):
         # This optional proof is not analysis admission. A gap withholds
         # every partial credit; the ordinary detectors still run.
