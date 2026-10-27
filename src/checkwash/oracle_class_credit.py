@@ -72,7 +72,8 @@ def _false_marker(node):
 def _function(node, *, method):
     if (not isinstance(node, ast.FunctionDef) or not node.name.startswith("test")
             or not _ordinary_binding(node.name) or node.decorator_list or node.returns is not None
-            or getattr(node, "type_params", ())):
+            or getattr(node, "type_params", ()) or len(node.body) > 128
+            or sum(1 for _ in ast.walk(node)) > 4096):
         return False
     args = node.args
     if not method:

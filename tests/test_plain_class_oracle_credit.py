@@ -162,3 +162,18 @@ def test_a_false_literal_subproof_does_not_bypass_independent_liveness():
     assert _false_marker(ast.parse('pytest.mark.skipif("False")', mode="eval").body)
     # The ordinary marker/liveness contract remains its own admission check.
     no_credit(moved(after=AFTER.replace("sys.version_info < (2,6)", "False")))
+
+
+def test_complete_class_proof_does_not_override_the_128_statement_unit_budget():
+    before = BEFORE.replace("    assert add(1, 2) == 3\n", "    assert add(1, 2) == 3\n" * 129)
+    after = AFTER.replace("        assert add(1, 2) == 3\n", "        assert add(1, 2) == 3\n" * 129)
+    no_credit(moved(before=before, after=after))
+
+
+def test_the_exact_128_statement_boundary_remains_eligible_when_other_proofs_hold():
+    before = BEFORE.replace("    assert add(1, 2) == 3\n", "    assert add(1, 2) == 3\n" * 128)
+    after = AFTER.replace("        assert add(1, 2) == 3\n", "        assert add(1, 2) == 3\n" * 128)
+    _ir, findings, verdict = moved(before=before, after=after)
+    assert verdict == "pass"
+    assert any(finding.severity == "info" and "ASSERTION_MOVED" in finding.deescalators
+               for finding in findings if finding.rule == "TEST_DISABLED")
