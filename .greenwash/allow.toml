@@ -758,3 +758,40 @@ reason = "PR #553 (#419's refusal turned off for v0.9.0, D-171; owner decision 2
 author = "taipei49314"
 created = "2026-10-22"
 expires = "2026-11-21"
+
+# LOCAL REVIEW PROPOSAL ONLY: no authority until separately accepted into BASE.
+# Codex delegated source review; not Nelson personal case review.
+# Exact candidate 9678e8de564ed47f7ff92867d5c7d09358c04fcb; packet SHA256 2bf1c1b350dd8f17d7aa7c424933a8df26a5540195f169a643f3c373f01dab5c
+# Proposed expiry 2026-11-03; no consumed operator grant is reused.
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_classic_raises_additions.py/test_added_literal_rows_retain_exception_removal_and_native_units/v2:d692f62b20ee000e8f0a3372f2d37e3f3225af7a8926db90ce06fe4e01468d87"
+rule = "ASSERT_WEAKENED"
+reason = "LOCAL PROPOSAL ONLY; not effective until separately accepted into BASE. Codex review under 2026-10-27 delegation, not Nelson personal case review. IR3 consumer migration: all 17 native UnitSide fields remain exact-equal; separately require empty frontend proof fields, engine SHA256 proof, exactly four row/assertion keys and SHA256 assertion proofs. The detector paired the old whole-side equality to a new field-count assertion; no native oracle was removed. Target source 9678e8de564ed47f7ff92867d5c7d09358c04fcb; BASE 1ffe283d7d947fecc426dea99323b0a2620a9482; target file tests/test_classic_raises_additions.py SHA256 99d2f52edb02a4c8a4313605a18b537f8e9ab3b615dddcc30bf449142713586d; BASE file SHA256 697850da5ab933d47ae97e8cfa0b2de9f3fcf23bd0d4fce696077e91f037cdb0; candidate BLOCK stdout SHA256 4b56e5668416a9d960a13748495986cebd9812486ccf201e0d063b477b1d70f7; evidence work/base-approval-010-evidence/approval-core.json SHA256 2bf1c1b350dd8f17d7aa7c424933a8df26a5540195f169a643f3c373f01dab5c."
+author = "Codex (delegated source review proposal; not Nelson personal review)"
+created = "2026-10-27"
+expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue263_string_conditions.py/test_tests_moved_under_a_class_mark_with_a_string_condition_are_relocated/v2:e68151e6b384b132ffde6d3b3a2e79cf1714294b2e27b5bc6b7147aa586130de"
+rule = "TEST_DISABLED"
+reason = "LOCAL PROPOSAL ONLY; not effective until separately accepted into BASE. Codex review under 2026-10-27 delegation, not Nelson personal case review. D179/D185 contract migration: original represented #263 programs have no app.calc.add producer or closed startup authority. Replacement requires BLOCK, exactly two TEST_DISABLED/high findings and absence of move/restructure/split/duplicate credits; separate closed-source positive/adversarial controls remain. Target source 9678e8de564ed47f7ff92867d5c7d09358c04fcb; BASE 1ffe283d7d947fecc426dea99323b0a2620a9482; target file tests/test_issue263_string_conditions.py SHA256 2cf6a5e0292c678b8781e3e4d825108ed0b4b1fb5a8f96b2f797c8d4be1c3982; BASE file SHA256 5a1b78dad3cb54bbb9b37cb966c06d60ff625058187b6bb5bdcfb7e3f311a60b; candidate BLOCK stdout SHA256 4b56e5668416a9d960a13748495986cebd9812486ccf201e0d063b477b1d70f7; evidence work/base-approval-010-evidence/approval-core.json SHA256 2bf1c1b350dd8f17d7aa7c424933a8df26a5540195f169a643f3c373f01dab5c."
+author = "Codex (delegated source review proposal; not Nelson personal review)"
+created = "2026-10-27"
+expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_a_survivor_the_chain_does_not_skip_is_credited/v2:9058d147d7f0e5dc141bce9e3e4e910fc31f38bcb48bc75e8691c62eec6b7ebb"
+rule = "TEST_DISABLED"
+reason = "LOCAL PROPOSAL ONLY; not effective until separately accepted into BASE. Codex review under 2026-10-27 delegation, not Nelson personal case review. D179 contract migration: liveness alone cannot prove duplicate preservation across changed fixture/conditional execution context. Replacement retains the sibling-directory CREDITED positive and explicitly requires UNCREDITED for the compatibility-gated changed context. Target source 9678e8de564ed47f7ff92867d5c7d09358c04fcb; BASE 1ffe283d7d947fecc426dea99323b0a2620a9482; target file tests/test_issue266_survivor_conftest_chain.py SHA256 745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f; BASE file SHA256 5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601; candidate BLOCK stdout SHA256 4b56e5668416a9d960a13748495986cebd9812486ccf201e0d063b477b1d70f7; evidence work/base-approval-010-evidence/approval-core.json SHA256 2bf1c1b350dd8f17d7aa7c424933a8df26a5540195f169a643f3c373f01dab5c."
+author = "Codex (delegated source review proposal; not Nelson personal review)"
+created = "2026-10-27"
+expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue266_survivor_conftest_chain.py/test_without_a_strict_snapshot_the_chain_is_unknown_and_reads_as_before/v2:e132c2bebecb035512ebaa870b40474afd7f1f1707e137e7da08dba600a31941"
+rule = "TEST_DISABLED"
+reason = "LOCAL PROPOSAL ONLY; not effective until separately accepted into BASE. Codex review under 2026-10-27 delegation, not Nelson personal case review. D179 contract migration: absence of a strict startup snapshot is unknown, never duplicate equivalence. Original source inputs remain; replacement explicitly requires UNCREDITED rather than the previous liveness-only CREDITED. Target source 9678e8de564ed47f7ff92867d5c7d09358c04fcb; BASE 1ffe283d7d947fecc426dea99323b0a2620a9482; target file tests/test_issue266_survivor_conftest_chain.py SHA256 745f1197ea3d3bf94b0c4a8a12d6990562e08f2c2e24d805ec08c2b1d0dafe4f; BASE file SHA256 5cbd52309e1163689436ada3849730117f543d1daa7827c9d79e785df840e601; candidate BLOCK stdout SHA256 4b56e5668416a9d960a13748495986cebd9812486ccf201e0d063b477b1d70f7; evidence work/base-approval-010-evidence/approval-core.json SHA256 2bf1c1b350dd8f17d7aa7c424933a8df26a5540195f169a643f3c373f01dab5c."
+author = "Codex (delegated source review proposal; not Nelson personal review)"
+created = "2026-10-27"
+expires = "2026-11-03"
