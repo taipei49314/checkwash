@@ -1,0 +1,22 @@
+{
+  "action_receipt_version": 1,
+  "analysis_exit_code": 0,
+  "base": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+  "error": null,
+  "exit_code": 0,
+  "fail_on": "high",
+  "head": "4eb36ce97415108b89f720496f6f8065561b46a5",
+  "identity": {
+    "base_python": "C:\\Users\\play\\actions-runners\\_tools\\tomorrowci-lab\\python311\\python.exe",
+    "bytecode_writes_disabled": true,
+    "isolated": true,
+    "package_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\action\\checkwash-action-suz893b7\\environment\\Lib\\site-packages\\checkwash",
+    "python": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\action\\checkwash-action-suz893b7\\environment\\Scripts\\python.exe",
+    "python_version": "3.11.9",
+    "runtime_files": 210,
+    "source_digest": "cb398f9fc05563a19fff443e235a30d98c25684a8d6d68752df6a246e2823717",
+    "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-pinned090",
+    "utf8": true,
+    "version": "0.9.0"
+  }
+}

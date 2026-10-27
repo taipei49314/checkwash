@@ -1,0 +1,592 @@
+{
+  "actions": [
+    {
+      "analysis_exit": 0,
+      "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+      "findings": 4,
+      "identity_sha256": "9069c41459b9834e63ee0cf0bc5cc5ae6994409304310fd4008bfbaa751abe19",
+      "kind": "action",
+      "local_replay": true,
+      "maximum_severity": "warn",
+      "package_members": 210,
+      "source_digest": "cb398f9fc05563a19fff443e235a30d98c25684a8d6d68752df6a246e2823717",
+      "steps": 2,
+      "version": "0.9.0"
+    },
+    {
+      "analysis_exit": 0,
+      "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+      "findings": 4,
+      "identity_sha256": "0a6842a0d238ea34fcbe563293efde159a6cfb55ee62e2f21a446f4b92e11c2b",
+      "kind": "candidate-action",
+      "local_replay": true,
+      "maximum_severity": "warn",
+      "package_members": 210,
+      "source_digest": "349e16d06ea7a1abd8480ea1e53eefa81aa9925d1d05348c05d2c27eb0eec165",
+      "steps": 2,
+      "version": "0.9.1"
+    }
+  ],
+  "archives": [
+    {
+      "bytes": 935775,
+      "members": 215,
+      "name": "checkwash-0.9.1-py3-none-any.whl",
+      "sha256": "96916dd5dd0534c103e95cc7d632690f995dc432ae00a3ba751528dc0ca89a66"
+    },
+    {
+      "bytes": 4566759,
+      "members": 3051,
+      "name": "checkwash-0.9.1.tar.gz",
+      "sha256": "a71be2d38031b5eb66f173bb35ced768ceb8d9dee30056805e759b4604207c9a"
+    },
+    {
+      "bytes": 914542,
+      "members": 211,
+      "name": "checkwash.pyz",
+      "sha256": "c0197785cc4281a4d2c040cb33a4822f5f48390018e8aaebeaa07788ed762c4b"
+    }
+  ],
+  "audit_development_note": "Own parser-development reports retained separately. Their four then four mismatches were audit assumptions: Python -m versus pytest selection, repr escaping versus actual package field, single-quoted YAML scalar newline, first native root-commit label, and nonexistent separate collector contract-source CLI flag. Packet bytes were never modified; final parser follows exact original encodings and original collector argument contract.",
+  "audit_script_sha256": "373c2840c87b1d45f05417b8a039900b9cd39fce0b11046da705cae18d23887f",
+  "checks": {
+    "action": 45,
+    "artifact": 10666,
+    "closure": 256,
+    "contract": 224,
+    "install": 6,
+    "inventory": 27,
+    "junit": 20664,
+    "manifest": 776,
+    "nested": 104137,
+    "nested-boundary": 23913,
+    "ordinary": 97778,
+    "outer": 59,
+    "prior": 230,
+    "qualification": 7698,
+    "runtime": 6,
+    "source": 24302
+  },
+  "collector": "0614953839bcee991d61ef7f63a6c2885d37f407",
+  "findings": [],
+  "finished_at": "2026-10-27T05:24:49.516044+00:00",
+  "full_suite": {
+    "declared_tests": 20721,
+    "host": "LAPTOP-16NUA5I8",
+    "junit_sha256": "8b097303d75ee2469d3a0709aa28b94329203cd3aca0bd10c5458f7ec106ba4e",
+    "original_stdout_summary": [
+      [
+        "20629",
+        "25",
+        "67",
+        "1323.39s (0:22:03)"
+      ]
+    ],
+    "passed_parents": 20629,
+    "passed_subtests": 67,
+    "physical_parents": 20654,
+    "skipped_parents": 25,
+    "skips": [
+      {
+        "classname": "tests.test_issue500_root_task_path",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'contracts' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_task_path_through_a_com0\\\\repo\\\\ci'",
+        "name": "test_a_task_path_through_a_committed_directory_symlink_is_an_engine_error[json-2]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'contracts' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_task_path_through_a_com0\\\\repo\\\\ci'"
+      },
+      {
+        "classname": "tests.test_issue500_root_task_path",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'contracts' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_task_path_through_a_com1\\\\repo\\\\ci'",
+        "name": "test_a_task_path_through_a_committed_directory_symlink_is_an_engine_error[hook-json-0]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'contracts' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_task_path_through_a_com1\\\\repo\\\\ci'"
+      },
+      {
+        "classname": "tests.test_issue500_root_task_path",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\repo' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\link'",
+        "name": "test_repo_reached_through_a_symlink_to_the_root[link-root]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\repo' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy0\\\\link'"
+      },
+      {
+        "classname": "tests.test_issue500_root_task_path",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\repo' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\link'",
+        "name": "test_repo_reached_through_a_symlink_to_the_root[root-link]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\repo' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy1\\\\link'"
+      },
+      {
+        "classname": "tests.test_issue500_root_task_path",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\repo' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\link'",
+        "name": "test_repo_reached_through_a_symlink_to_the_root[link-link]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue500_root_task_path.py:100: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\repo' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_repo_reached_through_a_sy2\\\\link'"
+      },
+      {
+        "classname": "tests.test_issue346_config_reads",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: '../pyproject.toml' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_working_tree_batch_refusa0\\\\requirements\\\\pyproject.toml'",
+        "name": "test_working_tree_batch_refusal_names_the_symlinked_path",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue346_config_reads.py:159: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: '../pyproject.toml' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_working_tree_batch_refusa0\\\\requirements\\\\pyproject.toml'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'real' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_the_inventory_lists_a_dir0\\\\link'",
+        "name": "test_the_inventory_lists_a_directory_symlink_as_an_opaque_directory",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'real' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_the_inventory_lists_a_dir0\\\\link'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'real' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_read_inside_a_directory0\\\\link'",
+        "name": "test_a_read_inside_a_directory_symlink_names_it",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'real' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_read_inside_a_directory0\\\\link'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'real' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_searches_name_the_directo0\\\\link'",
+        "name": "test_searches_name_the_directory_symlink",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'real' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_searches_name_the_directo0\\\\link'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'lib' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_0\\\\.venv\\\\lib64'",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[venv_lib64-term]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'lib' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_0\\\\.venv\\\\lib64'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'lib' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_1\\\\.venv\\\\lib64'",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[venv_lib64-hook-json]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'lib' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_1\\\\.venv\\\\lib64'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_2\\\\node_modules\\\\left-pad'",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[pnpm_node_modules-term]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_2\\\\node_modules\\\\left-pad'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_3\\\\node_modules\\\\left-pad'",
+        "name": "test_an_unreachable_directory_symlink_gives_a_verdict[pnpm_node_modules-hook-json]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: '.pnpm\\\\left-pad@1.3.0\\\\node_modules\\\\left-pad' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_an_unreachable_directory_3\\\\node_modules\\\\left-pad'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'src' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_collection_that_reaches3\\\\linked'",
+        "name": "test_a_collection_that_reaches_a_directory_symlink_fails_closed_naming_it[term]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'src' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_collection_that_reaches3\\\\linked'"
+      },
+      {
+        "classname": "tests.test_issue414_worktree_directory_symlinks",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'src' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_collection_that_reaches4\\\\linked'",
+        "name": "test_a_collection_that_reaches_a_directory_symlink_fails_closed_naming_it[hook-json]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue414_worktree_directory_symlinks.py:38: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'src' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_collection_that_reaches4\\\\linked'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can0\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-root-tracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can0\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can1\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-root-untracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can1\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can2\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-subdirectory-tracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can2\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_doctor",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\canonical-source.yml' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\.github\\\\workflows\\\\checkwash.yml'",
+        "name": "test_linked_workflow_and_local_action_paths_are_never_healthy",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_doctor.py:401: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\canonical-source.yml' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw0\\\\test_linked_workflow_and_local0\\\\file-link\\\\.github\\\\workflows\\\\checkwash.yml'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can3\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[range-subdirectory-untracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can3\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can4\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-root-tracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can4\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can5\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-root-untracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can5\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can6\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-subdirectory-tracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'NOTES.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can6\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue416_subdirectory_root",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can7\\\\repo\\\\TASK.md'",
+        "name": "test_a_symlinked_task_file_cannot_choose_the_contract[worktree-subdirectory-untracked]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue416_subdirectory_root.py:144: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'evil.md' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw1\\\\test_a_symlinked_task_file_can7\\\\repo\\\\TASK.md'"
+      },
+      {
+        "classname": "tests.test_issue455_q4_unchanged_dot_less_refusal",
+        "message": "symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'python3.12' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw0\\\\test_an_unchanged_dot_less_sym1\\\\.venv\\\\bin\\\\python'",
+        "name": "test_an_unchanged_dot_less_symlink_still_refuses[worktree]",
+        "text": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010\\tests\\test_issue455_q4_unchanged_dot_less_refusal.py:122: symlinks unavailable: [WinError 1314] A required privilege is not held by the client: 'python3.12' -> 'C:\\\\Users\\\\play\\\\Documents\\\\Codex\\\\2026-10-27\\\\new-chat\\\\work\\\\a3\\\\pytest\\\\popen-gw0\\\\test_an_unchanged_dot_less_sym1\\\\.venv\\\\bin\\\\python'"
+      }
+    ]
+  },
+  "kind": "independent-data-only-PR573-R3-audit",
+  "limits": [
+    "Only R3 is assessed as completed. R1/R2 original failed attempts remain retained separately and are not PASS evidence.",
+    "Both Actions are actual local composite Bash replays on 16NU, not hosted workflow executions or native GitHub App approvals.",
+    "This packet proves the exact PR573 source 4eb and its old 210-member engine. It does not qualify the later 0.10 candidate.",
+    "4 BASE approvals in unmerged PR573 are not admitted authority in main; root owns normal reviewed collector061 metadata-only workflow dispatch.",
+    "Other OS/Python legs NOT_RUN; symlink privilege skips are skips, not executed PASS.",
+    "No formal release acceptance, gate waiver or personal Nelson review is claimed."
+  ],
+  "manifest": {
+    "files": 254,
+    "listed_bytes": 49287422,
+    "sha256": "84f7fccf59572cc5591b23a337658fec6e9965a4e83f8e12f99c082b19d73fe4"
+  },
+  "outer_execution": {
+    "attempt_id": "ee98b807-309c-455b-bd9a-42263b269e55",
+    "automatic_retries": false,
+    "exit": 0,
+    "finished_utc": "2026-10-27T05:06:52.768587+00:00",
+    "receipt_sha256": "67ccd6d6a6d624eb935d7a7c7ce748aa4bb16d83c63d4ead7d953d60a94afdef",
+    "root_admission_sha256": "fff2aa8eb4ac337e25d4fdd2b2ef0f0290ac0166a8a76a40c01b9046a5562809",
+    "started_utc": "2026-10-27T03:54:08.172838+00:00"
+  },
+  "packet": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-validation\\receipts-r3",
+  "prior_attempts": [
+    {
+      "attempt": "r1",
+      "counted_as_R3_PASS": false,
+      "errors": [
+        "ValueError: candidate differs from audited helper/contract: tools/assertion_contract.py"
+      ],
+      "exit": 1,
+      "listed_files": 36,
+      "manifest_sha256": "342940045382c562878e76125a9a8c79e78e473d9433220f1dcd63fc202ac965",
+      "status": "failed"
+    },
+    {
+      "attempt": "r2",
+      "counted_as_R3_PASS": false,
+      "errors": [
+        "ValueError: command failed: test-editable-install"
+      ],
+      "exit": 1,
+      "listed_files": 190,
+      "manifest_sha256": "1557c14467826b48e13bea1d789ae79c9474fb7f08348d4e78384d16e1c20e4b",
+      "status": "failed"
+    }
+  ],
+  "qualification": {
+    "cases_per_distribution": 283,
+    "distributions": [
+      "source",
+      "wheel",
+      "pyz"
+    ],
+    "raw_case_index": "qualification-raw-index.json",
+    "raw_case_index_sha256": "05011d7ff309d0d548b380c204f3ed37357a1b20bbbd38723d3d01d1562078b0",
+    "source_members": 210,
+    "source_package_sha256": "f89741b48bddb63f3b43f47bfeb8b406947cfe80c4253a577b1f669ce6f39605",
+    "suite_sha256": "2a8f8a0d40964c36563d737534965c4769ebc0b08d3fdd6bfa011f4b32f4c311"
+  },
+  "raw_commands": {
+    "all_segments_contiguous_original_bytes": true,
+    "binary_slices": 15942,
+    "nested_exit_distributions": {
+      "nested-inventory-pyz": {
+        "0": 216
+      },
+      "nested-inventory-source": {
+        "0": 216
+      },
+      "nested-inventory-wheel": {
+        "0": 3271
+      },
+      "nested-qualify-pyz": {
+        "0": 1272,
+        "1": 149,
+        "2": 1
+      },
+      "nested-qualify-source": {
+        "0": 1272,
+        "1": 149,
+        "2": 1
+      },
+      "nested-qualify-wheel": {
+        "0": 1274,
+        "1": 149,
+        "2": 1
+      }
+    },
+    "nested_ledgers": {
+      "nested-inventory-pyz": 216,
+      "nested-inventory-source": 216,
+      "nested-inventory-wheel": 3271,
+      "nested-qualify-pyz": 1422,
+      "nested-qualify-source": 1422,
+      "nested-qualify-wheel": 1424
+    },
+    "nested_native_git_verbs": {
+      "nested-inventory-pyz": {
+        "cat-file": 210,
+        "diff": 1,
+        "ls-tree": 1,
+        "rev-parse": 4
+      },
+      "nested-inventory-source": {
+        "cat-file": 210,
+        "diff": 1,
+        "ls-tree": 1,
+        "rev-parse": 4
+      },
+      "nested-inventory-wheel": {
+        "cat-file": 210,
+        "diff": 1,
+        "ls-tree": 2,
+        "rev-parse": 4,
+        "show": 3054
+      },
+      "nested-qualify-pyz": {
+        "add": 566,
+        "commit": 566,
+        "init": 1,
+        "rev-parse": 2,
+        "status": 1
+      },
+      "nested-qualify-source": {
+        "add": 566,
+        "commit": 566,
+        "init": 1,
+        "rev-parse": 2,
+        "status": 1
+      },
+      "nested-qualify-wheel": {
+        "add": 566,
+        "commit": 566,
+        "init": 1,
+        "rev-parse": 2,
+        "status": 1
+      }
+    },
+    "nested_total": 7971,
+    "ordinary_ledgers": {
+      "action/command-ledger.json": 2,
+      "action/git-evidence/command-ledger.json": 18,
+      "candidate-action/command-ledger.json": 2,
+      "candidate-action/git-evidence/command-ledger.json": 18,
+      "command-ledger.json": 15,
+      "git-evidence/command-ledger.json": 38
+    }
+  },
+  "runtime": {
+    "action_build_dependency_scope": "Actual Action PEP 517 build dependency resolution is logged, not claimed locked.",
+    "dependencies": {
+      "build": "1.6.1",
+      "colorama": "0.4.6",
+      "editables": "0.6",
+      "execnet": "2.1.2",
+      "hatchling": "1.32.4",
+      "iniconfig": "2.3.1",
+      "packaging": "26.3",
+      "pathspec": "1.1.1",
+      "pip": "26.2.2",
+      "pluggy": "1.7.0",
+      "pygments": "2.21.0",
+      "pyproject-hooks": "1.3.3",
+      "pytest": "9.1.1",
+      "pytest-xdist": "3.8.0",
+      "pyyaml": "6.0.3",
+      "tomlkit": "0.15.2",
+      "trove-classifiers": "2026.9.21.13"
+    },
+    "host": "LAPTOP-16NUA5I8",
+    "os": "Windows",
+    "other_platforms": "NOT_RUN",
+    "provenance": "HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL",
+    "python_version": "3.11.9"
+  },
+  "schema_version": 1,
+  "scope": "Read/hash/parse original local data and source files only. No source imports, subprocesses, tests, product CLI, remote reads or mutations.",
+  "source": "4eb36ce97415108b89f720496f6f8065561b46a5",
+  "source_closure": {
+    "limit": "Recorded initial/final native trees are identical; present physical files match every recorded Git blob. Frozen collector source enforces physical before/after snapshot equality; this is local evidence, not continuous hardware attestation.",
+    "native_snapshot_rows": [
+      {
+        "commit": "0614953839bcee991d61ef7f63a6c2885d37f407",
+        "files": 3058,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "a72ca9d24ee1f6445a2914ce27823d17e003372e4b7f8ffb07f0c331a666c287",
+        "row": 3,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\trusted-collector-A"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 7,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010"
+      },
+      {
+        "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+        "files": 2987,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e",
+        "row": 11,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-pinned090"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 21,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-action-4eb"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 25,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-action-4eb"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 29,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010"
+      },
+      {
+        "commit": "0614953839bcee991d61ef7f63a6c2885d37f407",
+        "files": 3058,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "a72ca9d24ee1f6445a2914ce27823d17e003372e4b7f8ffb07f0c331a666c287",
+        "row": 33,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\trusted-collector-A"
+      },
+      {
+        "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+        "files": 2987,
+        "ledger": "git-evidence/command-ledger.json",
+        "raw_sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e",
+        "row": 37,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-pinned090"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "action/git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 3,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010"
+      },
+      {
+        "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+        "files": 2987,
+        "ledger": "action/git-evidence/command-ledger.json",
+        "raw_sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e",
+        "row": 7,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-pinned090"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "action/git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 13,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010"
+      },
+      {
+        "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+        "files": 2987,
+        "ledger": "action/git-evidence/command-ledger.json",
+        "raw_sha256": "7edd5e620f7acdf44cfcaeb19ba30c4731c0a0832d372ff240e9bdb4a4f3b48e",
+        "row": 17,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-pinned090"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "candidate-action/git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 3,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "candidate-action/git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 7,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-action-4eb"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "candidate-action/git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 13,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "ledger": "candidate-action/git-evidence/command-ledger.json",
+        "raw_sha256": "822c885d87079cc413116eaaebf49da6b8cc1895ecfa099dd9d275524e594aef",
+        "row": 17,
+        "source_root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-action-4eb"
+      }
+    ],
+    "physical_sources": [
+      {
+        "commit": "0614953839bcee991d61ef7f63a6c2885d37f407",
+        "files": 3058,
+        "recorded_snapshots": 2,
+        "root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\trusted-collector-A",
+        "source_hash_map_sha256": "1fe4b05ce08c3c50779c4af60f472f79dc4e21483d6b6d040439cc57c2338699",
+        "tree": "fa8fb7d461c040a78e6b654477138fcee736d6ae"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "recorded_snapshots": 6,
+        "root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-010",
+        "source_hash_map_sha256": "b38d6da44a2a4c44d9b36c1660dd33c0815af80097eace288c63611af65c0178",
+        "tree": "1181bb39cad455ee1899e29c5896159ccf466dc0"
+      },
+      {
+        "commit": "d6eda4f695fabb8e7d138f7a87b099d2028f0294",
+        "files": 2987,
+        "recorded_snapshots": 4,
+        "root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-pinned090",
+        "source_hash_map_sha256": "aaa58e339c8f3cda92384935a069ebbb324d77e79ce728e1c0eb4f33dd9094a6",
+        "tree": "631e5fc92f2ccae1539018797c66a2f6013a46d2"
+      },
+      {
+        "commit": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "files": 3050,
+        "recorded_snapshots": 4,
+        "root": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-action-4eb",
+        "source_hash_map_sha256": "b38d6da44a2a4c44d9b36c1660dd33c0815af80097eace288c63611af65c0178",
+        "tree": "1181bb39cad455ee1899e29c5896159ccf466dc0"
+      }
+    ]
+  },
+  "started_at": "2026-10-27T05:24:46.979433+00:00",
+  "status": "CLEAR",
+  "total_checks": 290787
+}

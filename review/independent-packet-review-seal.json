@@ -1,0 +1,32 @@
+{
+  "collector": "0614953839bcee991d61ef7f63a6c2885d37f407",
+  "files": {
+    "audit.py": {
+      "bytes": 40109,
+      "sha256": "373c2840c87b1d45f05417b8a039900b9cd39fce0b11046da705cae18d23887f"
+    },
+    "parser-development-r1.json": {
+      "bytes": 38942,
+      "sha256": "d68aa06a1b31035059d33ef9d75108d0c679a6477068d9159de9cc87521f4be5"
+    },
+    "parser-development-r2.json": {
+      "bytes": 39722,
+      "sha256": "c7196e4bc90bb17b37a719b746751db3f7a375f50504d7ec38aa531b5624af20"
+    },
+    "qualification-raw-index.json": {
+      "bytes": 332617,
+      "sha256": "05011d7ff309d0d548b380c204f3ed37357a1b20bbbd38723d3d01d1562078b0"
+    },
+    "result.json": {
+      "bytes": 40440,
+      "sha256": "df08f765a7919e6821b15a23c521ae92e99f71df9c018da2ee278d4c8c585210"
+    }
+  },
+  "kind": "PR573_R3_INDEPENDENT_DATA_AUDIT_SEAL",
+  "no_packet_source_mutation": true,
+  "no_source_import_test_product_cli_remote": true,
+  "packet_manifest_sha256": "84f7fccf59572cc5591b23a337658fec6e9965a4e83f8e12f99c082b19d73fe4",
+  "sealed_at": "2026-10-27T05:25:12.204249+00:00",
+  "source": "4eb36ce97415108b89f720496f6f8065561b46a5",
+  "status": "CLEAR"
+}

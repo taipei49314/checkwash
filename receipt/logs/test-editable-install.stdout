@@ -1,0 +1,13 @@
+Obtaining file:///C:/Users/play/Documents/Codex/2026-10-27/new-chat/work/base-approval-010
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: checkwash
+  Building editable for checkwash (pyproject.toml): started
+  Building editable for checkwash (pyproject.toml): finished with status 'done'
+  Created wheel for checkwash: filename=checkwash-0.9.1-py3-none-any.whl size=13218 sha256=b3cd611a09d8d0e847a932934d0a28ebe524a79deac7f4105d34065403f92c51
+  Stored in directory: C:\Users\play\Documents\Codex\2026-10-27\new-chat\work\a3\pip-ephem-wheel-cache-6jl_xfx5\wheels\38\dc\57\5fb94313c6b6609b3c643bb0c6b29193a12f091edf3a6662d3
+Successfully built checkwash
+Installing collected packages: checkwash
+Successfully installed checkwash-0.9.1

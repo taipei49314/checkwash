@@ -1,0 +1,1 @@
+"$CW_PYTHON" -I -B -X utf8 "$CW_ACTION_PATH/secure.py" check

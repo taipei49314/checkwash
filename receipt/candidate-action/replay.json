@@ -1,0 +1,65 @@
+{
+  "action_sha": "4eb36ce97415108b89f720496f6f8065561b46a5",
+  "action_tree": "1181bb39cad455ee1899e29c5896159ccf466dc0",
+  "action_yaml_sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83",
+  "base_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+  "comment_pr": false,
+  "errors": [],
+  "fail_on": "high",
+  "files": {
+    "action_yaml": "action.yml",
+    "check_receipt": "runtime-receipts/check-receipt.json",
+    "check_run": "check.bash",
+    "check_stderr": "logs/check.stderr",
+    "check_stdout": "logs/check.stdout",
+    "engine_stderr": "runtime-receipts/stderr.txt",
+    "engine_stdout": "runtime-receipts/stdout.txt",
+    "identity": "runtime-receipts/identity.json",
+    "install_report": "runtime-receipts/install-report.json",
+    "install_run": "install.bash",
+    "install_stderr": "logs/install.stderr",
+    "install_stdout": "logs/install.stdout",
+    "pip_stderr": "runtime-receipts/install-stderr.txt",
+    "pip_stdout": "runtime-receipts/install-stdout.txt"
+  },
+  "head_sha": "4eb36ce97415108b89f720496f6f8065561b46a5",
+  "host": "LAPTOP-16NUA5I8",
+  "kind": "checkwash.pju-action-replay.v1",
+  "provenance": "16NU_LOCAL_COMPOSITE_REPLAY",
+  "resolved_outputs": {
+    "exit-code": "0",
+    "identity-path": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action\\checkwash-action-qilog10w\\identity.json",
+    "receipt-path": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action\\checkwash-action-qilog10w\\check-receipt.json"
+  },
+  "schema_version": 1,
+  "status": "completed",
+  "steps": [
+    {
+      "exit_code": 0,
+      "id": "install",
+      "outputs": {
+        "directory": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action\\checkwash-action-qilog10w",
+        "identity_path": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action\\checkwash-action-qilog10w\\identity.json",
+        "python": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action\\checkwash-action-qilog10w\\environment\\Scripts\\python.exe"
+      },
+      "run_sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4",
+      "stderr": "logs/install.stderr",
+      "stdout": "logs/install.stdout"
+    },
+    {
+      "exit_code": 0,
+      "id": "check",
+      "outputs": {
+        "analysis_exit_code": "0",
+        "base": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+        "exit_code": "0",
+        "fail_on": "high",
+        "head": "4eb36ce97415108b89f720496f6f8065561b46a5",
+        "receipt_path": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action\\checkwash-action-qilog10w\\check-receipt.json"
+      },
+      "run_sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93",
+      "stderr": "logs/check.stderr",
+      "stdout": "logs/check.stdout"
+    }
+  ]
+}

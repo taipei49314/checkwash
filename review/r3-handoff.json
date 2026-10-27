@@ -1,0 +1,76 @@
+{
+  "actual_route": {
+    "action_provenance": "16NU_LOCAL_COMPOSITE_REPLAY",
+    "host": "LAPTOP-16NUA5I8",
+    "provenance": "HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL"
+  },
+  "all_top_level_exits_zero": true,
+  "attempt": "ee98b807-309c-455b-bd9a-42263b269e55",
+  "both_original_action_replays_completed": true,
+  "entry_semantics": "Repeatable stdout-only invocation of unchanged trusted061 Packet/validate_packet. Never call bridge main for local inspection; it uses native GitHub services.",
+  "entry_source_sha256": "2a95176670d92a1162d7f291de70e53808107b0c18ae80ece5e1ff2f697cd1ef",
+  "external_record_hashes": {
+    "collector-r3-intent.json": "6f1a1f521e4896a1ad84403e74142b1bd5084f0ee18de785a558e256e6cffec0",
+    "collector-r3-result.json": "67ccd6d6a6d624eb935d7a7c7ce748aa4bb16d83c63d4ead7d953d60a94afdef",
+    "collector-r3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "collector-r3.stdout": "d9c06b2e625e37edd38bf6dd9326dfb19edceb2b819d940f1eeb95d8194c9b5a",
+    "dependency-lock-r3.json": "293db35873e4d6239ed72cc0e2b1c0993e8ff459105a7298dca2b7af402884cb",
+    "dependency-lock.json": "367f6c288c5c5140d6c4f98f49760da627724789a6fa9293c2b3d09dc1d5a32a",
+    "offline-verification-r3.json": "3b23ba498704bdb181d6977a1adcf7dcf7d6107a1ec7024fba8802c64d14fb4d",
+    "post-r3-audit-commands.json": "9d8f942f80c6851c7adfa235483413eedd046eb14a8ac12d08b7c8168a51015d",
+    "r3-data-audit.json": "6e458f4d318b5aead91dd0a86872a6ab7b44835e1107d0cbf365cbd9d0c7a9a4",
+    "root-admission-r3.json": "fff2aa8eb4ac337e25d4fdd2b2ef0f0290ac0166a8a76a40c01b9046a5562809"
+  },
+  "final_after_offline_packet_inventory_equal": true,
+  "full_each_file_hash_inventory": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-validation\\r3-data-audit.json",
+  "identity": {
+    "base_sha": "1ffe283d7d947fecc426dea99323b0a2620a9482",
+    "collector_source_sha": "0614953839bcee991d61ef7f63a6c2885d37f407",
+    "contract_source_sha": "0614953839bcee991d61ef7f63a6c2885d37f407",
+    "head_sha": "4eb36ce97415108b89f720496f6f8065561b46a5",
+    "pr_number": 573,
+    "repository": "taipei49314/checkwash",
+    "source_tree": "1181bb39cad455ee1899e29c5896159ccf466dc0"
+  },
+  "kind": "PR573_R3_IMMUTABLE_LOCAL_DATA_HANDOFF_NOT_NATIVE_PUBLICATION",
+  "manifest_sha256": "84f7fccf59572cc5591b23a337658fec6e9965a4e83f8e12f99c082b19d73fe4",
+  "native_check_ids": [],
+  "normal_local_validation_entry": [
+    "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-runtime311\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-X",
+    "utf8",
+    "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\verify-pr573-r3-offline.py"
+  ],
+  "original_failure_stops": {
+    "r1": "Original collector9678 preflight refused A-incompatible assertion_contract.py before runtime/product work; no helper patched.",
+    "r1_manifest_sha256": "342940045382c562878e76125a9a8c79e78e473d9433220f1dcd63fc202ac965",
+    "r2": "Version-matched collector061 reached editable install then stopped for missing required editables; source/helpers unchanged. Separate root-admitted R3 added only hook-required editables0.6 in private A runtime.",
+    "r2_manifest_sha256": "1557c14467826b48e13bea1d789ae79c9474fb7f08348d4e78384d16e1c20e4b"
+  },
+  "packet_bytes": 49352477,
+  "packet_files": 255,
+  "packet_path": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\base-approval-validation\\receipts-r3",
+  "qualifications": {
+    "pyz": 283,
+    "source": 283,
+    "wheel": 283
+  },
+  "required_native_header": "Real local execution: LAPTOP-16NUA5I8; HUMAN_AUTHORIZED_LOCAL_16NU_NOT_EC_POOL.",
+  "scope": "PR573/base1ffe/head4eb/tree1181 under collector061. Parent product9678 tests/qualifications were not substituted. Other platforms remain NOT_RUN. Root independently audits and owns any later receipt-data commit/dispatch/check publication.",
+  "service_actions_performed": false,
+  "status": "COMPLETED_AND_OFFLINE_DATA_VERIFIED",
+  "tests": {
+    "passed": 20629,
+    "passed_subtests": 67,
+    "skipped": 25
+  },
+  "top_level_commands": 15,
+  "trusted_tool_file_hashes": {
+    "tools/collect_pju_receipts.py": "313477a77ba011fe8cb2bf3f0d9523a9cac1c5d35731e8dedaac212d5fd39eea",
+    "tools/pju_receipt_bridge.py": "66e10a534c9915b747f70ea1aef497d102d440a75ae72a8109f4b595782aa164",
+    "tools/receipt_execution_route.py": "60a5e83dd3aeea54cc6149731e995a36387db5f4c45202e5cf66254467c6b5da",
+    "tools/replay_pju_action.py": "492c6ed1e02aaacd29d4d652be90de2e550015f5bf2ac7be8d0d90c392104b08"
+  }
+}

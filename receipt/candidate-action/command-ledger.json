@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/play/Documents/Codex/2026-10-27/new-chat/work/base-approval-validation/receipts-r3/candidate-action/install.bash"
+    ],
+    "cwd": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action",
+    "duration_seconds": 10.937000000034459,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T03:55:06.850430+00:00",
+    "name": "install",
+    "started_at": "2026-10-27T03:54:55.920614+00:00",
+    "stderr": "logs/install.stderr",
+    "stdout": "logs/install.stdout",
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/play/Documents/Codex/2026-10-27/new-chat/work/base-approval-validation/receipts-r3/candidate-action/check.bash"
+    ],
+    "cwd": "C:\\Users\\play\\Documents\\Codex\\2026-10-27\\new-chat\\work\\a3\\candidate-action",
+    "duration_seconds": 4.172000000020489,
+    "exit_code": 0,
+    "finished_at": "2026-10-27T03:55:11.019365+00:00",
+    "name": "check",
+    "started_at": "2026-10-27T03:55:06.855425+00:00",
+    "stderr": "logs/check.stderr",
+    "stdout": "logs/check.stdout",
+    "timed_out": false
+  }
+]
