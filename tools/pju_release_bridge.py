@@ -669,6 +669,7 @@ def validate_parents(packet, api, current):
         exact_keys(parents, "", "PR has no prior release-stage report")
         return None
     exact_keys(parents, expected, "previous stage set")
+    route = B.receipt_route(packet.manifest)
     link = parents[expected]
     exact_keys(link, "report sha256 check_run_id", "previous stage link")
     require(link["report"] == "parents/" + expected + ".json", "previous report path differs")
@@ -676,6 +677,7 @@ def validate_parents(packet, api, current):
     require(digest(raw) == sha(link["sha256"]), "previous report bytes differ")
     report = B.strict_json(raw)
     require(report.get("status") == "verified" and report.get("repository") == REPOSITORY, "previous stage not verified")
+    require(B.receipt_route(report) == route, "previous stage execution route differs")
     manifest_digest = sha(report["manifest_sha256"])
     check = api.request("GET", f"/repos/{REPOSITORY}/check-runs/{positive(link['check_run_id'], 'previous check ID')}")
     require(type(check.get("id")) is int and check.get("id") == link["check_run_id"] and check.get("app", {}).get("id") == ACTION_APP_ID
@@ -687,6 +689,7 @@ def validate_parents(packet, api, current):
         require(report.get("source_tree") == current["source_tree"] and report.get("base_sha") == current["base_sha"]
                 and check.get("name") == "checkwash" and check.get("head_sha") == report.get("head_sha")
                 and check.get("external_id") == "pju:" + manifest_digest + ":checkwash", "PR receipt does not bind this main tree")
+        B.validate_native_route(check, route)
         pr = api.request("GET", f"/repos/{REPOSITORY}/pulls/{positive(report['pr_number'], 'previous PR')}")
         require(pr.get("state") == "closed" and pr.get("merged") is True
                 and pr.get("merge_commit_sha") == current["head_sha"]
@@ -702,6 +705,7 @@ def validate_parents(packet, api, current):
                     and native.get("status") == "completed" and native.get("conclusion") == "success"
                     and native.get("name") in B.CONTEXTS
                     and native.get("external_id") == "pju:" + manifest_digest + ":" + native["name"], "PR native required check mismatch")
+            B.validate_native_route(native, route)
             names.add(native["name"])
         require(names == set(B.CONTEXTS), "PR required context coverage differs")
         stage_check = api.request("GET", f"/repos/{REPOSITORY}/check-runs/{positive(report['check_run_id'], 'PR release-stage check')}")
@@ -709,6 +713,7 @@ def validate_parents(packet, api, current):
                 and stage_check.get("status") == "completed" and stage_check.get("conclusion") == "success"
                 and stage_check.get("name") == context("pr")
                 and stage_check.get("external_id") == f"pju-release:{manifest_digest}:pr", "PR release-stage check missing/mismatched")
+        B.validate_native_route(stage_check, route)
     else:
         prior = report["subject"]
         require(subject(prior) == expected and prior["head_sha"] == current["head_sha"]
@@ -720,6 +725,7 @@ def validate_parents(packet, api, current):
             require(prior["release_id"] == current["release_id"], "public visitor has another release parent")
         require(check.get("name") == context(expected) and check.get("head_sha") == current["head_sha"]
                 and check.get("external_id") == f"pju-release:{manifest_digest}:{expected}", "previous native stage check mismatch")
+        B.validate_native_route(check, route)
     return {"stage": expected, "report_sha256": link["sha256"], "check_run_id": link["check_run_id"]}
 
 
@@ -729,9 +735,9 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
                         "contract_source_sha files records raw_exits status runtime action_sha subject parents", "release manifest")
     require(type(manifest["schema_version"]) is int and manifest["schema_version"] == 1
             and manifest["kind"] == "checkwash.pju-release-receipt.v1"
-            and manifest["repository"] == REPOSITORY and manifest["host"] == HOST
-            and manifest["provenance"] == PROVENANCE and manifest["status"] == "completed"
+            and manifest["repository"] == REPOSITORY and manifest["status"] == "completed"
             and manifest["action_sha"] == B.ACTION_SHA, "release manifest schema/host/status")
+    route = B.receipt_route(manifest)
     current = manifest["subject"]
     stage = subject(current)
     require(all(manifest[key] == current[key] for key in ("head_sha", "base_sha", "source_tree"))
@@ -763,7 +769,7 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
     validate_visitors(packet, source_root, trusted_root, collector, desc, exits, artifacts)
     live_subject(api, current)
     report = dict(schema_version=1, kind="checkwash.pju-release-verification.v1", status="verified", repository=REPOSITORY,
-                subject=current, collector_source_sha=collector, host=HOST, provenance=PROVENANCE,
+                subject=current, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
                 qualification_cases=len(desc["cases"]), junit=junit, verdict=verdict, artifacts=artifacts,
                 previous=parent, checks=[context(stage)], other_platforms="NOT_RUN",
                 trust="owner-admitted immutable receipt; not hardware attestation",
@@ -911,12 +917,13 @@ def publish_check(api, report, run_url):
     current = report["subject"]
     names = [*B.CONTEXTS, context("pr")] if current["stage"] == "pr" else [context(current["stage"])]
     require(report["status"] == "verified" and report["checks"] == names, "unverified stage check publication")
+    route = B.receipt_route(report)
     live_subject(api, current)
     created = []
-    summary = (f"{PROVENANCE}; actual host {HOST}; Windows/Python 3.11.9. Other platforms NOT_RUN.\n\n"
+    summary = (f"{route['provenance']}; actual host {route['host']}; Windows/Python 3.11.9. Other platforms NOT_RUN.\n\n"
                f"Stage {current['stage']}; source {current['head_sha']}; base {current['base_sha']}; tree {current['source_tree']}; receipt {report['receipt_commit']}; "
                f"manifest SHA256 {report['manifest_sha256']}.\n\n"
-               "Full PJU development, source/wheel/pyz qualification/inventory, actual visitor and verdict evidence verified. "
+               "Full local development, source/wheel/pyz qualification/inventory, actual visitor and verdict evidence verified. "
                "This local scope check is not publication authorization or hardware attestation.")
     try:
         for name in names:
@@ -924,12 +931,12 @@ def publish_check(api, report, run_url):
                         else f"pju-release:{report['manifest_sha256']}:{current['stage']}")
             result = api.request("POST", f"/repos/{REPOSITORY}/check-runs", dict(name=name, head_sha=current["head_sha"],
                 status="in_progress", external_id=external, details_url=run_url,
-                output={"title": "PJU release-stage evidence verified; publishing check", "summary": summary}))
+                output={"title": "Local release-stage evidence verified; publishing check", "summary": summary}))
             created.append(positive(result["id"], "stage check ID"))
         for check_id in created:
             live_subject(api, current)
             api.request("PATCH", f"/repos/{REPOSITORY}/check-runs/{check_id}", dict(status="completed", conclusion="success",
-                        output={"title": "Exact-source PJU release-stage evidence passed", "summary": summary}))
+                        output={"title": "Exact-source local release-stage evidence passed", "summary": summary}))
         live_subject(api, current)
         return {"check_run_id": created[-1], "check_run_ids": created[:-1] if current["stage"] == "pr" else []}
     except Exception:

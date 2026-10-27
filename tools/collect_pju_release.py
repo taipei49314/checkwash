@@ -1,4 +1,4 @@
-"""Collect fresh exact-source release-stage evidence on the authorized PJU.
+"""Collect fresh release-stage evidence on an authorized local Windows host.
 
 Run with the admitted task-local Python and -I -B -X utf8. Native subject,
 event payload and prior reports are immutable external admissions, not claims
