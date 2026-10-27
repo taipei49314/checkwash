@@ -194,13 +194,17 @@ The original complete B packet contains48,594 files/103,619,263 bytes. Its
 session-inventory SHA256 is
 `f0c385e8a625d85ef69e7b86fd8c4dc2c52281b67fbeca8327c29a31bdd46c57`.
 The private [Lab archive PR30](https://github.com/taipei49314/checkwash-lab/pull/30)
-retains the preparation/source/readings. At this pre-qualification checkpoint,
-**final whole-packet private archival custody/readback is PENDING**. That
-separate storage operation can proceed alongside the fresh PR-stage validation;
-it must close with its actual immutable commit/custody record before any new
-tag or publication. No final raw-packet archive is claimed already present
-in PR30. Hashes below identify the actual closed local records, not
-reconstructed summaries.
+now retains the preparation/source/readings and the complete final bundle at
+[immutable commit e0fe01a1](https://github.com/taipei49314/checkwash-lab/tree/e0fe01a1154636b4841a5f6c9c2685c3128f7004/notes/r29-010-20261027/attempt-b/final-closed),
+tree `41717c3d42aa482b549f3d7bb74b811fda6493c2`. The complete selection is
+48,684 files/139,397,212 bytes, packed into a34,395,769-byte ZIP with a per-file
+inventory. All3,870 previous tracked blob/mode entries remain unchanged;
+only19 new archive files were added. Fresh remote Git readback, full ZIP
+roundtrip and root's independent native REST tree/fresh-Git byte verification
+all passed. Private archival custody/readback is **DONE before any new tag**.
+This storage proof preserves the original decisions and does not add run,
+coverage, platform or publication acceptance. Hashes below identify actual
+closed records and bytes, not reconstructed summaries.
 
 | Record | SHA256 |
 |---|---|
@@ -213,6 +217,9 @@ reconstructed summaries.
 | Final selected19 join | `5e673af96c275b98da4b499eb2ddabda5e2d1826922cb719ef4944c7a4aaa64d` |
 | Root current0.10 cost/risk decision | `f809e3bd74edd19e2512118fcd152685e6475181f418fc211310288e884e2c1b` |
 | Actual old-R4 identity-fragment join | `5999cf292f4184b00c04a65b5bf728dec3f5a6613e4ea679eccf483d09492f22` |
+| Private whole-bundle ZIP | `12d8ef33a57ec48f3620b57f936497c7c9468987dc8dca6d1ba90172e30debf4` |
+| Private archive custody | `3eacae404a9fc69184858bbfb57af94f9f1a5627194d49f53cd8e2b96f8ee747` |
+| Root native remote-byte/archive review | `62e7073968bf67d350a9aea0da3c55b067e1f171d2ffee47ee39313f02a6f897` |
 
 This R29 and cost decision do not supply later whole-source receipts, missing
 platforms, cross-platform bytes, adoption or held-out/adjudicated rates.
