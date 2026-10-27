@@ -43,6 +43,15 @@ def _literal(node):
         return False
 
 
+def _source_lines(text):
+    """Lines as ast and the frontend count them: only \n and a lone \r end one.
+
+    str.splitlines() also breaks at form feeds and Unicode separators, which
+    shifted every later span onto another function's proof.
+    """
+    return re.split(r"(?<=[\r\n])(?!$)", text) if text else []
+
+
 def _span(node, lines, offsets):
     def point(line, column):
         return offsets[line - 1] + len(lines[line - 1].encode("utf-8")[:column].decode("utf-8"))
@@ -97,7 +106,7 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
                 "currentframe", "_getframe", "getframeinfo", "getmodule", "stack", "f_code", "f_globals", "f_locals"})
            for node in ast.walk(tree)):
         return  # Helpers/defaults share the module's identity too.
-    lines = text.splitlines(keepends=True)
+    lines = _source_lines(text)
     offsets, total = [], 0
     for line in lines:
         offsets.append(total)
@@ -393,7 +402,7 @@ def mark_contexts(source, units, path, language, *, startup_known=True, startup=
                 from checkwash.oracle_class_credit import prove_plain_class_units
                 text = source.decode("utf-8-sig").replace("\r\n", "\n")
                 tree = ast.parse(text)
-                lines = text.splitlines(keepends=True)
+                lines = _source_lines(text)
                 offsets, total = [], 0
                 for line in lines:
                     offsets.append(total)
