@@ -1,0 +1,22 @@
+{
+ "failures": [
+  "baseline-blocked-drift: pinned count 159, sha256 9993cab624a6ee1831a27f33fb48088676a639e9f5dd2a1b69361f1048c3f3a4; observed count 160, sha256 40be07fce6801395902303cd2da797d7a4e473ef46d1b8444892d607a2dc4cd0"
+ ],
+ "mode": "gate",
+ "status": "failed",
+ "summary": {
+  "cases": 185,
+  "failures": 1,
+  "reported": 0,
+  "t1": 159,
+  "t3": 26,
+  "transitions": {
+   "block->block": 160,
+   "canary block->block": 45,
+   "canary block->pass": 71,
+   "canary pass->block": 6,
+   "canary pass->pass": 37,
+   "pass->pass": 25
+  }
+ }
+}

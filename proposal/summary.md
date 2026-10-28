@@ -1,0 +1,214 @@
+## verdict gate (gate): FAILED
+
+185 cases (T1 159, T3 26), 1 failure(s), 0 reported.
+
+| engine | artifact | sha256 | size | version | commit | errors |
+|---|---|---|---|---|---|---|
+| baseline | baseline.pyz | 9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a | 952399 | checkwash 0.10.0 | 100699796d942af30644738ffbcd1f1c939411c5 | 0 |
+| canary-new | canary-new.pyz | b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c | 588886 | checkwash 0.5.0 | 24b60a2019a5900291ecb35ab8290f34af2d5438 | 0 |
+| canary-old | canary-old.pyz | 423ce220365d0e179cfd9caa7e45724d71b8bd7c67d3cbfc51eca19e8a626ee7 | 546241 | checkwash 0.4.2 | 23ef5929896187e4aac5889735c792e65af3e721 | 0 |
+| candidate | candidate.pyz | 37f453a877f4f22c1ab7ae41dd51b9d5e948a3cfcf7815f9a65de9f0e9b0d0bb | 952398 | checkwash 0.10.0 | ed923b440f5c3c770ecd4d58605698070a178d6e | 0 |
+
+### Failures
+
+- `baseline-blocked-drift` -: pinned count 159, sha256 9993cab624a6ee1831a27f33fb48088676a639e9f5dd2a1b69361f1048c3f3a4; observed count 160, sha256 40be07fce6801395902303cd2da797d7a4e473ef46d1b8444892d607a2dc4cd0
+
+### Cases
+
+| case | tier | label | baseline -> candidate | canary | entry | rules |
+|---|---|---|---|---|---|---|
+| chai:chai.assert.closeTo.delta | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.equal.exists | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.isNull.exists | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.require-member.isOk | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.strictEqual.direct | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.strictEqual.isOk | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.strictEqual.remove | T3 | block | block->block | - | - | evaluated |
+| chai:chai.assert.strictEqual.rewrite | T3 | block | block->block | - | - | evaluated |
+| chai:chai.cjs.equal.exist | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.closeTo.delta | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.closeTo.exist | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.dirty-chai.true.ok | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.eql.include | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.equal.exist | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.equal.ok | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.equal.remove | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.equal.rewrite | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.lengthOf.ok | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.not-exist.exist | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.null.exist | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.true.false | T3 | block | block->block | - | - | evaluated |
+| chai:chai.expect.true.ok | T3 | block | block->block | - | - | evaluated |
+| chai:chai.global.equal.exist | T3 | block | block->block | - | - | evaluated |
+| chai:chai.namespace.equal.ok | T3 | block | block->block | - | - | evaluated |
+| chai:chai.vitest.assert.isOk | T3 | block | block->block | - | - | evaluated |
+| chai:chai.vitest.equal.ok | T3 | block | block->block | - | - | evaluated |
+| i196/F1 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i196/F2 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i196/F3 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/F4 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/F5 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/F6 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/F7 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/F8 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/Fc1 | T1 | block | block->block | block->block | - | evaluated |
+| i196/Fc2 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i196/M0 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/M1 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/M2 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/M3 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/M4 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/M5 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/Mc1 | T1 | block | block->block | block->block | - | evaluated |
+| i196/Mc2 | T1 | block | block->block | block->block | - | evaluated |
+| i196/Mc3 | T1 | block | block->block | block->block | - | evaluated |
+| i196/P1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/P2 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/P3 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/S1 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/S2 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/S3 | T1 | block | block->block | block->pass | - | evaluated |
+| i196/Sc1 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i196/Sc2 | T1 | block | block->block | block->block | - | evaluated |
+| i196/Sp1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/Sp2 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/Sp3 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/Sp4 | T1 | block | block->block | pass->pass | - | evaluated |
+| i196/W1 | T1 | pass | pass->pass | block->block | - | evaluated |
+| i196/Wc1 | T1 | block | block->block | block->block | - | evaluated |
+| i197/A1 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A10 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A10ctl | T1 | block | block->block | block->block | - | evaluated |
+| i197/A11 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A12 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A13 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A2 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A3 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i197/A4 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A5 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A6 | T1 | block | block->block | block->block | - | evaluated |
+| i197/A7 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/A8 | T1 | block | block->block | block->block | - | evaluated |
+| i197/A9 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/B1 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/B2 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/B3 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/B4 | T1 | block | block->block | block->block | - | evaluated |
+| i197/B5 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/B6 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/B7 | T1 | block | block->block | block->block | - | evaluated |
+| i197/C1 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/C2 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/C3 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/C4 | T1 | block | block->block | block->block | - | evaluated |
+| i197/C5 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/C5ctl | T1 | block | block->block | block->block | - | evaluated |
+| i197/O1 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/O2 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/O3 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/Q5a | T1 | pass | block->block | pass->block | - | evaluated |
+| i197/Q5b | T1 | pass | pass->pass | block->block | - | evaluated |
+| i197/R1 | T1 | pass | pass->pass | pass->block | - | evaluated |
+| i197/R2 | T1 | pass | pass->pass | pass->block | - | evaluated |
+| i197/T1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i197/U1 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/U2 | T1 | block | block->block | block->pass | - | evaluated |
+| i197/U3 | T1 | block | block->block | block->block | - | evaluated |
+| i197/X1 | T1 | block | block->block | block->block | - | evaluated |
+| i197/X2 | T1 | block | block->block | block->block | - | evaluated |
+| i197/ctl | T1 | block | block->block | block->block | - | evaluated |
+| i198/B1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/B2 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/B3 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/B4 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/FP1 | T1 | pass | pass->pass | block->block | - | evaluated |
+| i198/FP2 | T1 | pass | pass->pass | block->block | - | evaluated |
+| i198/FP3 | T1 | block | block->block | block->block | - | evaluated |
+| i198/FPJ1 | T1 | pass | pass->pass | block->block | - | evaluated |
+| i198/FPJ2 | T1 | pass | pass->pass | block->block | - | evaluated |
+| i198/H1 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i198/H2 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i198/H3 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i198/H4 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i198/H5 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i198/H6 | T1 | pass | pass->pass | block->pass | - | evaluated |
+| i198/J1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/J2 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/J3 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/J4 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/J5 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/K1 | T1 | block | block->block | block->block | - | evaluated |
+| i198/K2 | T1 | block | block->block | block->block | - | evaluated |
+| i198/K3 | T1 | block | block->block | block->block | - | evaluated |
+| i198/M1a | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1b | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1c | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1d | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1e | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1f | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1g | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M1h | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2a | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2b | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2c | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2d | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2e | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2f | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2g | T1 | block | block->block | block->pass | - | evaluated |
+| i198/M2h | T1 | block | block->block | block->pass | - | evaluated |
+| i198/O1 | T1 | block | block->block | block->pass | - | evaluated |
+| i198/O2 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/S1 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i198/S2 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i198/S3 | T1 | block | block->block | block->pass | - | evaluated |
+| i198/S4 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i198/S5 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i198/T1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/T2 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/T3 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/T4 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/T5 | T1 | block | block->block | pass->pass | - | evaluated |
+| i198/T6 | T1 | block | block->block | pass->pass | - | evaluated |
+| i199/C1 | T1 | block | block->block | block->block | - | evaluated |
+| i199/C2 | T1 | block | block->block | block->block | - | evaluated |
+| i199/C3 | T1 | block | block->block | block->block | - | evaluated |
+| i199/C4 | T1 | block | block->block | block->block | - | evaluated |
+| i199/G1 | T1 | block | block->block | block->block | - | evaluated |
+| i199/G2 | T1 | block | block->block | block->block | - | evaluated |
+| i199/G3 | T1 | block | block->block | block->block | - | evaluated |
+| i199/H1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i199/H2 | T1 | block | block->block | block->block | - | evaluated |
+| i199/K1 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i199/M1 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M2 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M3 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M4 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M5 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M6 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M7 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/M8 | T1 | block | block->block | block->pass | - | evaluated |
+| i199/N1 | T1 | block | block->block | block->block | - | evaluated |
+| i199/N2 | T1 | block | block->block | block->block | - | evaluated |
+| i199/N3 | T1 | block | block->block | block->block | - | evaluated |
+| i199/N4 | T1 | block | block->block | block->block | - | evaluated |
+| i199/N5 | T1 | block | block->block | block->block | - | evaluated |
+| i199/N6 | T1 | block | block->block | block->block | - | evaluated |
+| i199/P1 | T1 | block | block->block | pass->block | - | evaluated |
+| i199/P2 | T1 | block | block->block | pass->block | - | evaluated |
+| i199/P3 | T1 | block | block->block | block->block | - | evaluated |
+| i199/P4 | T1 | pass | pass->pass | pass->pass | - | evaluated |
+| i199/P5 | T1 | block | block->block | pass->block | - | evaluated |
+| i199/R1 | T1 | block | block->block | pass->pass | - | evaluated |
+| i199/R2 | T1 | block | block->block | block->block | - | evaluated |
+| i199/R3 | T1 | block | block->block | block->block | - | evaluated |
+| i199/R4 | T1 | block | block->block | block->block | - | evaluated |
+
+### Proposed entries and pins (never written by the gate)
+
+```toml
+# pins file
+[baseline_blocked]
+count = 160
+sha256 = "40be07fce6801395902303cd2da797d7a4e473ef46d1b8444892d607a2dc4cd0"
+```
+
