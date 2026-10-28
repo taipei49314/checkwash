@@ -67,3 +67,8 @@ validator; a correct lookup is not proof that malformed policy was applied.
 These task settings apply only when the caller actually supplies `--task`.
 This change does not make every managed hook or Action pass a task
 file, change empty-scope semantics, or add a YAML runtime dependency.
+
+The managed Stop hook passes no task. The managed PreToolUse hook (0.11,
+D-189) passes none either, so no `scope.allow` applies there and a TASK
+syntax error never reaches it, but it turns `oracle_freeze` on for its own
+analysis, as a task declaring `oracle_freeze: true` would.
