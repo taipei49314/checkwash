@@ -86,16 +86,28 @@ schema_version = 1
 # 159 blocked and 26 passing cases with no proposed movement; the chai
 # input file is unchanged. A fresh rotation PR verdict must confirm these
 # retained baseline_blocked/T3 pins. The canary pair is not rotated.
+# 2026-10-28: rotated to v0.10.0 (docs/RELEASING.md step 9, D-188), which
+# Nelson authorized by choosing the offered reply 「授權 Claude 做」.
+# [baseline] pins release commit 1006997 (tag object 90210d81) and the
+# Release's checkwash.pyz: 952399 bytes, the SHA256 the publication record
+# and the GitHub Releases API report. A PJU proposal run with this [baseline]
+# (LAPTOP-01AGNPJU, HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL) ran all 185 cases
+# (159 T1, 26 T3): 160 block -> block, 25 pass -> pass, zero reported. Its
+# only failure was this blocked pin: v0.10.0 blocks i197/Q5a, the PASS ->
+# BLOCK movement the v0.10.0 release disclosed, so [baseline_blocked] goes
+# 159 -> 160 with no case removed. Q5a keeps its pass label. The chai file
+# is the same blob at 1006997 as at d6eda4f, so [t3.cases] stays, and the
+# [canary] pair and its 71 block -> pass IDs are not rotated.
 [baseline]
-tag = "v0.9.0"
-version = "0.9.0"
-commit = "d6eda4f695fabb8e7d138f7a87b099d2028f0294"
-sha256 = "7319152cdf4889df4d58b454dc63072bb2e923823e1b2ce09677e4381dbccd5c"
-size = 914407
+tag = "v0.10.0"
+version = "0.10.0"
+commit = "100699796d942af30644738ffbcd1f1c939411c5"
+sha256 = "9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a"
+size = 952399
 
 [baseline_blocked]
-count = 159
-sha256 = "9993cab624a6ee1831a27f33fb48088676a639e9f5dd2a1b69361f1048c3f3a4"
+count = 160
+sha256 = "40be07fce6801395902303cd2da797d7a4e473ef46d1b8444892d607a2dc4cd0"
 
 [canary]
 block_to_pass = [

@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-28 (v0.10.0 published and verified; the CLI, Action and advertised pins move to v0.10.0)
+Updated: 2026-10-28 (v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0)
 
 ## 2026-10-28: v0.10.0 published
 
@@ -20,8 +20,10 @@ and the [publication record](docs/releases/v0.10.0-publication-verification.md).
 
 The advertised manifest, README, doctor, self-audit workflow and the receipt
 tools now pin v0.10.0, so a fresh PJU receipt's pinned Action checkout is H.
-Baseline rotation to v0.10.0 is a separate reviewed PR. The release-time
-decision-log cut waits for Nelson (agent-read-only files). The published
+Nelson then authorized Claude to do the agent-read-only release housekeeping
+(he chose the offered reply 「授權 Claude 做」): D-173 to D-187 moved to
+[DECISIONS-archive-3](DECISIONS-archive-3.md), and the verdict baseline
+rotated to v0.10.0 (D-188; blocked pin 159 -> 160 for i197/Q5a). The published
 0.10.0 `doctor` still requires the v0.9.0 Action pin, and the PyPI 0.10.0
 description is the release commit's README; both are in
 [KNOWN-ISSUES-v0.10.0](docs/KNOWN-ISSUES-v0.10.0.md). 1.0 is NOT_MET and
