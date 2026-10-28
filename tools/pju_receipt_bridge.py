@@ -30,7 +30,7 @@ _ROUTE = importlib.util.module_from_spec(_ROUTE_SPEC)
 _ROUTE_SPEC.loader.exec_module(_ROUTE)
 HOST, PROVENANCE = _ROUTE.HOST, _ROUTE.PROVENANCE
 receipt_route = _ROUTE.receipt_route
-ACTION_SHA = "d6eda4f695fabb8e7d138f7a87b099d2028f0294"
+ACTION_SHA = "100699796d942af30644738ffbcd1f1c939411c5"
 CONTEXTS = ("checkwash", *(f"candidate assertion contract ({d})" for d in ("source", "wheel", "pyz")))
 CONTRACTS = ("tests/data/javascript_assertion_support.json", "tests/data/javascript_foundation_mutations.json")
 UTILITIES = ("tools/assertion_contract.py", "tools/qualify_assertions.py", "tools/release_inventory.py")

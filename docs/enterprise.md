@@ -7,7 +7,7 @@ Start with a review of its
 protect the deployed check and its policy files.
 
 **v0.3.0 notice:** v0.3.0 (2026-09-07) changes five exemption namespaces and
-local installation behavior. The recommended Action pin is v0.5.0 (advanced
+local installation behavior. The recommended Action pin was then v0.5.0 (advanced
 by v0.6.0 under the one-release trust lag) and carries
 these changes. Follow
 the [migration notes](remediation-upgrade.md); a CLI upgrade alone still does

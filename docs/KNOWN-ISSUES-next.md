@@ -1,8 +1,9 @@
 # Status update — 2026-10-23
 
 The changes below shipped in v0.9.0. The previous unreleased/NOT_RUN
-wording is retained as a dated preparation record. Current publication:
-[v0.9.0 verification](releases/v0.9.0-publication-verification.md).
+wording is retained as a dated preparation record. Publication at the time:
+[v0.9.0 verification](releases/v0.9.0-publication-verification.md). The
+current release is v0.10.0 ([publication record](releases/v0.10.0-publication-verification.md)).
 
 ## 2026-10-23: measured #345 / #469 residual exits
 

@@ -174,6 +174,79 @@ rows SHA256 `9b04bd886cec8a63cd5fc1a02339593e58110611040f078330c9b91a8582baf9`).
 This differential is in-sample between two candidate trees; it is not native
 Linux, a false-positive rate or a new adjudication.
 
+## v0.10.0 checked publication and pin promotion (2026-10-28)
+
+Claude carried out the 0.10.0 publication operations under the delegation
+above, except the PyPI deployment review. Claude's delegated approval through
+the available gh token was refused (HTTP 403: the token lacks that
+permission). No protection, reviewer or token setting was changed. Claude
+asked Nelson, who approved the `pypi` deployment of run 40603968869 himself
+and wrote:
+
+> 已核准這一次 pypi 部署
+
+#566 merged as `100699796d942af30644738ffbcd1f1c939411c5` (H). H's first
+parent is the reviewed base `c9356686b4a9b3a6f0cd714c66d952891cffdd70`, and
+its tree equals the qualified PR tree
+`9201a7f2f755c848b487077f5392a0c5088bf896`. Annotated tag `v0.10.0` (object
+`90210d81dd714f49e3ee6e2b1ccbb7c7428fe15b`, tagger Claude) peels to H and was
+pushed alone. GitHub Release 425888732 was published without assets at
+2026-10-27T19:23:58Z. Its real `release: published` event was captured before
+the release-event collection, and the release workflow's `publish-assets` job
+attached the three receipt artifacts afterwards. PyPI 0.10.0 serves the same
+wheel and sdist bytes. Every stage's evidence ran on LAPTOP-01AGNPJU, Windows,
+CPython 3.11.9 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Other platforms are
+NOT_RUN; the separately recorded acceptance covers this release only. The
+[publication record](releases/v0.10.0-publication-verification.md) lists each
+stage's native capture, receipt, verification run and check.
+
+The reviewed collector and verifier `071fa76f` had never been run past the
+main stage. Two defects in it stopped later stages and a review found a third
+before it could, so the later steps ran from successive commits of
+`review/collector-c-010-20261028`, each adding one fix to `071fa76f` with a
+regression test that fails without it:
+
+- `a1846d15`: tag verification raised `NameError`, because `validate_verdict`
+  read `exits` without receiving it. The tag stage was collected with
+  `071fa76f`; its verification run 40566636845 failed this way, and run
+  40567984394 verified the same receipt at `a1846d15`.
+- `aa6829e6`: the collector read parent reports under a 2 MiB JSON limit, but
+  the tag report is 4,408,656 bytes because it keeps the raw published-baseline
+  responses. The release-event's first collection stopped at input admission
+  and produced no receipt; the second was collected at `aa6829e6`.
+- `8d75bf9a`: the public-visitor packet would have stored the PyPI wheel and
+  sdist next to the GitHub copies under the same names, which the verifier's
+  by-name lookup rejects. A read-only review of the unexercised paths found it
+  before that stage ran. The release-event verification and the whole
+  public-visitor stage ran at `8d75bf9a`.
+
+The helpers the verifier compares with H (verdict gate, published-release
+identity, published source, zipapp and assertion qualification, assertion
+contract, release inventory) are byte-identical to H. Before each dispatch, a
+local dry run of the fixed verifier checked the real published receipt. This
+follow-up carries the three fixes to main.
+
+The public-visitor stage passed (check 122587845714, run
+[40618583442](https://github.com/taipei49314/checkwash/actions/runs/40618583442)).
+It downloaded the three GitHub assets and the two PyPI files, confirmed each
+PyPI file equals its GitHub copy, installed each wheel and sdist into a fresh
+environment, and ran the downloaded pyz. Every install reported 0.10.0 with
+members equal to H's source. The PyPI project and version pages were checked
+after publication: the description is the README as built from H, so it still
+names v0.9.0 and carries one relative link (D-185) that does not resolve on
+PyPI. PyPI keeps that description until the next release; the launch notes
+and known issues point readers to the GitHub README.
+
+The decision-log cut that [After the release](#after-the-release) requires at
+publication is not in this follow-up: `DECISIONS.md` and its archives are
+agent-read-only, so the move to `DECISIONS-archive-3.md` waits for Nelson.
+
+This follow-up promotes `release/advertised.toml`, the README, `checkwash
+doctor`, this repository's self-audit workflow and the two receipt-tool Action
+pins to v0.10.0 (H); later PJU receipts replay the v0.10.0 Action. Baseline
+rotation remains a separate reviewed PR. No downstream re-pin is authorized.
+1.0 remains NOT_MET and needs Nelson's decision.
+
 ## v0.9.1 publication instruction (2026-10-24)
 
 After receiving the concrete v0.9.1/#419/PJU review packet, Nelson typed:

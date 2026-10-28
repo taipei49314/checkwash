@@ -1,18 +1,22 @@
 # checkwash
 
-**v0.9.0 adds the Claude Code session-start commit window, content-bound
-TEST_DISABLED exemptions, broader Python and JS/TS assertion readings, and
-clearer handling of oversized or unreadable input.**
-[Publication evidence](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-publication-verification.md) ·
-[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-public-launch.md).
+**v0.10.0 binds policy changes to the reviewed BASE and asks for source-bound
+proof before a moved test oracle earns credit.** A newly winning `.checkwash`
+config or allowance is compared with its BASE `.greenwash` predecessor, so a
+change cannot approve its own relaxation; relative `--task` addresses resolve
+from `--repo`; and moving assertion text, keeping assertion mass or keeping a
+test name no longer proves the same oracle. The IR contract is now version 3;
+the findings envelope stays at version 2.
+[Publication evidence](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) ·
+[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md).
 A pass does not prove correctness; retain exit 2 and diagnostics as analysis
 errors. With `--format hook-json` (the Claude Code Stop hook) an engine error
-now exits 0 with a "not analysed" message. The recommended Action is pinned to
-the same v0.9.0 release.
+exits 0 with a "not analysed" message. The recommended Action is pinned to
+the same v0.10.0 release.
 
-The #419 opaque-change refusal is turned off in that published v0.9.0 pin. A no-op opaque
-production edit can still leave affected oracle findings at warn; #419 remains
-open. Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/v0.9.0/docs/KNOWN-ISSUES-v0.9.0.md)
+The broad #419 opaque-change refusal stays off in v0.10.0, and #419 remains
+open. Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
+and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)
 before relying on a pass.
 
 **Development snapshots:** the source in this checkout may be newer than the
@@ -91,6 +95,11 @@ old and the new assertion as well, TEST_DISABLED keys one by what the change
 disabled ([#512](https://github.com/taipei49314/checkwash/issues/512)), and
 their old keys stop matching: re-review and re-record those entries. [Assertion-level notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md#assertion-level-rules-next-minor-421)
 
+**v0.10.0 compares a newly winning `.checkwash` policy with its BASE
+predecessor and credits a moved oracle only with source-bound proof.**
+Callers of `--emit-ir` read IR version 3, which adds `policy_shadows`; the
+findings JSON stays at version 2. [v0.10.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md)
+
 ## Try it
 
 You need **Python 3.11+ and Git**. Download and try the offline examples first.
@@ -98,7 +107,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.9.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.10.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -107,7 +116,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.9.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.10.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -119,7 +128,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.9.0/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.10.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -139,11 +148,11 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-public-launch.md#use-it-and-preserve-the-result).
+For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md#use-it-and-preserve-the-result).
 
 ## Know the limits
 
-**v0.9.0 is alpha.** A pass does not prove that a change is correct or honest.
+**v0.10.0 is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -159,10 +168,10 @@ Legitimate refactors can be flagged. The frozen historical corpus records
 **22 blocks out of 60 (36.7%)**. A separate pre-release source replay records
 4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
 errors remain. These are selected examples, not a general false-positive rate.
-The 0.10.0 development ledger retains 6/60 static source blocks after the
-[D-185 dispositions](docs/oracle-context-dispositions-0.10.0.md), including two
+The v0.10.0 ledger retains 6/60 static source blocks after the
+[D-185 dispositions](https://github.com/taipei49314/checkwash/blob/main/docs/oracle-context-dispositions-0.10.0.md), including two
 additional known legitimate-refactor false blocks. This is a later source
-readback, not a rewrite of the historical runtime results or a published update.
+readback, not a rewrite of the historical runtime results.
 
 A changed file over 1,000,000 bytes is not read. An image, data file,
 lockfile, document or non-Python production source that large is reported on
@@ -232,7 +241,7 @@ To stop a merge, make the **`checkwash` status check required** in your
 repository's branch rules. Installing the tool or adding a workflow alone
 does not enforce its verdict.
 
-The recommended Action and the CLI above are both **v0.9.0**.
+The recommended Action and the CLI above are both **v0.10.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 **Advisory: Action trust boundary.** Every published Action release up to and
@@ -242,7 +251,7 @@ example a top-level `pip` package) can replace the installer and then the
 checker, and the pull request can tamper with the result it is judged by. Under
 checkwash's threat model that applies to every pull request it judges. v0.8.0
 fixes it ([#372](https://github.com/taipei49314/checkwash/pull/372)); pin the
-v0.9.0 Action below. If you stay on v0.7.0 or earlier, treat a pass as
+v0.10.0 Action below. If you stay on v0.7.0 or earlier, treat a pass as
 advisory, review the pull request before merging and keep `comment-pr` off.
 [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
 
@@ -270,7 +279,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@d6eda4f695fabb8e7d138f7a87b099d2028f0294 # v0.9.0
+      - uses: taipei49314/checkwash/action@100699796d942af30644738ffbcd1f1c939411c5 # v0.10.0
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -285,12 +294,15 @@ gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.j
 
 This adds a ruleset; it does not replace existing ones. `checkwash doctor`
 can inspect the local workflow, but cannot verify live branch protection.
+The published 0.10.0 CLI's `doctor` accepts only the Action pin built into it,
+v0.9.0's, so it reports the v0.10.0 pin above as an unsupported SHA ("workflow
+analysis incomplete", exit 1); `doctor` from this repository's main accepts it.
 
 **Why is the pin added after the release?** A release
 cannot embed its own commit SHA, so a release commit carries the prior
 release's pin; once a release's publication is verified, a follow-up on main
-recommends that release's own peeled commit. The recommended v0.9.0 Action includes the engine
-published on 2026-10-23 Asia/Taipei. A CLI upgrade does not update an existing Action. To verify another trusted release, use
+recommends that release's own peeled commit. The recommended v0.10.0 Action includes the engine
+published on 2026-10-28 Asia/Taipei. A CLI upgrade does not update an existing Action. To verify another trusted release, use
 `git rev-parse 'vX.Y.Z^{commit}'`.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
@@ -305,9 +317,9 @@ published on 2026-10-23 Asia/Taipei. A CLI upgrade does not update an existing A
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.9.0
+pipx install checkwash==0.10.0
 # or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.9.0
+pipx install git+https://github.com/taipei49314/checkwash@v0.10.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -345,7 +357,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.9.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.9.0-public-launch.md) |
+| Installation checks, versions and first use | [v0.10.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) · [v0.10.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
@@ -360,5 +372,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 21652 tests (collection denominator).
+Alpha pre-release. 22 detectors, 21699 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

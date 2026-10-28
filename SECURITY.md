@@ -26,8 +26,9 @@ only thing standing between an agent and your main branch.
 **Affected:** every published release of the GitHub Action
 `taipei49314/checkwash/action` up to and including v0.7.0
 (`d647a65e9734f2b6e57b528ea595b1507dc31094`), and v0.6.0, whose Action is
-identical. Fixed in v0.8.0 (`f02b5d8a07fa39ee1898881f66c571eb164cb11c`), the
-currently recommended pin.
+identical. Fixed in v0.8.0 (`f02b5d8a07fa39ee1898881f66c571eb164cb11c`) and every later
+release; the currently recommended pin is v0.10.0
+(`100699796d942af30644738ffbcd1f1c939411c5`).
 
 **What happens:** the composite Action runs `python -m pip` to install
 checkwash, then runs whichever `checkwash` is first on `PATH`, with the pull

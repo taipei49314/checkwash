@@ -133,8 +133,8 @@ by hand, in its own `legacy-comparison` job. Every engine change since v0.4.0
 fails it, so it stays red as recorded; it is neither changed nor waived
 (#295).
 
-To try the packaged preview, install `checkwash==0.6.0`. The recommended
-v0.5.0 Action also includes the quality preview; a CLI installation does
+To try the packaged preview, install `checkwash==0.6.0`. The v0.5.0 Action
+recommended at the time also includes the quality preview; a CLI installation does
 not update that Action. The preview's native/package checks and retained
 T-255 comparison failure are identified separately in the release guide.
 

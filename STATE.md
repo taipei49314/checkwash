@@ -1,6 +1,31 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-27 (Claude takeover: review fixes and the PJU release chain for 0.10.0; v0.9.0 remains the verified public CLI/Action)
+Updated: 2026-10-28 (v0.10.0 published and verified; the CLI, Action and advertised pins move to v0.10.0)
+
+## 2026-10-28: v0.10.0 published
+
+v0.10.0 is the verified public release: GitHub Release 425888732 and PyPI
+0.10.0 serve the same bytes, from H `100699796d942af30644738ffbcd1f1c939411c5`
+(tag object `90210d81dd714f49e3ee6e2b1ccbb7c7428fe15b`). The PR, main, tag,
+release-event and public-visitor stages each passed on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`); other platforms remain NOT_RUN.
+Nelson approved the PyPI deployment himself after the delegated approval was
+refused for lack of token permission. The tag stage's verification and the
+release-event and public-visitor stages ran from successive commits of
+`review/collector-c-010-20261028` (`a1846d15`, `aa6829e6`, `8d75bf9a`), which
+fix three defects in paths of `071fa76f` that had never run past the main
+stage; main carries those fixes from this follow-up on.
+Details: [RELEASING](docs/RELEASING.md#v0100-checked-publication-and-pin-promotion-2026-10-28)
+and the [publication record](docs/releases/v0.10.0-publication-verification.md).
+
+The advertised manifest, README, doctor, self-audit workflow and the receipt
+tools now pin v0.10.0, so a fresh PJU receipt's pinned Action checkout is H.
+Baseline rotation to v0.10.0 is a separate reviewed PR. The release-time
+decision-log cut waits for Nelson (agent-read-only files). The published
+0.10.0 `doctor` still requires the v0.9.0 Action pin, and the PyPI 0.10.0
+description is the release commit's README; both are in
+[KNOWN-ISSUES-v0.10.0](docs/KNOWN-ISSUES-v0.10.0.md). 1.0 is NOT_MET and
+needs Nelson's decision.
 
 ## 2026-10-27: Claude takeover, review fixes and PJU release chain
 
@@ -3245,8 +3270,8 @@ how the measurements moved; their original dates and values remain history.
 | authoritative number | value |
 |---|---|
 | version | v0.10.0 |
-| last published CLI | v0.9.0 |
-| last published CLI commit | d6eda4f695fabb8e7d138f7a87b099d2028f0294 |
+| last published CLI | v0.10.0 |
+| last published CLI commit | 100699796d942af30644738ffbcd1f1c939411c5 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |
