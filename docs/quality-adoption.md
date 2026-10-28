@@ -131,7 +131,7 @@ context without removing real checks just to obtain a complete report.
 ## 3. Connect a separate PR status
 
 **Since v0.8.0:** the entry-point hardening described below shipped in v0.8.0
-(#375), and the recommended Action pin is the v0.8.0 release commit. No
+(#375); the recommended Action pin, now the v0.10.0 release commit, includes it. No
 unreleased commit is recommended here; updating a CLI does not update an Action.
 This security boundary does not establish quality-preview enforcement maturity.
 

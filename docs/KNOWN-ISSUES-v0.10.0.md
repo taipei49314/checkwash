@@ -1,8 +1,10 @@
 # Known issues for 0.10.0
 
-Status, 2026-10-27: candidate limits found by the pre-release review of the
-0.10 candidate. Each was traced or reproduced on actual LAPTOP-01AGNPJU /
-Windows / CPython 3.11.9 (HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL). Three other
+Status, 2026-10-28: limits of the published v0.10.0. The first three sections
+come from the pre-release review of the 0.10 candidate; each was traced or
+reproduced on actual LAPTOP-01AGNPJU / Windows / CPython 3.11.9
+(HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL). The Publication section was found
+when the published release was checked and by the review of the follow-up. Three other
 review findings were fixed before release; they are listed in
 [the release guide](releases/v0.10.0-public-launch.md). Earlier limits remain in
 [KNOWN-ISSUES-v0.9.0](KNOWN-ISSUES-v0.9.0.md) and
@@ -18,7 +20,11 @@ stay in [the D-185 dispositions](oracle-context-dispositions-0.10.0.md) and
   Stop check refuse with `worktree pytest config is not a regular source`
   (exit 2, hook `not analysed`). Use a repository-owned regular config, or
   rely on the committed-range required check, which follows the link from
-  Git's tree.
+  Git's tree. The working tree is listed before the link is refused, so in a
+  tree that also holds a junction cycle or more than 200,000 paths the same
+  refusal surfaces as the inventory error instead of this message; the
+  outcome (exit 2, `not analysed`) is the same. Raised by a Grok review of
+  #566 and verified by Claude.
 - **On-disk spelling that differs from Git's.** On a case-insensitive file
   system, when a directory holding a pytest config is spelled differently on
   disk than in the index (for example `Tests/` on disk, `tests/` in Git), or
@@ -51,3 +57,17 @@ stay in [the D-185 dispositions](oracle-context-dispositions-0.10.0.md) and
   `CONTEXT_UNRESOLVED: INI DEFAULT inheritance is not modeled` correctly but
   advises adding configuration that already exists. The exit code and state
   are correct; only the advice text is misleading.
+
+## Publication
+
+- **`doctor` and the v0.10.0 Action pin.** The published 0.10.0 `doctor`
+  accepts only the Action commit built into it, v0.9.0's `d6eda4f6`. A release
+  cannot name its own commit, so a workflow pinned to the v0.10.0 Action, as
+  the README recommends after verification, is reported as "workflow analysis
+  incomplete" with an unsupported SHA, and `doctor` exits 1. `doctor` from main
+  accepts the v0.10.0 pin.
+- **PyPI description.** The PyPI 0.10.0 page shows the README as built from
+  the release commit: it still names v0.9.0 in its summary, install commands
+  and Action pin. Its D-185 link is relative, so it does not resolve on PyPI,
+  and its usage-guide link names a section the v0.9.0 guide does not have.
+  PyPI keeps the first upload's description; use the GitHub README.

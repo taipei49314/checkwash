@@ -27,6 +27,10 @@ API = "https://api.github.com/repos/" + REPOSITORY
 STAGES = {"pr": set(), "main": {"pr"}, "tag": {"main"}, "release-event": {"tag"}, "public-visitor": {"release-event"}}
 MAX_JSON = 2 * 1024 * 1024
 MAX_ARTIFACT = 256 * 1024 * 1024
+# Tag and later reports carry the raw published-baseline responses (up to
+# 16 MiB in published_release_identity), far over MAX_JSON; the verifier
+# admits each packet file up to 256 MiB.
+MAX_PARENT_REPORT = 256 * 1024 * 1024
 
 
 def require(condition, message):
@@ -200,7 +204,7 @@ class ReleaseCollection:
             exact(row, "report sha256 check_run_id", "parent report")
             require(row["report"] == "parents/" + stage + ".json", "noncanonical prior report path")
             integer(row["check_run_id"])
-            raw, _ = read_admitted(parent_root / row["report"], row["sha256"], self.action)
+            raw, _ = read_admitted(parent_root / row["report"], row["sha256"], self.action, maximum=MAX_PARENT_REPORT)
             self.parent_files[row["report"]] = raw
         self.expected_raw = self.expected = None
         if self.subject["stage"] == "public-visitor":
@@ -301,12 +305,17 @@ class ReleaseCollection:
                     and package["digests"]["sha256"] == wanted["sha256"], "PyPI metadata differs")
             role = "wheel" if name.endswith(".whl") else "sdist"
             require(package["packagetype"] == ("bdist_wheel" if role == "wheel" else "sdist"), "PyPI package type differs")
-            path = self.download(ctx, "pypi-" + role, package["url"], wanted, output / "public/pypi" / name,
+            # The install copy stays in scratch: a second packet file named like
+            # artifacts/<name> made the verifier's basename lookup ambiguous.
+            # The packet keeps the PyPI bytes as this read's network raw.
+            path = self.download(ctx, "pypi-" + role, package["url"], wanted, ctx["scratch"] / "public-pypi" / name,
                                  origins={"files.pythonhosted.org"})
+            read = self.network.rows[-1]
+            require(read["name"] == "pypi-" + role and read["sha256"] == wanted["sha256"], "PyPI network raw missing")
             require(path.read_bytes() == (output / "artifacts" / name).read_bytes(), "GitHub/PyPI bytes differ")
             self.public_paths["pypi-" + role] = path
             self.publication["downloads"].append(dict(channel="pypi", name=name, url=package["url"],
-                path=path.relative_to(output).as_posix(), bytes=wanted["bytes"], sha256=wanted["sha256"]))
+                path=read["path"], bytes=wanted["bytes"], sha256=wanted["sha256"]))
             self.save_publication(output)
 
     def save_publication(self, output):

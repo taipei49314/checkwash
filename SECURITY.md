@@ -26,8 +26,9 @@ only thing standing between an agent and your main branch.
 **Affected:** every published release of the GitHub Action
 `taipei49314/checkwash/action` up to and including v0.7.0
 (`d647a65e9734f2b6e57b528ea595b1507dc31094`), and v0.6.0, whose Action is
-identical. Fixed in v0.8.0 (`f02b5d8a07fa39ee1898881f66c571eb164cb11c`), the
-currently recommended pin.
+identical. Fixed in v0.8.0 (`f02b5d8a07fa39ee1898881f66c571eb164cb11c`) and every later
+release; the currently recommended pin is v0.10.0
+(`100699796d942af30644738ffbcd1f1c939411c5`).
 
 **What happens:** the composite Action runs `python -m pip` to install
 checkwash, then runs whichever `checkwash` is first on `PATH`, with the pull
@@ -51,10 +52,10 @@ pass is not a trustworthy verdict on its own.
 with the setup-python interpreter, verifies the installed package and invokes it
 explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies the
 same isolation to the separate quality preview Action. Both shipped in v0.8.0
-(2026-10-15), and the README recommends the v0.8.0 Action (maintainer decision,
-2026-10-14: no one-release lag). Pin it by its peeled commit
-([action/README.md](action/README.md#public-pin-and-upgrade)). The v0.8.0
-Action needs setup-python in the same job, a checkout with both refs, and a
+(2026-10-15). The README recommends the newest verified release's Action, v0.10.0
+since 2026-10-28, with no one-release lag (maintainer decision, 2026-10-14). Pin
+it by its peeled commit ([action/README.md](action/README.md#public-pin-and-upgrade)).
+The v0.8.0 and later Actions need setup-python in the same job, a checkout with both refs, and a
 dedicated job that runs no pull-request code before the check.
 
 **If you stay on v0.7.0 or earlier:**

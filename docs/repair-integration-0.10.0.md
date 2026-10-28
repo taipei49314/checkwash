@@ -10,7 +10,10 @@ The source version is 0.10.0, with IR3 and findings2. These contracts require a
 minor version: policy-shadow comparison and proof, TASK path/validation, and
 oracle relocation/compensation eligibility. A version string does not establish
 release acceptance or publication. Public CLI/Action remain the verified
-v0.9.0 until new public artifacts are actually verified.
+v0.9.0 until new public artifacts are actually verified. Status, 2026-10-28:
+v0.10.0 is published and verified
+([publication record](releases/v0.10.0-publication-verification.md)), and the
+public pins now name it.
 
 | Original issue | Integrated treatment |
 |---|---|

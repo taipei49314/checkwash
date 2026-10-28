@@ -377,7 +377,7 @@ def validate_published_baseline(vg, source_root, tag, pin, value, api, execution
     return refreshed
 
 
-def validate_verdict(packet, source_root, trusted_root, collector, desc, api):
+def validate_verdict(packet, source_root, trusted_root, collector, desc, api, exits):
     records = packet.manifest["records"]["release"]
     value = packet.json(records["verdict"])
     inventory = packet.json(records["verdict_inventory"])
@@ -801,7 +801,7 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
             and same(packet.json("release/parents-admission.json"), manifest["parents"]), "previous stage admission differs")
     parent = validate_parents(packet, api, current)
     desc, junit, exits, artifacts = validate_product(packet, source_root, trusted_root, collector)
-    verdict = validate_verdict(packet, source_root, trusted_root, collector, desc, api)
+    verdict = validate_verdict(packet, source_root, trusted_root, collector, desc, api, exits)
     validate_visitors(packet, source_root, trusted_root, collector, desc, exits, artifacts)
     live_subject(api, current)
     report = dict(schema_version=1, kind="checkwash.pju-release-verification.v1", status="verified", repository=REPOSITORY,

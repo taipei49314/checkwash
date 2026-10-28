@@ -118,6 +118,21 @@ class ReleaseCollectorTests(unittest.TestCase):
                 with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, "digest/size"):
                     fixture.collection()
 
+    def test_tag_report_with_raw_published_baseline_is_admitted_as_a_parent(self):
+        # A real v0.10.0 tag report was 4,408,656 bytes; the old 2 MiB JSON
+        # limit refused it before the release-event collection started.
+        with tempfile.TemporaryDirectory() as folder:
+            fixture = Fixture(Path(folder), "release-event")
+            raw = encoded({"publication_evidence": "x" * (COLLECT.MAX_JSON + 1)})
+            (fixture.root / "parents/tag.json").write_bytes(raw)
+            fixture.parents["tag"]["sha256"] = COLLECT.digest(raw)
+            fixture.args.parents.write_bytes(encoded(fixture.parents))
+            fixture.args.parents_sha256 = COLLECT.digest(encoded(fixture.parents))
+            self.assertEqual(fixture.collection().parent_files["parents/tag.json"], raw)
+            (fixture.root / "parents/tag.json").write_bytes(raw + b" ")
+            with self.assertRaisesRegex(ValueError, "digest/size"):
+                fixture.collection()
+
     def test_external_authority_records_are_copied_as_data_not_self_authorized(self):
         with tempfile.TemporaryDirectory() as folder:
             fixture = Fixture(Path(folder), "release-event")
@@ -254,7 +269,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             output = fixture.root / "out"
             output.mkdir()
             (output / "artifacts").mkdir()
-            ctx = dict(output=output, project={"version": "0.9.1"}, manifest={"records": {}})
+            ctx = dict(output=output, scratch=fixture.root / "scratch", project={"version": "0.9.1"}, manifest={"records": {}})
             collection.initialize(ctx)
             release = dict(id=42, tag_name="v0.9.1", draft=False, prerelease=False, assets=[])
             pypi = dict(info={"version": "0.9.1"}, urls=[])
@@ -266,12 +281,24 @@ class ReleaseCollectorTests(unittest.TestCase):
                         url="https://files.pythonhosted.org/owned/" + name, yanked=False,
                         packagetype="bdist_wheel" if name.endswith(".whl") else "sdist"))
             def fetch(name, url, maximum, *, origins):
-                if name == "github-release": return encoded(release)
-                if name == "pypi-version": return encoded(pypi)
-                return fixture.artifacts[url.rsplit("/", 1)[1]]
+                raw = (encoded(release) if name == "github-release" else encoded(pypi) if name == "pypi-version"
+                       else fixture.artifacts[url.rsplit("/", 1)[1]])
+                path = output / "release/network" / (name + ".bin")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(raw)
+                collection.network.rows.append(dict(name=name, path=path.relative_to(output).as_posix(), sha256=COLLECT.digest(raw)))
+                return raw
             with patch.object(collection.network, "fetch", side_effect=fetch):
                 collection.public_artifacts(ctx)
             self.assertEqual(len(collection.publication["downloads"]), 5)
+            # The verifier finds artifact bytes by basename across the packet.
+            names = [path.name for path in output.rglob("*") if path.is_file()]
+            self.assertEqual(len(names), len(set(names)))
+            for item in collection.publication["downloads"]:
+                if item["channel"] == "pypi":
+                    self.assertTrue(item["path"].startswith("release/network/pypi-"))
+                    self.assertEqual((output / item["path"]).read_bytes(), fixture.artifacts[item["name"]])
+            self.assertTrue(collection.public_paths["pypi-wheel"].is_relative_to(ctx["scratch"]))
             self.assertEqual(collection.publication["status"], "failed")
             self.assertEqual(len(collection.public_paths), 5)
             for name, raw in fixture.artifacts.items():

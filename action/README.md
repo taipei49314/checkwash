@@ -106,14 +106,14 @@ A release cannot embed its own commit SHA, so a release commit carries the prior
 release's pin, and once the new release's publication is verified a follow-up on
 main recommends it (since 2026-10-14; before that the recommendation trailed by
 one release). Source changes here do not update that public pin.
-The recommended v0.9.0 Action contains this installation repair; v0.7.0 and
+The recommended v0.10.0 Action contains this installation repair; v0.7.0 and
 earlier do not. Promoting a security release/pin requires a separate recorded
 publication decision; do not silently re-pin consumers to unreleased source.
 
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.9.0^{}'
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.10.0^{}'
 ```
 
 The hosted `action-security` qualification invokes the actual candidate composite
