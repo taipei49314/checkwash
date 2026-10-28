@@ -168,7 +168,9 @@ Generated handlers require Claude Code's command/args exec-form support,
 qualified here with **2.1.260**. That qualification ran the Stop handler as it
 was before 0.11: a clean Stop completed and a blocked Stop repeatedly received
 denial. At the test's ten-turn limit Claude still ended its process. It covers neither the PreToolUse handler nor the 0.11 Stop changes
-below; no real Claude Code run has been made for them. A local hook is not a
+below. A separate pre-registered lifecycle receipt ran both on Claude Code
+2.1.260 with haiku on Windows, in `-p` mode only (D-189); what it showed is
+given with each below. A local hook is not a
 merge gate. Configuration installation, direct handler execution, a real Stop
 or PreToolUse event, and CI enforcement are separate checks. The installer
 preserves custom hooks and does not create a Git ignore rule.
@@ -222,7 +224,14 @@ Blocking again pressed Claude to change the test rather than enforcing
 anything: in the 2.1.260 run above, Claude ended its process at the turn
 limit anyway. The set is recorded as
 `<git-dir>/checkwash/sessions/<sha256(session_id)>.stop`; a pass deletes it,
-and session-start pruning removes such records after 30 days.
+and session-start pruning removes such records after 30 days. In the `-p`
+lifecycle receipt (D-189), the first stop was blocked with this reason, and
+Claude reported the finding without editing the test or writing an
+exemption; the continued stop was released with the note above, which came
+back in the hook event output and as Claude Code's own informational notice
+("Stop says: checkwash: this stop was not blocked again, ..."), so the
+managed handler received `stop_hook_active: true`. Whether the interactive
+UI displays the note is not verified.
 
 **The PreToolUse ask (0.11, D-189).** A local install adds a third managed
 handler, under PreToolUse in a group with the matcher `Edit|Write|MultiEdit`,
@@ -258,10 +267,16 @@ not been measured.
 Claude Code's hooks documentation, read on 2026-10-28, says the ask reason is
 shown to the user in the permission prompt; that `ask` also prompts in auto
 mode; that in a `-p` run, where nobody can answer, the call is denied and
-Claude reads the reason; and that a hook that times out does not block. None
-of this has been observed with this handler in a real Claude Code run.
-Whether the ask prompts in bypassPermissions mode, and whether a PreToolUse
-`systemMessage` reaches the user, are not verified. The hook is an author-side
+Claude reads the reason; and that a hook that times out does not block. The
+`-p` lifecycle receipt (D-189; Claude Code 2.1.260, haiku, Windows) observed
+that denial: under `acceptEdits` and under bypassPermissions alike, an
+ASSERT_WEAKENED Edit was denied with the hook's reason and the file left
+unchanged, so bypassPermissions did not skip the ask in `-p`. No interactive
+session was run, so the permission prompt is not verified in any mode,
+bypassPermissions included; nor are a Write call, MultiEdit, the other four
+rules, the size ask, the engine-error ask, whether a PreToolUse
+`systemMessage` reaches the user, auto mode, a timed-out hook, or other
+Claude Code versions, models and platforms. The hook is an author-side
 check: edits made through Bash or any tool the matcher does not name never
 reach it, an approved ask lets the edit through, and the required CI check in
 range mode remains the gate.
@@ -285,8 +300,10 @@ handlers there is in no diff. The required CI check remains the gate.
 Doctor reads local and shared Stop configuration and, since 0.11, PreToolUse
 configuration: a managed or custom `checkwash hook pre-tool-use` handler under
 any matcher counts, and other checkwash commands there do not. It notes when
-only one of the PreToolUse ask and the Stop hook is configured, and that
-whether the ask prompts in bypassPermissions mode is not verified. A
+only one of the PreToolUse ask and the Stop hook is configured, that the
+PreToolUse ask on an ASSERT_WEAKENED Edit became a denial in a `-p` run
+under bypassPermissions (Claude Code 2.1.260, haiku, Windows), and that the
+interactive prompt is not verified in any mode. A
 local-only installation should be reported as configured locally but missing
 CI, exit 1. Doctor does not run Claude or inspect all global/managed settings.
 For workflows, it now

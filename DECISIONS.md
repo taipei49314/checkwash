@@ -205,8 +205,9 @@ the 630 (19.5%).
   - Claude Code's hooks documentation (code.claude.com/docs/en/hooks,
     read 2026-10-28) caps consecutive stop-hook continuations at 8
     (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`), so blocking again enforced
-    nothing; it only pressed Claude to change the test. No lifecycle run
-    here exercised that cap.
+    nothing; it only pressed Claude to change the test. In the lifecycle
+    receipt below the hook released the first continued stop, so the cap
+    of 8 was not reached or exercised.
 
 **Superseded.**
 
@@ -225,11 +226,83 @@ strength lattice, alignment parameters, every `.gwcase` expectation, the
 findings and IR versions, and the required CI check in range mode, which
 remains the gate. Both hooks remain author-side checks.
 
+**Evidence: a Claude Code hook lifecycle receipt.** On 2026-10-28 Nelson
+clicked the button labelled 「核准跑一次」. The button's label and its option
+text were written by Claude; the option text was
+"核准在 PJU 跑一次 Claude Code hook lifecycle 實測（PreToolUse ask 在 default 與 bypassPermissions 模式各一次、Stop 的 stop_hook_active 放行），只為 PR #576 驗證"
+(approve one Claude Code hook lifecycle run on PJU: the PreToolUse ask once
+in default and once in bypassPermissions mode, and the Stop hook's
+stop_hook_active release, for verifying PR #576 only). Only the label may
+have been sent.
+
+- Records: local repository `C:/Users/nelson/dev/cwrp`, pre-registration
+  `LIFECYCLE-PREREG.md` and `run_lifecycle.py` committed as `abd56c0`
+  before the run, with no amendment; results `LIFECYCLE-RESULTS.md`
+  (`bb95fd6`), with post-hoc notes from a review of the raw records
+  (`4f33b92`). Raw output is under `lifecycle/20261028T145207Z/`: committed
+  are `meta.json` and, per invocation, `record.json`, `stream.jsonl`,
+  `stderr.txt` and `debug.log`; each invocation's scratch `repo/` (with its
+  `settings.local.json` and session records) is local only. That
+  repository has no remote.
+- Run: LAPTOP-01AGNPJU, Windows (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`),
+  2026-10-28T14:52:07Z to 14:53:07Z. Claude Code `2.1.260 (Claude Code)`,
+  model `claude-haiku-4-5-20251001` (`--model haiku`), `-p --output-format
+  stream-json --verbose --include-hook-events --setting-sources
+  project,local`. Engine: PR #576 head `f4253f7c`, clean worktree, with the
+  hooks that `checkwash hook install --agent claude-code --local` writes, in
+  a scratch repository per invocation. Four invocations, US$0.19 in all as
+  Claude Code reported it.
+- Deviation, registered before the run: `--permission-mode acceptEdits`
+  replaced default mode. The pre-registration's reason: in a `-p` run
+  default mode would deny the Edit whether or not the hook asks, so the
+  hook's effect could not be told apart, while acceptEdits approves edits
+  by itself, so only the hook can turn the Edit into a denial. No
+  default-mode invocation ran. A control invocation's comment-line Edit got
+  `{}` from the hook and was applied.
+- PreToolUse: under acceptEdits and under bypassPermissions
+  (`--dangerously-skip-permissions`) alike, an Edit changing `== 105.3` to
+  `> 0` got `permissionDecision: "ask"` naming ASSERT_WEAKENED; Claude Code
+  denied it, the tool result carried the hook's reason verbatim, and the
+  file was unchanged. Both invocations' stream output records the denial
+  with `decision_reason_type: "hook"`, which is the evidence that the hook
+  caused it. bypassPermissions did not skip the hook's ask in `-p`.
+- Stop: with the weakened test in the working tree, the first stop was
+  blocked with the reason above (no `checkwash allow`; "tell the user which
+  finding blocks and why"). Claude read the test once and reported the
+  finding to the user, with no edit and no exemption. The next stop got no
+  `decision` and the `systemMessage` "checkwash: this stop was not blocked
+  again, but 1 finding(s) still block this change: ...". The first stop's
+  block wrote a `.stop` record, which was still there after the run. The
+  release runs only on `stop_hook_active` exactly `true`, so the managed
+  Stop handler received it on the continuation; the debug log does not
+  record hook inputs.
+- Every SessionStart handler exited 0 with no output.
+  `~/.claude/settings.json` was unchanged; Claude Code wrote project
+  entries for the scratch paths to `~/.claude.json`.
+- Observed, not pre-registered: Claude restated the weakened assertion's
+  "Before" as `== 90`. The finding message reads "assertion strength
+  EXACT_VALUE(90) -> BOUND(40)", where 90 is the lattice strength, not the
+  expected value. Right after the first stop's `decision: block`, Claude
+  Code emitted `{"subtype": "notification", "key": "stop-hook-error",
+  "text": "Stop hook error occurred · ctrl+o to see"}`, while its debug log
+  records that hook as `Hook Stop (Stop) success`: in `-p` stream-json,
+  Claude Code 2.1.260 reports checkwash's exit-0 block as a hook error.
+  How the interactive UI shows the block is not verified
+  ([KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md)).
+
 **Not verified.**
 
-- No real Claude Code lifecycle run, PreToolUse or Stop, has been made for
-  these changes. One needs Nelson's approval for that run (EC POLICY
-  `checkwash-pju-tests` / `checkwash-pju-sweep`).
+- The receipt ran in `-p` mode only, where an ask becomes a denial. No
+  interactive session was run, so the permission prompt the user sees is
+  not observed in any mode, bypassPermissions included, and neither is
+  whether a `systemMessage` is displayed to the user in the interactive UI
+  (the released stop's appeared in the hook event output and as Claude
+  Code's own `informational` notice event, "Stop says: checkwash: this stop
+  was not blocked again, ..."). Only the Edit tool and the ASSERT_WEAKENED
+  rule were exercised: a Write call, a MultiEdit call, the other four
+  rules, the size ask and the engine-error ask were not, nor were a
+  PreToolUse `systemMessage`, other Claude Code versions, other models and
+  other platforms.
 - Claude Code's hooks documentation (code.claude.com/docs/en/hooks, read on
   2026-10-28) says: the ask reason is shown to the user in the permission
   prompt; in a `-p` run nobody can answer, so the call is denied and Claude
@@ -238,7 +311,10 @@ remains the gate. Both hooks remain author-side checks.
   (default timeout 600 seconds). It does not say whether a hook's `ask`
   prompts in bypassPermissions mode, or whether `systemMessage` on
   PreToolUse output reaches the user, and it does not document MultiEdit's
-  input. None of this was exercised here.
+  input. Of these, the receipt observed the `-p` denial, under acceptEdits
+  and bypassPermissions, and an edit the hook answered with `{}` (an empty
+  decision, not "no output") going ahead under acceptEdits; auto mode and a
+  timed-out hook were not exercised.
 - Latency: smoke runs on LAPTOP-01AGNPJU (human-authorized local PJU, NOT
   EC pool) took about 1.0 to 1.2 seconds per PreToolUse call on a two-file
   repository. It is not measured on large

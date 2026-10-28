@@ -524,7 +524,9 @@ def collect(root: Path) -> list[Note]:
             "info", "local hook configuration is not runtime verification",
             "Found " + ", ".join(any_hook_paths) + ". Doctor does not execute Claude or evaluate "
             f"its complete managed/global settings. Verify the {verify} event in your Claude runtime."
-            + (" Whether the PreToolUse hook's ask prompts in bypassPermissions mode is not verified."
+            + (" The PreToolUse ask on an ASSERT_WEAKENED Edit became a denial in a -p run under "
+               "bypassPermissions (Claude Code 2.1.260, haiku, Windows); the interactive prompt is "
+               "not verified in any mode."
                if pre_tool_paths else ""),
         ))
         tracked = _git_query(root, "ls-files", "-z", "--", *any_hook_paths)

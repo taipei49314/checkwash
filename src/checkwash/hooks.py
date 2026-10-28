@@ -386,9 +386,9 @@ def install_claude(repo: str, local: bool) -> str:
     pre_tool = (
         "A PreToolUse hook in the same file asks you before an Edit or Write weakens a test "
         "(ASSERT_WEAKENED, ASSERT_REMOVED, TEST_DISABLED, TOLERANCE_LOOSENED or BROAD_EXCEPT_ADDED "
-        "at high or above); in a -p run nobody can answer, so such an edit is denied. Whether it "
-        "asks in bypassPermissions mode is not verified, and it is not covered by the Stop "
-        "lifecycle qualification below.\n"
+        "at high or above); in a -p run nobody can answer, so such an edit is denied. A -p run "
+        "on Claude Code 2.1.260 denied an ASSERT_WEAKENED Edit under bypassPermissions too; the "
+        "interactive prompt is not verified in any mode.\n"
         if local else
         "No PreToolUse hook is installed in shared settings: a teammate whose PATH holds an older "
         "checkwash would have every Edit and Write blocked. Each teammate can add it with "
