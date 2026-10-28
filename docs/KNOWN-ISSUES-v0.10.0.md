@@ -1,8 +1,10 @@
 # Known issues for 0.10.0
 
-Status, 2026-10-28: limits of the published v0.10.0, found by the pre-release
-review of the 0.10 candidate. Each was traced or reproduced on actual LAPTOP-01AGNPJU /
-Windows / CPython 3.11.9 (HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL). Three other
+Status, 2026-10-28: limits of the published v0.10.0. The first three sections
+come from the pre-release review of the 0.10 candidate; each was traced or
+reproduced on actual LAPTOP-01AGNPJU / Windows / CPython 3.11.9
+(HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL). The Publication section was found
+when the published release was checked and by the review of the follow-up. Three other
 review findings were fixed before release; they are listed in
 [the release guide](releases/v0.10.0-public-launch.md). Earlier limits remain in
 [KNOWN-ISSUES-v0.9.0](KNOWN-ISSUES-v0.9.0.md) and
@@ -66,5 +68,6 @@ stay in [the D-185 dispositions](oracle-context-dispositions-0.10.0.md) and
   accepts the v0.10.0 pin.
 - **PyPI description.** The PyPI 0.10.0 page shows the README as built from
   the release commit: it still names v0.9.0 in its summary, install commands
-  and Action pin, and its D-185 link is relative, so it does not resolve on
-  PyPI. PyPI keeps the first upload's description; use the GitHub README.
+  and Action pin. Its D-185 link is relative, so it does not resolve on PyPI,
+  and its usage-guide link names a section the v0.9.0 guide does not have.
+  PyPI keeps the first upload's description; use the GitHub README.

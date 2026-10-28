@@ -148,7 +148,7 @@ The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct.
 
-For JSON/SARIF output and more examples, see the [usage guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.8.0-public-launch.md#use-it-and-preserve-the-result).
+For JSON/SARIF output and more examples, see the [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) and the [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
 
 ## Know the limits
 

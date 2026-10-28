@@ -233,9 +233,12 @@ PyPI file equals its GitHub copy, installed each wheel and sdist into a fresh
 environment, and ran the downloaded pyz. Every install reported 0.10.0 with
 members equal to H's source. The PyPI project and version pages were checked
 after publication: the description is the README as built from H, so it still
-names v0.9.0 and carries one relative link (D-185) that does not resolve on
-PyPI. PyPI keeps that description until the next release; the launch notes
-and known issues point readers to the GitHub README.
+names v0.9.0, carries one relative link (D-185) that does not resolve on
+PyPI, and links a usage-guide section the v0.9.0 guide does not have. The
+pre-publication description check that [Check the public package page](#check-the-public-package-page)
+asks for was not run as a separate step, so it did not catch them. PyPI keeps
+that description until the next release; the launch notes and known issues
+point readers to the GitHub README.
 
 The decision-log cut that [After the release](#after-the-release) requires at
 publication is not in this follow-up: `DECISIONS.md` and its archives are

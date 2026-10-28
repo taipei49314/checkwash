@@ -52,10 +52,10 @@ pass is not a trustworthy verdict on its own.
 with the setup-python interpreter, verifies the installed package and invokes it
 explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies the
 same isolation to the separate quality preview Action. Both shipped in v0.8.0
-(2026-10-15), and the README recommends the v0.8.0 Action (maintainer decision,
-2026-10-14: no one-release lag). Pin it by its peeled commit
-([action/README.md](action/README.md#public-pin-and-upgrade)). The v0.8.0
-Action needs setup-python in the same job, a checkout with both refs, and a
+(2026-10-15). The README recommends the newest verified release's Action, v0.10.0
+since 2026-10-28, with no one-release lag (maintainer decision, 2026-10-14). Pin
+it by its peeled commit ([action/README.md](action/README.md#public-pin-and-upgrade)).
+The v0.8.0 and later Actions need setup-python in the same job, a checkout with both refs, and a
 dedicated job that runs no pull-request code before the check.
 
 **If you stay on v0.7.0 or earlier:**
