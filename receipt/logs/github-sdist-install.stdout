@@ -1,0 +1,15 @@
+Processing c:\users\nelson\dev\cw10pub\r\artifacts\checkwash-0.10.0.tar.gz
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: checkwash
+  Building wheel for checkwash (pyproject.toml): started
+  Building wheel for checkwash (pyproject.toml): finished with status 'done'
+  Created wheel for checkwash: filename=checkwash-0.10.0-py3-none-any.whl size=973990 sha256=3522d641d589ff9b75ad5e2f510d0884ca2520c32265d8397f0fcef226bc1171
+  Stored in directory: C:\Users\nelson\dev\cw10pub\s\pip-ephem-wheel-cache-7ehs80wu\wheels\15\6b\35\6faebc3126659a9e5aa28a3d9c20f6d998e492196d28a9805a
+Successfully built checkwash
+Installing collected packages: checkwash
+Successfully installed checkwash-0.10.0

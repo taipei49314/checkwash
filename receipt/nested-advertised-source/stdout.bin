@@ -1,0 +1,60 @@
+d6eda4f695fabb8e7d138f7a87b099d2028f0294
+631e5fc92f2ccae1539018797c66a2f6013a46d2
+60bdd18f7038d6d908ef584fedda1960815e520f
+d6eda4f695fabb8e7d138f7a87b099d2028f0294
+60bdd18f7038d6d908ef584fedda1960815e520f	refs/tags/v0.9.0
+d6eda4f695fabb8e7d138f7a87b099d2028f0294	refs/tags/v0.9.0^{}
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "checkwash"
+version = "0.9.0"
+description = "Flags known patterns of weakened tests and CI checks in a Git diff."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "taipei49314" }]
+keywords = ["ai-agent", "code-review", "test-tampering", "reward-hacking", "ci"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+# Zero runtime dependencies is a product feature, not an accident. See DECISIONS.md D-001.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+greenwash = "checkwash.cli:main"  # legacy alias (pre-rename callers and Actions pinned before v0.2.11); kept at least one more release
+checkwash = "checkwash.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/taipei49314/checkwash"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/checkwash"]
+# demo_cases/*.gwcase ship in the wheel so `greenwash demo` works after pipx.
+artifacts = ["src/checkwash/demo_cases/*.gwcase"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+"""checkwash: a deterministic, zero-LLM detector for diffs that tamper with the verification layer."""
+
+__version__ = "0.9.0"
+
+IR_VERSION = 2
+FINDINGS_VERSION = 2
+040000 tree 4baaee4c89dc3e7a4c6f3d069595a5ef8576025f	src
+100644 blob 6963ab5c337985236fe814b627cd14ad73e204e0	pyproject.toml
+040000 tree 9a2c38718cd59458229384e749044bc8105b9e9f	action
+100644 blob 7437283b555603198116c90a794950d3dd47f760	.pre-commit-hooks.yaml
