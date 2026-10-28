@@ -242,12 +242,15 @@ point readers to the GitHub README.
 
 The decision-log cut that [After the release](#after-the-release) requires at
 publication is not in this follow-up: `DECISIONS.md` and its archives are
-agent-read-only, so the move to `DECISIONS-archive-3.md` waits for Nelson.
+agent-read-only, so #574 left the move to `DECISIONS-archive-3.md` for
+Nelson. He then authorized Claude to do it and the baseline rotation (he
+chose the offered reply 「授權 Claude 做」), and #575 moved D-173 to D-187 and
+rotated the verdict baseline to v0.10.0 (D-188).
 
 This follow-up promotes `release/advertised.toml`, the README, `checkwash
 doctor`, this repository's self-audit workflow and the two receipt-tool Action
 pins to v0.10.0 (H); later PJU receipts replay the v0.10.0 Action. Baseline
-rotation remains a separate reviewed PR. No downstream re-pin is authorized.
+rotation is the separate reviewed PR #575. No downstream re-pin is authorized.
 1.0 remains NOT_MET and needs Nelson's decision.
 
 ## v0.9.1 publication instruction (2026-10-24)
