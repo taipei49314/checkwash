@@ -59,3 +59,208 @@ v0.10.0 pyz again and runs the full gate with these pins with zero failures,
 plus the PR's required checks. The proposal run is the basis, not a
 substitute. No public tag change or downstream re-pin is part of this
 rotation.
+
+## D-189 (2026-10-28): a Claude Code PreToolUse ask on the five weakening rules, and a Stop block that reports instead of exempting
+
+On 2026-10-28 Claude asked "0.11 的 agent 路徑要走哪一種？" with two buttons.
+Nelson clicked the button labelled 「加 PreToolUse ask」. The button's label
+and its option text were written by Claude; the option text was:
+"0.11 加 PreToolUse ask，只問五條弱化規則；先修擋下訊息和 stop_hook_active，Stop hook 凍結預設另外再議"
+(0.11 adds a PreToolUse ask on the five weakening rules only; first fix the
+block message and stop_hook_active; the Stop hook freeze default is to be
+discussed separately). Only the label may have been sent. Earlier the same
+day Nelson approved the 0.11 scope
+(「1.核准 2.用寫清楚結案 stop hook自動凍結 3.這次統一收尾後跑 4.readme等到修復後重排 可以進版 Hook選local …」
+and 「開始」); this decision replaces item 2's "stop hook 自動凍結" with
+the PreToolUse ask.
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」, the same delegation Codex had: 0.x autonomous, stop
+before 1.0; [RELEASING](docs/RELEASING.md)). The detailed choices below,
+this entry's text and the test-expectation changes it lists are Claude's
+under that delegation, as D-185 to D-187 were Codex's. They are not
+Nelson's personal review.
+
+**Why.** A pre-registered session replay (local repository
+`C:/Users/nelson/dev/cwrp`, PREREG `2e693e3`, results `93e602c`,
+RESULTS.md) took the 684 successful Claude Edit and Write calls on Python
+test files in this host's Claude Code transcripts (2026-08 to 2026-10),
+reconstructed 630, and replayed each as a single-file diff through the
+released v0.10.0 pyz (SHA256
+`9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a`), with
+and without `oracle_freeze`, on LAPTOP-01AGNPJU, Windows CPython 3.11.9
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). The freeze arm blocked 123 of
+the 630 (19.5%).
+
+- Labels: blind, two-pass, by Claude, not a human, so they are
+  provisional until Nelson spot-checks the deciding cases (PREREG).
+- A real loosening is a block labelled LOOSEN_UNEXPLAINED or
+  LOOSEN_JUSTIFIED: after the edit the tests check strictly less about
+  existing behaviour, with nothing in the context justifying it, or with
+  the context justifying it.
+- A false ask is a block labelled NOT_LOOSENING (nothing got weaker),
+  counted against the blocks not labelled UNCLEAR. ORACLE_CHANGE_NEUTRAL,
+  an oracle changed at equal strength to follow an intended behaviour
+  change, is neither.
+- The 123 blocks: 32 real loosenings (12 unexplained, 20 justified), 56
+  neutral oracle changes, 32 not a loosening (false asks, 32 of 120
+  labelled, 26.7%) and 3 unclear.
+- Exploratory, not pre-registered: the blocks whose blocking rules include
+  one of the five weakening rules are 63 asks (10% of the edits): 8
+  unexplained, 16 justified, 26 neutral, 12 not a loosening and 1 unclear,
+  so 24 of the 32 real loosenings and 8 of the 12 unexplained ones, with
+  12/62 = 19% false asks.
+- Scope of the evidence: Python test files only, single-file diffs, edits
+  mostly from checkwash and EC development on this host. The rates are the
+  released v0.10.0 pyz's on those diffs, not a measurement of the 0.11
+  handler.
+
+**What 0.11 implements.**
+
+- A. `checkwash hook pre-tool-use` (`pretool.py`, `cli.py`), the managed
+  PreToolUse handler.
+  - It is dispatched before argparse, reads only `--repo` and ignores every
+    other argument, and always exits 0, printing exactly one ASCII-escaped
+    JSON object: a PreToolUse hook that exits 2 blocks the tool call. It
+    reads at most 8,000,000 bytes of hook input.
+  - It answers `{}` unless the input is a PreToolUse event for Edit, Write
+    or MultiEdit (whose input Claude Code does not document) with a
+    `file_path` ending `.py`, inside this work tree as resolved through
+    links and junctions (not under `.git`, in a nested repository or
+    submodule, with a `:` part, or not UTF-8), and judged a test: role
+    `test` or `conftest` under base policy, or collectable by pytest.
+    Python only: JS/TS tests were not measured and are not asked about.
+  - Policy (`config.toml`, `allow.toml`) is read from the session base when
+    a usable record exists, else HEAD, as the Stop hook reads it (#418,
+    D-177). No `--task` is read.
+  - The diff is one change: the current working-tree file (absent: an
+    addition) against the bytes the call would leave, predicted from the
+    tool input. An Edit applies `old_string` to `new_string` in strict
+    UTF-8, exactly once unless `replace_all`, with CRLF line ends in a file
+    that holds CRLF line ends and no bare LF. Anything not predicted exactly answers
+    `{}`. When the working copy does not parse and HEAD's copy does, HEAD's
+    copy is the before side; an edit that makes a parseable test
+    unparseable still asks (TEST_DISABLED for each vanished unit), as the
+    replay measured. The rest of the analysis reads the working tree with
+    the proposed bytes at that path. `oracle_freeze` is forced on through
+    the contract (E2); the gating table is unchanged.
+  - It asks when a finding of ASSERT_WEAKENED, ASSERT_REMOVED,
+    TEST_DISABLED, TOLERANCE_LOOSENED or BROAD_EXCEPT_ADDED, on any path, is
+    not allowlisted and is at high or above. The threshold is fixed at high
+    and does not follow `fail_on`. A side over 1,000,000 bytes asks, naming
+    it (as #456 blocks the Stop).
+  - The reason names at most three findings, escapes unprintable and bidi
+    characters, is at most 1,200 characters, offers no `checkwash allow`
+    and no fingerprint, and says that if the user denies the edit, Claude
+    should report the finding, not make the same change another way.
+  - An engine error once the path is judged a test, or no answer within
+    30 seconds: under base `on_engine_error = "block"` it asks, saying the
+    edit was not analysed; under `pass_with_warning`, the default, it
+    answers with that text as a `systemMessage` and leaves the call to the
+    normal permission flow.
+- B. Installation and doctor (`hooks.py`, `cli.py`, `doctor.py`).
+  - `hook install --agent claude-code` writes `.claude/settings.local.json`
+    by default. `--shared` writes `.claude/settings.json`; `--local` stays,
+    as the default's spelling; the two exclude each other. With neither
+    flag, an install refuses (exit 2) when `.claude/settings.json` already
+    holds the managed Stop or SessionStart handler, and names both flags.
+  - Local installs add a managed PreToolUse handler in a group with the
+    matcher `Edit|Write|MultiEdit`, on the Stop handler's runtime binding,
+    running its own bootstrap, which exits 0 whatever the bound runtime
+    does: an older checkwash left there would answer with a usage error,
+    exit 2, and block every edit. The install probes it with `{}`.
+  - Shared installs get no PreToolUse handler: a teammate whose PATH holds
+    a checkwash older than 0.11 would have every Edit and Write blocked.
+    The install message says so, and that each teammate can add it with
+    `checkwash hook install --agent claude-code --local`.
+  - The installer manages a matcher group only in its own exact shape; a
+    user's own groups and matchers are never rewritten. doctor recognises
+    the PreToolUse handler and notes when the PreToolUse ask and the Stop
+    hook are not both configured.
+- C. The Stop hook (`cli.py`, `session.py`).
+  - Every `check --format hook-json` block on findings, with or without
+    `--hook-input`, gives the count and the first finding, tells Claude to
+    fix the production code if it is wrong, not to weaken, skip or remove
+    the test, and not to add an exemption or change checkwash's
+    configuration or hooks itself, but to tell the user which finding
+    blocks and why and let the user decide. It offers no `checkwash allow`
+    and no fingerprint.
+  - Release (V1): with `--hook-input stdin`, a block verdict,
+    `stop_hook_active` exactly JSON `true`, and a blocking set identical to
+    the one this hook last blocked on in the session, the stop is not
+    blocked again. A `systemMessage` tells the user that up to five named
+    findings still block, and adds the next-session sentence when the
+    session base differs from HEAD. Every other case blocks: no recorded
+    block (another hook's continuation), a different set, a value other
+    than `true`, no session id, no `--hook-input`.
+  - The set is the SHA256 of the sorted blocking fingerprints, recorded in
+    `<git-dir>/checkwash/sessions/<sha256(session_id)>.stop`. A pass
+    deletes it, and session-start pruning removes such records older than
+    30 days. The agent can write them (THREATMODEL item 2).
+  - The #456 size block is a separate path and still blocks on every stop:
+    D-150's choice not to read `stop_hook_active` there stands. A released
+    stop gives no session-commits note; that note is for a pass.
+  - Claude Code's hooks documentation (code.claude.com/docs/en/hooks,
+    read 2026-10-28) caps consecutive stop-hook continuations at 8
+    (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`), so blocking again enforced
+    nothing; it only pressed Claude to change the test. No lifecycle run
+    here exercised that cap.
+
+**Superseded.**
+
+- D-142 item 6's "keeps the `checkwash allow` command": the reason offers
+  no exemption command or fingerprint.
+- The reason's next-session sentence ("An exemption, config change or hook
+  upgrade committed during this session applies from the next session;
+  /clear starts one."): it is no longer in the reason, and goes to the user
+  in the released stop's note. Policy committed during a session still
+  applies from the next one.
+- The 0.11 scope item "stop hook 自動凍結": the Stop hook applying
+  `oracle_freeze` by default is deferred.
+
+**Unchanged.** The verdict computation, the gating severity table, the
+strength lattice, alignment parameters, every `.gwcase` expectation, the
+findings and IR versions, and the required CI check in range mode, which
+remains the gate. Both hooks remain author-side checks.
+
+**Not verified.**
+
+- No real Claude Code lifecycle run, PreToolUse or Stop, has been made for
+  these changes. One needs Nelson's approval for that run (EC POLICY
+  `checkwash-pju-tests` / `checkwash-pju-sweep`).
+- Claude Code's hooks documentation (code.claude.com/docs/en/hooks, read on
+  2026-10-28) says: the ask reason is shown to the user in the permission
+  prompt; in a `-p` run nobody can answer, so the call is denied and Claude
+  reads the reason; `ask` also prompts in auto mode; exit 0 with no output
+  leaves the normal permission flow; a timed-out hook does not block
+  (default timeout 600 seconds). It does not say whether a hook's `ask`
+  prompts in bypassPermissions mode, or whether `systemMessage` on
+  PreToolUse output reaches the user, and it does not document MultiEdit's
+  input. None of this was exercised here.
+- Latency: smoke runs on LAPTOP-01AGNPJU (human-authorized local PJU, NOT
+  EC pool) took about 1.0 to 1.2 seconds per PreToolUse call on a two-file
+  repository. It is not measured on large
+  repositories.
+
+**Test expectations.** These ordinary tests changed, none of them a
+`.gwcase` fixture or under `tests/gates`:
+
+- `tests/e2e/test_cli.py` `test_hook_json_blocks_with_reason`: "checkwash
+  allow" in the reason becomes not in the reason, and the "tell the user
+  which finding blocks and why" sentence is.
+- `tests/test_issue418_session_base.py`
+  `test_an_uncommitted_blocked_edit_still_blocks_as_before`: the
+  `checkwash allow "ASSERT_WEAKENED/` substring becomes the named finding,
+  with "checkwash allow" absent.
+- `tests/test_issue418_session_base.py`
+  `test_an_exemption_committed_during_the_session_governs_only_the_next_one`
+  (THREATMODEL row 133's E2E pin): the fingerprint comes from `check
+  --format json`; the second stop still blocks, without "checkwash allow";
+  the next-session sentence is asserted in the released stop's
+  `systemMessage`; the next session (s-2) still passes.
+- `tests/test_issue455_bounded_shebang_read.py` (one assertion) and
+  `tests/test_issue456_hook_size_refusal.py` (one assertion, three
+  parameters): "checkwash allow" in the reason becomes the "tell the user"
+  sentence.
+
+New: `tests/test_pre_tool_use.py`. No other existing expectation changed.
