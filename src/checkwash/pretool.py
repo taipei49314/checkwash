@@ -18,7 +18,6 @@ matcher does not name never reach it, and the required CI check stays the gate.
 
 from __future__ import annotations
 
-import ast
 import os
 from pathlib import Path
 
@@ -143,9 +142,24 @@ def _encode(text: str | None) -> bytes | None:
         return None
 
 
+def writes_python(file_path: str) -> bool:
+    """The gate before any Git call: would this write land in a `.py` file?
+
+    On Windows the file system folds case and drops a last part's trailing
+    dots and spaces, so `test_x.PY` and `test_x.py.` write `test_x.py`.
+    """
+    if os.name == "nt":
+        return file_path.rstrip(" .").lower().endswith(".py")
+    return file_path.endswith(".py")
+
+
 def parses(data: bytes) -> bool:
+    """Whether the engine's Python frontend parses these bytes, as it decodes them."""
+    from checkwash.frontends.python.frontend import normalize_source
+    from checkwash.frontends.python.syntax import parse_module
+
     try:
-        ast.parse(data)
+        parse_module(normalize_source(data))
     except (SyntaxError, ValueError, RecursionError, MemoryError):
         return False
     return True

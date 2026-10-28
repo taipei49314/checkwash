@@ -750,7 +750,7 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
     """What `hook pre-tool-use` prints for one tool call (D-189)."""
     from checkwash.pretool import (
         TOOLS, WEAKENING_RULES, ProposedTree, ask, is_judged_test, oversized, oversized_reason,
-        parses, proposed_bytes, proposed_change, repository_path, weakening_reason,
+        parses, proposed_bytes, proposed_change, repository_path, weakening_reason, writes_python,
     )
 
     data = hook_input.data if hook_input is not None else None
@@ -760,7 +760,7 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
     if tool not in TOOLS or not isinstance(tool_input, dict):
         return {}
     file_path = tool_input.get("file_path")
-    if not isinstance(file_path, str) or not file_path.endswith(".py"):
+    if not isinstance(file_path, str) or not writes_python(file_path):
         return {}  # before any git call: most edits are not Python tests
     args = argparse.Namespace(repo=repo, task=None, fail_on=None, format=None, emit_ir=False)
     try:

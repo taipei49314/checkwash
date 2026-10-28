@@ -32,7 +32,12 @@ Status: implemented on branch `claude/v011-candidate-20261028`, from main
 `69eff676`. A full suite on LAPTOP-01AGNPJU (Windows CPython 3.11.9,
 `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), 2026-10-28T13:25:00Z to
 13:33:12Z, exited 1 with one failure, the documented test count, since
-corrected to 21748; a clean full run is pending. No real Claude Code lifecycle run, PreToolUse or Stop, has been
+corrected. Full suites then exited 0 on 2026-10-28T13:52:14Z to 14:00:17Z
+(the working tree with this text) and 14:04:25Z to 14:12:28Z (commit
+`4e98ae0b`), 21748 collected. A Grok review (claims and correctness,
+verified by Claude) found two defects, a Windows spelling of the test path
+that skipped the ask and a parse check that differed from the engine's,
+both fixed with tests; the suite now collects 21752. No real Claude Code lifecycle run, PreToolUse or Stop, has been
 made; one needs Nelson's approval for that run. Not released: package
 metadata stays 0.10.0, and v0.10.0 remains the published release.
 

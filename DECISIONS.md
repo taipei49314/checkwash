@@ -125,7 +125,9 @@ the 630 (19.5%).
     reads at most 8,000,000 bytes of hook input.
   - It answers `{}` unless the input is a PreToolUse event for Edit, Write
     or MultiEdit (whose input Claude Code does not document) with a
-    `file_path` ending `.py`, inside this work tree as resolved through
+    `file_path` ending `.py` (on Windows, as the file system writes it:
+    trailing dots and spaces dropped, case folded), inside this work tree
+    as resolved through
     links and junctions (not under `.git`, in a nested repository or
     submodule, with a `:` part, or not UTF-8), and judged a test: role
     `test` or `conftest` under base policy, or collectable by pytest.

@@ -154,6 +154,23 @@ def test_the_working_tree_is_the_before_side(repo):
     assert edit(repo, "def test_total():", "def test_total():  # the invoice total") == {}
 
 
+def test_a_working_copy_the_engine_parses_is_not_replaced_by_head(repo):
+    # A byte that is not UTF-8, in a comment: the engine decodes it as U+FFFD
+    # and parses the file, so its assertion is the before side, not HEAD's.
+    (repo / TEST).write_bytes(b"def test_total():\n    assert total() > 0\n")
+    git(repo, "commit", "-am", "weak at HEAD")
+    (repo / TEST).write_bytes(b"# \xff\ndef test_total():\n    assert total() == 5\n")
+    reason = asked(write(repo, "def test_total():\n    assert total() > 0\n"))
+    assert reason is not None and "ASSERT_WEAKENED" in reason
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows folds case and drops trailing dots and spaces")
+@pytest.mark.parametrize("spelling", ["test_total.py.", "test_total.py ", "TEST_TOTAL.PY"])
+def test_a_windows_spelling_of_the_test_still_asks(repo, spelling):
+    assert asked(pre_tool(repo, event(repo, "Edit", file_path=str(repo / spelling), old_string="== 5",
+                                      new_string="> 0", replace_all=False))) is not None
+
+
 def test_an_unparseable_working_copy_is_compared_with_head(repo):
     (repo / TEST).write_bytes(b"def test_total(:\n    assert total() == 5\n")
     reason = asked(write(repo, "def test_total():\n    assert total() > 0\n"))
