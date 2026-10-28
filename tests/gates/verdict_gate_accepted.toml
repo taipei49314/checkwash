@@ -67,4 +67,6 @@
 # instruction after he approved the v0.9.0 PyPI deployment. Only this
 # baseline header changes: there are no accept entries to retire or add.
 # Fresh hosted rotation results are recorded in the rotation PR.
-baseline = "v0.9.0"
+# 2026-10-28: v0.10.0 rotation (D-188). The file still holds no entry and
+# the PJU rotation run names none stale, so only the baseline changes.
+baseline = "v0.10.0"

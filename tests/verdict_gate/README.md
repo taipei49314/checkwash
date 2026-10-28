@@ -61,6 +61,16 @@ on every CI leg (no git, no engine).
 
 ## Reading a run
 
+The v0.10.0 post-publication rotation (D-188) pins release commit `1006997`
+and its actual 952399-byte pyz (`9a58d3d4…`). Against it the 185 cases run
+160 block -> block and 25 pass -> pass with nothing reported: v0.10.0 blocks
+i197/Q5a, the PASS -> BLOCK movement the release disclosed, so the blocked
+pin goes 159 -> 160 while Q5a keeps its pass label. The 26-case T3 map and
+the v0.4.2 to v0.5.0 canary stay. The protected acceptance list is still
+empty, so only its baseline header changes. Hosted test workflows are
+disabled; the rotation PR's own PJU release-stage receipt runs the gate
+against the downloaded public pyz.
+
 The v0.9.0 post-publication rotation (D-173) pins release commit `d6eda4f6`
 and its actual 914407-byte pyz (`7319152c…`). The tag verdict saw no movement
 against v0.8.0, so the proposed 159 blocked pin and 26-case T3 map stay;
