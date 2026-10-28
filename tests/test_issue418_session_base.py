@@ -25,7 +25,6 @@ import io
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 
@@ -125,7 +124,8 @@ def test_an_uncommitted_blocked_edit_still_blocks_as_before(repo):
     weaken(repo)
     payload = stop(repo)
     assert payload["decision"] == "block"
-    assert 'checkwash allow "ASSERT_WEAKENED/' in payload["reason"]
+    assert "ASSERT_WEAKENED test_total.py :: test_total" in payload["reason"]
+    assert "checkwash allow" not in payload["reason"]  # D-189
     assert "next session" not in payload["reason"]
     assert "systemMessage" not in payload
 
@@ -135,7 +135,10 @@ def test_an_exemption_committed_during_the_session_governs_only_the_next_one(rep
     weaken(repo)
     first = stop(repo)
     assert first["decision"] == "block"
-    fingerprint = re.search(r'checkwash allow "([^"]+)"', first["reason"]).group(1)
+    # The reason offers no exemption (D-189); the user reads it from the report.
+    report = json.loads(cli(repo, "check", "--format", "json").stdout)
+    fingerprint = report["findings"][0]["fingerprint"]
+    assert fingerprint.startswith("ASSERT_WEAKENED/")
     assert cli(repo, "allow", fingerprint, "--reason", "reviewed").returncode == 0
     ledgers = [name for name in (".checkwash/allow.toml", ".greenwash/allow.toml") if (repo / name).exists()]
     assert len(ledgers) == 1
@@ -143,9 +146,13 @@ def test_an_exemption_committed_during_the_session_governs_only_the_next_one(rep
     git(repo, "commit", "-m", "exempt it")
     second = stop(repo)
     assert second["decision"] == "block"
-    assert "checkwash allow" in second["reason"]
+    assert "checkwash allow" not in second["reason"]
+    # The next-session rule now reaches the user, in the note on a stop that
+    # is not blocked again on the same set (D-189).
+    released = stop(repo, stdin=_input("s-1", "Stop", stop_hook_active=True))
+    assert "decision" not in released
     assert ("An exemption, config change or hook upgrade committed during this session applies "
-            "from the next session; /clear starts one.") in second["reason"]
+            "from the next session; /clear starts one.") in released["systemMessage"]
     start(repo, "s-2")
     assert stop(repo, "s-2") == {}
 
