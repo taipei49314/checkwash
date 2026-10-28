@@ -144,6 +144,50 @@ version, review it again and store the new key; the
 
 ## Upgrade notes
 
+### v0.10.0 to v0.11.0
+
+0.11 is not released. These are the changes on the 0.11 candidate branch (D-189); a build
+from main before that release reports `checkwash_version` `0.10.0`.
+
+- **The document and the IR did not change:** findings version 2, IR version
+  3, the same keys, finding fields, rule ids and fingerprints. `check`
+  computes its verdict as before.
+- **The Stop hook's `reason`** (`--format hook-json`, `decision: block`) is
+  for Claude, and its wording changed. It still names the number of blocking
+  findings and the first one, then tells Claude to fix the production code or
+  report the finding to the user. It no longer contains a `checkwash allow`
+  command, a fingerprint or the next-session sentence. A tool that took the
+  fingerprint from the reason should take it from `--format json`.
+- **A block verdict can carry no `decision`.** With `--hook-input stdin`, a
+  stop whose hook input has `stop_hook_active` exactly `true`, with the same
+  blocking set this hook last blocked on in the session, prints a
+  `systemMessage` for the user and no `decision`. Every other block, and the
+  size block (#456), still prints `decision: block`; the exit status is 0 as
+  before. A tool that read the verdict from `decision` should run
+  `--format json` instead. The set is recorded in
+  `<git-dir>/checkwash/sessions/` as `<sha256(session_id)>.stop`.
+- **A new hook command,** `checkwash hook pre-tool-use`, the managed Claude
+  Code PreToolUse handler. It reads the hook input on stdin (at most
+  8,000,000 bytes, waiting at most 10 seconds), takes `--repo` and ignores
+  every other argument, and always exits 0. It prints exactly one JSON
+  object, ASCII-escaped with sorted keys: `{"hookSpecificOutput":
+  {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+  "permissionDecisionReason": "..."}}` when the proposed edit weakens a test,
+  or could not be analysed because a side is over the source size limit or,
+  under `on_engine_error = "block"`, because of an engine error or the
+  30-second deadline; a `systemMessage` for such an unanalysed edit under any
+  other `on_engine_error`; and `{}` otherwise. The reason is for people, like
+  `message`. Unprintable and bidi characters in it are escaped, and a
+  weakening reason names at most three findings in at most 1,200 characters,
+  with no fingerprint. The output is not a findings document and has no
+  version number.
+- **`hook install --agent claude-code`** writes `.claude/settings.local.json`
+  by default and adds the PreToolUse handler there; `--shared` writes
+  `.claude/settings.json`, with no PreToolUse handler. A script that ran the
+  command without a flag for shared settings must pass `--shared`. With
+  neither flag, a repository whose shared settings already hold the managed
+  Stop or SessionStart handler makes the install exit 2.
+
 ### v0.7.0 to v0.8.0
 
 - **The document did not change:** the same keys, finding fields, version 2,

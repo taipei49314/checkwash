@@ -5,7 +5,11 @@ records name the runtime tested; writing settings is not a Stop lifecycle test.
 
 The installer writes two managed handlers (#418): a Stop handler that checks
 the working tree and the session's commits, and a SessionStart handler, in a
-group of its own, that records where each session starts.
+group of its own, that records where each session starts. Machine-local
+settings, the default since 0.11, get a third (D-189): a PreToolUse handler,
+in a group matching Edit, Write and MultiEdit, that asks before a test is
+weakened. Shared settings do not: a teammate whose PATH holds an older
+checkwash would answer every edit with a usage error, exit 2, which blocks it.
 """
 
 from __future__ import annotations
@@ -28,6 +32,10 @@ _CHECK_ARGS = ["check", "--format", "hook-json", "--hook-input", "stdin"]
 # replaces it, and a custom handler is still recognized by this prefix.
 _LEGACY_CHECK_ARGS = ["check", "--format", "hook-json"]
 _SESSION_ARGS = ["hook", "session-start"]
+_PRE_TOOL_ARGS = ["hook", "pre-tool-use"]
+_PRE_TOOL_MATCHER = "Edit|Write|MultiEdit"
+# Matchers earlier versions wrote, so an install moves the handler from them.
+_LEGACY_PRE_TOOL_MATCHERS: tuple[str, ...] = ()
 _LEGACY_COMMANDS = {
     "checkwash check --format hook-json",
     "greenwash check --format hook-json",
@@ -47,6 +55,29 @@ else:
         raise SystemExit("checkwash hook: selected package origin changed; reinstall the hook")
     from checkwash.cli import main
     raise SystemExit(main())
+"""
+# The PreToolUse handler's own program (D-189). Exit 2 from a PreToolUse hook
+# blocks the tool call, and an older checkwash left at the bound path answers
+# `hook pre-tool-use` with a usage error, exit 2. So whatever the bound
+# runtime does, this exits 0: at worst the hook says nothing.
+_PRE_TOOL_BOOTSTRAP = """# checkwash managed PreToolUse hook v1
+import json, os, runpy, sys
+try:
+    binding = json.loads(sys.argv.pop(1))
+    if binding["kind"] == "zipapp":
+        runpy.run_path(binding["path"], run_name="__main__")
+    else:
+        sys.path.insert(0, binding["path"])
+        import checkwash
+        if os.path.realpath(checkwash.__file__) == binding["origin"]:
+            from checkwash.cli import main
+            main()
+except BaseException:
+    pass
+try:
+    sys.stdout.flush()
+finally:
+    os._exit(0)
 """
 
 
@@ -122,6 +153,28 @@ def session_handler(stop: dict) -> dict:
     return {**stop, "args": [*stop["args"][:-len(_CHECK_ARGS)], *_SESSION_ARGS]}
 
 
+def pre_tool_use_handler(stop: dict) -> dict:
+    """The managed PreToolUse handler on the local runtime of `stop` (D-189).
+
+    It runs `_PRE_TOOL_BOOTSTRAP`, which exits 0 whatever the bound runtime
+    does, and is probed with an empty event, which must answer `{}`.
+    """
+    command, args = stop["command"], stop["args"]
+    handler = {"type": "command", "command": command,
+               "args": ["-I", "-c", _PRE_TOOL_BOOTSTRAP, args[3], *_PRE_TOOL_ARGS]}
+    try:
+        with tempfile.TemporaryDirectory(prefix="checkwash-probe-") as cwd:
+            result = subprocess.run(
+                [command, *handler["args"]], cwd=cwd, input=b"{}",
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30, check=False,
+            )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise HookInstallError(f"cannot execute the PreToolUse hook: {exc}") from exc
+    if result.returncode or result.stdout.decode("utf-8", "replace").strip() != "{}":
+        raise HookInstallError("the PreToolUse hook did not answer an empty event with {}; not installing it")
+    return handler
+
+
 def is_managed_handler(handler: object) -> bool:
     """Only exact installer shapes are eligible for replacement, not custom hooks."""
     if isinstance(handler, dict) and handler.get("type") == "command" and set(handler) == {"type", "command"}:
@@ -134,17 +187,23 @@ def is_managed_session_handler(handler: object) -> bool:
     return _managed_shape(handler, (_SESSION_ARGS,))
 
 
-def _managed_shape(handler: object, tails: tuple[list[str], ...]) -> bool:
+def is_managed_pre_tool_use_handler(handler: object) -> bool:
+    """The installer's PreToolUse shape: local only (D-189)."""
+    return _managed_shape(handler, (_PRE_TOOL_ARGS,), bootstrap=_PRE_TOOL_BOOTSTRAP, shared=False)
+
+
+def _managed_shape(handler: object, tails: tuple[list[str], ...], *, bootstrap: str = _BOOTSTRAP,
+                   shared: bool = True) -> bool:
     if not isinstance(handler, dict) or handler.get("type") != "command":
         return False
     if set(handler) != {"type", "command", "args"}:
         return False
     args = handler["args"]
-    if handler["command"] == "checkwash" and args in tails:
+    if shared and handler["command"] == "checkwash" and args in tails:
         return True
     if not isinstance(handler["command"], str) or not isinstance(args, list):
         return False
-    if args[:3] != ["-I", "-c", _BOOTSTRAP] or not any(
+    if args[:3] != ["-I", "-c", bootstrap] or not any(
         len(args) == 4 + len(tail) and args[4:] == tail for tail in tails
     ):
         return False
@@ -165,6 +224,10 @@ def stop_handlers(settings: object) -> list[dict]:
 
 def session_start_handlers(settings: object) -> list[dict]:
     return _event_handlers(settings, "SessionStart")
+
+
+def pre_tool_use_handlers(settings: object) -> list[dict]:
+    return _event_handlers(settings, "PreToolUse")
 
 
 def _event_handlers(settings: object, event: str) -> list[dict]:
@@ -205,6 +268,32 @@ def has_stop_hook(settings: object) -> bool:
 def has_session_start_hook(settings: object) -> bool:
     """A managed or custom `checkwash hook session-start` handler (#418)."""
     return _has_hook(session_start_handlers(settings), is_managed_session_handler, _SESSION_ARGS)
+
+
+def has_pre_tool_use_hook(settings: object) -> bool:
+    """A managed or custom `checkwash hook pre-tool-use` handler (D-189).
+
+    Recognized whatever its group's matcher is: doctor reads configuration,
+    never effective policy. Any other checkwash command under PreToolUse is
+    not this hook.
+    """
+    return _has_hook(pre_tool_use_handlers(settings), is_managed_pre_tool_use_handler, _PRE_TOOL_ARGS)
+
+
+def shared_settings_managed(repo: str) -> bool:
+    """Whether `<repo>/.claude/settings.json` holds a managed Stop or SessionStart handler.
+
+    Reads only; anything unreadable is False, and the installer reports it.
+    """
+    path = Path(repo) / ".claude" / "settings.json"
+    try:
+        if path.is_symlink() or not path.is_file():
+            return False
+        settings = json.loads(path.read_bytes().decode("utf-8-sig"))
+        return any(map(is_managed_handler, stop_handlers(settings))) or any(
+            map(is_managed_session_handler, session_start_handlers(settings)))
+    except (OSError, ValueError, UnicodeError, HookInstallError):
+        return False
 
 
 def stop_reads_hook_input(settings: object) -> bool:
@@ -264,12 +353,18 @@ def install_claude(repo: str, local: bool) -> str:
         raise HookInstallError(f"{path} is not valid UTF-8 JSON; not touching it") from exc
     stop_handlers(settings)
     session_start_handlers(settings)
+    if local:
+        pre_tool_use_handlers(settings)
     handler = build_handler(local)
     hooks = settings.setdefault("hooks", {})
     merged = [
         _merge(hooks.setdefault("Stop", []), handler, is_managed_handler),
         _merge(hooks.setdefault("SessionStart", []), session_handler(handler), is_managed_session_handler),
     ]
+    if local:
+        merged.append(_merge(hooks.setdefault("PreToolUse", []), pre_tool_use_handler(handler),
+                             is_managed_pre_tool_use_handler, matcher=_PRE_TOOL_MATCHER,
+                             legacy=_LEGACY_PRE_TOOL_MATCHERS))
     unchanged = all(same for same, _ in merged)
     matches = any(found for _, found in merged)
     data = (json.dumps(settings, indent=2, sort_keys=True) + "\n").encode("utf-8")
@@ -288,33 +383,55 @@ def install_claude(repo: str, local: bool) -> str:
                 temporary.unlink(missing_ok=True)
     action = "already installed" if unchanged else "updated" if matches else "installed"
     scope = "local runtime is bound to this installation" if local else "shared command requires checkwash on Claude's PATH"
+    pre_tool = (
+        "A PreToolUse hook in the same file asks you before an Edit or Write weakens a test "
+        "(ASSERT_WEAKENED, ASSERT_REMOVED, TEST_DISABLED, TOLERANCE_LOOSENED or BROAD_EXCEPT_ADDED "
+        "at high or above); in a -p run nobody can answer, so such an edit is denied. A -p run "
+        "on Claude Code 2.1.260 denied an ASSERT_WEAKENED Edit under bypassPermissions too; the "
+        "interactive prompt is not verified in any mode.\n"
+        if local else
+        "No PreToolUse hook is installed in shared settings: a teammate whose PATH holds an older "
+        "checkwash would have every Edit and Write blocked. Each teammate can add it with "
+        "`checkwash hook install --agent claude-code --local`.\n"
+    )
     return (
         f"{action}: Stop hook configuration in {path}\n"
         "A SessionStart hook in the same file records where each session starts, so the Stop "
         "hook also checks what the session commits.\n"
+        + pre_tool +
         f"{scope}; version probe passed.\n"
         "Requires Claude Code command/args exec-form support (tested with 2.1.260). "
         "Writing configuration does not verify a Claude Stop event.\n"
     )
 
 
-def _merge(groups: list, handler: dict, managed) -> tuple[bool, bool]:
+def _merge(groups: list, handler: dict, managed, *, matcher: str | None = None,
+           legacy: tuple[str, ...] = ()) -> tuple[bool, bool]:
     """Put `handler` in place of the managed ones in `groups`.
 
-    Only unfiltered installer groups are managed. User matchers, timeouts,
-    async flags and other custom handler fields remain exactly as configured.
+    Only installer groups are managed: unfiltered ones, or with `matcher`
+    (PreToolUse, D-189) a group holding just that matcher or a `legacy` one.
+    User matchers, timeouts, async flags and other custom handler fields
+    remain exactly as configured, and a group's matcher is never rewritten.
     Returns (unchanged, whether a managed handler was there).
     """
+    def owned(entry: dict) -> bool:
+        if matcher is None:
+            return set(entry) == {"hooks"}
+        return set(entry) == {"matcher", "hooks"} and entry["matcher"] in (matcher, *legacy)
+
     matches = [
-        (entry, old) for entry in groups if set(entry) == {"hooks"}
+        (entry, old) for entry in groups if owned(entry)
         for old in entry["hooks"] if managed(old)
     ]
-    unchanged = len(matches) == 1 and matches[0][1] == handler
+    unchanged = (len(matches) == 1 and matches[0][1] == handler
+                 and (matcher is None or matches[0][0]["matcher"] == matcher))
     if not unchanged:
         for entry, old in matches:
             entry["hooks"].remove(old)
-        if matches:
-            matches[0][0]["hooks"].append(handler)
+        target = next((entry for entry, _ in matches if matcher is None or entry["matcher"] == matcher), None)
+        if target is not None:
+            target["hooks"].append(handler)
         else:
-            groups.append({"hooks": [handler]})
+            groups.append({"hooks": [handler]} if matcher is None else {"matcher": matcher, "hooks": [handler]})
     return unchanged, bool(matches)

@@ -164,7 +164,7 @@ def test_a_worktree_side_over_the_limit_blocks_the_stop(tmp_path, row):
         undo(repo)
         payload, _stderr = _hook(repo)
         assert payload["decision"] == "block"
-        assert "ASSERT_WEAKENED" in payload["reason"] and "checkwash allow" in payload["reason"]
+        assert "ASSERT_WEAKENED" in payload["reason"] and "tell the user which finding blocks and why" in payload["reason"]
 
 
 def test_a_head_side_over_the_limit_blocks_a_range_whatever_fail_on_says(tmp_path):

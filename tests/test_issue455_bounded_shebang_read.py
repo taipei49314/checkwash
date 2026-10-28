@@ -770,7 +770,7 @@ def test_the_stop_hook_beside_an_untracked_oversized_extensionless_file(tmp_path
         assert f"A file checkwash must read is over the source byte limit: {described('NOTES', 'worktree')}. " in reason
     else:
         # Set aside: the weakened test blocks the stop, as a finding does.
-        assert "ASSERT_WEAKENED" in reason and "checkwash allow" in reason
+        assert "ASSERT_WEAKENED" in reason and "tell the user which finding blocks and why" in reason
         assert _notes(stderr) == [f"checkwash: {NOTE}: {described('NOTES', 'worktree')}; it earns no repair evidence"]
 
 

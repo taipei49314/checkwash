@@ -8,7 +8,9 @@ back, so work the agent commits during the session is still analysed, and so
 policy it commits during the session governs only the next one.
 
 A record lives under `.git`, which the agent can write (THREATMODEL item 2).
-It narrows the hook's window; the required CI check remains the gate.
+It narrows the hook's window; the required CI check remains the gate. Beside
+it, `<name>.stop` holds what the Stop hook last blocked on in the session, so
+a continuation on the same set is released with a note (D-189).
 """
 
 from __future__ import annotations
@@ -54,6 +56,14 @@ class HookInput:
     def source(self) -> str | None:
         value = (self.data or {}).get("source")
         return value if isinstance(value, str) else None
+
+    @property
+    def stop_hook_active(self) -> bool:
+        """Claude Code sets it while Claude continues because of a stop hook.
+
+        Only JSON `true` counts; anything else stops as it always did (D-189).
+        """
+        return (self.data or {}).get("stop_hook_active") is True
 
 
 def read_hook_input(stream, *, cap: int = INPUT_BYTE_CAP, wait: float = INPUT_WAIT_SECONDS) -> HookInput | None:
@@ -181,6 +191,18 @@ def _prune(repo: str, directory: Path, now: datetime.datetime, keep: str) -> Non
         return
     limit = datetime.timedelta(days=RECORD_MAX_AGE_DAYS)
     for entry in entries:
+        if entry.name == keep + _STOP_SUFFIX:
+            continue
+        if re.fullmatch(r"[0-9a-f]{64}" + re.escape(_STOP_SUFFIX), entry.name):
+            # A Stop record holds no commit; it goes by its own age (D-189).
+            try:
+                age = now - datetime.datetime.fromtimestamp(entry.stat(follow_symlinks=False).st_mtime,
+                                                            datetime.timezone.utc)
+                if age > limit:
+                    os.unlink(entry.path)
+            except (OSError, OverflowError, ValueError):
+                pass
+            continue
         if entry.name == keep or not re.fullmatch(r"[0-9a-f]{64}", entry.name):
             continue
         data = _read_record(entry.path)
@@ -239,3 +261,60 @@ def session_base(repo: str, hook_input: HookInput | None) -> str | None:
     if parsed is None or not _commit_exists(repo, parsed[0]):
         return None
     return parsed[0]
+
+
+# What the Stop hook last blocked on in a session (D-189): a stop that arrives
+# with `stop_hook_active` true and the same blocking set is not blocked again.
+_STOP_SUFFIX = ".stop"
+
+
+def blocking_digest(fingerprints) -> str:
+    """One digest for a blocking set: its fingerprints, sorted, one per line."""
+    joined = "\n".join(sorted(fingerprints))
+    return hashlib.sha256(joined.encode("utf-8", "surrogatepass")).hexdigest()
+
+
+def _stop_path(repo: str, hook_input: HookInput | None) -> Path | None:
+    if hook_input is None or hook_input.session_id is None:
+        return None
+    return _sessions_dir(repo) / (_record_name(hook_input.session_id) + _STOP_SUFFIX)
+
+
+def last_stop_digest(repo: str, hook_input: HookInput | None) -> str | None:
+    """The blocking set the Stop hook last blocked on in this session, or None."""
+    try:
+        path = _stop_path(repo, hook_input)
+        data = _read_record(path) if path is not None else None
+        record = json.loads(data.decode("utf-8")) if data is not None else None
+    except (OSError, GitError, UnicodeDecodeError, ValueError, RecursionError):
+        return None
+    value = record.get("blocking") if isinstance(record, dict) and record.get("version") == 1 else None
+    return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) else None
+
+
+def record_stop(repo: str, hook_input: HookInput | None, digest: str) -> None:
+    """Remember the set this Stop blocks on. Never raises."""
+    try:
+        path = _stop_path(repo, hook_input)
+        if path is None:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps({"version": 1, "blocking": digest}, sort_keys=True).encode("utf-8") + b"\n"
+        temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(temporary, flags, 0o600)
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+        os.replace(temporary, path)
+    except Exception:  # noqa: BLE001 - a Stop must never fail on its own record
+        return
+
+
+def clear_stop(repo: str, hook_input: HookInput | None) -> None:
+    """Forget the last blocking set, on a pass. Never raises."""
+    try:
+        path = _stop_path(repo, hook_input)
+        if path is not None:
+            path.unlink(missing_ok=True)
+    except Exception:  # noqa: BLE001 - as record_stop
+        return

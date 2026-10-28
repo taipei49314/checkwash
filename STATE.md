@@ -1,6 +1,59 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-28 (v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0)
+Updated: 2026-10-28 (v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-10-28: 0.11 scope, a PreToolUse ask and the Stop release (D-189)
+
+Nelson chose the 0.11 agent path by clicking the button labelled
+「加 PreToolUse ask」; its label and option text were written by Claude, and
+only the label may have been sent (the option text is quoted in
+[D-189](DECISIONS.md)). As implemented, 0.11 adds a Claude Code PreToolUse
+ask on the five weakening rules, and first fixes the Stop hook's block
+message and its `stop_hook_active` handling. This replaces
+the approved scope's "stop hook 自動凍結": the Stop hook applying
+`oracle_freeze` by default is deferred. The detailed choices are Claude's
+under the 2026-10-27 delegation. The owner decision, replay evidence,
+design, lifecycle receipt and unverified points are in
+[D-189](DECISIONS.md); the named residuals are in
+[KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md).
+
+`checkwash hook pre-tool-use` asks before an Edit, Write or MultiEdit of a
+Python test leaves a non-allowlisted ASSERT_WEAKENED, ASSERT_REMOVED,
+TEST_DISABLED, TOLERANCE_LOOSENED or BROAD_EXCEPT_ADDED finding at high or
+above, with `oracle_freeze` forced and policy from the session base (HEAD
+without a session record); it always exits 0. `hook install --agent claude-code` now writes
+`.claude/settings.local.json` by default and adds that handler there;
+`--shared` writes `.claude/settings.json` without it. The Stop block's
+reason no longer offers `checkwash allow` and tells Claude to take the
+finding to the user, and a continuation stop on the set it last blocked on
+is released with a note for the user. The #456 size block still blocks on
+every stop.
+
+Status: implemented on branch `claude/v011-candidate-20261028`, from main
+`69eff676`. A full suite on LAPTOP-01AGNPJU (Windows CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), 2026-10-28T13:25:00Z to
+13:33:12Z, exited 1 with one failure, the documented test count, since
+corrected. Full suites then exited 0 on 2026-10-28T13:52:14Z to 14:00:17Z
+(the working tree with this text) and 14:04:25Z to 14:12:28Z (commit
+`4e98ae0b`), 21748 collected. A Grok review (claims and correctness,
+verified by Claude) found two defects, a Windows spelling of the test path
+that skipped the ask and a parse check that differed from the engine's,
+both fixed with tests; the suite now collects 21752. A pre-registered
+Claude Code lifecycle receipt, approved by Nelson (the button labelled
+「核准跑一次」; Claude wrote its label and option text, quoted in D-189, and
+only the label may have been sent), ran on head `f4253f7c` on
+2026-10-28T14:52:07Z to 14:53:07Z: Claude Code 2.1.260, haiku, Windows, `-p`
+mode only (local repository `C:/Users/nelson/dev/cwrp`, prereg `abd56c0`).
+The PreToolUse ask on an ASSERT_WEAKENED Edit became a denial under
+acceptEdits (acceptEdits in place of the approved default mode, a deviation
+registered before the run; D-189) and under bypassPermissions, and the Stop
+hook blocked once with the D-189 reason and then released the continued
+stop with its note, so it received `stop_hook_active: true`. The
+interactive permission prompt in any mode, whether the interactive UI shows
+a `systemMessage`, a Write call, MultiEdit, the other four rules, the size
+and engine-error asks, and other versions, models and platforms are not
+verified. Not released: package
+metadata stays 0.10.0, and v0.10.0 remains the published release.
 
 ## 2026-10-28: v0.10.0 published
 

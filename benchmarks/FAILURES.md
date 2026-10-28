@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **181 bypasses** are documented, of which **59 are not closed**.
+- **189 bypasses** are documented, of which **67 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (33)
+## Open — no defence at all (39)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -55,6 +55,12 @@ it is known not to.
 | 155 | Change an operator of a chained comparison, or a conjunct of a plain `and`, instead of fixing code: `assert 0 < x < 60` -> `assert 0 <= x < 60`, `assert 0 < x != 60` or `assert 0 > x < 60`; `assert 0 < x and x < 4` -> `assert 0 < x` or `assert 0 < x and x < 5`; or `self.assertTrue(0 < x < 4)` -> `self.assertTrue(0 < x)` (#461) | — |
 | 156 | Record a regressed test as an expected failure in a results record the test runner reads, instead of fixing code: in undici's `test/web-platform-tests/expectation.json`, a subtest that now fails recorded as `success: false` or `flaky: true`, or its test file's entry marked `skip: true`. Running the suite and committing the file it rewrites is enough (#468) | — |
 | 158 | (False positive, not a bypass) An honest edit to a test built by a fixture, after a production change that the call the fixture returns or yields does not reach: a setup call in the fixture (a seeded default, a configured clock), an `autouse` fixture or a `usefixtures` mark the test does not request by parameter, a fixture another fixture requests (`client(app)` returning `app.test_client()`), a fixture that returns from several places, binds its value through `with ... as` or returns `request.param`, a factory producer that calls the changed symbol, a test class with a base class or a keyword when the fixture is outside that class's own body, or xunit `setUp` that builds the subject on `self` | — |
+| 163 | Weaken a test through a tool the PreToolUse matcher does not name, instead of fixing code: `Bash` (`sed -i`, `python -c`, a heredoc, `git checkout HEAD~3 -- tests/test_x.py`, `git apply`), `NotebookEdit`, an MCP server's file tool, or a subagent (D-189) | — |
+| 164 | Weaken a test in a way the PreToolUse ask does not look for, instead of fixing code: rewrite the expected value to what the buggy code returns (`EXPECTED_VALUE_CHANGED`, row 15), substitute or re-derive the expectation or the subject (`ASSERT_SUBSTITUTED`, `SUBJECT_NORMALIZED`, `EXPECTED_VALUE_DERIVED`, `EXPECTATION_DEFINITION_CHANGED`, `SUBJECT_INPUT_CHANGED`), patch the subject from a test or conftest (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`), edit a file the ask does not analyse, or make a finding of the five weakening rules that a de-escalator holds below high (D-189) | — |
+| 165 | Split a weakening so that no single Edit or Write holds it, instead of fixing code: Write a weakened copy of the test as a new file and delete the original with `rm` or `git rm`, or make the change in steps that are each judged alone and none of which is a finding of the five weakening rules at high (D-189) | — |
+| 168 | Leave the PreToolUse ask unable to decide, instead of fixing code: provoke an engine error in the analysis of an edit to a test (row 128's directory symlinks or limit refusals), or make the analysis outlast its 30-second deadline (D-189) | — |
+| 169 | Make an Edit that Claude Code applies but checkwash cannot rebuild from the tool input, so the PreToolUse ask has nothing to analyse (D-189) | — |
+| 170 | Make the weakening before the hook sees it, then edit on top of it: once a weakened test is in the working tree, written through Bash, through an approved ask, or by an edit the hook could not rebuild, each later Edit or Write is judged only on its own change (D-189) | — |
 
 ## Narrowed, still open (3)
 
@@ -82,7 +88,7 @@ it is known not to.
 | 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | `snapshot_new_prod_module_new_test_pos.gwcase`, `snapshot_new_prod_module_pos.gwcase` |
 | 133 | Commit the cheat during the Claude Code session, so the Stop hook, which diffed HEAD against the working tree, sees a clean tree and prints `{}`; or commit an exemption, a `[detectors] disable` or a relaxed `fail_on`, so it governs the agent's next Stop | — |
 
-## Open by design — the cost of a deliberate trade (10)
+## Open by design — the cost of a deliberate trade (12)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -96,13 +102,15 @@ it is known not to.
 | 100 | Two commits: **create** checkwash's own config (`.checkwash/config.toml` or `.greenwash/config.toml`, the file did not exist) containing `[detectors] disable = [...]` or `fail_on = "critical"` — a created guardrail file was warn under D-030, verdict pass — then weaken the test on the next diff under the disabled rule: zero findings. Configuration is read base-side, so the planting commit is the only place to catch it, and at warn it never blocked under the default `fail_on` | `guardrail_config_created_disable_checkwash_pos.gwcase`, `guardrail_config_created_disable_greenwash_pos.gwcase`, `guardrail_config_created_failon_pos.gwcase` |
 | 103 | Leave the expected answer, the operator and the assertion strength untouched and change the **subject's input data** so the frozen buggy production returns what the test still expects: `assert normalize("Hello World") == "hello world"` becomes `assert normalize("hello world") == "hello world"`. Spellings harvested live from the natural arm (2026-09-04): a pre-solved literal on the assert line, a fixture-body assert and a call through the fixture-returned alias, a raise-style oracle, a rewritten local binding under a byte-identical assertion, and a parametrize row whose input cells move while its answer stays (issue #93) | `subject_input_binding_changed_pos.gwcase`, `subject_input_literal_changed_pos.gwcase`, `subject_input_parametrize_pos.gwcase` |
 | 128 | Make the Claude Code Stop hook non-blocking by provoking an engine error on purpose, for example an untracked, non-ignored directory symlink or a directory symlink a pytest collection can reach | — |
+| 166 | Get past the ask itself: the user approves it, a `-p` run denies the call and the agent makes the same change through Bash, or the session runs in a permission mode where the ask may not prompt (D-189) | — |
+| 167 | Stop again without acting on the Stop hook's block: the managed Stop hook releases a stop that arrives with `stop_hook_active` true on the blocking set it last blocked on in the session, whichever stop hook caused the continuation (D-189) | — |
 
 ## Out of scope — the limits of the whole approach (3)
 
 | # | shape | pinned by |
 |---|---|---|
 | 1 | Rewrite prod logic so the weak test passes honestly | — |
-| 3 | Remove the hook / run outside greenwash | — |
+| 3 | Remove the hook / run outside greenwash / use a tool the PreToolUse matcher does not name | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
 ## Closed — each pinned by something that runs (119)

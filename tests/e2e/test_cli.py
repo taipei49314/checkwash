@@ -236,7 +236,9 @@ def test_hook_json_blocks_with_reason(repo):
     payload = json.loads(result.stdout)
     assert payload["decision"] == "block"
     assert "ASSERT_WEAKENED" in payload["reason"]
-    assert "checkwash allow" in payload["reason"]
+    # D-189: the reason takes the question to the user; it offers no exemption.
+    assert "tell the user which finding blocks and why" in payload["reason"]
+    assert "checkwash allow" not in payload["reason"]
 
 
 def test_hook_json_clean_is_empty_object(repo):

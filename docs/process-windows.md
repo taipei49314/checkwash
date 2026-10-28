@@ -15,6 +15,7 @@ covers L0-C.
 |---|---|
 | `checkwash check` | `HEAD` vs the working tree |
 | the managed Claude Code Stop hook (`check --format hook-json --hook-input stdin`) | `HEAD` vs the working tree decides the verdict; on a pass, findings in the commits since the session started, recorded by the SessionStart hook, are named in a non-blocking note (#418) |
+| the managed Claude Code PreToolUse hook (`hook pre-tool-use`, 0.11, D-189) | one proposed Edit, Write or MultiEdit of a Python test file: the file in the working tree now vs the bytes the call would leave. It asks before the edit, on five weakening rules only; edits made any other way never reach it |
 | `checkwash check HEAD~1..HEAD` | one commit |
 | `checkwash check origin/main...HEAD` | the pull request: merge-base to HEAD |
 | `checkwash sweep HEAD --limit 300` | 300 consecutive non-merge commits, each checked against its parent |

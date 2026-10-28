@@ -19,13 +19,18 @@ keeps exit 2 on a size refusal of the analysis, and its stdout names the
 refused side in an `unread` entry, outside any findings document (#454). With
 `--hook-input stdin` (the managed Stop hook) it also reads the session's start
 from what `hook session-start` (the managed SessionStart hook) recorded, which
-prints nothing and always exits 0 (#418).
+prints nothing and always exits 0 (#418), and a stop that arrives with
+`stop_hook_active` on the set it last blocked on is released with a note for
+the user (D-189). `hook pre-tool-use` (the managed PreToolUse hook) asks before
+an Edit or Write weakens a test; it prints one JSON object and always exits 0,
+whatever its arguments (D-189).
 `bench` uses 0 / 2 only — it never reports a verdict.
 """
 
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import datetime
 import os
 import posixpath
@@ -66,7 +71,16 @@ from checkwash.report.context import ReportContext
 from checkwash.report.coverage import coverage_to_json
 from checkwash.report.term import render
 from checkwash.report.textio import write_text
-from checkwash.session import HookInput, read_hook_input, record_session_start, session_base
+from checkwash.session import (
+    HookInput,
+    blocking_digest,
+    clear_stop,
+    last_stop_digest,
+    read_hook_input,
+    record_session_start,
+    record_stop,
+    session_base,
+)
 from checkwash.sweep import sweep
 
 
@@ -204,13 +218,15 @@ def _task_path_context(args, mapped) -> str:
 
 
 def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label: str, head_label: str,
-             head_reader, head_searcher, root_snapshot, pytest_configs, quiet: bool = False) -> _Run | int:
+             head_reader, head_searcher, root_snapshot, pytest_configs, quiet: bool = False,
+             oracle_freeze: bool = False) -> _Run | int:
     """One analysis of `changes` with policy read from `config_side`.
 
     `quiet` leaves stderr to an earlier run with the same `config_side`, so a
     session's second leg (#418) does not repeat its diagnostics, and makes
     the early returns write nothing to stdout either: the first leg owns the
-    one JSON object the hook prints.
+    one JSON object the hook prints. `oracle_freeze` turns E2 on whatever the
+    task contract says: the PreToolUse ask judges a weakening as such (D-189).
     """
     repo = args.repo
 
@@ -318,6 +334,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         task_source = "BASE" if data is not None else "working-tree fallback"
         for message in contract_diagnostics(task_text):
             advise(f"checkwash: --task {rel!r} ({task_source}): {message}\n")
+    if oracle_freeze:
+        contract = dataclasses.replace(contract, oracle_freeze=True)
 
     known_modules: set[str] | None = None
     declared: set[str] = set()
@@ -401,20 +419,56 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
         return unread + f"Engine error: {type(exc).__name__}: {exc}"
     if isinstance(leg, int):
         return unread + "Their policy could not be read."
-    found = sorted(_visible(leg), key=lambda f: -SEVERITY_ORDER[f.severity])
+    found = _visible(leg)
     if not found:
         return None
-    listed = "; ".join(
-        f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}" for f in found[:5]
-    ) + (f"; and {len(found) - 5} more" if len(found) > 5 else "")
     return (f"checkwash: commits made during this session hold {len(found)} finding(s) at or above "
-            f"fail_on that this Stop does not block; the required check will judge them: {listed}.")
+            f"fail_on that this Stop does not block; the required check will judge them: {_listed(found)}.")
+
+
+def _listed(found: list, limit: int = 5) -> str:
+    """Up to `limit` findings, most severe first, as the Stop hook's notes name them."""
+    found = sorted(found, key=lambda f: -SEVERITY_ORDER[f.severity])
+    return "; ".join(
+        f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}" for f in found[:limit]
+    ) + (f"; and {len(found) - limit} more" if len(found) > limit else "")
+
+
+def _block_reason(visible: list) -> str:
+    """What a blocked Stop tells Claude (D-189, superseding D-142 item 6).
+
+    It names the first finding and asks Claude to fix the code or take the
+    question to the user. It never offers an exemption command, a fingerprint
+    or a way round: the exemption is the user's decision.
+    """
+    head = visible[0] if visible else None
+    return "checkwash: " + (
+        f"{len(visible)} finding(s) blocking. "
+        + (f"{head.rule} {head.path}" + (f" :: {head.unit}" if head.unit else "") + f" — {head.message}. "
+           if head else "")
+        + "Fix the production code if it is wrong. Do not weaken, skip or remove the test, and do not add "
+          "an exemption or change checkwash's configuration or hooks yourself: if you believe the test "
+          "change is correct, tell the user which finding blocks and why, and let the user decide."
+    )
+
+
+def _released_message(visible: list, window: _Window | None) -> str:
+    """The note on a stop that is not blocked again (D-189): for the user."""
+    text = (f"checkwash: this stop was not blocked again, but {len(visible)} finding(s) still block this "
+            f"change: {_listed(visible)}. Claude was told once to fix the production code or report it to "
+            "you. Review the change before relying on it; `checkwash check` lists each finding and how "
+            "to record a reviewed exemption.")
+    if window is not None and window.base is not None and window.base != window.head:
+        text += (" An exemption, config change or hook upgrade committed during this session applies "
+                 "from the next session; /clear starts one.")
+    return text
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     pytest_configs = None
     window = None
+    hook_input = None
     if getattr(args, "hook_input", None) and not args.emit_ir:
         hook_input = read_hook_input(sys.stdin)
         if hook_input is not None:
@@ -523,26 +577,25 @@ def _cmd_check(args: argparse.Namespace) -> int:
         payload: dict[str, str] = {}
         if verdict == "block":
             visible = _visible(run)
-            head = visible[0] if visible else None
-            reason = "checkwash: " + (
-                f"{len(visible)} finding(s) blocking. "
-                + (f"{head.rule} {head.path}"
-                   + (f" :: {head.unit}" if head.unit else "")
-                   + f" — {head.message}. " if head else "")
-                + "Fix the production code, or record a reviewed exemption: "
-                + (f'checkwash allow "{head.fingerprint}" --reason "..."' if head else "")
-            )
-            if window is not None and window.base is not None and window.base != window.head:
-                reason = reason.rstrip(": ") + (
-                    ". An exemption, config change or hook upgrade committed during this "
-                    "session applies from the next session; /clear starts one."
-                )
-            payload = {"decision": "block", "reason": reason}
-        elif window is not None:
-            # The session note is for a pass only (#418 ruling 2 and 4).
-            note = _session_note(args, window, readers)
-            if note is not None:
-                payload["systemMessage"] = note
+            digest = blocking_digest(f.fingerprint for f in visible)
+            # Blocking again on the set this hook already blocked on, while
+            # Claude is continuing because of a stop hook, only presses Claude
+            # to change the test: release that stop and tell the user instead
+            # (D-189). Any other set, or another hook's continuation, blocks.
+            # The size block (#456) is not this path and blocks on every stop.
+            if (hook_input is not None and hook_input.stop_hook_active
+                    and last_stop_digest(repo, hook_input) == digest):
+                payload["systemMessage"] = _released_message(visible, window)
+            else:
+                record_stop(repo, hook_input, digest)
+                payload = {"decision": "block", "reason": _block_reason(visible)}
+        else:
+            clear_stop(repo, hook_input)
+            if window is not None:
+                # The session note is for a pass only (#418 ruling 2 and 4).
+                note = _session_note(args, window, readers)
+                if note is not None:
+                    payload["systemMessage"] = note
         _write_machine((_json.dumps(payload) if payload else "{}") + "\n")
         return 0
     else:
@@ -594,14 +647,28 @@ def _cmd_hook_install(args: argparse.Namespace) -> int:
         if args.local:
             write_text("error: --local applies to --agent claude-code only\n", sys.stderr)
             return 2
+        if args.shared:
+            write_text("error: --shared applies to --agent claude-code only\n", sys.stderr)
+            return 2
         # Nothing to write for them — their config is theirs; print the block.
         sys.stdout.write(_PRECOMMIT_SNIPPET.format(version=__version__))
         return 0
 
-    from checkwash.hooks import HookInstallError, install_claude
+    from checkwash.hooks import HookInstallError, install_claude, shared_settings_managed
 
+    # Machine-local settings are the default since 0.11 (D-189). A repository
+    # whose shared settings already hold the managed handlers would get a
+    # second, local copy of each, so the implicit default refuses and asks.
+    if not args.shared and not args.local and shared_settings_managed(args.repo):
+        write_text(
+            "error: .claude/settings.json already holds checkwash's managed Stop or SessionStart "
+            "hook; run `checkwash hook install --agent claude-code --shared` to update it there, or "
+            "`--local` to add machine-local settings beside it\n",
+            sys.stderr,
+        )
+        return 2
     try:
-        message = install_claude(args.repo, args.local)
+        message = install_claude(args.repo, not args.shared)
     except HookInstallError as exc:
         write_text(f"error: {exc}\n", sys.stderr)
         return 2
@@ -622,6 +689,131 @@ def _cmd_session_start(args: argparse.Namespace) -> int:
     except Exception:  # noqa: BLE001 - a session start must never fail on checkwash
         pass
     return 0
+
+
+def _cmd_pre_tool_use(argv: list[str]) -> int:
+    """The managed PreToolUse hook (0.11, D-189): ask before an edit weakens a test.
+
+    `main()` dispatches it before argparse, so no argument can make it exit 2:
+    a PreToolUse hook that exits 2 blocks the tool call. It prints one JSON
+    object and exits 0 on every path. `{}` leaves the call to the normal
+    permission flow; an ask names the findings in the permission prompt.
+    Past DEADLINE_SECONDS the edit is left unanalysed, as an engine error.
+    """
+    import json as _json
+    import threading
+
+    from checkwash.pretool import DEADLINE_SECONDS, INPUT_BYTE_CAP
+
+    repo = argv[argv.index("--repo") + 1] if "--repo" in argv[:-1] else "."
+    state: dict = {}
+    try:
+        hook_input = read_hook_input(sys.stdin, cap=INPUT_BYTE_CAP)
+    except Exception:  # noqa: BLE001 - as below
+        hook_input = None
+
+    def work() -> None:
+        try:
+            state["payload"] = _pre_tool_use(repo, hook_input, state)
+        except Exception as exc:  # noqa: BLE001 - not analysed; the base policy says what that means
+            state["payload"] = _pre_tool_unanalysed(state, f"{type(exc).__name__}: {exc}")
+
+    worker = threading.Thread(target=work, name="checkwash-pre-tool-use", daemon=True)
+    worker.start()
+    worker.join(DEADLINE_SECONDS)
+    timed_out = worker.is_alive()
+    payload = state.get("payload", {}) if not timed_out else _pre_tool_unanalysed(
+        state, f"no answer within {DEADLINE_SECONDS:g} seconds")
+    try:
+        _write_machine(_json.dumps(payload, ensure_ascii=True, sort_keys=True) + "\n")
+    except (OSError, ValueError):
+        pass
+    if timed_out:
+        # The worker may sit in a git call; exit without waiting on or
+        # tearing down its locks.
+        os._exit(0)
+    return 0
+
+
+def _pre_tool_unanalysed(state: dict, detail: str) -> dict:
+    """An edit to a judged test that could not be analysed: the base policy decides."""
+    from checkwash.pretool import ask, unanalysed_reason
+
+    config, rel = state.get("config"), state.get("rel")
+    if config is None or rel is None:
+        return {}  # nothing said it is a test the policy covers
+    reason = unanalysed_reason(rel, detail)
+    return ask(reason) if config.on_engine_error == "block" else {"systemMessage": reason}
+
+
+def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
+    """What `hook pre-tool-use` prints for one tool call (D-189)."""
+    from checkwash.pretool import (
+        TOOLS, WEAKENING_RULES, ProposedTree, ask, is_judged_test, oversized, oversized_reason,
+        parses, proposed_bytes, proposed_change, repository_path, weakening_reason, writes_python,
+    )
+
+    data = hook_input.data if hook_input is not None else None
+    if not isinstance(data, dict) or data.get("hook_event_name") != "PreToolUse":
+        return {}
+    tool, tool_input = data.get("tool_name"), data.get("tool_input")
+    if tool not in TOOLS or not isinstance(tool_input, dict):
+        return {}
+    file_path = tool_input.get("file_path")
+    if not isinstance(file_path, str) or not writes_python(file_path):
+        return {}  # before any git call: most edits are not Python tests
+    args = argparse.Namespace(repo=repo, task=None, fail_on=None, format=None, emit_ir=False)
+    try:
+        _reroot(args, required=True)
+    except GitError:
+        return {}  # not a repository: the Stop hook says so
+    repo = args.repo
+    rel = repository_path(repo, file_path, data.get("cwd"))
+    if rel is None:
+        return {}
+    window = _session_window(repo, hook_input)
+    config_side = window.head if window.base is None else window.base
+    config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
+    config = load_config(config_data, path=config_path)[0]
+    if not is_judged_test(config, rel):
+        return {}
+    state["config"], state["rel"] = config, rel
+    try:
+        before = WorkingTreeSnapshot(repo).read(rel, unread_oversized=True)
+    except EngineError:
+        return {}  # a directory, a link, a path leaving the repository: the call fails or the Stop sees it
+    if isinstance(before, UnreadSide):
+        return ask(oversized_reason(before))
+    after = proposed_bytes(tool, tool_input, before)
+    if after is None or after == before:
+        return {}
+    side = oversized(rel, before, after)
+    if side is not None:
+        return ask(oversized_reason(side))
+    head = GitSnapshot(repo, window.head, side="base")
+    if before is not None and not parses(before):
+        # An unparseable working copy has no units to weaken, so a weakening
+        # finished in this edit would pass silently: compare with HEAD's copy.
+        committed = head.read(rel)
+        if isinstance(committed, bytes) and parses(committed):
+            before = committed
+    change = proposed_change(rel, before, after)
+    proposed = ProposedTree(repo, change)
+    # Both sides are this working tree, so the only config delta is this
+    # call's own; HEAD against the worktree would replay earlier edits.
+    readers = {
+        "head_reader": proposed.read, "head_searcher": proposed.search, "root_snapshot": proposed,
+        "pytest_configs": PairedPytestConfigs(WorktreePytestConfigs(WorkingTreeSnapshot(repo), head, ()),
+                                              WorktreePytestConfigs(proposed, head, [change])),
+    }
+    run = _analyse(args, [change], config_side, base_label="worktree", head_label="proposed",
+                   quiet=True, oracle_freeze=True, **readers)
+    if isinstance(run, int):
+        return _pre_tool_unanalysed(state, "its policy could not be read")
+    threshold = SEVERITY_ORDER["high"]
+    found = sorted((f for f in run.findings if f.rule in WEAKENING_RULES and not f.allowlisted
+                    and SEVERITY_ORDER[f.severity] >= threshold), key=lambda f: f.sort_key())
+    return ask(weakening_reason(found)) if found else {}
 
 
 
@@ -741,17 +933,33 @@ def build_parser() -> argparse.ArgumentParser:
     hook_sub = hook.add_subparsers(dest="hook_command", required=True)
     hook_install = hook_sub.add_parser(
         "install", help="write Claude settings or print a pre-commit template",
-        description="For claude-code, write Stop hook settings. For pre-commit, print a YAML template only; save it and run pre-commit install yourself.",
+        description="For claude-code, write Stop hook settings, with a SessionStart hook and, in "
+                    "machine-local settings, a PreToolUse hook. For pre-commit, print a YAML template only; "
+                    "save it and run pre-commit install yourself.",
     )
     hook_install.add_argument("--agent", choices=["claude-code", "pre-commit"], required=True)
     hook_install.add_argument(
         "--repo", default=".",
         help="directory whose .claude/ receives the settings, used as given (default: .)",
     )
-    hook_install.add_argument(
+    hook_scope = hook_install.add_mutually_exclusive_group()
+    hook_scope.add_argument(
         "--local",
         action="store_true",
-        help="write machine-local .claude/settings.local.json instead of shared settings.json; this installer does not configure Git ignore",
+        help="write machine-local .claude/settings.local.json (the default since 0.11; kept for "
+             "compatibility); this installer does not configure Git ignore",
+    )
+    hook_scope.add_argument(
+        "--shared",
+        action="store_true",
+        help="write shared .claude/settings.json instead; its Stop hook runs the checkwash on each "
+             "teammate's PATH, and it installs no PreToolUse hook",
+    )
+    hook_sub.add_parser(
+        "pre-tool-use", help="ask before an Edit or Write weakens a test (the managed PreToolUse hook)",
+        description="Read the PreToolUse hook input from stdin. Prints one JSON object and always exits 0; "
+                    "takes --repo and ignores other arguments.",
+        add_help=False,
     )
     hook_session = hook_sub.add_parser(
         "session-start", help="record where a Claude Code session starts (the managed SessionStart hook)",
@@ -904,6 +1112,10 @@ def _root_note(root: RepositoryRoot) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:2] == ["hook", "pre-tool-use"]:
+        # Before argparse: any usage error would exit 2, which blocks the
+        # tool call (D-189). The handler takes `--repo` and ignores the rest.
+        return _cmd_pre_tool_use(argv[2:])
     if not argv:
         argv = ["check"]
     # Every subcommand must be listed here as well as in the parser: an
@@ -959,6 +1171,8 @@ def main(argv: list[str] | None = None) -> int:
             # Settings are written under `--repo` as given, never re-rooted.
             if args.hook_command == "session-start":
                 return _cmd_session_start(args)
+            if args.hook_command == "pre-tool-use":  # dispatched before argparse; kept exit 0 here too
+                return _cmd_pre_tool_use([])
             return _cmd_hook_install(args)
         if args.command == "sweep":
             _reroot(args, required=True)

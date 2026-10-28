@@ -13,7 +13,7 @@ from pathlib import Path
 
 from checkwash.config import CONFIG_DIRS, resolve_config_file
 from checkwash.allowlist import MAX_EXPIRY_DAYS, fingerprint_diagnostics, load_allowlist, namespace_diagnostics, summarize_allowlist
-from checkwash.hooks import HookInstallError, has_session_start_hook, has_stop_hook, stop_reads_hook_input
+from checkwash.hooks import HookInstallError, has_pre_tool_use_hook, has_session_start_hook, has_stop_hook, stop_reads_hook_input
 from checkwash.report.textio import write_text
 
 
@@ -461,6 +461,7 @@ def collect(root: Path) -> list[Note]:
     hook_paths = []
     session_paths = []
     input_paths = []
+    pre_tool_paths = []
     hook_issues = []
     for relative in (".claude/settings.json", ".claude/settings.local.json"):
         path = root / relative
@@ -474,8 +475,14 @@ def collect(root: Path) -> list[Note]:
                 session_paths.append(relative)
             if stop_reads_hook_input(settings):
                 input_paths.append(relative)
+            # Last, so a malformed PreToolUse block still leaves the Stop
+            # findings above in place (D-189).
+            if has_pre_tool_use_hook(settings):
+                pre_tool_paths.append(relative)
         except (OSError, ValueError, HookInstallError) as exc:
             hook_issues.append(f"{relative}: {exc}")
+    any_hook_paths = [p for p in (".claude/settings.json", ".claude/settings.local.json")
+                      if p in hook_paths or p in pre_tool_paths]
     precommit_blob = _read(root / ".pre-commit-config.yaml")
     precommit_installed = "checkwash" in precommit_blob or "greenwash" in precommit_blob
 
@@ -491,8 +498,9 @@ def collect(root: Path) -> list[Note]:
             "direct run steps are never trusted.",
         ))
     else:
+        events = " or ".join(name for name, paths in (("Stop", hook_paths), ("PreToolUse", pre_tool_paths)) if paths)
         where = [name for name, present in (
-            ("a Claude Code Stop hook configuration in " + ", ".join(hook_paths), bool(hook_paths)),
+            (f"a Claude Code {events} hook configuration in " + ", ".join(any_hook_paths), bool(any_hook_paths)),
             ("pre-commit configuration", precommit_installed),
         ) if present]
         if where:
@@ -510,19 +518,24 @@ def collect(root: Path) -> list[Note]:
                 "under \"Use it in CI\" in the README and require its checkwash status check.",
             ))
 
-    if hook_paths:
+    if any_hook_paths:
+        verify = " and ".join(name for name, paths in (("Stop", hook_paths), ("PreToolUse", pre_tool_paths)) if paths)
         notes.append(Note(
             "info", "local hook configuration is not runtime verification",
-            "Found " + ", ".join(hook_paths) + ". Doctor does not execute Claude or evaluate "
-            "its complete managed/global settings. Verify the Stop event in your Claude runtime.",
+            "Found " + ", ".join(any_hook_paths) + ". Doctor does not execute Claude or evaluate "
+            f"its complete managed/global settings. Verify the {verify} event in your Claude runtime."
+            + (" The PreToolUse ask on an ASSERT_WEAKENED Edit became a denial in a -p run under "
+               "bypassPermissions (Claude Code 2.1.260, haiku, Windows); the interactive prompt is "
+               "not verified in any mode."
+               if pre_tool_paths else ""),
         ))
-        tracked = _git_query(root, "ls-files", "-z", "--", *hook_paths)
+        tracked = _git_query(root, "ls-files", "-z", "--", *any_hook_paths)
         indexed_paths = tracked.stdout.split(b"\0") if tracked is not None and not tracked.returncode else []
-        tracked_hooks = [path for path in hook_paths if path.encode("utf-8") in indexed_paths]
+        tracked_hooks = [path for path in any_hook_paths if path.encode("utf-8") in indexed_paths]
         if tracked_hooks:
             notes.append(Note(
                 "info", "hook maintenance can change tracked guardrails",
-                "Found tracked Stop-hook settings: " + ", ".join(tracked_hooks) + ". "
+                "Found tracked checkwash hook settings: " + ", ".join(tracked_hooks) + ". "
                 "Installing or reinstalling the hook can modify these tracked guardrail files. "
                 "Inspect `git diff` before committing and use the existing BASE/review process "
                 "for the change. Doctor does not exempt hook maintenance from guardrail checks.",
@@ -531,13 +544,22 @@ def collect(root: Path) -> list[Note]:
             ("no `checkwash hook session-start` handler", not session_paths),
             ("no Stop handler that passes its hook input (`--hook-input stdin`)", not input_paths),
         ) if absent]
-        if missing:
+        if missing and hook_paths:
             notes.append(Note(
                 "info", "the Stop hook cannot see what a session commits",
                 "Found " + " and ".join(missing) + ", so the Stop hook checks the working tree "
                 "against HEAD only, and work committed during a session is not analysed there. "
-                "Run `checkwash hook install --agent claude-code` again, with `--local` for "
-                ".claude/settings.local.json, to install both (#418).",
+                "Run `checkwash hook install --agent claude-code` again (`--local`, the default, for "
+                ".claude/settings.local.json; `--shared` for .claude/settings.json) to install both (#418).",
+            ))
+        if hook_paths and not pre_tool_paths or pre_tool_paths and not hook_paths:
+            notes.append(Note(
+                "info", "the PreToolUse ask and the Stop hook are not both configured",
+                ("Found a Stop hook and no `checkwash hook pre-tool-use` handler, so nothing asks before an "
+                 "Edit or Write weakens a test; `checkwash hook install --agent claude-code --local` adds it to "
+                 ".claude/settings.local.json (D-189)." if hook_paths else
+                 "Found a `checkwash hook pre-tool-use` handler and no Stop hook, so edits made any other "
+                 "way, through Bash for one, are not checked before the session stops."),
             ))
     if hook_issues:
         notes.append(Note("info", "local hook configuration could not be read", "; ".join(hook_issues)))

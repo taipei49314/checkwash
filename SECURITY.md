@@ -3,10 +3,12 @@
 ## What checkwash is trusted with
 
 checkwash reads your git diff and, in worktree/hook mode, your working tree.
-It runs entirely locally: **no network, no telemetry, no LLM, no code
-execution.** "No network" is enforced by a test (`tests/conftest.py` blocks
-sockets during the suite), not just promised. It never runs the code under
-review — it parses it. Evidence quoted in findings stays on your machine.
+As the Claude Code PreToolUse hook (0.11, D-189), it also reads the content a
+proposed Edit, Write or MultiEdit would write, from the hook input Claude Code
+passes on stdin. It runs entirely locally: **no network, no telemetry, no LLM,
+no code execution.** "No network" is enforced by a test (`tests/conftest.py`
+blocks sockets during the suite), not just promised. It never runs the code
+under review — it parses it. Evidence quoted in findings stays on your machine, except that the Claude Code hooks pass finding text to Claude Code in a Stop block's reason or a PreToolUse ask, and Claude Code passes it to the model.
 
 ## Threat model
 
