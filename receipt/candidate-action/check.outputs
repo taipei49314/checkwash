@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\dev\cw10p574c\s\candidate-action\checkwash-action-agmkktuy\check-receipt.json
+base=100699796d942af30644738ffbcd1f1c939411c5
+head=f3752cf585b0a08a1a9341b1fe2c556455c916cf
+fail_on=high
