@@ -672,3 +672,329 @@ high, `bypass: 171`). The design's `failure_relay_await_removed_pos` is not
 added: under the 0.10 bound that edit passes, so it is the row-171 residual
 test instead. New: `tests/test_failure_relays.py`, and five tests at the end
 of `tests/test_pre_tool_use.py`. No existing expectation changed.
+
+## D-191 (2026-10-29): #419 closes as a documented residual of E1's repair evidence
+
+**Authority.**
+
+- On 2026-10-19T07:03:47Z the owner ruling on #419
+  ([comment](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6261642679),
+  「裁決總表全部照建議」) set its closing condition: "This issue closes only if
+  no stop fires, the new polyglot419 blocks are rated (R21), and the Q4 docs
+  PR (R22) and D-141's Sweep section, both maintainer text, merge."
+- On 2026-10-28T08:34:01Z Claude asked Nelson five questions. Item 2 was
+  「**#419**：擋到「誠實但確實弱化」的改動算不算誤擋；能不能用「寫清楚的殘餘」結案；Stop hook 要不要自動凍結。」
+  (does blocking an honest but real weakening count as a false block; may
+  #419 close with a clearly written residual; should the Stop hook freeze
+  automatically). At 2026-10-28T08:41:25Z Nelson replied
+  「1.核准 2.用寫清楚結案 stop hook自動凍結 3.這次統一收尾後跑 4.readme等到修復後重排 可以進版 Hook選local Doctor放寬我有點不太確定 5.這題我不太確定」
+  (its line breaks and doubled spaces shown as single spaces, as in D-189
+  and D-190). The first half of item 2, 「用寫清楚結案」 (close it by writing
+  it clearly), is this entry's ruling.
+- Claude's plan at 08:43:12Z, item 2, was
+  「**#419 以「寫清楚的殘餘」結案**：把 THREATMODEL、SPEC、README、KNOWN-ISSUES、defence-design、stability 改成實際行為，記一筆決策取代你 10-19 定的結案條件，然後在 #419 留言並關閉。」
+  (rewrite those documents to the actual behaviour, record a decision that
+  replaces his 10-19 closing condition, then comment on #419 and close it),
+  and Nelson clicked the button labelled 「開始」 at 09:05:05Z.
+- At 2026-10-28T12:34:07Z Nelson clicked the button labelled
+  「加 PreToolUse ask」, whose option text was
+  "0.11 加 PreToolUse ask，只問五條弱化規則；先修擋下訊息和 stop_hook_active，Stop hook 凍結預設另外再議"
+  (D-189). It replaced the second half of item 2, 「stop hook自動凍結」,
+  with the PreToolUse ask.
+- At 2026-10-28T17:33:37Z (2026-10-29 01:33 Asia/Taipei) Nelson clicked the
+  button labelled 「接著做 0.11」, whose option text was
+  「接著做 0.11 其他項目（uvloop 轉交辨識、#419 殘餘結案、doctor 方案 S、README 重排），順便帶上那 3 項文字修正」
+  (go on with 0.11's other items, among them the #419 residual closure, and
+  bring the three text fixes along).
+- At 2026-10-29T14:29:31Z Nelson clicked the button labelled
+  「用 C，開始改 PR-A」, whose option text was
+  「用 C：認得的轉交不列 finding，並限制成不會多出 0.10 沒有的 finding；照交接檔 0a 的清單改好 PR-A 再開工」
+  (D-190). The residual below describes the relay as D-190 implements it.
+
+Claude wrote each button's label and option text, and only the label may
+have been sent. These approvals cover this entry's agent-read-only edits,
+listed under *Maintainer text* below. Claude maintains checkwash under
+Nelson's 2026-10-27 delegation (「Checkwash 一樣給你」: 0.x autonomous, stop
+before 1.0; [RELEASING](docs/RELEASING.md)). Every choice below that is not
+quoted above is Claude's under that delegation, as D-189's and D-190's
+were: the residual statement's wording, the three text fixes' form,
+THREATMODEL rows 172 to 176, and the tests and their expectations. The
+one-hop correction in SPEC §5 clause 2 and THREATMODEL item 5, and the row
+4 clarification, are Claude's reading under the delegation: the residual
+needs them to be accurate, no quoted approval names them, and they are not
+Nelson's words. None of this is Nelson's personal review.
+
+**Not answered by Nelson, and not decided here.** Whether blocking an
+honest but real weakening counts as a false block (item 2's first
+question; werkzeug `ab6150fa` is among D-171's stop commits): those commits
+stay unadjudicated, and nothing here calls them honest or false. What the
+2026-10-28 direction review's "ceiling" means: this entry says only that E1
+can be bypassed by an author who reads the rules. Whether work on E1-class
+rules stops: nothing here says it does.
+
+**What is decided.** #419 closes as a documented residual, not a fix: this
+entry changes no engine code, no repair evidence, no gating, no strength or
+alignment parameter and no detector. It supersedes the 2026-10-19 closing
+condition. The stop fired (2026-10-21; eleven commits in all, D-171 and
+D-172), so its first condition cannot hold. `opaque419` and `polyglot419`
+never ran (D-171, K2), so there are no polyglot419 blocks for the condition
+to rate; R21 also names `cfjs131`'s blocks (R30), and its 55 were never
+rated. C2.6 halted the Q4 arms and "No complete RC Q4 numbers are supplied
+under R22" ([DECISIONS-archive-2](DECISIONS-archive-2.md), D-172). D-141's
+*Sweep* section records the stop in its *Result* paragraph but no
+adjudication, and an archived entry is not edited. So R21, R22 and the
+*Sweep* condition are superseded by the 2026-10-28 ruling, not met. R30's
+line for row 131 is not met either: THREATMODEL row 131 now records
+`cfjs131`'s count, which nobody has adjudicated, and the JS/TS adjudication
+stays with #212. For 0.11 this also supersedes the statements in D-176 and
+D-187 that #419 remains open; THREATMODEL rows 2, 93, 130 and 131 stay
+open, as accepted residuals.
+
+**What 0.11.0 does for #419.** E1 asks whether a production change explains
+a test change: D1 holds an oracle finding at warn when it has repair
+evidence (`REPAIR_EVIDENCE`), E1 sets one high when it has none and nothing
+else holds it, and E2 (`oracle_freeze`) then sets every oracle finding that
+reaches it high. The verdict blocks at or above `fail_on`, `high` by
+default. Two routes supply the evidence:
+
+- Route B, opaque-change evidence (SPEC §5 clause 3): a byte modification of
+  an existing production-role file that checkwash cannot read, other than an
+  inert file in `roles.py`, an artifact, a file under a test-support
+  directory, a file whose content runs a test runner, or Python the diff made
+  unparseable. It is evidence for every oracle finding in the diff, and
+  `AUTHORS`, `CHANGELOG`, `.coveragerc`, `docs/requirements.txt` and
+  `doc/*.txt` qualify.
+- Route A, symbol evidence (clauses 1 and 2; Python only): an edit the
+  fingerprint normalisation keeps, `+ 0`, an added `pass` or `...`, a renamed
+  parameter, a temporary or a dead branch among them, in a function the test
+  calls, anywhere in a class it calls (a class's fingerprint covers its
+  whole body), in a changed method or nested function that a function of a
+  changed production file calls when the test calls a name equal to that
+  function's own (one hop), in a production symbol that a same-file helper
+  the test invokes calls (T1.9), or in the producer of a fixture the
+  assertion reads, the last two not for `TEST_DISABLED`. The one hop has no
+  module check; it reads the changed files in path order, so a caller
+  counts only for changes in its own file or in a file whose path sorts
+  before it; and a call made on another call's result, such as
+  `Calc().total(items)`, is recorded as a call of `Calc` alone. A changed
+  top-level function gives no one-hop evidence (#420). Every symbol route
+  needs a finding with a test unit, so a finding with none takes Route B
+  only.
+
+By rule family, at the default `fail_on`:
+
+- Python `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED` and
+  `TOLERANCE_LOOSENED`: beside either route, warn and pass; alone, high and
+  block.
+- The Python expectation family, `ASSERT_SUBSTITUTED` and `*_PATCHES_*`: held
+  at warn by Route B (row 130), and by Route A when the finding has a test
+  unit. A finding with no unit takes Route B only: `CONFTEST_PATCHES_PROD`
+  has none, so beside a kept no-op in the function the conftest patches it
+  is high (`PROD_CHANGE_NOT_EVIDENCE`) and blocks.
+- Python `BROAD_EXCEPT_ADDED` in a test or conftest: the detector gives the
+  finding no unit, so Route A never reaches it, and D-176 refuses it Route B,
+  so it is high and blocks beside any production change
+  (`OPAQUE_PROD_CHANGE_NOT_EVIDENCE` beside an opaque edit,
+  `PROD_CHANGE_NOT_EVIDENCE` beside a Python one). A proven failure relay is
+  not counted as added, within 0.10's count (D-190, row 171); an honest relay
+  the rules do not read, in a new file or an existing one, still reports, is
+  asked about and blocks, as D-190 lists. Rows 172 to 176 name five
+  spellings that 0.10 already misses.
+- Python conftest suite controls: an unguarded one refuses all evidence and
+  blocks (`COLLECTION_CONTROL_UNEXPLAINED`); one guarded by an `except` that
+  D6 cannot read takes Route B; one guarded by an `if` that can be false is
+  held at warn with or without a production change: by `COMPAT_GATE`, which
+  is no #419 route, or, beside an opaque edit, by `REPAIR_EVIDENCE` first.
+- JS/TS tests: every rule keeps Route B, the broad catch included, because
+  D-176's refusal needs a Python file, and checkwash reads no JS/TS
+  production code, so an edit to any existing JS/TS module qualifies. There
+  is no Route A (row 131).
+
+What does not rest on E1 ([enterprise checklist §7](docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)):
+
+- `fail_on = "warn"` blocks every warn finding. In the Action it is the
+  `fail-on` input: the Action always passes `--fail-on`
+  (`action/secure.py`), which overrides `gate.fail_on` in the base config,
+  and `gate.fail_on` applies to CLI runs without the flag and to the Stop
+  hook. `checkwash doctor` proves only a checkwash step with `uses:` and no
+  `with:` (`doctor.py`), so a workflow that sets `with: fail-on: warn`
+  reports "WARN workflow analysis incomplete" and doctor exits 1. That is
+  expected in 0.11, and doctor is not changed; whether doctor should accept
+  a stricter `fail-on` is a question for Nelson. A pull request that lowers
+  its own workflow's `fail-on` shows only `CI_WORKFLOW_TOUCHED` at warn.
+- `oracle_freeze: true` through CLI `--task`, with the contract committed
+  at the base (SPEC §4c), blocks beside either route. The Action has no task
+  input, and the managed hooks pass no `--task`. A task file the base does
+  not hold is read from the working tree, which the change controls.
+- The D-189 PreToolUse ask, on local installs, judges each Claude Code
+  Edit, Write or MultiEdit of a Python test or conftest alone with
+  `oracle_freeze` forced, so neither route lowers its five rules at high.
+  It does not cover pull request checks, the Action, edits through Bash,
+  NotebookEdit or an MCP tool, JS/TS tests, the other rules, allowlisted
+  findings or ones held at info, input over 8,000,000 bytes or not complete
+  within 10 seconds, edits it cannot predict, and, under the default
+  `pass_with_warning`, engine errors and the 30-second deadline. A new file
+  has no units for the four unit-scoped rules, but a swallowing broad
+  `except` in it (unless a proven relay), suite controls in a new
+  `conftest.py` and an oversized side are still asked about. The Stop hook
+  applies no freeze, so it passes what either route holds.
+
+**Why.** Against an author who reads the rules, an edit chosen to change
+nothing meets any static criterion a real edit meets, and 419.Q3 ruled out
+fold lists for that reason (row 93): E1 can be bypassed by such an author.
+The narrowings tried so far were priced only on commits that nobody has
+adjudicated: #464's five-rule refusal fired its pre-registered stop on
+eleven commits (D-171, D-172), and the report-only `cfjs131` arm, which
+refused opaque evidence to JS/TS tests, moved 55 of #212's 1,800 commits
+pass → block on the RC engine `141acceef` (D-172). The routes that do not
+rest on E1 are the three above, each at a cost the user chooses, and the
+required check stays the gate and lists the warn findings in its report.
+
+**Costs.** D-187 accepted, for 0.10 only, D-176's three known uvloop false
+blocks (three commits, four HIGH occurrences) and its explicitly unmeasured
+remaining-history risk. D-190 is expected to remove the three, pending the
+targeted three-commit diagnostic on the release tree. The remaining risk is
+not yet accepted for 0.11; the 0.11 release record will settle it in a
+separate delegated disposition. The hardening costs in enterprise §7 are
+archived rows of the v0.9.0 combined sweep: the RC engine `141acceef`
+blocked 48 of 1,800 in-sample commits (attrs, click, flask, httpx, rich and
+starlette, 300 each), and its two Q4 variant arms recorded 615 with
+`--fail-on warn` and 127 with a base-side `oracle_freeze` contract. Both
+arms were halted under C2.6 with their rows archived, so the counts are not
+a result and not the pre-registered Q4 numbers, nothing in them is
+adjudicated, and none was measured on 0.11. Claude recomputed each from
+the sweep result files (`v090-call1/standard` and `v090-call3/standardx`
+aggregates; `v090-call4/combined/combined.json`, SHA256
+`b9946817dacdcbd9ebec052e0910e1e2e30aa7dd0dc3e0e04e145d6d68e9e2db`, which
+lists the halted arms) before quoting it.
+
+**Text fixes** (the three of the 「接著做 0.11」 option text).
+
+1. STATE.md: the 2026-10-28 section's status recorded PR #576 as
+   implemented on its branch. It now records the merge (`6a867f6d`, GitHub
+   mergedAt 2026-10-28T16:54:42Z), the full suites on `f4253f7c` and
+   `ad3f0bac`, and the PR's PJU receipt.
+2. Hook input the PreToolUse hook does not read: input over 8,000,000
+   bytes, or not complete within the 10-second wait, gets `{}` before any
+   policy is read, even under `on_engine_error = "block"` (`pretool.py`,
+   `session.py`, `cli.py`), as SPEC §9's input bullet now says. THREATMODEL
+   row 169 and KNOWN-ISSUES-next say what that leaves to the Stop hook.
+3. Strength ranks read as values: in the D-189 lifecycle receipt Claude
+   restated `EXACT_VALUE(90)` as an expected value of 90.
+   `pretool.evidence_clause` adds the assertion's source text to both hook
+   reasons, ` (before: <text>; after: <text>)` for `ASSERT_WEAKENED` and
+   ` (before: <text>)` for `ASSERT_REMOVED`, each side with its whitespace
+   collapsed, cut to 120 characters and escaped as `_shown` escapes; every
+   other rule gets nothing, since `BROAD_EXCEPT_ADDED`'s handler line and
+   `TOLERANCE_LOOSENED`'s tolerances are already in their messages. In the
+   ask the named findings' own text comes first, their clauses are added in
+   order while the 1,200-character reason fits, and a cut keeps `; and N
+   more`, which the old cut could drop. In the Stop reason only the clause is
+   escaped and cut, so the rest is D-189's text byte for byte. Claude's
+   choices: this form over dropping the ranks from the finding message,
+   which would change about a dozen existing test expectations; the in-order
+   fitting; the cut that keeps the count; a cap counted in source characters
+   before escaping; and whitespace collapsed inside string literals, for
+   display only. The finding message, the term, JSON and SARIF reports, and
+   the Stop hook's session note and released-stop note still show
+   NAME(rank). The clause has not been re-observed in a hook lifecycle run,
+   and each such run needs the maintainer's prior approval; SPEC §9's
+   receipt sentence is scoped to the reason as head `f4253f7c` gave it.
+
+**Residuals** (THREATMODEL item 4; rows 2, 93, 130, 131, 169 and 172 to
+175; KNOWN-ISSUES-next):
+
+- Route B, with the cheap metadata files: `AUTHORS`, `CHANGELOG`,
+  `.coveragerc`, `docs/requirements.txt` and `doc/*.txt` stay opaque
+  evidence. Making them inert would narrow E1 and move verdicts, which this
+  entry does not do, and no issue is opened for it.
+- Route A, with the one hop as implemented: by leaf name with no module
+  check, only for changes in the caller's own file or in files whose paths
+  sort before it, not through a call made on another call's result, and
+  none for a changed top-level function (#420, closed as not planned on
+  2026-10-18 and deferred until after 1.0 in #504). THREATMODEL row 93 no
+  longer says #420 will land.
+- JS/TS Route B, until #212.
+- The PreToolUse ask's scope, above, and the input it does not read (row
+  169).
+- A workflow that sets `with: fail-on: warn` is not proven by doctor.
+- Five `BROAD_EXCEPT_ADDED` routes that 0.10 already misses, the first
+  four found by D-190's security review, all reproduced through
+  `analyze()`, plain and
+  under `oracle_freeze`, on D-190's commit `d9fcd20b` and on main
+  `6a867f6d`, with no finding: a base swallow that stops counting (a
+  trailing `raise`, or its assertion moved to `else`) pays for a new swallow
+  of the same first line (row 172); `except Err:` with `Err = Exception`
+  (row 173, a spelling of the aliased-exception residual row 91b already
+  names); a broad handler whose only `raise` sits in a nested def (row
+  174); a non-broad exception raised before the assert in the `try` body
+  and caught (row 175); and a broad handler around a call that reaches an
+  assertion, whose guarded block holds no oracle of its own (row 176),
+  which Claude found while checking a Gemini 4 Argon review of D-190 and
+  which bounds what a dressed failure relay can lose. No engine change
+  here, and no issue is opened.
+
+**Maintainer text** (agent-read-only edits under this entry): SPEC §4's
+`BROAD_EXCEPT_ADDED` bullet (its JS/TS clause only), §5 clauses 1 to 3, and
+§9 (the input bullet, the block reason, the ask, the receipt sentence and
+the not-verified list); THREATMODEL items 4 and 5 (the latter's one hop),
+rows 2, 4 (one clarifying sentence; still Closed), 68 and 87 (wording), 93,
+130, 131, 165 (new files) and 169, and new rows 172 to 176; and this
+entry. D-190's own text, SPEC §4's relay text and THREATMODEL rows 16 and
+171 are unchanged.
+
+**Contracts.** No fingerprint, `FINDINGS_VERSION` (2), `IR_VERSION` (3),
+verdict, severity, escalator, de-escalator, `.gwcase` or `tests/gates`
+change. Only the two hook reasons change, by the assertion clause; the
+finding `message`, JSON and SARIF are unchanged.
+
+**Tests.** New: `tests/test_issue419_residual.py`, which pins the routes,
+blocks and hardening of the statement above in-process, and 32 tests at the
+end of `tests/test_pre_tool_use.py`: the evidence clause (24), new files
+(4), bought evidence (2), and input over the cap or cut off (2). Four of
+the new tests are residual pins of row 93:
+`test_residual_row93_one_hop_matches_leaf_name_in_any_module`,
+`test_residual_row93_one_hop_reads_callers_in_path_order`,
+`test_residual_row93_a_call_on_a_call_result_gives_no_hop` and
+`test_residual_row93_issue420_top_level_callee_gives_no_hop`. Five more
+(`test_residual_row172_...` to `test_residual_row176_...`) pin the new rows.
+A fix of #420, of the one hop's module check, path order or call reading,
+or of one of those routes changes its expectation as a recorded change. No
+existing expectation or fixture changed. The documented test count moves to
+22025 collected.
+
+**Evidence and NOT_RUN.** LAPTOP-01AGNPJU, Windows CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, 2026-10-29 UTC, on D-190's commit
+`d9fcd20b` with this change uncommitted. Reproduced on toy repositories,
+through `analyze()` or the CLI: each rule family's outcome above, alone and
+beside each route; the one hop's limits and the T1.9 hop; the conftest
+controls; `CONFTEST_PATCHES_PROD` beside both routes; `fail_on = "warn"`,
+`gate.fail_on = "warn"` in the CLI and the Stop hook, and `--fail-on`
+overriding it; the `--task` freeze and a task file only in the working
+tree; a pull request that lowers its own `fail-on`; the doctor outcome; the
+assertion clause in both hook reasons; the PreToolUse ask beside bought
+evidence and on new files; hook input over the cap (one Edit and one Write
+probe) or cut off; and the five routes of rows 172 to 176, which also pass
+on main `6a867f6d`, extracted with `git archive`. By reading only: that the
+Action always passes `--fail-on` (`action/secure.py`), that it has no task
+input and the managed hooks pass no `--task`, the `oracle_freeze`
+exceptions, the MultiEdit over-cap case, and the PreToolUse ask's scope as
+D-189 gives it (NotebookEdit and MCP tools, allowlisted and info-held
+findings, and engine errors and the 30-second deadline under
+`pass_with_warning`). By arithmetic, with the one Write probe: that a Write
+over the input cap carries a file over the source limit. Targeted runs on
+that worktree, each exiting 0: the new residual tests,
+`tests/test_pre_tool_use.py` and `tests/test_issue419_narrow_broad_except.py`
+(200 passed); `tests/e2e/test_cli.py` and
+`tests/test_issue418_session_base.py` (64); the seven other test files that
+read the Stop reason (215) and five that check its block decision (180
+passed, 13 skipped); the golden runner (1143); the THREATMODEL, STATE,
+link, published-source, SPEC, oracle-rule, schema and
+documentation-contract tests (67); and `tests/test_packaging.py` (10), the
+documented count included. `benchmarks/FAILURES.md` is regenerated. Not
+run: the full suite, `tests/gates`, R29, the targeted uvloop diagnostic,
+dogfood, a Claude Code hook lifecycle run, any sweep or new arm, and other
+platforms.
+
+**#419** is closed after this change merges, with a comment that links
+this entry.

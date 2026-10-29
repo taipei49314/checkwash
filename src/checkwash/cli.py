@@ -439,13 +439,18 @@ def _block_reason(visible: list) -> str:
 
     It names the first finding and asks Claude to fix the code or take the
     question to the user. It never offers an exemption command, a fingerprint
-    or a way round: the exemption is the user's decision.
+    or a way round: the exemption is the user's decision. After the message
+    comes the assertion's source text for ASSERT_WEAKENED and ASSERT_REMOVED
+    (D-191); only that clause is escaped and capped, so the rest of the text
+    is as D-189 wrote it.
     """
+    from checkwash.pretool import evidence_clause
+
     head = visible[0] if visible else None
     return "checkwash: " + (
         f"{len(visible)} finding(s) blocking. "
-        + (f"{head.rule} {head.path}" + (f" :: {head.unit}" if head.unit else "") + f" — {head.message}. "
-           if head else "")
+        + (f"{head.rule} {head.path}" + (f" :: {head.unit}" if head.unit else "") + f" — {head.message}"
+           + evidence_clause(head) + ". " if head else "")
         + "Fix the production code if it is wrong. Do not weaken, skip or remove the test, and do not add "
           "an exemption or change checkwash's configuration or hooks yourself: if you believe the test "
           "change is correct, tell the user which finding blocks and why, and let the user decide."

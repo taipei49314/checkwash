@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **190 bypasses** are documented, of which **68 are not closed**.
+- **195 bypasses** are documented, of which **73 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (39)
+## Open — no defence at all (44)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -59,8 +59,13 @@ it is known not to.
 | 164 | Weaken a test in a way the PreToolUse ask does not look for, instead of fixing code: rewrite the expected value to what the buggy code returns (`EXPECTED_VALUE_CHANGED`, row 15), substitute or re-derive the expectation or the subject (`ASSERT_SUBSTITUTED`, `SUBJECT_NORMALIZED`, `EXPECTED_VALUE_DERIVED`, `EXPECTATION_DEFINITION_CHANGED`, `SUBJECT_INPUT_CHANGED`), patch the subject from a test or conftest (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`), edit a file the ask does not analyse, or make a finding of the five weakening rules that a de-escalator holds below high (D-189) | — |
 | 165 | Split a weakening so that no single Edit or Write holds it, instead of fixing code: Write a weakened copy of the test as a new file and delete the original with `rm` or `git rm`, or make the change in steps that are each judged alone and none of which is a finding of the five weakening rules at high (D-189) | — |
 | 168 | Leave the PreToolUse ask unable to decide, instead of fixing code: provoke an engine error in the analysis of an edit to a test (row 128's directory symlinks or limit refusals), or make the analysis outlast its 30-second deadline (D-189) | — |
-| 169 | Make an Edit that Claude Code applies but checkwash cannot rebuild from the tool input, so the PreToolUse ask has nothing to analyse (D-189) | — |
+| 169 | Make an Edit that Claude Code applies but checkwash cannot rebuild from the tool input, so the PreToolUse ask has nothing to analyse (D-189), or one whose input the hook does not read (D-191) | — |
 | 170 | Make the weakening before the hook sees it, then edit on top of it: once a weakened test is in the working tree, written through Bash, through an approved ask, or by an edit the hook could not rebuild, each later Edit or Write is judged only on its own change (D-189) | — |
+| 172 | Trade a swallow the file already has for a new one, instead of fixing code: make a broad handler that already swallows an assertion stop counting, with a trailing `raise` after its body or by moving its assertion to the `else` clause, and wrap another test's assertion in a new swallow with the same first line (D-191) | — |
+| 173 | Swallow an assertion in a broad handler spelled through an alias, instead of fixing code: `Err = Exception`, then `except Err: pass` around the assertion (D-191) | — |
+| 174 | Swallow an assertion in a broad handler that holds a `raise` it never runs, instead of fixing code: `except Exception:` whose body only defines a nested function containing `raise` (D-191) | — |
+| 175 | Hide an assertion behind a caught exception, instead of fixing code: put a statement that always raises a non-broad exception before it in a `try` and catch that exception, as in `try: int('x')`, the assertion, `except ValueError: pass` (D-191) | — |
+| 176 | Swallow an assertion the test reaches through a call, instead of fixing code: wrap the call, not the assertion, in a broad handler whose guarded block holds no oracle of its own, as in `try: check()` / `except Exception: pass` where `check` asserts, or call an `assert`-named helper or a fixture's checker through an alias such as `chk = assert_total` (D-191) | — |
 
 ## Narrowed, still open (3)
 

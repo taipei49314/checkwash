@@ -1,6 +1,62 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-29 (0.11 candidate: a proven Python failure relay is not counted as a swallow, D-190, with its fix round; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-10-29 (0.11 candidate: #419 closes as a documented residual, D-191, with the three text fixes; a proven Python failure relay is not counted as a swallow, D-190, with its fix round; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-10-29: #419 closes as a documented residual (D-191)
+
+Nelson's 2026-10-28 ruling 「2.用寫清楚結案」, then his clicks of the
+buttons labelled 「接著做 0.11」 and 「用 C，開始改 PR-A」 (Claude wrote each
+label and option text, quoted in [D-191](DECISIONS.md), and only the label
+may have been sent), close #419 as a documented residual of E1's repair
+evidence, not a fix; D-191 supersedes the 2026-10-19 closing condition. No
+engine code changes. 0.11.0 still holds a weakened Python oracle at warn
+beside a no-op modification of a file checkwash cannot read (Route B,
+`AUTHORS`, `CHANGELOG`, `.coveragerc`, `docs/requirements.txt` and
+`doc/*.txt` included) or, for a finding with a test unit, a kept no-op in
+a symbol the test reaches (Route A); a broad `except` added in a Python
+test or conftest blocks beside any production change unless it is a proven
+failure relay, which is not counted as added, within 0.10's count (D-176,
+D-190); and JS/TS tests keep Route B. `fail_on = "warn"`, a base-side
+`oracle_freeze` contract and the PreToolUse ask are what does not rest on
+E1, with the archived, halted costs in the
+[enterprise checklist §7](docs/enterprise.md#7-hardening-against-bought-repair-evidence-419).
+THREATMODEL item 4 and rows 2, 93, 130, 131 and 169, SPEC §4, §5 and §9,
+KNOWN-ISSUES-next, README, defence-design and stability say so. SPEC §5 and
+row 93 now describe the one hop as implemented: matched by leaf name with
+no module check, read in path order, not through a call made on another
+call's result, and none for a changed top-level function (#420, deferred).
+New rows 172 to 176 record five `BROAD_EXCEPT_ADDED` routes that 0.10
+already misses, four from D-190's security review and one from Claude's
+check of a Gemini 4 Argon review of D-190, without an engine change.
+
+The three text fixes: the PR #576 status below records its merge and
+receipt; hook input over 8,000,000 bytes, or not complete within 10
+seconds, gets `{}` from the PreToolUse hook (row 169); and both hook
+reasons quote the assertion's source text for ASSERT_WEAKENED and
+ASSERT_REMOVED (`pretool.evidence_clause`), while the finding message and
+the reports keep NAME(rank). Not answered by Nelson, and left open in
+D-191: whether blocking an honest but real weakening counts as a false
+block. #419 is to be closed after this change merges.
+
+New: `tests/test_issue419_residual.py` and 32 tests in
+`tests/test_pre_tool_use.py`, among them residual pins of rows 93 and 172 to
+175; no existing expectation changed.
+
+Status: on branch `claude/v011-next-20261029`, on D-190's commit
+`d9fcd20b`; not merged. Targeted runs on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-10-29, each exiting 0: the new residual tests,
+`tests/test_pre_tool_use.py` and `tests/test_issue419_narrow_broad_except.py`
+(200 passed); `tests/e2e/test_cli.py` and
+`tests/test_issue418_session_base.py` (64); the seven other test files that
+read the Stop reason (215) and five that check its block decision (180
+passed, 13 skipped); the golden runner over all 1141 fixtures (1143
+passed); the THREATMODEL, STATE, link, published-source, SPEC, oracle-rule,
+schema and documentation-contract tests (67); and `tests/test_packaging.py`
+(10), with the documented test count now 22025 collected. Not run: the full
+suite, `tests/gates`, R29, the targeted uvloop diagnostic, dogfood and a
+Claude Code hook lifecycle run. Not released: package metadata stays
+0.10.0.
 
 ## 2026-10-29: proven Python failure relays (D-190)
 
@@ -95,8 +151,11 @@ finding to the user, and a continuation stop on the set it last blocked on
 is released with a note for the user. The #456 size block still blocks on
 every stop.
 
-Status: implemented on branch `claude/v011-candidate-20261028`, from main
-`69eff676`. A full suite on LAPTOP-01AGNPJU (Windows CPython 3.11.9,
+Status: merged into main as `6a867f6d` (PR #576, a merge commit of
+`69eff676` and the branch head `ad3f0bac`; GitHub mergedAt
+2026-10-28T16:54:42Z). Implemented on branch
+`claude/v011-candidate-20261028`, from main `69eff676`. A full suite on
+LAPTOP-01AGNPJU (Windows CPython 3.11.9,
 `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), 2026-10-28T13:25:00Z to
 13:33:12Z, exited 1 with one failure, the documented test count, since
 corrected. Full suites then exited 0 on 2026-10-28T13:52:14Z to 14:00:17Z
@@ -104,7 +163,10 @@ corrected. Full suites then exited 0 on 2026-10-28T13:52:14Z to 14:00:17Z
 `4e98ae0b`), 21748 collected. A Grok review (claims and correctness,
 verified by Claude) found two defects, a Windows spelling of the test path
 that skipped the ask and a parse check that differed from the engine's,
-both fixed with tests; the suite now collects 21752. A pre-registered
+both fixed with tests in `f4253f7c`; the suite then collected 21752. Full
+suites exited 0 on `f4253f7c`, in the recorded window 2026-10-28T14:39:46Z
+to 14:48:15Z, from the commit to the end of the run, and on `ad3f0bac`,
+15:27:49Z to 15:36:16Z, each with 21752 collected. A pre-registered
 Claude Code lifecycle receipt, approved by Nelson (the button labelled
 「核准跑一次」; Claude wrote its label and option text, quoted in D-189, and
 only the label may have been sent), ran on head `f4253f7c` on
@@ -118,8 +180,17 @@ stop with its note, so it received `stop_hook_active: true`. The
 interactive permission prompt in any mode, whether the interactive UI shows
 a `systemMessage`, a Write call, MultiEdit, the other four rules, the size
 and engine-error asks, and other versions, models and platforms are not
-verified. Not released: package
-metadata stays 0.10.0, and v0.10.0 remains the published release.
+verified. The PR's PJU receipt, manifest SHA256
+`182996eaed5df924aca8d5a27e62c89b8314b52fe1a9ee5cf899c5f9b39a95b1`,
+published as `evidence/pr576-182996eaed5d-20261028` at
+`bcec82716bbacafa09abf2a997ef31b801bb4e9d` (head `ad3f0bac`, LAPTOP-01AGNPJU,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), recorded a JUnit file whose
+testsuite counts `tests="21819"`: 21752 testcase entries, 21727 passed and
+25 skipped, plus 67 subtests, with 0 failures and 0 errors; the pinned
+(`100699796d`) and candidate (`ad3f0bac`) Action replays exited 0; and
+qualification passed 283 of 283 for source, wheel and pyz. Intake run
+40730258765 then set the four required checks to success. Not released:
+package metadata stays 0.10.0, and v0.10.0 remains the published release.
 
 ## 2026-10-28: v0.10.0 published
 

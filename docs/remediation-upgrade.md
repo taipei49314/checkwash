@@ -198,11 +198,13 @@ default since 0.11, for `.claude/settings.local.json`; `--shared` for
 earlier managed Stop handler.
 
 **What a blocked Stop says (0.11, D-189).** A block's `reason` names the
-number of blocking findings and the first one (rule, path, unit, message). It
-tells Claude to fix the production code if it is wrong, not to weaken, skip or
-remove the test, and not to add an exemption or change checkwash's
-configuration or hooks itself: if Claude believes the test change is correct,
-it should tell the user which finding blocks and why, and let the user decide.
+number of blocking findings and the first one (rule, path, unit, message,
+and the assertion's source text before the change for ASSERT_WEAKENED and
+ASSERT_REMOVED, and after it for ASSERT_WEAKENED, D-191). It tells Claude to
+fix the production code if it is wrong, not to weaken, skip or remove the
+test, and not to add an exemption or change checkwash's configuration or
+hooks itself: if Claude believes the test change is correct, it should tell
+the user which finding blocks and why, and let the user decide.
 For every Stop handler, the reason no longer offers a `checkwash allow`
 command, a fingerprint or the next-session sentence; `checkwash check` lists
 each finding and how to record a reviewed exemption.
@@ -225,7 +227,8 @@ anything: in the 2.1.260 run above, Claude ended its process at the turn
 limit anyway. The set is recorded as
 `<git-dir>/checkwash/sessions/<sha256(session_id)>.stop`; a pass deletes it,
 and session-start pruning removes such records after 30 days. In the `-p`
-lifecycle receipt (D-189), the first stop was blocked with this reason, and
+lifecycle receipt (D-189), which ran on head `f4253f7c`, before D-191 added
+the assertion text, the first stop was blocked with this reason, and
 Claude reported the finding without editing the test or writing an
 exemption; the continued stop was released with the note above, which came
 back in the hook event output and as Claude Code's own informational notice
@@ -252,10 +255,12 @@ Stop hook reads it, or from HEAD without a usable record; no `--task` is read,
 and `oracle_freeze` is on. It asks when a finding of ASSERT_WEAKENED,
 ASSERT_REMOVED, TEST_DISABLED, TOLERANCE_LOOSENED or BROAD_EXCEPT_ADDED that
 no exemption covers is at `high` or above; that threshold is fixed and does
-not follow `fail_on`. The reason names up to three findings and says to
-approve only if the weaker test is intended, and that if you deny it, Claude
-should report the finding to you rather than make the same change another
-way. It offers no `checkwash allow` command or fingerprint. A side over the
+not follow `fail_on`. The reason names up to three findings, each
+ASSERT_WEAKENED or ASSERT_REMOVED one with its assertion text as the Stop
+reason gives it, where it fits (D-191), and says to approve only if the
+weaker test is intended, and that if you deny it, Claude should report the
+finding to you rather than make the same change another way. It offers no
+`checkwash allow` command or fingerprint. A side over the
 1,000,000-byte source limit asks too, as #456 blocks the Stop. An engine
 error in the analysis of such an edit, or no answer within 30 seconds, asks
 under the base policy's `on_engine_error = "block"` and otherwise gives a
@@ -274,12 +279,12 @@ ASSERT_WEAKENED Edit was denied with the hook's reason and the file left
 unchanged, so bypassPermissions did not skip the ask in `-p`. No interactive
 session was run, so the permission prompt is not verified in any mode,
 bypassPermissions included; nor are a Write call, MultiEdit, the other four
-rules, the size ask, the engine-error ask, whether a PreToolUse
-`systemMessage` reaches the user, auto mode, a timed-out hook, or other
-Claude Code versions, models and platforms. The hook is an author-side
-check: edits made through Bash or any tool the matcher does not name never
-reach it, an approved ask lets the edit through, and the required CI check in
-range mode remains the gate.
+rules, the size ask, the engine-error ask, the assertion text D-191 added to
+both reasons, whether a PreToolUse `systemMessage` reaches the user, auto
+mode, a timed-out hook, or other Claude Code versions, models and platforms.
+The hook is an author-side check: edits made through Bash or any tool the
+matcher does not name never reach it, an approved ask lets the edit through,
+and the required CI check in range mode remains the gate.
 
 Shared settings (`.claude/settings.json`) run the `checkwash` on each
 teammate's PATH. A checkwash older than #418 rejects `--hook-input` as an

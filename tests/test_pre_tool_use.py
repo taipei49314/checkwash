@@ -26,13 +26,15 @@ import pytest
 import checkwash.cli as cli_module
 from checkwash.config import Config
 from checkwash.doctor import collect
+from checkwash.findings import Evidence, Finding
 from checkwash.hooks import (
     _PRE_TOOL_BOOTSTRAP,
     has_pre_tool_use_hook,
     install_claude,
     is_managed_pre_tool_use_handler,
 )
-from checkwash.pretool import proposed_bytes, repository_path, weakening_reason
+from checkwash.pretool import INPUT_BYTE_CAP, evidence_clause, proposed_bytes, repository_path, weakening_reason
+from checkwash.session import read_hook_input
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 ENV = {**os.environ, "PYTHONPATH": str(SRC), "PYTHONUTF8": "1", "GREENWASH_TODAY": "2026-10-28", "NO_COLOR": "1"}
@@ -514,3 +516,269 @@ def test_a_relay_made_proven_does_not_hide_a_new_swallow(repo):
                                  "    try:\n        assert total() == 5\n    except Exception as e:\n        print(e)\n")
     reason = asked(write(repo, "import asyncio\n\n\n" + swallowed + RELAY))
     assert reason is not None and "BROAD_EXCEPT_ADDED" in reason
+
+
+# --- the assertion's text in the ask and the Stop reason (D-191) -------------------------------------
+#
+# The ASSERT_WEAKENED message names lattice strengths, and in the D-189
+# lifecycle receipt Claude restated `EXACT_VALUE(90)` as an expected value of
+# 90. Both hook reasons now quote the assertion itself, for ASSERT_WEAKENED
+# and ASSERT_REMOVED only; the finding message and the reports are unchanged.
+
+ASK_TAIL = ("Approve only if the weaker test is intended. If you deny it, Claude should report the finding "
+            "to you, not make the same change another way.")
+STOP_TAIL = ("Fix the production code if it is wrong. Do not weaken, skip or remove the test, and do not add "
+             "an exemption or change checkwash's configuration or hooks yourself: if you believe the test "
+             "change is correct, tell the user which finding blocks and why, and let the user decide.")
+STRENGTH = "test_total: assertion strength EXACT_VALUE(90) -> BOUND(40)"
+REMOVED = "test_total: assertion removed (strength EXACT_VALUE)"
+
+
+def _finding(rule, before=None, after=None, message=STRENGTH, unit="test_total"):
+    return Finding(rule=rule, severity="high", message=message, path=TEST, unit=unit,
+                   before=None if before is None else Evidence(before, (2, 2)),
+                   after=None if after is None else Evidence(after, (2, 2)))
+
+
+def test_the_clause_quotes_a_weakened_assertion_and_a_removed_one():
+    weakened = _finding("ASSERT_WEAKENED", "assert total() == 105.3", "assert total() > 0")
+    assert evidence_clause(weakened) == " (before: assert total() == 105.3; after: assert total() > 0)"
+    removed = _finding("ASSERT_REMOVED", "assert total() != 6", message=REMOVED)
+    assert evidence_clause(removed) == " (before: assert total() != 6)"
+
+
+@pytest.mark.parametrize("rule,before,after", [
+    # Their evidence is already in their messages.
+    ("TOLERANCE_LOOSENED", "rel=1e-9", "rel=0.5"),
+    ("BROAD_EXCEPT_ADDED", None, "exceptException:"),
+    ("TEST_DISABLED", None, "pytest.mark.skip"),
+    # Rules the clause is not for, though their evidence is assertion text.
+    ("EXPECTED_VALUE_CHANGED", "assert total() == 5", "assert total() == 6"),
+    ("ASSERT_SUBSTITUTED", "assert total() == 5", "assert other() == 5"),
+    # A finding without the evidence its rule's clause needs.
+    ("ASSERT_WEAKENED", "assert total() == 5", None),
+    ("ASSERT_WEAKENED", " \n\t", "assert total() > 0"),
+    ("ASSERT_REMOVED", None, None),
+])
+def test_no_clause_for_other_rules_or_missing_evidence(rule, before, after):
+    assert evidence_clause(_finding(rule, before, after)) == ""
+
+
+def test_no_clause_for_a_finding_without_evidence_attributes():
+    class Bare:
+        rule, path, unit, message = "ASSERT_WEAKENED", TEST, "test_total", STRENGTH
+
+    assert evidence_clause(Bare()) == ""
+
+
+def test_the_clause_collapses_whitespace_and_cuts_each_side_at_120_characters():
+    multiline = "assert total(\n        1,\t2) == 105.3, (\r\n        'msg')"
+    assert evidence_clause(_finding("ASSERT_REMOVED", multiline)) == " (before: assert total( 1, 2) == 105.3, ( 'msg'))"
+    whole = "assert name == '" + "a" * 103 + "'"
+    long = "assert name == '" + "b" * 200 + "'"
+    assert len(whole) == 120  # kept whole; a longer side is cut to 119 characters and an ellipsis
+    assert evidence_clause(_finding("ASSERT_WEAKENED", whole, long)) == f" (before: {whole}; after: {long[:119]}…)"
+
+
+def test_the_clause_escapes_control_and_bidi_characters():
+    override, isolate, bell = chr(0x202E), chr(0x2066), chr(0x07)  # built so this file holds none
+    clause = evidence_clause(_finding("ASSERT_WEAKENED", f"assert name == 'ab{override}c'",
+                                      f"assert name{isolate} > {bell}0"))
+    assert clause == " (before: assert name == 'ab\\u202ec'; after: assert name\\u2066 > \\u00070)"
+    # The cut counts the assertion's own characters, before they are escaped.
+    assert evidence_clause(_finding("ASSERT_REMOVED", override * 130)) == " (before: " + "\\u202e" * 119 + "…)"
+
+
+def test_the_ask_quotes_the_assertion(repo):
+    assert asked(edit(repo, "== 5", "> 0")) == (
+        "checkwash: this edit weakens a test (1 finding(s)): ASSERT_WEAKENED test_total.py :: test_total — "
+        f"{STRENGTH} (before: assert total() == 5; after: assert total() > 0). " + ASK_TAIL)
+    assert asked(write(repo, "def test_total():\n    total()\n")) == (
+        "checkwash: this edit weakens a test (1 finding(s)): ASSERT_REMOVED test_total.py :: test_total — "
+        f"{REMOVED} (before: assert total() == 5). " + ASK_TAIL)
+
+
+def test_the_ask_adds_no_clause_to_a_loosened_tolerance(repo):
+    (repo / TEST).write_bytes(b"import pytest\n\n\ndef test_total():\n    assert total() == pytest.approx(5, rel=1e-9)\n")
+    git(repo, "commit", "-am", "approx")
+    assert asked(edit(repo, "rel=1e-9", "rel=0.5")) == (
+        "checkwash: this edit weakens a test (1 finding(s)): TOLERANCE_LOOSENED test_total.py :: test_total — "
+        "test_total: tolerance loosened (rel=1e-9 -> rel=0.5). " + ASK_TAIL)
+
+
+def test_each_named_finding_gets_its_own_clause():
+    broad = _finding("BROAD_EXCEPT_ADDED", None, "exceptException:",
+                     message="broad exception handler added (exceptException:)", unit=None)
+    weak = _finding("ASSERT_WEAKENED", "assert total() == 5", "assert total() > 0")
+    assert weakening_reason([broad, weak]) == (
+        "checkwash: this edit weakens a test (2 finding(s)): BROAD_EXCEPT_ADDED test_total.py — broad exception "
+        f"handler added (exceptException:); ASSERT_WEAKENED test_total.py :: test_total — {STRENGTH} (before: "
+        "assert total() == 5; after: assert total() > 0). " + ASK_TAIL)
+
+
+def test_the_named_findings_come_before_their_clauses():
+    # Three named findings and the count fit in 1,200 characters, with room
+    # for two of the three clauses: they are added in order while they fit.
+    weak = _finding("ASSERT_WEAKENED", "assert total() == " + "1" * 200, "assert total() > 0", message="m" * 150)
+    reason = weakening_reason([weak] * 5)
+    assert len(reason) <= 1200
+    assert reason.count(f"ASSERT_WEAKENED {TEST} :: test_total — " + "m" * 150) == 3
+    assert reason.count(evidence_clause(weak)) == 2
+    assert reason.endswith("m; and 2 more. " + ASK_TAIL)
+
+
+def test_a_cut_keeps_the_count_of_the_findings_not_named():
+    weak = _finding("ASSERT_WEAKENED", "assert total() == 5", "assert total() > 0", message="m" * 600)
+    reason = weakening_reason([weak] * 5)
+    assert len(reason) == 1200 and evidence_clause(weak) not in reason
+    assert reason.endswith("m…; and 2 more. " + ASK_TAIL)
+    # With three findings or fewer there is no count, and the cut ends the text as before.
+    one = weakening_reason([_finding("ASSERT_WEAKENED", "assert total() == 5", "assert total() > 0", message="m" * 2000)])
+    assert len(one) == 1200 and one.endswith("m…. " + ASK_TAIL)
+
+
+def test_the_stop_reason_quotes_the_assertion(weakened):
+    assert stop(weakened, False)["reason"] == (
+        f"checkwash: 1 finding(s) blocking. ASSERT_WEAKENED test_total.py :: test_total — {STRENGTH} "
+        "(before: assert total() == 5; after: assert total() > 0). " + STOP_TAIL)
+
+
+def test_the_stop_reason_escapes_its_clause():
+    head = _finding("ASSERT_REMOVED", f"assert name == 'ab{chr(0x202E)}c'", message=REMOVED)
+    assert cli_module._block_reason([head]) == (
+        f"checkwash: 1 finding(s) blocking. ASSERT_REMOVED test_total.py :: test_total — {REMOVED} "
+        "(before: assert name == 'ab\\u202ec'). " + STOP_TAIL)
+
+
+@pytest.mark.parametrize("rule,before,after,unit,message", [
+    ("TEST_DISABLED", None, "pytest.mark.skip", "test_total", "test_total: disabling marker added (pytest.mark.skip)"),
+    ("BROAD_EXCEPT_ADDED", None, "exceptException:", None, "broad exception handler added (exceptException:)"),
+    ("TOLERANCE_LOOSENED", "rel=1e-9", "rel=0.5", "test_total", "test_total: tolerance loosened (rel=1e-9 -> rel=0.5)"),
+    ("EXPECTED_VALUE_CHANGED", "assert total() == 5", "assert total() == 6", "test_total",
+     "test_total: expected value changed"),
+])
+def test_the_stop_reason_of_other_rules_is_unchanged(rule, before, after, unit, message):
+    # D-189's text, byte for byte. Only the first finding is named, so a
+    # weakened assertion after it adds nothing either.
+    named = f"{rule} {TEST}" + (f" :: {unit}" if unit else "")
+    head = _finding(rule, before, after, message=message, unit=unit)
+    assert cli_module._block_reason([head, _finding("ASSERT_WEAKENED", "assert a == 1", "assert a")]) == (
+        f"checkwash: 2 finding(s) blocking. {named} — {message}. " + STOP_TAIL)
+
+
+def test_a_skip_blocks_the_stop_with_the_d189_reason(repo):
+    (repo / TEST).write_bytes(b"import pytest\n\n\n@pytest.mark.skip\ndef test_total():\n    assert total() == 5\n")
+    assert stop(repo, False)["reason"] == (
+        "checkwash: 1 finding(s) blocking. TEST_DISABLED test_total.py :: test_total — test_total: disabling "
+        "marker added (pytest.mark.skip). " + STOP_TAIL)
+
+
+# --- new files, bought repair evidence and input the hook does not read (D-191) ---------------------
+#
+# #419's residual statement says where the ask fires and where it does not.
+# A new file has no before-side units, so the four unit-scoped rules cannot
+# fire on it, but three cases still ask.
+
+def test_a_new_test_file_still_asks_about_a_swallowing_broad_except(repo):
+    swallowed = "def test_new():\n    try:\n        assert total() == 5\n    except Exception:\n        pass\n"
+    reason = asked(write(repo, swallowed, repo / "test_new.py"))
+    assert reason is not None and "BROAD_EXCEPT_ADDED test_new.py — " in reason
+    # A proven failure relay in a new file is not an added swallow (D-190).
+    assert write(repo, "import asyncio\n\n\n" + ORIGINAL + RELAY, repo / "test_new.py") == {}
+
+
+def test_a_new_conftest_still_asks_about_a_suite_control(repo):
+    reason = asked(write(repo, 'collect_ignore = ["test_total.py"]\n', repo / "conftest.py"))
+    assert reason is not None and "TEST_DISABLED conftest.py :: <suite> — " in reason
+
+
+def test_a_new_test_file_over_the_source_limit_asks(repo):
+    reason = asked(write(repo, "def test_new():\n    assert True\n" + "#" * 1_000_001 + "\n", repo / "test_new.py"))
+    assert reason is not None and "test_new.py (proposed, " in reason and "over the source byte limit" in reason
+
+
+def test_a_new_test_file_has_no_unit_to_weaken(repo):
+    new = "import pytest\n\n\n@pytest.mark.skip\ndef test_new():\n    assert total() > 0\n"
+    assert write(repo, new, repo / "test_new.py") == {}
+
+
+IMPORTING = "from billing import total\n\n\ndef test_total():\n    assert total() == 5\n"
+
+
+@pytest.mark.parametrize("bought", ["plus_zero", "template_comment"])
+def test_bought_repair_evidence_does_not_stop_the_ask(repo, bought):
+    # #419: the ask judges the one edit with oracle_freeze forced, so a kept
+    # no-op in a called function (Route A) or a comment in a template (Route
+    # B) in the working tree does not lower its five rules. The Stop hook,
+    # with no freeze, passes the same change at the default fail_on.
+    template = repo / "app" / "templates" / "invoice.html"
+    template.parent.mkdir(parents=True)
+    template.write_bytes(b"<p>{{ total }}</p>\n")
+    (repo / TEST).write_bytes(IMPORTING.encode())
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "an importing test and a template")
+    if bought == "plus_zero":
+        (repo / "billing.py").write_bytes(b"def total():\n    return 5 + 0\n")
+    else:
+        template.write_bytes(b"<!-- note -->\n<p>{{ total }}</p>\n")
+    reason = asked(edit(repo, "== 5", "> 0"))
+    assert reason is not None and "ASSERT_WEAKENED" in reason
+    (repo / TEST).write_bytes(IMPORTING.replace("== 5", "> 0").encode())
+    assert json.loads(cli(repo, "check", "--format", "hook-json").stdout) == {}
+
+
+def _block_on_engine_errors(repo):
+    (repo / ".checkwash").mkdir()
+    (repo / ".checkwash" / "config.toml").write_bytes(b'[gate]\non_engine_error = "block"\n')
+
+
+def test_hook_input_over_the_cap_is_not_analysed(repo):
+    # Input over pretool.INPUT_BYTE_CAP is not read further, so the hook
+    # answers {}, even under on_engine_error = "block" (THREATMODEL row 169).
+    # An Edit that large can leave a small file, which the Stop hook judges
+    # at its own severities, without the forced freeze; a Write that large
+    # leaves a file over the source limit, which the Stop hook's size block
+    # (#456) blocks.
+    pad = "\x01" * 999_000
+    padded = ORIGINAL + '\n\nX = "' + pad + '"\n'
+    _block_on_engine_errors(repo)
+    (repo / TEST).write_bytes(padded.encode())
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "padded")
+    old, new = '== 5\n\n\nX = "' + pad, '> 0\n\n\nX = "' + "\x01" * 350_000
+    stdin = event(repo, "Edit", old_string=old, new_string=new, replace_all=False)
+    assert len(stdin) > INPUT_BYTE_CAP and pre_tool(repo, stdin) == {}
+    (repo / TEST).write_bytes(padded.replace(old, new).encode())
+    assert (repo / TEST).stat().st_size < 1_000_000
+    payload = stop(repo, False)
+    assert payload["decision"] == "block" and "ASSERT_WEAKENED" in payload["reason"]
+
+    big = ORIGINAL.replace("== 5", "> 0") + "#" * 8_100_000 + "\n"
+    stdin = event(repo, "Write", content=big)
+    assert len(stdin) > INPUT_BYTE_CAP and pre_tool(repo, stdin) == {}
+    (repo / TEST).write_bytes(big.encode())
+    payload = stop(repo, False)
+    assert payload["decision"] == "block" and "over the source byte limit" in payload["reason"]
+
+
+def test_hook_input_cut_off_or_never_sent_is_not_analysed(repo):
+    # Input that is not complete when the 10-second wait ends (cut short here)
+    # is not analysed: {} before any policy is read, so on_engine_error =
+    # "block" does not turn it into an ask.
+    _block_on_engine_errors(repo)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-m", "block on engine errors")
+    weakening = event(repo, "Edit", old_string="== 5", new_string="> 0", replace_all=False)
+    for sent in (b"", weakening[:-1]):
+        read_end, write_end = os.pipe()
+        stream = os.fdopen(read_end, "rb")
+        try:
+            if sent:
+                os.write(write_end, sent)
+            hook_input = read_hook_input(stream, cap=INPUT_BYTE_CAP, wait=0.2)
+        finally:
+            os.close(write_end)
+            stream.close()
+        state: dict = {}
+        assert cli_module._pre_tool_use(str(repo), hook_input, state) == {} and state == {}
+    assert asked(pre_tool(repo, weakening)) is not None  # the whole input asks

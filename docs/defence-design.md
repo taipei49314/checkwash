@@ -72,11 +72,15 @@ fix generalises.
 > eleven measured cases now block; the two over-reach guards
 > (`runner_build_makefile_neg`, `runner_opaque_native_neg`) stay green.
 >
-> **#419 (D-141, D-171).** #464 made a build Makefile's or a native source's
-> edit stop holding a weakened assertion in a Python test at warn. That
-> refusal is turned off for v0.9.0 after the combined sweep's pre-registered
-> stop, so such an edit again carries the full repair-evidence weight below.
-> #419 stays open.
+> **#419 (D-141, D-171, D-176, D-191).** #464 made a build Makefile's or a
+> native source's edit stop holding a weakened assertion in a Python test at
+> warn. That refusal fired the combined sweep's pre-registered stop and has
+> been off since v0.9.0, so such an edit again carries the full
+> repair-evidence weight below. Besides an unguarded conftest suite
+> control, which refused it already (THREATMODEL row 72), since v0.10.0
+> only a broad `except` added in a Python test or conftest refuses that
+> credit (D-176). In 0.11, D-191 closes #419 as a documented residual, not
+> a fix (THREATMODEL item 4, row 2).
 
 
 Widening the list is the obvious move and it is the weaker half. The list will
@@ -580,13 +584,21 @@ subject).
 
 ### B1. The opaque blanket, per-relationship instead of diff-global (P1)
 
-> **#419 (D-141, D-171).** The design below was not built. #464 narrowed the
-> blanket by rule and language instead: a weakened, removed, skipped or
-> loosened oracle, or an added broad `except`, in a Python test or conftest
-> refused opaque-change evidence. The combined acceptance sweep's
-> pre-registered stop fired on it (three pass → block moves on D-088
-> members), so it is turned off for v0.9.0, and the blanket below is again
-> the behaviour (Route B). #419 stays open for redesign.
+> **#419 (D-141, D-171, D-176, D-191).** The design below was not built.
+> #464 narrowed the blanket by rule and language instead: a weakened,
+> removed, skipped or loosened oracle, or an added broad `except`, in a
+> Python test or conftest refused opaque-change evidence. The combined
+> acceptance sweep's pre-registered stop fired on it (three pass → block
+> moves on D-088 members), so it has been off since v0.9.0, and the blanket
+> below is again the behaviour (Route B). Besides an unguarded conftest
+> suite control, which refused it already (THREATMODEL row 72), since
+> v0.10.0 only a broad `except` added in a Python test or conftest refuses
+> this credit (D-176), and since 0.11 a proven failure relay is not counted
+> as one, within 0.10's count (D-190). In 0.11, D-191 closes #419 as a
+> documented residual: this blanket and the symbol route (Route A) remain
+> (THREATMODEL rows 2, 93, 130 and 131), and the opt-in hardening and its
+> cost are in
+> [the enterprise checklist](enterprise.md#7-hardening-against-bought-repair-evidence-419).
 
 One unreadable production file suppresses E1 for **every** oracle finding in
 the diff. This is the largest structural hole on the *attack surface*.

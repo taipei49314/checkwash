@@ -155,9 +155,13 @@ from main before that release reports `checkwash_version` `0.10.0`.
 - **The Stop hook's `reason`** (`--format hook-json`, `decision: block`) is
   for Claude, and its wording changed. It still names the number of blocking
   findings and the first one, then tells Claude to fix the production code or
-  report the finding to the user. It no longer contains a `checkwash allow`
-  command, a fingerprint or the next-session sentence. A tool that took the
-  fingerprint from the reason should take it from `--format json`.
+  report the finding to the user. After an ASSERT_WEAKENED or ASSERT_REMOVED
+  finding's message it now quotes the assertion's source text, as
+  ` (before: <text>; after: <text>)` or ` (before: <text>)` (D-191); the
+  finding's `message` in the document is unchanged. It no longer contains a
+  `checkwash allow` command, a fingerprint or the next-session sentence. A
+  tool that took the fingerprint from the reason should take it from
+  `--format json`.
 - **A block verdict can carry no `decision`.** With `--hook-input stdin`, a
   stop whose hook input has `stop_hook_active` exactly `true`, with the same
   blocking set this hook last blocked on in the session, prints a
@@ -179,8 +183,9 @@ from main before that release reports `checkwash_version` `0.10.0`.
   other `on_engine_error`; and `{}` otherwise. The reason is for people, like
   `message`. Unprintable and bidi characters in it are escaped, and a
   weakening reason names at most three findings in at most 1,200 characters,
-  with no fingerprint. The output is not a findings document and has no
-  version number.
+  quoting their assertions as the Stop reason does where they fit, with no
+  fingerprint. The output is not a findings document and has no version
+  number.
 - **`hook install --agent claude-code`** writes `.claude/settings.local.json`
   by default and adds the PreToolUse handler there; `--shared` writes
   `.claude/settings.json`, with no PreToolUse handler. A script that ran the
