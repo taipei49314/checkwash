@@ -106,8 +106,11 @@ credited: a patched `asyncio.Future.result`, `setattr` or `vars` through
 an alias or `builtins`, `suppress` with an aliased type, and a B whose own
 call is swallowed. R3, R5, R6 and R7 now refuse those families, pinned by
 three fixtures and twenty tests, and uvloop's three commits still pass.
-D-190's *Second review* lists each; the documented test count is now
-22048 collected.
+D-190's *Second review* lists each. A second Argon review of the fixes
+(the run completed) found five more spellings, among them a fixture's
+checker called in the `try` body; R2, R3, R5 and R6 now refuse them
+(D-190's *Third round*), and the documented test count is now 22056
+collected.
 
 New: four negative and twenty positive `failure_relay_*` fixtures (their
 labels are Claude's, under the delegation), `tests/test_failure_relays.py`,

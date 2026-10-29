@@ -1042,7 +1042,12 @@ failure relay when all of the following hold.
   their names, is not read. An alias or a `functools.partial` of such a
   function, a fixture's returned closure and a helper from another file are
   not followed: 0.10 already lets a broad handler around such a call pass
-  (THREATMODEL row 176).
+  (THREATMODEL row 176). Nor does the `try` body, outside nested defs,
+  call an oracle that 0.10 reads (a call whose last name starts with
+  `assert` or is `fail` or `raises`) other than a method of the test's own
+  receiver, such as `self.assertEqual(...)`: a fixture's returned checker,
+  another file's helper or an alias of either may run an assertion the
+  engine folds into the unit only after the parse.
 - **R2b Where the relay sits.** (a) The parse collects tests and is not a conftest's:
   a test-role file that pytest does not collect, and a conftest, are not
   read. (b) No function enclosing the `try` is a pytest fixture, by any
@@ -1062,8 +1067,8 @@ failure relay when all of the following hold.
   R7), or `<trusted L>.create_future()` with no argument (R6). Nowhere in
   the file is there a read, called or not, of the builtins `locals`,
   `vars`, `globals`, `eval`, `exec`, `compile`, `__import__`, `setattr` or
-  `delattr`; a read of `getattr` other than a call whose name is a string
-  constant; an attribute `setattr`, `delattr`, `__setattr__`,
+  `delattr`; a read of `getattr` other than a call, with no starred
+  argument, whose name is a string constant; an attribute `setattr`, `delattr`, `__setattr__`,
   `__delattr__`, `__dict__`, `__closure__`, `cell_contents`, `__code__`,
   `__globals__`, `__builtins__`, `f_locals`, `f_globals`, `f_back`,
   `_getframe`, `currentframe`, `getclosurevars`, `get_referrers`,
@@ -1110,7 +1115,8 @@ failure relay when all of the following hold.
   clause returns, breaks or continues, and no `with` body but the trusted
   kind above on the way (a loop or an `if` can only keep B from running);
   and a B nested in another function is undecorated and called at least
-  once.
+  once from outside its own body, and never from inside a generator
+  expression, which runs the call wherever it is iterated.
 - **R6 Trusted loop L.** L is `s.attr`, or a name bound exactly once, to
   `s.attr` by a direct assignment, in the first function binding it on the
   way from the use to M, with no `nonlocal` of it there. M, the outermost
@@ -1123,7 +1129,8 @@ failure relay when all of the following hold.
   delete of it elsewhere is on a fresh local, a plain name inside a
   function that is a parameter neither of that function nor of one
   enclosing it and that the function binds only by direct assignments of a
-  call's result, a call that reads no parameter of those functions
+  call's result, a call that reads no parameter of those functions nor a
+  name they bind directly to one (`s = self`)
   (uvloop's `proto = MyProto(loop=loop)` then `proto.loop = loop`); so an
   alias such as `me = self` or `me = (lambda x: x)(self)`, a helper's
   parameter, a module-level class and any receiver that is not a plain name
@@ -1209,7 +1216,8 @@ never called; relays inside a loop; a
 `try` at module or class level, in a method body or in a module-level def;
 relays in a pytest fixture or in a test-role file that pytest does not
 collect; relays whose `try` body runs a unit's assertion, directly or
-through a same-file name; and every relay in a file with the dynamic access
+through a same-file name, or calls an oracle other than a method of the
+test's own receiver; and every relay in a file with the dynamic access
 R3 lists, such as `mock.patch`, `setattr` or `vars` read without a call, or
 a computed `getattr`, and in a file that stores a protocol name or
 `result`. A coroutine that binds `asyncio.Future()` and awaits that future
@@ -1368,9 +1376,11 @@ and that no other de-escalator holds. Evidence exists when:
 
 1. the normalized AST fingerprint of a symbol the test calls changed, which is
    not a behaviour change: docstrings are stripped, and
-   `_normalize_for_fingerprint` drops annotations, non-leading string
+   `_normalize_for_fingerprint` drops annotations, and, only as direct
+   statements of a module, class or function body, non-leading string
    statements, value-less annotated assignments and function-local dead
-   literal bindings. Any other edit counts, an alpha-rename, `+ 0`, an added
+   literal bindings; the same statement inside an `if`, a loop, a `with`
+   or a `try` is kept. Any other edit counts, an alpha-rename, `+ 0`, an added
    `pass` or `...` statement, a renamed parameter, a single-use temporary or
    a dead branch included (THREATMODEL 93, #419). A class is one symbol
    whose fingerprint covers its whole body, so any edit inside a class the

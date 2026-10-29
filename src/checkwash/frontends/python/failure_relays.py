@@ -347,6 +347,7 @@ class Reader:
                     self._dynamic = True
                 elif node.id == "getattr" and not (
                         isinstance(parent, ast.Call) and parent.func is node and len(parent.args) >= 2
+                        and not any(isinstance(arg, ast.Starred) for arg in parent.args)
                         and isinstance(parent.args[1], ast.Constant) and isinstance(parent.args[1].value, str)):
                     self._dynamic = True
         elif isinstance(node, ast.Attribute):
@@ -466,8 +467,10 @@ class Reader:
         if not self._fixture_free(holder):
             return False
         # R2: the try body neither holds an assertion a unit executes nor
-        # reads the name of a function such an assertion runs in.
-        if self._guards_unit_assertion(try_node) or self._reaches_unit_assertion(try_node, holder):
+        # reads the name of a function such an assertion runs in, nor calls
+        # an oracle other than a method of the test's own receiver.
+        if (self._guards_unit_assertion(try_node) or self._reaches_unit_assertion(try_node, holder)
+                or self._calls_foreign_oracle(try_node)):
             return False
         future = self._future_of(holder, target.id)
         if future is None:
@@ -521,6 +524,39 @@ class Reader:
                 return True
             index += 1
         return False
+
+    def _calls_foreign_oracle(self, try_node: ast.Try) -> bool:
+        """R2: the try body, outside nested scopes, calls an oracle 0.10 reads that is no `s.method(...)`.
+
+        A call whose last name starts with `assert` or is `fail` or `raises`
+        (`_is_oracle_call`) is an oracle wherever its function comes from. A
+        fixture's returned checker, a helper imported from another file or an
+        alias of either may run an assertion the engine folds into the unit
+        only after the parse, out of R2's sight, so only a method of the
+        test's own receiver, `self.assertEqual(...)` among them, is let
+        through (a second review).
+        """
+        stack: list[ast.AST] = list(try_node.body)
+        while stack:
+            node = stack.pop()
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                continue
+            if isinstance(node, ast.Call) and self._fe._is_oracle_call(node) and not self._receiver_method(node.func):
+                return True
+            stack.extend(ast.iter_child_nodes(node))
+        return False
+
+    def _receiver_method(self, func: ast.AST) -> bool:
+        """`s.name`, s the first parameter of the method holding it, read as R6 reads a receiver."""
+        if not (isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name)):
+            return False
+        found = self._method(func)
+        if found is None:
+            return False
+        m, inner = found
+        receiver = _first_positional(m)
+        return (receiver is not None and func.value.id == receiver and receiver not in self._own(m)
+                and not any(self._binds(s, receiver) for s in inner))
 
     def _reaches_unit_assertion(self, try_node: ast.Try, holder: ast.AST) -> bool:
         """R2 through a call: the try body, outside nested defs, reads an asserting name."""
@@ -673,7 +709,10 @@ class Reader:
         statement that nothing in its function can swallow
         (`_unswallowed`). So B is not handed to a thread, the loop or another
         callable, and a failure of its call reaches that function; a loop or
-        an `if` around the call can only keep B from running. An async B's
+        an `if` around the call can only keep B from running. A nested B
+        must be called from outside its own body, and never from inside a
+        generator expression, which would run the call wherever it is
+        iterated. An async B's
         coroutine is not followed further: one that is scheduled and never
         awaited is open (row 171), and so is a failure lost above the
         calling function. A B defined at module level or as a method of a
@@ -692,7 +731,10 @@ class Reader:
 
     def _called_as_proven(self, b: ast.AST, nested: bool) -> bool:
         reads = [*self._names.nodes.get(b.name, ()), *self._attribute_nodes.get(b.name, ())]
-        if nested and not reads:
+        start, stop = self._span(b)
+        # A nested B must be called from outside its own body: a call only
+        # B makes never runs it.
+        if nested and not any(not start <= self._pre[id(node)] < stop for node in reads):
             return False
         for node in reads:
             call = self._up(node)
@@ -702,6 +744,10 @@ class Reader:
             statement = call
             while statement is not None and not isinstance(statement, ast.stmt):
                 statement = self._up(statement)
+                # A generator expression runs the call later, wherever it is
+                # iterated, maybe under a handler that swallows its failure.
+                if isinstance(statement, ast.GeneratorExp):
+                    return False
             g = self._fn.get(id(statement)) if statement is not None else None
             if not isinstance(g, _FUNCTIONS) or not self._unswallowed(statement, g):
                 return False
@@ -1068,11 +1114,26 @@ class Reader:
             return False
         name = receiver.id
         parameters: set[str] = set()
+        functions: list[ast.AST] = []
         scope: ast.AST | None = owner
         while scope is not None:
             if isinstance(scope, _FUNCTION_LIKE):
                 parameters |= _parameters(scope)
+                functions.append(scope)
             scope = self._scope_of(scope)
+        # A name those functions bind directly to a parameter, or to such a
+        # name (`s = self`), stands for it too (a second review).
+        grew = True
+        while grew:
+            grew = False
+            for function in functions:
+                for alias, targets in self._own(function).items():
+                    if alias not in parameters and any(
+                            isinstance(target, ast.Name) and isinstance(self._up(target), ast.Assign)
+                            and isinstance(self._up(target).value, ast.Name)
+                            and self._up(target).value.id in parameters for target in targets):
+                        parameters.add(alias)
+                        grew = True
         if name in parameters:
             return False
         binders = self._own(owner).get(name)

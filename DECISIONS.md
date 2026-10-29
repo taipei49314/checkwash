@@ -712,6 +712,62 @@ read stay 0/1, 3/4 and 1/3, and all three commits still pass, plain and under
 review is not a PASS and does not replace Claude's own. The documented test
 count moves to 22048 collected.
 
+**Third round (2026-10-29).** Claude ran a second read-only Gemini 4 Argon
+review, of `371b067d` (D-191) and `eee48652` (the second review's fixes);
+the run completed, with four reads of files that do not exist. Claude
+checked each of its nine findings against the source and kept the verdicts
+with its packet. Raised by Argon and verified by Claude:
+
+1. R2 let through an oracle call 0.10 reads in the `try` body when R2 could
+   not see what it runs: a fixture's returned checker called as
+   `assert_total(...)`, a helper imported from another file, an alias of
+   either. The engine folds such an assertion into the unit only after the
+   parse. R2 now refuses any call whose last name starts with `assert` or is
+   `fail` or `raises` (`_is_oracle_call`) unless it is a method of the
+   test's own receiver, such as `self.assertEqual(...)`. A cheaper 0.10 edit
+   could already lose such an assertion through an alias (row 176), so this
+   is defence in depth; its cost is that a handed-off callback calling an
+   `assert`-named helper is no longer read, and
+   `test_r2_an_assert_named_helper_call_is_refused_even_handed_off` now
+   expects that, where the first commit's version of the test,
+   `test_r2_a_helper_no_unit_runs_is_no_bar`, expected the relay read.
+   Checked on this round's commit alone, checkwash reports that rename as
+   TEST_DISABLED at high (the unit disappeared, beside a production change
+   it does not take as evidence for it); on the pull request's range from
+   main it reports nothing, since main never had the test.
+2. R5 credited a nested B whose only call sat in its own body, and a B whose
+   call a generator expression deferred to wherever it is iterated, maybe
+   under a handler that swallows its failure. A nested B must now be called
+   from outside its own body, and never from inside a generator expression.
+3. R6 counted `s = self; me = (lambda x: x)(s)` as fresh. A name the
+   functions around the store bind directly to a parameter, or to such a
+   name, now counts as that parameter. A stand-in reached through other
+   spellings of a call's result stays open (row 171).
+4. R3 read `getattr(*(obj, name), 'default')` as a constant name; a
+   `getattr` with a starred argument now counts as computed.
+5. SPEC §5 clause 1 (D-191's text) now says the fingerprint normalisation
+   strips string statements, value-less annotated assignments and dead
+   literal bindings only as direct statements of a body, so the same
+   statement inside an `if`, a loop, a `with` or a `try` changes the
+   fingerprint and is Route A evidence.
+
+Rejected, each against the source: two findings described code that is not
+in the repository (a `_compose` cut in `weakening_reason`, a capped
+`_stop_block_reason`), the actual reason code keeps the footer and the
+count; the claim that fixture-producer evidence is gated by an
+`_ASSERTION_EVIDENCE_RULES` set, and that a runtime import shadow refuses
+both routes, also names code that does not exist; a module-level constant
+matched by leaf name is checked for reachability by `_symbol_match`; a B
+called only after a `return` never runs, so nothing is lost. Accepted as
+a record fix only: the first review's triage, kept outside the repository,
+listed planned actions; the *Second review* paragraph above records what
+was implemented, and the triage now says so. Pins:
+`failure_relay_fixture_checker_call_pos`, and in
+`tests/test_failure_relays.py` six refused spellings and one control. On
+the uvloop replay the relays read stay 0/1, 3/4 and 1/3, and all three
+commits still pass, plain and under `oracle_freeze`. The documented test
+count moves to 22056 collected.
+
 **Not run** when this entry was written: the full suite, `tests/gates`
 (the perf gate and the verdict gate among them), R29, the targeted uvloop
 diagnostic, dogfood, a Claude Code hook lifecycle run, a run of the
@@ -738,8 +794,9 @@ The PreToolUse tests run the CLI handler on toy repositories only.
 `failure_relay_decorated_coroutine_pos`,
 `failure_relay_future_in_thread_body_pos`,
 `failure_relay_future_method_patched_pos`,
-`failure_relay_consumer_under_suppress_alias_pos` and
-`failure_relay_b_call_swallowed_pos` (each one BROAD_EXCEPT_ADDED at
+`failure_relay_consumer_under_suppress_alias_pos`,
+`failure_relay_b_call_swallowed_pos` and
+`failure_relay_fixture_checker_call_pos` (each one BROAD_EXCEPT_ADDED at
 high, `bypass: 171`). The design's `failure_relay_await_removed_pos` is not
 added: under the 0.10 bound that edit passes, so it is the row-171 residual
 test instead. New: `tests/test_failure_relays.py`, and five tests at the end

@@ -536,10 +536,13 @@ def test_r2_the_unit_runs_the_helper_assertion_through_the_callback():
         ("ASSERT_REMOVED", "high")]
 
 
-def test_r2_a_helper_no_unit_runs_is_no_bar():
-    # Handed off rather than called, the callback runs no unit's assertion,
-    # so reading assert_total's name in its try body is no bar.
-    assert credited(v("    check()\n", "    asyncio.get_running_loop().call_soon(check)\n", ASSERT_HELPER))
+def test_r2_an_assert_named_helper_call_is_refused_even_handed_off():
+    # Handed off rather than called, the callback runs no parse-time unit's
+    # assertion, but `assert_total(...)` is a call 0.10 reads as an oracle
+    # and the engine may fold its assertion into the unit after the parse,
+    # so R2 refuses it: only a method of the test's own receiver passes (the
+    # second review; this test expected the opposite in D-190's first commit).
+    assert not credited(v("    check()\n", "    asyncio.get_running_loop().call_soon(check)\n", ASSERT_HELPER))
 
 
 def test_r2_a_try_body_calling_functions_no_unit_assertion_runs_in_is_read():
@@ -911,3 +914,70 @@ def test_r5_a_nested_b_called_in_a_loop_and_gathered_is_read():
 
 def test_r3_getattr_called_with_a_constant_name_stays_allowed():
     assert credited(v("        self.loop.call_soon(cb)\n", "        getattr(self, 'maxDiff')\n        self.loop.call_soon(cb)\n"))
+
+
+# --- the third round: a second Argon review, raised by Argon and verified by Claude ----------------------
+# A second review of the relay reading found more spellings that it still
+# credited; each reproduced on eee48652. R2 now refuses an oracle call that
+# is no method of the test's own receiver; R5 requires a nested B to be
+# called from outside its own body and never from a generator expression;
+# R6 treats a name bound directly to a parameter as that parameter; and R3
+# reads a `getattr` with a starred argument as computed.
+
+FIXTURE_CHECKER = '''import asyncio
+
+import pytest
+
+from app import compute
+
+
+@pytest.fixture
+def assert_total():
+    def check(value):
+        assert value == 3
+    return check
+
+
+async def test_x(assert_total):
+    fut = asyncio.Future()
+
+    def cb():
+        try:
+            assert_total(compute())
+        except Exception as e:
+            fut.set_exception(e)
+        else:
+            fut.set_result(None)
+
+    asyncio.get_running_loop().call_soon(cb)
+    await fut
+'''
+
+THIRD_ROUND = {
+    "a fixture's checker called in the try": FIXTURE_CHECKER,
+    "pytest.fail in the try": v("                self.assertEqual(compute(), 3)\n",
+                                "                if compute() != 3:\n                    pytest.fail('total')\n",
+                                _with_import("pytest", BASE)),
+    "a nested B that only calls itself": nested_b("        def worker():\n", "\n        pass\n").replace(
+        "            self.loop.run_until_complete(fut)\n",
+        "            self.loop.run_until_complete(fut)\n            if False:\n                worker()\n", 1),
+    "B's call deferred in a generator expression": nested_b(
+        "        def worker():\n",
+        "\n        gen = (worker() for _ in range(1))\n        try:\n            next(gen)\n        except Exception:\n"
+        "            pass\n"),
+    "an alias of self, then through a call": v("    def test_x(self):", SETUP_STORE.replace(
+        "BODY", "s = self\n        me = (lambda x: x)(s)\n        me.loop = compute()")),
+    "a getattr with a starred argument": v("        self.loop.call_soon(cb)\n",
+                                           "        getattr(*(self, 'lo' + 'op'), 'default')\n        self.loop.call_soon(cb)\n"),
+}
+
+
+@pytest.mark.parametrize("source", THIRD_ROUND.values(), ids=THIRD_ROUND.keys())
+def test_a_third_round_spelling_is_not_trusted(source):
+    assert not credited(source)
+
+
+def test_r2_a_method_of_the_tests_own_receiver_passes():
+    # uvloop's callbacks assert through `self.assertEqual(...)`.
+    assert credited(v("                self.assertEqual(compute(), 3)\n",
+                      "                self.assertTrue(compute() == 3)\n                self.fail('unreachable') if False else None\n"))
