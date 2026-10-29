@@ -789,3 +789,125 @@ def test_a_chain_of_nested_coroutines_parses_quickly():
     elapsed = time.perf_counter() - started
     assert len(result.relay_handlers) == len(result.swallowing_handlers) == 90
     assert elapsed < 3.0, elapsed
+
+
+# --- the second review: more same-file spellings, raised by Argon and verified by Claude ----------------
+# A Gemini 4 Argon review of d9fcd20b found spellings of the routes the fix
+# round closed that the reading still credited; each reproduced there. The
+# rules now close their families: R7 reads asyncio.Future, wait_for and
+# gather only as a call's function and refuses any store reached from
+# asyncio, R6 refuses a stored `result` and a receiver bound to a call that
+# reads a parameter, R3 refuses any read of a dynamic builtin, and R5 passes
+# a `with` only for a context manager the test's base class provides and
+# requires every call of B to be one nothing in its function can swallow.
+
+def _with_import(name: str, source: str) -> str:
+    return source.replace("import asyncio\n", f"import asyncio\nimport {name}\n", 1)
+
+
+SETUP_STORE = "    def setUp(self):\n        super().setUp()\n        BODY\n\n    def test_x(self):"
+
+SECOND_REVIEW = {
+    # R7 (Argon F3): a method of asyncio.Future patched, directly or through an alias.
+    "asyncio.Future.result patched": v("import asyncio\n", "import asyncio\n\nasyncio.Future.result = lambda self: None\n",
+                                       MODULE_RESULT),
+    "asyncio.Future aliased, then patched": v("import asyncio\n", "import asyncio\n\nFutureType = asyncio.Future\n"
+                                              "FutureType.result = lambda self: None\n", MODULE_RESULT),
+    "a result stored on another receiver": v("import asyncio\n", "import asyncio\nimport types\n\n"
+                                             "types.SimpleNamespace.result = None\n", MODULE_RESULT),
+    # R6 (F4): an alias of the receiver through a call's result.
+    "an alias of self through a call": v("    def test_x(self):", SETUP_STORE.replace(
+        "BODY", "me = (lambda x: x)(self)\n        me.loop = compute()")),
+    "a helper's parameter through a call": v("class TestLoop", "def install(case):\n    me = next(iter((case,)))\n"
+                                             "    me.loop = compute()\n\n\nclass TestLoop", v(
+        "    def test_x(self):", SETUP_STORE.replace("BODY", "install(self)"))),
+    # R3 (F4): a dynamic builtin read without a call of it, or through builtins.
+    "setattr through an alias": v("    def test_x(self):", SETUP_STORE.replace(
+        "BODY", "s = setattr\n        s(self, 'lo' + 'op', compute())")),
+    "vars through an alias": v("    def test_x(self):", SETUP_STORE.replace(
+        "BODY", "w = vars\n        w(self)['lo' + 'op'] = compute()")),
+    "builtins.vars": _with_import("builtins", v("    def test_x(self):", SETUP_STORE.replace(
+        "BODY", "builtins.vars(self)['lo' + 'op'] = compute()"))),
+    "getattr handed on": v("        self.loop.call_soon(cb)\n", "        fetch = getattr\n        self.loop.call_soon(cb)\n"),
+    # R5 (F4): a consumer under a with the file names or builds.
+    "suppress with an aliased type": _with_import("contextlib", v(
+        "        self.loop.run_until_complete(fut)\n",
+        "        with contextlib.suppress(Err):\n            self.loop.run_until_complete(fut)\n",
+        v("class TestLoop", "Err = Exception\n\n\nclass TestLoop"))),
+    "suppress through an alias": _with_import("contextlib", v(
+        "        self.loop.run_until_complete(fut)\n",
+        "        sup = contextlib.suppress\n        with sup(Exception):\n            self.loop.run_until_complete(fut)\n")),
+    "a context manager the file defines": _with_import("contextlib", v(
+        "        self.loop.run_until_complete(fut)\n",
+        "        with self.quiet():\n            self.loop.run_until_complete(fut)\n",
+        v("    def test_x(self):", "    @contextlib.contextmanager\n    def quiet(self):\n        try:\n"
+                                  "            yield\n        except Exception:\n            pass\n\n    def test_x(self):"))),
+    # R5 (F5): B's own call swallowed, under a with, under a finally that returns, or never made.
+    "B's call swallowed": nested_b("        def worker():\n",
+                                   "\n        try:\n            worker()\n        except Exception:\n            pass\n"),
+    "B's call under suppress": _with_import("contextlib", nested_b(
+        "        def worker():\n", "\n        with contextlib.suppress(Exception):\n            worker()\n")),
+    "B's call under a finally that returns": nested_b(
+        "        def worker():\n", "\n        try:\n            worker()\n        finally:\n            return\n"),
+    "a nested B never called": nested_b("        def worker():\n", "\n"),
+}
+
+
+@pytest.mark.parametrize("source", SECOND_REVIEW.values(), ids=SECOND_REVIEW.keys())
+def test_a_second_review_spelling_is_not_trusted(source):
+    assert not credited(source)
+
+
+def test_r5_a_with_the_base_class_provides_is_read():
+    # uvloop's `with self.tcp_client(...)`: R6 trusts it as it trusts self.loop.
+    assert credited(v("        self.loop.run_until_complete(fut)\n",
+                      "        with self.tcp_client(compute):\n            self.loop.run_until_complete(fut)\n"))
+
+
+def test_r5_a_with_the_file_defines_on_the_receiver_is_not_read():
+    source = v("        self.loop.run_until_complete(fut)\n",
+               "        with self.tcp_client(compute):\n            self.loop.run_until_complete(fut)\n",
+               v("    def test_x(self):", "    def tcp_client(self, prog):\n        return compute()\n\n    def test_x(self):"))
+    assert not credited(source)
+
+
+GATHERED = '''import asyncio
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_x(self):
+        async def client():
+            fut = self.loop.create_future()
+
+            def cb():
+                try:
+                    self.assertEqual(compute(), 3)
+                except Exception as e:
+                    fut.set_exception(e)
+                else:
+                    fut.set_result(None)
+
+            self.loop.call_soon(cb)
+            await fut
+
+        async def start_all():
+            tasks = []
+            for _ in range(3):
+                tasks.append(client())
+            await asyncio.wait_for(asyncio.gather(*tasks), 10.0)
+
+        self.loop.run_until_complete(start_all())
+'''
+
+
+def test_r5_a_nested_b_called_in_a_loop_and_gathered_is_read():
+    # uvloop 2081db89's `tasks.append(test_client(addr))`: a loop or an `if`
+    # around B's call can only keep B from running.
+    assert credited(GATHERED)
+
+
+def test_r3_getattr_called_with_a_constant_name_stays_allowed():
+    assert credited(v("        self.loop.call_soon(cb)\n", "        getattr(self, 'maxDiff')\n        self.loop.call_soon(cb)\n"))

@@ -425,8 +425,9 @@ it is reported as on 0.10.
   untrusted receiver is another use of the future (R4), which refuses,
   rather than a use that merely proves nothing. The reader numbers the tree
   once in pre-order, indexes what the rules look up, and memoises per
-  scope, future, statement and statement list, so it runs in time linear in
-  the file up to the log factor of its interval lookups.
+  scope, future, statement and statement list; its walks up the scope chain
+  make the worst case the file's size times the nesting depth of the
+  relay's scopes (*Second review*, below).
 - `frontend.py`: the swallowing list is computed exactly as on 0.10. The
   proven relays among it go to a new `ParsedFile.relay_handlers`, read only
   in a parse with `collect_tests` and without `conftest`, and only once a
@@ -487,13 +488,15 @@ and a test-role file that pytest does not collect is parsed without units
 (status review, DF0). Keying on units being present would keep uvloop
 `7b202ccf` blocking: its `tests/test_context.py` parses to no unit, because
 its tests live in a mixin whose collecting class has an imported base. R2
-and R2b carry the security argument: a credited relay sits in a callback or
-thread body a collected test hands off, outside any fixture, and its `try`
+and R2b carry the security argument: a credited relay sits in a function
+nested in another, in a collected test module and outside any fixture, and
+its `try`
 body neither holds an assertion a parse-time unit executes nor reaches one
-through a same-file name, so whatever defeats it loses only an assertion
-whose deletion already passes silently (THREATMODEL row 91). R3 to R7 carry
-it only together with R2 and R2b: they refuse the spellings they name, and
-no list of spellings closes every same-file route.
+through a same-file name, so whatever defeats it loses only what 0.10
+already lets a cheaper edit lose (THREATMODEL rows 91 and 176, as the
+*Second review* below corrects). R3 to R7 are precision on top: they
+refuse the spellings they name, and no list of spellings closes every
+same-file route.
 
 **Other consumers of the swallow lists.** Only the engine's
 BROAD_EXCEPT_ADDED count reads `swallowing_handlers` and `broad_handlers`,
@@ -518,12 +521,13 @@ a loop built outside the file is trusted (uvloop's `BaseTestCase.setUp` sets
 override); asyncio or its `Future` replaced from another file, a conftest's
 `sys.modules` among them, is trusted; a same-file route the named spellings
 miss, such as a stand-in reached through a call's result or a metaclass, is
-not refused; B's own completion is read only against the named hand-offs,
-so a B called from a function that is itself handed to a thread, or an
-async B whose coroutine is scheduled and never awaited, can lose the
-consumer's failure; a callback invoked again after it completed the future
-loses the later failure; a `with` whose `__exit__` suppresses is not read
-(row 91a); a broken relay is not reported, as on 0.10; and honest relays
+not refused; B's own completion is read only in the function that calls
+it, so a B called from a function that is itself handed to a thread or
+swallowed further up, or an async B whose coroutine is scheduled and never
+awaited, can lose the consumer's failure; a callback invoked again after
+it completed the future loses the later failure; a context manager the
+test's base class provides is trusted as its loop is; a broken relay is
+not reported, as on 0.10; and honest relays
 outside the rules (a future created on, a relay scheduled on or a run site
 on a loop from `asyncio.get_running_loop()`, `asyncio.new_event_loop()` or
 pytest-asyncio's `event_loop`; `asyncio.run` as a nested coroutine's run
@@ -643,6 +647,71 @@ splicing fuzzer, extended with 43 constructs aimed at the rewritten reader,
 over six seeds: 30,000 variants of a relay-shaped test parsed and were
 analysed under `oracle_freeze` with no exception.
 
+**Second review (2026-10-29).** Claude ran a read-only Gemini 4 Argon review
+(agy, runner v4) of this entry's first commit, `d9fcd20b`; the run completed.
+Claude checked each of its seven findings against the source and kept the
+verdicts with the review packet, outside the repository. Raised by Argon and
+verified by Claude:
+
+1. The security argument above overclaimed. R2 reads parse-time units and
+   same-file names only, so a fixture's returned closure, a helper from
+   another file, an alias or a `functools.partial` reached from the `try`
+   body is not seen, and deleting such an assertion is reported. The
+   argument now rests on what 0.10 already allows: a broad handler around a
+   call that holds no oracle of its own is no swallow, plain or under
+   `oracle_freeze`, so such an assertion can be swallowed without any relay
+   (THREATMODEL row 176, recorded under D-191, which also bounds rows 172 to
+   175). SPEC §4, row 171, KNOWN-ISSUES-next and the module say so.
+2. R7 trusted a patched `asyncio.Future.result`, directly or through an
+   alias. `asyncio.Future`, `wait_for` and `gather` are now read only as a
+   call's function, any store reached from `asyncio` refuses, and so does a
+   stored `result` on any receiver (R6).
+3. R3 missed a dynamic builtin read without a call (`s = setattr`,
+   `w = vars`) or through `builtins`. Any read of those builtins, `getattr`
+   other than called with a constant name, the names `builtins` and
+   `__builtins__`, an import of `builtins` and the attribute
+   `__subclasses__` now turn the file's relays off.
+4. R6 counted a receiver bound to a call that reads a parameter, such as
+   `me = (lambda x: x)(self)`, as fresh. The call must now read no parameter
+   of the functions around the store.
+5. R5 proved a consumer under `contextlib.suppress` with an aliased type, or
+   under a context manager the file defines. A `with` on the walk now passes
+   only when every item is `s.attr(...)` that R6 trusts as it trusts a loop,
+   a context manager the test's base class provides (uvloop's
+   `self.tcp_client(...)`). This also closes the earlier open route of a
+   `with` whose `__exit__` suppresses, except a base class's own context
+   manager, which is trusted as its loop is.
+6. R5 credited a B whose own call a broad handler swallowed, and a nested B
+   never called. Every call of B must now sit where nothing in its function
+   can swallow it (no `try` body with a handler, no part of a `try` whose
+   finally clause jumps, no `with` but the trusted kind), and a nested B must
+   be called. A loop or an `if` around the call stays allowed: uvloop
+   `2081db89` appends `test_client(addr)` coroutines in a loop and gathers
+   them.
+7. The cost was called linear. The walks up the scope chain make the worst
+   case the file's size times the nesting depth of the relay's scopes; the
+   measured shapes are unchanged. The fix round's fuzzer checks robustness
+   only, no exception, not what is credited.
+8. R2b (c) described S as a callback or a thread body that the test hands
+   off, which the reading does not check: it checks only that S is nested
+   in another function, and the text now says so. A unit that calls S
+   itself folds S's assertions, which R2 then refuses.
+
+Not changed: B's name is still matched anywhere in the file, which can
+refuse an honest relay (a precision cost); and the multiset per first line,
+whose slot reuse is 0.10's and is row 172, stays: Argon suggested keying it
+by scope, a design for later. Pins: `failure_relay_future_method_patched_pos`,
+`failure_relay_consumer_under_suppress_alias_pos` and
+`failure_relay_b_call_swallowed_pos`, and in `tests/test_failure_relays.py`
+seventeen refused spellings and three controls (a base class's context
+manager, a nested B called in a loop and gathered, and `getattr` with a
+constant name). On `d9fcd20b` the seventeen spellings were credited, and the
+three controls were read as they are now. On the uvloop replay the relays
+read stay 0/1, 3/4 and 1/3, and all three commits still pass, plain and under
+`oracle_freeze`; 30,000 more fuzzed variants raised no exception. An Argon
+review is not a PASS and does not replace Claude's own. The documented test
+count moves to 22048 collected.
+
 **Not run** when this entry was written: the full suite, `tests/gates`
 (the perf gate and the verdict gate among them), R29, the targeted uvloop
 diagnostic, dogfood, a Claude Code hook lifecycle run, a run of the
@@ -666,8 +735,11 @@ The PreToolUse tests run the CLI handler on toy repositories only.
 `failure_relay_loop_set_by_helper_pos`,
 `failure_relay_closure_completes_future_pos`,
 `failure_relay_wait_for_timeout_caught_pos`,
-`failure_relay_decorated_coroutine_pos` and
-`failure_relay_future_in_thread_body_pos` (each one BROAD_EXCEPT_ADDED at
+`failure_relay_decorated_coroutine_pos`,
+`failure_relay_future_in_thread_body_pos`,
+`failure_relay_future_method_patched_pos`,
+`failure_relay_consumer_under_suppress_alias_pos` and
+`failure_relay_b_call_swallowed_pos` (each one BROAD_EXCEPT_ADDED at
 high, `bypass: 171`). The design's `failure_relay_await_removed_pos` is not
 added: under the 0.10 bound that edit passes, so it is the row-171 residual
 test instead. New: `tests/test_failure_relays.py`, and five tests at the end

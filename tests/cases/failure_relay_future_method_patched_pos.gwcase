@@ -1,0 +1,48 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay whose future's result() the file patches through asyncio is not read
+origin: D-190 second review, THREATMODEL row 171: a Gemini 4 Argon review of d9fcd20b (F3), raised by Argon and verified by Claude
+note: the file replaces asyncio.Future.result with a function that returns None, so `called.result()` never raises the relayed failure; R7 reads asyncio.Future only as a call's function and refuses any store reached from asyncio; with no production change the finding does not depend on the D-176 refusal; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_server.py ===
+import asyncio
+
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+=== after: tests/test_server.py ===
+import asyncio
+
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+asyncio.Future.result = lambda self: None
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_factory_sees_listen_context(self):
+        called = asyncio.Future(loop=self.loop)
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        self.loop.run_until_complete(start_server(self.loop, factory))
+        self.loop.run_until_complete(asyncio.sleep(0))
+        called.result()
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

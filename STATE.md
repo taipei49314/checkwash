@@ -95,6 +95,20 @@ raised `RecursionError`. D-190's fix round lists the fix and the pins of
 each, and SPEC §4, row 171 and KNOWN-ISSUES-next now name the routes the
 reading still misses.
 
+Still on 2026-10-29, Claude ran a read-only Gemini 4 Argon review of the
+relay commit `d9fcd20b`; the run completed, and Claude verified each of
+its seven findings against the source. The security argument overclaimed:
+R2 sees neither a fixture's closure nor another file's helper nor an
+alias, and what keeps a defeated relay from losing anything new is that
+0.10 already lets a broad handler around a call that reaches an assertion
+pass (THREATMODEL row 176, under D-191). Same-file spellings were still
+credited: a patched `asyncio.Future.result`, `setattr` or `vars` through
+an alias or `builtins`, `suppress` with an aliased type, and a B whose own
+call is swallowed. R3, R5, R6 and R7 now refuse those families, pinned by
+three fixtures and twenty tests, and uvloop's three commits still pass.
+D-190's *Second review* lists each; the documented test count is now
+22048 collected.
+
 New: four negative and twenty positive `failure_relay_*` fixtures (their
 labels are Claude's, under the delegation), `tests/test_failure_relays.py`,
 five tests in `tests/test_pre_tool_use.py`, THREATMODEL row 171, and rows

@@ -1013,8 +1013,9 @@ failure and pass it, unchanged, to an asyncio future that the test awaits,
 so the failure still fails the test; D-187 accepted three such false blocks
 for 0.10 only. The frontend keeps 0.10's swallowing list unchanged and
 records which of its handlers are *proven failure relays*
-(`failure_relays.py`). Proof is pure syntax, in time linear in the file up
-to a logarithmic factor, and never runs the test.
+(`failure_relays.py`). Proof is pure syntax and never runs the test. Its
+cost is at worst the file's size times the nesting depth of the relay's
+scopes, from its walks up the scope chain.
 
 Only a Python test module that the parse collects is read. The handler
 belongs to a `try` (a `try`/`except*` is not read) whose body holds an
@@ -1037,15 +1038,19 @@ failure relay when all of the following hold.
   an asserting name; its name, the class of a method, and the names a
   lambda is assigned to are asserting names, matched by spelling, as a name
   or an attribute, anywhere in the file. So a `try` body that runs a unit's
-  assertion through a same-file helper, a method or a chain of calls is not
-  read.
-- **R2b Handed off.** (a) The parse collects tests and is not a conftest's:
+  assertion through a same-file helper, a method or a chain of calls, by
+  their names, is not read. An alias or a `functools.partial` of such a
+  function, a fixture's returned closure and a helper from another file are
+  not followed: 0.10 already lets a broad handler around such a call pass
+  (THREATMODEL row 176).
+- **R2b Where the relay sits.** (a) The parse collects tests and is not a conftest's:
   a test-role file that pytest does not collect, and a conftest, are not
   read. (b) No function enclosing the `try` is a pytest fixture, by any
   decorator whose last name is `fixture` or `yield_fixture`
   (`pytest_asyncio.fixture` included). (c) S is
-  itself nested in another function, a callback or a thread body that the
-  test hands off, not a module-level def or a method body. Units are not
+  itself nested in another function, not a module-level def or a method
+  body. How S is called is not read: a unit that calls S itself folds S's
+  assertions, which R2 then refuses. Units are not
   required: a test mixin whose collecting class has an imported base parses
   to none (uvloop `7b202ccf`).
 - **R3 The future.** F resolves outward from S through function scopes
@@ -1055,14 +1060,16 @@ failure relay when all of the following hold.
   assignment that is a direct statement of B's body. Its value is
   `asyncio.Future()`, with no argument or only `loop=<trusted L>` (R6 and
   R7), or `<trusted L>.create_future()` with no argument (R6). Nowhere in
-  the file is there a call of `locals`, `vars`, `globals`, `eval`, `exec`,
-  `compile`, `__import__`, `setattr` or `delattr`, a `getattr` whose name is
-  not a string constant, an attribute `setattr`, `delattr`, `__setattr__`,
+  the file is there a read, called or not, of the builtins `locals`,
+  `vars`, `globals`, `eval`, `exec`, `compile`, `__import__`, `setattr` or
+  `delattr`; a read of `getattr` other than a call whose name is a string
+  constant; an attribute `setattr`, `delattr`, `__setattr__`,
   `__delattr__`, `__dict__`, `__closure__`, `cell_contents`, `__code__`,
   `__globals__`, `__builtins__`, `f_locals`, `f_globals`, `f_back`,
   `_getframe`, `currentframe`, `getclosurevars`, `get_referrers`,
-  `get_referents`, `get_objects`, `modules` or `patch`, the name `importlib`
-  or `patch`, or an import of `importlib`: a file that may reach a scope, a
+  `get_referents`, `get_objects`, `modules`, `patch` or `__subclasses__`;
+  the name `importlib`, `patch`, `builtins` or `__builtins__`; or an import
+  of `importlib` or `builtins`: a file that may reach a scope, a
   frame, a closure, an attribute table or a module by another route reads
   no relay.
 - **R4 Every use of F is accounted for:** the binding; the relay of R1, the
@@ -1086,17 +1093,24 @@ failure relay when all of the following hold.
   is proven in its function when the walk up to that function passes only
   the body or finally clause of a `try` that has no handler and whose
   finally clause holds no `return`, `break` or `continue`, and the body of a
-  `with` whose items neutralise no AssertionError (the `with` path's
-  predicate), never an `if`, a loop, a match case, a handler or an else
+  `with` whose every item is `s.attr(...)` that R6 trusts as it trusts a
+  loop, a context manager the test's base class provides outside the file
+  (uvloop's `self.tcp_client(...)`), never one the file names or defines;
+  never an `if`, a loop, a match case, a handler or an else
   clause; and no statement before it, at any level of that walk, is a
   `return` or a `raise` or holds a `return` outside nested functions. With
   no handler on the walk, a `raise` nested in an earlier statement leaves
   the function uncaught, so it fails or skips the test and never lets it
   pass (uvloop opens tests with `if self.implementation == 'asyncio': raise
   unittest.SkipTest()`); a `return` refuses whatever guards it. B's own
-  failure must reach its caller: B is not a generator, every read of B's
+  failure must reach its caller: B is not a generator; every read of B's
   name in the file, as a name or an attribute, is the function of a call
-  outside any lambda, and a B nested in another function is undecorated.
+  outside any lambda whose statement nothing in its function can swallow,
+  with no `try` body with a handler, no part of a `try` whose finally
+  clause returns, breaks or continues, and no `with` body but the trusted
+  kind above on the way (a loop or an `if` can only keep B from running);
+  and a B nested in another function is undecorated and called at least
+  once.
 - **R6 Trusted loop L.** L is `s.attr`, or a name bound exactly once, to
   `s.attr` by a direct assignment, in the first function binding it on the
   way from the use to M, with no `nonlocal` of it there. M, the outermost
@@ -1109,32 +1123,40 @@ failure relay when all of the following hold.
   delete of it elsewhere is on a fresh local, a plain name inside a
   function that is a parameter neither of that function nor of one
   enclosing it and that the function binds only by direct assignments of a
-  call's result (uvloop's `proto = MyProto(loop=loop)` then `proto.loop =
-  loop`); so an alias such as `me = self`, a helper's parameter, a
-  module-level class and any receiver that is not a plain name redirect.
-  The file is stand-in free: no class body binds, nothing stores or
-  deletes, no string constant equals, and no keyword argument is named
+  call's result, a call that reads no parameter of those functions
+  (uvloop's `proto = MyProto(loop=loop)` then `proto.loop = loop`); so an
+  alias such as `me = self` or `me = (lambda x: x)(self)`, a helper's
+  parameter, a module-level class and any receiver that is not a plain name
+  redirect. The file is stand-in free: no class body binds, nothing stores
+  or deletes, no string constant equals, and no keyword argument is named
   `create_future`, `call_soon`, `call_soon_threadsafe`,
   `run_until_complete`, `set_exception`, `set_result`, `__await__`,
-  `__getattr__` or `__getattribute__`; `asyncio.Future` needs stand-in
-  freedom too.
+  `__getattr__` or `__getattribute__`, and nothing stores or deletes
+  `result`; `asyncio.Future` needs stand-in freedom too.
 - **R7 asyncio is the real module.** Wherever `asyncio.Future`, `wait_for`
   or `gather` is read, every binding of the name `asyncio`, counted in all
   scopes, is a module-level `import asyncio` or `import asyncio.<sub>`
   without `as`; asyncio is imported no other way (no `as`, no `from
   asyncio... import`) and there is no star import; the name is read only as
-  `asyncio.<attr>`; nothing stores or deletes an attribute of it, or an
-  attribute named `Future`, `wait_for` or `gather` on any receiver; and no
-  string constant starts with `asyncio.` or equals one of those three names.
+  `asyncio.<attr>`, and `asyncio.Future`, `asyncio.wait_for` and
+  `asyncio.gather` only as a call's function, so never aliased, subclassed
+  or patched; nothing stores or deletes anything reached from it
+  (`asyncio.Future.result` included), or an attribute named `Future`,
+  `wait_for` or `gather` on any receiver; and no string constant starts
+  with `asyncio.` or equals one of those three names.
 
-R2 and R2b carry the security argument: a credited relay sits in a callback
-or thread body that a collected test hands off, outside any fixture, and its
-`try` body neither holds an assertion a parse-time unit executes nor reaches
-one through a same-file name, so whatever defeats it loses only an assertion
-whose deletion already passes silently (row 91). R3 to R7 carry that
-argument only together with R2 and R2b. On their own they are precision:
-they name spellings, and they trust what the file cannot show, the loop a
-base class builds outside the file and asyncio itself (row 171).
+R2 and R2b keep a credited relay off what checkwash protects: it sits in a
+function nested in another, in a collected test module and outside any
+fixture, and its `try` body neither holds an assertion a parse-time unit
+executes nor reaches one through a same-file name. Whatever else a relay
+that a stand-in defeats could lose, 0.10 already lets a cheaper edit lose:
+an oracle no unit executes can be deleted silently (row 91), and an
+assertion reached through a call, whether an alias, a fixture's closure or
+another file's helper, can be swallowed by a broad handler around a call
+that holds no oracle of its own, which 0.10 does not count as a swallow
+(row 176). R3 to R7 are precision on top of that: they name spellings, and
+they trust what the file cannot show, the loop or context manager a base
+class builds outside the file and asyncio itself (row 171).
 
 **Effect.** Per file and per handler text, the `BROAD_EXCEPT_ADDED`
 additions are the multiset intersection (the elementwise minimum) of 0.10's
@@ -1174,19 +1196,25 @@ local bound once to it (`asyncio.get_running_loop()`,
 `unittest.IsolatedAsyncioTestCase`'s running loop);
 trio, anyio, `concurrent.futures`, queue or Event relays; `from asyncio
 import Future`, asyncio under another name, and annotated `F: T = ...`
-bindings; `asyncio.shield`; a consumer under a `try` that has any handler,
-under an `if` or in a loop, or after a `return`, guarded or not; run chains
+bindings; `asyncio.shield`; `asyncio.Future`, `wait_for` or `gather` read
+other than as a call's function; a consumer under a `try` that has any
+handler, under an `if`, in a loop or under a `with` other than the trusted
+kind, or after a `return`, guarded or not; run chains
 deeper than one nested coroutine, and a nested coroutine run in any other
 form than R5's two (through `wait_for`, `asyncio.run` or a plain call) or
 decorated; a B handed to a thread, the loop or another callable instead of
-called, a generator B, and a decorated nested B; relays inside a loop; a
+called, a B whose call a handler, a finally clause that jumps or such a
+`with` could swallow, a generator B, and a nested B that is decorated or
+never called; relays inside a loop; a
 `try` at module or class level, in a method body or in a module-level def;
 relays in a pytest fixture or in a test-role file that pytest does not
 collect; relays whose `try` body runs a unit's assertion, directly or
 through a same-file name; and every relay in a file with the dynamic access
-R3 lists, such as `mock.patch` or a computed `getattr`. A coroutine that
-binds `asyncio.Future()` and awaits that future itself is read however it is
-run, `asyncio.run(main())` included.
+R3 lists, such as `mock.patch`, `setattr` or `vars` read without a call, or
+a computed `getattr`, and in a file that stores a protocol name or
+`result`. A coroutine that binds `asyncio.Future()` and awaits that future
+itself is read wherever nothing in the calling function can swallow its
+call, `asyncio.run(main())` included.
 
 ## 4b. Artifacts are never evidence
 

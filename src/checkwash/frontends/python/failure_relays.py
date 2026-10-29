@@ -13,27 +13,31 @@ The frontend keeps its swallow list exactly as before and records which of
 its handlers this module proves to be relays; the engine credits the after
 side's relays only, and only within what 0.10 counts as added (D-190).
 
-R2 and R2b carry the security argument: a credited relay sits in a callback
-or thread body that a collected test hands off, never in a fixture, and its
-`try` body neither holds an assertion a parse-time unit executes nor reads
-the name of a same-file function such an assertion runs in. Deleting such
-an assertion already passes silently (THREATMODEL row 91), so a relay that a
-stand-in defeats loses nothing a cheaper edit could not. R3 to R7 carry it
-only together with R2 and R2b; on their own they are precision, and they
-trust what the file cannot show (a loop its base class builds, asyncio
-itself; row 171).
+R2 and R2b keep a credited relay off what checkwash protects: it sits in a
+function nested in another, in a collected test module and outside any
+fixture, and its `try` body neither holds an assertion a parse-time unit
+executes nor reads the name of a same-file function such an assertion runs
+in. Whatever else a relay that a stand-in defeats could lose, 0.10 already
+lets a cheaper edit lose: an oracle no unit executes can be deleted silently
+(THREATMODEL row 91), and an assertion reached through a call, such as an
+alias, a fixture's closure or a helper from another file, can be swallowed
+by a broad handler around a call not named `assert...`, which 0.10 does not
+count as a swallow (row 176). R3 to R7 are precision on top
+of that: they refuse the spellings they name, and they trust what the file
+cannot show (a loop its base class builds, asyncio itself; row 171).
 
 The proof is pure syntax and never imports or runs the test. A `Reader`
 is built once per parsed side, the first time a relay-shaped handler needs
-it, and answers every handler in time linear in the file, up to the log
-factor of its interval lookups: one walk numbers the nodes in pre-order, so
-"inside B" is an interval test, and every per-scope, per-future,
-per-statement and per-body question is memoised. Reachability is read from
-the statements before the consumer rather than from `_unreachable_ids`,
-whose cost grows with the nesting depth: a review timed a 350 KB chain of
-90 nested coroutines at 11.9 seconds against 0.72 on 0.10. A first
-prototype took 25.5 seconds for 400 handlers sharing one future, against
-the PreToolUse ask's 30-second deadline (2026-10-29 status review).
+it. One walk numbers the nodes in pre-order, so "inside B" is an interval
+test, and the per-scope, per-future, per-statement and per-body questions
+are memoised; what remains are walks up the scope chain from each relay and
+loop read, so the cost is at worst the file's size times the nesting depth
+of those scopes. Reachability is read from the statements before the
+consumer rather than from `_unreachable_ids`, whose cost on every function
+grew with the nesting depth: a review timed a 350 KB chain of 90 nested
+coroutines at 11.9 seconds against 0.72 on 0.10. A first prototype took
+25.5 seconds for 400 handlers sharing one future, against the PreToolUse
+ask's 30-second deadline (2026-10-29 status review).
 """
 
 from __future__ import annotations
@@ -60,21 +64,28 @@ _PROTOCOL = frozenset({
     "create_future", "call_soon", "call_soon_threadsafe", "run_until_complete",
     "set_exception", "set_result", "__await__", "__getattr__", "__getattribute__",
 })
-# R7: the attributes of asyncio the rules read.
+# R6: stored or deleted on any receiver, these could also replace what a
+# consumer calls, `fut.result()` among them.
+_PROTOCOL_STORES = _PROTOCOL | {"result"}
+# R7: the attributes of asyncio the rules read, only ever as a call's function.
 _ASYNCIO_READ = frozenset({"Future", "wait_for", "gather"})
 # R3: reading or writing a scope, a frame, a closure, an object's attribute
-# table or a module by another route, anywhere in the file: these calls by
-# name, these attributes (a call's `monkeypatch.setattr` or
-# `object.__setattr__` included), and these names.
-_DYNAMIC_CALLS = frozenset({
+# table or a module by another route, anywhere in the file: these builtins,
+# read by name in any way (called, aliased or passed on), `getattr` other
+# than called with a string constant for its name, these attributes (a
+# call's `monkeypatch.setattr` or `object.__setattr__` included), these
+# names, and an import of `importlib` or `builtins`.
+_DYNAMIC_BUILTINS = frozenset({
     "locals", "vars", "globals", "eval", "exec", "compile", "__import__", "setattr", "delattr",
 })
 _DYNAMIC_ATTRIBUTES = frozenset({
     "setattr", "delattr", "__setattr__", "__delattr__", "__dict__", "__closure__", "cell_contents",
     "__code__", "__globals__", "__builtins__", "f_locals", "f_globals", "f_back", "_getframe",
     "currentframe", "getclosurevars", "get_referrers", "get_referents", "get_objects", "modules", "patch",
+    "__subclasses__",
 })
-_DYNAMIC_NAMES = frozenset({"importlib", "patch"})
+_DYNAMIC_NAMES = frozenset({"importlib", "patch", "builtins", "__builtins__"})
+_DYNAMIC_MODULES = frozenset({"importlib", "builtins"})
 _TYPE_PARAMETERS = ("TypeVar", "ParamSpec", "TypeVarTuple")
 
 
@@ -114,6 +125,13 @@ def _relay(handler: ast.ExceptHandler) -> tuple[ast.Name, ast.AST | None] | None
 def candidate(handler: ast.ExceptHandler) -> bool:
     """The cheap part of R1: is this handler shaped like a relay at all?"""
     return _relay(handler) is not None
+
+
+def _root_name(node: ast.AST) -> str | None:
+    """The name an attribute or subscript chain starts from: `asyncio` for `asyncio.Future.result`."""
+    while isinstance(node, (ast.Attribute, ast.Subscript)):
+        node = node.value
+    return node.id if isinstance(node, ast.Name) else None
 
 
 def _children(node: ast.AST):
@@ -279,13 +297,11 @@ class Reader:
         self._attributes: dict[tuple[str, int], bool] = {}
         self._redirects: dict[str, bool] = {}
         self._completions: dict[int, bool] = {}
-        self._direct_calls: dict[str, bool] = {}
         self._fixtures: dict[int, bool] = {}
         self._lives: dict[int, bool] = {}
         self._runs: dict[int, bool] = {}
         self._first_stops: dict[tuple[int, str], int] = {}
         self._jumps: dict[int, bool] = {}
-        self._withs: dict[int, bool] = {}
 
     # --- one walk ----------------------------------------------------------
 
@@ -327,28 +343,28 @@ class Reader:
                 self._loads.setdefault(node.id, []).append(node)
                 if node.id == "asyncio" and not (isinstance(parent, ast.Attribute) and parent.value is node):
                     self._asyncio_loose = True
-                if node.id in _DYNAMIC_NAMES:
+                if node.id in _DYNAMIC_NAMES or node.id in _DYNAMIC_BUILTINS:
+                    self._dynamic = True
+                elif node.id == "getattr" and not (
+                        isinstance(parent, ast.Call) and parent.func is node and len(parent.args) >= 2
+                        and isinstance(parent.args[1], ast.Constant) and isinstance(parent.args[1].value, str)):
                     self._dynamic = True
         elif isinstance(node, ast.Attribute):
             self._attribute_nodes.setdefault(node.attr, []).append(node)
             if isinstance(node.ctx, (ast.Store, ast.Del)):
                 self._stores.add(node.attr, position, node)
+                if _root_name(node) == "asyncio":
+                    self._asyncio_loose = True
             else:
                 self._loads.setdefault(node.attr, []).append(node)
+                if (node.attr in _ASYNCIO_READ and isinstance(node.value, ast.Name) and node.value.id == "asyncio"
+                        and not (isinstance(parent, ast.Call) and parent.func is node)):
+                    self._asyncio_loose = True
             if node.attr in _DYNAMIC_ATTRIBUTES:
                 self._dynamic = True
         elif isinstance(node, ast.Constant):
             if isinstance(node.value, str):
                 self._strings.add(node.value)
-        elif isinstance(node, ast.Call):
-            func = node.func
-            if isinstance(func, ast.Name):
-                if func.id in _DYNAMIC_CALLS:
-                    self._dynamic = True
-                elif func.id == "getattr" and not (
-                        len(node.args) >= 2 and isinstance(node.args[1], ast.Constant)
-                        and isinstance(node.args[1].value, str)):
-                    self._dynamic = True
         elif isinstance(node, ast.keyword):
             if node.arg in _PROTOCOL:
                 self._protocol_keyword = True
@@ -371,13 +387,13 @@ class Reader:
                 root = alias.name.split(".")[0]
                 if root == "asyncio" and alias.asname:
                     self._asyncio_loose = True
-                elif root == "importlib":
+                elif root in _DYNAMIC_MODULES:
                     self._dynamic = True
         elif isinstance(node, ast.ImportFrom):
             root = (node.module or "").split(".")[0]
             if root == "asyncio":
                 self._asyncio_loose = True
-            elif root == "importlib":
+            elif root in _DYNAMIC_MODULES:
                 self._dynamic = True
         elif isinstance(node, ast.alias):
             if node.name != "*":
@@ -441,8 +457,9 @@ class Reader:
             holder = self._up(holder)
         if not isinstance(holder, _FUNCTIONS):
             return False
-        # R2b (c): S is nested in another function, a callback or a thread
-        # body the test hands off, not a module-level def or a method.
+        # R2b (c): S is nested in another function, not a module-level def
+        # or a method. How S is called is not read: a unit that calls S
+        # itself folds S's assertions, which R2 refuses.
         if not isinstance(self._scope_of(holder), _FUNCTIONS):
             return False
         # R2b (b): no function enclosing the try is a pytest fixture.
@@ -649,36 +666,73 @@ class Reader:
         return _Future(set_exception, set_result, proven)
 
     def _completes(self, b: ast.AST) -> bool:
-        """R5: B is no generator, every read of its name calls it, and a nested B is undecorated.
+        """R5: B is no generator and every read of its name is a proven call; a nested B is called and undecorated.
 
         The name is read as a name or an attribute anywhere in the file, and
-        each read must be the function of a call outside any lambda, so B is
-        not handed to a thread, a loop or another callable that would lose
-        its failure. A B defined at module level or as a method of a
-        module-level class keeps its decorators, which mark tests.
+        each read must be the function of a call outside any lambda, in a
+        statement that nothing in its function can swallow
+        (`_unswallowed`). So B is not handed to a thread, the loop or another
+        callable, and a failure of its call reaches that function; a loop or
+        an `if` around the call can only keep B from running. An async B's
+        coroutine is not followed further: one that is scheduled and never
+        awaited is open (row 171), and so is a failure lost above the
+        calling function. A B defined at module level or as a method of a
+        module-level class may go uncalled and keeps its decorators, which
+        mark tests.
         """
         known = self._completions.get(id(b))
         if known is None:
-            known = id(b) not in self._generators and self._called_directly(b.name)
-            if known and b.decorator_list:
-                scope = self._scope_of(b)
-                known = isinstance(scope, ast.Module) or (
-                    isinstance(scope, ast.ClassDef) and isinstance(self._scope_of(scope), ast.Module))
+            scope = self._scope_of(b)
+            nested = not (isinstance(scope, ast.Module) or (
+                isinstance(scope, ast.ClassDef) and isinstance(self._scope_of(scope), ast.Module)))
+            known = (id(b) not in self._generators and not (nested and b.decorator_list)
+                     and self._called_as_proven(b, nested))
             self._completions[id(b)] = known
         return known
 
-    def _called_directly(self, name: str) -> bool:
-        known = self._direct_calls.get(name)
-        if known is None:
-            known = True
-            for node in (*self._names.nodes.get(name, ()), *self._attribute_nodes.get(name, ())):
-                call = self._up(node)
-                if not (isinstance(node.ctx, ast.Load) and isinstance(call, ast.Call) and call.func is node
-                        and not isinstance(self._fn.get(id(node)), ast.Lambda)):
-                    known = False
-                    break
-            self._direct_calls[name] = known
-        return known
+    def _called_as_proven(self, b: ast.AST, nested: bool) -> bool:
+        reads = [*self._names.nodes.get(b.name, ()), *self._attribute_nodes.get(b.name, ())]
+        if nested and not reads:
+            return False
+        for node in reads:
+            call = self._up(node)
+            if not (isinstance(node.ctx, ast.Load) and isinstance(call, ast.Call) and call.func is node
+                    and not isinstance(self._fn.get(id(node)), ast.Lambda)):
+                return False
+            statement = call
+            while statement is not None and not isinstance(statement, ast.stmt):
+                statement = self._up(statement)
+            g = self._fn.get(id(statement)) if statement is not None else None
+            if not isinstance(g, _FUNCTIONS) or not self._unswallowed(statement, g):
+                return False
+        return True
+
+    def _unswallowed(self, statement: ast.AST, g: ast.AST) -> bool:
+        """Nothing between the statement and G can swallow its failure.
+
+        The walk up to G passes no `try` body with a handler, no part of a
+        `try` whose finally clause returns, breaks or continues, and no
+        `with` body unless every item is `s.attr(...)` R6 trusts.
+        """
+        node = statement
+        while True:
+            up, field = self._up(node), self._field.get(id(node))
+            if up is None:
+                return False
+            if up is g:
+                return True
+            if isinstance(up, (ast.Try, ast.TryStar)):
+                if (up.handlers and field == "body") or (field != "finalbody" and self._finally_jumps(up)):
+                    return False
+            elif isinstance(up, (ast.With, ast.AsyncWith)):
+                if field == "body" and not self._trusted_items(up):
+                    return False
+            node = up
+
+    def _trusted_items(self, with_node: ast.AST) -> bool:
+        """Every item is `s.attr(...)` with `s.attr` trusted as R6 trusts a loop."""
+        return all(isinstance(item.context_expr, ast.Call) and self._trusted_loop(item.context_expr.func)
+                   for item in with_node.items)
 
     def _creates_future(self, value: ast.AST) -> bool:
         """R3: `asyncio.Future()`, `asyncio.Future(loop=<trusted L>)` or `<trusted L>.create_future()`."""
@@ -808,16 +862,20 @@ class Reader:
 
         Up to G the walk passes only the body or finally clause of a `try`
         that has no handler and whose finally clause neither returns, breaks
-        nor continues, and the body of a `with` whose items neutralise no
-        AssertionError; and no statement before it, at any level of the
-        walk, is a `return` or a `raise` or holds a `return` outside nested
-        functions. With no handler on the walk, a `raise` nested in an
-        earlier statement leaves G uncaught, so it fails or skips the test
-        and never lets it pass: uvloop opens tests with `if
-        self.implementation == 'asyncio': raise unittest.SkipTest()`. A
-        guarded `return` refuses whatever its guard, which is stricter than
-        `_unreachable_ids`; the reading is linear, where `_unreachable_ids`
-        on each function would grow with the nesting depth.
+        nor continues, and the body of a `with` whose every item is
+        `s.attr(...)` with `s.attr` trusted as R6 trusts a loop: a context
+        manager the test's base class provides, such as uvloop's
+        `self.tcp_client(...)`, never one the file names or builds, whose
+        `__exit__` may suppress whatever it is called; and no statement
+        before it, at any level of the walk, is a `return` or a `raise` or
+        holds a `return` outside nested functions. With no handler on the
+        walk, a `raise` nested in an earlier statement leaves G uncaught, so
+        it fails or skips the test and never lets it pass: uvloop opens
+        tests with `if self.implementation == 'asyncio': raise
+        unittest.SkipTest()`. A guarded `return` refuses whatever its guard,
+        which is stricter than `_unreachable_ids`; the reading is linear,
+        where `_unreachable_ids` on each function would grow with the
+        nesting depth.
         """
         known = self._lives.get(id(statement))
         if known is not None:
@@ -837,7 +895,7 @@ class Reader:
                     result = False
                     break
             elif isinstance(up, (ast.With, ast.AsyncWith)):
-                if self._neutralises(up):
+                if field != "body" or not self._trusted_items(up):
                     result = False
                     break
             else:
@@ -882,13 +940,6 @@ class Reader:
                     stack.extend(ast.iter_child_nodes(node))
             self._jumps[key] = jumps
         return self._jumps[key]
-
-    def _neutralises(self, with_node: ast.AST) -> bool:
-        key = id(with_node)
-        if key not in self._withs:
-            self._withs[key] = any(
-                self._fe._neutralizes_assertionerror(item.context_expr) for item in with_node.items)
-        return self._withs[key]
 
     # --- R6: the trusted loop ----------------------------------------------
 
@@ -1000,38 +1051,51 @@ class Reader:
         return known
 
     def _fresh_receiver(self, store: ast.Attribute) -> bool:
-        """R6: the store's receiver is a local bound only to the result of a call.
+        """R6: the store's receiver is a local bound only to the result of a call that reads no parameter.
 
         A plain name, inside a function, that is a parameter neither of
         that function nor of one enclosing it, and that the function binds
         only by direct assignments of a call's result, as uvloop's
-        `proto = MyProto(loop=loop)` then `proto.loop = loop`. So an alias
-        of the receiver (`me = self`), a helper's parameter (`case.loop =
-        ...`), a module-level class and anything that is not a plain name
-        all count as redirecting.
+        `proto = MyProto(loop=loop)` then `proto.loop = loop`, where no
+        call reads a parameter of those functions. So an alias of the
+        receiver (`me = self`, `me = (lambda x: x)(self)`), a helper's
+        parameter (`case.loop = ...`), a module-level class and anything
+        that is not a plain name all count as redirecting.
         """
         receiver = store.value
         owner = self._def.get(id(store))
         if not isinstance(receiver, ast.Name) or owner is None:
             return False
         name = receiver.id
+        parameters: set[str] = set()
         scope: ast.AST | None = owner
         while scope is not None:
-            if isinstance(scope, _FUNCTION_LIKE) and name in _parameters(scope):
-                return False
+            if isinstance(scope, _FUNCTION_LIKE):
+                parameters |= _parameters(scope)
             scope = self._scope_of(scope)
+        if name in parameters:
+            return False
         binders = self._own(owner).get(name)
         if not binders:
             return False
-        return all(isinstance(target, ast.Name) and isinstance(self._up(target), ast.Assign)
-                   and isinstance(self._up(target).value, ast.Call) for target in binders)
+        for target in binders:
+            statement = self._up(target)
+            if not (isinstance(target, ast.Name) and isinstance(statement, ast.Assign)
+                    and isinstance(statement.value, ast.Call)):
+                return False
+            if any(isinstance(node, ast.Name) and node.id in parameters for node in ast.walk(statement.value)):
+                return False
+        return True
 
     def _stand_in_free(self) -> bool:
-        """R6: no class body binds, nothing stores, no string names and no keyword argument is a protocol name."""
+        """R6: no class body binds, nothing stores, no string names and no keyword argument is a protocol name.
+
+        A store or delete of `result` on any receiver counts as well.
+        """
         if self._stand_ins is None:
             self._stand_ins = (
                 not (self._class_bound & _PROTOCOL)
-                and not any(attr in self._stores.nodes for attr in _PROTOCOL)
+                and not any(attr in self._stores.nodes for attr in _PROTOCOL_STORES)
                 and not (self._strings & _PROTOCOL)
                 and not self._protocol_keyword
             )
@@ -1049,10 +1113,13 @@ class Reader:
         Every binding of the name, counted in all scopes, is a module-level
         `import asyncio` or `import asyncio.<sub>` without `as`; asyncio is
         imported no other way (no `as`, no `from asyncio... import`) and
-        there is no star import; the name is read only as `asyncio.<attr>`;
-        nothing stores or deletes an attribute of it, or an attribute named
-        `Future`, `wait_for` or `gather` on any receiver; and no string
-        constant starts with "asyncio." or equals one of those three names.
+        there is no star import; the name is read only as `asyncio.<attr>`,
+        and `asyncio.Future`, `asyncio.wait_for` and `asyncio.gather` only as
+        a call's function, so never aliased, subclassed or patched; nothing
+        stores or deletes anything reached from it (`asyncio.Future.result`
+        included), or an attribute named `Future`, `wait_for` or `gather` on
+        any receiver; and no string constant starts with "asyncio." or
+        equals one of those three names.
         """
         if self._asyncio is None:
             counts, star = self._fe._bindings(self._off) or module_bindings(self._tree)
@@ -1064,8 +1131,6 @@ class Reader:
             self._asyncio = (
                 not star and top > 0 and counts["asyncio"] == top
                 and not self._asyncio_loose
-                and not any(isinstance(store.value, ast.Name) and store.value.id == "asyncio"
-                            for stores in self._stores.nodes.values() for store in stores)
                 and not any(attr in self._stores.nodes for attr in _ASYNCIO_READ)
                 and not (self._strings & _ASYNCIO_READ)
                 and not any(string.startswith("asyncio.") for string in self._strings)
