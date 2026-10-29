@@ -1,0 +1,62 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a loop whose create_future the file replaces gives no proven future
+origin: D-190, THREATMODEL row 171: the after side of failure_relay_callback_future_neg with one edit
+note: the file stores create_future and a class body binds protocol names, so the loop is not trusted (R6); no production change, so the finding does not depend on the D-176 refusal; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_server.py ===
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+=== after: tests/test_server.py ===
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class _Done:
+    def __await__(self):
+        return iter(())
+
+    def set_exception(self, exc):
+        pass
+
+    def set_result(self, value):
+        pass
+
+
+class TestServer(LoopTestCase):
+    def setUp(self):
+        super().setUp()
+        self.loop.create_future = _Done
+
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_factory_sees_listen_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        async def main():
+            srv = await start_server(self.loop, factory)
+            try:
+                await called
+            finally:
+                srv.close()
+
+        self.loop.run_until_complete(main())
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

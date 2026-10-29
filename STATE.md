@@ -1,6 +1,72 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-28 (v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-10-29 (0.11 candidate: a proven Python failure relay is not counted as a swallow, D-190, with its fix round; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-10-29: proven Python failure relays (D-190)
+
+Nelson chose how checkwash reads uvloop's failure relays by clicking the
+button labelled 「用 C，開始改 PR-A」; Claude wrote its label and option
+text, quoted in [D-190](DECISIONS.md), and only the label may have been
+sent. A broad handler in a Python test whose first statement hands the
+caught exception unchanged to an asyncio future that the test awaits is a
+proven failure relay, by the bounded rules of SPEC §4 *Python failure
+relays* (R1 to R7, with R2b), read in
+`src/checkwash/frontends/python/failure_relays.py`. The frontend keeps
+0.10's swallowing list and records the relays apart
+(`ParsedFile.relay_handlers`). The engine reads only the after side's
+relays, and only in BROAD_EXCEPT_ADDED's count of additions: per handler
+text, the smaller of 0.10's count and the after side's swallowing handlers
+that are not proven relays. So 0.11 reports no BROAD_EXCEPT_ADDED that 0.10
+would not, a relay made proven in the same change cannot pay for a new
+swallow, an edit elsewhere in a file cannot make an unchanged relay
+reported, and an edit that breaks a relay is not reported, as on 0.10
+(THREATMODEL row 171). Its price: an honest relay added beside a handler of
+the same first line that is not a proven relay is counted, as on 0.10, which
+departs from the first half of the option text Nelson clicked (D-190, *The
+bound's form*). This removes the finding where the 10-28 plan said
+「降成 warn」; D-190 gives the reason (D-189's forced `oracle_freeze` and E2
+would turn a warn into an ask) and the residuals.
+
+Later on 2026-10-29, two adversarial reviews of the first implementation confirmed
+problems, each reproduced before the fix: the both-sides form of the bound
+let a relay made proven in the same change hide a new swallow of a unit's
+assertion; R2 missed a unit's assertion run through a helper; same-file
+stand-ins defeated R3, R6 and R7 through spellings row 171 called closed; R5
+proved consumers that a narrower handler or a decorator could skip, and a B
+handed to a thread; reachability grew with the nesting depth, so an Edit to
+a 610 KB test could outlast the PreToolUse ask's deadline; and a deep guard
+raised `RecursionError`. D-190's fix round lists the fix and the pins of
+each, and SPEC §4, row 171 and KNOWN-ISSUES-next now name the routes the
+reading still misses.
+
+New: four negative and twenty positive `failure_relay_*` fixtures (their
+labels are Claude's, under the delegation), `tests/test_failure_relays.py`,
+five tests in `tests/test_pre_tool_use.py`, THREATMODEL row 171, and rows
+in SPEC §4 and [KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md). On the three
+uvloop commits' test files, each paired with a synthetic `.pyx` edit (not
+the full commits), main `6a867f6d` blocks with 1, 1 and 2 HIGH findings and
+this change passes all three, plain and under `oracle_freeze`
+(LAPTOP-01AGNPJU, Windows CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Owed before the 0.11 tag: the
+targeted three-commit, six-call uvloop diagnostic on the final release src
+tree, because R29's repositories hold no uvloop commit, and the 0.11
+disposition of D-176's remaining history risk, which is not yet accepted
+for 0.11.
+
+Status: on branch `claude/v011-next-20261029`, from main `6a867f6d`; not
+merged. Targeted runs on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-10-29, after the fix round, each exiting 0: the golden runner over all
+1141 fixtures (1143 passed); `tests/test_failure_relays.py` and
+`tests/test_pre_tool_use.py` (174 passed); the 29 other test files that
+mention BROAD_EXCEPT_ADDED, swallowing, D-176 or `broad_handlers` (2118
+passed, 1 skipped); the THREATMODEL, STATE, link, SPEC, schema,
+determinism, detector-coverage and documentation-contract tests (45
+passed); and the documented test count, now 21897 collected. The findings,
+SARIF and IR of all 1117 existing fixtures are byte-identical to main's.
+Not run: the full suite, `tests/gates`, R29, the targeted uvloop
+diagnostic, dogfood and a Claude Code hook lifecycle run. Not released:
+package metadata stays 0.10.0.
 
 ## 2026-10-28: 0.11 scope, a PreToolUse ask and the Stop release (D-189)
 

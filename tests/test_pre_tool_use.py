@@ -433,3 +433,84 @@ def test_the_size_block_blocks_on_every_stop(weakened):
         payload = stop(weakened, active)
         assert payload["decision"] == "block"
         assert "over the source byte limit" in payload["reason"]
+
+
+# --- failure relays (D-190) --------------------------------------------------------------------------
+
+RELAY = '''
+
+async def test_callback_total():
+    fut = asyncio.Future()
+
+    def cb():
+        try:
+            assert total() == 5
+        except Exception as e:
+            fut.set_exception(e)
+        else:
+            fut.set_result(None)
+
+    asyncio.get_running_loop().call_soon(cb)
+    await fut
+'''
+
+
+def test_adding_a_proven_failure_relay_does_not_ask(repo):
+    assert write(repo, "import asyncio\n\n\n" + ORIGINAL + RELAY) == {}
+
+
+def test_adding_a_relay_outside_the_rules_asks(repo):
+    # Nothing consumes the future, so the handler swallows the failure (R5).
+    reason = asked(write(repo, "import asyncio\n\n\n" + ORIGINAL + RELAY.replace("    await fut\n", "")))
+    assert reason is not None and "BROAD_EXCEPT_ADDED" in reason
+
+
+UNREAD_RELAY = '''import asyncio
+
+
+def test_callback_total():
+    async def main():
+        fut = asyncio.get_running_loop().create_future()
+
+        def cb():
+            try:
+                assert total() == 5
+            except Exception as e:
+                fut.set_exception(e)
+            else:
+                fut.set_result(None)
+
+        asyncio.get_running_loop().call_soon(cb)
+        await fut
+
+    asyncio.run(main())
+'''
+
+
+def test_a_new_file_with_a_relay_the_rules_do_not_read_asks(repo):
+    # A residual (KNOWN-ISSUES-next): this honest relay, through asyncio.run
+    # and get_running_loop().create_future(), is outside R1 to R7, and a new
+    # file is analysed as an addition.
+    reason = asked(write(repo, UNREAD_RELAY, repo / "test_new.py"))
+    assert reason is not None and "BROAD_EXCEPT_ADDED" in reason
+
+
+def test_breaking_a_failure_relay_does_not_ask(repo):
+    # A residual, the same as 0.10 (THREATMODEL row 171): both sides hold the
+    # handler, so removing the await adds nothing to count.
+    (repo / TEST).write_bytes(("import asyncio\n\n\n" + ORIGINAL + RELAY).encode())
+    git(repo, "commit", "-am", "relay")
+    assert edit(repo, "    await fut\n", "    pass\n") == {}
+
+
+def test_a_relay_made_proven_does_not_hide_a_new_swallow(repo):
+    # The 2026-10-29 adversarial reviews: the base holds the relay without
+    # its await, so it counts as a swallow; the write restores the await and
+    # swallows test_total's own assertion under the same first line. Only
+    # the after side's relays are credited, so the new swallow still asks.
+    (repo / TEST).write_bytes(("import asyncio\n\n\n" + ORIGINAL + RELAY.replace("    await fut\n", "")).encode())
+    git(repo, "commit", "-am", "relay without its await")
+    swallowed = ORIGINAL.replace("    assert total() == 5\n",
+                                 "    try:\n        assert total() == 5\n    except Exception as e:\n        print(e)\n")
+    reason = asked(write(repo, "import asyncio\n\n\n" + swallowed + RELAY))
+    assert reason is not None and "BROAD_EXCEPT_ADDED" in reason

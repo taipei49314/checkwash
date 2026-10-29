@@ -1,0 +1,50 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay-shaped handler inside a pytest fixture is not credited
+origin: 2026-10-29 status review, DF0: a fixture's assertions, nested callbacks included, become oracles of the units that request it only after the parse, so R2 cannot see them
+note: the callback lies in a fixture (R2b); every other condition holds; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_checked.py ===
+import asyncio
+
+import pytest
+
+from app import compute
+
+
+@pytest.fixture
+async def checked():
+    return True
+
+
+def test_uses(checked):
+    assert checked
+=== after: tests/test_checked.py ===
+import asyncio
+
+import pytest
+
+from app import compute
+
+
+@pytest.fixture
+async def checked():
+    fut = asyncio.Future()
+
+    def cb():
+        try:
+            assert compute() == 3
+        except Exception as e:
+            fut.set_exception(e)
+        else:
+            fut.set_result(None)
+
+    asyncio.get_running_loop().call_soon(cb)
+    await fut
+    return True
+
+
+def test_uses(checked):
+    assert checked
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

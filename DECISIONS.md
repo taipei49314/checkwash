@@ -342,3 +342,333 @@ have been sent.
   sentence.
 
 New: `tests/test_pre_tool_use.py`. No other existing expectation changed.
+
+## D-190 (2026-10-29): a proven Python failure relay is not a swallow, within 0.10's count
+
+**Authority.** On 2026-10-28T08:34:01Z Claude asked Nelson five questions.
+Item 1 was
+「**uvloop**：沿用 Codex 的接受，還是你親自決定；是否核准「認得轉交寫法」的引擎修正。」
+(keep Codex's acceptance or decide himself, and whether to approve an engine
+fix that recognises the relay spelling), with the recommendation
+「讓 checkwash 認得「把例外交給一個確實會被等待的 Future」，認得的降成 warn，真正吞掉例外的照擋。這會動到凍結區，要你核准。D-187 只涵蓋 0.10，下一版要嘛做這個修正，要嘛由你親自決定接不接受。」
+(recognise "handing the exception to a Future that is actually awaited",
+lower what is recognised to warn and keep blocking real swallows; it touches
+the frozen area and needs his approval; D-187 covers 0.10 only). At
+2026-10-28T08:41:25Z Nelson replied
+「1.核准 2.用寫清楚結案 stop hook自動凍結 3.這次統一收尾後跑 4.readme等到修復後重排 可以進版 Hook選local Doctor放寬我有點不太確定 5.這題我不太確定」
+(its line breaks and doubled spaces shown as single spaces, as in D-189).
+Claude's plan at
+08:43:12Z, item 1, was
+「**修 uvloop 誤擋（你已核准）**：讓 checkwash 認得「把例外交給一個確實會被等待的 Future」這種轉交寫法，降成 warn。真正吞掉例外的照擋；`oracle_freeze` 和 `fail_on=warn` 還是會擋。另外補上回歸 fixture，並重跑那三筆 uvloop，確認從 block 變成 warn。」,
+and Nelson clicked the button labelled 「開始」 at 09:05:05Z.
+
+At 2026-10-28T17:33:37Z (2026-10-29 01:33 Asia/Taipei) Nelson clicked the
+button labelled 「接著做 0.11」, whose option text was
+「接著做 0.11 其他項目（uvloop 轉交辨識、#419 殘餘結案、doctor 方案 S、README 重排），順便帶上那 3 項文字修正」.
+
+On 2026-10-29 Claude told him that the design departs from the approved
+text: under option C a recognised relay gets no finding, so `oracle_freeze`
+and `fail_on=warn` no longer block it, because D-189's PreToolUse ask forces
+`oracle_freeze` and E2 would raise a warn to high, so every legitimate relay
+would be asked about. Claude recommended C, bounded so that 0.11 never adds a
+finding 0.10 lacks, and asked 「uvloop 轉交要用哪個做法？」. At
+2026-10-29T14:29:31Z Nelson clicked the button labelled
+「用 C，開始改 PR-A」, whose option text was
+「用 C：認得的轉交不列 finding，並限制成不會多出 0.10 沒有的 finding；照交接檔 0a 的清單改好 PR-A 再開工」;
+the other button was labelled 「照原案降 warn，開始」.
+
+Claude wrote each button's label and option text, and only the label may
+have been sent. These approvals cover this entry's agent-read-only edits:
+the SPEC §4 row and its new subsection, THREATMODEL rows 16 and 171, and
+this entry. Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
+[RELEASING](docs/RELEASING.md)). Every choice below that is not quoted above
+is Claude's under that delegation, as D-189's were: the rules R1 to R7 and
+R2b, the bound's form, the fixtures, and the tests and their expectations.
+They are not Nelson's personal review. AGENTS.md says fixture labels are
+reviewed by a human before merge; the labels of this entry's 24 fixtures
+were set by Claude as the delegated maintainer.
+
+**The departure from 「降成 warn」.** The approved recommendation and plan
+said a recognised relay is lowered to warn, stays listed, and still blocks
+under `oracle_freeze` and `fail_on=warn`. This implementation removes the
+finding instead. E2 (`gating.py`) sets every oracle finding to high after
+the de-escalators, and D-189's PreToolUse handler forces `oracle_freeze` and
+asks on BROAD_EXCEPT_ADDED at high, so a warn would still ask about every
+legitimate relay; an exemption per fingerprint would need a human for each
+case and fix nothing in general. Nelson chose C, with the 0.10 bound, on
+2026-10-29 (above). So a recognised relay is not reported under
+`oracle_freeze` or `fail_on=warn` either, which the 10-28 plan said would
+still block, except in the price case of *The bound's form* (below), where
+it is reported as on 0.10.
+
+**What changed.**
+
+- `frontends/python/failure_relays.py` (new) proves SPEC §4 *Python failure
+  relays*: R1 the relay statement, in a function S with no loop between; R2
+  no assertion a parse-time unit executes inside the `try` body, compared in
+  the character offsets `Assertion.span` uses, and no asserting name read in
+  it, closed over same-file calls; R2b (a) a parse that collects tests and
+  is not a conftest's, (b) no enclosing pytest fixture, by any decorator
+  whose last name is `fixture` or `yield_fixture`, so
+  `pytest_asyncio.fixture` too, (c) S nested in another function; R3 the
+  future, with a file-wide list of dynamic access that turns every relay in
+  the file off; R4 its uses; R5 a proven consumer, under no handler and
+  after no `return`, with B's own failure reaching its caller; R6 the
+  trusted loop, with every store of its attribute outside M on a fresh
+  local; and R7 asyncio. A `try`/`except*` is not read. The run
+  sites are exactly R5's two forms: the design prototype's further
+  acceptance of a plain `C()` call of a sync def and of `await
+  asyncio.wait_for(C(...))` is dropped
+  (`tests/test_failure_relays.py::test_r5_no_other_run_site_is_read`, with
+  `asyncio.run(C())`). A `run_until_complete` on an
+  untrusted receiver is another use of the future (R4), which refuses,
+  rather than a use that merely proves nothing. The reader numbers the tree
+  once in pre-order, indexes what the rules look up, and memoises per
+  scope, future, statement and statement list, so it runs in time linear in
+  the file up to the log factor of its interval lookups.
+- `frontend.py`: the swallowing list is computed exactly as on 0.10. The
+  proven relays among it go to a new `ParsedFile.relay_handlers`, read only
+  in a parse with `collect_tests` and without `conftest`, and only once a
+  relay-shaped handler asks; a `RecursionError` in the reading leaves the
+  handler unproven, so the reading never turns a file 0.10 analyses into an
+  engine error. `ParsedFile` is not serialized, so no IR field, fingerprint
+  or cache key changes.
+- `engine.py`: per file and per handler text, the BROAD_EXCEPT_ADDED
+  additions become the multiset intersection (`Counter &`, the elementwise
+  minimum) of 0.10's difference, Counter(swallowing after) −
+  Counter(swallowing before), and the after side's swallowing handlers that
+  are not proven relays, Counter(swallowing after) − Counter(relays after).
+  The before side's relays are not read. A file without relays on its after
+  side gets exactly 0.10's count, so its IR is byte-identical.
+
+Consequences, stated in SPEC §4, THREATMODEL row 171 and KNOWN-ISSUES-next:
+0.11 never reports a BROAD_EXCEPT_ADDED that 0.10 would not; a relay that
+the same change makes proven cannot pay for a new swallow of the same first
+line; an unrelated edit can no longer make an unchanged relay reported (the
+2026-10-29 status review's N1: one added line `_NOTE = 'loop'` in uvloop's
+`tests/test_tcp.py` made a per-side reading report four relays); an edit
+that breaks an existing relay, for example by removing its await, is not
+reported, exactly as on 0.10, a residual pinned by
+`tests/test_failure_relays.py::test_residual_row171_breaking_a_relay_is_not_reported`;
+a new swallow added beside an existing relay still reports; and an honest
+relay added beside a handler of the same first line that is not a proven
+relay is counted, as 0.10 counts it.
+
+**The bound's form.** Claude's plan for this round, and the first
+implementation, put the bound as 0.10's difference intersected with the
+difference computed with proven relays removed from both sides. That form
+keeps every consequence the plan named, but two 2026-10-29 adversarial
+reviews showed it pays for a genuine swallow. When a handler the before side
+did not read as a relay (its consumer missing, its body not yet a relay, or
+a string equal to the loop's attribute name elsewhere in the file) becomes a
+proven relay in the same change, removing relays from both sides matches
+the new swallow of the same first line against that before-side handler,
+and the swallow of a unit's own assertion went unreported: the PreToolUse
+ask stayed silent and the Stop hook and a CI range check passed, where 0.10
+blocked. Reading the after side alone keeps the intersection with 0.10's
+difference, so the second half of Nelson's option text,
+「限制成不會多出 0.10 沒有的 finding」, still holds; it keeps every
+consequence the plan named and adds the one above. Its price is the last
+consequence above, and there it departs from the first half,
+「認得的轉交不列 finding」: an honest relay added beside a handler of the
+same first line that is not a proven relay is reported, under
+`oracle_freeze` too
+(`tests/test_failure_relays.py::test_a_relay_beside_a_same_text_swallow_reports_as_on_0_10`).
+A count per handler text cannot tell that case from the trade above, where
+the same counts hide a genuine swallow. Choosing the after-side form, and
+with it that departure, is Claude's under the delegation; Claude reported
+the departure to Nelson when this change was committed.
+
+**Why R2b.** R2 reads parse-time units only, but the engine folds a
+fixture's assertions (everything lexically inside it, nested callbacks
+included) and sibling helpers' own assertions into units after the parse,
+and a test-role file that pytest does not collect is parsed without units
+(status review, DF0). Keying on units being present would keep uvloop
+`7b202ccf` blocking: its `tests/test_context.py` parses to no unit, because
+its tests live in a mixin whose collecting class has an imported base. R2
+and R2b carry the security argument: a credited relay sits in a callback or
+thread body a collected test hands off, outside any fixture, and its `try`
+body neither holds an assertion a parse-time unit executes nor reaches one
+through a same-file name, so whatever defeats it loses only an assertion
+whose deletion already passes silently (THREATMODEL row 91). R3 to R7 carry
+it only together with R2 and R2b: they refuse the spellings they name, and
+no list of spellings closes every same-file route.
+
+**Other consumers of the swallow lists.** Only the engine's
+BROAD_EXCEPT_ADDED count reads `swallowing_handlers` and `broad_handlers`,
+and the relay credit applies only to the swallowing side of that count. The
+three alias passes (`class_exception_aliases`, `function_exception_aliases`,
+`neutralizing_aliases`) add to both lists and keep `relay_handlers` through
+`dataclasses.replace`. Gating and the evidence code read neither list. The
+#496 always-passing branch is an `elif` of `_swallows`, so a relay never
+reaches it. JS/TS parses leave `relay_handlers` empty.
+
+**Unchanged.** The gating severity table and `ORACLE_RULES`; E1 and E2;
+D-176's unit-less refusal, with `issue419_narrow_broad_template_pos` still
+blocking; the strength lattice and alignment parameters; the detectors and
+the unit-less fingerprint; `pretool.py`, `cli.py` and `hooks.py`, so the
+PreToolUse rule set and threshold; the JS/TS frontend; the findings and IR
+versions; `broad_handlers`, so production-role files; `tests/gates`; and
+every existing `.gwcase` and test expectation.
+
+**Residuals** (THREATMODEL row 171, [KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md)):
+a loop built outside the file is trusted (uvloop's `BaseTestCase.setUp` sets
+`self.loop = self.new_loop()`, which a same-file subclass or another file can
+override); asyncio or its `Future` replaced from another file, a conftest's
+`sys.modules` among them, is trusted; a same-file route the named spellings
+miss, such as a stand-in reached through a call's result or a metaclass, is
+not refused; B's own completion is read only against the named hand-offs,
+so a B called from a function that is itself handed to a thread, or an
+async B whose coroutine is scheduled and never awaited, can lose the
+consumer's failure; a callback invoked again after it completed the future
+loses the later failure; a `with` whose `__exit__` suppresses is not read
+(row 91a); a broken relay is not reported, as on 0.10; and honest relays
+outside the rules (a future created on, a relay scheduled on or a run site
+on a loop from `asyncio.get_running_loop()`, `asyncio.new_event_loop()` or
+pytest-asyncio's `event_loop`; `asyncio.run` as a nested coroutine's run
+site, deeper run chains, a consumer after a guarded
+`return`, relays in loops, `except*`, module- or method-level handlers,
+fixtures, a file with the dynamic access R3 lists) still report
+BROAD_EXCEPT_ADDED and are asked about, in a new file too.
+
+**uvloop.** D-187 recorded three PASS-to-BLOCK commits, `7b202ccf`,
+`2081db89` and `9cba7493`, and four HIGH occurrences
+([DECISIONS-archive-3](DECISIONS-archive-3.md)); [RELEASING](docs/RELEASING.md)
+records the first one's fingerprint,
+`BROAD_EXCEPT_ADDED/tests/test_context.py/-/ed0231ac4a64`. D-190 is expected to remove
+those findings. Here that is shown only on the three commits' before and
+after test files, each paired with a synthetic one-line `.pyx` comment edit
+(an opaque production change), not on the full commits. On
+LAPTOP-01AGNPJU, Windows CPython 3.11.9
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), main `6a867f6d` (extracted with
+`git archive`) and this change's worktree, after the fix round below, gave:
+
+| uvloop commit | main `6a867f6d`, plain and `oracle_freeze` | this change, plain and `oracle_freeze` |
+| --- | --- | --- |
+| `7b202ccf` | block, 1 HIGH (`OPAQUE_PROD_CHANGE_NOT_EVIDENCE`; with freeze also `ORACLE_FREEZE`) | pass, no finding (relays before/after 0/1) |
+| `2081db89` | block, 1 HIGH | pass, no finding (relays 3/4) |
+| `9cba7493` | block, 2 HIGH | pass, no finding (relays 1/3) |
+
+R29's Python set (attrs, click, flask, httpx, rich and starlette;
+[RELEASING](docs/RELEASING.md)) holds no uvloop commit, so R29 cannot show
+this movement. A targeted three-commit, six-call diagnostic, the v0.10.0 pyz
+against 0.11 as `known-cost-010-r1` compared v0.9.0, is owed before the 0.11
+tag. It runs on the final release src tree that RELEASING's candidate rule
+counts, not in this PR.
+
+**D-176 for 0.11.** D-187 accepted the three uvloop costs and D-176's
+explicitly unmeasured remaining-history risk for 0.10 only. D-190 is
+expected to remove the three known costs, pending that diagnostic. It does
+not accept the remaining risk for 0.11: that risk is not yet accepted for
+0.11, and the 0.11 release record will disposition it after R29 and the
+targeted diagnostic on the final tree.
+
+**Fix round (2026-10-29).** Two adversarial reviews of the first
+implementation, Claude subagents with no external model, confirmed problems
+that each reproduced on LAPTOP-01AGNPJU before the fix: dress-swallow, a
+security review, seven, and drift-perf, on semantic drift, performance and
+real code, five, two of them overlapping. Each is fixed and pinned:
+
+1. The bound's form paid for a genuine swallow (both reviews): the engine
+   now reads the after side's relays only (*The bound's form*, above).
+   Pinned by `failure_relay_made_proven_pays_for_swallow_pos`, four
+   spellings, plain and under `oracle_freeze`, in
+   `tests/test_failure_relays.py`, and
+   `tests/test_pre_tool_use.py::test_a_relay_made_proven_does_not_hide_a_new_swallow`.
+2. R2 read lexical containment only, so a credited relay could guard a
+   unit's assertion run through a helper, and with a stand-in lose it: R2
+   now refuses a `try` body that reads an asserting name.
+   `failure_relay_unit_helper_call_pos` and five spellings.
+3. R7 trusted an `asyncio.Future` replaced through an alias, `importlib` or
+   `asyncio.__dict__`. `failure_relay_aliased_asyncio_stand_in_pos` and
+   seven spellings.
+4. R6 trusted a loop replaced by a computed `setattr`, an alias of `self`, a
+   helper's store, `vars()` in a class body or a keyword-built stand-in.
+   `failure_relay_loop_set_by_helper_pos` and six spellings.
+5. R3 missed a future completed through a closure cell, or through a frame
+   from outside B: its dynamic-access list is now file-wide and longer.
+   `failure_relay_closure_completes_future_pos` and two spellings.
+6. R5 proved a consumer that a narrower handler skips or whose failure it
+   drops, and one in a decorated coroutine: no handler of any kind may be on
+   the walk, and C is undecorated. `failure_relay_wait_for_timeout_caught_pos`,
+   `failure_relay_decorated_coroutine_pos` and seven more spellings.
+7. R5 did not ask whether B's own failure reaches the test: B is not a
+   generator, every read of its name is a call outside any lambda, and a
+   nested B is undecorated; what that misses is open (row 171).
+   `failure_relay_future_in_thread_body_pos` and five more spellings.
+8. Reachability through `_unreachable_ids` on each function grew with the
+   nesting depth: an Edit adding a swallow to a 610 KB chain of 90 nested
+   coroutines outlasted the PreToolUse ask's 30-second deadline, so it was
+   not asked about, where 0.10 asks. R5 now reads the statements before the
+   consumer instead. A first version refused any `raise` before it, which
+   refused one of uvloop `2081db89`'s four relays (its test opens with `if
+   self.implementation == 'asyncio': raise unittest.SkipTest()`), so a
+   `raise` nested in an earlier statement is allowed: with no handler on the
+   walk it fails or skips the test. A `return` refuses whatever its guard.
+   `test_a_chain_of_nested_coroutines_parses_quickly`.
+9. A 300-term guard in the consuming coroutine raised `RecursionError`, an
+   engine error on a file 0.10 analyses: the reading no longer evaluates
+   guards, and a `RecursionError` leaves the handler unproven.
+   `test_a_deep_guard_in_the_consuming_coroutine_is_no_engine_error`,
+   `test_a_reader_that_cannot_decide_leaves_the_handler_a_swallow`.
+10. Text: SPEC §4 and KNOWN-ISSUES-next listed `asyncio.run` as not read,
+    but a coroutine that awaits its own future is read however it is run;
+    row 171 said every dressed shape fails a condition. Both are corrected,
+    the second to the named spellings, with the routes they miss listed as
+    open.
+
+**Evidence, this round** (LAPTOP-01AGNPJU, Windows CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, worktree on main `6a867f6d` with
+this change uncommitted, 2026-10-29, after the fix round): the table above;
+the findings JSON, SARIF, IR JSON, fingerprints and verdicts of all 1117
+existing fixtures, plain and under `oracle_freeze`, are byte-identical on
+main and on this change; the 24 new fixtures match on this change, plain
+and under `oracle_freeze`, while on main all 24 block, the four negatives
+being uvloop's false blocks; the status review's N1 probe (uvloop's real
+`tests/test_tcp.py` plus one line `_NOTE = 'loop'`, `'asyncio.TimeoutError'`,
+`'call_soon'`, `'Future'`, `import importlib` or `_N = vars()`) passes on
+both. Timings, best of two on a host shared with other load: a 350 KB chain
+of 90 nested coroutines parses in 0.56 seconds (0.36 on main), and an Edit
+adding a swallow to it is analysed in 1.2 seconds (0.72 on main, 11.9 on
+the first implementation); on a 610 KB chain the Edit takes 3.8 seconds
+(2.4 on main), and the CLI PreToolUse Edit asks after 8.1 seconds; 2,000
+relay-shaped handlers 60 functions deep, 2,000 tests each with a nested
+relay, and 3,000 asserting helpers beside one relay parse in 1.05, 1.82 and
+1.69 seconds (0.77, 1.22 and 1.32 on main). The status review measured a
+first prototype at 25.5 seconds for 400 handlers sharing one future. The
+prototype's 38 parse variants are the unit tests' 38, with the same
+expected outcome each. After the fix round Claude ran the security review's
+splicing fuzzer, extended with 43 constructs aimed at the rewritten reader,
+over six seeds: 30,000 variants of a relay-shaped test parsed and were
+analysed under `oracle_freeze` with no exception.
+
+**Not run** when this entry was written: the full suite, `tests/gates`
+(the perf gate and the verdict gate among them), R29, the targeted uvloop
+diagnostic, dogfood, a Claude Code hook lifecycle run, a run of the
+corrected tests against the first implementation, and any other platform.
+The PreToolUse tests run the CLI handler on toy repositories only.
+
+**Test expectations.** New fixtures, labels set by Claude:
+`failure_relay_callback_future_neg`, `failure_relay_thread_wait_for_neg`,
+`failure_relay_nested_coroutine_future_neg` and
+`failure_relay_unitless_mixin_neg` (pass); `failure_relay_never_awaited_pos`,
+`failure_relay_result_set_first_pos`,
+`failure_relay_gather_return_exceptions_pos`,
+`failure_relay_await_swallowed_pos`, `failure_relay_await_suppressed_pos`,
+`failure_relay_stand_in_future_pos`, `failure_relay_shadowed_asyncio_pos`,
+`failure_relay_exception_rebound_pos`, `failure_relay_stand_in_loop_pos`,
+`failure_relay_repeated_in_loop_pos`, `failure_relay_in_fixture_pos`,
+`failure_relay_helper_module_pos`,
+`failure_relay_made_proven_pays_for_swallow_pos`,
+`failure_relay_unit_helper_call_pos`,
+`failure_relay_aliased_asyncio_stand_in_pos`,
+`failure_relay_loop_set_by_helper_pos`,
+`failure_relay_closure_completes_future_pos`,
+`failure_relay_wait_for_timeout_caught_pos`,
+`failure_relay_decorated_coroutine_pos` and
+`failure_relay_future_in_thread_body_pos` (each one BROAD_EXCEPT_ADDED at
+high, `bypass: 171`). The design's `failure_relay_await_removed_pos` is not
+added: under the 0.10 bound that edit passes, so it is the row-171 residual
+test instead. New: `tests/test_failure_relays.py`, and five tests at the end
+of `tests/test_pre_tool_use.py`. No existing expectation changed.

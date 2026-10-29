@@ -1,0 +1,43 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay in a test helper module that pytest does not collect is not credited
+origin: 2026-10-29 status review, DF0: a test-role file pytest does not collect is parsed without units and still judged on its swallowing handlers
+note: tests/helpers.py has the test role but is not collectable, so it is parsed without collecting tests (R2b); every other condition holds; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/helpers.py ===
+from app import current_context
+
+
+class ServerChecks:
+    def check_started(self, srv):
+        assert srv is not None
+=== after: tests/helpers.py ===
+from app import current_context
+
+
+class ServerChecks:
+    def check_started(self, srv):
+        assert srv is not None
+
+    def check_factory_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                assert current_context() == "inner"
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        async def main():
+            srv = await self.start(factory)
+            try:
+                await called
+            finally:
+                srv.close()
+
+        self.loop.run_until_complete(main())
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

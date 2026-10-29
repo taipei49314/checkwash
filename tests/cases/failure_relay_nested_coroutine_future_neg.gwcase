@@ -1,0 +1,63 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: a thread's failure relayed to an asyncio.Future that its coroutine awaits is not swallowed
+origin: MagicStack/uvloop 9cba7493 (tests/test_tcp.py test_shutdown_timeout), reduced; one of the three false blocks D-187 accepted for 0.10
+note: the .pyx edit is an opaque production change, so on 0.10 the added handler is refused the opaque credit and blocks with OPAQUE_PROD_CHANGE_NOT_EVIDENCE (D-176, D-187); as a proven failure relay it is not counted as added (SPEC §4, D-190); the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: app/_server.pyx ===
+# listen without a context
+cdef int backlog = 100
+=== after: app/_server.pyx ===
+# listen in the copied context
+cdef int backlog = 100
+=== before: tests/test_server.py ===
+import asyncio
+
+from app import handshake, start_server
+from tests.support import LoopTestCase
+
+
+class TestShutdown(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+=== after: tests/test_server.py ===
+import asyncio
+
+from app import handshake, start_server
+from tests.support import LoopTestCase
+
+
+class TestShutdown(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_shutdown_timeout(self):
+        clients = []
+
+        async def test_client(addr):
+            fut = asyncio.Future(loop=self.loop)
+
+            def prog(sock):
+                try:
+                    sock.connect(addr)
+                    self.assertEqual(handshake(sock), b"OK")
+                except Exception as ex:
+                    self.loop.call_soon_threadsafe(fut.set_exception, ex)
+                else:
+                    self.loop.call_soon_threadsafe(fut.set_result, None)
+
+            client = self.tcp_client(prog)
+            client.start()
+            clients.append(client)
+            await fut
+
+        async def start_all():
+            tasks = [test_client(None) for _ in range(3)]
+            await asyncio.wait_for(asyncio.gather(*tasks), 10.0)
+
+        self.loop.run_until_complete(start_all())
+        for client in clients:
+            client.stop()
+=== expect ===
+[]

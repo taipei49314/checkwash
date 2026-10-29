@@ -1662,7 +1662,26 @@ def build_ir(
 
             before_broad = Counter(_handlers(before_parsed))
             after_broad = Counter(_handlers(after_parsed))
-            for text, count in sorted((after_broad - before_broad).items()):
+            added = after_broad - before_broad
+            after_relays = Counter(
+                after_parsed.relay_handlers
+                if after_parsed is not None and after_parsed.parse_ok and (judged_test or role == "conftest")
+                else ()
+            )
+            if added and after_relays:
+                # A proven failure relay is not a swallow (D-190), but only
+                # as far as 0.10 counts, and never on the before side's
+                # word: per handler text, the additions are the smaller of
+                # 0.10's count and the after side's swallowing handlers that
+                # are not proven relays. So no change reports one that 0.10
+                # would not, and a relay made proven in the same change
+                # cannot offset a new swallow of the same text, which the
+                # before side's handlers would otherwise account for; an
+                # edit elsewhere that makes an unchanged relay unread
+                # reports nothing, and a broken relay is not reported, as
+                # on 0.10 (THREATMODEL row 171).
+                added &= after_broad - after_relays
+            for text, count in sorted(added.items()):
                 g.broad_excepts_added.extend([(path, text)] * count)
 
     g.base_literals = sorted(base_literals)

@@ -19,6 +19,8 @@ from types import SimpleNamespace
 
 from checkwash.frontends.python.binding_canonical import binding_key as _binding_key
 from checkwash.frontends.python.conditional_oracles import conditional_oracle_carriers
+from checkwash.frontends.python.failure_relays import Reader as _RelayReader
+from checkwash.frontends.python.failure_relays import candidate as _relay_candidate
 from checkwash.frontends.python.fixture_producers import (
     ProducerScope,
     _binders as _fixture_binders,
@@ -217,6 +219,12 @@ class ParsedFile:
     # — swallowing an error in prod is its own cheat, but a test that provokes
     # an error on purpose and inspects it hides nothing.
     swallowing_handlers: tuple[str, ...] = ()
+    # Subset of `swallowing_handlers`: the handlers that relay the failure to
+    # a future the test awaits (proven failure relays, SPEC §4, D-190). The
+    # engine reads them on a change's after side only, to cap what it counts
+    # as added, never above 0.10's count. Python only, and only in a
+    # collected test module.
+    relay_handlers: tuple[str, ...] = ()
     # JS only: the file's first focus (`.only`, `fit`, `fdescribe`,
     # `{ only: true }`), whatever it turns off in this file (#196 187.4).
     focus: Marker | None = None
@@ -4911,6 +4919,27 @@ def _parse_python(
             return scope is not None and _testcase_method(call, *scope, methods_of(), raw)
         return testcase
 
+    # The proven failure relays among the swallowing handlers (D-190), read
+    # only in a collected test module (R2b), and only once a relay-shaped
+    # handler asks: the reader is built then, with the spans of the
+    # assertions this file's units execute (R2), which are final by now.
+    relays: list[str] = []
+    relay_readers: list[_RelayReader | None] = []
+    reads_relays = collect_tests and not conftest
+
+    def proven_relay(handler: ast.ExceptHandler, node: ast.AST) -> bool:
+        # A tree too deep for the reading leaves the handler unproven, which
+        # is 0.10's reading: the relay pass never turns a file 0.10 analyses
+        # into an engine error.
+        try:
+            if not relay_readers:
+                relay_readers.append(None)
+                relay_readers[0] = _RelayReader(tree, off, [a.span for u in units for a in u.side.assertions])
+            reader = relay_readers[0]
+            return reader is not None and reader.proven(handler, node)
+        except RecursionError:
+            return False
+
     broad: list[str] = []
     swallowing: list[str] = []
     for node in _walk(tree):
@@ -4944,6 +4973,11 @@ def _parse_python(
                     continue
                 if _swallows(handler):
                     swallowing.append(seg)
+                    if reads_relays and _relay_candidate(handler) and proven_relay(handler, node):
+                        # It hands the failure, unchanged, to a future the
+                        # test awaits. It stays in both lists, as on 0.10;
+                        # the engine credits it in what a change adds (D-190).
+                        relays.append(seg)
                 elif not _raises_in(handler) and _proved_to_pass(handler, testcase_of(handler)):
                     # Its oracles cannot fail, so it swallows too, under its
                     # own text (#496, R50).
@@ -4977,6 +5011,7 @@ def _parse_python(
                     swallowing.append(seg)
     broad.sort()
     swallowing.sort()
+    relays.sort()
 
     suppressions = [
         f"{i + 1}:{line.strip()}"
@@ -5005,6 +5040,7 @@ def _parse_python(
         literals=frozenset(literals),
         broad_handlers=tuple(broad),
         swallowing_handlers=tuple(swallowing),
+        relay_handlers=tuple(relays),
         constants=_top_level_constants(tree, text),
         from_imports=_top_level_from_imports(tree),
         fixture_defs=_fixture_definitions(tree) if collect_tests else {},

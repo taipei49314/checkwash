@@ -1,0 +1,43 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay around a same-file helper whose assertion a unit runs is not read
+origin: D-190 fix round, THREATMODEL row 171: the 2026-10-29 adversarial review dress-swallow, problem 2 (E1a)
+note: test_total runs check() itself, so the assertion in assert_total is one its unit executes, through a call in the try body rather than inside it; R2 refuses a try body that reads the name of a function such an assertion runs in, so the handler stays a swallow; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_total.py ===
+import asyncio
+
+from app import compute
+
+
+def assert_total(value):
+    assert value == 3
+
+
+def test_total():
+    assert_total(compute())
+=== after: tests/test_total.py ===
+import asyncio
+
+from app import compute
+
+
+def assert_total(value):
+    assert value == 3
+
+
+async def test_total():
+    fut = asyncio.Future()
+
+    def check():
+        try:
+            assert_total(compute())
+        except Exception as e:
+            fut.set_exception(e)
+        else:
+            fut.set_result(None)
+
+    check()
+    await fut
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

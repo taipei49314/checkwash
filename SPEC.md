@@ -833,7 +833,7 @@ detectors can only be disabled whole.
 | `EXPECTATION_DEFINITION_CHANGED` | an aligned assertion whose **text is unchanged** and whose expectation resolves to something outside the assertion whose definition changed: a unit-local binding, a `parametrize` **column the expectation actually consumes**, a same-file `@pytest.fixture`'s return/yield, or a **same-file top-level constant** (canonical on both sides so reformatting is not a change; last-wins on both sides, which is module execution order, so an appended rebind is caught; a constant the subject also consumes is a shared producer and excluded — D-051, the 2026-08-25 census's largest blind bucket). Which column is the expectation is decided by consumption, not by position or by the name `expected`. Pure row additions and net deletions are excluded — those are `TEST_DISABLED`'s event. When live count does not fall, disappeared input rows whose consumed answers are replaced by different new answers also belong to this rule: input-only renames retaining the old answers have their own bounded owner in `SUBJECT_INPUT_CHANGED` since the issue #93 contract decision (D-060); pure append, disabled rows and skip-plus-append retain their prior behavior. A cell is read through `pytest.param(...)`, so marking rows skipped is not an expectation edit. Since v0.3.0 (#135) the parametrize comparison is row-keyed: rows are identified by their input cells and the consumed column is compared per key as a multiset — a key that disappeared is a deletion or the replacement event just described, a key whose answers still contain everything they had is an addition or a reorder, a key that lost an answer it had and gained one it did not is this rule's event — and every positional cell of a `pytest.param(...)` row is read, so a fully wrapped table is compared like a bare one; a single-column table has no inputs to key on, so its identity is position and the before cells must survive as a subsequence (insertion anywhere, edit or reshuffle reported). A binding that gains a **branch-exclusive alternative** is excluded the same way, and only then: the after side must have more definitions, every before-side definition must survive verbatim (multiset containment), and the name's bindings must sit in pairwise-exclusive `if`/`match` arms — a sequential rebind fails the third clause because the last unconditional binding is the one the assertion reads (THREATMODEL 95 records the tautological-gate residual). Compared structurally, so reformatting is not a change. Escalates through repair evidence like every oracle rule — and D9 `DEPENDENCY_DRIFT` and `PACKAGE_REPAIR` de-escalate it the same way. Blocking status is a measured decision taken twice, not a hedge: as a blocking rule in v0.1.19 it cost 12 extra blocks on 1800 human commits and shipped at `info`; after the T1.9/T1.10/T1.11 credit rounds the 2026-08-25 promotion sweep cost 5, each adjudicated false and named (`benchmarks/adjudication-2026-08-25.json`), inside the pre-registered line of five. A JS/TS `.each`/`.for` table's rows are read the same way (§2b, #428): the consumed column is one the expected operand names directly through the callback's own parameter (`toBe(sum)`, with `sum` an array row's third cell, consumes `#2`), a column the subject names is a shared producer, and a local computed from a cell, a member (`row.expected`) and an index are not followed |
 | `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter. Resolved through **one hop** of the unit's own bindings, so hoisting the wrapper to the previous line is the same event; and applied to **argument positions** too, so `f(x)` becoming `f(normalise(x))` counts — same callee, same arity, every argument unchanged or containing its counterpart, at least one actually wrapped. Two hops are a stated residual; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it. Direct containment is retained alongside one-hop resolved containment. The bounded concrete ASCII-string proof below can establish that an added normalization is redundant for the unchanged production expression. Separate literal-table events can expose the same wrapper when ordinary assertion alignment does not; exact raw oracles that remain present are consumed first, so merely adding wrapped cases does not replace them. Neither extension changes severity or the ordinary restructure policy. |
 | `SUBJECT_INPUT_CHANGED` | an aligned assertion keeps its form, strength, polarity and expected answer, and the subject's **input data** changed — `f("Hello")` became `f("hello")` while `== "hello"` stayed (issue #93). Bounded: the subject must be a plain call with the structurally same callee on both sides (a provider bound in the unit, as a same-file fixture or as a module constant must be defined identically, so a changed provider invents no evidence), and every changed argument must resolve to a concrete literal on **both** sides — directly, or through the straight-line local binding / module constant the assertion reads. A changed argument that resolves to the *same* value is a rename and stays silent, as do a computed argument, a changed callable, a new test, and a name the expectation also reads (a shared producer moves both sides of the comparison and explains itself). The literal `parametrize` spelling counts too: a vanished live row paired with an arriving live row that keeps the consumed expected cells beside different input cells — but only when the vanished input does not survive with a different answer, which is EXPECTATION_DEFINITION_CHANGED's row-keyed event (#135). Row reorders and pure row additions stay silent. Escalates through repair evidence like every oracle rule, because feeding a test different data is routine when production changed under it |
-| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. In Python (#496), a handler that does not re-raise and whose every assertion is proved to always pass is not inspection either, and it reports its first line followed by a space and `[always-passing assertion]`, compared apart from the plain first line: an `assert` of a literal, of `not` before a literal, of a comparison between literals (`is` and `is not` only against `None`), or of `and`/`or` over these with every operand evaluated on its own; or `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`, `assertEqual` or `assertNotEqual` with literal operands that pass and at most one literal `msg`, called on a method's own receiver, when the first base of the class's local order that the file does not define has a name ending in `TestCase` and no same-file class before it binds the method's name (D-163). An always-failing assertion stays inspection, and so does any assertion the proof cannot read. |
+| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In Python, nor is a proven failure relay (D-190, *Python failure relays* below): a handler whose first statement hands the caught exception unchanged to an asyncio future that the test then awaits or runs to completion. It stays in the swallowing list the engine compares; a change's after-side relays only cap what the change counts as added, so no change reports an addition that 0.10 would not. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. In Python (#496), a handler that does not re-raise and whose every assertion is proved to always pass is not inspection either, and it reports its first line followed by a space and `[always-passing assertion]`, compared apart from the plain first line: an `assert` of a literal, of `not` before a literal, of a comparison between literals (`is` and `is not` only against `None`), or of `and`/`or` over these with every operand evaluated on its own; or `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`, `assertEqual` or `assertNotEqual` with literal operands that pass and at most one literal `msg`, called on a method's own receiver, when the first base of the class's local order that the file does not define has a name ending in `TestCase` and no same-file class before it binds the method's name (D-163). An always-failing assertion stays inspection, and so does any assertion the proof cannot read. |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` added, in Python files only. No JS/TS form is read: a test file's `@ts-nocheck` is #366, and ESLint directives are #367, deferred by ruling until after 1.0 |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`), content-classified runner scripts and package manifests whose test command changed (§2), **plus one hop**: a changed script that runs no test runner of its own but invokes another script that does is ci too, resolved against the diff or the head snapshot. Exactly one hop. A shell-script hop must terminate in a real runner — a `ci.sh` calling `compile.sh` stays production, which is the line the content gate has drawn since v0.1.8. A manifest's hop is bounded by where it starts instead: a script that `test` or a `test:*` script names through a script runner is part of the test command whatever it runs, because `npm test` runs `scripts.test` whatever it says (#196 185.2). Test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`, and `--test-only`, under which node's runner runs only the tests marked `only` (#196 187.1, #216)): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. For a package manifest that base side is its base-side test command, not the whole file: a token that only a non-test script carried at base counts once the diff writes it into the test command (#196 185.1). Additionally, literal option/value comparison recognizes newly introduced `--co`/`--collect-only`, `--ignore-glob`, and quoted or unquoted `-k`/`-m` selectors, including a changed value of an existing option. Literal `testpaths` and collection-name lists are narrowing when the new selection is a provable strict subset; additional `norecursedirs` exclusions also count. Restating, reordering or provably broadening a setting is not narrowing it. Identical configuration migration stays quiet, while narrowing during a migration remains visible. First configuration adoption without a base CI surface keeps the syntax scanner at warn; the resolved collection inventory (§2b) still judges a first configuration when it runs. Where it runs, a new root-config selector is judged against the base-suite tests that a run it governs collects: all of them for a run without targets, and those beneath the targets for a run with explicit targets whose discovery finds the same root config on both sides (#196 184.1). `-m`, `-k` and `--co` count whenever such a test exists; `--ignore`, `--ignore-glob` and `--deselect` only when they drop one, and `-p no:` only for a plugin other than `cacheprovider`, `faulthandler`, `pastebin` and `stepwise` (#196 184.2). A positional target in the root config's addopts is an explicit target of every run, read with the one definition of explicit targets a command's arguments use, which knows pytest's own and the common plugins' options that take a value, so `-n auto` or `--cov src` is no target (#173): a run collects beneath its command's targets and the addopts targets together, and when the addopts targets change, a base-suite test the base runs collected and no head run collects is excluded, a weakened command. A target moved between a command and addopts loses nothing. A word in addopts that names no file or directory on its side is no target: it is the value of an option the reader does not know, or a target that fails every run. A head run whose command names a missing path, or that collects no test, fails, and no claim is made for it; ambiguous addopts withholds the inventory. The inventory's settings proof does not reach a run with explicit targets, its command's or its config's addopts'. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests: a runner name anywhere in it, as row 69 reads one, or a runner site in it, live or dead (#216); deleting a runner script or a config file does not — that is consolidation until proven otherwise. A condition, a trigger, a hook inventory or a GitLab job's keys can stop a runner without touching its line (#181, #214), so GitHub workflows, `.pre-commit-config.yaml` and `.gitlab-ci.yml` are also read as an inventory of **runner sites**, each with whether it can execute for a pull request's commits and fail them. A runner site is a workflow step, a pre-commit hook or a command in a GitLab job's `script:` whose own command invokes a test runner, by a whole-word runner name outside the contexts known not to run it (`echo` and `printf` text, heredoc text written out, install commands, comments; #196 191.5), or by one of the runners #216 adds, `node --test`, `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`, `poe test` and `pdm test`, where a command starts: the first word of a simple command, past assignments, wrappers, package launchers, `sh -c` and `eval`, or inside a command substitution or a heredoc a shell reads, and never as a word elsewhere; or it is a `uses:` step whose action name and one of its `with:` inputs both name a runner. The same reading decides whether a runner-shaped script, a manifest script or a one-hop target invokes a test runner (§2); the opaque-exemption denial (THREATMODEL row 87) keeps row 69's names alone. A site is dead only for a static reason: a step or job `if:` that no event able to run the workflow on a pull request can make true, with status functions read as on an otherwise green run; a job that `needs:` a dead job and has no status function to run anyway; a trigger set with no event that runs on a pull request's commits, including activity `types` without `opened`, `synchronize` or `reopened` and a path filter that leaves no file (#196 191.9, 191.2(d)); a hook parked on the `manual` stage; a GitLab job that does not start by itself on a green pipeline (`when: manual`, `when: never`, or `when: on_failure`) or whose failure is allowed (`allow_failure: true`, or `exit_codes`), where each `rules:` entry that may match decides as the job's own keys do (an entry's condition is not evaluated, an entry with none ends the list, and a job no entry adds is not in the pipeline) and the job's `extends:` templates are merged in first; a hidden GitLab job (`.name`) that no job extends; and every GitLab job when `workflow: rules:` can only keep the pipeline from running (#214). There is no global GitLab token: `allow_failure: true` on a job whose `script:` runs no test runner is not a weakening. A runner command that lost a live site and gained a dead one is a disabled suite, and so is a runner reworded as the inventory moves a site from live to dead (#196 191.8); a pre-commit config whose hook entries invoked a recognised runner at base and invoke none at head, whatever its hook ids and names say, has removed its suite (#196 191.7). Both are weakened test commands. A workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader read with at least one live runner site, and whose head side it declines, is out of reach rather than weakened: high under E8, with a reason that names what the reader declined and the runner the base side ran (#196 191.3). A workflow is a `.yml` or `.yaml` file beneath `.github/workflows/`, `.gitlab-ci.yml` or `.pre-commit-config.yaml`; any other file kept beneath `.github/workflows/` is ci-role but not a workflow. A ci-role file that carries test obligations (§2) is reported at warn and is not scanned for swallows, narrowings or runner tokens: its lines are test code, judged by the test rules |
 | `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual)  Since 0.10.0, the D-177 policy-shadow exception: a newly winning `.checkwash/config.toml` over an existing selected BASE `.greenwash/config.toml` compares against that effective BASE policy, not defaults; see §6 policy-shadow transitions. |
@@ -1003,6 +1003,189 @@ effect or statement joins its guarded ones, or when its guard is a constant
   remains disabled under D-171; this revision admits only the separately
   stated Python broad-except condition. Production-role handlers that carry
   no test obligations remain non-oracle findings.
+
+### Python failure relays (D-190, 0.11.0)
+
+A broad handler in a Python test can relay a failure instead of swallowing
+it. uvloop's regression tests catch a callback's or a thread's assertion
+failure and pass it, unchanged, to an asyncio future that the test awaits,
+so the failure still fails the test; D-187 accepted three such false blocks
+for 0.10 only. The frontend keeps 0.10's swallowing list unchanged and
+records which of its handlers are *proven failure relays*
+(`failure_relays.py`). Proof is pure syntax, in time linear in the file up
+to a logarithmic factor, and never runs the test.
+
+Only a Python test module that the parse collects is read. The handler
+belongs to a `try` (a `try`/`except*` is not read) whose body holds an
+oracle; it is broad by the shared type-set predicate, and it swallows as
+0.10 reads it (it neither re-raises nor holds an oracle). It is a proven
+failure relay when all of the following hold.
+
+- **R1 Relay statement.** The handler binds the exception as a name E, and
+  its first statement is an expression statement of one of two exact
+  shapes: `F.set_exception(E)`, or `L.call_soon(F.set_exception, E)` /
+  `L.call_soon_threadsafe(F.set_exception, E)`, with no other argument or
+  keyword, where F is a plain name other than E. Statements after it are
+  unrestricted, except as R4 limits them. The `try` lies in a function S,
+  with no `for`, `async for` or `while` between S and the `try`.
+- **R2 Not a unit oracle.** No assertion that a parse-time unit executes
+  (`UnitSide.assertions`, THREATMODEL row 91) lies inside the `try` body,
+  compared in the character offsets `Assertion.span` records; and the `try`
+  body, outside nested defs, reads no asserting name. A def or lambda is
+  asserting when such an assertion lies in its own body, or when it reads
+  an asserting name; its name, the class of a method, and the names a
+  lambda is assigned to are asserting names, matched by spelling, as a name
+  or an attribute, anywhere in the file. So a `try` body that runs a unit's
+  assertion through a same-file helper, a method or a chain of calls is not
+  read.
+- **R2b Handed off.** (a) The parse collects tests and is not a conftest's:
+  a test-role file that pytest does not collect, and a conftest, are not
+  read. (b) No function enclosing the `try` is a pytest fixture, by any
+  decorator whose last name is `fixture` or `yield_fixture`
+  (`pytest_asyncio.fixture` included). (c) S is
+  itself nested in another function, a callback or a thread body that the
+  test hands off, not a module-level def or a method body. Units are not
+  required: a test mixin whose collecting class has an imported base parses
+  to none (uvloop `7b202ccf`).
+- **R3 The future.** F resolves outward from S through function scopes
+  only, with no class between; the first function binding it is B. F is
+  bound exactly once in B's whole subtree, nested scopes, parameters,
+  `global` and `nonlocal` included: the single name target of an
+  assignment that is a direct statement of B's body. Its value is
+  `asyncio.Future()`, with no argument or only `loop=<trusted L>` (R6 and
+  R7), or `<trusted L>.create_future()` with no argument (R6). Nowhere in
+  the file is there a call of `locals`, `vars`, `globals`, `eval`, `exec`,
+  `compile`, `__import__`, `setattr` or `delattr`, a `getattr` whose name is
+  not a string constant, an attribute `setattr`, `delattr`, `__setattr__`,
+  `__delattr__`, `__dict__`, `__closure__`, `cell_contents`, `__code__`,
+  `__globals__`, `__builtins__`, `f_locals`, `f_globals`, `f_back`,
+  `_getframe`, `currentframe`, `getclosurevars`, `get_referrers`,
+  `get_referents`, `get_objects`, `modules` or `patch`, the name `importlib`
+  or `patch`, or an import of `importlib`: a file that may reach a scope, a
+  frame, a closure, an attribute table or a module by another route reads
+  no relay.
+- **R4 Every use of F is accounted for:** the binding; the relay of R1, the
+  only `set_exception` site; `set_result` sites, each a direct statement of
+  the same `try`'s else clause, `F.set_result(x)` or
+  `<trusted L>.call_soon[_threadsafe](F.set_result, x)`; and loads inside
+  consuming expressions (R5). Any other use refuses: an alias, F passed to
+  a call (a `run_until_complete` on an untrusted receiver among them),
+  `add_done_callback`, `cancel`, `exception()`, `done()`, a load inside a
+  list, or a `gather` with `return_exceptions`.
+- **R5 A proven consumer.** A consuming statement is an expression
+  statement or an assignment whose value is `await A` (in an async def),
+  `<trusted L>.run_until_complete(A)` or `F.result()`. A is F,
+  `asyncio.wait_for(A', ...)` with A' first, or `asyncio.gather(..., A',
+  ...)` with A' a direct positional argument, no `**` and
+  `return_exceptions` absent or literal False (R7). The consuming statement
+  lies in B, or in an undecorated def or async def C, not a generator, that
+  is a direct statement of B's body, which B binds only by that def and not
+  as a parameter, run from a proven statement in B of exactly the form
+  `<trusted L>.run_until_complete(C(...))` or `await C(...)`. A statement
+  is proven in its function when the walk up to that function passes only
+  the body or finally clause of a `try` that has no handler and whose
+  finally clause holds no `return`, `break` or `continue`, and the body of a
+  `with` whose items neutralise no AssertionError (the `with` path's
+  predicate), never an `if`, a loop, a match case, a handler or an else
+  clause; and no statement before it, at any level of that walk, is a
+  `return` or a `raise` or holds a `return` outside nested functions. With
+  no handler on the walk, a `raise` nested in an earlier statement leaves
+  the function uncaught, so it fails or skips the test and never lets it
+  pass (uvloop opens tests with `if self.implementation == 'asyncio': raise
+  unittest.SkipTest()`); a `return` refuses whatever guards it. B's own
+  failure must reach its caller: B is not a generator, every read of B's
+  name in the file, as a name or an attribute, is the function of a call
+  outside any lambda, and a B nested in another function is undecorated.
+- **R6 Trusted loop L.** L is `s.attr`, or a name bound exactly once, to
+  `s.attr` by a direct assignment, in the first function binding it on the
+  way from the use to M, with no `nonlocal` of it there. M, the outermost
+  function holding the use, is defined directly in a module-level class,
+  with only function or lambda scopes between it and the use, and is
+  neither a `staticmethod` nor a `classmethod`; s is M's first positional
+  parameter, bound neither in M nor in a scope between. Nothing may
+  redirect `attr`: no class body binds it, no string constant equals it,
+  nothing inside M stores or deletes it on any receiver, and every store or
+  delete of it elsewhere is on a fresh local, a plain name inside a
+  function that is a parameter neither of that function nor of one
+  enclosing it and that the function binds only by direct assignments of a
+  call's result (uvloop's `proto = MyProto(loop=loop)` then `proto.loop =
+  loop`); so an alias such as `me = self`, a helper's parameter, a
+  module-level class and any receiver that is not a plain name redirect.
+  The file is stand-in free: no class body binds, nothing stores or
+  deletes, no string constant equals, and no keyword argument is named
+  `create_future`, `call_soon`, `call_soon_threadsafe`,
+  `run_until_complete`, `set_exception`, `set_result`, `__await__`,
+  `__getattr__` or `__getattribute__`; `asyncio.Future` needs stand-in
+  freedom too.
+- **R7 asyncio is the real module.** Wherever `asyncio.Future`, `wait_for`
+  or `gather` is read, every binding of the name `asyncio`, counted in all
+  scopes, is a module-level `import asyncio` or `import asyncio.<sub>`
+  without `as`; asyncio is imported no other way (no `as`, no `from
+  asyncio... import`) and there is no star import; the name is read only as
+  `asyncio.<attr>`; nothing stores or deletes an attribute of it, or an
+  attribute named `Future`, `wait_for` or `gather` on any receiver; and no
+  string constant starts with `asyncio.` or equals one of those three names.
+
+R2 and R2b carry the security argument: a credited relay sits in a callback
+or thread body that a collected test hands off, outside any fixture, and its
+`try` body neither holds an assertion a parse-time unit executes nor reaches
+one through a same-file name, so whatever defeats it loses only an assertion
+whose deletion already passes silently (row 91). R3 to R7 carry that
+argument only together with R2 and R2b. On their own they are precision:
+they name spellings, and they trust what the file cannot show, the loop a
+base class builds outside the file and asyncio itself (row 171).
+
+**Effect.** Per file and per handler text, the `BROAD_EXCEPT_ADDED`
+additions are the multiset intersection (the elementwise minimum) of 0.10's
+difference, Counter(swallowing after) − Counter(swallowing before), and the
+after side's swallowing handlers that are not proven relays,
+Counter(swallowing after) − Counter(relays after). The before side's relays
+are not read. So:
+
+- 0.11 never reports a `BROAD_EXCEPT_ADDED` that 0.10 would not;
+- a relay that the same change makes proven, by adding its consumer,
+  rewriting its body or removing a string that left it unread, cannot pay
+  for a new swallow of the same first line: up to 0.10's count, every
+  after-side handler that is not a proven relay is counted;
+- an unrelated edit that makes an unchanged relay unread (a string equal to
+  the loop's attribute name, a class attribute, a `setattr`) reports
+  nothing;
+- an edit that breaks an existing relay, for example by removing its
+  await, is not reported, exactly as in 0.10 (a residual, row 171);
+- a new swallow added beside an existing relay still reports;
+- an honest relay added beside a handler of the same first line that is not
+  a proven relay is counted, as 0.10 counts it.
+
+There is no new rule, finding, label, escalator, de-escalator, severity,
+verdict path or IR field: `globals.broad_excepts_added` simply leaves out a
+credited addition, and a reported one keeps its unit-less fingerprint.
+`broad_handlers`, which production-role files are judged on, is unchanged,
+and so are the gating table, E1 and E2, D-176's unit-less refusal and the
+PreToolUse ask; a credited relay has no finding for them to act on.
+
+**Not read.** JS/TS is not read: its catch rule is unchanged, and the
+PreToolUse ask does not analyse JS/TS files. Nor are these Python shapes,
+each of which still reports `BROAD_EXCEPT_ADDED`, and the PreToolUse ask
+asks about it, in a new file too: `try`/`except*`; a future, a
+scheduled relay or a run site on a loop that is not `self.<attr>` or a
+local bound once to it (`asyncio.get_running_loop()`,
+`asyncio.new_event_loop()`, a pytest-asyncio `event_loop` fixture,
+`unittest.IsolatedAsyncioTestCase`'s running loop);
+trio, anyio, `concurrent.futures`, queue or Event relays; `from asyncio
+import Future`, asyncio under another name, and annotated `F: T = ...`
+bindings; `asyncio.shield`; a consumer under a `try` that has any handler,
+under an `if` or in a loop, or after a `return`, guarded or not; run chains
+deeper than one nested coroutine, and a nested coroutine run in any other
+form than R5's two (through `wait_for`, `asyncio.run` or a plain call) or
+decorated; a B handed to a thread, the loop or another callable instead of
+called, a generator B, and a decorated nested B; relays inside a loop; a
+`try` at module or class level, in a method body or in a module-level def;
+relays in a pytest fixture or in a test-role file that pytest does not
+collect; relays whose `try` body runs a unit's assertion, directly or
+through a same-file name; and every relay in a file with the dynamic access
+R3 lists, such as `mock.patch` or a computed `getattr`. A coroutine that
+binds `asyncio.Future()` and awaits that future itself is read however it is
+run, `asyncio.run(main())` included.
 
 ## 4b. Artifacts are never evidence
 

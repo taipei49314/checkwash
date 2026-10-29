@@ -1,0 +1,46 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a consumer that gives up under a caught timeout proves nothing
+origin: D-190 fix round, THREATMODEL row 171: the 2026-10-29 adversarial review dress-swallow, problem 6 (F1r)
+note: wait_for(fut, 0) times out at once, `except asyncio.TimeoutError: pass` drops that, and the callback runs later; R5 refuses a consumer under a try that has any handler; no production change; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_loop.py ===
+import asyncio
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_y(self):
+        self.assertEqual(compute(), 4)
+=== after: tests/test_loop.py ===
+import asyncio
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_y(self):
+        self.assertEqual(compute(), 4)
+
+    def test_x(self):
+        fut = self.loop.create_future()
+
+        def cb():
+            try:
+                self.assertEqual(compute(), 3)
+            except Exception as e:
+                fut.set_exception(e)
+            else:
+                fut.set_result(None)
+
+        self.loop.call_later(0.05, cb)
+        try:
+            self.loop.run_until_complete(asyncio.wait_for(fut, 0))
+        except asyncio.TimeoutError:
+            pass
+        self.loop.run_until_complete(asyncio.sleep(0.2))
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,51 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a future bound and consumed in a thread body loses the consumer's failure
+origin: D-190 fix round, THREATMODEL row 171: the 2026-10-29 adversarial review dress-swallow, problem 7 (F20)
+note: worker binds the future and raises from fut.result(), but the test hands worker to a thread, where that failure dies; R5 requires every read of B's name to call it directly, outside any lambda; no production change; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_loop.py ===
+import asyncio
+import threading
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_y(self):
+        self.assertEqual(compute(), 4)
+=== after: tests/test_loop.py ===
+import asyncio
+import threading
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_y(self):
+        self.assertEqual(compute(), 4)
+
+    def test_x(self):
+        def worker():
+            fut = self.loop.create_future()
+
+            def cb():
+                try:
+                    self.assertEqual(compute(), 3)
+                except Exception as e:
+                    fut.set_exception(e)
+                else:
+                    fut.set_result(None)
+
+            t = threading.Thread(target=cb)
+            t.start()
+            t.join()
+            fut.result()
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
