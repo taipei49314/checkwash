@@ -1,0 +1,60 @@
+=== meta ===
+rule: BROAD_EXCEPT_ADDED
+title: a relay in a test mixin whose collecting class has an imported base is read though the file has no unit
+origin: MagicStack/uvloop 7b202ccf (tests/test_context.py): its tests live in `class _ContextBaseTests:` and run through `Test_UV_Context(_ContextBaseTests, tb.UVTestCase)`, so the parse has no unit (2026-10-29 status review, DF0)
+note: the parse finds no unit, because the collecting class's base is imported, and R2b, not the presence of units, keeps the relay to a handed-off callback; the .pyx edit is an opaque production change, so on 0.10 the added handler is refused the opaque credit and blocks with OPAQUE_PROD_CHANGE_NOT_EVIDENCE (D-176, D-187); as a proven failure relay it is not counted as added (SPEC §4, D-190); the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: app/_server.pyx ===
+# listen without a context
+cdef int backlog = 100
+=== after: app/_server.pyx ===
+# listen in the copied context
+cdef int backlog = 100
+=== before: tests/test_server.py ===
+from app import current_context, start_server
+from tests import support as tb
+
+
+class _ServerTests:
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+
+class Test_UV_Server(_ServerTests, tb.UVTestCase):
+    pass
+=== after: tests/test_server.py ===
+from app import current_context, start_server
+from tests import support as tb
+
+
+class _ServerTests:
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_factory_sees_listen_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        async def main():
+            srv = await start_server(self.loop, factory)
+            try:
+                await called
+            finally:
+                srv.close()
+
+        self.loop.run_until_complete(main())
+
+
+class Test_UV_Server(_ServerTests, tb.UVTestCase):
+    pass
+=== expect ===
+[]

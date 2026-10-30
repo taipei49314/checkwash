@@ -14,8 +14,12 @@ errors. With `--format hook-json` (the Claude Code Stop hook) an engine error
 exits 0 with a "not analysed" message. The recommended Action is pinned to
 the same v0.10.0 release.
 
-The broad #419 opaque-change refusal stays off in v0.10.0, and #419 remains
-open. Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
+An edit that changes nothing, such as `+ 0` in a function a test calls or
+one line in a template or `AUTHORS`, can still hold a weakened Python or
+JS/TS test at warn, which passes at the default threshold. #419 is closed
+as a documented residual, not fixed
+([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
+Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
 and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)
 before relying on a pass.
 
@@ -146,7 +150,17 @@ run it from the repository root.
 
 The default threshold is **high**: a visible **warn** can still pass.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
-prove a repair is correct.
+prove a repair is correct, and an edit that changes nothing can earn it
+(#419). To block such changes, set the Action's `fail-on: warn`
+(`checkwash doctor` then reports "workflow analysis incomplete" and exits 1,
+which is expected: it proves only a checkwash step with no `with:`), or run
+`checkwash check --task` in a CLI step of your own with a base-side
+`oracle_freeze` contract (the Action has no task input); both block more
+honest changes too. From 0.11 (unreleased), on a local hook install, the
+Claude Code PreToolUse hook asks before an Edit, Write or MultiEdit of a
+Python test leaves a finding of its five weakening rules at high, whatever
+repair evidence the rest of the working tree holds; its limits are in the
+[0.11 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md).
 
 For JSON/SARIF output and more examples, see the [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) and the [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
 
@@ -372,5 +386,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 21752 tests (collection denominator).
+Alpha pre-release. 22 detectors, 22056 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

@@ -1,0 +1,74 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay made proven in the same change does not pay for a new swallow of the same text
+origin: D-190 fix round, THREATMODEL row 171: the 2026-10-29 adversarial reviews (dress-swallow problem 1, drift-perf problem 1)
+note: on the before side the string "loop" leaves the relay unread (R6), so 0.10 and 0.11 count it as a swallow; the change drops the string, which makes the relay proven, and swallows test_server_starts's own assertion under the same first line; 0.11 counts at most the after side's handlers that are not proven relays, so the new swallow still reports, as on 0.10; no production change, so the finding does not depend on the D-176 refusal; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_server.py ===
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_factory_sees_listen_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        async def main():
+            srv = await start_server(self.loop, factory)
+            try:
+                await called
+            finally:
+                srv.close()
+
+        self.loop.run_until_complete(main())
+
+
+LABEL = "loop"
+=== after: tests/test_server.py ===
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        try:
+            self.assertIsNotNone(srv)
+        except Exception as e:
+            print(e)
+
+    def test_factory_sees_listen_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        async def main():
+            srv = await start_server(self.loop, factory)
+            try:
+                await called
+            finally:
+                srv.close()
+
+        self.loop.run_until_complete(main())
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

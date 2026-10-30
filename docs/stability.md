@@ -323,11 +323,19 @@ production file the engine cannot parse is the only repair evidence a JS/TS
 test can earn. It still suppresses escalation there, through the documented
 opaque-change rule, until the JS/TS history replay
 ([#212](https://github.com/taipei49314/checkwash/issues/212)) prices a
-change. In v0.9.0 it does the same for a Python test or conftest:
-[#419](https://github.com/taipei49314/checkwash/issues/419)'s refusal, which
-on main since #464 made a weakened, removed, skipped or loosened assertion,
-or an added broad `except`, high beside such a change, is turned off after
-the combined sweep's pre-registered stop (D-171). A package manifest's test command is not production
+change. It does the same for a Python test or conftest, except for an
+unguarded conftest suite control, which never takes such credit
+(THREATMODEL row 72), and a broad `except` added around an assertion,
+which since v0.10.0 takes none (D-176) and which 0.11 does not count as
+added when it is a proven failure relay, within 0.10's count (D-190).
+[#419](https://github.com/taipei49314/checkwash/issues/419)'s five-rule
+refusal, which on main since #464 made a weakened, removed, skipped or
+loosened assertion, or an added broad `except`, high beside such a change,
+was turned off after the combined sweep's pre-registered stop (D-171), and
+D-191 closes #419 in 0.11 as a documented residual (THREATMODEL item 4,
+rows 2 and 131;
+[enterprise checklist §7](enterprise.md#7-hardening-against-bought-repair-evidence-419)).
+A package manifest's test command is not production
 (issue #174): when a diff changes what `package.json` runs as its tests —
 `scripts.test`, `test:*` scripts, scripts that invoke a recognised runner, and
 the scripts `test` and `test:*` name through `npm run`, `yarn`, `pnpm`,

@@ -1,0 +1,50 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay whose consumer sits under contextlib.suppress with an aliased type is not read
+origin: D-190 second review, THREATMODEL row 171: a Gemini 4 Argon review of d9fcd20b (F4), raised by Argon and verified by Claude
+note: `Err = Exception` makes `contextlib.suppress(Err)` drop the relayed failure, which the frontend's literal neutraliser check does not see; R5 passes a `with` only when each item is `s.attr(...)` that R6 trusts, a context manager the test's base class provides; with no production change the finding does not depend on the D-176 refusal; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_server.py ===
+import asyncio
+
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+=== after: tests/test_server.py ===
+import asyncio
+import contextlib
+
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+Err = Exception
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_factory_sees_listen_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        self.loop.run_until_complete(start_server(self.loop, factory))
+        with contextlib.suppress(Err):
+            self.loop.run_until_complete(called)
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

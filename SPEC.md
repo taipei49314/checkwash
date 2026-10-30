@@ -833,7 +833,7 @@ detectors can only be disabled whole.
 | `EXPECTATION_DEFINITION_CHANGED` | an aligned assertion whose **text is unchanged** and whose expectation resolves to something outside the assertion whose definition changed: a unit-local binding, a `parametrize` **column the expectation actually consumes**, a same-file `@pytest.fixture`'s return/yield, or a **same-file top-level constant** (canonical on both sides so reformatting is not a change; last-wins on both sides, which is module execution order, so an appended rebind is caught; a constant the subject also consumes is a shared producer and excluded — D-051, the 2026-08-25 census's largest blind bucket). Which column is the expectation is decided by consumption, not by position or by the name `expected`. Pure row additions and net deletions are excluded — those are `TEST_DISABLED`'s event. When live count does not fall, disappeared input rows whose consumed answers are replaced by different new answers also belong to this rule: input-only renames retaining the old answers have their own bounded owner in `SUBJECT_INPUT_CHANGED` since the issue #93 contract decision (D-060); pure append, disabled rows and skip-plus-append retain their prior behavior. A cell is read through `pytest.param(...)`, so marking rows skipped is not an expectation edit. Since v0.3.0 (#135) the parametrize comparison is row-keyed: rows are identified by their input cells and the consumed column is compared per key as a multiset — a key that disappeared is a deletion or the replacement event just described, a key whose answers still contain everything they had is an addition or a reorder, a key that lost an answer it had and gained one it did not is this rule's event — and every positional cell of a `pytest.param(...)` row is read, so a fully wrapped table is compared like a bare one; a single-column table has no inputs to key on, so its identity is position and the before cells must survive as a subsequence (insertion anywhere, edit or reshuffle reported). A binding that gains a **branch-exclusive alternative** is excluded the same way, and only then: the after side must have more definitions, every before-side definition must survive verbatim (multiset containment), and the name's bindings must sit in pairwise-exclusive `if`/`match` arms — a sequential rebind fails the third clause because the last unconditional binding is the one the assertion reads (THREATMODEL 95 records the tautological-gate residual). Compared structurally, so reformatting is not a change. Escalates through repair evidence like every oracle rule — and D9 `DEPENDENCY_DRIFT` and `PACKAGE_REPAIR` de-escalate it the same way. Blocking status is a measured decision taken twice, not a hedge: as a blocking rule in v0.1.19 it cost 12 extra blocks on 1800 human commits and shipped at `info`; after the T1.9/T1.10/T1.11 credit rounds the 2026-08-25 promotion sweep cost 5, each adjudicated false and named (`benchmarks/adjudication-2026-08-25.json`), inside the pre-registered line of five. A JS/TS `.each`/`.for` table's rows are read the same way (§2b, #428): the consumed column is one the expected operand names directly through the callback's own parameter (`toBe(sum)`, with `sum` an array row's third cell, consumes `#2`), a column the subject names is a shared producer, and a local computed from a cell, a member (`row.expected`) and an index are not followed |
 | `SUBJECT_NORMALIZED` | an aligned assertion keeps its form, strength **and** expected literal, and the asserted subject now wraps its old self — `f(x)` became `f(x).replace(...)`, `sorted(f(x))`, `f(x)[0]`. Structural containment, so spelling does not matter. Resolved through **one hop** of the unit's own bindings, so hoisting the wrapper to the previous line is the same event; and applied to **argument positions** too, so `f(x)` becoming `f(normalise(x))` counts — same callee, same arity, every argument unchanged or containing its counterpart, at least one actually wrapped. Two hops are a stated residual; a subject replaced outright is a different test, not a laundered one. Escalates through repair evidence like every oracle rule, because wrapping is routine when production changed under it. Direct containment is retained alongside one-hop resolved containment. The bounded concrete ASCII-string proof below can establish that an added normalization is redundant for the unchanged production expression. Separate literal-table events can expose the same wrapper when ordinary assertion alignment does not; exact raw oracles that remain present are consumed first, so merely adding wrapped cases does not replace them. Neither extension changes severity or the ordinary restructure policy. |
 | `SUBJECT_INPUT_CHANGED` | an aligned assertion keeps its form, strength, polarity and expected answer, and the subject's **input data** changed — `f("Hello")` became `f("hello")` while `== "hello"` stayed (issue #93). Bounded: the subject must be a plain call with the structurally same callee on both sides (a provider bound in the unit, as a same-file fixture or as a module constant must be defined identically, so a changed provider invents no evidence), and every changed argument must resolve to a concrete literal on **both** sides — directly, or through the straight-line local binding / module constant the assertion reads. A changed argument that resolves to the *same* value is a rename and stays silent, as do a computed argument, a changed callable, a new test, and a name the expectation also reads (a shared producer moves both sides of the comparison and explains itself). The literal `parametrize` spelling counts too: a vanished live row paired with an arriving live row that keeps the consumed expected cells beside different input cells — but only when the vanished input does not survive with a different answer, which is EXPECTATION_DEFINITION_CHANGED's row-keyed event (#135). Row reorders and pure row additions stay silent. Escalates through repair evidence like every oracle rule, because feeding a test different data is routine when production changed under it |
-| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. In Python (#496), a handler that does not re-raise and whose every assertion is proved to always pass is not inspection either, and it reports its first line followed by a space and `[always-passing assertion]`, compared apart from the plain first line: an `assert` of a literal, of `not` before a literal, of a comparison between literals (`is` and `is not` only against `None`), or of `and`/`or` over these with every operand evaluated on its own; or `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`, `assertEqual` or `assertNotEqual` with literal operands that pass and at most one literal `msg`, called on a method's own receiver, when the first base of the class's local order that the file does not define has a name ending in `TestCase` and no same-file class before it binds the method's name (D-163). An always-failing assertion stays inspection, and so does any assertion the proof cannot read. |
+| `BROAD_EXCEPT_ADDED` | bare `except:` / `except Exception` / empty handler added. In a **test** file only when it swallows an oracle — the guarded block contains an assertion and the handler neither re-raises nor asserts; provoking an error and inspecting it is not suppression. In Python, nor is a proven failure relay (D-190, *Python failure relays* below): a handler whose first statement hands the caught exception unchanged to an asyncio future that the test then awaits or runs to completion. It stays in the swallowing list the engine compares; a change's after-side relays only cap what the change counts as added, so no change reports an addition that 0.10 would not. In JS/TS, an assertion the frontend proves always passes (resolved Vitest/Jest expect, node:assert or chai assert; true/false/null subject; matching predicate and polarity; no extra arguments) is not inspection, and its catch reports `catch always-passing assertion`. In Python (#496), a handler that does not re-raise and whose every assertion is proved to always pass is not inspection either, and it reports its first line followed by a space and `[always-passing assertion]`, compared apart from the plain first line: an `assert` of a literal, of `not` before a literal, of a comparison between literals (`is` and `is not` only against `None`), or of `and`/`or` over these with every operand evaluated on its own; or `assertTrue`, `assertFalse`, `assertIsNone`, `assertIsNotNone`, `assertEqual` or `assertNotEqual` with literal operands that pass and at most one literal `msg`, called on a method's own receiver, when the first base of the class's local order that the file does not define has a name ending in `TestCase` and no same-file class before it binds the method's name (D-163). An always-failing assertion stays inspection, and so does any assertion the proof cannot read. |
 | `SUPPRESSION_ADDED` | `# noqa` / `# type: ignore` added, in Python files only. No JS/TS form is read: a test file's `@ts-nocheck` is #366, and ESLint directives are #367, deferred by ruling until after 1.0 |
 | `CI_WORKFLOW_TOUCHED` | ci-role file changed — pipeline definitions, pytest configuration (`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`), content-classified runner scripts and package manifests whose test command changed (§2), **plus one hop**: a changed script that runs no test runner of its own but invokes another script that does is ci too, resolved against the diff or the head snapshot. Exactly one hop. A shell-script hop must terminate in a real runner — a `ci.sh` calling `compile.sh` stays production, which is the line the content gate has drawn since v0.1.8. A manifest's hop is bounded by where it starts instead: a script that `test` or a `test:*` script names through a script runner is part of the test command whatever it runs, because `npm test` runs `scripts.test` whatever it says (#196 185.2). Test command weakened → high. Weakening is two families, and the difference is the rule's precision. A **swallow** discards an exit code (`\|\| true`, `\|\| :`, `\|\| exit 0`, `set +e`, `continue-on-error: true`): introducing one anywhere is a weakened command. A **narrowing** restricts which tests run (`--ignore`, `--deselect`, `-k`, `python_files`, `python_classes`, `python_functions`, `testpaths`, `norecursedirs`, `collect_ignore`, `-p no:`, and `--test-only`, under which node's runner runs only the tests marked `only` (#196 187.1, #216)): it counts only when the diff *introduces* it — the token must be absent from the base side of every ci-role file in the diff, and the file carrying it must have existed at base. For a package manifest that base side is its base-side test command, not the whole file: a token that only a non-test script carried at base counts once the diff writes it into the test command (#196 185.1). Additionally, literal option/value comparison recognizes newly introduced `--co`/`--collect-only`, `--ignore-glob`, and quoted or unquoted `-k`/`-m` selectors, including a changed value of an existing option. Literal `testpaths` and collection-name lists are narrowing when the new selection is a provable strict subset; additional `norecursedirs` exclusions also count. Restating, reordering or provably broadening a setting is not narrowing it. Identical configuration migration stays quiet, while narrowing during a migration remains visible. First configuration adoption without a base CI surface keeps the syntax scanner at warn; the resolved collection inventory (§2b) still judges a first configuration when it runs. Where it runs, a new root-config selector is judged against the base-suite tests that a run it governs collects: all of them for a run without targets, and those beneath the targets for a run with explicit targets whose discovery finds the same root config on both sides (#196 184.1). `-m`, `-k` and `--co` count whenever such a test exists; `--ignore`, `--ignore-glob` and `--deselect` only when they drop one, and `-p no:` only for a plugin other than `cacheprovider`, `faulthandler`, `pastebin` and `stepwise` (#196 184.2). A positional target in the root config's addopts is an explicit target of every run, read with the one definition of explicit targets a command's arguments use, which knows pytest's own and the common plugins' options that take a value, so `-n auto` or `--cov src` is no target (#173): a run collects beneath its command's targets and the addopts targets together, and when the addopts targets change, a base-suite test the base runs collected and no head run collects is excluded, a weakened command. A target moved between a command and addopts loses nothing. A word in addopts that names no file or directory on its side is no target: it is the value of an option the reader does not know, or a target that fails every run. A head run whose command names a missing path, or that collects no test, fails, and no claim is made for it; ambiguous addopts withholds the inventory. The inventory's settings proof does not reach a run with explicit targets, its command's or its config's addopts'. Also weakening: a tab-indented make recipe prefixed `-` that invokes a runner, and errexit lost between the two sides. Deleting a **workflow** counts as weakening only if that workflow ran tests: a runner name anywhere in it, as row 69 reads one, or a runner site in it, live or dead (#216); deleting a runner script or a config file does not — that is consolidation until proven otherwise. A condition, a trigger, a hook inventory or a GitLab job's keys can stop a runner without touching its line (#181, #214), so GitHub workflows, `.pre-commit-config.yaml` and `.gitlab-ci.yml` are also read as an inventory of **runner sites**, each with whether it can execute for a pull request's commits and fail them. A runner site is a workflow step, a pre-commit hook or a command in a GitLab job's `script:` whose own command invokes a test runner, by a whole-word runner name outside the contexts known not to run it (`echo` and `printf` text, heredoc text written out, install commands, comments; #196 191.5), or by one of the runners #216 adds, `node --test`, `mocha`, `ava`, `tap`, `bun test`, `deno test`, `hatch test`, `just test`, `poe test` and `pdm test`, where a command starts: the first word of a simple command, past assignments, wrappers, package launchers, `sh -c` and `eval`, or inside a command substitution or a heredoc a shell reads, and never as a word elsewhere; or it is a `uses:` step whose action name and one of its `with:` inputs both name a runner. The same reading decides whether a runner-shaped script, a manifest script or a one-hop target invokes a test runner (§2); the opaque-exemption denial (THREATMODEL row 87) keeps row 69's names alone. A site is dead only for a static reason: a step or job `if:` that no event able to run the workflow on a pull request can make true, with status functions read as on an otherwise green run; a job that `needs:` a dead job and has no status function to run anyway; a trigger set with no event that runs on a pull request's commits, including activity `types` without `opened`, `synchronize` or `reopened` and a path filter that leaves no file (#196 191.9, 191.2(d)); a hook parked on the `manual` stage; a GitLab job that does not start by itself on a green pipeline (`when: manual`, `when: never`, or `when: on_failure`) or whose failure is allowed (`allow_failure: true`, or `exit_codes`), where each `rules:` entry that may match decides as the job's own keys do (an entry's condition is not evaluated, an entry with none ends the list, and a job no entry adds is not in the pipeline) and the job's `extends:` templates are merged in first; a hidden GitLab job (`.name`) that no job extends; and every GitLab job when `workflow: rules:` can only keep the pipeline from running (#214). There is no global GitLab token: `allow_failure: true` on a job whose `script:` runs no test runner is not a weakening. A runner command that lost a live site and gained a dead one is a disabled suite, and so is a runner reworded as the inventory moves a site from live to dead (#196 191.8); a pre-commit config whose hook entries invoked a recognised runner at base and invoke none at head, whatever its hook ids and names say, has removed its suite (#196 191.7). Both are weakened test commands. A workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader read with at least one live runner site, and whose head side it declines, is out of reach rather than weakened: high under E8, with a reason that names what the reader declined and the runner the base side ran (#196 191.3). A workflow is a `.yml` or `.yaml` file beneath `.github/workflows/`, `.gitlab-ci.yml` or `.pre-commit-config.yaml`; any other file kept beneath `.github/workflows/` is ci-role but not a workflow. A ci-role file that carries test obligations (§2) is reported at warn and is not scanned for swallows, narrowings or runner tokens: its lines are test code, judged by the test rules |
 | `GUARDRAIL_TOUCHED` | guardrail-role file changed → critical (exception: §6 exemptions). A guardrail file the diff **created** is reported at warn instead: a constraint that did not exist has not been relaxed, and rating creation critical meant `greenwash hook install --agent claude-code` produced a blocking verdict on greenwash's own artefact. Exception to that exception (issue #79): a created `.checkwash/config.toml` / `.greenwash/config.toml` whose content disables any detector or sets `fail_on` above `high` is critical like a modification — with no file the defaults were in force, that file relaxes them, and on the base-side read it governs the next diff, so its creation is the only place the two-commit plant can be caught. A created config that only tightens stays warn; `roles` overrides in a created config stay warn (stated residual)  Since 0.10.0, the D-177 policy-shadow exception: a newly winning `.checkwash/config.toml` over an existing selected BASE `.greenwash/config.toml` compares against that effective BASE policy, not defaults; see §6 policy-shadow transitions. |
@@ -998,11 +998,231 @@ effect or statement joins its guarded ones, or when its guard is a constant
   without a unit, including handlers inside a function; "file-scoped" does
   not mean module-level syntax. A sibling test's symbol evidence never
   reaches such a finding. In a Python file, a finding with no unit now
-  refuses clause 3's opaque production credit (D-176). In JS/TS, that credit
-  is unchanged pending #212. The broad five-rule refusal introduced by #464
+  refuses clause 3's opaque production credit (D-176). In JS/TS that credit
+  is kept, an accepted residual (THREATMODEL row 131, D-191) until #212
+  prices it. The broad five-rule refusal introduced by #464
   remains disabled under D-171; this revision admits only the separately
   stated Python broad-except condition. Production-role handlers that carry
   no test obligations remain non-oracle findings.
+
+### Python failure relays (D-190, 0.11.0)
+
+A broad handler in a Python test can relay a failure instead of swallowing
+it. uvloop's regression tests catch a callback's or a thread's assertion
+failure and pass it, unchanged, to an asyncio future that the test awaits,
+so the failure still fails the test; D-187 accepted three such false blocks
+for 0.10 only. The frontend keeps 0.10's swallowing list unchanged and
+records which of its handlers are *proven failure relays*
+(`failure_relays.py`). Proof is pure syntax and never runs the test. Its
+cost is at worst the file's size times the nesting depth of the relay's
+scopes, from its walks up the scope chain.
+
+Only a Python test module that the parse collects is read. The handler
+belongs to a `try` (a `try`/`except*` is not read) whose body holds an
+oracle; it is broad by the shared type-set predicate, and it swallows as
+0.10 reads it (it neither re-raises nor holds an oracle). It is a proven
+failure relay when all of the following hold.
+
+- **R1 Relay statement.** The handler binds the exception as a name E, and
+  its first statement is an expression statement of one of two exact
+  shapes: `F.set_exception(E)`, or `L.call_soon(F.set_exception, E)` /
+  `L.call_soon_threadsafe(F.set_exception, E)`, with no other argument or
+  keyword, where F is a plain name other than E. Statements after it are
+  unrestricted, except as R4 limits them. The `try` lies in a function S,
+  with no `for`, `async for` or `while` between S and the `try`.
+- **R2 Not a unit oracle.** No assertion that a parse-time unit executes
+  (`UnitSide.assertions`, THREATMODEL row 91) lies inside the `try` body,
+  compared in the character offsets `Assertion.span` records; and the `try`
+  body, outside nested defs, reads no asserting name. A def or lambda is
+  asserting when such an assertion lies in its own body, or when it reads
+  an asserting name; its name, the class of a method, and the names a
+  lambda is assigned to are asserting names, matched by spelling, as a name
+  or an attribute, anywhere in the file. So a `try` body that runs a unit's
+  assertion through a same-file helper, a method or a chain of calls, by
+  their names, is not read. An alias or a `functools.partial` of such a
+  function, a fixture's returned closure and a helper from another file are
+  not followed: 0.10 already lets a broad handler around such a call pass
+  (THREATMODEL row 176). Nor does the `try` body, outside nested defs,
+  call an oracle that 0.10 reads (a call whose last name starts with
+  `assert` or is `fail` or `raises`) other than a method of the test's own
+  receiver, such as `self.assertEqual(...)`: a fixture's returned checker,
+  another file's helper or an alias of either may run an assertion the
+  engine folds into the unit only after the parse.
+- **R2b Where the relay sits.** (a) The parse collects tests and is not a conftest's:
+  a test-role file that pytest does not collect, and a conftest, are not
+  read. (b) No function enclosing the `try` is a pytest fixture, by any
+  decorator whose last name is `fixture` or `yield_fixture`
+  (`pytest_asyncio.fixture` included). (c) S is
+  itself nested in another function, not a module-level def or a method
+  body. How S is called is not read: a unit that calls S itself folds S's
+  assertions, which R2 then refuses. Units are not
+  required: a test mixin whose collecting class has an imported base parses
+  to none (uvloop `7b202ccf`).
+- **R3 The future.** F resolves outward from S through function scopes
+  only, with no class between; the first function binding it is B. F is
+  bound exactly once in B's whole subtree, nested scopes, parameters,
+  `global` and `nonlocal` included: the single name target of an
+  assignment that is a direct statement of B's body. Its value is
+  `asyncio.Future()`, with no argument or only `loop=<trusted L>` (R6 and
+  R7), or `<trusted L>.create_future()` with no argument (R6). Nowhere in
+  the file is there a read, called or not, of the builtins `locals`,
+  `vars`, `globals`, `eval`, `exec`, `compile`, `__import__`, `setattr` or
+  `delattr`; a read of `getattr` other than a call, with no starred
+  argument, whose name is a string constant; an attribute `setattr`, `delattr`, `__setattr__`,
+  `__delattr__`, `__dict__`, `__closure__`, `cell_contents`, `__code__`,
+  `__globals__`, `__builtins__`, `f_locals`, `f_globals`, `f_back`,
+  `_getframe`, `currentframe`, `getclosurevars`, `get_referrers`,
+  `get_referents`, `get_objects`, `modules`, `patch` or `__subclasses__`;
+  the name `importlib`, `patch`, `builtins` or `__builtins__`; or an import
+  of `importlib` or `builtins`: a file that may reach a scope, a
+  frame, a closure, an attribute table or a module by another route reads
+  no relay.
+- **R4 Every use of F is accounted for:** the binding; the relay of R1, the
+  only `set_exception` site; `set_result` sites, each a direct statement of
+  the same `try`'s else clause, `F.set_result(x)` or
+  `<trusted L>.call_soon[_threadsafe](F.set_result, x)`; and loads inside
+  consuming expressions (R5). Any other use refuses: an alias, F passed to
+  a call (a `run_until_complete` on an untrusted receiver among them),
+  `add_done_callback`, `cancel`, `exception()`, `done()`, a load inside a
+  list, or a `gather` with `return_exceptions`.
+- **R5 A proven consumer.** A consuming statement is an expression
+  statement or an assignment whose value is `await A` (in an async def),
+  `<trusted L>.run_until_complete(A)` or `F.result()`. A is F,
+  `asyncio.wait_for(A', ...)` with A' first, or `asyncio.gather(..., A',
+  ...)` with A' a direct positional argument, no `**` and
+  `return_exceptions` absent or literal False (R7). The consuming statement
+  lies in B, or in an undecorated def or async def C, not a generator, that
+  is a direct statement of B's body, which B binds only by that def and not
+  as a parameter, run from a proven statement in B of exactly the form
+  `<trusted L>.run_until_complete(C(...))` or `await C(...)`. A statement
+  is proven in its function when the walk up to that function passes only
+  the body or finally clause of a `try` that has no handler and whose
+  finally clause holds no `return`, `break` or `continue`, and the body of a
+  `with` whose every item is `s.attr(...)` that R6 trusts as it trusts a
+  loop, a context manager the test's base class provides outside the file
+  (uvloop's `self.tcp_client(...)`), never one the file names or defines;
+  never an `if`, a loop, a match case, a handler or an else
+  clause; and no statement before it, at any level of that walk, is a
+  `return` or a `raise` or holds a `return` outside nested functions. With
+  no handler on the walk, a `raise` nested in an earlier statement leaves
+  the function uncaught, so it fails or skips the test and never lets it
+  pass (uvloop opens tests with `if self.implementation == 'asyncio': raise
+  unittest.SkipTest()`); a `return` refuses whatever guards it. B's own
+  failure must reach its caller: B is not a generator; every read of B's
+  name in the file, as a name or an attribute, is the function of a call
+  outside any lambda whose statement nothing in its function can swallow,
+  with no `try` body with a handler, no part of a `try` whose finally
+  clause returns, breaks or continues, and no `with` body but the trusted
+  kind above on the way (a loop or an `if` can only keep B from running);
+  and a B nested in another function is undecorated and called at least
+  once from outside its own body, and never from inside a generator
+  expression, which runs the call wherever it is iterated.
+- **R6 Trusted loop L.** L is `s.attr`, or a name bound exactly once, to
+  `s.attr` by a direct assignment, in the first function binding it on the
+  way from the use to M, with no `nonlocal` of it there. M, the outermost
+  function holding the use, is defined directly in a module-level class,
+  with only function or lambda scopes between it and the use, and is
+  neither a `staticmethod` nor a `classmethod`; s is M's first positional
+  parameter, bound neither in M nor in a scope between. Nothing may
+  redirect `attr`: no class body binds it, no string constant equals it,
+  nothing inside M stores or deletes it on any receiver, and every store or
+  delete of it elsewhere is on a fresh local, a plain name inside a
+  function that is a parameter neither of that function nor of one
+  enclosing it and that the function binds only by direct assignments of a
+  call's result, a call that reads no parameter of those functions nor a
+  name they bind directly to one (`s = self`)
+  (uvloop's `proto = MyProto(loop=loop)` then `proto.loop = loop`); so an
+  alias such as `me = self` or `me = (lambda x: x)(self)`, a helper's
+  parameter, a module-level class and any receiver that is not a plain name
+  redirect. The file is stand-in free: no class body binds, nothing stores
+  or deletes, no string constant equals, and no keyword argument is named
+  `create_future`, `call_soon`, `call_soon_threadsafe`,
+  `run_until_complete`, `set_exception`, `set_result`, `__await__`,
+  `__getattr__` or `__getattribute__`, and nothing stores or deletes
+  `result`; `asyncio.Future` needs stand-in freedom too.
+- **R7 asyncio is the real module.** Wherever `asyncio.Future`, `wait_for`
+  or `gather` is read, every binding of the name `asyncio`, counted in all
+  scopes, is a module-level `import asyncio` or `import asyncio.<sub>`
+  without `as`; asyncio is imported no other way (no `as`, no `from
+  asyncio... import`) and there is no star import; the name is read only as
+  `asyncio.<attr>`, and `asyncio.Future`, `asyncio.wait_for` and
+  `asyncio.gather` only as a call's function, so never aliased, subclassed
+  or patched; nothing stores or deletes anything reached from it
+  (`asyncio.Future.result` included), or an attribute named `Future`,
+  `wait_for` or `gather` on any receiver; and no string constant starts
+  with `asyncio.` or equals one of those three names.
+
+R2 and R2b keep a credited relay off what checkwash protects: it sits in a
+function nested in another, in a collected test module and outside any
+fixture, and its `try` body neither holds an assertion a parse-time unit
+executes nor reaches one through a same-file name. Whatever else a relay
+that a stand-in defeats could lose, 0.10 already lets a cheaper edit lose:
+an oracle no unit executes can be deleted silently (row 91), and an
+assertion reached through a call, whether an alias, a fixture's closure or
+another file's helper, can be swallowed by a broad handler around a call
+that holds no oracle of its own, which 0.10 does not count as a swallow
+(row 176). R3 to R7 are precision on top of that: they name spellings, and
+they trust what the file cannot show, the loop or context manager a base
+class builds outside the file and asyncio itself (row 171).
+
+**Effect.** Per file and per handler text, the `BROAD_EXCEPT_ADDED`
+additions are the multiset intersection (the elementwise minimum) of 0.10's
+difference, Counter(swallowing after) − Counter(swallowing before), and the
+after side's swallowing handlers that are not proven relays,
+Counter(swallowing after) − Counter(relays after). The before side's relays
+are not read. So:
+
+- 0.11 never reports a `BROAD_EXCEPT_ADDED` that 0.10 would not;
+- a relay that the same change makes proven, by adding its consumer,
+  rewriting its body or removing a string that left it unread, cannot pay
+  for a new swallow of the same first line: up to 0.10's count, every
+  after-side handler that is not a proven relay is counted;
+- an unrelated edit that makes an unchanged relay unread (a string equal to
+  the loop's attribute name, a class attribute, a `setattr`) reports
+  nothing;
+- an edit that breaks an existing relay, for example by removing its
+  await, is not reported, exactly as in 0.10 (a residual, row 171);
+- a new swallow added beside an existing relay still reports;
+- an honest relay added beside a handler of the same first line that is not
+  a proven relay is counted, as 0.10 counts it.
+
+There is no new rule, finding, label, escalator, de-escalator, severity,
+verdict path or IR field: `globals.broad_excepts_added` simply leaves out a
+credited addition, and a reported one keeps its unit-less fingerprint.
+`broad_handlers`, which production-role files are judged on, is unchanged,
+and so are the gating table, E1 and E2, D-176's unit-less refusal and the
+PreToolUse ask; a credited relay has no finding for them to act on.
+
+**Not read.** JS/TS is not read: its catch rule is unchanged, and the
+PreToolUse ask does not analyse JS/TS files. Nor are these Python shapes,
+each of which still reports `BROAD_EXCEPT_ADDED`, and the PreToolUse ask
+asks about it, in a new file too: `try`/`except*`; a future, a
+scheduled relay or a run site on a loop that is not `self.<attr>` or a
+local bound once to it (`asyncio.get_running_loop()`,
+`asyncio.new_event_loop()`, a pytest-asyncio `event_loop` fixture,
+`unittest.IsolatedAsyncioTestCase`'s running loop);
+trio, anyio, `concurrent.futures`, queue or Event relays; `from asyncio
+import Future`, asyncio under another name, and annotated `F: T = ...`
+bindings; `asyncio.shield`; `asyncio.Future`, `wait_for` or `gather` read
+other than as a call's function; a consumer under a `try` that has any
+handler, under an `if`, in a loop or under a `with` other than the trusted
+kind, or after a `return`, guarded or not; run chains
+deeper than one nested coroutine, and a nested coroutine run in any other
+form than R5's two (through `wait_for`, `asyncio.run` or a plain call) or
+decorated; a B handed to a thread, the loop or another callable instead of
+called, a B whose call a handler, a finally clause that jumps or such a
+`with` could swallow, a generator B, and a nested B that is decorated or
+never called; relays inside a loop; a
+`try` at module or class level, in a method body or in a module-level def;
+relays in a pytest fixture or in a test-role file that pytest does not
+collect; relays whose `try` body runs a unit's assertion, directly or
+through a same-file name, or calls an oracle other than a method of the
+test's own receiver; and every relay in a file with the dynamic access
+R3 lists, such as `mock.patch`, `setattr` or `vars` read without a call, or
+a computed `getattr`, and in a file that stores a protocol name or
+`result`. A coroutine that binds `asyncio.Future()` and awaits that future
+itself is read wherever nothing in the calling function can swallow its
+call, `asyncio.run(main())` included.
 
 ## 4b. Artifacts are never evidence
 
@@ -1156,19 +1376,41 @@ and that no other de-escalator holds. Evidence exists when:
 
 1. the normalized AST fingerprint of a symbol the test calls changed, which is
    not a behaviour change: docstrings are stripped, and
-   `_normalize_for_fingerprint` drops annotations, non-leading string
+   `_normalize_for_fingerprint` drops annotations, and, only as direct
+   statements of a module, class or function body, non-leading string
    statements, value-less annotated assignments and function-local dead
-   literal bindings. Any other edit counts, an alpha-rename, `+ 0`, a
-   single-use temporary or a dead branch included (THREATMODEL 93, #419).
+   literal bindings; the same statement inside an `if`, a loop, a `with`
+   or a `try` is kept. Any other edit counts, an alpha-rename, `+ 0`, an added
+   `pass` or `...` statement, a renamed parameter, a single-use temporary or
+   a dead branch included (THREATMODEL 93, #419). A class is one symbol
+   whose fingerprint covers its whole body, so any edit inside a class the
+   test calls counts, in one of its methods, a reordered method or an added
+   class attribute among them (D-191).
    For a finding about an assertion that reads the value of a fixture the
    test requests, the call that fixture returns or yields counts as a symbol
    the test calls (the fixture's producer, below; #471), or
 2. a symbol the test calls itself calls a changed symbol (one hop — a test
    going through `format_invoice` is legitimately updated when the
-   `compute_total` it calls changes); a changed symbol that a same-file
-   helper the test invokes calls counts too (a top-level function of the
-   test module that is neither a test nor a fixture; the T1.9 hop), for
-   every oracle finding but `TEST_DISABLED`; for a finding about an
+   `compute_total` it calls changes). As implemented, and as D-191 records
+   it, the callers are the functions of the changed production Python
+   files, and one counts when a name the test calls equals its own name,
+   the last part of its qualified name, with no module check, so a
+   same-named function in an unrelated changed module counts too. The
+   changed files are read in path order, and a caller is matched only
+   against the symbols changed in its own file or in a file whose path
+   sorts before it, so a caller in `app/a_caller.py` gets no evidence from
+   a method changed in `app/z_calc.py`. A call is recorded by the last part
+   of its dotted name, and a call made on another call's result, such as
+   `Calc().total(items)`, is recorded as a call of `Calc` alone, so it gives
+   no evidence for a changed `Calc.total`. The changed symbol a caller calls
+   counts only when it is defined inside a class or a function, such as a
+   method: a changed top-level function keeps its module prefix in the
+   index and is never matched, so this clause's own example gives no
+   evidence when `compute_total` is a top-level function (#420, deferred
+   until after 1.0 in #504; THREATMODEL 93). A changed symbol that a
+   same-file helper the test invokes calls counts too (a top-level function
+   of the test module that is neither a test nor a fixture; the T1.9 hop),
+   for every oracle finding but `TEST_DISABLED`; for a finding about an
    assertion the test reaches through a helper method (§3), a symbol that
    method calls counts too, and for no other finding (#306), or
 3. the diff **modifies** an existing production file checkwash cannot
@@ -1176,16 +1418,18 @@ and that no other de-escalator holds. Evidence exists when:
    did not parse at base — conservative, see THREATMODEL #4. The inert files
    (`roles.py`: type stubs, docs-site config, repo metadata), generated
    artifacts (§4b), files beneath a test-support directory and files whose
-   content runs a test runner (§2) are not such files. A deletion does not
-   count, and neither does unparseability the diff causes: a production `.py`
-   that parsed at base and does not parse at head is reported unparseable
-   instead (THREATMODEL 78, 80). A path renamed onto production from one that
-   was not production is not pre-existing production (row 79). A file the
-   diff *adds* does not count: it cannot be the repair of behaviour that
-   predates it, and a genuinely new implementation arrives with the Python
-   that reaches it. Told to defeat this tool and handed its source, an agent
-   wrote a three-line json file nothing imports, purely to satisfy this
-   clause (row 73).
+   content runs a test runner (§2) are not such files. Every other
+   production-role file checkwash cannot analyse is one, `AUTHORS`,
+   `CHANGELOG`, `.coveragerc`, `docs/requirements.txt` and `doc/*.txt` among
+   them (D-191). A deletion does not count, and neither does unparseability
+   the diff causes: a production `.py` that parsed at base and does not
+   parse at head is reported unparseable instead (THREATMODEL 78, 80). A
+   path renamed onto production from one that was not production is not
+   pre-existing production (row 79). A file the diff *adds* does not count:
+   it cannot be the repair of behaviour that predates it, and a genuinely
+   new implementation arrives with the Python that reaches it. Told to
+   defeat this tool and handed its source, an agent wrote a three-line json
+   file nothing imports, purely to satisfy this clause (row 73).
    Every oracle finding takes this clause except an unguarded suite control
    (§4, THREATMODEL 72) and a `BROAD_EXCEPT_ADDED` finding with no unit in a
    Python file judged as a test (§2) or holding the conftest role (D-176).
@@ -1193,8 +1437,11 @@ and that no other de-escalator holds. Evidence exists when:
    opaque modifications alike; it does not prove that the modification is
    irrelevant or dishonest. All other rules retain D-171's refusal-off
    behavior, including Python unit-scoped weakening, removal, disabling and
-   tolerance findings. #419 remains open for those routes and for Route A;
-   JS/TS behavior and #212's ruling remain independent.
+   tolerance findings. Since D-191 those routes, the symbol routes of
+   clauses 1 and 2 (Route A) and the JS/TS credit are accepted residuals of
+   #419 (THREATMODEL item 4, rows 2, 93, 130 and 131): `fail_on = "warn"`
+   (§9) or a base-side `oracle_freeze` contract (§4c, E2) blocks such
+   findings, and #212's ruling on the JS/TS credit remains independent.
 
 **A fixture's producer** (#471). A test that gets its subject from a pytest
 fixture calls nothing that builds it, so clause 1 counts one call of the
@@ -1648,7 +1895,7 @@ every crash path is mapped to 2.
 
 `check --format hook-json` (the Claude Code Stop hook) exits 0 on both verdicts: on a block its JSON carries `"decision": "block"` and a `reason`; on a pass it carries no `decision`, and is `{}` unless a session note below applies; a stop released under `stop_hook_active` (below, D-189) carries no `decision` either, only a `systemMessage`. An engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 there too, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`. The hook is an author-side check; the required CI check remains the gate (#414). With `--emit-ir`, every engine error keeps exit 2. One engine error blocks instead: a size refusal (§4b) of a change in the diff that decides the verdict (HEAD against the working tree for the Stop hook, or the range given) exits 0 with `decision: block` when any unread side of that change is its head or worktree side, and the `reason` names that side's path, side, size and limit and says to shrink or split the file, or revert the change to it (#456). It blocks on every stop, `stop_hook_active` or not, since it is not the path a stop is released on (D-189, below). Any other size refusal keeps that `systemMessage`: of a change whose base side alone is over the limit; of a base manifest, config, exemption list or `--task` file; of a file the diff does not hold; and, with a range, of a pytest configuration's symlink target that no detector must read (§4b), which is read through the link even when the diff changes the target. The run refuses only the first must-read change it meets, so a padded file the diff lists after a change whose base side alone is over the limit keeps it too. One in the session-commits analysis below keeps that analysis's note.
 
-**The block reason (D-189).** Since 0.11 a block on findings gives this `reason` from `check --format hook-json`, whichever Stop handler runs it, with `--hook-input stdin` or without: `checkwash: N finding(s) blocking. RULE path :: unit — message. Fix the production code if it is wrong. Do not weaken, skip or remove the test, and do not add an exemption or change checkwash's configuration or hooks yourself: if you believe the test change is correct, tell the user which finding blocks and why, and let the user decide.` It names the first of the findings at or above `fail_on` that no exemption covers. It offers no `checkwash allow` command, no fingerprint and no other way round, since the exemption is the user's decision; this replaces D-142 item 6, under which the reason carried the `checkwash allow` command for the first finding and, with a session base other than HEAD, the next-session sentence below. The size refusal's block (#456) keeps its own reason. The reason text therefore differs from 0.10's for every Stop handler, flag or not; where this section says a run is "the one without the flag", it compares two runs of the same version.
+**The block reason (D-189).** Since 0.11 a block on findings gives this `reason` from `check --format hook-json`, whichever Stop handler runs it, with `--hook-input stdin` or without: `checkwash: N finding(s) blocking. RULE path :: unit — message<assertion>. Fix the production code if it is wrong. Do not weaken, skip or remove the test, and do not add an exemption or change checkwash's configuration or hooks yourself: if you believe the test change is correct, tell the user which finding blocks and why, and let the user decide.` It names the first of the findings at or above `fail_on` that no exemption covers. It offers no `checkwash allow` command, no fingerprint and no other way round, since the exemption is the user's decision; this replaces D-142 item 6, under which the reason carried the `checkwash allow` command for the first finding and, with a session base other than HEAD, the next-session sentence below. The size refusal's block (#456) keeps its own reason. The reason text therefore differs from 0.10's for every Stop handler, flag or not; where this section says a run is "the one without the flag", it compares two runs of the same version. `<assertion>` quotes the named finding's assertion (D-191) for the two rules whose messages name lattice strengths: ` (before: <text>; after: <text>)` for `ASSERT_WEAKENED` and ` (before: <text>)` for `ASSERT_REMOVED`. Each text is the assertion's source on that side with its runs of whitespace collapsed to one space, cut to at most 120 characters (119 and `…`), with unprintable and bidi control characters then escaped as `\uXXXX`. `<assertion>` is empty for every other rule (`BROAD_EXCEPT_ADDED`'s handler line and `TOLERANCE_LOOSENED`'s tolerances are already in their messages) and for a finding without that text. Only this clause is escaped and cut; the rest of the reason is as D-189 gave it. In the D-189 lifecycle receipt Claude restated an `ASSERT_WEAKENED` message's `EXACT_VALUE(90) -> BOUND(40)` as an expected value of 90; the finding message, the reports, and the session note and released stop's note below still name the strengths.
 
 **The managed Stop hook's window (#418).** `hook session-start`, the managed SessionStart handler, reads the hook input from stdin and records HEAD as `{"created": <UTC time>, "head": <commit>, "version": 1}` in `<git-dir>/checkwash/sessions/<sha256(session_id)>`. It writes only when no record exists, and never when `source` is `compact` or `resume`. After writing, it prunes other sessions' records that are older than 30 days or name a commit that is gone, never by count; it never prunes the starting session's own record, or one that does not parse. A record is read only as a regular file of at most 4,096 bytes. It prints nothing and exits 0 on every outcome.
 
@@ -1658,20 +1905,20 @@ every crash path is mapped to 2.
 - **A session base equal to HEAD:** the output is the one without the flag, except that a stop can be released under `stop_hook_active` (below).
 - **No usable record** (input that does not parse, no `session_id`, no record, a record whose commit Git cannot compare with HEAD, or HEAD with no history in common with it): the run is the one without the flag, and a pass adds a `systemMessage` saying the session's commits were not analysed and why. Input that parses and carries a `session_id` can still release a stop under `stop_hook_active` (below), since the Stop record does not depend on the session record.
 
-**A stop that is not blocked again (D-189).** With `--hook-input stdin`, a block verdict on findings, the input's `stop_hook_active` exactly JSON `true`, and a blocking set identical to the one this hook last blocked on in the same session, the output carries no `decision` and a `systemMessage` for the user: `` checkwash: this stop was not blocked again, but N finding(s) still block this change: <findings>. Claude was told once to fix the production code or report it to you. Review the change before relying on it; `checkwash check` lists each finding and how to record a reviewed exemption. `` The findings are named as the session note names them: at most five, most severe first, then `; and N more`. With a session base other than HEAD it adds `An exemption, config change or hook upgrade committed during this session applies from the next session; /clear starts one.` Every other case blocks: no block recorded for the session (a continuation another Stop hook caused), a different set, a `stop_hook_active` other than `true`, no `session_id`, input that does not parse, no input, or no `--hook-input`. The blocking set is the sha256 of the sorted fingerprints of the findings at or above `fail_on` that no exemption covers, one per line. Each block on findings whose input carries a `session_id` records it as `{"blocking": <digest>, "version": 1}` in `<git-dir>/checkwash/sessions/<sha256(session_id)>.stop`, written to a temporary file and renamed into place, and read only as a regular file of at most 4,096 bytes without following links; a pass deletes it, and an engine error leaves it. When `hook session-start` prunes (above), it also removes other sessions' `.stop` records older than 30 days by modification time, never the starting session's own. The agent can write these records too (THREATMODEL item 2). The size refusal's block (#456) is a separate path and blocks on every stop. A released stop gives no session-commits note; that note is for a pass. Blocking the same set again told Claude nothing new and only pressed it to change the test. A pre-registered Claude Code lifecycle receipt (D-189; Claude Code 2.1.260, `-p` mode, haiku, Windows) observed a first stop blocked with the reason above and the continued stop answered with no `decision` and this `systemMessage`, which came back in the hook event output and as Claude Code's own `informational` notice event ("Stop says: checkwash: this stop was not blocked again, ..."), so the managed handler received `stop_hook_active: true` on the continuation. Whether the interactive UI displays the `systemMessage` to the user is not verified.
+**A stop that is not blocked again (D-189).** With `--hook-input stdin`, a block verdict on findings, the input's `stop_hook_active` exactly JSON `true`, and a blocking set identical to the one this hook last blocked on in the same session, the output carries no `decision` and a `systemMessage` for the user: `` checkwash: this stop was not blocked again, but N finding(s) still block this change: <findings>. Claude was told once to fix the production code or report it to you. Review the change before relying on it; `checkwash check` lists each finding and how to record a reviewed exemption. `` The findings are named as the session note names them: at most five, most severe first, then `; and N more`. With a session base other than HEAD it adds `An exemption, config change or hook upgrade committed during this session applies from the next session; /clear starts one.` Every other case blocks: no block recorded for the session (a continuation another Stop hook caused), a different set, a `stop_hook_active` other than `true`, no `session_id`, input that does not parse, no input, or no `--hook-input`. The blocking set is the sha256 of the sorted fingerprints of the findings at or above `fail_on` that no exemption covers, one per line. Each block on findings whose input carries a `session_id` records it as `{"blocking": <digest>, "version": 1}` in `<git-dir>/checkwash/sessions/<sha256(session_id)>.stop`, written to a temporary file and renamed into place, and read only as a regular file of at most 4,096 bytes without following links; a pass deletes it, and an engine error leaves it. When `hook session-start` prunes (above), it also removes other sessions' `.stop` records older than 30 days by modification time, never the starting session's own. The agent can write these records too (THREATMODEL item 2). The size refusal's block (#456) is a separate path and blocks on every stop. A released stop gives no session-commits note; that note is for a pass. Blocking the same set again told Claude nothing new and only pressed it to change the test. A pre-registered Claude Code lifecycle receipt (D-189; Claude Code 2.1.260, `-p` mode, haiku, Windows) observed a first stop blocked with the reason above as head `f4253f7c` gave it, before D-191 added `<assertion>`, and the continued stop answered with no `decision` and this `systemMessage`, which came back in the hook event output and as Claude Code's own `informational` notice event ("Stop says: checkwash: this stop was not blocked again, ..."), so the managed handler received `stop_hook_active: true` on the continuation. Whether the interactive UI displays the `systemMessage` to the user is not verified.
 
 **The managed PreToolUse hook (0.11, D-189).** `hook pre-tool-use`, the managed PreToolUse handler, asks the user before an Edit or Write weakens a Python test. `main()` dispatches it before argparse: it takes `--repo` (default `.`) and ignores every other argument, prints exactly one JSON object, ASCII-escaped with sorted keys, and exits 0 on every outcome, since a PreToolUse hook that exits 2 blocks the tool call. `{}` leaves the call to Claude Code's normal permission flow. An ask is `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": <reason>}}`. The rule set and threshold below come from D-189 and the session replay behind it, which covered Python test files only.
 
-- **Input.** The hook input is read from stdin as the Stop handler reads it, but up to 8,000,000 bytes, since a Write carries the whole file, with the same 10-second wait. Anything but a JSON object with `hook_event_name` `PreToolUse`, `tool_name` `Edit`, `Write` or `MultiEdit`, and an object `tool_input` whose `file_path` is a string ending `.py` is `{}`; on Windows the ending is read as the file system writes it, with a last part's trailing dots and spaces dropped and case folded, so `test_x.py.` and `test_x.PY` count. That much is checked before any Git call. The run then re-roots as `check` does (#416), and a directory Git does not place in a repository is `{}`.
+- **Input.** The hook input is read from stdin as the Stop handler reads it, but up to 8,000,000 bytes, since a Write carries the whole file, with the same 10-second wait. Input over that cap, or not complete when the wait ends, is not parsed and is `{}` before any policy is read, so under `on_engine_error = "block"` too (D-191, THREATMODEL row 169). Anything but a JSON object with `hook_event_name` `PreToolUse`, `tool_name` `Edit`, `Write` or `MultiEdit`, and an object `tool_input` whose `file_path` is a string ending `.py` is `{}`; on Windows the ending is read as the file system writes it, with a last part's trailing dots and spaces dropped and case folded, so `test_x.py.` and `test_x.PY` count. That much is checked before any Git call. The run then re-roots as `check` does (#416), and a directory Git does not place in a repository is `{}`.
 - **Path.** A relative `file_path` is joined to the input's `cwd`, which must be absolute. The path is resolved through links and junctions, as the write resolves it, and must lie inside the work tree's resolved root; on Windows each part's trailing dots and spaces are dropped, as Windows creates the file. It is `{}` for a path outside the work tree, a part `.git` or a part containing `:`, a path inside a nested repository or submodule (a directory on the way holding `.git`), a NUL, CR or LF in the path, or a path that is not UTF-8.
 - **Policy.** `config.toml` and `allow.toml` are read from the session base when a usable session record exists, as for the Stop hook (#418), and otherwise from HEAD (§1, §6). No `--task` is read (§4c). Only a judged Python test is asked about: a path that, as resolved, ends `.py` and whose role under that configuration is `test` or `conftest`, or that pytest's default collection runs (`collectable`, #219). JS/TS tests are not asked about in 0.11. Anything else is `{}`.
 - **The change.** The before side is the path's current working-tree bytes; an absent file makes the change an addition, and a working-tree read the snapshot refuses (a directory, a link, a path leaving the repository) is `{}`. The after side is predicted from the tool input. A Write's is its `content`. An Edit's is the working-tree text, decoded as strict UTF-8, with `old_string` replaced by `new_string` exactly once, or at every occurrence with `replace_all`. For an Edit, no occurrence, several without `replace_all`, `old_string` equal to `new_string`, a field of the wrong type, or a working-tree file that is not UTF-8 is `{}`: the tool call fails, or its result is not predicted. An empty `old_string` is accepted only for an absent or empty file, which then holds `new_string`. When the file holds CRLF line ends and no bare LF, both strings' line ends are converted to CRLF first. A MultiEdit, whose input Claude Code does not document, applies its `edits` in order under the same rules. A lone surrogate in the text is `{}`, and so is an after side equal to the before side.
 - **Size.** Either side over the 1,000,000-byte source limit is asked about, naming path, side, size and limit (§4b); the working-tree side is checked before the edit is predicted.
 - **An unparseable working copy.** When the before bytes do not parse as Python and HEAD's copy does, HEAD's copy is the before side, so a weakening finished in this edit still has before units to compare. An edit that makes a parseable test unparseable is asked about: each unit that vanishes is a `TEST_DISABLED` finding.
 - **Analysis.** The diff is that one change. Every other path is read from the working tree, and the path itself from the proposed bytes, so the conftest chain, importer search and collection inventory see the new content; pytest configurations pair the working tree against that proposed tree. E2 is forced on (§4c); the gating table is unchanged.
-- **The ask.** The hook asks when any finding under `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`, `TOLERANCE_LOOSENED` or `BROAD_EXCEPT_ADDED` that no exemption covers is at `high` or above, on any path, since a helper's change can surface on its importers. The threshold is fixed at `high` and does not follow `fail_on`. Every other rule, the expected-value family among them, is left to the Stop hook and the required check. The reason is `checkwash: this edit weakens a test (N finding(s)): RULE path :: unit — message; ...`, with at most three findings and then `; and N more`, followed by `Approve only if the weaker test is intended. If you deny it, Claude should report the finding to you, not make the same change another way.` Unprintable and bidi control characters in the findings are escaped as `\uXXXX`, and this reason is at most 1,200 characters. It names no `checkwash allow` command and no fingerprint. A size ask reads `checkwash: this edit was not analysed: <path (side, size > limit bytes)> is over the source byte limit, so a weakened test in it would not be seen.` with the same closing sentences.
+- **The ask.** The hook asks when any finding under `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`, `TOLERANCE_LOOSENED` or `BROAD_EXCEPT_ADDED` that no exemption covers is at `high` or above, on any path, since a helper's change can surface on its importers. The threshold is fixed at `high` and does not follow `fail_on`. Every other rule, the expected-value family among them, is left to the Stop hook and the required check. The reason is `checkwash: this edit weakens a test (N finding(s)): RULE path :: unit — message<assertion>; ...`, with at most three findings and then `; and N more`, followed by `Approve only if the weaker test is intended. If you deny it, Claude should report the finding to you, not make the same change another way.` `<assertion>` is the block reason's clause above, for each finding named (D-191). Unprintable and bidi control characters in the findings are escaped as `\uXXXX`, and this reason is at most 1,200 characters: the named findings' own text comes first, their clauses are added in order while the whole fits, up to the first that does not, and a cut ends the named findings in `…` and keeps `; and N more`. It names no `checkwash allow` command and no fingerprint. A size ask reads `checkwash: this edit was not analysed: <path (side, size > limit bytes)> is over the source byte limit, so a weakened test in it would not be seen.` with the same closing sentences.
 - **Not analysed.** An engine error once the path is judged a test, other than the working-tree read refusal above, a base `allow.toml` that fails to parse under `on_engine_error = "block"` (a `config.toml` that fails to parse falls back to the defaults, which are `pass_with_warning`), or no answer within 30 seconds leaves the edit not analysed. Under the base policy's `on_engine_error = "block"` the hook asks with `checkwash: this edit to PATH was not analysed before it was made, so it was neither asked about nor passed. Engine error: <detail>`; otherwise it prints `{"systemMessage": <the same text>}` and no decision. Unlike the Stop hook, where no engine error but the size refusal above blocks (#414, #456), `block` here asks. An error or the deadline before the path is judged a test is `{}`. At the 30-second deadline the process prints its answer and exits 0 at once, without waiting for the analysis.
-- **Claude Code.** Claude Code's hooks documentation (code.claude.com/docs/en/hooks, read 2026-10-28) says the ask reason is shown to the user in the permission prompt; in a `-p` run nobody can answer, so the call is denied and Claude reads the reason; `ask` also prompts in auto mode; exit 0 with no output leaves the normal permission flow; and a hook that times out does not block (default timeout 600 seconds). A pre-registered Claude Code lifecycle receipt (D-189; Claude Code 2.1.260, haiku, Windows) ran in `-p` mode only: under `acceptEdits` and under bypassPermissions alike, an Edit with an `ASSERT_WEAKENED` finding was asked about, and Claude Code denied it with the reason in the tool result and left the file unchanged, so bypassPermissions did not skip the ask in `-p`. Not verified: the permission prompt in an interactive session, in any mode, bypassPermissions included; auto mode; a timed-out hook; a Write call, the other four rules, the size ask and the engine-error ask; whether a `systemMessage` in PreToolUse output reaches the user; the shape of a MultiEdit input; and other Claude Code versions, models and platforms.
+- **Claude Code.** Claude Code's hooks documentation (code.claude.com/docs/en/hooks, read 2026-10-28) says the ask reason is shown to the user in the permission prompt; in a `-p` run nobody can answer, so the call is denied and Claude reads the reason; `ask` also prompts in auto mode; exit 0 with no output leaves the normal permission flow; and a hook that times out does not block (default timeout 600 seconds). A pre-registered Claude Code lifecycle receipt (D-189; Claude Code 2.1.260, haiku, Windows) ran in `-p` mode only: under `acceptEdits` and under bypassPermissions alike, an Edit with an `ASSERT_WEAKENED` finding was asked about, and Claude Code denied it with the reason in the tool result and left the file unchanged, so bypassPermissions did not skip the ask in `-p`. Not verified: the permission prompt in an interactive session, in any mode, bypassPermissions included; auto mode; a timed-out hook; a Write call, the other four rules, the size ask and the engine-error ask; whether a `systemMessage` in PreToolUse output reaches the user; the shape of a MultiEdit input; the `<assertion>` clause in either reason, since the receipt ran on head `f4253f7c`, before D-191; and other Claude Code versions, models and platforms.
 - **Installation.** `hook install --agent claude-code` writes machine-local `.claude/settings.local.json` by default since 0.11, and only that install adds this handler, in a group `{"matcher": "Edit|Write|MultiEdit", "hooks": [<handler>]}` on the Stop handler's runtime binding. The handler runs a bootstrap of its own that exits 0 whatever the bound runtime does, so an older checkwash at the bound path, which would answer with a usage error, exit 2, and block every edit, prints nothing on stdout and exits 0 instead; the install probes it with `{}` on stdin and requires exit 0 and `{}`. `--shared` writes `.claude/settings.json` with no PreToolUse handler, since a teammate whose PATH holds a checkwash older than 0.11 would answer every Edit and Write with exit 2.
 
 The hook is an author-side check, like the Stop hook. An edit made through Bash or any tool the matcher does not name never reaches it, an approved ask lets the edit through, and the required CI check in range mode remains the gate.

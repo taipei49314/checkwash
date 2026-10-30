@@ -41,6 +41,13 @@ INPUT_BYTE_CAP = 8_000_000
 DEADLINE_SECONDS = 30.0
 _REASON_FINDINGS = 3
 _REASON_MAX_CHARS = 1200
+# Each side of the assertion text a hook reason quotes (evidence_clause, D-191).
+_EVIDENCE_CHARS = 120
+# The rules a hook reason quotes the assertion for, and its sides: the two
+# whose messages name lattice strengths. The handler line of
+# BROAD_EXCEPT_ADDED and the tolerances of TOLERANCE_LOOSENED are already in
+# their messages.
+_EVIDENCE_SIDES = {"ASSERT_WEAKENED": ("before", "after"), "ASSERT_REMOVED": ("before",)}
 
 
 def is_judged_test(config, rel: str) -> bool:
@@ -239,23 +246,62 @@ def _shown(text: str) -> str:
                    else f"\\u{ord(c):04x}" for c in text)
 
 
+def evidence_clause(finding) -> str:
+    """The assertion's source text a hook reason adds after a finding's message (D-191).
+
+    The ASSERT_WEAKENED message names lattice strengths, as in
+    `EXACT_VALUE(90) -> BOUND(40)`, and in the D-189 lifecycle receipt Claude
+    restated the weakened assertion as `== 90`. So the PreToolUse ask and the
+    Stop block reason quote the assertion itself: ` (before: <text>; after:
+    <text>)` for ASSERT_WEAKENED and ` (before: <text>)` for ASSERT_REMOVED.
+    Each text has its runs of whitespace collapsed to one space and is cut to
+    at most _EVIDENCE_CHARS characters, the last one `…` when it is cut; the
+    clause is then escaped as _shown escapes it, since the text is
+    agent-written. Every other rule, and a finding without that evidence,
+    gives ''. The finding message and every report keep NAME(rank).
+    """
+    sides = []
+    for side in _EVIDENCE_SIDES.get(getattr(finding, "rule", None), ()):
+        text = getattr(getattr(finding, side, None), "text", None)
+        text = " ".join(text.split()) if isinstance(text, str) else ""
+        if not text:
+            return ""
+        if len(text) > _EVIDENCE_CHARS:
+            text = text[: _EVIDENCE_CHARS - 1] + "…"
+        sides.append(f"{side}: {text}")
+    return _shown(" (" + "; ".join(sides) + ")") if sides else ""
+
+
 def _footer() -> str:
     return ("Approve only if the weaker test is intended. If you deny it, Claude should report the "
             "finding to you, not make the same change another way.")
 
 
 def weakening_reason(found: list) -> str:
-    """The permission prompt's text: for the user, and for Claude after a -p deny."""
-    listed = "; ".join(
-        f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}"
-        for f in found[:_REASON_FINDINGS]
-    ) + (f"; and {len(found) - _REASON_FINDINGS} more" if len(found) > _REASON_FINDINGS else "")
+    """The permission prompt's text: for the user, and for Claude after a -p deny.
+
+    At most _REASON_MAX_CHARS characters. The named findings' own text comes
+    first: their assertion text (evidence_clause) is added in order, while
+    the whole still fits, and stops at the first that does not. A cut ends
+    the named findings in `…` and keeps `; and N more` (D-191).
+    """
+    named = found[:_REASON_FINDINGS]
+    more = f"; and {len(found) - _REASON_FINDINGS} more" if len(found) > _REASON_FINDINGS else ""
     head = f"checkwash: this edit weakens a test ({len(found)} finding(s)): "
-    room = _REASON_MAX_CHARS - len(head) - len(_footer()) - 2
-    listed = _shown(listed)
-    if len(listed) > room:
-        listed = listed[: max(room - 1, 0)] + "…"
-    return head + listed + ". " + _footer()
+    room = _REASON_MAX_CHARS - len(head) - len(_footer()) - 2 - len(more)
+    listed = [_shown(f"{f.rule} {f.path}" + (f" :: {f.unit}" if f.unit else "") + f" — {f.message}")
+              for f in named]
+    spare = room - len("; ".join(listed))
+    for index, finding in enumerate(named):
+        clause = evidence_clause(finding)
+        if len(clause) > spare:
+            break
+        listed[index] += clause
+        spare -= len(clause)
+    text = "; ".join(listed)
+    if len(text) > room:
+        text = text[: max(room - 1, 0)] + "…"
+    return head + text + more + ". " + _footer()
 
 
 def oversized_reason(side: UnreadSide) -> str:

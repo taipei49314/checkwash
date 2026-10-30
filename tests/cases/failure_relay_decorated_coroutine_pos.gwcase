@@ -1,0 +1,46 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a decorated nested coroutine is not a run site
+origin: D-190 fix round, THREATMODEL row 171: the 2026-10-29 adversarial review dress-swallow, problem 6 (F17)
+note: the decorator replaces main, so run_until_complete(main()) never runs `await fut`; R5 runs only an undecorated nested coroutine; no production change; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_loop.py ===
+import asyncio
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_y(self):
+        self.assertEqual(compute(), 4)
+=== after: tests/test_loop.py ===
+import asyncio
+
+from app import compute
+from tests.support import LoopTestCase
+
+
+class TestLoop(LoopTestCase):
+    def test_y(self):
+        self.assertEqual(compute(), 4)
+
+    def test_x(self):
+        fut = self.loop.create_future()
+
+        def cb():
+            try:
+                self.assertEqual(compute(), 3)
+            except Exception as e:
+                fut.set_exception(e)
+            else:
+                fut.set_result(None)
+
+        self.loop.call_soon(cb)
+        @(lambda f: lambda: asyncio.sleep(0))
+        async def main():
+            await fut
+
+        self.loop.run_until_complete(main())
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

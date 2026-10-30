@@ -1,0 +1,48 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a relay that is not the handler's first statement is not read as a relay
+origin: D-190, THREATMODEL row 171: the after side of failure_relay_callback_future_neg with one edit
+note: the handler's first statement is not the relay (R1); this spelling would still fail at run time, and it pins the syntactic bound; no production change, so the finding does not depend on the D-176 refusal; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_server.py ===
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+=== after: tests/test_server.py ===
+from app import current_context, start_server
+from tests.support import LoopTestCase
+
+
+class TestServer(LoopTestCase):
+    def test_server_starts(self):
+        srv = self.loop.run_until_complete(start_server(self.loop, object))
+        self.assertIsNotNone(srv)
+
+    def test_factory_sees_listen_context(self):
+        called = self.loop.create_future()
+
+        def factory():
+            try:
+                self.assertEqual(current_context(), "inner")
+            except Exception as e:
+                e = RuntimeError("factory failed")
+                called.set_exception(e)
+            else:
+                called.set_result(None)
+            return object()
+
+        async def main():
+            srv = await start_server(self.loop, factory)
+            try:
+                await called
+            finally:
+                srv.close()
+
+        self.loop.run_until_complete(main())
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

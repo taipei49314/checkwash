@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **189 bypasses** are documented, of which **67 are not closed**.
+- **195 bypasses** are documented, of which **73 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (39)
+## Open — no defence at all (44)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -59,8 +59,13 @@ it is known not to.
 | 164 | Weaken a test in a way the PreToolUse ask does not look for, instead of fixing code: rewrite the expected value to what the buggy code returns (`EXPECTED_VALUE_CHANGED`, row 15), substitute or re-derive the expectation or the subject (`ASSERT_SUBSTITUTED`, `SUBJECT_NORMALIZED`, `EXPECTED_VALUE_DERIVED`, `EXPECTATION_DEFINITION_CHANGED`, `SUBJECT_INPUT_CHANGED`), patch the subject from a test or conftest (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`), edit a file the ask does not analyse, or make a finding of the five weakening rules that a de-escalator holds below high (D-189) | — |
 | 165 | Split a weakening so that no single Edit or Write holds it, instead of fixing code: Write a weakened copy of the test as a new file and delete the original with `rm` or `git rm`, or make the change in steps that are each judged alone and none of which is a finding of the five weakening rules at high (D-189) | — |
 | 168 | Leave the PreToolUse ask unable to decide, instead of fixing code: provoke an engine error in the analysis of an edit to a test (row 128's directory symlinks or limit refusals), or make the analysis outlast its 30-second deadline (D-189) | — |
-| 169 | Make an Edit that Claude Code applies but checkwash cannot rebuild from the tool input, so the PreToolUse ask has nothing to analyse (D-189) | — |
+| 169 | Make an Edit that Claude Code applies but checkwash cannot rebuild from the tool input, so the PreToolUse ask has nothing to analyse (D-189), or one whose input the hook does not read (D-191) | — |
 | 170 | Make the weakening before the hook sees it, then edit on top of it: once a weakened test is in the working tree, written through Bash, through an approved ask, or by an edit the hook could not rebuild, each later Edit or Write is judged only on its own change (D-189) | — |
+| 172 | Trade a swallow the file already has for a new one, instead of fixing code: make a broad handler that already swallows an assertion stop counting, with a trailing `raise` after its body or by moving its assertion to the `else` clause, and wrap another test's assertion in a new swallow with the same first line (D-191) | — |
+| 173 | Swallow an assertion in a broad handler spelled through an alias, instead of fixing code: `Err = Exception`, then `except Err: pass` around the assertion (D-191) | — |
+| 174 | Swallow an assertion in a broad handler that holds a `raise` it never runs, instead of fixing code: `except Exception:` whose body only defines a nested function containing `raise` (D-191) | — |
+| 175 | Hide an assertion behind a caught exception, instead of fixing code: put a statement that always raises a non-broad exception before it in a `try` and catch that exception, as in `try: int('x')`, the assertion, `except ValueError: pass` (D-191) | — |
+| 176 | Swallow an assertion the test reaches through a call, instead of fixing code: wrap the call, not the assertion, in a broad handler whose guarded block holds no oracle of its own, as in `try: check()` / `except Exception: pass` where `check` asserts, or call an `assert`-named helper or a fixture's checker through an alias such as `chk = assert_total` (D-191) | — |
 
 ## Narrowed, still open (3)
 
@@ -70,7 +75,7 @@ it is known not to.
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
 
-## Closed in part (13)
+## Closed in part (14)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -87,6 +92,7 @@ it is known not to.
 | 129 | Always-passing assertion in the catch: keep the broad catch that swallows the guarded assertion and give it an assertion that cannot fail, so the catch reads as inspection — `try { expect(value()).toBe(1); } catch (error) { expect(true).toBe(true); }` | `broad_except_always_passing_assert_true_pos.gwcase`, `broad_except_always_passing_bare_except_pos.gwcase`, `broad_except_always_passing_literal_compare_pos.gwcase`, `broad_except_always_passing_unittest_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase` |
 | 132 | Rewrite a stored snapshot, golden or expected file to the buggy output, and buy silence with any production change anywhere in the diff: a modified production file checkwash cannot read, any changed Python production symbol whether or not a test reaches it, or a new `.py` production module holding one definition or top-level binding (`X = 1`) | `snapshot_new_prod_module_new_test_pos.gwcase`, `snapshot_new_prod_module_pos.gwcase` |
 | 133 | Commit the cheat during the Claude Code session, so the Stop hook, which diffed HEAD against the working tree, sees a clean tree and prints `{}`; or commit an exemption, a `[detectors] disable` or a relaxed `fail_on`, so it governs the agent's next Stop | — |
+| 171 | Dress a swallow in a test's callback or thread as a failure relay, instead of fixing code: `except Exception as e: fut.set_exception(e)` where the future is never awaited, gets a result first, or is completed through a closure cell or a frame; where the consumer gives up under a broad or a narrower handler, under `suppress` (an aliased type included) or a context manager the file defines, or through `gather(return_exceptions=True)`, or sits in a decorated coroutine; where the future, the loop or asyncio is a same-file stand-in (a class, a stored or keyword-built protocol, a computed `setattr`, an alias of `self`, a helper's parameter, `vars()` in a class body, asyncio under another name or through `__dict__` or `importlib`, a patched method of `asyncio.Future`, a dynamic builtin read through an alias or `builtins`, an alias of `self` reached through a call, directly or through a name bound to `self`, a `getattr` with a starred argument); where the handler rebinds the exception first, the relay runs in a loop, or the function that binds and consumes the future is handed to a thread or the loop, has its own call swallowed, deferred in a generator expression, or made only from its own body, or is never called; put the relay where the reading cannot see what the `try` guards: in a pytest fixture, in a test helper module pytest does not collect, or around an assertion the test runs itself, directly or through a same-file helper, or through a fixture's checker or another file's helper called by an `assert`-named name; make a relay the before side did not read proven in the same change, so that it pays for a new swallow of the same first line; or break a relay the rule reads, for example by removing its await (D-190) | `failure_relay_aliased_asyncio_stand_in_pos.gwcase`, `failure_relay_await_suppressed_pos.gwcase`, `failure_relay_await_swallowed_pos.gwcase`, `failure_relay_b_call_swallowed_pos.gwcase`, `failure_relay_closure_completes_future_pos.gwcase`, `failure_relay_consumer_under_suppress_alias_pos.gwcase`, `failure_relay_decorated_coroutine_pos.gwcase`, `failure_relay_exception_rebound_pos.gwcase`, `failure_relay_fixture_checker_call_pos.gwcase`, `failure_relay_future_in_thread_body_pos.gwcase`, `failure_relay_future_method_patched_pos.gwcase`, `failure_relay_gather_return_exceptions_pos.gwcase`, `failure_relay_helper_module_pos.gwcase`, `failure_relay_in_fixture_pos.gwcase`, `failure_relay_loop_set_by_helper_pos.gwcase`, `failure_relay_made_proven_pays_for_swallow_pos.gwcase`, `failure_relay_never_awaited_pos.gwcase`, `failure_relay_repeated_in_loop_pos.gwcase`, `failure_relay_result_set_first_pos.gwcase`, `failure_relay_shadowed_asyncio_pos.gwcase`, `failure_relay_stand_in_future_pos.gwcase`, `failure_relay_stand_in_loop_pos.gwcase`, `failure_relay_unit_helper_call_pos.gwcase`, `failure_relay_wait_for_timeout_caught_pos.gwcase` |
 
 ## Open by design — the cost of a deliberate trade (12)
 

@@ -1,0 +1,45 @@
+=== meta ===
+bypass: 171
+rule: BROAD_EXCEPT_ADDED
+title: a future from an asyncio.Future that the file replaces through an alias is not trusted
+origin: D-190 fix round, THREATMODEL row 171: the 2026-10-29 adversarial review dress-swallow, problem 3 (F4)
+note: `import asyncio as aio` then `aio.Future = unittest.mock.MagicMock` makes asyncio.Future a stand-in whose result() never raises; R7 refuses asyncio imported under another name and a store of an attribute named Future; no production change; the label is Claude's, set under the 2026-10-27 delegation (D-190)
+=== before: tests/test_loop.py ===
+import asyncio
+
+from app import compute
+
+
+def test_y():
+    assert compute() == 4
+=== after: tests/test_loop.py ===
+import asyncio
+
+import unittest.mock
+import asyncio as aio
+
+aio.Future = unittest.mock.MagicMock
+
+from app import compute
+
+
+def test_y():
+    assert compute() == 4
+
+
+async def test_x():
+    fut = asyncio.Future()
+
+    def cb():
+        try:
+            assert compute() == 3
+        except Exception as e:
+            fut.set_exception(e)
+        else:
+            fut.set_result(None)
+
+    asyncio.get_running_loop().call_soon(cb)
+    await asyncio.sleep(0)
+    fut.result()
+=== expect ===
+[{"rule": "BROAD_EXCEPT_ADDED", "severity": "high", "unit": null, "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
