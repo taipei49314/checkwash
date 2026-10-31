@@ -1,0 +1,44 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 178
+title: A raises fold over a column named like the as target checks the ExceptionInfo instead
+note: Found by D-192's review. The before tests name their ExceptionInfo
+note2: excinfo; the after table names its column excinfo too, so `as excinfo`
+note3: rebinds it before the block runs and checked() receives the
+note4: ExceptionInfo, which this production rejects with ValueError whatever
+note5: the range check does. The proof read the cells -1 and 101.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not isinstance(x, int) or not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError) as excinfo:
+        checked(-1)
+
+
+def test_large():
+    with pytest.raises(ValueError) as excinfo:
+        checked(101)
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("excinfo", [-1, 101])
+def test_invalid(excinfo):
+    with pytest.raises(ValueError) as excinfo:
+        checked(excinfo)
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_large", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_negative", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}
+]

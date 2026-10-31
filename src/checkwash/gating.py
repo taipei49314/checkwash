@@ -472,27 +472,35 @@ def _oracle_mass(side) -> int:
 
 
 def _file_restructured(ir: IR, file_constants: dict[str, dict[str, str]]) -> dict[str, bool]:
-    """path -> did the file's added live units replace its disappeared mass?
+    """path -> is this test file a D5 candidate?
 
     Triage cluster: N tests merged into one parametrize, splits, in-file
     renames with rewrites. Oracle mass = strong assertions x parametrize rows;
-    if what appeared covers what disappeared, disappearances hold at warn.
+    the file's added live units must cover the mass it lost. Since D-179 that
+    is only the candidate budget: `_proven_restructure` decides each unit.
+
+    A file that lost units but no mass, such as `pytest.raises` tests without
+    `match=`, is a candidate when a live unit arrived in it too (D-192). An
+    arrival in another file is a move, which D2 judges, not a restructure.
     """
     result: dict[str, bool] = {}
     for file in ir.files:
         if not judged_as_test(file):
             continue
         gone = added = 0
+        lost = arrived = False
         for unit in file.units:
             if unit.before is not None and unit.after is None:
+                lost = True
                 gone += _oracle_mass(unit.before)
             elif (
                 unit.after is not None
                 and unit.before is None
                 and unit_is_live(unit.after, file_constants.get(file.path))
             ):
+                arrived = True
                 added += _oracle_mass(unit.after)
-        if gone:
+        if gone or (lost and arrived):
             result[file.path] = added >= gone
     return result
 

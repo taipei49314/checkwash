@@ -1,0 +1,52 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 177
+title: A raises fold that drops a row still blocks the dropped test
+note: The outside report's fold with only the -1 row kept: the 101 case no
+note2: longer runs. Each row pays for one disappearance, so test_large has no
+note3: proof and stays high.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_large():
+    with pytest.raises(ValueError):
+        checked(101)
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("bad", [-1])
+def test_invalid(bad):
+    with pytest.raises(ValueError):
+        checked(bad)
+
+
+@pytest.mark.parametrize("ok", [50])
+def test_valid(ok):
+    assert checked(ok) == ok
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_large", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+  {"rule": "TEST_DISABLED", "severity": "info", "unit": "test_negative", "deescalators": ["ASSERTION_MOVED"]},
+  {"rule": "TEST_DISABLED", "severity": "warn", "unit": "test_ok", "deescalators": ["RESTRUCTURED"]}
+]

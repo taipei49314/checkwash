@@ -1324,7 +1324,7 @@ not a general claim that all range/worktree rename classifications coincide.
 | D2 `ASSERTION_MOVED` | a removed oracle has a matching two-sided static context in a live arrival, under D-179 below. Text, body hash, assertion mass and name similarity alone establish no credit. Existing collection/liveness checks remain. Each arriving assertion is spendable once across whole-unit, assertion and D5 routes; a complete-unit credit consumes its assertion credits too. Complete-unit equivalence may return at info; assertion-only credit still applies E2 under oracle_freeze | info, or high/ORACLE_FREEZE for assertion-only credit under freeze |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
-| D5 `RESTRUCTURED` | within-file oracle mass is a candidate budget only; every lost own assertion must also have a matching static context/multiplicity proof in live arrivals (D-179). Split/renamed candidates use the same proof and shared spendable budget | hold at warn, still subject to E2 |
+| D5 `RESTRUCTURED` | within-file oracle mass is a candidate budget only, and a file that lost units but no mass is a candidate with a zero budget when a live unit arrived in it too (D-192); every lost own assertion must also have a matching static context/multiplicity proof in live arrivals (D-179). Split/renamed candidates use the same proof and shared spendable budget | hold at warn, still subject to E2 |
 | D6 `COMPAT_GATE` | the added skip is a `skipif` or a non-strict `xfail` mark (on the test, on its class, or in a `pytestmark`, which is read as the call it holds: #209 X1), a skip or non-strict `xfail` mark that a `pytestmark` binding carries under recorded guards, judged on the guard and the mark's own condition together (#260 Q2: `if sys.platform == "win32": pytestmark = pytest.mark.skip(...)` holds as its `skipif` spelling does), or an imperative skip (`pytest.skip` / `pytest.xfail` / `self.skipTest`, or a raised `unittest.SkipTest` / `pytest.skip.Exception`, in any import spelling: #220) under recorded `if` guards, in the test body, in the setup the unit runs (#196 183.2), or in a helper either of them calls, same-file or imported (#272). So is a later binding of the test's name that may replace it (`collection.rebound`, §2b), under the condition that binding runs under; one with no condition D6 can read (a loop body, an `except … as` or for target, a `match` case, mid-way through a `try` body) earns nothing (#424). A mark's condition given as a string is the expression pytest compiles from it, read as pytest evaluates it: `os`, `sys` and `platform` are those modules unless the test module binds the name to a constant, and `config` is unknown; a string that does not compile earns nothing (#263). Its condition — with module constants resolved from the test file, from files in the diff, or from the head snapshot — must reference the interpreter/OS environment (`sys.version_info` / `sys.platform` / `platform.` / `os.name`, in the condition text or in a resolved constant), and, **evaluated** over a matrix of supported Python versions and platforms, must not be provably true everywhere. "True" means truthy: a condition that is always truthy is an unconditional kill in a compat costume. Sub-expressions that cannot be resolved stay unknown, and credit is denied only when the condition is true under every assignment of the unknowns; `strict=True` xfail earns nothing (it inverts the oracle instead of skipping it). A suite-level collection control in a `conftest.py` (`collect_ignore`, a collection hook, an `add_marker(...skip)` in one; §2b) is judged on its own guard, which need not name the interpreter or OS but must be able to be false (D-028, #209 Q1). The hold is a fact about the marker the finding reports: every after-side marker of that name must qualify, and a finding with no marker of its own (a unit gone, parametrize rows deleted, a guard weakened or removed) gets none, so a gate lends nothing to another disable on its unit (#208) | hold at warn |
 | D7 `MILD_WEAKENING` | `ASSERT_WEAKENED` that fell < 30 points and landed ≥ EXACT_VALUE — still inside the exact family; landing at APPROX or below is material (THREATMODEL 13), so 90→70 and 70→60 are not mild | hold at warn |
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
@@ -1345,6 +1345,11 @@ load-bearing:
   comparison against the before side is what separates the two.
 - **Oracle mass** (D5) = strong assertions × parametrize row count. Merging N
   tests into one parametrized test preserves mass; deleting N tests does not.
+  Mass is D5's candidate budget, never its proof (D-179): a file that lost
+  units but no mass, such as `pytest.raises` tests without `match=`, is a
+  candidate with a zero budget when a live unit arrived in the same file,
+  and each lost own assertion still needs its two-sided proof (D-192). An
+  arrival in another file is a move, which D2 judges.
 - **A strong assertion must be able to fail.** Everywhere compensation is
   counted (D4, D5, split/rename), an assertion qualifies only if its strength
   is ≥ PATTERN *and* its subject depends on something other than literals and
@@ -1354,6 +1359,9 @@ load-bearing:
   true for every possible input — `assert "" in str(x)`, `assert len(x) >= 0`,
   `assert (cond, "msg")`, `assert isinstance(x, object)` — are TAUTOLOGY, so
   they never count. The list is a floor, not a completeness claim.
+  Qualification decides what a budget counts, not what a proof may hold: a
+  lost `pytest.raises` or weak check is held only by its own two-sided
+  D-179 proof, and a padding assertion has another key (D-192).
 - **Split/rename needs mass, not just a name.** A disappeared unit is excused
   as split-or-renamed only when a related name arrived *and* the file's added
   oracle mass covers what it lost. Name similarity alone let one weak survivor
@@ -1513,6 +1521,22 @@ Literal parameter combinations are expanded statically up to 64 live rows.
 There is no getattr-to-attribute equivalence: opaque prior calls may replace
 builtin lookup. Module/helper metadata and unsupported dynamic contexts supply
 no proof. Exact complete-unit relocation remains available with known context.
+
+Raise carriers (D-192, 0.11): a `with` statement whose only item is
+`pytest.raises(...)`, `pytest.warns(...)` or a bare `raises(...)`, bound to at
+most a plain name, around expression statements, assignments and `pass` only,
+is proved like an assertion: per literal row, the whole concretized statement
+with its prior and following execution context. It then joins the prior
+context of later statements. Other `with` statements, more items, control
+flow inside the block, `async with`, the call form `pytest.raises(E, f, x)`
+and unittest's `assertRaises` stay unproved.
+
+A row is substituted only where its cell is what the test reads (D-192): a
+unit gets no assertion proof when its parametrize is `indirect`, when its
+body binds a column's name, when a live row carries marks not proved to
+skip it, or when it reads a column more than once while a cell holds a
+list, dict or set. An `async def` unit's assertion proof records its
+function kind.
 
 JS/TS proof retains declarations/tables, bindings and surrounding execution.
 Ordinary strings are never module paths. Only recognized static import tokens

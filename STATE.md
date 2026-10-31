@@ -1,6 +1,54 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-29 (0.11 candidate: #419 closes as a documented residual, D-191, with the three text fixes; a proven Python failure relay is not counted as a swallow, D-190, with its fix round; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-10-31 (0.11 candidate: an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-10-31: raise carriers are proved, and cells that never reach the test are not (D-192)
+
+An outside report on #130 (talhayme, 2026-10-30) showed an honest fold
+blocking at high on 0.10.0, where 0.8.0 and 0.9.0 passed: two
+`pytest.raises` tests folded into one literal `parametrize`, beside an
+equality test folded into a one-row table. D-179's Python proof stopped at
+the first `with` statement, so the carrier had no key, and a file that lost
+only raises tests without `match=` had no D5 mass, so it was never a D5
+candidate. Nelson handed the report to Claude on 2026-10-31
+(「接手checkwash 有一則外部誤報」); every choice in D-192 is Claude's under
+the 2026-10-27 delegation, and Claude asks Nelson before merging.
+
+D-192 proves a lone `pytest.raises`, `pytest.warns` or bare `raises` item
+around expression statements, assignments and `pass` like an `assert`, per
+literal row and with its prior and following statements, and lets a test
+file that lost units but no mass be a D5 candidate that the proof decides,
+when a live unit arrived in the same file. Its adversarial review (six
+agents and a verifier for each of the 20 claimed holes, all confirmed,
+with pytest ground truth) found no weakening of the carrier itself that
+passes, but three older D-179 substitution gaps the carriers inherited:
+`indirect` cells, a column the body rebinds, and rows whose own marks may
+keep them from running. A Gemini 4 Argon review then raised two more,
+verified by Claude: a list cell read twice (one shared object) and a test
+moved into `async def`. Each already passed for `assert` tests on main
+`c06b10d3`. A unit with any of the first four now gets no assertion keys,
+and an async test's keys record its function kind (THREATMODEL row 178).
+Row 177 holds the tampering controls; row 179, open,
+records the older gap D-192 extends to raises folds kept in their file:
+arrivals the repository's own collection settings never run, here a name
+or row id a standing `-k` deselects.
+
+New: `tests/test_raises_carrier_oracle_credit.py` (38 tests) and nine
+fixtures, the report's two forms credited to talhayme there, in
+`benchmarks/external-credits.json` and in the regenerated
+`benchmarks/FAILURES.md`. KNOWN-ISSUES-next lists the honest folds that
+still block; KNOWN-ISSUES-v0.10.0 records the false block for 0.10.0 users.
+No existing expectation changed.
+
+Status: on branch `claude/raises-carrier-credit-20261031`, from main
+`c06b10d3`; not merged, waiting for Nelson. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-10-31: the full suite (`pytest tests`, `tests/gates` included, xdist `-n 4`): a JUnit file whose testsuite counts `tests="22170"`: 22103 testcase entries, 22078 passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors; a same-host differential over the 3,600 R29 members
+against main, 3,600 identical; and the report across v0.8.0, v0.9.0,
+v0.10.0, main and this change. A Gemini 4 Argon review completed (agy
+was re-verified after it updated itself to 1.4.12); D-192 records the
+verified findings. Not run: the PR receipt and other platforms. Not
+released: package metadata stays 0.10.0.
 
 ## 2026-10-29: #419 closes as a documented residual (D-191)
 
@@ -36,14 +84,25 @@ reasons quote the assertion's source text for ASSERT_WEAKENED and
 ASSERT_REMOVED (`pretool.evidence_clause`), while the finding message and
 the reports keep NAME(rank). Not answered by Nelson, and left open in
 D-191: whether blocking an honest but real weakening counts as a false
-block. #419 is to be closed after this change merges.
+block. #419 was closed when the change merged, as not planned
+(2026-10-30T02:20:20Z).
 
 New: `tests/test_issue419_residual.py` and 32 tests in
 `tests/test_pre_tool_use.py`, among them residual pins of rows 93 and 172 to
 175; no existing expectation changed.
 
-Status: on branch `claude/v011-next-20261029`, on D-190's commit
-`d9fcd20b`; not merged. Targeted runs on LAPTOP-01AGNPJU
+Status: merged with D-190 as PR #577, merge commit `c06b10d3` on
+2026-10-30T02:20:19Z (parents `6a867f6d` and `b36a4817`), on Nelson's click
+of the button labelled 「合併並結案 #419」, whose text Claude wrote. The PR's
+PJU receipt, manifest SHA256
+`38641255b6965eb5270759644f88e2b25dbedd5c0ca19c986af553354a0e2fe5`,
+published as `evidence/pr577-38641255b696-20261029` at
+`aee58cc62c65f87203820533effdd3d1e154e70d` (head `b36a4817`,
+LAPTOP-01AGNPJU, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), recorded a JUnit
+file whose testsuite counts `tests="22123"`: 22056 testcase entries, 22031
+passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors.
+Intake run 40973609981 then set the four required checks to success. The
+targeted runs below came first, on D-190's commit `d9fcd20b`. Targeted runs on LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
 2026-10-29, each exiting 0: the new residual tests,
 `tests/test_pre_tool_use.py` and `tests/test_issue419_narrow_broad_except.py`
@@ -126,8 +185,9 @@ tree, because R29's repositories hold no uvloop commit, and the 0.11
 disposition of D-176's remaining history risk, which is not yet accepted
 for 0.11.
 
-Status: on branch `claude/v011-next-20261029`, from main `6a867f6d`; not
-merged. Targeted runs on LAPTOP-01AGNPJU
+Status: merged with D-191 as PR #577, merge commit `c06b10d3`
+(2026-10-30T02:20:19Z); the D-191 status above gives its receipt and checks.
+Before it, targeted runs on LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
 2026-10-29, after the fix round, each exiting 0: the golden runner over all
 1141 fixtures (1143 passed); `tests/test_failure_relays.py` and
