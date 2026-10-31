@@ -1142,8 +1142,14 @@ this entry.
   proposed no detector patch or policy change, and asked whether the case
   should be pinned as a known-limit control or kept as outside evidence
   beside #567's D-179 costs.
-- On 2026-10-31 Nelson handed it to Claude: 「接手checkwash 有一則外部誤報」
+- At 2026-10-31T04:09:28Z Nelson handed it to Claude: 「接手checkwash 有一則外部誤報」
   (take over checkwash; there is an outside false-block report).
+- At 2026-10-31T06:49:09Z, with this change open as draft PR #578, Claude
+  asked 「要核准 D-192，跑收據後代合，並回覆回報者嗎？」 (approve D-192, merge
+  after the receipt, and reply to the reporter?). At 07:11:25Z Nelson
+  clicked the button labelled 「核准並代合」 (approve and merge), whose
+  option text was
+  「核准 D-192 進 0.11：跑 PJU 收據，4 個必要檢查綠了就代合 #578，合併後在 #130 貼回覆（用 reply-130.md 的草稿）」.
 
 Claude maintains checkwash under Nelson's 2026-10-27 delegation
 (「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
@@ -1154,8 +1160,10 @@ as D-176 to D-187 were Codex's: the carrier's bounds, the D5 candidate
 change, the four substitution refusals and the function-kind binding,
 which take the reviews' findings, the agent-read-only text listed
 under *Maintainer text*, the fixtures and their labels, and the tests and
-their expectations. None of it is Nelson's personal review, and nothing
-here is a quoted approval of these edits; Claude asks him before merging.
+their expectations. Claude wrote the question, the button's label and its
+option text, and only the label may have been sent. That approval covers
+this entry's agent-read-only edits, listed under *Maintainer text*, and the
+merge. None of it is Nelson's personal review.
 
 **Diagnosis.** D-179's Python proof (`oracle_credit._python_context`) built a
 per-row context key only for a top-level `assert` statement and stopped at
@@ -1291,7 +1299,10 @@ Windows CPython 3.11.9, 2026-10-31).
   3,493 pass, 105 block and 2 errors on both sides; 2,266.9 s. The sample
   holds no fold this entry credits or refuses, so it measures no cost and no
   catch either way: what it shows is that nothing else moved.
-- The full suite (`pytest tests`, `tests/gates` included, xdist `-n 4`): a JUnit file whose testsuite counts `tests="22170"`: 22103 testcase entries, 22078 passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors.
+- The full suite (`pytest tests`, `tests/gates` included, xdist `-n 4`): a
+  JUnit file whose testsuite counts `tests="22170"`: 22103 testcase entries,
+  22078 passed and 25 skipped, plus 67 subtests, with 0 failures and 0
+  errors.
 
 **Residuals.** Honest folds that still block at high, as on 0.10.0 (the
 review confirmed each with pytest): a fold into a `for` loop or unittest's

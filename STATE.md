@@ -12,7 +12,8 @@ the first `with` statement, so the carrier had no key, and a file that lost
 only raises tests without `match=` had no D5 mass, so it was never a D5
 candidate. Nelson handed the report to Claude on 2026-10-31
 (「接手checkwash 有一則外部誤報」); every choice in D-192 is Claude's under
-the 2026-10-27 delegation, and Claude asks Nelson before merging.
+the 2026-10-27 delegation, and Nelson approved it and its merge on
+2026-10-31 (the button labelled 「核准並代合」, quoted in D-192).
 
 D-192 proves a lone `pytest.raises`, `pytest.warns` or bare `raises` item
 around expression statements, assignments and `pass` like an `assert`, per
@@ -40,15 +41,19 @@ fixtures, the report's two forms credited to talhayme there, in
 still block; KNOWN-ISSUES-v0.10.0 records the false block for 0.10.0 users.
 No existing expectation changed.
 
-Status: on branch `claude/raises-carrier-credit-20261031`, from main
-`c06b10d3`; not merged, waiting for Nelson. On LAPTOP-01AGNPJU
+Status: PR #578 from `claude/raises-carrier-credit-20261031` (main
+`c06b10d3`). Nelson approved it at 2026-10-31T07:11:25Z (the button labelled
+「核准並代合」; Claude wrote it, quoted in D-192), to merge once the PJU receipt
+sets the four required checks. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
-2026-10-31: the full suite (`pytest tests`, `tests/gates` included, xdist `-n 4`): a JUnit file whose testsuite counts `tests="22170"`: 22103 testcase entries, 22078 passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors; a same-host differential over the 3,600 R29 members
-against main, 3,600 identical; and the report across v0.8.0, v0.9.0,
-v0.10.0, main and this change. A Gemini 4 Argon review completed (agy
-was re-verified after it updated itself to 1.4.12); D-192 records the
-verified findings. Not run: the PR receipt and other platforms. Not
-released: package metadata stays 0.10.0.
+2026-10-31: the full suite (`pytest tests`, `tests/gates` included, xdist
+`-n 4`), whose JUnit testsuite counts `tests="22170"`: 22103 testcase
+entries, 22078 passed and 25 skipped, plus 67 subtests, with 0 failures and
+0 errors; a same-host differential over the 3,600 R29 members against main,
+3,600 identical; and the report across v0.8.0, v0.9.0, v0.10.0, main and
+this change. A Gemini 4 Argon review completed (agy was re-verified after it
+updated itself to 1.4.12); D-192 records the verified findings. Not run:
+other platforms. Not released: package metadata stays 0.10.0.
 
 ## 2026-10-29: #419 closes as a documented residual (D-191)
 
