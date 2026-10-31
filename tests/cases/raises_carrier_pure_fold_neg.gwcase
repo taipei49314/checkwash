@@ -1,0 +1,43 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+credit: @talhayme (#130)
+title: Two pytest.raises tests folded into one literal two-row parametrize
+note: The outside report's smaller form (#130 comment 6531871133): without the
+note2: equality test 0.8.0 and 0.9.0 blocked one disappearance and 0.10.0 both.
+note3: Raises carriers without match= carry no D5 oracle mass, so the file was
+note4: never a D5 candidate; the two-sided proof now decides.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_large():
+    with pytest.raises(ValueError):
+        checked(101)
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("bad", [-1, 101])
+def test_invalid(bad):
+    with pytest.raises(ValueError):
+        checked(bad)
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "info", "unit": "test_large", "deescalators": ["ASSERTION_MOVED"]},
+  {"rule": "TEST_DISABLED", "severity": "warn", "unit": "test_negative", "deescalators": ["RESTRUCTURED"]}
+]

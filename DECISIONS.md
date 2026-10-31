@@ -1127,3 +1127,238 @@ platforms.
 
 **#419** is closed after this change merges, with a comment that links
 this entry.
+
+## D-192 (2026-10-31): a lone `pytest.raises` carrier is proved like an assertion, D5 takes files that lost no oracle mass, and cells that never reach the test are not substituted
+
+**Authority.**
+
+- At 2026-10-30T19:35:44Z talhayme, an outside contributor, reported on
+  #130 ([comment](https://github.com/taipei49314/checkwash/issues/130#issuecomment-6531871133))
+  a reduced honest refactor that PyPI 0.8.0 passes and 0.10.0 blocks: two
+  `pytest.raises(ValueError)` tests, for the inputs -1 and 101, folded into
+  one literal two-row `parametrize`, beside an equality test folded into a
+  one-row table, with production unchanged. With only the two raises tests,
+  0.8.0 already blocks one disappearance and 0.10.0 both. The report
+  proposed no detector patch or policy change, and asked whether the case
+  should be pinned as a known-limit control or kept as outside evidence
+  beside #567's D-179 costs.
+- At 2026-10-31T04:09:28Z Nelson handed it to Claude: 「接手checkwash 有一則外部誤報」
+  (take over checkwash; there is an outside false-block report).
+- At 2026-10-31T06:49:09Z, with this change open as draft PR #578, Claude
+  asked 「要核准 D-192，跑收據後代合，並回覆回報者嗎？」 (approve D-192, merge
+  after the receipt, and reply to the reporter?). At 07:11:25Z Nelson
+  clicked the button labelled 「核准並代合」 (approve and merge), whose
+  option text was
+  「核准 D-192 進 0.11：跑 PJU 收據，4 個必要檢查綠了就代合 #578，合併後在 #130 貼回覆（用 reply-130.md 的草稿）」.
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
+[RELEASING](docs/RELEASING.md)), whose continuation instruction covers
+"completing the remaining core repairs and their necessary protected
+contracts". Every choice in this entry is Claude's under that delegation,
+as D-176 to D-187 were Codex's: the carrier's bounds, the D5 candidate
+change, the four substitution refusals and the function-kind binding,
+which take the reviews' findings, the agent-read-only text listed
+under *Maintainer text*, the fixtures and their labels, and the tests and
+their expectations. Claude wrote the question, the button's label and its
+option text, and only the label may have been sent. That approval covers
+this entry's agent-read-only edits, listed under *Maintainer text*, and the
+merge. None of it is Nelson's personal review.
+
+**Diagnosis.** D-179's Python proof (`oracle_credit._python_context`) built a
+per-row context key only for a top-level `assert` statement and stopped at
+the first statement of any other kind ("No text-only credit through unknown
+control flow"). The frontend records `pytest.raises(...)` as an assertion
+(form `raises`, or `pattern` with `match=`), but its `with` statement
+stopped the walk, so it never had a key, `assertions_proven` was false for
+every unit holding one, and no route could pay for its disappearance. The
+equality test beside it was proved, which is why it stayed at warn.
+Separately, a raises carrier without `match=` has no strength, so it adds
+no D5 oracle mass, and `_file_restructured` only judged files whose
+disappeared units lost some mass: a file that lost only such units was
+never a D5 candidate, and the text route pays one disappearance per
+arriving assertion text, not per row. That second gap is why the smaller
+form blocked one test on 0.8.0 and 0.9.0 too. Neither is a boundary D-179
+chose: it names "unsupported control flow" as a limit, and a lone raises
+carrier around simple statements is a statement the proof can bind
+exactly. 0.8.0 and 0.9.0 passed the report through the text and mass routes
+D-179 removed, which also passed weakened folds: on 0.9.0, a fold that
+broadens `ValueError` to `Exception`, drops the 101 row or changes it to
+1000 passes.
+
+**What is decided.**
+
+1. *Raise carriers.* A `with` statement whose only item is a call written
+   `pytest.raises(...)`, `pytest.warns(...)` or a bare `raises(...)` (the
+   spellings the frontend records), bound `as` a plain name or not, whose
+   body holds only expression statements, assignments (plain, annotated or
+   augmented) and `pass`, is proved like an `assert`: for each literal
+   parameter row, its key binds the unit scope, the concretized prior and
+   following statements and the whole concretized `with` statement, so the
+   expected exception, any `match=` or other argument and every statement
+   inside it. It then joins the prior context of later statements, so an
+   assertion on `excinfo` after it is proved too. Every other `with`
+   statement (unittest's `with self.assertRaises(...)` among them), a
+   second item, control flow inside the block and `async with` still stop
+   the walk, and the call forms `pytest.raises(E, f, x)` and
+   `self.assertRaises(E, f, x)` still get no key.
+2. *D5 candidates.* A test file that lost units but no oracle mass is a D5
+   candidate with a zero budget when a live unit also arrived in it. D5
+   still requires `_proven_restructure`: every own assertion of the
+   disappeared unit proved, with spendable credits from live arrivals; a
+   disappeared unit with no own assertion gets nothing. Files that lost
+   mass are judged as before. The in-file arrival keeps D5 a restructure:
+   without it, a zero budget would have let D5 pay for a fold into another
+   file with credits from that file, which a fold of strong tests cannot
+   get (its file must cover the mass it lost) and which is D2's to judge as
+   a move. The contract review raised it.
+3. *Cells that never reach the test.* The proof substitutes each literal row
+   for every read of its column's name and treats as live every row the
+   frontend does not prove skipped. D-192's review found three ways for the
+   key to read the cell while the test runs something else, each older
+   than the carriers for `assert` statements and inherited by them (row
+   178). A unit now gets no assertion keys when its parametrize is
+   `indirect` (the keyword, the third positional argument or a `**`
+   mapping), when its body binds a column's name anywhere (`_rebinds`:
+   assignment, `del`, `as`, loop, comprehension and walrus targets, nested
+   and lambda parameters, imports, `global`, `nonlocal`, handler and match
+   captures), or when a row carries marks that `_param_row_disabled` does
+   not prove skipped. Its complete-unit key is unchanged.
+4. *Two more found by the Gemini 4 Argon review* (raised by Argon,
+   verified by Claude; both older than the carriers, for `assert`
+   statements too, and in row 178). A unit that reads a column more than
+   once while a row's cell holds a list, dict or set gets no assertion
+   keys: each read is one shared object, which a call can mutate, where the
+   literal it replaced was a fresh object at each place; the table
+   projection already refuses repeated row references for this reason. And
+   an `async def` test's assertion keys carry its function kind: a plain
+   `TestCase` never awaits an async method, so its assertions never run,
+   and pytest without a plugin skips or fails it. Synchronous keys are
+   byte-identical to before; async-to-async folds keep their credit.
+
+All four keep D-179's contract: a credit still needs a bounded two-sided
+proof of the same static obligations, each arriving row pays once across
+every route, assertion-only credit still reaches E2 under `oracle_freeze`
+(the reported fold blocks under a `--task` freeze on main and here), and
+mass, text and names remain candidates only.
+
+**Review.** Six agents, read-only outside their own directories, built
+synthetic two-commit repositories and ran main `c06b10d3`, the carrier
+alone and the carrier with the D5 change on each, with pytest on both sides
+against the correct implementation and mutants for ground truth: four
+attack lenses (the carrier's spellings, row substitution, the zero-mass D5
+candidate, credit accounting across routes), one lens of honest refactors
+and a contract review; each claimed new false negative went to an
+independent verifier that rebuilt it from its files. Every weakening of the
+carrier itself blocked on all three engines. The lenses claimed 20 new
+false negatives and the verifiers confirmed all 20. Seventeen are the
+three gaps of decision 3 (six through a rebound column or `as` target, two
+through `indirect`, nine through rows whose marks keep them from running),
+reached by several lenses and already open for `assert` folds on main. The
+other three are row 179 (arrivals in files the repository does not
+collect, or under a name a standing `-k` deselects). The contract review
+raised the cross-file reach of the zero budget, which decision 2's in-file
+arrival removes. Claude reran every case on the final branch: 19 of the 20
+block, the remaining one is row 179's `-k` rename, every other real
+weakening blocks, and every honest case keeps its verdict on the carrier
+with the D5 change, except the two folds into another file, which block as
+on 0.10.0.
+
+A Gemini 4 Argon review (agy, read-only, on the diff and a snapshot of
+main) then returned eight findings. agy updated itself from 1.4.10 to
+1.4.12 during the run; the new binary was re-verified (signature, flags and
+a read-guard test) before the review was counted. Claude checked each
+finding against the source and by running cases: two were real and are
+decision 4, the alias tautology and the `async def` move, each passing on
+main and here before the fix; one is wording (row 179 now names both
+spellings of a row id); one adds a residual (a raises table beside a loop
+fold, below); three were rejected, two of them resting on code that does
+not exist; and its audit of the claims misquoted two numbers from the
+evidence. The triage is kept with the review's receipts.
+
+**Measured** (LAPTOP-01AGNPJU, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9, 2026-10-31).
+
+- The report, rebuilt from its five files (a two-commit repository, root
+  `app.py` and `test_app.py`, `checkwash check HEAD~1..HEAD --format json`):
+  v0.8.0 and v0.9.0 exit 0, pass; v0.10.0 and main `c06b10d3` exit 1, block,
+  with `TEST_DISABLED/high` and `NO_PROD_CHANGE_IN_DIFF` on `test_negative`
+  and `test_large` and `RESTRUCTURED` warn on `test_ok`; this change exits
+  0, with `test_large` at info (`ASSERTION_MOVED`) and the other two at warn
+  (`RESTRUCTURED`), as on 0.8.0. pytest 9.1.1: both sides pass 3 on the
+  correct implementation and fail 2 of 3 with the range check removed.
+- The smaller form (the two raises tests alone) passes, with `test_large`
+  at info and `test_negative` at warn; v0.8.0, v0.9.0, v0.10.0 and main
+  block it, and so did the carrier without the D5 change.
+- A same-host differential over the 3,600 members of 0.10.0's R29 sample
+  (members file SHA256 `f6281caa...`, with the same-host differential
+  script Claude used for 0.10.0's review fixes, 16 workers): each member
+  checked once with main `c06b10d3`'s `src/`
+  (tree `b52df5f2`) and once with this change's `src/`, exit code and whole
+  report compared except run metadata. 3,600 identical, 0 different; exits
+  3,493 pass, 105 block and 2 errors on both sides; 2,266.9 s. The sample
+  holds no fold this entry credits or refuses, so it measures no cost and no
+  catch either way: what it shows is that nothing else moved.
+- The full suite (`pytest tests`, `tests/gates` included, xdist `-n 4`): a
+  JUnit file whose testsuite counts `tests="22170"`: 22103 testcase entries,
+  22078 passed and 25 skipped, plus 67 subtests, with 0 failures and 0
+  errors.
+
+**Residuals.** Honest folds that still block at high, as on 0.10.0 (the
+review confirmed each with pytest): a fold into a `for` loop or unittest's
+`subTest`; unittest's `assertRaises`; the call form; a second item, another
+context manager or control flow in the `with`; one test holding two raise
+carriers folded into rows, whose keys bind each other as prior and
+following statements; a cell that is not a literal (an exception class, a
+module constant); an f-string `match=`; the subject call moved into a
+helper; the `from pytest import mark` / `@mark.parametrize` and
+`import pytest as pt` spellings; list-form argnames; a fold into another
+file, which D2's text route moves one test of and D5 no longer takes
+(decision 2); a fold in place while a strong test moves out of the file,
+which leaves it short of D5 mass; a literal-table loop fold in the same
+file as a parametrized raises fold, which the table projection then does
+not credit (on main too); and, since decisions 3 and 4, an honest fold
+through `indirect`, a rebound column, a marked row or a mutable cell read
+twice, or one moved between `def` and `async def`, for `assert` folds too.
+KNOWN-ISSUES-next lists them.
+
+One gap stays open, older than this entry, and this entry extends it
+(row 179): arrival liveness reads pytest's default collection patterns and
+the unit's own markers, not the repository's resolved collection settings.
+On main `c06b10d3` a test moved unchanged into a file outside
+`python_files` or into a `collect_ignore` file still earns the
+complete-unit move credit, and an `assert` fold whose row a standing `-k`
+in `addopts` deselects by id still passes. With decisions 1 and 2, a raises
+fold kept in its file joins the last: under a test name or a row id such a
+`-k` deselects, it still pays, where main blocked it for want of any
+proof. The review and Claude reproduced each shape, with pytest reporting
+the file uncollected or the test deselected; the review's verifier rated
+the `-k` rename low. Closing it means reading `collection_inventory`'s
+resolved settings in the liveness path of every arrival route, a change of
+its own, not made here. It needs a selection already standing in the
+repository's configuration, and it was already open for every other moved
+oracle, while the false block this entry removes is common, the report's
+own fold among them.
+
+**Maintainer text** (agent-read-only edits under this entry): SPEC's D5 row,
+its oracle-mass and strong-assertion bullets, and a raise-carrier and a
+substitution paragraph in *Oracle-context proof in IR3*; THREATMODEL row 92
+(a `pytest.raises` paragraph appended), a row in its table of false blocks,
+and new rows 177, 178 and 179; and this entry.
+
+**Contracts.** No fingerprint, `FINDINGS_VERSION` (2), `IR_VERSION` (3),
+finding field, escalator, de-escalator or severity-table change; no existing
+`.gwcase` expectation and no `tests/gates` change. Verdicts move only where
+a proof now exists (decisions 1 and 2), or where a substituted row or a
+function kind did not match what runs (decisions 3 and 4).
+
+**Tests.** New: `tests/test_raises_carrier_oracle_credit.py` (38 tests,
+three of them residual pins of row 179) and nine fixtures: the report's
+two forms, credited to talhayme (`raises_carrier_fold_neg`,
+`raises_carrier_pure_fold_neg`), two tampering controls for row 177
+(`raises_carrier_fold_broadened_pos`, `raises_carrier_fold_row_dropped_pos`)
+and five for row 178 (`param_indirect_cells_pos`,
+`param_column_as_target_pos`, `param_row_marks_not_run_pos`,
+`param_mutable_cell_read_twice_pos`, `async_def_moved_assertion_pos`). The
+credit is in both report fixtures' headers, `benchmarks/external-credits.json`
+and the regenerated `benchmarks/FAILURES.md`.

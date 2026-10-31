@@ -87,6 +87,57 @@ def _rows(side):
     return result
 
 
+def _raises_carrier(statement):
+    """The `pytest.raises(...)` call a `with` statement carries, or None.
+
+    Only a lone `pytest.raises`/`pytest.warns`/bare `raises` item, bound to at
+    most a plain name, around simple statements. The whole statement is then
+    the obligation, bound concretely like an `assert`: the expected exception,
+    any `match=` and the call that must raise. Other context managers, more
+    items and nested control flow stay unknown.
+    """
+    if not isinstance(statement, ast.With) or len(statement.items) != 1:
+        return None
+    item = statement.items[0]
+    call = item.context_expr
+    if (not isinstance(call, ast.Call) or ast.unparse(call.func) not in {"pytest.raises", "pytest.warns", "raises"}
+            or not (item.optional_vars is None or isinstance(item.optional_vars, ast.Name))):
+        return None
+    if not all(isinstance(s, (ast.Expr, ast.Assign, ast.AnnAssign, ast.AugAssign, ast.Pass)) for s in statement.body):
+        return None
+    return call
+
+
+def _rebinds(statements, names):
+    """Whether the statements bind one of `names` anywhere.
+
+    A row is substituted for every read of its column's name. Once the body
+    binds that name (`bad = 1000`, `as bad`, a loop, a nested parameter, an
+    import), a read after it is no longer the cell, so no row can be read.
+    """
+    for statement in statements:
+        for node in ast.walk(statement):
+            if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+                bound = (node.id,)
+            elif isinstance(node, ast.arg):
+                bound = (node.arg,)
+            elif isinstance(node, ast.alias):
+                bound = ((node.asname or node.name).split(".")[0],)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                bound = (node.name,)
+            elif isinstance(node, (ast.Global, ast.Nonlocal)):
+                bound = tuple(node.names)
+            elif isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)):
+                bound = (node.name,)
+            elif isinstance(node, ast.MatchMapping):
+                bound = (node.rest,)
+            else:
+                continue
+            if names.intersection(bound):
+                return True
+    return False
+
+
 def _python_context(source, units, path, startup, needed, source_reader=None, source_searcher=None,
                     source_path_lister=None):
     try:
@@ -217,6 +268,20 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
         side.oracle_context = _key("python-unit-v1", scope, _dump(declaration))
         if fixture_parameters:
             continue  # exact standard-fixture smoke relocation only, no text credit.
+        if any(isinstance(d, ast.Call) and ast.unparse(d.func) == "pytest.mark.parametrize"
+               and any(not (isinstance(value, ast.Constant) and value.value is False)
+                       for value in (*d.args[2:3], *(k.value for k in d.keywords if k.arg in {"indirect", None})))
+               for d in function.decorator_list):
+            continue  # indirect cells reach a fixture, not the test: they are no row to substitute.
+        if _rebinds(function.body, set(side.param_columns)):
+            continue  # a column rebound in the body is no longer its cell where it is read.
+        from checkwash.frontends.python.frontend import _param_row_disabled
+        if any(isinstance(d, ast.Call) and ast.unparse(d.func) == "pytest.mark.parametrize"
+               and len(d.args) > 1 and isinstance(d.args[1], (ast.List, ast.Tuple))
+               and any(isinstance(row, ast.Call) and any(k.arg in {"marks", None} for k in row.keywords)
+                       and not _param_row_disabled(row) for row in d.args[1].elts)
+               for d in function.decorator_list):
+            continue  # a live row's own marks decide whether it runs, and no key holds them.
         concrete_args = copy.deepcopy(args)
         for name in ("posonlyargs", "args", "kwonlyargs"):
             setattr(concrete_args, name, [a for a in getattr(concrete_args, name) if a.arg not in side.param_columns])
@@ -231,15 +296,25 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
             assertion_environment = [item for item in environment if item != pytest_import]
         assertion_scope = (assertion_environment, startup, class_name, _dump(concrete_args),
                            [_dump(d) for d in other_decorators], *fixture_scope)
+        if isinstance(function, ast.AsyncFunctionDef):
+            # Whether the body runs at all depends on the runner: a plain
+            # TestCase never awaits it, and pytest without a plugin skips or fails it.
+            assertion_scope = (*assertion_scope, "async-def")
         rows = _rows(side)
+        reads = Counter(node.id for part in function.body for node in ast.walk(part)
+                        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load))
+        if any(reads[name] > 1 and any(isinstance(node, (ast.List, ast.Dict, ast.Set)) for node in ast.walk(cell))
+               for row in rows for name, cell in row.items()):
+            continue  # each read of a mutable cell is one shared object, not a fresh equal literal.
         prefix = []
         from checkwash.frontends.python.snapshot_context import _literal_expression
         def literal_assert(statement):
             return (isinstance(statement, ast.Assert) and _literal_expression(statement.test)
                     and (statement.msg is None or _literal_expression(statement.msg)))
         for statement_index, statement in enumerate(function.body):
-            if isinstance(statement, ast.Assert):
-                span = _span(statement, lines, offsets)
+            carrier = _raises_carrier(statement)
+            if isinstance(statement, ast.Assert) or carrier is not None:
+                span = _span(statement if carrier is None else carrier, lines, offsets)
                 for assertion in side.assertions:
                     if assertion.span == span and not assertion.inherited and assertion.via is None:
                         for ordinal, row in enumerate(rows):

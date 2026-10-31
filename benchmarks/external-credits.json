@@ -37,6 +37,14 @@
       "issue": 471,
       "fixture": "hardcoded_via_conftest_fixture_neg.gwcase",
       "threatmodel_row": "93, 158"
+    },
+    {
+      "date": "2026-10-31",
+      "kind": "false block",
+      "reporter": "@talhayme",
+      "issue": 130,
+      "fixture": "raises_carrier_fold_neg.gwcase",
+      "threatmodel_row": "92"
     }
   ]
 }

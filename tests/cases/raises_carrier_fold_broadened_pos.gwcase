@@ -1,0 +1,52 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 177
+title: A raises fold that broadens the expected exception still blocks
+note: The outside report's fold with pytest.raises(ValueError) widened to
+note2: pytest.raises(Exception): a TypeError regression now passes. The
+note3: concrete carriers differ, so neither disappearance has a proof.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_large():
+    with pytest.raises(ValueError):
+        checked(101)
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("bad", [-1, 101])
+def test_invalid(bad):
+    with pytest.raises(Exception):
+        checked(bad)
+
+
+@pytest.mark.parametrize("ok", [50])
+def test_valid(ok):
+    assert checked(ok) == ok
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_large", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_negative", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]},
+  {"rule": "TEST_DISABLED", "severity": "warn", "unit": "test_ok", "deescalators": ["RESTRUCTURED"]}
+]

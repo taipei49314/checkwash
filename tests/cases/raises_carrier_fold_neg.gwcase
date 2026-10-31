@@ -1,0 +1,54 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+credit: @talhayme (#130)
+title: Outside report: two pytest.raises tests and an equality test folded into literal parametrize tables
+note: Reduced by talhayme from pr-witness's synthetic corpus (#130 comment
+note2: 6531871133, 2026-10-30). Production unchanged; both sides pass on the
+note3: correct implementation and fail the same two cases when the range check
+note4: is removed. 0.8.0 and 0.9.0 passed; 0.10.0 blocked the two raises tests
+note5: at high because D-179's proof stopped at the first with statement.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_large():
+    with pytest.raises(ValueError):
+        checked(101)
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("bad", [-1, 101])
+def test_invalid(bad):
+    with pytest.raises(ValueError):
+        checked(bad)
+
+
+@pytest.mark.parametrize("ok", [50])
+def test_valid(ok):
+    assert checked(ok) == ok
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "info", "unit": "test_large", "deescalators": ["ASSERTION_MOVED"]},
+  {"rule": "TEST_DISABLED", "severity": "warn", "unit": "test_negative", "deescalators": ["RESTRUCTURED"]},
+  {"rule": "TEST_DISABLED", "severity": "warn", "unit": "test_ok", "deescalators": ["RESTRUCTURED"]}
+]

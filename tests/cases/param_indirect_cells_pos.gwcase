@@ -1,0 +1,41 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 178
+title: An equality test folded into an indirect table whose fixture replaces the cell
+note: Found by D-192's review; it passed on main c06b10d3. indirect=True hands
+note2: the cell 50 to the conftest fixture ok, which returns 7, so the test
+note3: checks checked(7) == 7. The proof substituted 50 for every read of ok.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== head: conftest.py ===
+import pytest
+
+
+@pytest.fixture
+def ok():
+    return 7
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("ok", [50], indirect=True)
+def test_valid(ok):
+    assert checked(ok) == ok
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_ok", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}
+]

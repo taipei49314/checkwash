@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 178
+title: An equality test folded into a row that xfail(run=False) never runs
+note: Found by D-192's review; it passed on main c06b10d3. A strict xfail is
+note2: not read as a disabled row, but run=False keeps pytest from running the
+note3: row at all, so checked(50) is no longer checked. A live row's own marks
+note4: are not in its proof key, so the unit now proves nothing.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("ok", [pytest.param(50, marks=pytest.mark.xfail(run=False, strict=True))])
+def test_valid(ok):
+    assert checked(ok) == ok
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_ok", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}
+]

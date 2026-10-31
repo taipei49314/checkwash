@@ -1,0 +1,37 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 178
+title: A TestCase method moved into async def keeps an assertion that never runs
+note: Raised by a Gemini 4 Argon review of D-192 and verified by Claude; it
+note2: passed on main c06b10d3. unittest calls the async method, gets a
+note3: coroutine it never awaits, and counts the test as passed, so
+note4: checked(50) is no longer checked. The assertion's key now records
+note5: the function kind.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== before: test_app.py ===
+import unittest
+from app import checked
+
+
+class T(unittest.TestCase):
+    def test_ok(self):
+        assert checked(50) == 50
+=== after: test_app.py ===
+import unittest
+from app import checked
+
+
+class T(unittest.TestCase):
+    async def test_ok_renamed(self):
+        assert checked(50) == 50
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "T.test_ok", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}
+]

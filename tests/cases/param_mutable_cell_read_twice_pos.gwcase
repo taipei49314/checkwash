@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+issue: 130
+bypass: 178
+title: A failing test folded into a row whose list cell is read twice becomes a tautology
+note: Raised by a Gemini 4 Argon review of D-192 and verified by Claude; it
+note2: passed on main c06b10d3. The before test fails on a correct sort: it
+note3: compares the sorted list with a fresh [2, 1]. The after test compares
+note4: the sorted list with itself. Substituting the cell for both reads made
+note5: two equal literals of one shared object.
+=== env ===
+app
+=== head: app.py ===
+def sort_in_place(xs):
+    xs.sort()
+    return xs
+=== before: test_app.py ===
+import pytest
+from app import sort_in_place
+
+
+def test_sort():
+    assert sort_in_place([2, 1]) == [2, 1]
+=== after: test_app.py ===
+import pytest
+from app import sort_in_place
+
+
+@pytest.mark.parametrize("xs", [[2, 1]])
+def test_sort_rows(xs):
+    assert sort_in_place(xs) == xs
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "unit": "test_sort", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}
+]

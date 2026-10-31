@@ -45,6 +45,15 @@ stay in [the D-185 dispositions](oracle-context-dispositions-0.10.0.md) and
   A cheat that relies on a different package initializer at the old path is
   not distinguished. 0.9.0 credited relocations by text alone, so this is not
   a regression, but the proof is narrower than its description.
+- **A `pytest.raises` fold blocks.** Found after release, from an outside
+  report on [#130](https://github.com/taipei49314/checkwash/issues/130#issuecomment-6531871133)
+  (2026-10-30). The proof binds only top-level `assert` statements, so
+  `with pytest.raises(...)` tests folded into a literal `parametrize` table,
+  honest or not, lose their credit and block at high, where 0.9.0 passed
+  them; a file that lost only raises tests without `match=` never reaches D5
+  either. This is a conservative false block, not a missed cheat. 0.11 fixes
+  it ([D-192](../DECISIONS.md)); on 0.10.0 an exemption in the base-side
+  `allow.toml` is the way through.
 
 ## TASK and quality
 
