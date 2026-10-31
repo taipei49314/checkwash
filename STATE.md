@@ -1,6 +1,61 @@
 # STATE — read this first when taking over
 
-Updated: 2026-10-31 (0.11 candidate: an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-10-31 (0.11 candidate: D-193 closes row 179 by reading the repository's own pytest collection settings; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-10-31: arrivals pay only where the repository's own pytest configuration runs them (D-193)
+
+D-192 left THREATMODEL row 179 open: a moved or folded Python test earned
+its credit wherever it landed, because arrival liveness read only the
+unit's own markers, never the repository's pytest configuration. On main
+`3d115a35` a test moved into a file outside `python_files`, into a
+`collect_ignore` file, outside `testpaths`, beneath an `--ignore` or
+`norecursedirs` entry, under a `--deselect`, with a name `python_functions`
+does not match, or under a standing `-k` still passed with
+`ASSERTION_MOVED`, and `git mv test_app.py app_test.py` under
+`python_files = test_*.py` passed with no finding while pytest ran nothing.
+Nelson asked for it on 2026-10-31 (the button labelled 「接著做 row 179」,
+quoted in D-193); every choice in D-193 is Claude's under the 2026-10-27
+delegation, and Nelson approved it and its merge on 2026-10-31 (quoted in
+D-193).
+
+D-193 adds `arrival_collection`, which answers collected, not collected or
+unknown for a targetless `pytest` run from the repository root under the
+head configuration, read as pytest 9.1.1 reads it (config discovery and
+loading, `-o` and the options of `addopts`, initial paths normalized as
+pytest normalizes them, node ids, the nearest conftest list, the virtual
+environment rule). A Python arrival or D10 survivor pays only where it is
+collected; a Python rename whose new path is certainly not collected, while
+the old one is not left out, is a disappearance. Unknown pays nothing and
+reports nothing: a standing `-k` withholds every Python arrival's credit.
+Its five-lens adversarial review and ten-agent engine-routes workflow
+(`wf_5cb8f97d-18d`, five finders and five independent verifiers against
+pytest 9.1.1) uncovered config-loading, `addopts`, conftest, initial-path,
+symlink and D10/rename edge cases that the final `arrival_collection` fixes,
+and two older pre-existing holes outside row 179 (now THREATMODEL rows 180
+and 181). A Gemini 4 Argon headless review stopped on a denied read outside
+the packet and is recorded as not reviewed.
+
+New: `arrival_collection.py`, `tests/test_arrival_collection.py` and four
+fixtures (`arrival_python_files_uncollected_pos`, `arrival_collect_ignore_pos`,
+`arrival_k_selection_pos`, `arrival_configured_collection_neg`); the three
+row-179 pins D-192 left flip, as D-192 said they would. KNOWN-ISSUES-next
+lists what the reading costs and what it does not read.
+
+Status: PR #579 from `claude/row179-collection-settings-20261031` (main
+`3d115a35`). Nelson approved it at 2026-10-31T12:01:36Z (quoted in D-193), to
+merge once the PJU receipt sets the four required checks. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-10-31: 86 collection shapes against pytest 9.1.1 (`--collect-only -q`),
+83 agree and 3 withhold credit conservatively (0 unsafe); the full suite
+(`pytest tests`, `tests/gates` included, xdist `-n 10`), whose JUnit
+testsuite counts `tests="22413"`: 22346 testcase entries, 22321 passed and
+25 skipped, plus 67 subtests, with 0 failures and 0 errors (1,131.6 s); and
+two same-host differentials over the 3,600 R29 members against main
+`3d115a35` (the final `src/` tree digest `d88e90a4...`,
+`arrival_collection.py` SHA256 `31873e46...`, committed `6bfc64f4...`: 3,600
+identical, 0 different, exits 3,493 pass, 105 block and 2 errors on both
+sides, 2,617.1 s). Not run:
+other platforms. Not released: package metadata stays 0.10.0.
 
 ## 2026-10-31: raise carriers are proved, and cells that never reach the test are not (D-192)
 
@@ -41,10 +96,13 @@ fixtures, the report's two forms credited to talhayme there, in
 still block; KNOWN-ISSUES-v0.10.0 records the false block for 0.10.0 users.
 No existing expectation changed.
 
-Status: PR #578 from `claude/raises-carrier-credit-20261031` (main
-`c06b10d3`). Nelson approved it at 2026-10-31T07:11:25Z (the button labelled
-「核准並代合」; Claude wrote it, quoted in D-192), to merge once the PJU receipt
-sets the four required checks. On LAPTOP-01AGNPJU
+Status: merged. Nelson approved PR #578 at 2026-10-31T07:11:25Z (the button
+labelled 「核准並代合」; Claude wrote it, quoted in D-192). Its PJU receipt
+(head `e702965f`, base and collector main `c06b10d3`, manifest SHA256
+`dfb3e89faf5bb93a60ac66bd1dbc581ad46001f63fd541e6164cf7c281bef3f2`) is
+published as `evidence/pr578-dfb3e89faf5b-20261031` (commit `15d7f521`), and
+intake run 41183508338 set the four required checks; #578 merged as main
+`3d115a35` at 08:11:55Z, and #130 was answered. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
 2026-10-31: the full suite (`pytest tests`, `tests/gates` included, xdist
 `-n 4`), whose JUnit testsuite counts `tests="22170"`: 22103 testcase

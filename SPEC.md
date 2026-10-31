@@ -195,6 +195,14 @@ between the two is a laundering route (all confirmed by reproduction):
   closing bracket, and an INI value, quoted or not, over every indented line
   after it (#324, #327). In `[pytest]`, which pytest 9's `pytest.toml` uses
   too, a quoted value stops at a line that reads as a TOML setting
+- what runs at head is read from that configuration too, for a move's
+  credit and a rename (D-193): a Python arrival pays, and a surviving copy
+  counts, only where the head's root config, its `addopts` and the
+  arrival's conftest chain certainly collect it for a targetless `pytest`
+  run from the repository root, and a Python rename whose new path they
+  certainly leave out, while not leaving out the old one, is a
+  disappearance like a rename out of the filename set (*Oracle-context
+  proof in IR3*)
 - `conftest.py` is analysed for suite-level collection controls
   (`pytest_collection_modifyitems`, `pytest_ignore_collect`,
   `collect_ignore`/`collect_ignore_glob`, `add_marker(...skip)`). A
@@ -1321,7 +1329,7 @@ not a general claim that all range/worktree rename classifications coincide.
 | E7 `OUT_OF_SCOPE_PROD_TOUCH` | `SCOPE_DRIFT` onto a prod / ci / guardrail file. E7 reads a test role that comes from the path alone (a JS/TS test path, or a file beneath a test-support directory, §2) only when the file declares a test on either side; otherwise it reads the role the §2 table and runner promotion give the path, so production code named like a test is a production touch (#196 186.8), and so is test data or a manual mock (#217). Every other rule keeps the test role | → high |
 | E8 `CI_BECAME_UNANALYSABLE` | a workflow or `.pre-commit-config.yaml` whose base side the bounded YAML reader (§4 `CI_WORKFLOW_TOUCHED`) read with at least one live runner site, and whose head side it declines. E6 still applies when the same file also weakens a test command (#196 191.3) | → high |
 | D1 `REPAIR_EVIDENCE` | repair evidence exists | hold at warn |
-| D2 `ASSERTION_MOVED` | a removed oracle has a matching two-sided static context in a live arrival, under D-179 below. Text, body hash, assertion mass and name similarity alone establish no credit. Existing collection/liveness checks remain. Each arriving assertion is spendable once across whole-unit, assertion and D5 routes; a complete-unit credit consumes its assertion credits too. Complete-unit equivalence may return at info; assertion-only credit still applies E2 under oracle_freeze | info, or high/ORACLE_FREEZE for assertion-only credit under freeze |
+| D2 `ASSERTION_MOVED` | a removed oracle has a matching two-sided static context in a live arrival, under D-179 below. Text, body hash, assertion mass and name similarity alone establish no credit. Existing collection/liveness checks remain, and a Python arrival is live only where the head's own pytest configuration collects it (D-193). Each arriving assertion is spendable once across whole-unit, assertion and D5 routes; a complete-unit credit consumes its assertion credits too. Complete-unit equivalence may return at info; assertion-only credit still applies E2 under oracle_freeze | info, or high/ORACLE_FREEZE for assertion-only credit under freeze |
 | D3 allowlist hit | valid exemption in base-side `allow.toml` | suppressed (still listed in report footer) |
 | D4 `SAME_UNIT_REWRITE` | a removal is escorted by a **newly written** assertion of strength ≥ PATTERN in the same unit | hold at warn |
 | D5 `RESTRUCTURED` | within-file oracle mass is a candidate budget only, and a file that lost units but no mass is a candidate with a zero budget when a live unit arrived in it too (D-192); every lost own assertion must also have a matching static context/multiplicity proof in live arrivals (D-179). Split/renamed candidates use the same proof and shared spendable budget | hold at warn, still subject to E2 |
@@ -1330,7 +1338,7 @@ not a general claim that all range/worktree rename classifications coincide.
 | D8 `PROD_SYMBOL_REMOVED` | a `TEST_DISABLED` in its removal shapes only — a unit that disappeared outright, or deleted parametrize rows; never an added marker — while the same diff deletes a prod symbol that existed at base **and whose enclosing scope is gone too** (a rewritten function "deletes" its old locals, and that counts for nothing), in a module the test file's imports reach (or, failing that, whose leaf name matches the `test_<module>` / `<module>_test` filename convention). Feature removal explains the removal of its test; new code explains nothing | hold at warn |
 | D5 `SAME_UNIT_REWRITE` (extended) | an `ASSERT_SUBSTITUTED` in a unit that also **deleted** an assertion and **wrote a new strong one** — the private-API-to-public-API rewrite cluster. Crediting the removal at warn while blocking the substitution at high described one edit two ways. A pure substitution removes nothing, so the shape this rule exists for is untouched | hold at warn |
 | D9 `DEPENDENCY_DRIFT` | an `EXPECTED_VALUE_CHANGED`, an `ASSERT_SUBSTITUTED` or an `EXPECTATION_DEFINITION_CHANGED` — those three only; `PACKAGE_REPAIR` (below) takes the first and the third — while the same diff changes a dependency manifest (`pyproject.toml`, `requirements*.txt`, lockfiles). A manifest counts only when its **dependencies** differ: a project's own `version =` line is dropped before the comparison, because otherwise every release commit buys the credit with its own version bump — the diff that motivated `ASSERT_SUBSTITUTED` bumps `version` in `pyproject.toml` and was de-escalated to warn by it. A pinned dependency's behaviour change is the honest cause of expectation drift, and it moves *how you reach* a value as often as the value itself — flask's `bump werkzeug 2.3.7` commits rewrote `rv.data == b"127.0.0.1"` into `flask.g.remote_addr == "127.0.0.1"` with the oracle intact. A manifest bump buys nothing for a weakened or deleted oracle, and all three credited rules require unweakened strength (an `EXPECTATION_DEFINITION_CHANGED` assertion's text is unchanged) | hold at warn |
-| D10 `DUPLICATE_REMAINS` | a disappeared unit has a proven complete oracle-context equivalent in an unchanged, live, collectable Python survivor. The existing bounded head search (at most eight parsed candidates), conftest liveness (#266) and collection checks remain. Strict startup context is required; an unknown context earns no credit. A verified survivor is reusable for genuine deduplication. JS/TS survivors remain outside this route (#484) | → info |
+| D10 `DUPLICATE_REMAINS` | a disappeared unit has a proven complete oracle-context equivalent in an unchanged, live, collectable Python survivor, collected under the head's own pytest configuration (D-193). The existing bounded head search (at most eight parsed candidates), conftest liveness (#266) and collection checks remain. Strict startup context is required; an unknown context earns no credit. A verified survivor is reusable for genuine deduplication. JS/TS survivors remain outside this route (#484) | → info |
 
 D4–D7 came from triaging 48 real blocked commits in OSS history
 (`benchmarks/triage-2026-07-30.json`). D8–D10 came from the second
@@ -1537,6 +1545,31 @@ body binds a column's name, when a live row carries marks not proved to
 skip it, or when it reads a column more than once while a cell holds a
 list, dict or set. An `async def` unit's assertion proof records its
 function kind.
+
+An arrival is live only where pytest collects it (D-193, 0.11): a Python
+unit with no base side, or one that gained assertions, supplies proof only
+where the head's configuration collects it for a targetless `pytest` run
+from the repository root, read as pytest 9.1.1 reads it. That is the root
+config `locate_config` finds, loaded as `load_config_dict_from_file` loads
+it (iniconfig's rules, tomllib, native tables), with the `-o` overrides in
+its `addopts`; its `python_files`, `python_functions`, `norecursedirs` and,
+once configured, `python_classes`;
+the run's initial paths, the `addopts` targets (node ids included) or the
+globbed `testpaths` with the fallback to the root, normalized as pytest
+normalizes collection arguments; the `--ignore`, `--ignore-glob` and
+`--deselect` in `addopts`; for each path, the nearest conftest above it that
+binds `collect_ignore` or `collect_ignore_glob`; and the virtual-environment
+directories pytest never enters. pytest never asks whether to ignore an
+initial path or a directory above one. A D10 survivor is read the same way.
+A `-k` (for a test), an `@` argument file, an option under which no test or
+only a cached selection runs, `--pyargs`, `-c`, another rootdir, a `-p`
+plugin load or `-p no:python`/`-p no:unittest`, a target outside the
+repository, a configuration pytest refuses, a file that cannot be read, a
+conftest in the chain that may define a hook, and a list a conftest changes
+in a way the reading does not follow leave the arrival unknown, and an
+unknown arrival supplies no proof. A Python rename whose new path that
+reading certainly leaves out, while not leaving out the old one, is a
+disappearance (§2b).
 
 JS/TS proof retains declarations/tables, bindings and surrounding execution.
 Ordinary strings are never module paths. Only recognized static import tokens

@@ -5,8 +5,9 @@ folded into one literal parametrize blocked at high on 0.10.0, while 0.8.0
 and 0.9.0 passed. D-179's Python proof bound only top-level `assert`
 statements and stopped at the first `with`, so the carrier had no proof key.
 The reviews of the fix found parametrize cells the proof read where the test
-runs something else; those tests are here too, with the residual pins of
-THREATMODEL row 179. These sources are parsed by CheckWash and never executed.
+runs something else; those tests are here too. The pins D-192 left for
+THREATMODEL row 179 now hold D-193's reading of the repository's collection
+settings. These sources are parsed by CheckWash and never executed.
 """
 import datetime
 
@@ -305,32 +306,31 @@ def test_a_mutable_cell_read_twice_is_one_object_not_two_literals():
     assert verdict == "pass"
 
 
-def test_residual_row179_a_row_a_configured_k_filter_deselects_still_pays():
-    # Open, older than D-192: the proof does not read the configured selection,
-    # so pytest deselects the 101 row ("2 passed, 1 deselected") while it pays
-    # for test_large. A fix changes this expectation as a recorded change.
+def test_a_configured_k_filter_leaves_every_python_arrival_unproven():
+    # Row 179 pin, flipped by D-193 (it passed under D-192): pytest deselects
+    # the 101 row ("2 passed, 1 deselected"). No keyword expression is
+    # evaluated, so a configured -k withholds every Python arrival's credit.
     ini = b'[pytest]\naddopts = -k "not slowcase"\n'
     after = REPORTED_AFTER.replace("[-1, 101]", '[-1, pytest.param(101, id="slowcase")]')
     _ir, findings, verdict = check(REPORTED_BEFORE, after, snapshot={"pytest.ini": ini})
-    assert verdict == "pass"
-    assert disabled(findings)["test_large"][0] != "high"
+    assert verdict == "block"
+    assert disabled(findings)["test_large"][0] != "info"
 
 
 @pytest.mark.parametrize("arrival,snapshot", [
     ("app_test.py", {"pytest.ini": b"[pytest]\npython_files = test_*.py\n"}),
     ("test_legacy.py", {"conftest.py": b'collect_ignore = ["test_legacy.py"]\n'}),
 ], ids=["python_files", "collect_ignore"])
-def test_residual_row179_a_test_moved_where_pytest_never_collects_still_pays(arrival, snapshot):
-    # Open, older than D-192: arrival liveness reads pytest's default patterns,
-    # not the repository's own collection settings, so a test moved unchanged
-    # into a file pytest never runs still earns the complete-unit move credit.
+def test_a_test_moved_where_pytest_never_collects_it_earns_nothing(arrival, snapshot):
+    # Row 179 pin, flipped by D-193 (it passed under D-192 with the complete-
+    # unit move credit): the repository's own settings never run the arrival.
     changes = [FileChange("test_app.py", "modified", (HEAD + NEGATIVE + OK).encode(), (HEAD + NEGATIVE).encode()),
                FileChange(arrival, "added", None, (HEAD + OK).encode())]
     sources = {"app.py": APP, **snapshot}
     _ir, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY,
                                      root_reader=sources.get, root_searcher=lambda _: [])
-    assert verdict == "pass"
-    assert disabled(findings) == {"test_ok": ("info", ("ASSERTION_MOVED",))}
+    assert verdict == "block"
+    assert disabled(findings) == {"test_ok": ("high", ())}
 
 
 def test_a_zero_mass_fold_into_another_file_is_a_move_not_a_restructure():

@@ -93,6 +93,7 @@ from checkwash.shadow import _PYTEST_CONFIGS, find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.frontends.javascript.expected_provenance import mark_js_expected_provenance
 from checkwash.gating import apply_gates, unit_is_live
+from checkwash.arrival_collection import arrival_collector
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
 from checkwash.ir.markers import parse_text
@@ -429,7 +430,8 @@ def _change_evidence(change: FileChange, rename_destinations: dict[str, str]) ->
 
 
 def _expand_renames(changes: list[FileChange], config: Config,
-                    manifest: Callable[[], bytes | None] | None = None) -> list[FileChange]:
+                    manifest: Callable[[], bytes | None] | None = None,
+                    python_excludes: Callable[[str], bool] | None = None) -> list[FileChange]:
     """A rename that moves a test file out of collection is a disappearance.
 
     git's rename folding would otherwise analyse only the new path: `git mv
@@ -437,6 +439,13 @@ def _expand_renames(changes: list[FileChange], config: Config,
     with zero findings (confirmed red-team bypass). The added half is marked
     synthetic so relocated bytes don't count as a "non-trivial prod change"
     and defuse E1.
+
+    pytest's default patterns judged a Python path alone, so `git mv
+    test_app.py app_test.py` under `python_files = test_*.py` kept every unit
+    aligned and silent while pytest stopped running them. A Python path the
+    head's own configuration certainly leaves out, where it would collect the
+    old path, has left collection too (`python_excludes`, D-193); an unknown
+    configuration keeps the default reading.
     """
     expanded: list[FileChange] = []
     for change in changes:
@@ -460,6 +469,9 @@ def _expand_renames(changes: list[FileChange], config: Config,
                 # (219.Q1): pytest still collects `tests/golden/test_x.py`.
                 old_test = collectable(old)
                 new_test = is_js_test_file(new, change.after) or collectable(new)
+                if (old_test and new_test and python_excludes is not None and not is_js_test_file(new, change.after)
+                        and python_excludes(new) and not python_excludes(old)):
+                    new_test = False
             # Moving a file out of a supervised role is a way of escaping
             # supervision: `git mv AGENTS.md docs/AGENTS.old` or a workflow
             # out of .github/workflows/ silenced the guardrail and CI rules
@@ -1176,8 +1188,72 @@ def build_ir(
         c.old_path.replace("\\", "/"): c.path.replace("\\", "/")
         for c in changes if c.old_path
     }
+    # What pytest collects at head (D-193, THREATMODEL row 179). A path the
+    # diff changes is read on its head side, a rename's source is gone, any
+    # other path is read from the strict snapshot, and nothing is read until
+    # a rename or an arrival asks. Without a snapshot nothing is known: no
+    # rename is judged by it and no arrival pays.
+    head_sides: dict[str, set] = {}
+    for change in changes:
+        path = change.path.replace("\\", "/")
+        head_sides.setdefault(path, set()).add(change.after)
+        old = (change.old_path or path).replace("\\", "/")
+        if old != path:
+            head_sides.setdefault(old, set())
+
+    def _head_source(candidate):
+        if candidate in head_sides:
+            if len(head_sides[candidate]) > 1:
+                raise ValueError("conflicting head sides of a changed path")
+            return next(iter(head_sides[candidate]), None)
+        if (candidate, -1) in chain_sources:
+            return chain_sources[(candidate, -1)]  # a conftest the chain reader already read
+        try:
+            return root_reader(candidate)
+        except EngineError:
+            # pytest follows a root config that is a link; the config
+            # evidence reads it the same way, where the snapshot refuses it.
+            if config_evidence is None or "/" in candidate or candidate not in _PYTEST_CONFIGS:
+                raise
+            return config_evidence.sources("after", [candidate])[candidate]
+
+    def _head_many(candidates):
+        candidates = list(dict.fromkeys(candidates))
+        rest = [candidate for candidate in candidates
+                if candidate not in head_sides and (candidate, -1) not in chain_sources]
+        found = {}
+        if rest and root_batch_reader is not None:
+            try:
+                found = dict(root_batch_reader(rest))
+            except EngineError:
+                found = {}  # one refused path refuses a batch: each is read alone
+        return {candidate: found[candidate] if candidate in found else _head_source(candidate)
+                for candidate in candidates}
+
+    def _head_paths():
+        listed = root_path_lister()
+        selected = {path for path in split_inventory(listed)[0] if isinstance(path, str)}
+        for candidate in head_sides:
+            selected.discard(candidate)
+            if _head_source(candidate) is not None:
+                selected.add(candidate)
+        return [*sorted(selected), *(path for path in listed if isinstance(path, str) and path.endswith("/"))]
+
+    head_collection = []
+
+    def python_collection():
+        if not head_collection:
+            head_collection.append(
+                arrival_collector(_head_source, _head_paths if root_path_lister is not None else None, _head_many)
+                if root_reader is not None else None)
+        return head_collection[0]
+
+    def python_excludes(path):
+        collection_ = python_collection()
+        return collection_ is not None and collection_.excludes(path)
+
     manifest = _base_manifest(changes, root_reader, unread_changes)
-    expanded_changes = sorted(_expand_renames(changes, config, manifest), key=lambda c: c.path)
+    expanded_changes = sorted(_expand_renames(changes, config, manifest, python_excludes), key=lambda c: c.path)
     # The runner each JS test file is judged under at head, for D2 liveness.
     js_head_runners: dict[str, frozenset[str] | None] = {}
     # An unread co-change could redefine a callee too (#415).
@@ -1943,6 +2019,13 @@ def build_ir(
                           source_path_lister=(lambda side=side_index: _relocation_context_path_list(side))
                           if root_path_lister is not None else None)
 
+    # A Python arrival pays only where the head's own pytest configuration
+    # certainly collects it (D-193); without a snapshot there is no proof to
+    # spend either.
+    def python_collected(path, qualname, source):
+        collection_ = python_collection()
+        return collection_ is not None and collection_(path, qualname, source)
+
     # Move credits, counted after the constant environments exist because
     # liveness now consults them. Assertions (and whole units) landing in a
     # unit that does not run never count as "moved" — a sacrificial
@@ -1952,13 +2035,23 @@ def build_ir(
     # a391797d00 / 700798252a).
     removed_units: Counter[str] = Counter()
     added_units: Counter[str] = Counter()
+    # Only an arrival or its added assertions can pay (oracle_credit.
+    # arrival_credits), and only for a disappeared unit or a removed
+    # assertion, so nothing is read unless both are there.
+    payable = any(unit.before is not None and (unit.after is None or (
+        unit.delta is not None and unit.delta.assertions_removed)) for file in ir.files for unit in file.units)
     for file in ir.files:
         constants = file.constants
         # A unit that reappears in a JS file its runner does not collect does
         # not run there, so it is not live (#196 186.7).
         js_collected = file.path not in js_head_runners or collected(file.path, js_head_runners[file.path])
+        python_test = payable and file.language == "python" and judged_as_test(file)
         for unit in file.units:
             live_after = unit.after is not None and js_collected and unit_is_live(unit.after, constants)
+            if live_after and python_test and (unit.before is None or (
+                    unit.delta is not None and unit.delta.assertions_added)):
+                live_after = python_collected(file.path, unit.qualname,
+                                              relocation_sources.get(file.path, (None, None))[1])
             if unit.after is not None and not live_after:
                 unit.after.oracle_context = ""
                 unit.after.oracle_assertion_contexts = {}
@@ -2055,7 +2148,8 @@ def build_ir(
                               source_path_lister=(lambda: _relocation_context_path_list(1))
                               if root_path_lister is not None else None)
                 for pu in parsed.units:
-                    if pu.side.oracle_context in wanted and unit_is_live(pu.side, consts):
+                    if (pu.side.oracle_context in wanted and unit_is_live(pu.side, consts)
+                            and python_collected(path, pu.qualname, data)):
                         found.add(pu.side.oracle_context)
             g.duplicate_unit_hashes = sorted(found)
     for path, unit, target, text, span in installation_events(
