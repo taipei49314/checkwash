@@ -1,0 +1,65 @@
+{
+  "action_sha": "e702965f0cb80808ff6dbb21c996a082b9056cef",
+  "action_tree": "7824b0716c6695a11863450c0c7d8bb949df1ed2",
+  "action_yaml_sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83",
+  "base_sha": "c06b10d33c545e9b85eac02a7f2abbbd63382cb1",
+  "comment_pr": false,
+  "errors": [],
+  "fail_on": "high",
+  "files": {
+    "action_yaml": "action.yml",
+    "check_receipt": "runtime-receipts/check-receipt.json",
+    "check_run": "check.bash",
+    "check_stderr": "logs/check.stderr",
+    "check_stdout": "logs/check.stdout",
+    "engine_stderr": "runtime-receipts/stderr.txt",
+    "engine_stdout": "runtime-receipts/stdout.txt",
+    "identity": "runtime-receipts/identity.json",
+    "install_report": "runtime-receipts/install-report.json",
+    "install_run": "install.bash",
+    "install_stderr": "logs/install.stderr",
+    "install_stdout": "logs/install.stdout",
+    "pip_stderr": "runtime-receipts/install-stderr.txt",
+    "pip_stdout": "runtime-receipts/install-stdout.txt"
+  },
+  "head_sha": "e702965f0cb80808ff6dbb21c996a082b9056cef",
+  "host": "LAPTOP-01AGNPJU",
+  "kind": "checkwash.pju-action-replay.v1",
+  "provenance": "PJU_LOCAL_COMPOSITE_REPLAY",
+  "resolved_outputs": {
+    "exit-code": "0",
+    "identity-path": "C:\\Users\\nelson\\dev\\cw578r1\\s\\candidate-action\\checkwash-action-jgf4o39v\\identity.json",
+    "receipt-path": "C:\\Users\\nelson\\dev\\cw578r1\\s\\candidate-action\\checkwash-action-jgf4o39v\\check-receipt.json"
+  },
+  "schema_version": 1,
+  "status": "completed",
+  "steps": [
+    {
+      "exit_code": 0,
+      "id": "install",
+      "outputs": {
+        "directory": "C:\\Users\\nelson\\dev\\cw578r1\\s\\candidate-action\\checkwash-action-jgf4o39v",
+        "identity_path": "C:\\Users\\nelson\\dev\\cw578r1\\s\\candidate-action\\checkwash-action-jgf4o39v\\identity.json",
+        "python": "C:\\Users\\nelson\\dev\\cw578r1\\s\\candidate-action\\checkwash-action-jgf4o39v\\environment\\Scripts\\python.exe"
+      },
+      "run_sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4",
+      "stderr": "logs/install.stderr",
+      "stdout": "logs/install.stdout"
+    },
+    {
+      "exit_code": 0,
+      "id": "check",
+      "outputs": {
+        "analysis_exit_code": "0",
+        "base": "c06b10d33c545e9b85eac02a7f2abbbd63382cb1",
+        "exit_code": "0",
+        "fail_on": "high",
+        "head": "e702965f0cb80808ff6dbb21c996a082b9056cef",
+        "receipt_path": "C:\\Users\\nelson\\dev\\cw578r1\\s\\candidate-action\\checkwash-action-jgf4o39v\\check-receipt.json"
+      },
+      "run_sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93",
+      "stderr": "logs/check.stderr",
+      "stdout": "logs/check.stdout"
+    }
+  ]
+}
