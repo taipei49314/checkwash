@@ -1,0 +1,49 @@
+=== meta ===
+rule: TEST_DISABLED
+title: A test moved into a file the repository's own collection settings run
+note: The configured python_files, testpaths, addopts and collect_ignore all
+note2: collect tests/test_moved.py, so the move keeps its credit (D-193).
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== head: pytest.ini ===
+[pytest]
+python_files = test_*.py check_*.py
+testpaths = tests
+addopts = -ra --strict-markers -p no:randomly -m "not slow" --ignore=tests/fixtures
+=== head: tests/conftest.py ===
+collect_ignore = ["setup.py"]
+collect_ignore_glob = ["*_py2.py"]
+=== before: tests/test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: tests/test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+=== after: tests/test_moved.py ===
+import pytest
+from app import checked
+
+
+def test_ok():
+    assert checked(50) == 50
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "info", "deescalators": ["ASSERTION_MOVED"], "unit": "test_ok"}]

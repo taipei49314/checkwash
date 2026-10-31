@@ -1,0 +1,46 @@
+=== meta ===
+rule: TEST_DISABLED
+bypass: 179
+title: A test moved unchanged into a file the repository's python_files never collects
+note: The head's pytest.ini collects test_*.py only, so app_test.py never runs.
+note2: Arrival liveness read pytest's default patterns, which take *_test.py, and
+note3: the complete-unit move credit paid; D-193 reads the repository's own.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== head: pytest.ini ===
+[pytest]
+python_files = test_*.py
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+=== after: app_test.py ===
+import pytest
+from app import checked
+
+
+def test_ok():
+    assert checked(50) == 50
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_ok"}]

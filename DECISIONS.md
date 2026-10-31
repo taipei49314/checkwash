@@ -1362,3 +1362,310 @@ and five for row 178 (`param_indirect_cells_pos`,
 `param_mutable_cell_read_twice_pos`, `async_def_moved_assertion_pos`). The
 credit is in both report fixtures' headers, `benchmarks/external-credits.json`
 and the regenerated `benchmarks/FAILURES.md`.
+
+## D-193 (2026-10-31): a Python arrival pays only where the repository's own pytest configuration collects it, and a rename out of that collection is a disappearance
+
+**Authority.**
+
+- D-192 left THREATMODEL row 179 open: arrival liveness did not read the
+  repository's resolved collection settings.
+- At 2026-10-31T08:13:27Z, after D-192's merge, Claude asked
+  「要接著在這裡做 row 179 嗎？」 (continue with row 179 here?). At 08:28:44Z
+  Nelson clicked the button labelled 「接著做 row 179」 (continue with row
+  179), whose option text was
+  「接著在這裡做 row 179：讓 arrival 的 liveness 讀 repo 自己的 python_files、collect_ignore 和 addopts 的 -k 選取，做完開 PR」
+  (do row 179 here: make arrival liveness read the repository's own
+  `python_files`, `collect_ignore` and the `-k` selection in `addopts`, and
+  open a PR when done).
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
+[RELEASING](docs/RELEASING.md)), whose continuation instruction covers
+"completing the remaining core repairs and their necessary protected
+contracts". Every choice in this entry is Claude's under that delegation:
+what the reading covers beyond the three settings the option text names,
+what it leaves unknown, the agent-read-only text listed under *Maintainer
+text*, the fixtures and their labels, and the tests and their expectations.
+Claude wrote the question, the button's label and its option text, and only
+the label may have been sent. The click asks for a pull request; it
+approves no merge. None of it is Nelson's personal review.
+
+**Diagnosis.** The arrival credits of D2, D5 and D10 count only live
+arrivals: `oracle_credit.arrival_credits` skips a unit that is not live, the
+engine clears a dead arrival's proof keys, and the text and whole-unit
+routes of the engine's move loop count only live arrivals. For a Python
+unit, live meant `compat.unit_is_live`: every marker on it is a qualified
+compat gate. Nothing asked whether pytest collects the unit at all. The
+engine parses units only in files pytest's default patterns collect
+(`roles.collectable`), and the D-179 proof's startup key binds the conftest
+chain's and package initializers' bytes, not the root config or the
+arrival's path. So a test moved unchanged into `app_test.py` under
+`python_files = test_*.py`, into a file a conftest's `collect_ignore` names,
+outside `testpaths`, beneath an `--ignore`, `--ignore-glob` or
+`norecursedirs` entry, under a `--deselect`, with a `python_functions`
+pattern it does not match, or under a `-k` in `addopts`, still earned the
+move credit. On main `3d115a35` each of these ten shapes passes with
+`ASSERTION_MOVED`. Renames had the same blind spot: `_expand_renames` splits
+a rename that leaves collection into a deletion and an addition, but judged
+a Python path by pytest's default patterns alone, so `git mv test_app.py
+app_test.py` under `python_files = test_*.py` kept every unit aligned and
+reported nothing, on main and here before this change, while pytest ran no
+test at head.
+
+**What is decided.**
+
+1. *Arrival collection.* A Python arrival in a judged test file, a unit
+   with no base side or one that gained assertions, is live only where the
+   head's configuration collects it for a targetless `pytest` run from the
+   repository root (`arrival_collection`), the run a required check makes
+   when it calls plain `pytest`, read as pytest 9.1.1 reads it:
+   - *the configuration:* the root config `locate_config` finds, in its
+     order, loaded as `load_config_dict_from_file` loads it: iniconfig's
+     rules for `.ini` and `.cfg` files (a header with a comment, `key:
+     value`, continuation lines, inline comments kept), tomllib for `.toml`
+     files (native `[tool.pytest]` tables included), the section each file
+     holds, and each later config file loaded too, as pytest loads it. Each
+     setting is split as `Config._getini` splits an `args` value, and the `-o`
+     overrides in `addopts` apply after it. Options come from `addopts`
+     alone, parsed as pytest's argument parser parses them, combined short
+     options included, never from runner commands elsewhere in the file;
+   - *names:* `python_files` is a glob over the file's name, or, for a
+     pattern with a slash, over pytest's absolute path, which decides only
+     where every checkout depth agrees; `python_functions` is a prefix or a
+     glob over the test's own name; and, once configured, `python_classes`
+     over the names of the classes that hold it, where a class with a base
+     spelled `...TestCase` is taken for a TestCase, which pytest's unittest
+     plugin collects whatever its name, and any other base is unknown;
+   - *initial paths:* the `addopts` targets, node ids included, or else
+     `testpaths` expanded as `glob.iglob` expands them, with pytest's
+     fallback to the root when no testpath exists, normalized as pytest 9
+     normalizes collection arguments (the outermost of overlapping ones is
+     kept). A word naming no path is an unknown option's value, as #173 reads
+     it, and so is a directory holding no test module. A test in a file a
+     node id names is collected only where the node id selects it. A word
+     after a long option the reading cannot place (pytest 9.1.1's own flags
+     are listed) may be that option's value, and leaves the initial paths
+     unknown;
+   - *what leaves a path out:* `norecursedirs` and pytest's virtual
+     environment rule (`pyvenv.cfg`, `conda-meta/history`) for each
+     directory below the initial path; the `--ignore`, `--ignore-glob` and
+     `--deselect` in `addopts`, a prefix every node id of a file starts
+     with deselecting the file; and the conftest lists, where each path is
+     judged by the nearest conftest above it that binds each list. An entry
+     the module adds under a condition, in an arm of a conditional
+     expression, or that a later binding which may not run would replace, is
+     only possible; a later binding that always runs replaces the list.
+     `--noconftest`, `--confcutdir` and `--collect-in-virtualenv` switch these
+     off as pytest does. pytest never asks whether to ignore an initial path
+     or a directory above one.
+
+   A file the diff changes is read on its head side and any other from the
+   strict snapshot, a root config that is a link through the config
+   evidence, which follows it as pytest does. Reads are batched and happen
+   only when a test disappeared or lost an assertion; the inventory is
+   listed only for a decision that needs it (a target in `addopts`, or an
+   arrival outside every testpath), because a working tree's listing walks
+   the tree whole. Names match by POSIX case rules, as the rest of the
+   collection reading does.
+2. *Unknown pays nothing.* An arrival is not live when the reading cannot
+   decide:
+   - a `-k` expression in `addopts`: no keyword expression is evaluated, so
+     the selection the option text names withholds every Python arrival's
+     credit, while a file is still decided;
+   - an `@` argument file; an option under which no test runs or only a
+     cached selection does (`--collect-only`, `--setup-only`,
+     `--setup-plan`, `--fixtures`, `--markers`, `--lf`, `--sw` and the like);
+     `--pyargs`, `-c`, `--keep-duplicates`, a `--rootdir` other than the
+     root; a `-p` plugin load,
+     `-p no:python` or `-p no:unittest`; a combined short option the reading
+     does not know; a target outside the repository; an absolute ignore or
+     `norecursedirs` pattern; a configuration pytest itself refuses; a file
+     that cannot be read;
+   - a conftest in the chain that pytest cannot import, or that may define a
+     hook or load a plugin (a `pytest_` name, a star import, `exec`, `eval`,
+     `globals()`, `vars()`, `__dict__`): its `pytest_ignore_collect` can
+     collect or leave out any path, so nothing is decided under it. A list a
+     conftest binds or changes in a way the reading does not follow (a
+     non-literal value, a function that changes the module's list, `global`,
+     an attribute, a keyword or the name as a string) leaves only that list
+     unknown.
+3. *What needs no reading.* `-m`: a proved unit's decorators can only be
+   `parametrize`, `skip`, `skipif` and `xfail`, a module or class mark leaves
+   the module context unproved, and a row's marks withhold its keys (D-192).
+   `python_classes` at its default needs none either: a class's name, bases
+   and body are in the proof key on both sides. Configured, it is read
+   (decision 1): a first configuration is only a warning, so a
+   `pytest.ini` created beside a moved class test could stop collecting the
+   class while the key stayed the same.
+4. *D10 survivors.* A surviving copy outside the diff counts only where the
+   same reading collects it.
+5. *Renames.* Each answer is collected, not collected or unknown. A credit
+   needs "collected"; a finding needs "not collected". A Python rename that
+   pytest's default patterns keep collecting, whose new path the head
+   configuration certainly leaves out while it does not leave out the old
+   one, is split into a deletion and an addition, as a rename out of the
+   default patterns already was, so its tests are disappearances and the
+   added half's units are arrivals that pay nothing. An unknown answer keeps
+   the default reading. A `-k` leaves every test unknown and every file
+   decided, so a rename out of `python_files` is still caught beside it.
+
+The routes are unchanged: a credit still needs D-179's two-sided proof, each
+arriving row pays once across every route, and assertion-only credit still
+reaches E2 under `oracle_freeze`. An arrival the reading leaves out only
+loses credit, and a rename the reading cannot decide keeps its old reading;
+nothing is added.
+
+**Review.** Five agents, read-only outside their own directories, each took one
+lens of the first version: collection semantics, conftest forms, engine credit
+routes, honest refactors and robustness. They built synthetic two-commit
+repositories, ran main `3d115a35` and the branch, and checked every case
+against what pytest 9.1.1 collects or runs. The engine-routes agent stopped
+before running anything (part of its work was withheld by a safety filter),
+so that lens ran again as a workflow: five finders, one per route group (the
+D2 routes, D5 and split/rename, D10, the rename split, the head overlay),
+each followed by an independent verifier that rebuilt every reported case.
+They found arrivals the first version still paid for while pytest ran them
+nowhere, every one through a configuration spelling or an option its
+line-based reader did not see, and all paid on main too; and over-reading
+that blocked honest changes main passed. Claude checked each finding against
+the source and pytest before acting, and the triage is kept with the
+review's receipts:
+- *the configuration:* a header with a comment, a triple-quoted TOML
+  string, `key: value`, quoted or dotted keys, a native `[tool.pytest]` table,
+  the wrong section of a file, and runner commands read as if they were
+  `addopts` (in both directions: a tox environment's `-k` withheld every
+  credit, and its `-o python_files=...` widened collection). Hence the
+  loader of decision 1, written against pytest 9.1.1's `locate_config`,
+  `load_config_dict_from_file`, iniconfig 2.3.1's parser and `_getini`;
+- *`addopts`:* clustered short options (`-qk`), an `@` argument file, node
+  ids, overlapping initial paths (pytest 9 keeps the outermost), run-nothing
+  and cache-selected options, `-p` plugin loads, a word after an unplaced
+  plugin option, `--noconftest`, `--confcutdir`, `--collect-in-virtualenv`
+  and a `--deselect` prefix that covers a whole file;
+- *conftests:* a docstring naming `collect_ignore`, a class or function
+  scope's own `collect_ignore`, `vars(x)`, `os.path.join`, conditional
+  expressions and concatenations, the nearest-list rule, an entry added
+  under a condition (now only possible), a Latin-1 conftest, and a hook in
+  the chain whose `pytest_ignore_collect` can override any exclusion (now
+  anything possible, deciding nothing);
+- *the rest:* an initial path asked whether to be ignored, slash patterns
+  matched against the absolute path, a linked root config in range mode,
+  opaque directories beside testpaths, a configured `python_classes` with a
+  first configuration (a real pass on main: the new `pytest.ini` is only a
+  warning), crashes on a symlink loop and on a 1,500-deep path, and the
+  cost of reading (now batched, cached against the chain reader, and skipped
+  when nothing can be paid).
+Each accepted finding has a test, most against pytest's own answer. Rejected
+or kept as residuals: the reviewers' inclusion of `--deselect` in the
+initial-path exemption (pytest deselects by node id regardless), a
+conditional ignore withholding a credit (kept, since the exclusion is
+possible), a `-k` withholding every credit (the decided reading), the
+working-tree listing walked once more when the inventory is needed, a hook
+in a conftest outside the chain, and Windows case rules. The workflow also
+reproduced two older holes outside row 179, now rows 180 and 181, and some
+pre-existing rename limits KNOWN-ISSUES-next lists. A Gemini 4 Argon headless
+review (`agy` 1.4.12, runner v4) stopped incomplete when it attempted to read
+a file outside the packet and read root (`runnerExitCode: 1`, empty response)
+and is recorded as not reviewed.
+
+**Measured** (LAPTOP-01AGNPJU, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9, 2026-10-31).
+
+- What pytest collects: 86 shapes, each built in a fresh directory and
+  collected with pytest 9.1.1 (`pytest --collect-only -q`, plugin autoload
+  off), against the reading on the same files. 83 agree. In the other three
+  the reading withholds a credit pytest would pay: a `unittest.TestCase`
+  method under a custom `python_functions`, an ignore in an arm of a
+  conditional expression, and an ignore appended under a version check,
+  each on Python 3.11. None goes the other way.
+- Main against this change: on main `3d115a35`, a test moved unchanged into a
+  file outside `python_files`, a `collect_ignore` or `collect_ignore_glob`
+  file, a path under `--ignore` or `--ignore-glob`, a node under
+  `--deselect`, a repository with a `-k` in `addopts`, a name
+  `python_functions` does not match, a path outside `testpaths` or beneath a
+  `norecursedirs` entry passes with `ASSERTION_MOVED`; here each blocks with
+  `TEST_DISABLED`/high. The controls pass on both: the default
+  configuration, `collect_ignore = ["setup.py"]`, a conftest of fixtures
+  using `monkeypatch`, a testpath hit, a missing testpath, a testpath glob,
+  `addopts` full of plugin options, an unknown option's value, extra
+  `python_files`, `[tool.pytest.ini_options]`, `setup.cfg`, an unrelated
+  `--deselect`, a replaced `norecursedirs` and a `TestCase` class move.
+- Renames: `git mv test_app.py app_test.py` under `python_files = test_*.py`
+  passes with no finding on main, while pytest reports "no tests ran"; here
+  both tests are `TEST_DISABLED`/high.
+- A first `pytest.ini` that sets `python_classes = Check` beside a moved
+  `TestThing` method: main passes with `CI_WORKFLOW_TOUCHED` at warn and
+  `ASSERTION_MOVED`; here the move blocks.
+- A root config that is a link, in range mode through the CLI: the version
+  without the config-evidence fallback blocks an honest move under a linked
+  `pytest.ini`, and under a regular `pytest.ini` beside a linked
+  `setup.cfg`; this change passes both.
+- Rows 180 and 181, reproduced through the CLI on main and here: a committed
+  `tests/pyvenv.cfg` leaves pytest collecting no item and both pass with no
+  finding; an ignored copy of a deleted test gives `DUPLICATE_REMAINS` in
+  working-tree mode.
+- A same-host differential over the 3,600 members of 0.10.0's R29 sample
+  (members file SHA256 `f6281caa...`, the script D-192 used), each member
+  checked once with main `3d115a35`'s `src/` (tree digest `e1ba3075...`)
+  and once with this change's, exit code and whole report compared except
+  run metadata. An interim version without the rename split and the third
+  review round: 3,600 identical, exits 3,493 pass, 105 block and 2 errors on
+  both sides, 2,690.1 s. The final `src/` (tree digest `d88e90a4...`,
+  `arrival_collection.py` SHA256 `31873e46...`; committed `6bfc64f4...`
+  spells the literal BOM on line 333 as `"\ufeff"`, identical parsed AST):
+  3,600 identical, 0 different; exits 3,493 pass, 105 block and 2 errors on
+  both sides, 2,617.1 s.
+- The full suite (`pytest tests`, `tests/gates` included, xdist `-n 10`):
+  a JUnit file whose testsuite counts `tests="22413"`: 22346 testcase entries,
+  22321 passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors
+  (1,131.6 s).
+
+**Residuals.** What the reading costs, as honest changes that now block at
+high: every Python move or fold in a repository with a `-k` in `addopts`,
+an `@` argument file, a run-nothing or cache-selected option, `--pyargs`,
+another rootdir or a `-p` plugin load, or with a conftest above the arrival
+that may define a hook (which withheld the credit through D-179's startup
+key already) or builds a list the reading does not follow; a move into a
+file a conditional ignore names, whose exclusion is only possible; a target
+in `addopts` after a plugin option the reading cannot place; a move or fold
+inside a file the configuration never collects on either side, whose deleted
+test never ran; a `unittest.TestCase` method under a custom
+`python_functions` it does not match, which pytest's unittest plugin
+collects by its own prefix; under a configured `python_classes`, a class
+whose base is a TestCase not spelled `...TestCase`; a `--deselect` that
+names one row of an arriving test, which withholds every row's credit; and
+a pattern with a slash that matches only at some checkout depths. What it does not read, so a move there
+still pays: a runner command's own targets or options (a CI workflow, a tox
+environment, a Makefile), `PYTEST_ADDOPTS`, a nested config that a targeted
+run discovers, a session hook such as `pytest_collection_modifyitems` in a
+conftest outside the arrival's chain, which sees every item, installed
+plugins, a pytest version that reads configuration otherwise, a pattern that
+names the checkout's own absolute path, case-insensitive file systems
+(Windows matches names without regard to case), and a test renamed in place
+to a name a configured `python_functions` does not collect, which stays one
+aligned unit. Units are still found only in files pytest's default patterns
+name, so a move or rename into or out of a file only the configuration
+collects is judged as before. KNOWN-ISSUES-next lists both. The review found
+two older holes outside this row, now THREATMODEL rows 180 (a `pyvenv.cfg`
+committed into a test directory) and 181 (an ignored copy counted as a D10
+survivor in working-tree mode), both open.
+
+**Maintainer text** (agent-read-only edits under this entry): SPEC's §2b
+collection bullets, its D2 and D10 rows and a paragraph in *Oracle-context
+proof in IR3*; THREATMODEL row 179, now Closed, and new rows 180 and 181, open;
+and this entry.
+
+**Contracts.** No fingerprint, `FINDINGS_VERSION` (2), `IR_VERSION` (3),
+finding field, escalator, de-escalator or severity-table change; no existing
+`.gwcase` expectation and no `tests/gates` change. Verdicts move only where
+a Python arrival that pytest does not certainly collect used to pay, and
+where a Python rename the head configuration certainly leaves out used to
+be silent. The three pins D-192 left for row 179 flip, as D-192 said they
+would, and are renamed: `test_a_configured_k_filter_leaves_every_python_arrival_unproven`
+and `test_a_test_moved_where_pytest_never_collects_it_earns_nothing`
+(`python_files`, `collect_ignore`).
+
+**Tests.** New: `tests/test_arrival_collection.py` (239 tests) and four
+fixtures: `arrival_python_files_uncollected_pos`, `arrival_collect_ignore_pos`
+and `arrival_k_selection_pos` for row 179, and the control
+`arrival_configured_collection_neg`.

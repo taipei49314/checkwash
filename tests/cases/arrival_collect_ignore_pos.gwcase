@@ -1,0 +1,45 @@
+=== meta ===
+rule: TEST_DISABLED
+bypass: 179
+title: A test moved unchanged into a file the root conftest's collect_ignore names
+note: pytest never collects test_legacy.py, so the moved test never runs there;
+note2: before D-193 it still earned the complete-unit move credit.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== head: conftest.py ===
+collect_ignore = ["setup.py"]
+collect_ignore.append("test_legacy.py")
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_ok():
+    assert checked(50) == 50
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+=== after: test_legacy.py ===
+import pytest
+from app import checked
+
+
+def test_ok():
+    assert checked(50) == 50
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_ok"}]

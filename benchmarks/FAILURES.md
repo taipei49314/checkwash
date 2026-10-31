@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **198 bypasses** are documented, of which **74 are not closed**.
+- **200 bypasses** are documented, of which **75 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (45)
+## Open — no defence at all (46)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -66,7 +66,8 @@ it is known not to.
 | 174 | Swallow an assertion in a broad handler that holds a `raise` it never runs, instead of fixing code: `except Exception:` whose body only defines a nested function containing `raise` (D-191) | — |
 | 175 | Hide an assertion behind a caught exception, instead of fixing code: put a statement that always raises a non-broad exception before it in a `try` and catch that exception, as in `try: int('x')`, the assertion, `except ValueError: pass` (D-191) | — |
 | 176 | Swallow an assertion the test reaches through a call, instead of fixing code: wrap the call, not the assertion, in a broad handler whose guarded block holds no oracle of its own, as in `try: check()` / `except Exception: pass` where `check` asserts, or call an `assert`-named helper or a fixture's checker through an alias such as `chk = assert_total` (D-191) | — |
-| 179 | Park a moved or folded oracle where the repository's own collection settings never run it, instead of fixing code: in a file outside its `python_files` pattern, in a file its conftest lists in `collect_ignore`, or under a test name or a row id (`pytest.param(..., id=...)` or `ids=`) that a `-k` filter already in its `addopts` deselects (D-192) | — |
+| 180 | Disable a test directory in place, instead of fixing code: commit a `pyvenv.cfg`, or a `conda-meta/history`, in it, which pytest takes for a virtual environment and never enters (D-193) | — |
+| 181 | In working-tree mode (the Stop hook and the PreToolUse ask), keep an ignored, uncommitted copy of a deleted test, instead of fixing code: the D10 survivor search finds the copy in the working tree and lowers the deletion to `DUPLICATE_REMAINS`, although the required check, which checks out committed files only, never has it (D-193) | — |
 
 ## Narrowed, still open (3)
 
@@ -120,7 +121,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash / use a tool the PreToolUse matcher does not name | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (121)
+## Closed — each pinned by something that runs (122)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -251,6 +252,7 @@ behind it* unshippable.
 | 162 | Start `check` in a repository subdirectory that holds an unchanged copy of a test with the same root-relative path, while weakening the root copy. Mixed Git path bases let the unchanged subdirectory blob stand in for the changed root blob, so the run returns pass with no findings where the same run at the repository root blocks (#416). | — |
 | 177 | Fold `pytest.raises` tests into a parametrized table while weakening them, instead of fixing code: broaden the expected exception (to a superclass or a tuple), drop or change a row, loosen or drop `match=`, swap `raises` for `warns`, replace the call that must raise, drop the assertion on `excinfo`, or put a statement that raises first inside the block (D-192) | `raises_carrier_fold_broadened_pos.gwcase`, `raises_carrier_fold_row_dropped_pos.gwcase` |
 | 178 | Launder a weakened oracle through parametrize row substitution, instead of fixing code: fold tests into a literal table whose cells never reach the test as written: `indirect=True`, so a fixture receives the cell and returns something else; a column the body rebinds (`bad = 1000`, or `with pytest.raises(ValueError) as excinfo` over a column named `excinfo`); or a row whose own marks may keep it from running (`xfail(run=False, strict=True)`, a string `skipif`, `skip.with_args`, a custom mark a `-m` filter deselects); or, beside them, a list cell the body reads twice, so the second read sees what the first call did to the one shared object (a failing `assert sort_in_place([2, 1]) == [2, 1]` folded into `assert sort_in_place(xs) == xs`), or a test moved into `async def`, which a plain `TestCase` never awaits (D-192) | `async_def_moved_assertion_pos.gwcase`, `param_column_as_target_pos.gwcase`, `param_indirect_cells_pos.gwcase`, `param_mutable_cell_read_twice_pos.gwcase`, `param_row_marks_not_run_pos.gwcase` |
+| 179 | Park a moved or folded oracle where the repository's own collection settings never run it, instead of fixing code: in a file outside its `python_files` pattern, in a file its conftest lists in `collect_ignore`, or under a test name or a row id (`pytest.param(..., id=...)` or `ids=`) that a `-k` filter already in its `addopts` deselects (D-192); or outside its `testpaths` or `addopts` targets, beneath an `--ignore`, `--ignore-glob` or `norecursedirs` entry, under a `--deselect`, with a test name its `python_functions` does not match, in a directory pytest takes for a virtual environment, or by renaming the whole test file to such a place (D-193) | `arrival_collect_ignore_pos.gwcase`, `arrival_k_selection_pos.gwcase`, `arrival_python_files_uncollected_pos.gwcase` |
 
 ## False positives on human-written commits
 

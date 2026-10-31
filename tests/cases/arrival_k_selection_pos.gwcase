@@ -1,0 +1,44 @@
+=== meta ===
+rule: TEST_DISABLED
+bypass: 179
+title: A configured -k selection deselects the row a fold's proof pays with
+note: pytest runs "2 passed, 1 deselected": the 101 row never runs. No keyword
+note2: expression is evaluated, so a -k in addopts withholds every Python
+note3: arrival's credit (D-193); D-192 paid test_large with that row.
+=== env ===
+app
+=== head: app.py ===
+def checked(x):
+    if not 0 <= x <= 100:
+        raise ValueError(x)
+    return x
+=== head: pytest.ini ===
+[pytest]
+addopts = -k "not slowcase"
+=== before: test_app.py ===
+import pytest
+from app import checked
+
+
+def test_negative():
+    with pytest.raises(ValueError):
+        checked(-1)
+
+
+def test_large():
+    with pytest.raises(ValueError):
+        checked(101)
+=== after: test_app.py ===
+import pytest
+from app import checked
+
+
+@pytest.mark.parametrize("bad", [-1, pytest.param(101, id="slowcase")])
+def test_invalid(bad):
+    with pytest.raises(ValueError):
+        checked(bad)
+=== expect ===
+[
+  {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_large"},
+  {"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"], "unit": "test_negative"}
+]
