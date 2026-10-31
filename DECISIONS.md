@@ -1377,6 +1377,14 @@ and the regenerated `benchmarks/FAILURES.md`.
   (do row 179 here: make arrival liveness read the repository's own
   `python_files`, `collect_ignore` and the `-k` selection in `addopts`, and
   open a PR when done).
+- At 2026-10-31T11:42:28Z, with this change open as PR #579, Antigravity
+  (taking over the session from Claude) asked
+  「PR #579（D-193，關閉 THREATMODEL row 179）已開立並完成本機驗證，是否核准執行 PJU 收據流程並合併？」
+  (PR #579 is open and locally verified; approve running the PJU receipt flow
+  and merging?). At 12:01:36Z Nelson selected the option
+  「(Recommended) 核准合併 PR #579：照流程跑 PJU 收據、讓 4 個必要檢查變綠後以 merge commit 合併 into main」
+  (approve merging PR #579: run the PJU receipt flow and merge into main with
+  a merge commit once the four required checks are green).
 
 Claude maintains checkwash under Nelson's 2026-10-27 delegation
 (「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
@@ -1386,9 +1394,10 @@ contracts". Every choice in this entry is Claude's under that delegation:
 what the reading covers beyond the three settings the option text names,
 what it leaves unknown, the agent-read-only text listed under *Maintainer
 text*, the fixtures and their labels, and the tests and their expectations.
-Claude wrote the question, the button's label and its option text, and only
-the label may have been sent. The click asks for a pull request; it
-approves no merge. None of it is Nelson's personal review.
+The assistant wrote the questions, the buttons' labels and their option text,
+and only the label may have been sent. The second click approves this entry's
+agent-read-only edits, listed under *Maintainer text*, and the merge. None of
+it is Nelson's personal review.
 
 **Diagnosis.** The arrival credits of D2, D5 and D10 count only live
 arrivals: `oracle_credit.arrival_credits` skips a unit that is not live, the

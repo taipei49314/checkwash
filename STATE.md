@@ -15,7 +15,8 @@ does not match, or under a standing `-k` still passed with
 `python_files = test_*.py` passed with no finding while pytest ran nothing.
 Nelson asked for it on 2026-10-31 (the button labelled 「接著做 row 179」,
 quoted in D-193); every choice in D-193 is Claude's under the 2026-10-27
-delegation, and the click asks for a pull request, not a merge.
+delegation, and Nelson approved it and its merge on 2026-10-31 (quoted in
+D-193).
 
 D-193 adds `arrival_collection`, which answers collected, not collected or
 unknown for a targetless `pytest` run from the repository root under the
@@ -40,8 +41,9 @@ fixtures (`arrival_python_files_uncollected_pos`, `arrival_collect_ignore_pos`,
 row-179 pins D-192 left flip, as D-192 said they would. KNOWN-ISSUES-next
 lists what the reading costs and what it does not read.
 
-Status: open for Nelson's merge review on branch
-`claude/row179-collection-settings-20261031`. On LAPTOP-01AGNPJU
+Status: PR #579 from `claude/row179-collection-settings-20261031` (main
+`3d115a35`). Nelson approved it at 2026-10-31T12:01:36Z (quoted in D-193), to
+merge once the PJU receipt sets the four required checks. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
 2026-10-31: 86 collection shapes against pytest 9.1.1 (`--collect-only -q`),
 83 agree and 3 withhold credit conservatively (0 unsafe); the full suite
