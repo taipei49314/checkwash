@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\dev\cw582r1\s\candidate-action\checkwash-action-q95l_ezk\check-receipt.json
+base=066d86984f4b7f05ca3cf18407e79cdc17af142f
+head=683e978692fcc5e1a3ec3475625454196cb3adb1
+fail_on=high
