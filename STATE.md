@@ -122,13 +122,22 @@ is at least as strong as the line it replaced: checkwash does not prove that
 a check of another shape is stronger. So those three strict checks are added
 after the loose lines, which stay, and need no exemption (D-195).
 
-Status: a pull request from `claude/restore-relaxed-tests-20261102` (main
-`0e6acc35`), with its own PJU receipt; not merged. On LAPTOP-01AGNPJU
+Status: merged. Nelson approved PR #580 at 2026-11-02T13:54:07Z (the
+button labelled 「核准合併 #580」, which Claude wrote, answering Claude's
+「要我用 merge commit 合併 #580 嗎？」), and #580 merged as main `6e8ca826`
+at 13:54:47Z (a merge commit, parents `0e6acc35` and `d20784cb`). Its PJU
+receipt (head `d20784cb`, base and collector main `0e6acc35`, manifest
+SHA256 `4d96ee7a754b4d45165e9237f02ba07bb7c4142035c53e5cad71bc7c0fb6d091`)
+is published as `evidence/pr580-4d96ee7a754b-20261102` (commit `098d3273`),
+and intake run 41454848018 set the four required checks. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
-2026-11-02: the changed test files and the state, docs and packaging tests
-pass, and checkwash's own check passes with no finding (main's engine and
-the published v0.10.0). Not run: other platforms. Not released: package
-metadata stays 0.10.0.
+2026-11-02: the receipt's full suite (`pytest tests`, `tests/gates`
+included, xdist `-n 2`), whose JUnit testsuite counts `tests="22414"`: 22347
+testcase entries, 22322 passed and 25 skipped, plus 67 subtests, with 0
+failures and 0 errors; both Action replays and the source, wheel and pyz
+qualifications exited 0; and checkwash's own check passed with no finding
+(main's engine and the published v0.10.0). Not run: other platforms. Not
+released: package metadata stays 0.10.0.
 
 ## 2026-10-31: arrivals pay only where the repository's own pytest configuration runs them (D-193)
 
