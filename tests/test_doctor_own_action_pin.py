@@ -13,6 +13,8 @@ import pathlib
 import re
 import subprocess
 import sys
+import tomllib
+import types
 
 import pytest
 
@@ -23,10 +25,18 @@ from test_doctor import CANONICAL, _canonical_repo, _git, _healthy, _incomplete,
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def _load(name, relative):
+    spec = importlib.util.spec_from_file_location(name, ROOT / relative)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 # Loaded at import, before the no-network fixture replaces socket for ssl.
-SPEC = importlib.util.spec_from_file_location("own_pin_bridge_contract", ROOT / "tools/pju_release_bridge.py")
-BRIDGE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(BRIDGE)
+BRIDGE = _load("own_pin_bridge_contract", "tools/pju_release_bridge.py")
+REPLAY = _load("own_pin_replay_contract", "tools/replay_pju_action.py")
 P = doctor._PREVIOUS_ACTION_PIN
 OWN = "b" * 40
 ACTION = "taipei49314/checkwash/action"
@@ -62,6 +72,47 @@ def test_doctor_holds_one_previous_and_one_own_pin_line():
     # The release bridge reads the same two lines from Git's LF blob.
     assert BRIDGE.doctor_action_pins(raw)[:2] == (doctor._PREVIOUS_ACTION_PIN, doctor._OWN_ACTION_PIN)
     assert "*.py text eol=lf" in (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+
+
+def test_outside_a_release_both_pin_lines_are_the_previous_pin():
+    """Only a release PR's last commit, whose version is not the advertised one, sets the own pin."""
+    version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    advertised = tomllib.loads((ROOT / "release/advertised.toml").read_text(encoding="utf-8"))["release"]["version"]
+    if version == advertised:
+        assert doctor._OWN_ACTION_PIN == doctor._PREVIOUS_ACTION_PIN
+
+
+def test_the_previous_pin_is_the_receipt_and_replay_tools_pin():
+    assert doctor._PREVIOUS_ACTION_PIN == BRIDGE.B.ACTION_SHA == REPLAY.ACTION_SHA
+
+
+def test_the_readme_names_only_the_previous_pin_by_the_release_bridge_rule():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert set(BRIDGE.README_ACTION_PIN.findall(readme)) == {doctor._PREVIOUS_ACTION_PIN}
+
+
+def test_the_module_wires_both_pin_lines(tmp_path, monkeypatch):
+    """doctor's own source, with only the own line set to another SHA, accepts exactly the two pins."""
+    path = ROOT / "src/checkwash/doctor.py"
+    source, count = re.subn(r'(?m)^_OWN_ACTION_PIN = "[0-9a-f]{40}"$', f'_OWN_ACTION_PIN = "{OWN}"',
+                            path.read_text(encoding="utf-8"))
+    assert count == 1
+    copy = types.ModuleType("_own_pin_doctor_copy")
+    # dataclasses looks the module up by name; checkwash.doctor itself is never replaced.
+    monkeypatch.setitem(sys.modules, copy.__name__, copy)
+    exec(compile(source, str(path), "exec"), copy.__dict__)
+    assert sys.modules["checkwash.doctor"] is doctor
+    assert copy._ACCEPTED[copy._ACTION] == (P, OWN) and copy._PINS[copy._ACTION] == P
+    root = _canonical_repo(tmp_path / "own", CANONICAL.replace(P, OWN))
+    notes = copy.collect(root)
+    assert [note.level for note in notes if "runs unconditionally" in note.title] == ["ok"]
+    assert not [note for note in notes if note.level in {"warn", "problem"}]
+    assert copy.run(str(root), io.StringIO()) == 0
+    other = _canonical_repo(tmp_path / "other", CANONICAL.replace(P, "c" * 40))
+    detail = next(note.detail for note in copy.collect(other) if "incomplete" in note.title)
+    assert (f"unsupported SHA {'c' * 40}; this CLI accepts {P} (the Action recommended before this release) "
+            f"or {OWN} (this release's Action)") in detail
+    assert copy.run(str(other), io.StringIO()) == 1
 
 
 @pytest.mark.parametrize("ref", ["a" * 40, "283db528cd3d8e5e38173e14d766a8915efa2c90"])

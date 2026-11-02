@@ -21,18 +21,19 @@ merges with a merge commit only. A release's `doctor` accepts two exact SHAs,
 `_PREVIOUS_ACTION_PIN` (the README pin when the release was prepared) and A;
 after step 8 the README, action/README and SECURITY recommend A =
 `vX.Y.Z^2^1`, verified in a clone. The release bridge's
-`validate_own_action_pin` checks the chain at `pr` and `main` when the head's
-version is not the advertised one, and at every tag and later stage, with
-GitHub's native merge parents; the ordinary receipt bridge refuses a
-version-changing head, so a release pull request's checks come only from the
-release bridge's `pr` stage. RELEASING's new scheme-S subsection and steps 1,
-2, 3, 5 and 8 give the procedure: R last and nothing after it, main frozen
-from A to the release merge, R29 and the uvloop diagnostic on R's tree, and
-the step-8 follow-up as the next merge. Both pin lines are v0.10.0's here, so
-`doctor`'s output does not change. Dependabot and Renovate will propose the
-tag's commit, which `doctor` rejects, and zizmor's `ref-version-mismatch`
-audit can report the pin's comment, for the same reason (both inferred, not
-run); KNOWN-ISSUES-next lists them with the other residuals.
+`validate_own_action_pin` checks the chain at `pr` and `main` unless the
+head's version equals both its advertised one and its base's, and at every
+tag and later stage, with GitHub's native merge parents; the ordinary
+receipt bridge refuses a version-changing head, so a release pull request's
+checks come only from the release bridge's `pr` stage. RELEASING's new
+scheme-S subsection and steps 1, 2, 3, 5 and 8 give the procedure: R last
+and nothing after it, main frozen from A to the release merge, R29 and the
+uvloop diagnostic on R's tree, and the step-8 follow-up as the next merge.
+Both pin lines are v0.10.0's here, so `doctor`'s output does not change.
+Dependabot and Renovate will propose the tag's commit, which `doctor`
+rejects, and zizmor's `ref-version-mismatch` audit can report the pin's
+comment, for the same reason (both inferred, not run); KNOWN-ISSUES-next
+lists them with the other residuals.
 
 New: `tools/own_action_pin.py`, `tests/test_doctor_own_action_pin.py`,
 `tests/test_own_action_pin.py`, `tests/test_pju_own_action_pin.py`, the
@@ -40,6 +41,17 @@ shared builder `tests/own_action_pin_fixtures.py` and
 `tests/test_packaging.py::test_release_action_commit_follows_scheme_s`;
 `test_packaging`'s README pin relation is version-aware, with every outcome
 unchanged at v0.10.0 (D-194 lists the edited assertions).
+
+Four Claude review agents and one Gemini 4 Argon run, which completed,
+reviewed `04b469fa`. The fixes require `doctor`'s two pin lines to be equal
+on the content commit (in the release bridge, `write` and `test_packaging`)
+and on every head outside a release (in the ordinary receipt bridge), check
+`doctor.py`'s pins against its parsed module without running it, also apply
+the rule at `pr` and `main` when the head's version differs from its
+base's, and make the pre-tag check `check --stage tag`; RELEASING now gives
+the recovery routes, says what is procedure rather than enforced, and moves
+the fixed-corpus records to the step-8 follow-up. D-194's *Review* lists
+what was accepted and what was declined.
 
 Status: a pull request from `claude/doctor-s-d194-20261102` (main
 `0e6acc35`), in review; not merged. On LAPTOP-01AGNPJU

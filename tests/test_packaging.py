@@ -42,9 +42,10 @@ def _release_action_commit(root: pathlib.Path, tag: str, tag_commit: str) -> str
     """The commit a verified release recommends as its Action pin.
 
     Up to v0.10.0 it is the tag's peeled commit. From v0.11.0 (scheme S,
-    D-194) the tag commit is a two-parent merge whose second parent, the
-    release PR's last commit, has one parent A and differs from it only in
-    doctor's own Action pin line, set to A. A is `vX.Y.Z^2^1`.
+    D-194) the tag commit is a two-parent merge with its second parent's tree;
+    that parent, the release PR's last commit, has one parent A. From A to the
+    tag only doctor.py changes, in place and in mode 100644, and of its bytes
+    only the own Action pin line, from A's previous pin to A. A is `vX.Y.Z^2^1`.
     """
     import os
     import subprocess
@@ -53,21 +54,33 @@ def _release_action_commit(root: pathlib.Path, tag: str, tag_commit: str) -> str
         return tag_commit
     env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
 
-    def git(*args: str) -> str:
-        return subprocess.check_output(["git", "-C", str(root), *args], env=env, text=True)
+    def git(*args: str) -> bytes:
+        return subprocess.check_output(["git", "-C", str(root), *args], env=env)
 
-    merge = git("rev-list", "--parents", "-n", "1", tag_commit).split()
+    merge = git("rev-list", "--parents", "-n", "1", tag_commit).decode().split()
     assert merge[:1] == [tag_commit] and len(merge) == 3, f"{tag} is not a two-parent merge commit"
-    final = git("rev-list", "--parents", "-n", "1", merge[2]).split()
+    assert git("rev-parse", tag_commit + "^{tree}") == git("rev-parse", merge[2] + "^{tree}"), (
+        f"{tag}'s tree is not the tree of {tag}^2"
+    )
+    final = git("rev-list", "--parents", "-n", "1", merge[2]).decode().split()
     assert len(final) == 2, f"{tag}^2 does not have exactly one parent"
     action = final[1]
-    changed = git("diff-tree", "-r", "--no-renames", "--name-only", action, tag_commit).split()
-    assert changed == ["src/checkwash/doctor.py"], f"{tag} differs from {tag}^2^1 in {changed}"
-    lines = [line for line in git("diff", "--no-ext-diff", "--no-color", "-U0", action, tag_commit).splitlines()
-             if line.startswith(("-", "+")) and not line.startswith(("---", "+++"))]
-    assert len(lines) == 2 and re.fullmatch(r'-_OWN_ACTION_PIN = "[0-9a-f]{40}"', lines[0]) and (
-        lines[1] == f'+_OWN_ACTION_PIN = "{action}"'
-    ), f"{tag} changes more than doctor's own Action pin line of {tag}^2^1: {lines}"
+    rows = git("diff-tree", "-r", "--raw", "-z", "--no-renames", "--ignore-submodules=none", action, tag_commit).split(b"\0")
+    assert len(rows) == 3 and rows[1:] == [b"src/checkwash/doctor.py", b""], (
+        f"{tag} differs from {tag}^2^1 in {[path.decode('utf-8', 'replace') for path in rows[1::2]]}"
+    )
+    meta = rows[0].decode("ascii").split()
+    assert meta[:2] == [":100644", "100644"] and meta[4:] == ["M"], f"{tag} changes doctor.py's mode or kind: {meta}"
+    before, after = (git("show", commit + ":src/checkwash/doctor.py").split(b"\n") for commit in (action, tag_commit))
+    changed = [index for index, (old, new) in enumerate(zip(before, after)) if old != new]
+    assert len(before) == len(after) and len(changed) == 1 and after[changed[0]] == (
+        b'_OWN_ACTION_PIN = "' + action.encode() + b'"'
+    ), f"{tag} changes more than doctor's own Action pin line of {tag}^2^1, to it: lines {changed}"
+    previous = [re.fullmatch(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"', line)
+                for line in before if line.startswith(b"_PREVIOUS_ACTION_PIN")]
+    assert len(previous) == 1 and previous[0] and before[changed[0]] == (
+        b'_OWN_ACTION_PIN = "' + previous[0].group(1) + b'"'
+    ), f"{tag}^2^1 does not hold its previous Action pin on doctor's own line"
     return action
 
 
@@ -330,7 +343,7 @@ def test_readme_action_snippet_is_zizmor_blanket():
 def test_release_action_commit_follows_scheme_s(tmp_path):
     """From v0.11.0 the pin is `vX.Y.Z^2^1`, one doctor line away from the tag."""
     import pytest
-    from own_action_pin_fixtures import DOCTOR, chain
+    from own_action_pin_fixtures import DOCTOR, chain, doctor, git, set_own
 
     good = chain(tmp_path / "good")
     assert _release_action_commit(good["root"], "v0.11.0", good["M"]) == good["A"]
@@ -351,6 +364,19 @@ def test_release_action_commit_follows_scheme_s(tmp_path):
     two = chain(tmp_path / "two", edit=two_lines)
     with pytest.raises(AssertionError, match="changes more than doctor's own Action pin line"):
         _release_action_commit(two["root"], "v0.11.0", two["M"])
+    # A's own line must hold A's previous pin.
+    unclean = chain(tmp_path / "unclean", doctor_text=doctor(own="c" * 40))
+    with pytest.raises(AssertionError, match="does not hold its previous Action pin on doctor's own line"):
+        _release_action_commit(unclean["root"], "v0.11.0", unclean["M"])
+    # The tag must carry R's tree: this R also edits README, and the tag commit
+    # leaves that out while differing from A only in the own line.
+    root = touched["root"]
+    git(root, "checkout", "-q", "--detach", touched["A"])
+    set_own(root, touched["A"])
+    git(root, "add", "--", DOCTOR)
+    partial = git(root, "commit-tree", git(root, "write-tree"), "-p", touched["B"], "-p", touched["R"], "-m", "not R's tree")
+    with pytest.raises(AssertionError, match="tree is not the tree of"):
+        _release_action_commit(root, "v0.11.0", partial)
 
 
 def test_perf_gate_is_in_default_collection():

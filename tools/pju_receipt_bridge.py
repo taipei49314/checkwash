@@ -7,6 +7,7 @@ No candidate Python, shell, Action, archive member, or test is executed here.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import importlib.util
 import io
@@ -549,17 +550,60 @@ def validate_candidate_action(packet, records, head, base, source_root, trusted_
         validate_action(packet, {"dogfood": check_path, "action_replay": replay_path}, head, base, source_root, action_sha=head)
 
 
-def release_versions(root, head):
-    """The head's pyproject version and the advertised release version it records."""
+def release_versions(root, head, where="the head"):
+    """The commit's pyproject version and the advertised release version it records."""
     versions = []
     for path, table in (("pyproject.toml", "project"), ("release/advertised.toml", "release")):
         try:
             value = tomllib.loads(git(root, "show", head + ":" + path).decode("utf-8")).get(table)
         except ValueError as error:  # failed Git read, undecodable bytes or invalid TOML
-            raise ValueError(path + " at the head could not be read or parsed") from error
-        require(type(value) is dict and type(value.get("version")) is str, path + " at the head has no " + table + " version")
+            raise ValueError(path + " at " + where + " could not be read or parsed") from error
+        require(type(value) is dict and type(value.get("version")) is str, path + " at " + where + " has no " + table + " version")
         versions.append(value["version"])
     return tuple(versions)
+
+
+DOCTOR_PATH = "src/checkwash/doctor.py"
+OWN_PIN_LINE = re.compile(rb'_OWN_ACTION_PIN = "([0-9a-f]{40})"')
+PREVIOUS_PIN_LINE = re.compile(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"')
+
+
+def doctor_action_pins(raw):
+    """Doctor's previous and own Action pins, and the own line's index (scheme S, D-194).
+
+    The two lines are read as text, then checked against the parsed module,
+    which is never executed: each name is bound once, by its own line, and no
+    other node binds or names it. Doctor's other logic is reviewed content.
+    """
+    lines = raw.split(b"\n")
+    previous = [index for index, line in enumerate(lines) if line.startswith(b"_PREVIOUS_ACTION_PIN")]
+    own = [index for index, line in enumerate(lines) if line.startswith(b"_OWN_ACTION_PIN")]
+    require(len(previous) == len(own) == 1, "doctor must hold exactly one previous and one own Action pin line")
+    old, new = PREVIOUS_PIN_LINE.fullmatch(lines[previous[0]]), OWN_PIN_LINE.fullmatch(lines[own[0]])
+    require(old is not None and new is not None, "doctor's Action pin lines differ from the exact shape")
+    # Python also ends a line at a lone CR, and a form feed may open a module-level statement: LF lines hide both.
+    require(b"\r" not in raw and b"\x0c" not in raw, "doctor.py holds a carriage return or form feed")
+    try:
+        tree = ast.parse(raw.decode("utf-8"), DOCTOR_PATH)
+    except (SyntaxError, ValueError, RecursionError, MemoryError) as error:  # undecodable, invalid or too deeply nested
+        raise ValueError("doctor.py could not be parsed") from error
+    pins = {"_PREVIOUS_ACTION_PIN": (previous[0], old.group(1).decode()), "_OWN_ACTION_PIN": (own[0], new.group(1).decode())}
+    bound = [node for node in tree.body if isinstance(node, ast.Assign) and len(node.targets) == 1
+             and isinstance(node.targets[0], ast.Name) and node.targets[0].id in pins]
+    found = [(node.targets[0].id, node.lineno - 1, node.value.value if isinstance(node.value, ast.Constant) else None)
+             for node in bound]
+    require(len(found) == 2 and set(found) == {(name, index, pin) for name, (index, pin) in pins.items()},
+            "doctor must bind each Action pin once, by a module-level assignment on its own line")
+    targets = {id(node.targets[0]) for node in bound}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            named = node.id in pins and not isinstance(node.ctx, ast.Load) and id(node) not in targets
+        else:  # a def, class, argument, import, attribute, global, keyword or string of the name; or `import *`
+            named = isinstance(node, ast.alias) and node.name == "*" or any(
+                type(item) is str and item in pins for _field, value in ast.iter_fields(node)
+                for item in (value if isinstance(value, list) else [value]))
+        require(not named, "doctor binds or names an Action pin outside its two lines")
+    return pins["_PREVIOUS_ACTION_PIN"][1], pins["_OWN_ACTION_PIN"][1], own[0]
 
 
 def validate_ordinary_head(root, head):
@@ -567,6 +611,9 @@ def validate_ordinary_head(root, head):
     version, advertised = release_versions(root, head)
     require(version == advertised, f"head version {version} differs from the advertised release {advertised}; "
             "a release PR's checks are published only through the release bridge's pr stage (tools/pju_release_bridge.py)")
+    previous, own, _index = doctor_action_pins(git(root, "show", head + ":" + DOCTOR_PATH))
+    require(own == previous, "doctor's own Action pin differs from its previous pin at a non-release head; "
+            "only a release PR's last commit sets doctor's own Action pin (scheme S, D-194)")
 
 
 def validate_packet(packet, *, repository, pr, base, head, source_tree, collector, source_root, trusted_root):

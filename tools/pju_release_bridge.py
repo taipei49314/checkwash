@@ -698,21 +698,10 @@ def validate_publication(packet, path, network, source_root, current, version, e
             validate_visitor(packet, visitor, exits, source_root, current["head_sha"], version, artifact_sha=matches[0]["sha256"])
 
 
-DOCTOR_PATH = "src/checkwash/doctor.py"
-OWN_PIN_LINE = re.compile(rb'_OWN_ACTION_PIN = "([0-9a-f]{40})"')
-PREVIOUS_PIN_LINE = re.compile(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"')
-README_ACTION_PIN = re.compile(r"(?i:taipei49314/checkwash/action)@(\w*)")
-
-
-def doctor_action_pins(raw):
-    """Doctor's previous and own Action pins, and the own line's index (scheme S, D-194)."""
-    lines = raw.split(b"\n")
-    previous = [index for index, line in enumerate(lines) if line.startswith(b"_PREVIOUS_ACTION_PIN")]
-    own = [index for index, line in enumerate(lines) if line.startswith(b"_OWN_ACTION_PIN")]
-    require(len(previous) == len(own) == 1, "doctor must hold exactly one previous and one own Action pin line")
-    old, new = PREVIOUS_PIN_LINE.fullmatch(lines[previous[0]]), OWN_PIN_LINE.fullmatch(lines[own[0]])
-    require(old is not None and new is not None, "doctor's Action pin lines differ from the exact shape")
-    return old.group(1).decode(), new.group(1).decode(), own[0]
+DOCTOR_PATH, OWN_PIN_LINE, PREVIOUS_PIN_LINE = B.DOCTOR_PATH, B.OWN_PIN_LINE, B.PREVIOUS_PIN_LINE
+doctor_action_pins = B.doctor_action_pins
+# The whole reference token, so `@<sha>^{}` or `@<sha>-x` is not the pin.
+README_ACTION_PIN = re.compile(r"(?i:taipei49314/checkwash/action)@([^\s`'\"()\[\]<>,;|]*)")
 
 
 def commit_parents(root, commit):
@@ -724,16 +713,17 @@ def commit_parents(root, commit):
 def validate_own_action_pin(source_root, current, *, announced, pr_head=None):
     """A release's doctor accepts its own Action commit A (scheme S, D-194).
 
-    The release PR's last commit R changes only doctor's own Action pin line,
-    to its one parent A; the merge and tag are the two-parent merge of the base
-    and R, with R's tree. PR and main subjects whose version is the advertised
-    one are not releases. A shallow or missing parent fails closed.
+    A holds both of doctor's pin lines at the previous pin. The release PR's
+    last commit R changes only the own line, to its one parent A; the merge and
+    tag are the two-parent merge of the base and R, with R's tree. A PR or main
+    subject whose version is both its advertised one and its base's is not a
+    release. A shallow or missing parent fails closed.
     """
     stage, head, base = current["stage"], sha(current["head_sha"], 40), sha(current["base_sha"], 40)
     require(stage in STAGES, "unknown release stage")
     if stage in ("pr", "main"):
         version, advertised = B.release_versions(source_root, head)
-        if version == advertised:
+        if version == advertised == B.release_versions(source_root, base, "the base")[0]:
             return {"applies": False}
     raw = git(source_root, "show", head + ":" + DOCTOR_PATH)
     previous, own, index = doctor_action_pins(raw)
@@ -751,14 +741,18 @@ def validate_own_action_pin(source_root, current, *, announced, pr_head=None):
                 "merge tree differs from the release PR head")
     require(commit_parents(source_root, final) == [own] and own != previous,
             "doctor's own Action pin is not the one parent of the release PR's last commit")
-    rows = git(source_root, "diff-tree", "-r", "-z", "--no-renames", own, head).split(b"\0")
+    clean = git(source_root, "show", own + ":" + DOCTOR_PATH)
+    require(doctor_action_pins(clean) == (previous, previous, index),
+            f"the Action commit A ({own}) does not hold the previous Action pin on both of doctor's pin lines")
+    # A checkout's own .gitmodules could otherwise hide a gitlink change.
+    rows = git(source_root, "diff-tree", "-r", "-z", "--no-renames", "--ignore-submodules=none", own, head).split(b"\0")
     require(len(rows) == 3 and rows[1] == DOCTOR_PATH.encode() and rows[2] == b"",
             "the release differs from its Action commit outside doctor.py")
     meta = rows[0].decode("ascii").split()
     require(len(meta) == 5 and meta[:2] == [":100644", "100644"] and meta[4] == "M", "doctor.py mode or change kind differs")
-    before, after = git(source_root, "show", own + ":" + DOCTOR_PATH).split(b"\n"), raw.split(b"\n")
+    before, after = clean.split(b"\n"), raw.split(b"\n")
     require(len(before) == len(after) and [i for i, (old, new) in enumerate(zip(before, after)) if old != new] == [index]
-            and OWN_PIN_LINE.fullmatch(before[index]) is not None
+            and before[index] == b'_OWN_ACTION_PIN = "' + previous.encode() + b'"'
             and after[index] == b'_OWN_ACTION_PIN = "' + own.encode() + b'"',
             "the release changes more than doctor's own Action pin line")
     return {"applies": True, "action_commit": own, "release_pr_head": final, "previous_action_pin": previous}

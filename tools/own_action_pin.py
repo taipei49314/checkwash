@@ -1,8 +1,9 @@
 """Write or check a release PR's last commit R (scheme S, D-194).
 
-`write` stages R on a clean checkout of the release PR's content commit A: R
-changes only doctor's own Action pin line, to A. It prints the commit command
-and never commits. `check` runs the release bridge's trusted rule on local
+`write` stages R on a clean checkout of the release PR's content commit A,
+whose two pin lines are equal: R changes only doctor's own Action pin line, to
+A. It prints the commit command and never commits; a refusal leaves doctor.py
+as it found it. `check` runs the release bridge's trusted rule on local
 commits: an advisory pre-push and pre-tag check, not release evidence.
 Neither imports or runs checkwash.
 """
@@ -42,19 +43,29 @@ def write(repo):
               "the checkout is not clean; commit or remove every change first")
     action = git(root, "rev-parse", "--verify", "HEAD^{commit}").decode().strip()
     raw = git(root, "cat-file", "blob", action + ":" + R.DOCTOR_PATH)
-    _previous, own, index = R.doctor_action_pins(raw)
+    previous, own, index = R.doctor_action_pins(raw)
     version, advertised = R.B.release_versions(root, action)
     R.require(version != advertised, f"HEAD's version {version} is the advertised release's; R belongs only to a release PR")
     R.require(own not in R.commit_parents(root, action), "HEAD already sets doctor's own Action pin to its parent; it is R")
+    R.require(own == previous, "HEAD's doctor own Action pin differs from its previous pin: R is written only on a content "
+              "commit whose two pin lines are equal, and after a commit that followed R, R must be dropped first")
     path = root / R.DOCTOR_PATH
     R.require(path.read_bytes() == raw, "the worktree doctor.py differs from HEAD's blob (line endings included)")
     lines = raw.split(b"\n")
     lines[index] = b'_OWN_ACTION_PIN = "' + action.encode() + b'"'
     path.write_bytes(b"\n".join(lines))
-    git(root, "add", "--", R.DOCTOR_PATH)
-    R.require(git(root, "diff", "--cached", "--name-only", "-z") == R.DOCTOR_PATH.encode() + b"\0"
-              and git(root, "cat-file", "blob", ":" + R.DOCTOR_PATH) == b"\n".join(lines),
-              "the staged change is not exactly doctor's own Action pin line; inspect git diff --cached")
+    try:
+        git(root, "add", "--", R.DOCTOR_PATH)
+        R.require(git(root, "diff", "--cached", "--name-only", "-z") == R.DOCTOR_PATH.encode() + b"\0"
+                  and git(root, "cat-file", "blob", ":" + R.DOCTOR_PATH) == b"\n".join(lines),
+                  "the staged change is not exactly doctor's own Action pin line")
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        path.write_bytes(raw)
+        try:  # best effort: a failed add staged nothing
+            git(root, "reset", "-q", "--", R.DOCTOR_PATH)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            pass
+        raise ValueError(f"{error}; doctor.py was restored") from None
     print(f'git commit -m "release: doctor accepts its own Action pin {action}"')
     return 0
 
@@ -68,6 +79,9 @@ def check(repo, stage, head, base, pr_head, announced):
     result = R.validate_own_action_pin(repo, current, announced=announced or R.B.ACTION_SHA,
                                        pr_head=None if pr_head is None else commit(pr_head))
     print(json.dumps(result, sort_keys=True))
+    if not result["applies"]:
+        print(f"warning: the rule does not apply at the {stage} stage, since the head's version equals its advertised "
+              "version and its base's; the tag stage always applies it", file=sys.stderr)
     return 0
 
 

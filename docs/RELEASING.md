@@ -543,17 +543,18 @@ under the standing route above. A source edit alone is not a passing receipt.
    A until the release merge: merge every other PR first.
 2. Open one release PR. Its last commit is R, which
    `tools/own_action_pin.py write` stages on A (scheme S, below), and nothing
-   may follow R: no commit, no GitHub **Update branch** and no receipt or
-   lifecycle record commit, which go in the step-8 follow-up. Run
-   `tools/own_action_pin.py check --stage pr` before collecting. Require the
-   final exact head R's PJU full development CI, source/wheel/pyz
-   qualification and inventory, real current-advertised visitor checks, and
-   `verdict gate` success. The release PR's required checks are published
-   only through the release bridge's `pr` stage; the ordinary receipt bridge
-   refuses a head whose version differs from the advertised one. If the head
-   changes, obtain new evidence for that head, after a new R. Retain the
-   actual checkout SHA and tree, since PR merge-checkout evidence and PR-head
-   evidence have different subjects.
+   may follow R: no commit, no GitHub **Update branch** and no receipt,
+   lifecycle or fixed-corpus record commit, which go in the step-8
+   follow-up. Run `tools/own_action_pin.py check --stage pr` before
+   collecting. Require the final exact head R's PJU full development CI,
+   source/wheel/pyz qualification and inventory, real current-advertised
+   visitor checks, and `verdict gate` success. The release PR's required
+   checks are published only through the release bridge's `pr` stage; the
+   ordinary receipt bridge refuses a head whose version differs from the
+   advertised one. If the head must change, drop R, make the change and
+   write R again (scheme S, below), then obtain new evidence for the new
+   head. Retain the actual checkout SHA and tree, since PR merge-checkout
+   evidence and PR-head evidence have different subjects.
 3. Merge through the normal required checks, with a merge commit only and the
    PR up to date with main, so the merge commit M has the base as its first
    parent, R as its second, and R's tree. Squash and rebase are refused; the
@@ -577,12 +578,13 @@ under the standing route above. A source edit alone is not a passing receipt.
    comparison (below) has run and the owner has reviewed every commit it
    lists, or the grant waives it, make the final annotated tag on
    the qualified merge commit and push only that tag. From v0.11.0 the
-   comparison runs on R's `src/` tree, which is M's, and
-   `tools/own_action_pin.py check --stage main` runs on M before the tag is
-   made: the tag and later stages apply the same rule, and a failure there
-   cannot be fixed by moving the tag. No ruleset is unlocked
-   or restored any more (2026-10-14, below); the grant is what permits the
-   push. Never move or delete an existing public tag to fix a failed check.
+   comparison runs on R's `src/` tree, which is M's (scheme S, below), and
+   `tools/own_action_pin.py check --stage tag --head <M> --base <base>` runs
+   on M before the tag is made: the tag stage applies the rule
+   unconditionally, and a failure there cannot be fixed by moving the tag.
+   No ruleset is unlocked or restored any more (2026-10-14, below); the
+   grant is what permits the push. Never move or delete an existing public
+   tag to fix a failed check.
 6. Require that tag's own native annotated identity, actual tag visitor,
    fresh PJU full CI/qualification, `verdict gate` receipts and successful tag
    stage check, all bound to the release commit. Record native capture/run IDs
@@ -616,14 +618,22 @@ under the standing route above. A source edit alone is not a passing receipt.
    `.github/workflows/checkwash.yml`, `doctor`'s `_PREVIOUS_ACTION_PIN` (its
    `_OWN_ACTION_PIN` is already A), `ACTION_SHA` in
    `tools/pju_receipt_bridge.py` and `tools/replay_pju_action.py`,
-   SECURITY.md's current pin, action/README's
+   SECURITY.md's current pin and the two pin literals in
+   `tests/test_doctor.py`; and, when `action/action.yml` changed,
+   `ACTION_YAML_SHA256` in `tools/replay_pju_action.py`. action/README's
+   verification block moves to the new tag: the clone,
    `git -C checkwash rev-parse 'vX.Y.Z^2^1'` and
-   `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` lines for the tag, and the two
-   pin literals in `tests/test_doctor.py`. `release/advertised.toml` advances
-   to the tag with `commit` the tag's peeled commit M, not A. The follow-up
-   also carries the release PR's receipt and lifecycle records, and it is the
-   next merge after the release: until it merges, main's version differs from
-   the advertised one, so the ordinary receipt bridge refuses every other PR.
+   `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` lines, with the concrete tag,
+   become the current verification of the checkwash pin, and the v0.10.0
+   `ls-remote` line becomes the legacy verification for pins up to v0.10.0
+   (the checkout and setup-python lines stay). `release/advertised.toml`
+   advances to the tag with `commit` the tag's peeled commit M, not A. The
+   follow-up also carries the release PR's receipt and lifecycle records
+   and, from v0.11.0, the fixed-corpus comparison's records (scheme S,
+   below). It is the next merge after the release, by procedure: until it
+   merges, main's version differs from the advertised one, and the ordinary
+   receipt bridge refuses any other PR once that PR takes main, which the
+   ruleset's strict up-to-date policy requires.
 9. Separately rotate the verdict baseline after publication. `[baseline]`
    pins the new tag/version/commit and its actual pyz size/SHA256;
    `baseline_blocked` and `[t3.cases]` follow the gate's recorded proposal.
@@ -651,59 +661,130 @@ recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
 
 - **A, the content commit.** The version bump, release notes and every other
   change of the release PR, with both pin lines equal to the README's Action
-  pin (step 1).
+  pin (step 1); `write` refuses, and the release bridge rejects, an A whose
+  two lines differ. A may be a merge commit, such as an **Update branch**
+  merge made before R.
 - **R, the last commit.** On a clean checkout of A, run
   `python tools/own_action_pin.py write`. It sets only `_OWN_ACTION_PIN` to A,
   stages it, checks that exactly `src/checkwash/doctor.py` is staged and
   prints the `git commit` command; commit with it, hooks included. It refuses,
   exit 2 with nothing changed, a checkout with any change or untracked file, a
-  pin line not in the exact shape, a HEAD at the advertised version, a HEAD
-  that is already an R, and a worktree `doctor.py` whose bytes differ from
-  HEAD's blob, line endings included.
-- **Nothing follows R.** No commit, no GitHub **Update branch** and no receipt
-  or lifecycle record commit: the release PR's records go in the step-8
-  follow-up. A commit after R voids R and every PR-stage receipt collected on
-  it; run `write` again on the new head and collect again.
+  `doctor.py` that the release bridge's pin reader refuses (below), a HEAD at
+  the advertised version, a HEAD that is already an R, a HEAD whose own pin
+  differs from its previous pin, and a worktree `doctor.py` whose bytes
+  differ from HEAD's blob, line endings included. If `git add` or the
+  staged-content check fails after the rewrite, for example on a stale
+  `.git/index.lock`, it restores `doctor.py` and its index entry, then exits 2.
+- **Nothing follows R.** No commit, no GitHub **Update branch** and no
+  receipt, lifecycle or fixed-corpus record commit: those records go in the
+  step-8 follow-up. A commit after R voids R and every PR-stage receipt
+  collected on it, and `write` refuses that head, which keeps R's own line.
+  To change the release PR after R, drop R: reset the PR branch to R's
+  parent (`git reset --hard R^1` and a force push), make the change as one
+  or more content commits (merging main, for an update), write R again on
+  the last of them and collect again.
 - **Main is frozen** from A until the release merge. Merge the README
   restructure, fixes and every other PR before A.
 - **Merge commit only**, with the PR up to date with main: M's first parent is
   the base, its second is R, and its tree is R's. A squash or a rebase leaves
-  A off main, and the `main` stage refuses it. To recover from an accidental
-  squash S, open a follow-up PR whose only commit, written by `write` on a
-  checkout of S, sets the own pin to S; collect it through the release
-  bridge's `pr` stage and merge it with a merge commit. S is then the
-  release's Action commit.
+  A off main, and the `main` stage refuses it.
+- **After an accidental squash S**, which keeps R's own line, open a
+  follow-up PR from S whose first commit sets `doctor`'s own line back to the
+  previous pin and whose last commit is R, written by `write` on it; collect
+  it through the release bridge's `pr` stage and merge it with a merge
+  commit. The reset commit is then the release's Action commit.
+- **A fix after the release merge**, before the tag, follows the same
+  pattern on main's tip: a PR whose first commit sets the own line back to
+  the previous pin, then the fix, and whose last commit is R, written on the
+  last content commit, which becomes the release's Action commit. Collect it
+  through the release bridge's `pr` stage, merge it with a merge commit and
+  run the fixed-corpus comparison again. An ordinary PR cannot carry the
+  fix: its version differs from the advertised one.
+- **To abandon the release**, a PR reverts the version to the advertised
+  release's and `doctor`'s own line to the previous pin; the ordinary
+  receipt bridge accepts that head.
 - **Required checks only through the release bridge.** The release PR's four
   required checks and `PJU release evidence (pr)` come from the release
   bridge's `pr` stage. The ordinary receipt bridge refuses a head whose
-  `[project]` version differs from `release/advertised.toml`'s.
-- **R29 and the targeted uvloop diagnostic** run on R's `src/` tree, which is
-  the tag's. A run on A's tree does not count, because A's `doctor.py`
-  differs; the candidate rule (below) needs no change.
+  `[project]` version differs from `release/advertised.toml`'s, and a head
+  whose `doctor` own pin differs from its previous pin.
+- **What is not enforced.** That main stays frozen from A and that the
+  step-8 follow-up is the next merge are documented procedure. Between A and
+  the release merge nothing stops another PR, whose version equals the
+  advertised one, from merging; the release PR must then take main, which
+  voids R. After the release merge, the ruleset's strict up-to-date policy
+  makes a stale PR take main first, and the ordinary receipt bridge then
+  refuses it. That refusal holds only for receipts verified at a trusted ref
+  that contains D-194, so from the D-194 merge on, ordinary receipts are
+  dispatched only from main, and the pre-D-194 `review/collector-*-010`
+  refs are not used for receipts.
+- **R29 and the targeted uvloop diagnostic.** From v0.11.0 the fixed-corpus
+  comparison and the targeted uvloop diagnostic start after the last content
+  commit A, once R is written, and run on R's `src/` tree, which is M's. The
+  owner still reviews the list before the tag. Their records (the run
+  identities, the list, the owner's review, the release guide's R29 and
+  JS/TS paragraph naming both engine commits, and the JS/TS results record)
+  go in the step-8 follow-up: any change to the release PR after R makes a
+  new A and an R whose `src/` differs in `doctor`'s own line, so the
+  comparison would run again. The candidate rule (below) keeps its
+  substance. Exempting `doctor`'s own line from it would let the comparison
+  run before R, but that is an owner decision, not taken here.
+- **The Action replay.** Every release stage replays the Action at its head,
+  R at `pr` and then M, which has R's tree; none replays it at A. That the
+  Action at A is the release's rests on the one-line diff and
+  `test_check_never_imports_doctor` (D-194).
 - **Local checks**, advisory and not evidence: before collecting,
   `python tools/own_action_pin.py check --stage pr --head <R> --base <base>`;
-  before tagging, `check --stage main --head <M> --base <base> --pr-head <R>`.
-  The announced pin defaults to `ACTION_SHA` in `tools/pju_receipt_bridge.py`.
-  Before each dispatch, also dry-run the verifier against the real receipt,
-  as for v0.10.0.
+  before tagging, `check --stage tag --head <M> --base <base>`. The tag
+  stage applies the rule unconditionally, while at `main` it is skipped, and
+  `check` only warns, when M's version equals its advertised version and its
+  base's. The announced pin defaults to `ACTION_SHA` in
+  `tools/pju_receipt_bridge.py`. Before each dispatch, also dry-run the
+  verifier against the real receipt, as for v0.10.0.
+- **From 0.12.** The Action pin, the previous release's A, differs from the
+  advertised and verdict-baseline commit, that release's tag commit.
+  `tools/collect_pju_release.py` falls back to the pinned Action checkout for
+  `--advertised-source` and `--verdict-baseline-source`, so each stage
+  collection must pass separate checkouts at those commits; otherwise it
+  stops on the checkout mismatch, after the full suite. The maintainer's
+  local stage scripts, which pass the Action checkout as both sources, and
+  `prepare-stage.sh`'s pinned-checkout assertion (`v0.10.0^{commit}` today,
+  `v0.11.0^2^1` after 0.11.0's step 8) must change accordingly.
 
 What the release bridge checks (`validate_own_action_pin`, after the
 previous-stage link and before the product evidence; the report records
 `own_action_pin`):
 
-- It applies at `pr` and `main` when the head's `[project]` version differs
-  from the `[release]` version of `release/advertised.toml` at that head, and
-  always at `tag`, `release-event` and `public-visitor`. So it cannot
-  re-verify a release before v0.11.0.
+- It applies at `pr` and `main` unless the head's `[project]` version equals
+  both the `[release]` version of `release/advertised.toml` at that head and
+  the base's `[project]` version, and always at `tag`, `release-event` and
+  `public-visitor`; a version that cannot be read fails closed. So a release
+  PR that also moves `release/advertised.toml` still needs R, and the rule
+  cannot re-verify a release before v0.11.0.
+- `doctor.py`'s two pin lines are read as text and checked against the
+  parsed module, which is never executed: no carriage return or form feed,
+  each name bound once, by a module-level assignment on its own line, and no
+  other binding or mention of either name (a `def`, class, argument, import
+  alias, `global`, attribute, keyword or string, or `import *`). A
+  `doctor.py` that does not parse is refused.
 - `doctor`'s previous pin is the announced pin, the trusted ref's
   `ACTION_SHA`, and every `taipei49314/checkwash/action@` reference in
-  README.md, in any case, is exactly that pin.
+  README.md, in any case and read as its whole token, is exactly that pin, so
+  `@<pin>^{}` or `@<pin>-x` fails.
 - At `pr` the head is R. Later, the head is a two-parent merge of the base and
   R with R's tree, R is the verified PR head at `main`, and GitHub's own
   commit object lists the parents in that order.
-- R has one parent, A, which is the own pin, and from A to the head only
-  `src/checkwash/doctor.py` changes, mode 100644, in exactly the own line.
+- R has one parent, A, which is the own pin and differs from the previous
+  pin. A is clean: its `doctor` holds the previous pin on both lines. From A
+  to the head only `src/checkwash/doctor.py` changes, mode 100644, in
+  exactly the own line, from the previous pin to A; the diff passes
+  `--ignore-submodules=none`, so the checkout's `.gitmodules` cannot hide a
+  gitlink change.
 - A shallow clone or a missing parent fails closed.
+
+The rule binds the pin text and its single binding. `doctor`'s other logic,
+such as `_ACCEPTED` and the checks that use it, is the release PR's reviewed
+content. The ordinary receipt bridge reads the pin lines the same way.
 
 Users verify the pin in a clone: `git -C checkwash rev-parse 'vX.Y.Z^2^1'`
 gives A, and `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` shows the one
@@ -714,10 +795,12 @@ their documentation, not run); Nelson accepted that with documentation
 (D-194).
 
 **0.11.0 bootstrap.** The 0.11.0 chain is verified from the trusted ref
-`review/collector-d-011-<date>`, cut from main after D-194 merges, as the
-trusted workflow and collector for all five stages; its SHA is recorded here
-when it is cut. Its announced pin is v0.10.0's
-`100699796d942af30644738ffbcd1f1c939411c5`.
+`review/collector-d-011-<date>`, cut from main after D-194 merges; its SHA is
+recorded here when it is cut. It is the trusted collector, and the trusted
+workflow for every dispatched run. The release-event capture, which the
+`release: published` event starts, runs `release.yml` from the tag M, so M
+must hold the same `release.yml` and audited helpers as that ref. Its
+announced pin is v0.10.0's `100699796d942af30644738ffbcd1f1c939411c5`.
 
 ## Before the tag: the fixed-corpus comparison
 
@@ -740,7 +823,10 @@ once the candidate commit is fixed, before step 5.
   (step 1), which `check --format json` prints only as
   `run.checkwash_version`. So a candidate frozen before the version bump
   still counts. If anything else in `src/` changes after the comparison,
-  the comparison runs again.
+  the comparison runs again. Scheme S (above): from v0.11.0 a candidate
+  frozen before R does not count, because R's `src/` tree differs from every
+  earlier commit's in `doctor`'s own pin line; the sentence about a
+  candidate frozen before the version bump holds before v0.11.0.
 - **Where.** Current EC POLICY `pju-primary-execution-20261024` (T-610)
   designates LAPTOP-01AGNPJU as the default authorized execution host,
   including this release verification. Preserve this comparison's frozen
@@ -768,7 +854,9 @@ once the candidate commit is fixed, before step 5.
   states the JS/TS result beside the Python result, labelled in-sample, with
   both engine commits, as counts of commits and never as a false-positive
   rate (SPEC §10.2 rule 1). The JS/TS result is also added to the
-  [results record](../benchmarks/javascript-replay/results.md).
+  [results record](../benchmarks/javascript-replay/results.md). From
+  v0.11.0 these records land in the step-8 follow-up, not in the release PR
+  (scheme S, above).
 - **What it is not.** Both sets are in-sample. The comparison shows what
   changed between two versions on commits the project knows. It is not a
   held-out or adjudicated false-positive rate
@@ -1362,16 +1450,17 @@ is authorized, and no ended-session local workload grant is reused.
   `test_readme_action_snippet_is_zizmor_blanket` checks the pinning. Up to
   v0.10.0 the pin is the tag's peeled commit; from v0.11.0 it is the
   release's Action commit `vX.Y.Z^2^1`, and the test requires the tag to be a
-  two-parent merge whose second parent changes only `doctor`'s own pin line,
-  to its parent.
+  two-parent merge with its second parent's tree, that parent to have one
+  parent A, and the tag to differ from A only in `doctor`'s own pin line, in
+  place and in mode 100644, from A's previous pin to A.
 - From v0.11.0 (scheme S, D-194), the release bridge's
   `validate_own_action_pin` checks R, the merge commit and the tag at each
   release stage it applies to, with GitHub's native merge parents; the
-  ordinary receipt bridge refuses a version-changing head; and
-  `tools/own_action_pin.py check` runs the same rule locally, as an advisory
-  check. `tests/test_pju_own_action_pin.py`, `tests/test_own_action_pin.py`
-  and `tests/test_doctor_own_action_pin.py` exercise them on owned Git
-  chains.
+  ordinary receipt bridge refuses a version-changing head and a head whose
+  own pin differs from its previous pin; and `tools/own_action_pin.py check`
+  runs the same rule locally, as an advisory check.
+  `tests/test_pju_own_action_pin.py`, `tests/test_own_action_pin.py` and
+  `tests/test_doctor_own_action_pin.py` exercise them on owned Git chains.
 - The actual public tag exists and its complete install surfaces have the
   expected source/native identity: `tools/verify_published_source.py`, in the
   advertised visitor, tag-event job and release prerequisite. Its failure

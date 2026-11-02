@@ -39,10 +39,18 @@ contract inventory, complete case identities, qualification and build receipts,
 artifact hashes, original command exits and JUnit results. Missing, failed,
 malformed or mismatched evidence produces no successful required check. It
 rechecks the live open PR head and base before validation and publication.
-It refuses a head whose `pyproject.toml` version differs from the version in
-its `release/advertised.toml` (D-194), before any GitHub read: that head is a
-release PR, whose checks come only from the release bridge's `pr` stage
-([release handoff](pju-release-handoff.md)).
+Before any GitHub read it refuses a head whose `pyproject.toml` version
+differs from the version in its `release/advertised.toml` (D-194). Such a
+head is a release PR, whose checks come only from the release bridge's `pr`
+stage ([release handoff](pju-release-handoff.md)), or a branch that took main
+between a release merge and its step-8 follow-up
+([RELEASING](RELEASING.md)). It also refuses a head whose
+`src/checkwash/doctor.py` own Action pin differs from its previous pin, read
+as the release bridge reads them: only a release PR's last commit sets the
+own pin. Like the release bridge's rule, this binds the pin text and its
+single binding; doctor's other logic is reviewed content. These refusals hold
+only for receipts verified at a trusted ref that contains them, so from
+D-194's merge on, ordinary receipts are dispatched only from main.
 
 Only the publisher job receives `checks: write`. It creates these completed
 checks for the tested head with GitHub Actions' identity:

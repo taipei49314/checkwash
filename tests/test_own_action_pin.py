@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from own_action_pin_fixtures import ACTION, DOCTOR, PREVIOUS, chain, commit, content, doctor, git, repository, write
+from own_action_pin_fixtures import (ACTION, DOCTOR, PREVIOUS, chain, commit, content, doctor, git, repository, set_own,
+                                     write)
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("own_action_pin_tool", ROOT / "tools/own_action_pin.py")
@@ -58,6 +59,10 @@ def test_write_stages_exactly_the_own_pin_line(tmp_path, capsys):
     # The default announced pin is the receipt tool's ACTION_SHA, which this chain does not use.
     assert T.main(["check", "--repo", str(root), "--stage", "pr", "--head", r, "--base", b]) == 2
     assert "previous Action pin is not the announced pin" in capsys.readouterr().err
+    # --pr-head reaches the rule: at main, the merge must name the verified PR head.
+    assert T.main(["check", "--repo", str(root), "--stage", "main", "--head", m, "--base", b, "--announced", PREVIOUS,
+                   "--pr-head", a]) == 2
+    assert "merge commit's second parent is not the verified release PR head" in capsys.readouterr().err
 
 
 def test_check_refuses_a_release_head_without_r(tmp_path, capsys):
@@ -67,6 +72,20 @@ def test_check_refuses_a_release_head_without_r(tmp_path, capsys):
     assert "own Action pin is not the one parent" in capsys.readouterr().err
     assert T.main(["check", "--repo", str(root), "--stage", "pr", "--head=--all", "--base", b]) == 2
     assert "cannot start with '-'" in capsys.readouterr().err
+
+
+def test_check_warns_when_the_rule_does_not_apply(tmp_path, capsys):
+    root = tmp_path / "repo"
+    b = repository(root)
+    write(root, {"NEWS": "no version change\n"})
+    head = commit(root, "H")
+    for stage in ("pr", "main"):
+        assert T.main(["check", "--repo", str(root), "--stage", stage, "--head", head, "--base", b, "--announced", PREVIOUS]) == 0
+        captured = capsys.readouterr()
+        assert json.loads(captured.out) == {"applies": False}
+        assert captured.err.startswith(f"warning: the rule does not apply at the {stage} stage") and captured.err.count("\n") == 1
+    assert T.main(["check", "--repo", str(root), "--stage", "tag", "--head", head, "--base", b, "--announced", PREVIOUS]) == 2
+    assert "not a two-parent merge commit" in capsys.readouterr().err
 
 
 def test_write_refuses_untracked_and_modified_files(tmp_path, capsys):
@@ -126,6 +145,30 @@ def test_write_refuses_a_crlf_worktree(tmp_path, capsys):
     refused(trap, capsys, "differs from HEAD's blob (line endings included)")
 
 
+def test_write_refuses_a_content_commit_whose_pins_differ(tmp_path, capsys):
+    root = tmp_path / "repo"
+    release_head(root, doctor_text=doctor(own="c" * 40))
+    refused(root, capsys, "R is written only on a content commit whose two pin lines are equal")
+
+
+def test_write_restores_doctor_when_staging_fails(tmp_path, capsys):
+    root = tmp_path / "repo"
+    release_head(root)
+
+    def state():
+        return ((root / DOCTOR).read_bytes(), git(root, "ls-files", "--stage"), git(root, "diff", "--cached", "--name-only"),
+                git(root, "status", "--porcelain=v1", "--untracked-files=all"), git(root, "rev-parse", "HEAD"))
+
+    before = state()
+    lock = root / ".git" / "index.lock"
+    lock.write_bytes(b"")
+    assert T.main(["write", "--repo", str(root)]) == 2
+    error = capsys.readouterr().err
+    assert "git add -- src/checkwash/doctor.py failed" in error and error.rstrip().endswith("doctor.py was restored")
+    lock.unlink()
+    assert state() == before
+
+
 def verify(root, stage, head, base, pr_head=None):
     return T.R.validate_own_action_pin(root, {"stage": stage, "head_sha": head, "base_sha": base},
                                        announced=PREVIOUS, pr_head=pr_head)
@@ -137,17 +180,21 @@ def write_r_again(root, capsys):
     return commit(root, "R again")
 
 
-def test_a_squash_is_recovered_by_a_new_r_on_the_squash(tmp_path, capsys):
-    # RELEASING's recovery: a squash S leaves A off main; a follow-up whose only
-    # commit sets the own pin to S, merged with a merge commit, verifies.
+def test_a_squash_is_recovered_by_a_reset_commit_and_a_new_r(tmp_path, capsys):
+    # RELEASING's recovery: a squash S leaves A off main and keeps R's own line.
+    # A follow-up content commit resets that line to the previous pin; R
+    # written on it, merged with a merge commit, verifies with it as A.
     c = chain(tmp_path / "repo")
     root, s = c["root"], c["S"]
     with pytest.raises(ValueError, match="two-parent merge commit"):
         verify(root, "main", s, c["B"], c["R"])
     git(root, "checkout", "-q", "--detach", s)
+    refused(root, capsys, "R is written only on a content commit whose two pin lines are equal")
+    set_own(root, PREVIOUS)
+    reset = commit(root, "doctor: reset the own Action pin")
     r = write_r_again(root, capsys)
-    assert T.R.commit_parents(root, r) == [s]
-    expected = {"applies": True, "action_commit": s, "release_pr_head": r, "previous_action_pin": PREVIOUS}
+    assert T.R.commit_parents(root, r) == [reset]
+    expected = {"applies": True, "action_commit": reset, "release_pr_head": r, "previous_action_pin": PREVIOUS}
     assert verify(root, "pr", r, s) == expected
     m = git(root, "commit-tree", r + "^{tree}", "-p", s, "-p", r, "-m", "merge")
     assert verify(root, "main", m, s, r) == expected
@@ -155,23 +202,32 @@ def test_a_squash_is_recovered_by_a_new_r_on_the_squash(tmp_path, capsys):
 
 
 @pytest.mark.parametrize("case", ["commit", "update-branch"])
-def test_a_commit_after_r_voids_it_until_r_is_written_again(tmp_path, capsys, case):
+def test_a_commit_after_r_is_refused_until_r_is_dropped(tmp_path, capsys, case):
     # Nothing may follow R: a commit after it, or GitHub's "Update branch" merge
-    # of a newer main, is refused; R written again on the new head verifies.
+    # of a newer main, keeps R's own line, and write refuses that head. R is
+    # dropped, the change made again on A, and R written on the result verifies.
     c = chain(tmp_path / "repo")
     root, base = c["root"], c["B"]
-    if case == "commit":
-        write(root, {"NEWS": "release notes, corrected\n"})
-        commit(root, "after R")
-    else:
+    if case == "update-branch":
         base = git(root, "commit-tree", c["B"] + "^{tree}", "-p", c["B"], "-m", "newer main")
+
+    def change():
+        if case == "commit":
+            write(root, {"NEWS": "release notes, corrected\n"})
+            return commit(root, "the change")
         git(root, "merge", "-q", "--no-ff", "-m", "Update branch", base)
-    head = git(root, "rev-parse", "HEAD")
+        return git(root, "rev-parse", "HEAD")
+
+    head = change()
     with pytest.raises(ValueError, match="one parent of the release PR's last commit"):
         verify(root, "pr", head, base)
+    refused(root, capsys, "after a commit that followed R, R must be dropped first")
+    git(root, "reset", "-q", "--hard", c["R"] + "^1")
+    action = change()
     r = write_r_again(root, capsys)
-    assert T.R.commit_parents(root, r) == [head]
-    expected = {"applies": True, "action_commit": head, "release_pr_head": r, "previous_action_pin": PREVIOUS}
+    assert T.R.commit_parents(root, r) == [action]
+    expected = {"applies": True, "action_commit": action, "release_pr_head": r, "previous_action_pin": PREVIOUS}
     assert verify(root, "pr", r, base) == expected
     m = git(root, "commit-tree", r + "^{tree}", "-p", base, "-p", r, "-m", "merge")
     assert verify(root, "main", m, base, r) == expected
+    assert verify(root, "tag", m, base) == expected
