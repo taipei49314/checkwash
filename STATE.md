@@ -57,12 +57,20 @@ refused. D-194's *Review* and *Second review* list what was accepted and
 what was declined.
 
 Status: PR #581 from `claude/doctor-s-d194-20261102`, with main `6e8ca826`
-(D-195) merged in; in review, not merged. On LAPTOP-01AGNPJU
+(D-195) merged in; not merged. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
-2026-11-02: the targeted tests pass, and checkwash's own check passes with
-eight warnings and none at or above high (D-194). The PJU receipt of the
-final head follows. Not run: other platforms. Not released: package
-metadata stays 0.10.0.
+2026-11-02, its PJU receipt on `abcf2146` (base and collector main
+`6e8ca826`, manifest SHA256
+`cd7874938a64398ff56b188f3e234658c8f3717b479833b4a8b128a73911c022`),
+published as `evidence/pr581-cd7874938a64-20261102` (commit `ebe630d1`):
+the full suite (`pytest tests`, `tests/gates` included, xdist `-n 2`),
+whose JUnit testsuite counts `tests="22511"`: 22444 testcase entries, 22419
+passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors; both
+Action replays and the source, wheel and pyz qualifications exited 0; and
+checkwash's own check passed with eight warnings and none at or above high
+(D-194). The final head differs only in this status and D-194's evidence
+paragraph, and its own receipt sets the four required checks. Not run:
+other platforms. Not released: package metadata stays 0.10.0.
 
 
 ## 2026-11-02: five test relaxations from agent sessions are restored (D-195)

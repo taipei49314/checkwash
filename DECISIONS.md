@@ -2281,7 +2281,25 @@ records reviewer).
 The first fixes added 38 collected tests (22431). The second review's fixes
 add 12, and D-195, merged from main, one, so the suite collects 22444.
 
-Evidence after review: TBD-D194-EVIDENCE2
+**Evidence after review.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9, pytest
+9.1.1) on 2026-11-02, for `abcf2146`, the head after both reviews: the
+twelve targeted files above, 322 tests, 0 failures and one existing
+symlink-privilege skip; the suite collects 22444; checkwash's own check
+from main `6e8ca826` at `--fail-on high`, with this tree's engine and with
+the published v0.10.0 pyz: pass, eight warnings and none at or above high;
+and the pull request's PJU receipt (head `abcf2146`, base and collector
+main `6e8ca826`, 15:22:31Z to 16:17:42Z): the full suite (`pytest tests`,
+`tests/gates` included, xdist `-n 2`), whose JUnit testsuite counts
+`tests="22511"`: 22444 testcase entries, 22419 passed and 25 skipped, plus
+67 subtests, with 0 failures and 0 errors; the pinned and candidate Action
+replays, the builds and the source, wheel and pyz qualifications all
+exited 0. Its manifest SHA256 is
+`cd7874938a64398ff56b188f3e234658c8f3717b479833b4a8b128a73911c022`,
+published as `evidence/pr581-cd7874938a64-20261102` (commit `ebe630d1`,
+254 files read back). The merged head differs from `abcf2146` only in this
+paragraph and STATE's status, and its own receipt sets the four required
+checks. Other platforms: NOT_RUN.
 
 ## D-195 (2026-11-02): five test relaxations that agent sessions left in checkwash's own tests are restored
 
