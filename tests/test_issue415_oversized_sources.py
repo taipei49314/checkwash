@@ -592,6 +592,9 @@ def test_another_manifest_over_the_limit_at_the_base_refuses_naming_it(tmp_path)
     assert stdout == ""
     # The GitError branch: the message survives the re-raise whole.
     assert stderr.splitlines() == [f"checkwash engine error: {REFUSAL}: {described('requirements.txt', 'base')}"]
+    # It is stderr's only line, ended by os.linesep: text-mode stderr writes
+    # CRLF on Windows, and _check decodes the bytes without translating them.
+    assert stderr == f"checkwash engine error: {REFUSAL}: {described('requirements.txt', 'base')}{os.linesep}"
 
 
 @pytest.mark.parametrize("mode", ["range", "worktree"])

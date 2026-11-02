@@ -260,6 +260,7 @@ def test_a_compat_gated_rebinding_is_held_at_warn():
     assert verdict == "pass"
     assert [(f.rule, f.severity) for f in findings] == [("TEST_DISABLED", "warn")]
     assert "COMPAT_GATE" in findings[0].deescalators
+    assert [(f.rule, f.severity, f.deescalators) for f in findings] == [("TEST_DISABLED", "warn", ["COMPAT_GATE"])]
     assert "a later binding of this test's name may replace it (collection.rebound)" in findings[0].message
 
 

@@ -128,6 +128,22 @@ def test_a_modified_module_that_shares_an_added_modules_name_still_counts():
     assert findings == [COCHANGE]
 
 
+def test_repair_evidence_still_reads_an_added_modules_symbols():
+    # Only the snapshot form leaves them out. A test that calls a function
+    # an added module defines keeps its symbol evidence.
+    before = b"from fees import fee\n\n\ndef test_fee():\n    assert fee() == 2\n"
+    after = b"from fees import fee\n\n\ndef test_fee():\n    assert fee() == 3\n"
+    ir, findings, verdict = analyze(
+        [FileChange("tests/test_fee.py", "modified", before, after),
+         added("fees.py", b"def fee():\n    return 2 + 1\n")],
+        Config(), Contract(), [], TODAY,
+    )
+    assert ir.globals.prod_symbols_in_added_files == ["fees::fee"]
+    hit, = findings
+    assert (hit.rule, hit.severity, hit.deescalators) == ("EXPECTED_VALUE_CHANGED", "warn", ["REPAIR_EVIDENCE"])
+    assert verdict == "pass"
+
+
 # --- Q2 (a), Q3 (a), Q4 (a): what still counts and what stays as it was -------------------
 
 
