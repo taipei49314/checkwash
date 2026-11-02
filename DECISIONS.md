@@ -2229,3 +2229,213 @@ Declined:
 The fixes add 38 collected tests, so the suite collects 22431.
 
 Evidence after review: TBD-D194-EVIDENCE2
+
+## D-195 (2026-11-02): five test relaxations that agent sessions left in checkwash's own tests are restored
+
+**Authority.**
+
+- The 2026-10-28 session replay (local repository `C:/Users/nelson/dev/cwrp`,
+  PREREG `2e693e3`, results `93e602c`; D-189's *Why*) replayed 630
+  reconstructed agent edits of Python test files one at a time through the
+  released v0.10.0 pyz. Its labels, provisional as D-189 says, call 12 of
+  them loosenings with no reason in their context. Five are in checkwash's
+  own tests and were still on main `0e6acc35`: replay items 672, 36, 32, 359
+  and 621.
+- On 2026-10-31 Nelson paused the outreach preparation (「先等等」, wait for
+  now); the handoff asked whether these five go into 0.11.
+- At 2026-11-02T11:49:13Z Claude asked
+  「checkwash main 裡那 5 筆 agent 放鬆的測試（回放 #672、#36、#32、#359 收緊比對，#621 補回被刪的測試），要在 0.11 凍結前修掉嗎？」
+  (should the five loosened tests on checkwash's main, replay items 672, 36,
+  32 and 359 to be tightened and 621 to be put back, be fixed before the
+  0.11 freeze?), with two options Claude wrote:
+  「帶進 0.11 (Recommended)」 (bring them into 0.11), described as
+  「凍結前另開一個只動 tests/ 的小 PR：逐筆確認原本的精確比對現在還成立再收緊，#621 查清原本測什麼再補；順便記下每筆是哪個 PR 帶進來、當時 checkwash 判了什麼。不動 src，不用重跑 R29，不影響 doctor-S 和六腿排程。」
+  (before the freeze, a separate small pull request that changes only
+  `tests/`: confirm for each that the original exact comparison still holds,
+  then tighten it; find out what #621 tested, then put it back; record which
+  pull request brought each in and what checkwash judged then; no `src`
+  change, no R29 rerun, no effect on doctor-S or the six-leg schedule), and
+  「先不帶」 (not now), described as
+  「維持「先等等」：0.11 照原範圍凍結，5 筆留到對外發文準備時再處理。」
+  (keep 「先等等」: 0.11 freezes with its scope, and the five wait for the
+  outreach preparation).
+- At 2026-11-02T11:49:28Z Nelson chose 「帶進 0.11 (Recommended)」.
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
+[RELEASING](docs/RELEASING.md)). Every choice in this entry is Claude's
+under that delegation: the form each restored check takes, the line ending
+of item 359, the place of the restored test, the mutations that show each
+check is not vacuous, and this entry's wording. Claude wrote the question,
+both options' labels and their descriptions, and the recorded answer holds
+only the label. The choice brings the five into 0.11; beside the tests,
+this change adds a STATE.md section and this entry, the record each change
+carries, and moves the documented test count in README.md, CONTRIBUTING.md
+and docs/launch.md; the option text names neither. None of it is Nelson's
+personal review.
+
+**How the loosenings reached main.** Each time, an agent session wrote the
+strict check, loosened or deleted it in its working copy and committed only
+the loose form minutes later, in a test file that its pull request added
+(the edit's time is the replay packet's, the commit's its author date):
+
+| Replay | Edit | First commit | Pull request | `checkwash` on that pull request |
+|---|---|---|---|---|
+| 672 | 2026-10-19T10:57:53Z | `92f861ea`, 11:02:46Z | #511 (head `c7efced8`), merged through integration batch 3, #540 (`35fd9df9`) | pass on both, with two IMPORT_UNRESOLVED warnings on this new file (its imports of two sibling test modules) |
+| 36 | 2026-10-17T06:42:29Z | `71a6604f`, 06:45:39Z | #476 (head `708c58b7`, merge `81c69d28`) | pass, with two TEST_DISABLED warnings in `tests/test_issue272_helper_skips.py` |
+| 32 | 2026-10-17T06:08:50Z | `a7961032`, 06:14:25Z | #474 (head `b88e25f7`, merge `f541f748`) | pass, with four warnings in `tests/test_frontend_iterative_visit.py` and `tests/test_conftest_controls.py` |
+| 359 | 2026-10-14T12:08:26Z | `c0b9ddca`, 12:10:06Z | #448 (head `a94b7ca0`, merge `a20d3767`) | pass, no finding |
+| 621 | 2026-10-19T06:49:41Z | `ae8bbe0f`, 06:50:05Z | #524, merged through integration batch 2, #533 (`adea2350`) | pass, no finding on #524's one run (head `98b2c8a7`); on #533, nine warnings in other files |
+
+The `checkwash` check (the pinned Action at `--fail-on high`: v0.8.0, and
+v0.6.0 for #448) compares a pull request's base with its head. Each file was
+new in its pull request, so each loose form was an added assertion with
+nothing to weaken, and no strict form was ever committed (each test's line
+history on main is the one commit that added it, and `git log --all -S`
+finds neither the strict lines of 672, 32 and 359 nor the deleted test's
+name). No finding was raised on these assertions, so no de-escalator was
+involved: the replay summary's unchecked guess that production changes in
+the same pull request held them at warn through E1 does not hold for these
+five. Where the dogfood job ran (every pull request but #533), it
+said the same. Replayed one edit at a time, v0.10.0 blocks each at high:
+ASSERT_WEAKENED (672 and 36), ASSERT_SUBSTITUTED and EXPECTED_VALUE_CHANGED
+(32), SUBJECT_NORMALIZED (359) and TEST_DISABLED (621). By rule alone, the
+0.11 PreToolUse ask (D-189), which asks only on the five weakening rules,
+would cover 672, 36 and 621 and not 32 or 359; it was not run on these
+edits. No commit message, pull request body, DECISIONS entry or STATE
+section gives a reason for any of them; for 621, #524's body and D-157
+state the behaviour the deleted test pinned.
+
+**What is decided.** Each item was checked again against the test's history
+and current behaviour. Each strict form still describes what main
+`0e6acc35` does; 359's line ending is made portable.
+
+1. *672*, `tests/test_issue469_limit_messages.py`.
+   `test_the_pass_reads_each_sides_module_once_for_helper_and_changed_callee_tests`
+   again ends with the line the session first wrote,
+   `assert {f.unit for f in findings if f.rule == "TEST_PATCHES_SUBJECT"} == {f"test_{n}" for n in range(count)}`,
+   byte for byte the replay's base side, in place of the `<=` form and the
+   comment the loosening added. The same subset shape was in
+   `test_the_pass_checks_math_gcd_and_parameterized_tests_once_per_file`, on
+   its units and, for the parameterized shape, its (unit, call) pairs,
+   written as `<=` in `81084439` with no strict form on record; both now use
+   `==`. On main both tests' findings name exactly their 30 tests, and the
+   parameterized shape's each at its own first call.
+2. *36*, `tests/test_issue306_self_methods.py`.
+   `test_a_helper_method_inlined_into_the_test_pairs_with_its_old_copy`
+   again asserts `run(SOURCE, after) == ("pass", [])`, byte for byte the
+   replay's base side, after the unpacking and
+   `assert not any(rule in ("ASSERT_REMOVED", "ASSERT_WEAKENED", "ASSERT_SUBSTITUTED") for rule, _ in findings)`
+   that the loosening wrote, which ignore the verdict and every other rule
+   and stay (see *checkwash on this change*). D-145 (Sub-Q11 (b))
+   pairs a `via` assertion with the after side's unpaired own assertions, so
+   a helper method's assertion inlined unchanged reports nothing; on main
+   the result is `("pass", [])`.
+3. *32*, `tests/test_issue424_rebinding.py`.
+   `test_a_compat_gated_rebinding_is_held_at_warn` again asserts
+   `[(f.rule, f.severity, f.deescalators) for f in findings] == [("TEST_DISABLED", "warn", ["COMPAT_GATE"])]`,
+   byte for byte the replay's base side, after the same list without
+   de-escalators and `"COMPAT_GATE" in findings[0].deescalators`, which
+   pass any extra de-escalator and stay. On main the finding carries exactly D6's
+   `["COMPAT_GATE"]` (D-144).
+4. *359*, `tests/test_issue415_oversized_sources.py`.
+   `test_another_manifest_over_the_limit_at_the_base_refuses_naming_it`
+   compares the whole stderr again, after the `splitlines()` check, which
+   stays:
+   `assert stderr == f"checkwash engine error: {REFUSAL}: {described('requirements.txt', 'base')}{os.linesep}"`.
+   The session's strict form ended in `"\n"`. `_check` decodes the child's
+   stderr bytes without translating line endings, and the CLI writes the
+   line through Python's text-mode `sys.stderr` (`cli._engine_error`,
+   `report.textio.write_text`), which ends it with CRLF on Windows: on
+   LAPTOP-01AGNPJU the stderr is the message and `"\r\n"`, so the strict
+   form fails there, as it would have on the Windows test legs, while
+   `splitlines()` accepted a missing or any other line ending. The restored
+   check pins the one line, its text and the platform's line ending. The
+   file's other stderr checks read lines or substrings, and none pins a
+   line ending.
+5. *621*, `tests/test_issue463_snapshot_added_production.py`.
+   `test_repair_evidence_still_reads_an_added_modules_symbols` is back at
+   line 131, where it was, byte for byte as the session wrote it: beside a
+   production module the diff adds, which defines the function a test
+   calls, `fees::fee` is in `prod_symbols_in_added_files`, and the test's
+   rewritten expected value is EXPECTED_VALUE_CHANGED held at warn by
+   REPAIR_EVIDENCE. That is D-157's "symbol repair evidence and the one-hop
+   callers (`gating._repair_evidence`, `evidence._record_callers`) still
+   read an added file's symbols", which the engine's added-file branch
+   repeats; on main the test passes.
+   `test_the_ir_names_what_an_added_file_contributed_and_keeps_it_a_changed_symbol`
+   pins only that the IR keeps those symbols, not that repair evidence
+   reads them.
+
+**Not vacuous.** Each restored check passes on main and fails, in a scratch
+copy of the tree, under a one-line mutation of the code under test or a
+wrong input; the loose form ran beside it on the same tree:
+
+- 672: `engine.py` records each subject-replacement event once more with no
+  unit. The restored unit equalities fail in all four cells; the `<=` forms
+  pass. Recording each event once more for its own unit with another text
+  fails the restored (unit, call) equality; the `<=` form passes.
+- 36: `ir/diffalign.py` stops pairing `via` assertions with the after
+  side's unpaired own assertions. The result is ASSERT_REMOVED at high, and
+  both forms fail. With a wrong input instead, the inlined copy expecting
+  78.5, the result is EXPECTED_VALUE_CHANGED at high and a block: the
+  restored check fails, the loose one passes.
+- 32: `gating.py` adds REPAIR_EVIDENCE beside a compensation. The restored
+  check fails; the loose one passes.
+- 359: `cli._engine_error` writes the line without its line ending. The
+  restored check fails; the loose one passes.
+- 621: `gating._repair_evidence`'s direct symbol match leaves out
+  `prod_symbols_in_added_files`. The restored test fails, EXPECTED_VALUE_CHANGED
+  at high with no de-escalator. On that tree the golden runner over every
+  fixture, the rest of the #463 file and eight related test files (snapshot
+  expectations, subject-snapshot integration, #219, #471, the #419
+  residual, root oracles, #335 and the CLI end-to-end tests) pass, 1620
+  items: nothing else there pins it.
+
+**checkwash on this change.** Written in place of the loose lines, as the
+sessions first wrote them, the strict checks of 36, 32 and 359 block.
+Checked from `0e6acc35` against the working tree at `--fail-on high`,
+main's engine and the published v0.10.0 pyz (SHA256 `9a58d3d4...`) agreed
+on three high findings and two warnings, all on checks at least as strong
+as the ones they replaced. 359 was ASSERT_SUBSTITUTED at high
+(`stderr.splitlines()` -> `stderr`); 36 was ASSERT_WEAKENED at high
+("subject and polarity both changed"); 32 was EXPECTED_VALUE_CHANGED at
+high (`[('TEST_DISABLED', 'warn')]` -> `[('TEST_DISABLED', 'warn',
+['COMPAT_GATE'])]`), with ASSERT_SUBSTITUTED and ASSERT_REMOVED at warn
+under SAME_UNIT_REWRITE. checkwash pairs a rewritten assertion by its
+subject and form, and does not prove that a check on another subject or of
+another shape is stronger. Rather than record base-side exemptions for a
+change that only strengthens tests, Claude added those three strict checks
+after the loose lines, which stay: an added assertion has no before side to
+weaken, and each strict check implies the loose one beside it, so each test
+checks what its strict form checks. The 672 equalities and the restored 621
+test raise nothing in place, and stay in place.
+
+**Contracts.** No `src/`, SPEC, THREATMODEL, `.gwcase` fixture or
+`tests/gates` change, and no fingerprint, finding field, escalator,
+de-escalator or severity change. With no `src/` change, R29 does not rerun
+for this change. Agent-read-only text: this entry only.
+
+**Tests.** Changed existing assertions, each listed above (`<=` to `==`):
+one in
+`test_the_pass_reads_each_sides_module_once_for_helper_and_changed_callee_tests`
+and two in `test_the_pass_checks_math_gcd_and_parameterized_tests_once_per_file`.
+Added after existing assertions, which stay: one each in
+`test_a_helper_method_inlined_into_the_test_pairs_with_its_old_copy`,
+`test_a_compat_gated_rebinding_is_held_at_warn` and
+`test_another_manifest_over_the_limit_at_the_base_refuses_naming_it`.
+Restored: `test_repair_evidence_still_reads_an_added_modules_symbols`, one
+more collected item, so the documented test count (22346 on main
+`0e6acc35`, in README.md, CONTRIBUTING.md and docs/launch.md) moves by one.
+
+**Evidence.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9, pytest 9.1.1) on 2026-11-02, from main `0e6acc35`:
+the five changed test files with `tests/test_state_claims.py`,
+`tests/test_docs_links.py`, `tests/test_documentation_contracts.py` and
+`tests/test_packaging.py` (the documented test count included) pass, exit 0;
+the mutation and wrong-input runs above ran in scratch copies; and
+checkwash's own check of the final change at `--fail-on high`, with main's
+engine and with the published v0.10.0 pyz, passes with no finding. The full
+suite runs in this change's PJU receipt. Not run: other platforms, so the
+`os.linesep` form of 359 is run on Windows only; by reading, POSIX writes
+`\n`, which is `os.linesep` there.

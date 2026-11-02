@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-02 (0.11 candidate: D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S); D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-02 (0.11 candidate: D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S); D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
 
 ## 2026-11-02: doctor accepts the release's own Action pin (D-194)
 
@@ -59,6 +59,75 @@ Status: a pull request from `claude/doctor-s-d194-20261102` (main
 2026-11-02: the targeted tests pass, and checkwash's own check passes with
 eight warnings and none at or above high (D-194). The full suite and the
 PJU receipt follow review. Not run: other platforms. Not released: package
+metadata stays 0.10.0.
+
+
+## 2026-11-02: five test relaxations from agent sessions are restored (D-195)
+
+The 2026-10-28 session replay (local repository `C:/Users/nelson/dev/cwrp`,
+results `93e602c`; D-189) labelled 12 agent edits of Python tests as
+loosenings with no reason in their context. Five of them were still on main
+`0e6acc35`, in checkwash's own tests. Nelson chose to bring them into 0.11
+on 2026-11-02 (the option labelled 「帶進 0.11 (Recommended)」, which Claude
+wrote; quoted in [D-195](DECISIONS.md)); every detail is Claude's under the
+2026-10-27 delegation.
+
+Each time, an agent session wrote the strict check, loosened or deleted it
+in its working copy and committed only the loose form minutes later, in a
+test file its pull request added. The `checkwash` check compares a pull
+request's base with its head, so the strict form never reached it: each
+landing pull request passed with no finding on these assertions, and no
+de-escalator was involved. Replayed one edit at a time with v0.10.0, each
+edit blocks at high.
+
+- Replay 672, `tests/test_issue469_limit_messages.py`: two "every test's
+  replacement is found" checks compared sets with `<=`, so an extra
+  TEST_PATCHES_SUBJECT unit or (unit, call) pair passed. The first is back
+  to the `==` line the session wrote; the second, a `<=` since its first
+  commit, now uses `==` too. Landed through #511 and integration batch 3
+  (#540); `checkwash` passed both with two IMPORT_UNRESOLVED warnings on
+  that new file.
+- Replay 36, `tests/test_issue306_self_methods.py`: the inlined helper
+  method again asserts `run(SOURCE, after) == ("pass", [])`, where it had
+  checked only that three rules were absent, which also passed a block.
+  Landed through #476; `checkwash` passed with two TEST_DISABLED warnings
+  elsewhere.
+- Replay 32, `tests/test_issue424_rebinding.py`: the compat-gated rebinding
+  again pins its de-escalators as `["COMPAT_GATE"]`, where
+  `"COMPAT_GATE" in` passed any extra one. Landed through #474; `checkwash`
+  passed with four warnings elsewhere.
+- Replay 359, `tests/test_issue415_oversized_sources.py`: the manifest
+  refusal's stderr is compared whole again, where `splitlines()` passed a
+  missing or different line ending. The session's strict form ended in
+  `"\n"`, which fails on Windows, where the CLI's text-mode stderr writes
+  CRLF; the check now ends the line with `os.linesep`. Landed through #448;
+  `checkwash` (the v0.6.0 Action) passed with no finding.
+- Replay 621, `tests/test_issue463_snapshot_added_production.py`: the
+  deleted `test_repair_evidence_still_reads_an_added_modules_symbols` is
+  back where it was, unchanged. It pins what D-157 states, that symbol
+  repair evidence still reads a production file the diff adds; with that
+  dropped, nothing else in the golden runner or eight related test files
+  fails. Landed through #524 and
+  integration batch 2 (#533); `checkwash` passed with no finding on #524's
+  one run and with nine warnings elsewhere on #533.
+
+Each restored check passes on main and fails under a one-line mutation of
+the code under test, made in a scratch copy; for 672, 32 and 359 the loose
+form passes under the same mutation, and for 36 under a wrong input. No
+`src/` change, so R29 does not rerun. The restored test is one more
+collected item. Written in place of the loose lines, the strict checks of
+36, 32 and 359 made checkwash's own check block (main's engine and the
+published v0.10.0 alike: three high findings and two warnings), though each
+is at least as strong as the line it replaced: checkwash does not prove that
+a check of another shape is stronger. So those three strict checks are added
+after the loose lines, which stay, and need no exemption (D-195).
+
+Status: a pull request from `claude/restore-relaxed-tests-20261102` (main
+`0e6acc35`), with its own PJU receipt; not merged. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-02: the changed test files and the state, docs and packaging tests
+pass, and checkwash's own check passes with no finding (main's engine and
+the published v0.10.0). Not run: other platforms. Not released: package
 metadata stays 0.10.0.
 
 ## 2026-10-31: arrivals pay only where the repository's own pytest configuration runs them (D-193)

@@ -549,6 +549,7 @@ def test_a_helper_method_inlined_into_the_test_pairs_with_its_old_copy():
              "        self.assertEqual(value, 78.75)\n")
     _verdict, findings = run(SOURCE, after)
     assert not any(rule in ("ASSERT_REMOVED", "ASSERT_WEAKENED", "ASSERT_SUBSTITUTED") for rule, _ in findings)
+    assert run(SOURCE, after) == ("pass", [])
 
 
 def test_a_helper_methods_new_assertion_earns_no_credit_for_a_removed_own_one():
