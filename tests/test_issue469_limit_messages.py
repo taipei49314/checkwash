@@ -598,8 +598,7 @@ def test_the_pass_reads_each_sides_module_once_for_helper_and_changed_callee_tes
     assert len(kept) == 2
     assert calls.count("scope") == calls.count("bindings") == 2 * count
     assert sorted(reads) == expected
-    # Every test's replacement is still found.
-    assert {f"test_{n}" for n in range(count)} <= {f.unit for f in findings if f.rule == "TEST_PATCHES_SUBJECT"}
+    assert {f.unit for f in findings if f.rule == "TEST_PATCHES_SUBJECT"} == {f"test_{n}" for n in range(count)}
 
 
 def test_kept_reads_leave_helper_and_changed_callee_verdicts_as_fresh_reads_give_them(monkeypatch):
@@ -732,9 +731,9 @@ def test_the_pass_checks_math_gcd_and_parameterized_tests_once_per_file(monkeypa
     assert len(asked) == count
     assert sorted(checked) == expected
     # Every test's replacement is still found, each at its own first call.
-    assert {f"test_{n}" for n in range(count)} <= {f.unit for f in findings}
+    assert {f"test_{n}" for n in range(count)} == {f.unit for f in findings}
     if shape == "parameterized":
-        assert {(f"test_{n}", f"check_value(-{n + 1}, {n + 1})") for n in range(count)} <= {
+        assert {(f"test_{n}", f"check_value(-{n + 1}, {n + 1})") for n in range(count)} == {
             (f.unit, f.after.text) for f in findings}
 
 
