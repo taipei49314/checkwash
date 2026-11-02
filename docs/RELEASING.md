@@ -544,8 +544,9 @@ under the standing route above. A source edit alone is not a passing receipt.
 2. Open one release PR. Its last commit is R, which
    `tools/own_action_pin.py write` stages on A (scheme S, below), and nothing
    may follow R: no commit, no GitHub **Update branch** and no receipt,
-   lifecycle or fixed-corpus record commit, which go in the step-8
-   follow-up. Run `tools/own_action_pin.py check --stage pr` before
+   lifecycle or fixed-corpus record commit. Receipt and lifecycle records
+   go in the step-8 follow-up; the fixed-corpus comparison's records go in
+   A, before R is written, or in that follow-up (D-196). Run `tools/own_action_pin.py check --stage pr` before
    collecting. Require the final exact head R's PJU full development CI,
    source/wheel/pyz qualification and inventory, real current-advertised
    visitor checks, and `verdict gate` success. The release PR's required
@@ -578,7 +579,8 @@ under the standing route above. A source edit alone is not a passing receipt.
    comparison (below) has run and the owner has reviewed every commit it
    lists, or the grant waives it, make the final annotated tag on
    the qualified merge commit and push only that tag. From v0.11.0 the
-   comparison runs on R's `src/` tree, which is M's (scheme S, below), and
+   comparison may run on A, or on any commit whose `src/` tree differs from
+   M's only in the version string and `doctor`'s own pin line (D-196, below), and
    `tools/own_action_pin.py check --stage tag --head <M> --base <base>` runs
    on M before the tag is made: the tag stage applies the rule
    unconditionally, and a failure there cannot be fixed by moving the tag.
@@ -629,8 +631,8 @@ under the standing route above. A source edit alone is not a passing receipt.
    (the checkout and setup-python lines stay). `release/advertised.toml`
    advances to the tag with `commit` the tag's peeled commit M, not A. The
    follow-up also carries the release PR's receipt and lifecycle records
-   and, from v0.11.0, the fixed-corpus comparison's records (scheme S,
-   below). It is the next merge after the release, by procedure: until it
+   and any fixed-corpus records not already in the release PR (D-196). It
+   is the next merge after the release, by procedure: until it
    merges, main's version differs from the advertised one, and the ordinary
    receipt bridge refuses any other PR once that PR takes main, which the
    ruleset's strict up-to-date policy requires.
@@ -677,7 +679,8 @@ recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
   `.git/index.lock`, it restores `doctor.py` and its index entry, then exits 2.
 - **Nothing follows R.** No commit, no GitHub **Update branch** and no
   receipt, lifecycle or fixed-corpus record commit: those records go in the
-  step-8 follow-up. A commit after R voids R and every PR-stage receipt
+  step-8 follow-up, or, for the fixed-corpus records, in A before R is
+  written (D-196). A commit after R voids R and every PR-stage receipt
   collected on it, and `write` refuses that head, which keeps R's own line.
   To change the release PR after R, drop R: reset the PR branch to R's
   parent (`git reset --hard R^1` and a force push), make the change as one
@@ -720,17 +723,18 @@ recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
   that contains D-194, so from the D-194 merge on, ordinary receipts are
   dispatched only from main, and the pre-D-194 `review/collector-*-010`
   refs are not used for receipts.
-- **R29 and the targeted uvloop diagnostic.** From v0.11.0 the fixed-corpus
-  comparison and the targeted uvloop diagnostic start after the last content
-  commit A, once R is written, and run on R's `src/` tree, which is M's. The
-  owner still reviews the list before the tag. Their records (the run
-  identities, the list, the owner's review, the release guide's R29 and
-  JS/TS paragraph naming both engine commits, and the JS/TS results record)
-  go in the step-8 follow-up: any change to the release PR after R makes a
-  new A and an R whose `src/` differs in `doctor`'s own line, so the
-  comparison would run again. The candidate rule (below) keeps its
-  substance. Exempting `doctor`'s own line from it would let the comparison
-  run before R, but that is an owner decision, not taken here.
+- **R29 and the targeted uvloop diagnostic.** Since D-196 the candidate
+  rule (below) accepts a `src/` tree that differs from the tag's only in the
+  version string and in `doctor`'s `_OWN_ACTION_PIN` line, which `check`
+  never reads (`test_check_never_imports_doctor`). So from v0.11.0 the
+  fixed-corpus comparison and the targeted uvloop diagnostic may run on A,
+  or on an earlier freeze that differs from the tag's `src/` only in those
+  two lines, and their records (the run identities, the list, the owner's
+  review, the release guide's R29 and JS/TS paragraph and the JS/TS results
+  record) can go in the release PR's content before R is written. Records
+  written after R go in the step-8 follow-up. The owner still reviews the
+  list before the tag, and any other `src/` change after the comparison
+  runs it again.
 - **The Action replay.** Every release stage replays the Action at its head,
   R at `pr` and then M, which has R's tree; none replays it at A. That the
   Action at A is the release's rests on the one-line diff and
@@ -801,7 +805,20 @@ gives A, and `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` shows the one
 Pin updaters that follow the `# vX.Y.Z` comment, such as Dependabot and
 Renovate, will propose the tag's commit, which `doctor` rejects (inferred from
 their documentation, not run); Nelson accepted that with documentation
-(D-194).
+(D-194). For the same reason zizmor's `ref-version-mismatch` audit (1.14.0
+and later) can report the README pin's comment, and its pedantic
+`stale-action-refs` the untagged commit (inferred, not run); Nelson accepted
+that with documentation for 0.11 (D-196).
+
+**Planned for 0.12 (D-196).** Nelson approved pointing the tag at the
+Action commit A from 0.12, so that pin updaters, zizmor and `git ls-remote`
+see the README pin as the tag's commit. That release must also rework the
+tag stage, the tag visitor and the published-source identity, which today
+require the tag to peel to the qualified merge commit,
+`release/advertised.toml`'s commit and the `tests/test_packaging.py`
+relation, and the README's install-from-tag command, which would install A,
+whose `doctor` accepts only the previous pin. Its design goes to Nelson
+first. Until then this section is the procedure.
 
 **0.11.0 bootstrap.** The 0.11.0 chain is verified from the trusted ref
 `review/collector-d-011-<date>`, cut from main after D-194 merges; its SHA is
@@ -830,12 +847,11 @@ once the candidate commit is fixed, before step 5.
 - **Candidate.** The commit to be tagged, or a commit whose `src/` tree
   differs from it only in the version string in `src/checkwash/__init__.py`
   (step 1), which `check --format json` prints only as
-  `run.checkwash_version`. So a candidate frozen before the version bump
-  still counts. If anything else in `src/` changes after the comparison,
-  the comparison runs again. Scheme S (above): from v0.11.0 a candidate
-  frozen before R does not count, because R's `src/` tree differs from every
-  earlier commit's in `doctor`'s own pin line; the sentence about a
-  candidate frozen before the version bump holds before v0.11.0.
+  `run.checkwash_version`, and, from v0.11.0, in `doctor`'s
+  `_OWN_ACTION_PIN` line, which `check` never imports (owner ruling
+  2026-11-02, D-196). So a candidate frozen before the version bump, or
+  before R, still counts. If anything else in `src/` changes after the
+  comparison, the comparison runs again.
 - **Where.** Current EC POLICY `pju-primary-execution-20261024` (T-610)
   designates LAPTOP-01AGNPJU as the default authorized execution host,
   including this release verification. Preserve this comparison's frozen
@@ -864,8 +880,8 @@ once the candidate commit is fixed, before step 5.
   both engine commits, as counts of commits and never as a false-positive
   rate (SPEC §10.2 rule 1). The JS/TS result is also added to the
   [results record](../benchmarks/javascript-replay/results.md). From
-  v0.11.0 these records land in the step-8 follow-up, not in the release PR
-  (scheme S, above).
+  v0.11.0 they go in the release PR before R is written, or in the step-8
+  follow-up (D-196).
 - **What it is not.** Both sets are in-sample. The comparison shows what
   changed between two versions on commits the project knows. It is not a
   held-out or adjudicated false-positive rate

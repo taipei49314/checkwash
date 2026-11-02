@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-03 (0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S); D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-03 (0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
 
 ## 2026-11-03: the README puts the start before the release history
 
@@ -36,14 +36,50 @@ the same from main and from v0.10.0's source (LAPTOP-01AGNPJU,
 README as built, so the 0.11 release pull request has to reword the version
 sentence.
 
-Status: a pull request from `claude/v011-readme-20261103` (main
-`066d8698`); not merged. Docs only. On LAPTOP-01AGNPJU
+Status: a pull request from `claude/v011-readme-20261103`, with main
+`dd4ec896` (D-196) merged in; not merged. Docs only. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
 2026-11-02: the tests that read README.md, with the docs-link,
 documentation-contract, packaging and state tests (133 passed, 9 existing
 symlink-privilege skips), and checkwash's own check of the change, which
 passes with no finding. Not run: other platforms. Not released: package
 metadata stays 0.10.0.
+
+
+## 2026-11-03: 0.11 keeps scheme S; the fixed-corpus candidate may differ in doctor's own pin line; two 0.12 directions (D-196)
+
+On 2026-11-02 Nelson answered three questions Claude had left open after
+D-194's review (quoted in [D-196](DECISIONS.md)). 0.11 keeps scheme S, and
+he accepts with documentation that pin updaters such as Dependabot and
+Renovate propose the tag's commit, which `doctor` rejects, and that
+zizmor's `ref-version-mismatch` audit can report the README pin's comment
+(both inferred from the tools' documentation, not run). The owner-ruled
+fixed-corpus candidate rule is relaxed: from v0.11.0 a candidate may also
+differ from the tag in `doctor`'s `_OWN_ACTION_PIN` line, which `check`
+never imports, so the comparison and the uvloop diagnostic may run on A,
+before R, with their records in the release pull request. For 0.12 he
+approved pointing the tag at the Action commit A, which moves the release
+chain's tag stage, tag visitor and source identity and the README's
+install-from-tag command, and said that D-191's residual, deliberate for
+0.11, is to change in 0.12; both designs go to him first. RELEASING and
+KNOWN-ISSUES-next say so; no code or test changes.
+
+Status: merged. Nelson approved PR #582 at 2026-11-02T19:22:01Z (the
+button labelled 「核准合併 #582」, which Claude wrote, answering Claude's
+「要我用 merge commit 合併 #582 嗎？」), and #582 merged as main `dd4ec896`
+at 19:22:15Z (a merge commit, parents `066d8698` and `683e9786`). Its PJU
+receipt (head `683e9786`, base and collector main `066d8698`, manifest
+SHA256 `3edfbbb31278bd8ddf73fad6a44b416c27b20cbdd989b1b284ff9a561a50085e`)
+is published as `evidence/pr582-3edfbbb31278-20261102` (commit `0ef6f8c4`),
+and intake run 41504508274 set the four required checks. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-02: the receipt's full suite (`pytest tests`, `tests/gates`
+included, xdist `-n 2`), whose JUnit testsuite counts `tests="22511"`:
+22444 testcase entries, 22419 passed and 25 skipped, plus 67 subtests, with
+0 failures and 0 errors; both Action replays and the source, wheel and pyz
+qualifications exited 0; and checkwash's own check passed with no finding.
+Docs only. Not run: other platforms. Not released: package metadata stays
+0.10.0.
 
 ## 2026-11-02: doctor accepts the release's own Action pin (D-194)
 
@@ -99,21 +135,25 @@ non-UTF-8 coding declaration and dynamic or shadowing code; both are now
 refused. D-194's *Review* and *Second review* list what was accepted and
 what was declined.
 
-Status: PR #581 from `claude/doctor-s-d194-20261102`, with main `6e8ca826`
-(D-195) merged in; not merged. On LAPTOP-01AGNPJU
-(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
-2026-11-02, its PJU receipt on `abcf2146` (base and collector main
+Status: merged. Nelson approved PR #581 at 2026-11-02T17:46:24Z (the
+button labelled 「核准合併 #581」, which Claude wrote, answering Claude's
+「要我用 merge commit 合併 #581 嗎？」), and #581 merged as main `066d8698`
+at 17:46:41Z (a merge commit, parents `6e8ca826` and `5e6474e9`). Its PJU
+receipt on the final head (head `5e6474e9`, base and collector main
 `6e8ca826`, manifest SHA256
-`cd7874938a64398ff56b188f3e234658c8f3717b479833b4a8b128a73911c022`),
-published as `evidence/pr581-cd7874938a64-20261102` (commit `ebe630d1`):
-the full suite (`pytest tests`, `tests/gates` included, xdist `-n 2`),
-whose JUnit testsuite counts `tests="22511"`: 22444 testcase entries, 22419
-passed and 25 skipped, plus 67 subtests, with 0 failures and 0 errors; both
-Action replays and the source, wheel and pyz qualifications exited 0; and
+`e077ffb2e6dad0386af362b26efca8d4ee31baa50533f22331faacf98152e7da`) is
+published as `evidence/pr581-e077ffb2e6da-20261102` (commit `bc7291bd`),
+and intake run 41490207402 set the four required checks. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-02: that receipt's full suite (`pytest tests`, `tests/gates`
+included, xdist `-n 2`), whose JUnit testsuite counts `tests="22511"`:
+22444 testcase entries, 22419 passed and 25 skipped, plus 67 subtests,
+with 0 failures and 0 errors; both Action replays and the source, wheel and
+pyz qualifications exited 0; the earlier receipt on `abcf2146`
+(`evidence/pr581-cd7874938a64-20261102`) gave the same counts; and
 checkwash's own check passed with eight warnings and none at or above high
-(D-194). The final head differs only in this status and D-194's evidence
-paragraph, and its own receipt sets the four required checks. Not run:
-other platforms. Not released: package metadata stays 0.10.0.
+(D-194). Not run: other platforms. Not released: package metadata stays
+0.10.0.
 
 
 ## 2026-11-02: five test relaxations from agent sessions are restored (D-195)
