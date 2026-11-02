@@ -725,6 +725,7 @@ def validate_own_action_pin(source_root, current, *, announced, pr_head=None):
         version, advertised = B.release_versions(source_root, head)
         if version == advertised == B.release_versions(source_root, base, "the base")[0]:
             return {"applies": False}
+    B.single_doctor_module(source_root, head)
     raw = git(source_root, "show", head + ":" + DOCTOR_PATH)
     previous, own, index = doctor_action_pins(raw)
     require(previous == sha(announced, 40), "doctor's previous Action pin is not the announced pin")

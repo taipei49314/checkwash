@@ -47,8 +47,10 @@ between a release merge and its step-8 follow-up
 ([RELEASING](RELEASING.md)). It also refuses a head whose
 `src/checkwash/doctor.py` own Action pin differs from its previous pin, read
 as the release bridge reads them: only a release PR's last commit sets the
-own pin. Like the release bridge's rule, this binds the pin text and its
-single binding; doctor's other logic is reviewed content. These refusals hold
+own pin, and a head whose `src/checkwash/` holds another doctor module. Like
+the release bridge's rule, this binds the pin text, its single static
+binding and a single doctor module; doctor's other logic is reviewed
+content. These refusals hold
 only for receipts verified at a trusted ref that contains them, so from
 D-194's merge on, ordinary receipts are dispatched only from main.
 

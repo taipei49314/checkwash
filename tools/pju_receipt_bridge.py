@@ -19,6 +19,7 @@ import re
 import stat
 import subprocess
 import tarfile
+import tokenize
 import tomllib
 import urllib.error
 import urllib.request
@@ -566,14 +567,19 @@ def release_versions(root, head, where="the head"):
 DOCTOR_PATH = "src/checkwash/doctor.py"
 OWN_PIN_LINE = re.compile(rb'_OWN_ACTION_PIN = "([0-9a-f]{40})"')
 PREVIOUS_PIN_LINE = re.compile(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"')
+# Names through which a module can bind a global the parse does not show.
+DYNAMIC_NAMES = {"exec", "eval", "compile", "globals", "locals", "vars", "setattr", "delattr", "__import__"}
+DYNAMIC_MODULES = {"importlib", "builtins"}
 
 
 def doctor_action_pins(raw):
     """Doctor's previous and own Action pins, and the own line's index (scheme S, D-194).
 
     The two lines are read as text, then checked against the parsed module,
-    which is never executed: each name is bound once, by its own line, and no
-    other node binds or names it. Doctor's other logic is reviewed content.
+    which is never executed: the file is UTF-8 as import reads it, each name is
+    bound once, by its own line, no other node binds or names it, and nothing
+    reaches the module namespace dynamically. Doctor's other logic is reviewed
+    content.
     """
     lines = raw.split(b"\n")
     previous = [index for index, line in enumerate(lines) if line.startswith(b"_PREVIOUS_ACTION_PIN")]
@@ -583,6 +589,12 @@ def doctor_action_pins(raw):
     require(old is not None and new is not None, "doctor's Action pin lines differ from the exact shape")
     # Python also ends a line at a lone CR, and a form feed may open a module-level statement: LF lines hide both.
     require(b"\r" not in raw and b"\x0c" not in raw, "doctor.py holds a carriage return or form feed")
+    # Import decodes by a PEP 263 declaration, which a parse of decoded text ignores.
+    try:
+        encoding = tokenize.detect_encoding(io.BytesIO(raw).readline)[0]
+    except SyntaxError as error:  # an unknown or malformed declaration
+        raise ValueError("doctor.py declares an encoding other than UTF-8") from error
+    require(encoding == "utf-8", "doctor.py declares an encoding other than UTF-8")
     try:
         tree = ast.parse(raw.decode("utf-8"), DOCTOR_PATH)
     except (SyntaxError, ValueError, RecursionError, MemoryError) as error:  # undecodable, invalid or too deeply nested
@@ -603,14 +615,29 @@ def doctor_action_pins(raw):
                 type(item) is str and item in pins for _field, value in ast.iter_fields(node)
                 for item in (value if isinstance(value, list) else [value]))
         require(not named, "doctor binds or names an Action pin outside its two lines")
+    for node in ast.walk(tree):
+        dynamic = (isinstance(node, ast.Name) and node.id in DYNAMIC_NAMES
+                   or isinstance(node, ast.Attribute) and node.attr == "__dict__"
+                   or isinstance(node, ast.alias) and node.name.split(".")[0] in DYNAMIC_MODULES
+                   or isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] in DYNAMIC_MODULES)
+        require(not dynamic, "doctor reaches its namespace dynamically (exec, eval, globals, setattr, __dict__, importlib ...)")
     return pins["_PREVIOUS_ACTION_PIN"][1], pins["_OWN_ACTION_PIN"][1], own[0]
+
+
+def single_doctor_module(root, commit):
+    """Nothing beside doctor.py, such as a doctor/ package, can be imported as checkwash.doctor."""
+    names = git(root, "ls-tree", "-z", "--name-only", commit + ":src/checkwash").split(b"\0")
+    require([name for name in names if name == b"doctor" or name.startswith(b"doctor.")] == [b"doctor.py"],
+            "src/checkwash holds another doctor module beside doctor.py")
 
 
 def validate_ordinary_head(root, head):
     """A head that changes the version is a release PR (scheme S, D-194)."""
     version, advertised = release_versions(root, head)
     require(version == advertised, f"head version {version} differs from the advertised release {advertised}; "
-            "a release PR's checks are published only through the release bridge's pr stage (tools/pju_release_bridge.py)")
+            "a release PR's checks are published only through the release bridge's pr stage (tools/pju_release_bridge.py), "
+            "and a branch that took main between a release merge and its step-8 follow-up waits for that follow-up")
+    single_doctor_module(root, head)
     previous, own, _index = doctor_action_pins(git(root, "show", head + ":" + DOCTOR_PATH))
     require(own == previous, "doctor's own Action pin differs from its previous pin at a non-release head; "
             "only a release PR's last commit sets doctor's own Action pin (scheme S, D-194)")

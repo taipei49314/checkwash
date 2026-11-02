@@ -1715,8 +1715,11 @@ and `arrival_k_selection_pos` for row 179, and the control
   commit before the tag, and merge every release pull request with a merge
   commit; its last sentence, on the log cut and baseline rotation after the
   release, is outside this entry), and 「先再討論」 (discuss it further
-  first). Its message at 09:04:19Z described the scheme. At 09:05:05Z
-  Nelson clicked 「開始」; only the label is sent. The commit before the tag
+  first). Its message at 09:04:19Z described the scheme and, since the
+  session ran over Remote Control, where the box may not show, listed the
+  two choices in its text, 「開始」 first. At 09:05:05Z Nelson answered
+  「開始」, the first button's label; the log does not tell a click from a
+  typed reply. The commit before the tag
   in that option text is implemented as `vX.Y.Z^2^1`: the tag is the merge
   commit, and the commit is its second parent's parent. He had not been
   told then of the pin-updater consequence below; Claude asked about it on
@@ -1747,7 +1750,7 @@ and `arrival_k_selection_pos` for row 179, and the control
   `doctor` 0.10 does not accept 0.11's A_N either; the design review
   recommended accepting it with documentation, and Claude recommended the
   same. Claude said it would not start D-194 before his confirmation. At
-  15:04:00Z Nelson clicked 「接受，寫進文件」.
+  15:04:00Z Nelson answered with the first button's label, 「接受，寫進文件」.
 
 Claude maintains checkwash under Nelson's 2026-10-27 delegation
 (「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
@@ -1834,13 +1837,21 @@ release's and whose tree differs from the tag's in one `doctor` line.
    - *How it reads `doctor`:* the two pin lines are read as text and checked
      against the parsed module, which is never executed. `doctor.py` must
      hold no carriage return or form feed, either of which can hide a
-     statement from a reader of line-feed lines; each name must be bound
-     once, by a module-level assignment on its own line; and no other node
-     may bind or name either pin (a `def`, class, argument, import alias,
-     `global`, attribute, keyword or string with that name, or `import *`).
-     A `doctor.py` that does not parse is refused. The rule binds the pin
-     text and its single binding; `doctor`'s other logic is the release pull
-     request's reviewed content.
+     statement from a reader of line-feed lines, and must be UTF-8 as import
+     reads it (no other PEP 263 declaration and no byte-order mark, since an
+     escaped newline in a comment would otherwise bind a pin at import); each
+     name must be bound once, by a module-level assignment on its own line;
+     no other node may bind or name either pin (a `def`, class, argument,
+     import alias, `global`, attribute, keyword or string with that name, or
+     `import *`); and nothing may reach the module namespace dynamically
+     (`exec`, `eval`, `compile`, `globals`, `locals`, `vars`, `setattr`,
+     `delattr`, `__import__`, `__dict__`, `importlib` or `builtins`).
+     `src/checkwash/` must hold no other `doctor` module beside `doctor.py`,
+     such as a `doctor/` package that import would take instead. A
+     `doctor.py` that does not parse is refused. The rule binds the pin text
+     and its single static binding; code elsewhere that changes `doctor` at
+     import, and `doctor`'s other logic, are the release pull request's
+     reviewed content.
    - *What it checks:* `doctor`'s previous pin is the announced pin, and
      every `taipei49314/checkwash/action@` reference in README.md, in any
      case and read as its whole token, is exactly that pin, so a tag, a
@@ -2028,9 +2039,10 @@ schemas and the workflow inputs are unchanged.
   (above).
 - No release stage replays the Action at A; each replays it at its head
   (above).
-- The rule binds `doctor`'s pin text and its single binding. `doctor`'s
-  other logic, such as `_ACCEPTED` and the checks that use it, is the
-  release pull request's reviewed content.
+- The rule binds `doctor`'s pin text, its single static binding and a
+  single `doctor` module. `doctor`'s other logic, such as `_ACCEPTED` and
+  the checks that use it, and code in other modules that could change
+  `doctor` at import, are the release pull request's reviewed content.
 - A failure after the tag is pushed cannot be fixed by moving the tag; the
   `main` stage and the local `check --stage tag` on M come before it.
 - At `pr` and `main` the discriminator skips the rule only when the head's
@@ -2122,21 +2134,25 @@ apply, and the recovery from a squash and from a commit after R),
 applies, the base version included, the merge shape, twenty-three R, A,
 README and `doctor` shapes refused at `pr`, `main` and `tag`, an A that
 keeps an earlier own pin, a gitlink change that `.gitmodules` hides, sixteen
-other bindings of the pin names, a `doctor.py` that does not parse, shallow
-and missing parents, the native parent order, the wiring in
+other bindings of the pin names, a `doctor.py` that does not parse or is not
+UTF-8, ten ways of reaching its namespace dynamically, a second `doctor`
+module, shallow and missing parents, the native parent order, the wiring in
 `validate_packet`, and the ordinary bridge's refusals before any GitHub
 read), `tests/test_packaging.py::test_release_action_commit_follows_scheme_s`,
 and the shared chain builder `tests/own_action_pin_fixtures.py`, which pytest
 does not collect. No other existing expectation changed. The documented test
-count moves to 22431 collected.
+count moves to 22444 collected (with D-195, merged from main).
 
 **What runs before merge.** On the pull request's final head, on
 LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the targeted
-tests (the new test files, `tests/test_doctor.py` and the other `doctor`
-tests, `tests/test_tools_global_names.py`, `tests/test_pju_release_bridge.py`,
-`tests/test_pju_receipt_bridge.py`, `tests/test_packaging.py` and the
-documentation tests); the full suite (`pytest tests`, `tests/gates`
-included); dogfood (`checkwash check` on the pull request's range with
+tests, these twelve files: `tests/test_pju_own_action_pin.py`,
+`tests/test_own_action_pin.py`, `tests/test_doctor_own_action_pin.py`,
+`tests/test_doctor.py`, `tests/test_issue436_doctor_messages.py`,
+`tests/test_tools_global_names.py`, `tests/test_pju_release_bridge.py`,
+`tests/test_pju_receipt_bridge.py`, `tests/test_packaging.py`,
+`tests/test_docs_links.py`, `tests/test_documentation_contracts.py` and
+`tests/test_state_claims.py` (the 272 below counted a list that differs from
+it); the full suite (`pytest tests`, `tests/gates` included); dogfood (`checkwash check` on the pull request's range with
 `--fail-on high`); and the pull request's ordinary PJU receipt, whose intake
 sets the four required checks. This pull request needs no same-host R29
 differential: its only `src/` change is `doctor.py`, which `check` never
@@ -2226,7 +2242,44 @@ Declined:
   on `tests/test_doctor_own_action_pin.py` (Argon): the import follows
   `tests/test_issue436_doctor_messages.py`, and the finding is a warning.
 
-The fixes add 38 collected tests, so the suite collects 22431.
+**Second review.** Two Claude agents re-reviewed the fixes at `8c75826e`:
+one reran the first round's reproductions and attacked the new code, the
+other checked the records against the code and their sources. Every
+accepted first-round finding reproduced as fixed, and a lifecycle probe of
+21 steps (ordinary pull requests, the release, a pull request after the
+merge, abandoning a release, a fix after the merge, step 8, the baseline
+rotation and a 0.12 release) refused no legitimate flow. Accepted and fixed:
+
+- A PEP 263 declaration such as `raw_unicode_escape` let an escaped
+  newline in a comment bind a pin at import, unseen by a parse of the
+  UTF-8 text; `doctor.py` must now be UTF-8 as import reads it (the attack
+  reviewer).
+- Dynamic rebinding (`exec`, a computed `globals()` key, `setattr` on the
+  module) and a `src/checkwash/doctor/` package that import takes instead
+  passed, while the records read as if every rebinding were refused. Both
+  are now refused, and the records say that the rule binds a single static
+  binding in a single module (the attack reviewer).
+- The ordinary bridge's version refusal now also names a branch that took
+  main between a release merge and its step-8 follow-up, as the
+  release-process reviewer had asked (left out of the first fixes, the
+  records reviewer).
+- The 「開始」 bullet no longer says that Nelson clicked; the targeted-test
+  files are named; RELEASING gives the recovery after a rebase merge too and
+  says that the comparison reruns (the records reviewer).
+
+Partly adopted: of the `doctor` reviewer's three suggested tool tests, the
+`--pr-head` one was added; tests for the staged-content check (through a
+`post-index-change` hook) and for the `GIT_*` environment strip were not.
+Both guard the advisory tool, and the release bridge refuses a bad R
+whatever the tool did. The tool's restore puts back `doctor.py` and its
+index entry; anything a hook stages beside it stays staged. The message of
+`8c75826e` says each new pinning test fails against `04b469fa`'s tools; the
+four invariant tests in `tests/test_doctor_own_action_pin.py` and the
+`--pr-head` assertion pin invariants that already held there, and pass (the
+records reviewer).
+
+The first fixes added 38 collected tests (22431). The second review's fixes
+add 12, and D-195, merged from main, one, so the suite collects 22444.
 
 Evidence after review: TBD-D194-EVIDENCE2
 

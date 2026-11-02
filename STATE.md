@@ -50,15 +50,18 @@ and on every head outside a release (in the ordinary receipt bridge), check
 the rule at `pr` and `main` when the head's version differs from its
 base's, and make the pre-tag check `check --stage tag`; RELEASING now gives
 the recovery routes, says what is procedure rather than enforced, and moves
-the fixed-corpus records to the step-8 follow-up. D-194's *Review* lists
-what was accepted and what was declined.
+the fixed-corpus records to the step-8 follow-up. A second review of the
+fixes found two more ways to bind a pin that the parse did not see, a
+non-UTF-8 coding declaration and dynamic or shadowing code; both are now
+refused. D-194's *Review* and *Second review* list what was accepted and
+what was declined.
 
-Status: a pull request from `claude/doctor-s-d194-20261102` (main
-`0e6acc35`), in review; not merged. On LAPTOP-01AGNPJU
+Status: PR #581 from `claude/doctor-s-d194-20261102`, with main `6e8ca826`
+(D-195) merged in; in review, not merged. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
 2026-11-02: the targeted tests pass, and checkwash's own check passes with
-eight warnings and none at or above high (D-194). The full suite and the
-PJU receipt follow review. Not run: other platforms. Not released: package
+eight warnings and none at or above high (D-194). The PJU receipt of the
+final head follows. Not run: other platforms. Not released: package
 metadata stays 0.10.0.
 
 

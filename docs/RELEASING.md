@@ -688,11 +688,13 @@ recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
 - **Merge commit only**, with the PR up to date with main: M's first parent is
   the base, its second is R, and its tree is R's. A squash or a rebase leaves
   A off main, and the `main` stage refuses it.
-- **After an accidental squash S**, which keeps R's own line, open a
-  follow-up PR from S whose first commit sets `doctor`'s own line back to the
-  previous pin and whose last commit is R, written by `write` on it; collect
-  it through the release bridge's `pr` stage and merge it with a merge
-  commit. The reset commit is then the release's Action commit.
+- **After an accidental squash or rebase merge**, which leaves R's own line
+  on main's tip S, open a follow-up PR from S whose first commit sets
+  `doctor`'s own line back to the previous pin and whose last commit is R,
+  written by `write` on it; collect it through the release bridge's `pr`
+  stage, merge it with a merge commit, and run the fixed-corpus comparison
+  again, since R's own line changed. The reset commit is then the release's
+  Action commit.
 - **A fix after the release merge**, before the tag, follows the same
   pattern on main's tip: a PR whose first commit sets the own line back to
   the previous pin, then the fix, and whose last commit is R, written on the
@@ -762,11 +764,16 @@ previous-stage link and before the product evidence; the report records
   PR that also moves `release/advertised.toml` still needs R, and the rule
   cannot re-verify a release before v0.11.0.
 - `doctor.py`'s two pin lines are read as text and checked against the
-  parsed module, which is never executed: no carriage return or form feed,
-  each name bound once, by a module-level assignment on its own line, and no
-  other binding or mention of either name (a `def`, class, argument, import
-  alias, `global`, attribute, keyword or string, or `import *`). A
-  `doctor.py` that does not parse is refused.
+  parsed module, which is never executed: no carriage return or form feed;
+  UTF-8 as import reads it, with no other PEP 263 declaration and no
+  byte-order mark; each name bound once, by a module-level assignment on its
+  own line; no other binding or mention of either name (a `def`, class,
+  argument, import alias, `global`, attribute, keyword or string, or
+  `import *`); and no dynamic reach into the namespace (`exec`, `eval`,
+  `compile`, `globals`, `locals`, `vars`, `setattr`, `delattr`, `__import__`,
+  `__dict__`, `importlib` or `builtins`). `src/checkwash/` holds no other
+  `doctor` module, such as a `doctor/` package that import would take
+  instead. A `doctor.py` that does not parse is refused.
 - `doctor`'s previous pin is the announced pin, the trusted ref's
   `ACTION_SHA`, and every `taipei49314/checkwash/action@` reference in
   README.md, in any case and read as its whole token, is exactly that pin, so
@@ -782,9 +789,11 @@ previous-stage link and before the product evidence; the report records
   gitlink change.
 - A shallow clone or a missing parent fails closed.
 
-The rule binds the pin text and its single binding. `doctor`'s other logic,
-such as `_ACCEPTED` and the checks that use it, is the release PR's reviewed
-content. The ordinary receipt bridge reads the pin lines the same way.
+The rule binds the pin text, its single static binding and a single
+`doctor` module. `doctor`'s other logic, such as `_ACCEPTED` and the checks
+that use it, and code in other modules that could change `doctor` at
+import, are the release PR's reviewed content. The ordinary receipt bridge
+reads the pin lines the same way.
 
 Users verify the pin in a clone: `git -C checkwash rev-parse 'vX.Y.Z^2^1'`
 gives A, and `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` shows the one

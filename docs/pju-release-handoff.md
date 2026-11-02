@@ -67,14 +67,17 @@ version and the base's version; at `tag` and later it always applies. The
 which it differs only in that line, gitlinks included
 (`--ignore-submodules=none`); A holds the previous pin on both of doctor's pin
 lines. Those lines are read as text and checked against the parsed module,
-which is never executed: doctor.py holds no carriage return or form feed, and
-each name is bound once, on its own line, and nowhere else. Every
+which is never executed: doctor.py holds no carriage return or form feed, is
+UTF-8 as import reads it, reaches its namespace by no dynamic call, and binds
+each name once, on its own line, and nowhere else, and `src/checkwash/` holds
+no other doctor module. Every
 `taipei49314/checkwash/action@` reference in README.md, in any case and read
 as a whole token, is the announced pin. From `main` on, the head is the
 two-parent merge of the base and R, with R's tree, in that order in GitHub's
 own commit object; at `main`, R is the admitted `pr` report's head. The rule
-binds the pin text and its single binding; doctor's other logic is the
-release PR's reviewed content. A pre-0.11 release has no own-pin lines, so
+binds the pin text, its single static binding and a single doctor module;
+doctor's other logic, and code elsewhere that could change it at import, are
+the release PR's reviewed content. A pre-0.11 release has no own-pin lines, so
 this bridge no longer re-verifies one.
 
 ## 1. Prepare reviewed sources and capture native metadata

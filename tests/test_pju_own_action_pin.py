@@ -269,6 +269,49 @@ def test_a_doctor_that_does_not_parse_is_refused(extra):
         B.doctor_action_pins(doctor().encode() + extra)
 
 
+def test_a_doctor_in_another_encoding_is_refused():
+    # Import honours a PEP 263 declaration: an escaped newline in a comment binds the pin again there.
+    body = doctor().encode()
+    hidden = b"# -*- coding: raw_unicode_escape -*-\n" + body + b"# pins\\u000a_OWN_ACTION_PIN = '" + b"e" * 40 + b"'\n"
+    for raw in (hidden, b"\xef\xbb\xbf" + body, b"# -*- coding: latin-1 -*-\n" + body, b"# coding: no-such-codec\n" + body):
+        with pytest.raises(ValueError, match="encoding other than UTF-8"):
+            B.doctor_action_pins(raw)
+    assert B.doctor_action_pins(b"# -*- coding: utf-8 -*-\n" + body) == (PREVIOUS, PREVIOUS, 3)
+
+
+DYNAMIC = {
+    "exec": "exec('_Z = 0')", "eval": "_Z = eval('0')", "globals": "_Z = globals()['_OWN_' + 'ACTION_PIN']",
+    "setattr": "import sys\nsetattr(sys.modules[__name__], '_OWN_ACTION' + '_PIN', '')", "vars": "_Z = vars()",
+    "dict": "import sys\nsys.modules[__name__].__dict__.update({})", "dunder-import": "_Z = __import__('os')",
+    "importlib": "import importlib", "from-importlib": "from importlib import import_module", "builtins": "import builtins",
+}
+
+
+@pytest.mark.parametrize("extra", list(DYNAMIC.values()), ids=list(DYNAMIC))
+def test_a_doctor_that_reaches_its_namespace_dynamically_is_refused(extra):
+    with pytest.raises(ValueError, match="reaches its namespace dynamically"):
+        B.doctor_action_pins(doctor().encode() + extra.encode() + b"\n")
+
+
+def test_another_doctor_module_beside_doctor_py_is_refused(tmp_path):
+    shadow = {"src/checkwash/doctor/__init__.py": "_OWN_ACTION_PIN = '" + "e" * 40 + "'\n"}
+    root = tmp_path / "release"
+    b = repository(root)
+    write(root, {"pyproject.toml": project("0.11.0"), **shadow})
+    a = commit(root, "A")
+    set_own(root, a)
+    r = commit(root, "R")
+    c = dict(root=root, B=b, A=a, R=r, M=git(root, "commit-tree", r + "^{tree}", "-p", b, "-p", r, "-m", "merge"))
+    for stage, head, pr_head in (("pr", r, None), ("main", c["M"], r), ("tag", c["M"], None)):
+        with pytest.raises(ValueError, match="another doctor module"):
+            verify(c, stage, head, pr_head=pr_head)
+    plain = tmp_path / "ordinary"
+    repository(plain)
+    write(plain, shadow)
+    with pytest.raises(ValueError, match="another doctor module"):
+        B.validate_ordinary_head(plain, commit(plain, "shadow"))
+
+
 def test_a_shallow_or_missing_parent_fails_closed(good, tmp_path):
     shallow = tmp_path / "shallow"
     git(tmp_path, "clone", "-q", "--depth", "1", good["root"].as_uri(), str(shallow))
