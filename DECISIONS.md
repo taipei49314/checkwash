@@ -2510,3 +2510,122 @@ engine and with the published v0.10.0 pyz, passes with no finding. The full
 suite runs in this change's PJU receipt. Not run: other platforms, so the
 `os.linesep` form of 359 is run on Windows only; by reading, POSIX writes
 `\n`, which is `os.linesep` there.
+
+## D-196 (2026-11-02): 0.11 keeps scheme S with its pin-updater and zizmor consequence accepted, the fixed-corpus candidate may differ in `doctor`'s own pin line, and 0.12 moves the tag to the Action commit and changes D-191's residual
+
+**Authority.**
+
+- At 2026-11-02T13:53:42Z, reporting D-194's first review, Claude listed
+  three questions for Nelson:
+  「1. zizmor 那個後果：接受並寫進文件，還是改註解寫法。」
+  (the zizmor consequence: accept it and document it, or change how the
+  comment is written),
+  「2. Argon 提的替代設計：讓 tag 指向 A，而不是指向 merge commit。這樣 Dependabot、Renovate、zizmor、`git ls-remote` 都能直接用，但等於改了你核准的方案，發版驗證鏈也要跟著重做。」
+  (Argon's alternative: point the tag at A instead of the merge commit;
+  Dependabot, Renovate, zizmor and `git ls-remote` then work as they are,
+  but it changes the scheme he approved, and the release verification chain
+  must be redone) and
+  「3. 可選：把 R29 的候選版規則改成允許 doctor own 那一行不同，R29 就能在 R 之前跑，流程比較簡單。這是你裁決過的規則，要你點頭才改。」
+  (optional: let R29's candidate rule allow a different `doctor` own line,
+  so that R29 can run before R, which is simpler; it is his ruling, so it
+  changes only with his consent). At 15:23:12Z it repeated them in short:
+  「1. zizmor 那個後果：接受並寫進文件，還是改註解寫法。」,
+  「2. 「tag 指向 A」的替代設計。」 and
+  「3. 可選：放寬 R29 候選版規則，讓比對可以在 R 之前跑。」.
+- At 15:24:21Z Nelson wrote one message of three lines: 「1.接受寫文件」 /
+  「2.核可」 / 「3.放寬」 (1. accept, write it into the documentation; 2.
+  approved; 3. relax it).
+- Claude then found that pointing the tag at A would make item 1's
+  consequence disappear, and that the README's install-from-tag command
+  would then install A, whose `doctor` accepts only the previous pin, which
+  it had not told him. At 15:26:41Z it asked
+  「「tag 指向 A」有一個你核可前不知道的代價：README 寫的 `pipx install git+…@v0.11.0` 會裝到 A，而 A 的 doctor 不認 v0.11.0 自己的 pin；發版驗證鏈的 tag 階段和 tag visitor 也要重做。要怎麼排？」
+  (pointing the tag at A has a cost he did not know when he approved it:
+  the README's `pipx install git+…@v0.11.0` would install A, whose `doctor`
+  does not accept v0.11.0's own pin, and the release chain's tag stage and
+  tag visitor must be redone; how should it be scheduled?), with three
+  options Claude wrote: 「0.11 照 S，0.12 改 (Recommended)」,
+  「0.11 就改 tag A」 and 「不採用 tag A」. At 15:29:13Z Nelson answered in
+  his own words 「不採用a的影響是什麼」 (what is the impact of not adopting
+  A?).
+- At 15:29:58Z Claude described the impact (gloss of its Chinese text): not
+  adopting it leaves Dependabot and Renovate proposing the tag's commit,
+  which `doctor` rejects, zizmor's `ref-version-mismatch` reporting the
+  README pin's comment, and `git ls-remote` unable to show the pin, all
+  inferred from those tools' documentation; adopting it removes those, but
+  the install-from-tag CLI's `doctor` then rejects its own release's pin,
+  and the tag stage, the tag visitor and the source identity must be
+  reworked, a path whose first real run would be a release; Claude
+  recommended 0.11 with scheme S and the tag change in 0.12. With it,
+  Claude asked 「「tag 指向 A」要怎麼排？」 (how should pointing the tag at A
+  be scheduled?), with two buttons Claude wrote, 「0.11 照 S，0.12 改」
+  (0.11 with S, change it in 0.12) and 「0.11 就改 tag A」. At 15:30:53Z
+  Nelson answered with the first button's label, 「0.11 照 S，0.12 改」.
+- At 15:43:21Z Nelson wrote 「d191是我刻意的 這部分12要改掉」 (D-191 was
+  deliberate on my part; this part is to be changed in 0.12). At 15:44:21Z
+  Claude replied with its reading (gloss): D-191 stays as it is in 0.11,
+  where #419 closes as a documented residual and an edit that changes no
+  behaviour can hold a weakened test at warn through E1's repair evidence;
+  0.12 removes that residual, and before changing it Claude brings him a
+  design with its costs, such as which honest refactors would then block.
+  Nelson has not corrected that reading.
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
+[RELEASING](docs/RELEASING.md)). Claude wrote the questions, the options and
+the buttons' labels; for a button answer the log holds only the label.
+These answers cover this entry and the change to the owner-ruled
+fixed-corpus candidate rule below. Every detail not quoted above is
+Claude's under that delegation, including this entry's wording and where
+the documents say it. None of it is Nelson's personal review.
+
+**What is decided.**
+
+1. *0.11 keeps scheme S* as D-194 implements it: the tag is the release
+   merge commit M, and the README recommends the Action commit A =
+   `vX.Y.Z^2^1`. Nelson accepts, with documentation, that pin updaters such
+   as Dependabot and Renovate will propose the tag's commit, which `doctor`
+   rejects (D-194), and that zizmor's `ref-version-mismatch` audit (zizmor
+   1.14.0 and later) can report the README pin's `# vX.Y.Z` comment for the
+   same reason, while its pedantic `stale-action-refs` can report that no
+   tag points to A. These tool behaviours are inferred from the tools'
+   documentation, not run. README, action/README and KNOWN-ISSUES-next
+   already state them; RELEASING and KNOWN-ISSUES-next now also say they
+   are accepted.
+2. *The fixed-corpus candidate rule is relaxed* (owner ruling 2026-10-19,
+   R29, amended): a candidate may differ from the commit to be tagged in the
+   version string in `src/checkwash/__init__.py` and, from v0.11.0, in
+   `doctor`'s `_OWN_ACTION_PIN` line. `check`, which the comparison runs,
+   never imports `doctor` (`tests/test_doctor_own_action_pin.py::test_check_never_imports_doctor`),
+   so that line cannot change its output. From v0.11.0 the comparison and
+   the targeted uvloop diagnostic may therefore run on A, or on an earlier
+   freeze that differs from the tag's `src/` only in those two lines, and
+   their records can go in the release PR's content before R is written, as
+   v0.10.0's did; records written after R go in the step-8 follow-up. Any
+   other `src/` change after the comparison still runs it again. This
+   supersedes D-194's statement that the comparison runs on R's tree with
+   its records in the step-8 follow-up, and its note that relaxing the rule
+   was an owner decision not taken.
+3. *0.12 points the tag at the Action commit A* (approved). Dependabot,
+   Renovate, zizmor and `git ls-remote` then see the README pin as the tag's
+   commit. 0.12 must also rework what that moves: the release chain's tag
+   stage, tag visitor and published-source identity, which today require
+   the tag to peel to the qualified merge commit; `release/advertised.toml`'s
+   commit and the `tests/test_packaging.py` relation; and the README's
+   install-from-tag command, which would install A, whose `doctor` accepts
+   only the previous pin. Its design goes to Nelson before it is built.
+4. *0.12 changes D-191's residual* (Nelson's words above). Until then D-191
+   stands as written. The design, with what it would block, goes to Nelson
+   before it is built.
+
+**Maintainer text.** This entry, and RELEASING's fixed-corpus *Candidate*
+and *Record* bullets, which carry the owner ruling of item 2. No code, test,
+fixture, SPEC or THREATMODEL change, so no R29 or other differential runs
+for this change.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): `tests/test_docs_links.py`,
+`tests/test_documentation_contracts.py`, `tests/test_state_claims.py` and
+`tests/test_packaging.py`; checkwash's own check on the pull request's range
+at `--fail-on high`; and the pull request's PJU receipt, whose intake sets
+the four required checks. Other platforms: NOT_RUN.
