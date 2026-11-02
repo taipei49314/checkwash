@@ -549,6 +549,26 @@ def validate_candidate_action(packet, records, head, base, source_root, trusted_
         validate_action(packet, {"dogfood": check_path, "action_replay": replay_path}, head, base, source_root, action_sha=head)
 
 
+def release_versions(root, head):
+    """The head's pyproject version and the advertised release version it records."""
+    versions = []
+    for path, table in (("pyproject.toml", "project"), ("release/advertised.toml", "release")):
+        try:
+            value = tomllib.loads(git(root, "show", head + ":" + path).decode("utf-8")).get(table)
+        except ValueError as error:  # failed Git read, undecodable bytes or invalid TOML
+            raise ValueError(path + " at the head could not be read or parsed") from error
+        require(type(value) is dict and type(value.get("version")) is str, path + " at the head has no " + table + " version")
+        versions.append(value["version"])
+    return tuple(versions)
+
+
+def validate_ordinary_head(root, head):
+    """A head that changes the version is a release PR (scheme S, D-194)."""
+    version, advertised = release_versions(root, head)
+    require(version == advertised, f"head version {version} differs from the advertised release {advertised}; "
+            "a release PR's checks are published only through the release bridge's pr stage (tools/pju_release_bridge.py)")
+
+
 def validate_packet(packet, *, repository, pr, base, head, source_tree, collector, source_root, trusted_root):
     manifest = packet.manifest
     exact_keys(manifest, "schema_version kind repository pr_number base_sha head_sha source_tree host provenance collector_source_sha "
@@ -704,6 +724,7 @@ def main(argv=None):
         admit_environment(args.trusted_workflow_sha, os.environ)
         require(git(args.trusted_root, "rev-parse", "HEAD").decode().strip() == args.trusted_workflow_sha, "trusted checkout differs")
         require(git(Path(args.receipt_root).parent, "rev-parse", "HEAD").decode().strip() == sha(args.receipt_commit, 40), "receipt commit differs")
+        validate_ordinary_head(args.source_root, sha(args.head, 40))
         api = GitHub(os.environ.get("GH_TOKEN"))
         source_tree = live_pr(api, args.repository, args.pr, sha(args.head, 40), sha(args.base, 40))
         packet = Packet(args.receipt_root, args.manifest_sha256)

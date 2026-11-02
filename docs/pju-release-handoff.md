@@ -59,6 +59,16 @@ and `PJU release evidence (pr)`. Other stages create their own
 `PJU release evidence (<stage>)` check only. A legacy four-green PR report alone
 does not prove the new PR visitor/verdict extras.
 
+From v0.11.0 every stage also checks the release's own Action pin (scheme S,
+D-194; [RELEASING](RELEASING.md)). At `pr` and `main` the rule applies when the
+head's `pyproject.toml` version differs from its `release/advertised.toml`
+version; at `tag` and later it always applies. The `pr` head is R, whose one
+parent A it names in doctor's own pin line and from which it differs only in
+that line. From `main` on, the head is the two-parent merge of the base and R,
+with R's tree, in that order in GitHub's own commit object; at `main`, R is the
+admitted `pr` report's head. A pre-0.11 release has no own-pin lines, so this
+bridge no longer re-verifies one.
+
 ## 1. Prepare reviewed sources and capture native metadata
 
 Prepare clean fixed checkouts with `core.autocrlf=false`: trusted collector,

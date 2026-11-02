@@ -535,18 +535,34 @@ under the standing route above. A source edit alone is not a passing receipt.
    on the last verified public release until the new release is publicly
    verified. Label candidate capability separately. Since 2026-10-14 the
    README's Action recommendation advances to this release once it is
-   publicly verified (step 8), not one release later.
-2. Open one release PR. Require its final exact head's PJU full development
-   CI, source/wheel/pyz qualification and inventory, real current-advertised
-   visitor checks, and `verdict gate` success. If the head changes, obtain new
-   evidence for that head. Retain the actual checkout SHA and tree, since PR
-   merge-checkout evidence and PR-head evidence have different subjects.
-3. Merge through the normal required checks. A merge/squash/rebase creates a
-   new commit: record it and compare its tree with the qualified head. Require
-   the exact merge commit's native main capture, fresh PJU CI/qualification,
-   visitor and `verdict gate` receipts, and successful main stage check before
-   creating a public tag. Missing, failed or cancelled required evidence stops
-   publication; neither a local tag nor an expected red replaces it.
+   publicly verified (step 8), not one release later; from v0.11.0 it names
+   the release's Action commit (scheme S, below). The version bump is made in
+   the release PR only, and these changes are its content commit A, in which
+   `doctor`'s two Action pin lines, `_PREVIOUS_ACTION_PIN` and
+   `_OWN_ACTION_PIN`, both equal the README's Action pin. Main is frozen from
+   A until the release merge: merge every other PR first.
+2. Open one release PR. Its last commit is R, which
+   `tools/own_action_pin.py write` stages on A (scheme S, below), and nothing
+   may follow R: no commit, no GitHub **Update branch** and no receipt or
+   lifecycle record commit, which go in the step-8 follow-up. Run
+   `tools/own_action_pin.py check --stage pr` before collecting. Require the
+   final exact head R's PJU full development CI, source/wheel/pyz
+   qualification and inventory, real current-advertised visitor checks, and
+   `verdict gate` success. The release PR's required checks are published
+   only through the release bridge's `pr` stage; the ordinary receipt bridge
+   refuses a head whose version differs from the advertised one. If the head
+   changes, obtain new evidence for that head, after a new R. Retain the
+   actual checkout SHA and tree, since PR merge-checkout evidence and PR-head
+   evidence have different subjects.
+3. Merge through the normal required checks, with a merge commit only and the
+   PR up to date with main, so the merge commit M has the base as its first
+   parent, R as its second, and R's tree. Squash and rebase are refused; the
+   scheme-S section below gives the recovery. Record M and compare its tree
+   with the qualified head. Require the exact merge commit's native main
+   capture, fresh PJU CI/qualification, visitor and `verdict gate` receipts,
+   and successful main stage check before creating a public tag. Missing,
+   failed or cancelled required evidence stops publication; neither a local
+   tag nor an expected red replaces it.
 4. At that commit, `[baseline]` in `tests/verdict_gate/baseline.toml` still pins
    the previous published release required by the tag gate: the highest other
    published stable GitHub Release whose native tag is merged into the commit,
@@ -560,7 +576,11 @@ under the standing route above. A source edit alone is not a passing receipt.
 5. Only under the explicit publication grant, and once the fixed-corpus
    comparison (below) has run and the owner has reviewed every commit it
    lists, or the grant waives it, make the final annotated tag on
-   the qualified merge commit and push only that tag. No ruleset is unlocked
+   the qualified merge commit and push only that tag. From v0.11.0 the
+   comparison runs on R's `src/` tree, which is M's, and
+   `tools/own_action_pin.py check --stage main` runs on M before the tag is
+   made: the tag and later stages apply the same rule, and a failure there
+   cannot be fixed by moving the tag. No ruleset is unlocked
    or restored any more (2026-10-14, below); the grant is what permits the
    push. Never move or delete an existing public tag to fix a failed check.
 6. Require that tag's own native annotated identity, actual tag visitor,
@@ -590,7 +610,20 @@ under the standing route above. A source edit alone is not a passing receipt.
    and limitations in the publication record. Advance the advertised manifest,
    the matching README CLI pins and the README Action pin to this release in a
    reviewed follow-up only once these checks pass. Failed historical receipts
-   remain failed.
+   remain failed. From v0.11.0 the follow-up moves these to the release's
+   Action commit A = `vX.Y.Z^2^1`, which the publication record names: the
+   README Action pin and its `# vX.Y.Z` annotation,
+   `.github/workflows/checkwash.yml`, `doctor`'s `_PREVIOUS_ACTION_PIN` (its
+   `_OWN_ACTION_PIN` is already A), `ACTION_SHA` in
+   `tools/pju_receipt_bridge.py` and `tools/replay_pju_action.py`,
+   SECURITY.md's current pin, action/README's
+   `git -C checkwash rev-parse 'vX.Y.Z^2^1'` and
+   `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` lines for the tag, and the two
+   pin literals in `tests/test_doctor.py`. `release/advertised.toml` advances
+   to the tag with `commit` the tag's peeled commit M, not A. The follow-up
+   also carries the release PR's receipt and lifecycle records, and it is the
+   next merge after the release: until it merges, main's version differs from
+   the advertised one, so the ordinary receipt bridge refuses every other PR.
 9. Separately rotate the verdict baseline after publication. `[baseline]`
    pins the new tag/version/commit and its actual pyz size/SHA256;
    `baseline_blocked` and `[t3.cases]` follow the gate's recorded proposal.
@@ -604,6 +637,87 @@ Preparation for 1.0 stops before steps 5–9. The readiness report distinguishes
 implemented publication checks from future execution against public objects
 that do not yet exist. No preparation receipt claims a v1.0.0 public download
 or visitor result.
+
+### The release's own Action pin (scheme S, D-194)
+
+A release cannot embed its own commit SHA. From v0.11.0 a release's `doctor`
+accepts two exact Action commits, both in its own source:
+`_PREVIOUS_ACTION_PIN`, the Action pin the README recommended when the release
+was prepared, and `_OWN_ACTION_PIN`, the release's own Action commit A. Each is
+one line at column 0, `_NAME = "<40 lowercase hex>"`, with no trailing
+comment; the release tools read that shape. After publication the README
+recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
+([D-194](../DECISIONS.md)).
+
+- **A, the content commit.** The version bump, release notes and every other
+  change of the release PR, with both pin lines equal to the README's Action
+  pin (step 1).
+- **R, the last commit.** On a clean checkout of A, run
+  `python tools/own_action_pin.py write`. It sets only `_OWN_ACTION_PIN` to A,
+  stages it, checks that exactly `src/checkwash/doctor.py` is staged and
+  prints the `git commit` command; commit with it, hooks included. It refuses,
+  exit 2 with nothing changed, a checkout with any change or untracked file, a
+  pin line not in the exact shape, a HEAD at the advertised version, a HEAD
+  that is already an R, and a worktree `doctor.py` whose bytes differ from
+  HEAD's blob, line endings included.
+- **Nothing follows R.** No commit, no GitHub **Update branch** and no receipt
+  or lifecycle record commit: the release PR's records go in the step-8
+  follow-up. A commit after R voids R and every PR-stage receipt collected on
+  it; run `write` again on the new head and collect again.
+- **Main is frozen** from A until the release merge. Merge the README
+  restructure, fixes and every other PR before A.
+- **Merge commit only**, with the PR up to date with main: M's first parent is
+  the base, its second is R, and its tree is R's. A squash or a rebase leaves
+  A off main, and the `main` stage refuses it. To recover from an accidental
+  squash S, open a follow-up PR whose only commit, written by `write` on a
+  checkout of S, sets the own pin to S; collect it through the release
+  bridge's `pr` stage and merge it with a merge commit. S is then the
+  release's Action commit.
+- **Required checks only through the release bridge.** The release PR's four
+  required checks and `PJU release evidence (pr)` come from the release
+  bridge's `pr` stage. The ordinary receipt bridge refuses a head whose
+  `[project]` version differs from `release/advertised.toml`'s.
+- **R29 and the targeted uvloop diagnostic** run on R's `src/` tree, which is
+  the tag's. A run on A's tree does not count, because A's `doctor.py`
+  differs; the candidate rule (below) needs no change.
+- **Local checks**, advisory and not evidence: before collecting,
+  `python tools/own_action_pin.py check --stage pr --head <R> --base <base>`;
+  before tagging, `check --stage main --head <M> --base <base> --pr-head <R>`.
+  The announced pin defaults to `ACTION_SHA` in `tools/pju_receipt_bridge.py`.
+  Before each dispatch, also dry-run the verifier against the real receipt,
+  as for v0.10.0.
+
+What the release bridge checks (`validate_own_action_pin`, after the
+previous-stage link and before the product evidence; the report records
+`own_action_pin`):
+
+- It applies at `pr` and `main` when the head's `[project]` version differs
+  from the `[release]` version of `release/advertised.toml` at that head, and
+  always at `tag`, `release-event` and `public-visitor`. So it cannot
+  re-verify a release before v0.11.0.
+- `doctor`'s previous pin is the announced pin, the trusted ref's
+  `ACTION_SHA`, and every `taipei49314/checkwash/action@` reference in
+  README.md, in any case, is exactly that pin.
+- At `pr` the head is R. Later, the head is a two-parent merge of the base and
+  R with R's tree, R is the verified PR head at `main`, and GitHub's own
+  commit object lists the parents in that order.
+- R has one parent, A, which is the own pin, and from A to the head only
+  `src/checkwash/doctor.py` changes, mode 100644, in exactly the own line.
+- A shallow clone or a missing parent fails closed.
+
+Users verify the pin in a clone: `git -C checkwash rev-parse 'vX.Y.Z^2^1'`
+gives A, and `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` shows the one
+`doctor` line ([Action reference](../action/README.md#public-pin-and-upgrade)).
+Pin updaters that follow the `# vX.Y.Z` comment, such as Dependabot and
+Renovate, will propose the tag's commit, which `doctor` rejects (inferred from
+their documentation, not run); Nelson accepted that with documentation
+(D-194).
+
+**0.11.0 bootstrap.** The 0.11.0 chain is verified from the trusted ref
+`review/collector-d-011-<date>`, cut from main after D-194 merges, as the
+trusted workflow and collector for all five stages; its SHA is recorded here
+when it is cut. Its announced pin is v0.10.0's
+`100699796d942af30644738ffbcd1f1c939411c5`.
 
 ## Before the tag: the fixed-corpus comparison
 
@@ -1245,7 +1359,19 @@ is authorized, and no ended-session local workload grant is reused.
 - Candidate source/package versions agree: `test_version_matches_pyproject`.
 - The Action recommendation is hash-pinned and, since 2026-10-14, advances
   to the newest verified release instead of lagging one release behind:
-  `test_readme_action_snippet_is_zizmor_blanket` checks the pinning.
+  `test_readme_action_snippet_is_zizmor_blanket` checks the pinning. Up to
+  v0.10.0 the pin is the tag's peeled commit; from v0.11.0 it is the
+  release's Action commit `vX.Y.Z^2^1`, and the test requires the tag to be a
+  two-parent merge whose second parent changes only `doctor`'s own pin line,
+  to its parent.
+- From v0.11.0 (scheme S, D-194), the release bridge's
+  `validate_own_action_pin` checks R, the merge commit and the tag at each
+  release stage it applies to, with GitHub's native merge parents; the
+  ordinary receipt bridge refuses a version-changing head; and
+  `tools/own_action_pin.py check` runs the same rule locally, as an advisory
+  check. `tests/test_pju_own_action_pin.py`, `tests/test_own_action_pin.py`
+  and `tests/test_doctor_own_action_pin.py` exercise them on owned Git
+  chains.
 - The actual public tag exists and its complete install surfaces have the
   expected source/native identity: `tools/verify_published_source.py`, in the
   advertised visitor, tag-event job and release prerequisite. Its failure

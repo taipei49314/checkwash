@@ -39,6 +39,10 @@ contract inventory, complete case identities, qualification and build receipts,
 artifact hashes, original command exits and JUnit results. Missing, failed,
 malformed or mismatched evidence produces no successful required check. It
 rechecks the live open PR head and base before validation and publication.
+It refuses a head whose `pyproject.toml` version differs from the version in
+its `release/advertised.toml` (D-194), before any GitHub read: that head is a
+release PR, whose checks come only from the release bridge's `pr` stage
+([release handoff](pju-release-handoff.md)).
 
 Only the publisher job receives `checks: write`. It creates these completed
 checks for the tested head with GitHub Actions' identity:

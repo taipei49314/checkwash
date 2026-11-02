@@ -312,12 +312,25 @@ The published 0.10.0 CLI's `doctor` accepts only the Action pin built into it,
 v0.9.0's, so it reports the v0.10.0 pin above as an unsupported SHA ("workflow
 analysis incomplete", exit 1); `doctor` from this repository's main accepts it.
 
-**Why is the pin added after the release?** A release
-cannot embed its own commit SHA, so a release commit carries the prior
-release's pin; once a release's publication is verified, a follow-up on main
-recommends that release's own peeled commit. The recommended v0.10.0 Action includes the engine
-published on 2026-10-28 Asia/Taipei. A CLI upgrade does not update an existing Action. To verify another trusted release, use
-`git rev-parse 'vX.Y.Z^{commit}'`.
+**Which commit is the recommended pin?** A release cannot embed its own commit SHA.
+Up to v0.10.0, the recommended pin is the commit the tag points to:
+`git rev-parse 'vX.Y.Z^{commit}'`. From v0.11.0 (D-194), it is the release's
+Action commit, the tag's second parent's parent: `git rev-parse 'vX.Y.Z^2^1'`.
+It is not the commit the tag points to. The release pull request's last commit
+changes one line, `doctor`'s own Action pin, to that Action commit, and the tag
+differs from the Action commit only in that line. The Action runs only
+`checkwash check`, which does not import `doctor`. From v0.11.0, a release's
+`doctor` accepts two Action pins: the one recommended before the release and
+the release's own Action commit.
+
+Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment, so
+they will propose the tag's commit, which `doctor` rejects (inferred from those
+tools' documentation, not run). For the same reason zizmor's
+`ref-version-mismatch` audit can report the comment (inferred, not run). The
+Action itself is unaffected: it runs the same check at either commit. `doctor` 0.10.0 does not accept the 0.11.0 pin, so
+upgrade the CLI and its local hooks first, then the Action pin. The recommended
+v0.10.0 Action includes the engine published on 2026-10-28 Asia/Taipei. A CLI
+upgrade does not update an existing Action.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 </details>
@@ -386,5 +399,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 22346 tests (collection denominator).
+Alpha pre-release. 22 detectors, 22393 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).
