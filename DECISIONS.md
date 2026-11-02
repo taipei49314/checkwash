@@ -1679,6 +1679,628 @@ fixtures: `arrival_python_files_uncollected_pos`, `arrival_collect_ignore_pos`
 and `arrival_k_selection_pos` for row 179, and the control
 `arrival_configured_collection_neg`.
 
+## D-194 (2026-11-02): a release's `doctor` accepts its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S)
+
+**Authority.**
+
+- On 2026-10-28T08:34:01Z Claude asked Nelson five questions, and at
+  08:41:25Z he replied
+  「1.核准 2.用寫清楚結案 stop hook自動凍結 3.這次統一收尾後跑 4.readme等到修復後重排 可以進版 Hook選local Doctor放寬我有點不太確定 5.這題我不太確定」
+  (its line breaks and doubled spaces shown as single spaces, as in D-189 to
+  D-191). Item 4's doctor part, 「Doctor放寬我有點不太確定」 (relaxing doctor:
+  I am a bit unsure), records his uncertainty about relaxing `doctor`.
+- Claude's plan at 08:43:12Z gave three options for `doctor`:
+  「(a) 維持嚴格，只把訊息改清楚，說明「這是比 CLI 新的版本，請升級或手動驗證」。安全性不變，但照 README 設定的人還是會看到 exit 1。」
+  (keep it strict and only make its message clear; whoever follows the
+  README still sees exit 1),
+  「(b) 遇到格式正確但不認得的 checkwash SHA，只提示、exit 0。體驗好，但等於放鬆了防範未審 commit 的那道檢查。」
+  (only note a well-formed checkwash SHA it does not know, and exit 0,
+  which relaxes the check against unreviewed commits) and
+  「(c) README 改回推薦上一版的 Action，這樣 doctor 和 README 永遠一致。代價是用 Action 的人會晚一版拿到新引擎，而且要推翻 10-14「不落後一版」的裁決。」
+  (have the README recommend the previous release's Action again, so that
+  `doctor` and the README always agree, at the cost of a release's lag for
+  Action users and of overturning the 10-14 no-lag ruling), and it
+  recommended (a): 「**我的建議**：這輪先做 (a)，之後再決定要不要 (b) 或 (c)。」
+  (do (a) this round, and decide on (b) or (c) later).
+- At 08:44:50Z Nelson wrote one message of two lines:
+  「選a不就又回到之前了嗎」 / 「獨立樣本之後討論」 (wouldn't choosing a just
+  take us back to how it was before? / discuss the independent sample
+  later). The second line is outside this entry.
+- Claude then proposed scheme S. At 09:04:03Z it asked
+  「要照更新後的計畫（含 doctor 方案 S）開始做 0.11.0 嗎？」 (start 0.11.0 on
+  the updated plan, doctor scheme S included?), with two buttons: 「開始」
+  (start), whose option text was
+  「照更新後的計畫開始做 0.11.0，doctor 採用方案 S（推薦 tag 前一個 commit、release PR 一律 merge commit）。發版後的切檔與 baseline 輪替也照上次做。」
+  (start 0.11.0 on the updated plan, with doctor scheme S: recommend the
+  commit before the tag, and merge every release pull request with a merge
+  commit; its last sentence, on the log cut and baseline rotation after the
+  release, is outside this entry), and 「先再討論」 (discuss it further
+  first). Its message at 09:04:19Z described the scheme and, since the
+  session ran over Remote Control, where the box may not show, listed the
+  two choices in its text, 「開始」 first. At 09:05:05Z Nelson answered
+  「開始」, the first button's label; the log does not tell a click from a
+  typed reply. The commit before the tag
+  in that option text is implemented as `vX.Y.Z^2^1`: the tag is the merge
+  commit, and the commit is its second parent's parent. He had not been
+  told then of the pin-updater consequence below; Claude asked about it on
+  2026-10-31.
+- At 2026-10-28T17:33:37Z (2026-10-29 01:33 Asia/Taipei) Nelson clicked the
+  button labelled 「接著做 0.11」, whose option text was
+  「接著做 0.11 其他項目（uvloop 轉交辨識、#419 殘餘結案、doctor 方案 S、README 重排），順便帶上那 3 項文字修正」
+  (go on with 0.11's other items, doctor scheme S among them, and bring the
+  three text fixes along).
+- On 2026-10-31 Claude recommended moving scheme S to 0.12. At 15:00:07Z
+  Nelson wrote one message of four lines: 「先等等」 / 「doctor帶s方案」 /
+  「如果六腿能批次放 那就可以周一開始」 / 「pypi可以按了?」 (wait a moment;
+  doctor with scheme S; if the six platform legs can be batched, start on
+  Monday; can PyPI be approved now?). 「doctor帶s方案」 keeps scheme S in
+  0.11; 「先等等」 paused the outreach preparation, not this change. That
+  Monday is 2026-11-02. The last line is outside this entry.
+- At 2026-10-31T15:03:31Z Claude asked
+  「doctor 方案 S 接受 Dependabot／Renovate 的這個後果嗎？」 (does doctor
+  scheme S accept this Dependabot/Renovate consequence?), with two buttons
+  labelled 「接受，寫進文件」 (accept, and write it into the documentation)
+  and 「先改設計」 (change the design first). The consequence Claude stated
+  with the question, glossed from its Chinese text: the pin the README
+  recommends is A_N, the commit before the tag, not the commit the tag
+  points to; Dependabot and Renovate change a pin by its version comment to
+  the tag's commit, and `doctor`, which accepts only the previous pin and
+  A_N, rejects it (inferred from those tools' documentation, not run); the
+  Action itself works as before, and only `doctor`'s check is affected;
+  `doctor` 0.10 does not accept 0.11's A_N either; the design review
+  recommended accepting it with documentation, and Claude recommended the
+  same. Claude said it would not start D-194 before his confirmation. At
+  15:04:00Z Nelson answered with the first button's label, 「接受，寫進文件」.
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0;
+[RELEASING](docs/RELEASING.md)), whose continuation instruction covers
+"completing the remaining core repairs and their necessary protected
+contracts". Claude wrote the questions, the buttons' labels and their option
+text, and only the label may have been sent. These approvals cover scheme S
+in 0.11 and this entry, the only agent-read-only text the change needs.
+Every choice below that is not quoted above is Claude's under that
+delegation, as D-189 to D-193's were: the detailed design, the shape of the
+pin lines, the release tool and its refusals, the release bridge's rule and
+where it applies, the ordinary bridge's refusals, the RELEASING procedure,
+this entry's text, and the tests and their expectations, including the
+`tests/test_packaging.py` edits listed under *Test expectations*. None of it
+is Nelson's personal review.
+
+**Why.** The published 0.10.0 `doctor` accepts only the Action commit built
+into it, v0.9.0's `d6eda4f6`, so a workflow pinned to the v0.10.0 Action the
+README recommends gets "workflow analysis incomplete" with an unsupported
+SHA, and `doctor` exits 1 ([KNOWN-ISSUES-v0.10.0](docs/KNOWN-ISSUES-v0.10.0.md),
+*Publication*; [KNOWN-ISSUES-v0.8.0](docs/KNOWN-ISSUES-v0.8.0.md) had the
+same row). The cause is general: a release cannot embed its own commit SHA,
+so since the README stopped lagging a release behind (2026-10-14), each
+release's `doctor` has known only the previous release's pin and rejected its
+own release's pin once the README recommended it. Option (a) would keep
+that. Scheme S relaxes `doctor` by one bounded step: it still accepts only
+exact SHAs, both written in the CLI's own source, with no network read and no
+input, and the second is the release's own Action commit, whose engine is the
+release's and whose tree differs from the tag's in one `doctor` line.
+
+**What 0.11 implements.**
+
+1. *`doctor`* (`src/checkwash/doctor.py`). Two constants, each on one line at
+   column 0 in exactly the form `_PREVIOUS_ACTION_PIN = "<40 lowercase hex>"`
+   or `_OWN_ACTION_PIN = "<40 lowercase hex>"`, with no trailing comment, a
+   shape the release tools read, and each name bound only there (item 3):
+   the Action pin the README recommended when the release was prepared, and
+   the release's own Action commit. Outside a release the two lines are
+   equal. `_PINS` keeps three `str` values; the Action's is the previous
+   pin, the one the README recommends. The checkwash step is proved when its
+   `uses:` names either pin (`_ACCEPTED`, deduplicated, so while the two
+   lines are equal there is one); checkout and setup-python keep one pin
+   each. With one accepted pin `doctor`'s text is byte-identical to before.
+   With two, a wrong ref reads "this CLI accepts P (the Action recommended
+   before this release) or A (this release's Action)", and a wrong owner
+   "expected <owner>@P or <owner>@A". Exit codes and the step's shape are
+   unchanged: the own pin with `with:`, in upper case or under another owner
+   still gives "workflow analysis incomplete", exit 1. In this change both
+   lines are v0.10.0's `100699796d942af30644738ffbcd1f1c939411c5`, so
+   `doctor`'s output does not change.
+2. *R* (`tools/own_action_pin.py`, new: a maintainer tool that never commits
+   and never imports or runs checkwash). `write`, on a clean checkout of the
+   release pull request's content commit A, rewrites the own line to A, runs
+   `git add`, checks that exactly `doctor.py` is staged with that blob, and
+   prints the `git commit` command for the operator, whose hooks run as
+   usual; that commit is R. It refuses, exit 2 with nothing changed, a
+   checkout with any change or untracked file, a `doctor.py` that the
+   release bridge's pin reader refuses (item 3), a HEAD whose `[project]`
+   version equals `release/advertised.toml`'s (R belongs only to a release
+   head), a HEAD that is already an R (its own pin is one of its parents), a
+   HEAD whose own pin differs from its previous pin (R is written only on a
+   content commit whose two lines are equal, so after a commit that followed
+   R, R is dropped first), and a worktree `doctor.py` whose bytes differ from
+   HEAD's blob, line endings included. If `git add` or the staged-content
+   check fails after the rewrite, it writes HEAD's bytes back, resets the
+   index entry and exits 2. `check --stage pr|main|tag` runs the release
+   bridge's rule on local commits, as an advisory pre-push and pre-tag
+   check, not release evidence, and warns on stderr when the rule does not
+   apply.
+3. *The release bridge* (`tools/pju_release_bridge.py`).
+   `validate_own_action_pin` runs in `validate_packet` after
+   `validate_parents` and before the product evidence, with the trusted
+   ref's announced pin (`ACTION_SHA` in `tools/pju_receipt_bridge.py`), and
+   the stage report gains `own_action_pin`.
+   - *Where it applies:* at the `pr` and `main` stages unless the head's
+     `pyproject.toml` `[project]` version equals both the `[release]`
+     version of `release/advertised.toml` at the same head and the base's
+     `[project]` version (a failed read or parse fails closed); at `tag`,
+     `release-event` and `public-visitor` always. So a version bumped by an
+     earlier pull request still needs R, so does a release pull request that
+     also moves `release/advertised.toml`, and a subject at the advertised
+     version over a base at that version, such as an ordinary pull request
+     or main after step 8, is not a release.
+   - *How it reads `doctor`:* the two pin lines are read as text and checked
+     against the parsed module, which is never executed. `doctor.py` must
+     hold no carriage return or form feed, either of which can hide a
+     statement from a reader of line-feed lines, and must be UTF-8 as import
+     reads it (no other PEP 263 declaration and no byte-order mark, since an
+     escaped newline in a comment would otherwise bind a pin at import); each
+     name must be bound once, by a module-level assignment on its own line;
+     no other node may bind or name either pin (a `def`, class, argument,
+     import alias, `global`, attribute, keyword or string with that name, or
+     `import *`); and nothing may reach the module namespace dynamically
+     (`exec`, `eval`, `compile`, `globals`, `locals`, `vars`, `setattr`,
+     `delattr`, `__import__`, `__dict__`, `importlib` or `builtins`).
+     `src/checkwash/` must hold no other `doctor` module beside `doctor.py`,
+     such as a `doctor/` package that import would take instead. A
+     `doctor.py` that does not parse is refused. The rule binds the pin text
+     and its single static binding; code elsewhere that changes `doctor` at
+     import, and `doctor`'s other logic, are the release pull request's
+     reviewed content.
+   - *What it checks:* `doctor`'s previous pin is the announced pin, and
+     every `taipei49314/checkwash/action@` reference in README.md, in any
+     case and read as its whole token, is exactly that pin, so a tag, a
+     placeholder, a suffix such as `^{}` or any other SHA fails. At `pr` the
+     head is R. At later stages the head is a two-parent merge whose first
+     parent is the base and whose second parent R has the head's tree; at
+     `main` R must also be the verified pull request head
+     (`parents/pr.json`). R has one parent, the own pin A, which differs
+     from the previous pin, and A is clean: its `doctor` holds the previous
+     pin on both lines. From A to the head `git diff-tree` names only
+     `src/checkwash/doctor.py`, mode 100644, modified, with
+     `--ignore-submodules=none` so that the checkout's `.gitmodules` cannot
+     hide a gitlink; and the two blobs, split at line feeds, differ in
+     exactly the own line, from `_OWN_ACTION_PIN = "<previous>"` to
+     `_OWN_ACTION_PIN = "<A>"`. A shallow clone or a missing parent fails
+     closed.
+   - *Native parents:* at `main` and later, GitHub's own commit object for
+     the head must list its parents as [base, R] (`validate_native_merge`,
+     one more read of `/git/commits/<head>`). That order was observed on the
+     merges of #577, #578 and #579, whose `/git/commits` parents are [pull
+     request base, pull request head]; GitHub does not document it, and any
+     other order is refused.
+   - `publish_check` and `tools/collect_pju_release.py` are unchanged: no
+     collection preflight and no summary sentence.
+4. *The ordinary receipt bridge* (`tools/pju_receipt_bridge.py`).
+   `release_versions` reads the two versions at a commit, and the release
+   bridge uses it for its discriminator; `doctor_action_pins`, the pin
+   reader of item 3, lives here too. `main()` now refuses, before any GitHub
+   client exists, a head whose version differs from the advertised one,
+   naming the release bridge's `pr` stage as the only route for a release
+   pull request's checks, and a head whose `doctor` own pin differs from its
+   previous pin, since only a release pull request's last commit sets it;
+   `validate_packet` is unchanged. Receipts are verified by the bridge at
+   the dispatched trusted ref, so the refusals hold only for receipts
+   verified at a trusted ref that contains them. From this change's merge
+   on, ordinary receipts are dispatched only from main, and the pre-D-194
+   `review/collector-*-010` refs are not used for receipts.
+5. *Procedure* ([RELEASING](docs/RELEASING.md), *The release's own Action
+   pin* and steps 1, 2, 3, 5 and 8). The version bump lives only in the
+   release pull request.
+   - *R last.* R is generated last, and nothing follows it: a commit after
+     R, GitHub's **Update branch** included, voids R and every PR-stage
+     receipt collected on it, so the release pull request's receipt and
+     lifecycle records go in the step-8 follow-up. A change after R drops R
+     (the branch is reset to R's parent), is made as content commits, and R
+     is written again.
+   - *Merge.* Main is frozen from A until the release merge, which is a
+     merge commit with the pull request up to date; squash and rebase are
+     refused at `main`. RELEASING gives the recovery from a squash (a
+     follow-up whose first commit sets `doctor`'s own line back to the
+     previous pin and whose last is R, merged with a merge commit), the
+     route for a fix after the release merge (the same pattern on main's
+     tip, with the comparison run again) and the way to abandon the release
+     (a pull request that reverts the version and the own line).
+   - *R29.* R29 and the targeted uvloop diagnostic start after the last
+     content commit A, once R is written, and run on R's `src/` tree, which
+     is the tag's. Their records (the run identities, the list, the owner's
+     review, the release guide's R29 and JS/TS paragraph naming both engine
+     commits, and the JS/TS results record) go in the step-8 follow-up,
+     because any change to the release pull request after R makes a new A
+     and an R whose `src/` differs in `doctor`'s own line. The owner-ruled
+     candidate rule keeps its substance, with a note that from v0.11.0 a
+     candidate frozen before R does not count. Exempting `doctor`'s own line
+     from that rule would let the comparison run before R, but that is the
+     owner's decision and is not taken here.
+   - *Local checks.* `tools/own_action_pin.py check` runs at `pr` before
+     collecting, and with `--stage tag` on M before tagging, since the tag
+     stage applies the rule unconditionally.
+   - *Step 8* moves the README pin and its annotation, the self-audit
+     workflow, `doctor`'s previous pin, the receipt tools' `ACTION_SHA`,
+     SECURITY.md's current pin and two `tests/test_doctor.py` literals to
+     A = `vX.Y.Z^2^1`, and, when `action/action.yml` changed,
+     `ACTION_YAML_SHA256` in `tools/replay_pju_action.py`. action/README's
+     verification moves to the new tag, and its v0.10.0 `ls-remote` line
+     becomes the check for pins up to v0.10.0. `release/advertised.toml`
+     keeps the tag's peeled commit.
+   - *Not enforced.* That main stays frozen from A and that the step-8
+     follow-up is the next merge are documented procedure. From the release
+     merge until step 8, main's version differs from the advertised one; the
+     ruleset's strict up-to-date policy makes another pull request take main
+     first, and the ordinary bridge then refuses it.
+6. *User text.* README (*Which commit is the recommended pin?*) and
+   action/README (*Public pin and upgrade*) say which commit to pin (up to
+   v0.10.0 the tag's peeled commit, from v0.11.0 `vX.Y.Z^2^1`), how to
+   verify it in a clone, the pin-updater consequence, and the upgrade
+   order: the CLI and its local hooks first, then the Action pin.
+   SECURITY.md says which commit to pin and links to action/README.
+7. *`tests/test_packaging.py`.* The README pin relation is version-aware
+   (*Test expectations*, below).
+
+**The accepted consequence.** From v0.11.0 the pin the README recommends,
+`@A # vX.Y.Z`, is not the commit the tag points to, and `git ls-remote`
+cannot show it. Pin updaters such as Dependabot and Renovate follow the
+version comment and will propose the tag's commit (inferred from those tools'
+documentation, not run), which no `doctor` accepts: release N's accepts only
+the pin recommended before release N and release N's own Action commit. The
+Action runs the same check at either commit. Nelson accepted this
+with documentation (*Authority*). README, action/README and
+[KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md) say so; the 0.11.0
+known-issues page takes over KNOWN-ISSUES-next's rows.
+
+The same cause reaches zizmor, which the question did not name. Its
+`ref-version-mismatch` audit (zizmor 1.14.0 and later) reports a hash pin
+whose version comment does not match the pinned commit, and its
+pedantic-only `stale-action-refs` reports a hash pin that no tag points to;
+`@A # vX.Y.Z` is both (inferred from zizmor's audit documentation, not run).
+The README's pin snippet was checked against zizmor's unpinned-uses audit
+(`test_readme_action_snippet_is_zizmor_blanket`), not these two. The README
+pin moves to A only at step 8 of 0.11, so this change documents the zizmor
+consequence beside Dependabot's, and whether to accept it or change the
+annotation before step 8 is left to Nelson.
+
+**Why the Action at A is the release's Action.**
+
+- The Action (`action/action.yml`, `action/secure.py`) installs its own
+  checkout's `src/checkwash` into a private environment, checks the
+  installed bytes, and runs only `python -m checkwash check` (term, and json
+  for comments).
+- `cli.py` imports `checkwash.doctor` only inside the `doctor` command.
+- `tests/test_doctor_own_action_pin.py::test_check_never_imports_doctor`
+  runs `cli.main(['check', ...])` in a separate interpreter, in term and json
+  format, with `--fail-on high`, and fails if `checkwash.doctor` was
+  imported.
+- The release bridge requires the tag's tree to differ from A's in exactly
+  the own line, gitlinks included, and `tests/test_packaging.py` requires
+  the same of the README's trusted tag from v0.11.0.
+
+So the check the Action at A runs is the tag's; its identity receipt differs
+from the tag's only through `doctor.py`'s bytes. Every release stage replays
+the Action at its head, R at `pr` and then M, which has R's tree; none
+replays it at A. The one-line diff and `test_check_never_imports_doctor` are
+what carry those replays to A.
+
+**Bootstrap for 0.11.0.** The 0.11.0 chain is verified from a trusted ref,
+`review/collector-d-011-<date>`, cut from main at or after this change's
+merge; RELEASING records its SHA when it is cut. It is the trusted collector,
+and the trusted workflow for the dispatched stages. The release-event
+capture runs `release.yml` from the tag M, so M must hold the same
+`release.yml` and audited helpers as that ref. This change merges before
+the release pull request's content commit A is made, since A's `doctor` and
+the verifier both come from it. The announced pin is v0.10.0's
+`100699796d942af30644738ffbcd1f1c939411c5`: `ACTION_SHA` at that ref,
+`doctor`'s previous pin and the README pin. Each stage's evidence records
+host LAPTOP-01AGNPJU, source SHA, runtime and exits, labelled
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; other platforms are NOT_RUN.
+
+**Superseded.**
+
+- README's *Why is the pin added after the release?* paragraph and
+  action/README's *Public pin and upgrade*: a release commit carries the
+  prior release's pin, and a follow-up recommends that release's own peeled
+  commit. From v0.11.0 the follow-up recommends the release's Action commit
+  `vX.Y.Z^2^1`; SECURITY.md's "Pin it by its peeled commit" is reworded to
+  match.
+- RELEASING step 3's "A merge/squash/rebase creates a new commit", for
+  release pull requests: a merge commit only.
+- The `tests/test_packaging.py` relation that the README pin is the trusted
+  tag's peeled commit, for trusted tags at or above v0.11.0.
+- `doctor.py`'s comment that its Action pin is "the newest verified stable
+  tag's peeled commit".
+
+The 2026-10-14 maintainer decision that the README recommends the newest
+verified release's Action, with no lag, stands; scheme S changes which
+commit of that release it names.
+
+**Maintainer text, and what is unchanged.** This entry is the only
+agent-read-only edit. Unchanged: SPEC.md, which holds no `doctor` pin text;
+THREATMODEL.md (row 88: `doctor` reports and cannot enforce, and stays
+advisory); `tests/gates/**`; the gating severity table, the strength lattice
+and alignment parameters; every `.gwcase` expectation; the findings and IR
+versions, fingerprints, and `check`'s verdicts, exit codes and messages;
+`doctor`'s exit semantics and its checkout and setup-python pins; and the
+schema and meaning of `release/advertised.toml`, whose `commit` stays the
+tag's peeled commit. The release verification report gains an additive
+`own_action_pin` object; the manifest, subject, admission and dispatch
+schemas and the workflow inputs are unchanged.
+
+**Limits.**
+
+- `doctor` N rejects release N+1's pin, so the CLI and its local hooks must
+  be upgraded before the Action pin; `doctor` 0.10.0 rejects the 0.11.0 pin
+  (exit 1).
+- The recommended pin is not the tag's commit, `git ls-remote` cannot show
+  it, and checking it needs a clone; pin updaters propose the tag's commit
+  (above).
+- No release stage replays the Action at A; each replays it at its head
+  (above).
+- The rule binds `doctor`'s pin text, its single static binding and a
+  single `doctor` module. `doctor`'s other logic, such as `_ACCEPTED` and
+  the checks that use it, and code in other modules that could change
+  `doctor` at import, are the release pull request's reviewed content.
+- A failure after the tag is pushed cannot be fixed by moving the tag; the
+  `main` stage and the local `check --stage tag` on M come before it.
+- At `pr` and `main` the discriminator skips the rule only when the head's
+  version equals both its `release/advertised.toml` version and its base's.
+  It relies on `release/advertised.toml` staying at the last verified
+  release until step 8, as step 1 requires and the advertised-release tests
+  enforce; the tag and later stages apply the rule regardless.
+- That main stays frozen from A to the release merge, and that the step-8
+  follow-up is the next merge after it, are procedure, not enforced. From
+  the release merge to the step-8 merge the ordinary bridge refuses any
+  other pull request once it takes main, as the ruleset's strict up-to-date
+  policy requires, but only for receipts verified at a trusted ref that
+  contains this change. Recovery from a squash or from a commit after R,
+  and a fix after the release merge, cost a new R and a new PR-stage
+  collection, hours on PJU, and the fixed-corpus comparison again if it
+  already ran.
+- The tag and later stages always apply the rule, so this bridge refuses to
+  re-verify a release before v0.11.0, which has no own pin line. That is by
+  design.
+- From 0.12, the Action pin (A of 0.11.0) differs from the advertised and
+  verdict-baseline commit (the v0.11.0 tag's), so
+  `tools/collect_pju_release.py` can no longer fall back to the Action
+  checkout for `--advertised-source` and `--verdict-baseline-source`: the
+  stage collection must pass separate checkouts, and otherwise stops on the
+  mismatch, after the full suite. The maintainer's local stage scripts,
+  which pass the Action checkout as both sources, and `prepare-stage.sh`'s
+  pinned-checkout assertion must change accordingly (RELEASING).
+- PyPI's 0.11.0 description is the README at the tag, which still names the
+  v0.10.0 pin, as 0.10.0's named v0.9.0's.
+- The verifier has run only on owned synthetic chains on PJU (Windows,
+  CPython 3.11.9), not on a real release chain or a hosted runner.
+
+**Test expectations.** Existing assertions edited, none a `.gwcase` fixture
+or under `tests/gates`, all in `tests/test_packaging.py` (line numbers at
+main `0e6acc35`):
+
+- `_assert_action_pin_matches_verified_release` (L22-32) gains
+  `action_commit=None`: `assert pin == advertised["commit"]` becomes
+  `assert pin == expected`, where `expected` is `advertised["commit"]`
+  unless `action_commit` is given, and its message adds "(Action commit X)".
+  The synthetic tag cases that call it without `action_commit` are
+  unchanged.
+- `test_readme_action_snippet_is_zizmor_blanket`: the trusted tag's peeled
+  commit is now `peeled`, and `sha`, the expected pin, is
+  `_release_action_commit(ROOT, tag, peeled)`: the peeled commit below
+  v0.11.0, else `vX.Y.Z^2^1` after the one-line check. The README reference
+  check (L222) and `assert sha == pin` (L246) keep their expressions, with
+  new messages. The `^{commit}` README string (L226) and action/README's
+  `git ls-remote` line (L229) are required only below v0.11.0; the `^2^1`
+  README string always; and from v0.11.0 action/README's
+  `git -C checkwash rev-parse` and `git -C checkwash diff` lines for the tag.
+  `version_tuple` moves to module level as `_version_tuple`. L255 passes
+  `action_commit=sha`, after a new assertion that
+  `release/advertised.toml`'s commit is the tag's peeled commit.
+
+At v0.10.0 every outcome is unchanged. From v0.11.0 the relation is relaxed
+on purpose: the README pin is the tag's `^2^1` commit, not its peeled commit,
+under the check that the tag is a two-parent merge with its second parent's
+tree, that this parent has one parent, A = `vX.Y.Z^2^1`, and that from A to
+the tag only `doctor.py` changes, in place, in mode 100644 and in exactly
+the own pin line, from A's previous pin to A. A dogfood run on the
+uncommitted change reported nothing for the rebinding of `sha` from one
+`git` call to another, so the relaxation is recorded here, to be reviewed by
+reading, not left to that verdict. The design named the expected pin
+`action` and wrote `assert action == pin`; with that naming checkwash's own
+check paired the removed `assert sha == pin` with the helper's merge-shape
+assertion and blocked (ASSERT_WEAKENED, high), a misalignment rather than a
+weakening. The test keeps `sha` for the expected pin instead, so
+`assert sha == pin` keeps its expression; the gate is unchanged.
+
+Still to come, at 0.11.0's step 8, as data: the v0.10.0 pin literals in
+`tests/test_doctor.py`, in
+`test_checkout_setup_and_gate_must_be_exact_and_in_order` (the
+`"checkwash"` pin, L216) and
+`test_ref_diagnostics_name_actual_and_required_pins` (`required`, L604),
+move to A of 0.11.0, as #574 moved them to v0.10.0's.
+
+New: `tests/test_doctor_own_action_pin.py` (the line shape and the module's
+values, both lines equal outside a release, the previous pin equal to both
+receipt tools' `ACTION_SHA`, the README naming only that pin by the release
+bridge's pattern, the module's wiring with its own line set to another SHA,
+the single-pin text, both pins healthy, other SHAs refused with the two-pin
+text, the step's shape, and `check` never importing `doctor`),
+`tests/test_own_action_pin.py` (the tool on owned repositories: what `write`
+stages, its refusals, its restoring `doctor.py` when staging fails, `check`
+at each stage, with `--pr-head` and with its warning when the rule does not
+apply, and the recovery from a squash and from a commit after R),
+`tests/test_pju_own_action_pin.py` (the rule at each stage and where it
+applies, the base version included, the merge shape, twenty-three R, A,
+README and `doctor` shapes refused at `pr`, `main` and `tag`, an A that
+keeps an earlier own pin, a gitlink change that `.gitmodules` hides, sixteen
+other bindings of the pin names, a `doctor.py` that does not parse or is not
+UTF-8, ten ways of reaching its namespace dynamically, a second `doctor`
+module, shallow and missing parents, the native parent order, the wiring in
+`validate_packet`, and the ordinary bridge's refusals before any GitHub
+read), `tests/test_packaging.py::test_release_action_commit_follows_scheme_s`,
+and the shared chain builder `tests/own_action_pin_fixtures.py`, which pytest
+does not collect. No other existing expectation changed. The documented test
+count moves to 22444 collected (with D-195, merged from main).
+
+**What runs before merge.** On the pull request's final head, on
+LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the targeted
+tests, these twelve files: `tests/test_pju_own_action_pin.py`,
+`tests/test_own_action_pin.py`, `tests/test_doctor_own_action_pin.py`,
+`tests/test_doctor.py`, `tests/test_issue436_doctor_messages.py`,
+`tests/test_tools_global_names.py`, `tests/test_pju_release_bridge.py`,
+`tests/test_pju_receipt_bridge.py`, `tests/test_packaging.py`,
+`tests/test_docs_links.py`, `tests/test_documentation_contracts.py` and
+`tests/test_state_claims.py` (the 272 below counted a list that differs from
+it); the full suite (`pytest tests`, `tests/gates` included); dogfood (`checkwash check` on the pull request's range with
+`--fail-on high`); and the pull request's ordinary PJU receipt, whose intake
+sets the four required checks. This pull request needs no same-host R29
+differential: its only `src/` change is `doctor.py`, which `check` never
+imports. The release's fixed-corpus comparison still runs on R's `src/`
+tree (item 5). Other platforms: NOT_RUN.
+
+**Evidence before review.** On `04b469fa`, the commit reviewed below, on
+LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython
+3.11.9, pytest 9.1.1) on 2026-11-02: the targeted set above, 272 tests with
+one existing symlink-privilege skip, 0 failures; the suite then collected
+22393 items; a scratch mutation run of the new rule, the tool and their
+tests killed 28 of 29 mutants, the survivor being the unreachable
+`own != previous`; and checkwash's own check from `0e6acc35` at
+`--fail-on high`, with this tree's engine and with the published v0.10.0
+pyz: pass, eight warnings and none at or above high (seven on
+`tests/test_packaging.py`, held at warn by PACKAGE_REPAIR, and one
+IMPORT_UNRESOLVED). The full suite and the PJU receipt run on the final
+head, after review.
+
+**Review.** Four Claude review agents (lenses: verifier attack; `doctor`,
+tool and tests; release process; claims and records) and one Gemini 4 Argon
+run, which completed, reviewed `04b469fa`. Claude checked each finding
+against the code before acting on it. Accepted and fixed:
+
+- *A is clean.* A's own line must equal its previous pin in the release
+  bridge, in `write` and in `tests/test_packaging.py`, and the ordinary
+  receipt bridge refuses a head outside a release whose own pin differs from
+  its previous pin, so one edited line can no longer make main's `doctor`
+  accept another SHA with every test passing (raised by Argon, verified by
+  Claude; also raised by the `doctor` reviewer). The recovery procedures
+  change with it: R is dropped before a change, and a squash is recovered
+  by a commit that resets the own line (raised by Argon, verified by
+  Claude).
+- *How `doctor` is read.* A lone carriage return, a form feed or a second
+  binding of a pin name, which the line reader missed, is refused, and the
+  module is parsed without being run (the verifier reviewer; also raised by
+  Argon, verified by Claude). The README pattern takes the whole reference
+  token (raised by Argon, verified by Claude). The A-to-head diff passes
+  `--ignore-submodules=none` (the verifier reviewer).
+- *Where the rule applies.* At `pr` and `main` it also applies when the
+  head's version differs from its base's (raised by Argon, verified by
+  Claude). The pre-tag check is `check --stage tag`, and `check` warns when
+  the rule does not apply (the verifier and release-process reviewers).
+- *The tool and the test helper.* `write` restores `doctor.py` and its index
+  entry when a step after the rewrite fails (the `doctor` reviewer).
+  `_release_action_commit` also requires the tag's tree to be R's, checks
+  the mode and the line bytes, and requires A's own line at A's previous
+  pin (raised by Argon, verified by Claude).
+- *New tests* cover `doctor`'s wiring with its own line set to another SHA,
+  `--pr-head` reaching the rule, both pin lines equal outside a release (the
+  `doctor` reviewer), the release bridge's README pattern on the live
+  README, and the previous pin against both receipt tools' `ACTION_SHA`
+  (the release-process reviewer).
+- *RELEASING.* When R29 runs and where its records go (the release-process
+  reviewer; raised by Argon, verified by Claude). What is procedure rather
+  than enforced between A and step 8, which refs may verify ordinary
+  receipts, and the routes for a change after R, a squash, a fix after the
+  release merge and abandoning the release (the release-process reviewer;
+  raised by Argon, verified by Claude). Step 8's list (raised by Argon,
+  verified by Claude; `ACTION_YAML_SHA256` from the release-process
+  reviewer). The sources from 0.12 (the release-process reviewer). The
+  replay scope and the release-event workflow (raised by Argon, verified by
+  Claude).
+- *This entry.* The test count (the claims and release-process reviewers;
+  also raised by Argon, verified by Claude), the authority bullets on the
+  `doctor` options, the observed merge-parent order, the SECURITY.md claim,
+  the `test_packaging` relation and the heading *What runs before merge*
+  (the claims reviewer).
+
+Declined:
+
+- Calling the ordinary bridge's refusals inside `validate_packet` (Argon):
+  `main()` is the only publication path, and `validate_packet` is the
+  unit-level validator that existing tests call with heads that have no
+  `release/advertised.toml`.
+- Requiring A to descend from the base or to have one parent (Argon): A may
+  legitimately be a merge commit, such as an **Update branch** merge before
+  R is written, and M's tree being R's already binds the content.
+- Replaying the Action at A (Argon): it would change the trusted collector,
+  which this change leaves unchanged; the one-line diff and
+  `test_check_never_imports_doctor` carry the replays to A.
+- Tagging A instead of M (Argon): a different scheme from the one Nelson
+  approved, which would change the tag stage, published-source verification
+  and the sdist's identity. It is left to Nelson, beside the zizmor question
+  above.
+- Moving the `test_doctor` helpers to clear the IMPORT_UNRESOLVED warning
+  on `tests/test_doctor_own_action_pin.py` (Argon): the import follows
+  `tests/test_issue436_doctor_messages.py`, and the finding is a warning.
+
+**Second review.** Two Claude agents re-reviewed the fixes at `8c75826e`:
+one reran the first round's reproductions and attacked the new code, the
+other checked the records against the code and their sources. Every
+accepted first-round finding reproduced as fixed, and a lifecycle probe of
+21 steps (ordinary pull requests, the release, a pull request after the
+merge, abandoning a release, a fix after the merge, step 8, the baseline
+rotation and a 0.12 release) refused no legitimate flow. Accepted and fixed:
+
+- A PEP 263 declaration such as `raw_unicode_escape` let an escaped
+  newline in a comment bind a pin at import, unseen by a parse of the
+  UTF-8 text; `doctor.py` must now be UTF-8 as import reads it (the attack
+  reviewer).
+- Dynamic rebinding (`exec`, a computed `globals()` key, `setattr` on the
+  module) and a `src/checkwash/doctor/` package that import takes instead
+  passed, while the records read as if every rebinding were refused. Both
+  are now refused, and the records say that the rule binds a single static
+  binding in a single module (the attack reviewer).
+- The ordinary bridge's version refusal now also names a branch that took
+  main between a release merge and its step-8 follow-up, as the
+  release-process reviewer had asked (left out of the first fixes, the
+  records reviewer).
+- The 「開始」 bullet no longer says that Nelson clicked; the targeted-test
+  files are named; RELEASING gives the recovery after a rebase merge too and
+  says that the comparison reruns (the records reviewer).
+
+Partly adopted: of the `doctor` reviewer's three suggested tool tests, the
+`--pr-head` one was added; tests for the staged-content check (through a
+`post-index-change` hook) and for the `GIT_*` environment strip were not.
+Both guard the advisory tool, and the release bridge refuses a bad R
+whatever the tool did. The tool's restore puts back `doctor.py` and its
+index entry; anything a hook stages beside it stays staged. The message of
+`8c75826e` says each new pinning test fails against `04b469fa`'s tools; the
+four invariant tests in `tests/test_doctor_own_action_pin.py` and the
+`--pr-head` assertion pin invariants that already held there, and pass (the
+records reviewer).
+
+The first fixes added 38 collected tests (22431). The second review's fixes
+add 12, and D-195, merged from main, one, so the suite collects 22444.
+
+**Evidence after review.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9, pytest
+9.1.1) on 2026-11-02, for `abcf2146`, the head after both reviews: the
+twelve targeted files above, 322 tests, 0 failures and one existing
+symlink-privilege skip; the suite collects 22444; checkwash's own check
+from main `6e8ca826` at `--fail-on high`, with this tree's engine and with
+the published v0.10.0 pyz: pass, eight warnings and none at or above high;
+and the pull request's PJU receipt (head `abcf2146`, base and collector
+main `6e8ca826`, 15:22:31Z to 16:17:42Z): the full suite (`pytest tests`,
+`tests/gates` included, xdist `-n 2`), whose JUnit testsuite counts
+`tests="22511"`: 22444 testcase entries, 22419 passed and 25 skipped, plus
+67 subtests, with 0 failures and 0 errors; the pinned and candidate Action
+replays, the builds and the source, wheel and pyz qualifications all
+exited 0. Its manifest SHA256 is
+`cd7874938a64398ff56b188f3e234658c8f3717b479833b4a8b128a73911c022`,
+published as `evidence/pr581-cd7874938a64-20261102` (commit `ebe630d1`,
+254 files read back). The merged head differs from `abcf2146` only in this
+paragraph and STATE's status, and its own receipt sets the four required
+checks. Other platforms: NOT_RUN.
+
 ## D-195 (2026-11-02): five test relaxations that agent sessions left in checkwash's own tests are restored
 
 **Authority.**

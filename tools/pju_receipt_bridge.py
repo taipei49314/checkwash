@@ -7,6 +7,7 @@ No candidate Python, shell, Action, archive member, or test is executed here.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import importlib.util
 import io
@@ -18,6 +19,7 @@ import re
 import stat
 import subprocess
 import tarfile
+import tokenize
 import tomllib
 import urllib.error
 import urllib.request
@@ -549,6 +551,98 @@ def validate_candidate_action(packet, records, head, base, source_root, trusted_
         validate_action(packet, {"dogfood": check_path, "action_replay": replay_path}, head, base, source_root, action_sha=head)
 
 
+def release_versions(root, head, where="the head"):
+    """The commit's pyproject version and the advertised release version it records."""
+    versions = []
+    for path, table in (("pyproject.toml", "project"), ("release/advertised.toml", "release")):
+        try:
+            value = tomllib.loads(git(root, "show", head + ":" + path).decode("utf-8")).get(table)
+        except ValueError as error:  # failed Git read, undecodable bytes or invalid TOML
+            raise ValueError(path + " at " + where + " could not be read or parsed") from error
+        require(type(value) is dict and type(value.get("version")) is str, path + " at " + where + " has no " + table + " version")
+        versions.append(value["version"])
+    return tuple(versions)
+
+
+DOCTOR_PATH = "src/checkwash/doctor.py"
+OWN_PIN_LINE = re.compile(rb'_OWN_ACTION_PIN = "([0-9a-f]{40})"')
+PREVIOUS_PIN_LINE = re.compile(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"')
+# Names through which a module can bind a global the parse does not show.
+DYNAMIC_NAMES = {"exec", "eval", "compile", "globals", "locals", "vars", "setattr", "delattr", "__import__"}
+DYNAMIC_MODULES = {"importlib", "builtins"}
+
+
+def doctor_action_pins(raw):
+    """Doctor's previous and own Action pins, and the own line's index (scheme S, D-194).
+
+    The two lines are read as text, then checked against the parsed module,
+    which is never executed: the file is UTF-8 as import reads it, each name is
+    bound once, by its own line, no other node binds or names it, and nothing
+    reaches the module namespace dynamically. Doctor's other logic is reviewed
+    content.
+    """
+    lines = raw.split(b"\n")
+    previous = [index for index, line in enumerate(lines) if line.startswith(b"_PREVIOUS_ACTION_PIN")]
+    own = [index for index, line in enumerate(lines) if line.startswith(b"_OWN_ACTION_PIN")]
+    require(len(previous) == len(own) == 1, "doctor must hold exactly one previous and one own Action pin line")
+    old, new = PREVIOUS_PIN_LINE.fullmatch(lines[previous[0]]), OWN_PIN_LINE.fullmatch(lines[own[0]])
+    require(old is not None and new is not None, "doctor's Action pin lines differ from the exact shape")
+    # Python also ends a line at a lone CR, and a form feed may open a module-level statement: LF lines hide both.
+    require(b"\r" not in raw and b"\x0c" not in raw, "doctor.py holds a carriage return or form feed")
+    # Import decodes by a PEP 263 declaration, which a parse of decoded text ignores.
+    try:
+        encoding = tokenize.detect_encoding(io.BytesIO(raw).readline)[0]
+    except SyntaxError as error:  # an unknown or malformed declaration
+        raise ValueError("doctor.py declares an encoding other than UTF-8") from error
+    require(encoding == "utf-8", "doctor.py declares an encoding other than UTF-8")
+    try:
+        tree = ast.parse(raw.decode("utf-8"), DOCTOR_PATH)
+    except (SyntaxError, ValueError, RecursionError, MemoryError) as error:  # undecodable, invalid or too deeply nested
+        raise ValueError("doctor.py could not be parsed") from error
+    pins = {"_PREVIOUS_ACTION_PIN": (previous[0], old.group(1).decode()), "_OWN_ACTION_PIN": (own[0], new.group(1).decode())}
+    bound = [node for node in tree.body if isinstance(node, ast.Assign) and len(node.targets) == 1
+             and isinstance(node.targets[0], ast.Name) and node.targets[0].id in pins]
+    found = [(node.targets[0].id, node.lineno - 1, node.value.value if isinstance(node.value, ast.Constant) else None)
+             for node in bound]
+    require(len(found) == 2 and set(found) == {(name, index, pin) for name, (index, pin) in pins.items()},
+            "doctor must bind each Action pin once, by a module-level assignment on its own line")
+    targets = {id(node.targets[0]) for node in bound}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            named = node.id in pins and not isinstance(node.ctx, ast.Load) and id(node) not in targets
+        else:  # a def, class, argument, import, attribute, global, keyword or string of the name; or `import *`
+            named = isinstance(node, ast.alias) and node.name == "*" or any(
+                type(item) is str and item in pins for _field, value in ast.iter_fields(node)
+                for item in (value if isinstance(value, list) else [value]))
+        require(not named, "doctor binds or names an Action pin outside its two lines")
+    for node in ast.walk(tree):
+        dynamic = (isinstance(node, ast.Name) and node.id in DYNAMIC_NAMES
+                   or isinstance(node, ast.Attribute) and node.attr == "__dict__"
+                   or isinstance(node, ast.alias) and node.name.split(".")[0] in DYNAMIC_MODULES
+                   or isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] in DYNAMIC_MODULES)
+        require(not dynamic, "doctor reaches its namespace dynamically (exec, eval, globals, setattr, __dict__, importlib ...)")
+    return pins["_PREVIOUS_ACTION_PIN"][1], pins["_OWN_ACTION_PIN"][1], own[0]
+
+
+def single_doctor_module(root, commit):
+    """Nothing beside doctor.py, such as a doctor/ package, can be imported as checkwash.doctor."""
+    names = git(root, "ls-tree", "-z", "--name-only", commit + ":src/checkwash").split(b"\0")
+    require([name for name in names if name == b"doctor" or name.startswith(b"doctor.")] == [b"doctor.py"],
+            "src/checkwash holds another doctor module beside doctor.py")
+
+
+def validate_ordinary_head(root, head):
+    """A head that changes the version is a release PR (scheme S, D-194)."""
+    version, advertised = release_versions(root, head)
+    require(version == advertised, f"head version {version} differs from the advertised release {advertised}; "
+            "a release PR's checks are published only through the release bridge's pr stage (tools/pju_release_bridge.py), "
+            "and a branch that took main between a release merge and its step-8 follow-up waits for that follow-up")
+    single_doctor_module(root, head)
+    previous, own, _index = doctor_action_pins(git(root, "show", head + ":" + DOCTOR_PATH))
+    require(own == previous, "doctor's own Action pin differs from its previous pin at a non-release head; "
+            "only a release PR's last commit sets doctor's own Action pin (scheme S, D-194)")
+
+
 def validate_packet(packet, *, repository, pr, base, head, source_tree, collector, source_root, trusted_root):
     manifest = packet.manifest
     exact_keys(manifest, "schema_version kind repository pr_number base_sha head_sha source_tree host provenance collector_source_sha "
@@ -704,6 +798,7 @@ def main(argv=None):
         admit_environment(args.trusted_workflow_sha, os.environ)
         require(git(args.trusted_root, "rev-parse", "HEAD").decode().strip() == args.trusted_workflow_sha, "trusted checkout differs")
         require(git(Path(args.receipt_root).parent, "rev-parse", "HEAD").decode().strip() == sha(args.receipt_commit, 40), "receipt commit differs")
+        validate_ordinary_head(args.source_root, sha(args.head, 40))
         api = GitHub(os.environ.get("GH_TOKEN"))
         source_tree = live_pr(api, args.repository, args.pr, sha(args.head, 40), sha(args.base, 40))
         packet = Packet(args.receipt_root, args.manifest_sha256)

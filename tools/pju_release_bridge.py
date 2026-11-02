@@ -698,6 +698,78 @@ def validate_publication(packet, path, network, source_root, current, version, e
             validate_visitor(packet, visitor, exits, source_root, current["head_sha"], version, artifact_sha=matches[0]["sha256"])
 
 
+DOCTOR_PATH, OWN_PIN_LINE, PREVIOUS_PIN_LINE = B.DOCTOR_PATH, B.OWN_PIN_LINE, B.PREVIOUS_PIN_LINE
+doctor_action_pins = B.doctor_action_pins
+# The whole reference token, so `@<sha>^{}` or `@<sha>-x` is not the pin.
+README_ACTION_PIN = re.compile(r"(?i:taipei49314/checkwash/action)@([^\s`'\"()\[\]<>,;|]*)")
+
+
+def commit_parents(root, commit):
+    row = git(root, "rev-list", "--parents", "-n", "1", commit).decode().split()
+    require(row[:1] == [commit], "commit identity differs")
+    return row[1:]
+
+
+def validate_own_action_pin(source_root, current, *, announced, pr_head=None):
+    """A release's doctor accepts its own Action commit A (scheme S, D-194).
+
+    A holds both of doctor's pin lines at the previous pin. The release PR's
+    last commit R changes only the own line, to its one parent A; the merge and
+    tag are the two-parent merge of the base and R, with R's tree. A PR or main
+    subject whose version is both its advertised one and its base's is not a
+    release. A shallow or missing parent fails closed.
+    """
+    stage, head, base = current["stage"], sha(current["head_sha"], 40), sha(current["base_sha"], 40)
+    require(stage in STAGES, "unknown release stage")
+    if stage in ("pr", "main"):
+        version, advertised = B.release_versions(source_root, head)
+        if version == advertised == B.release_versions(source_root, base, "the base")[0]:
+            return {"applies": False}
+    B.single_doctor_module(source_root, head)
+    raw = git(source_root, "show", head + ":" + DOCTOR_PATH)
+    previous, own, index = doctor_action_pins(raw)
+    require(previous == sha(announced, 40), "doctor's previous Action pin is not the announced pin")
+    readme = git(source_root, "show", head + ":README.md").decode("utf-8")
+    require(set(README_ACTION_PIN.findall(readme)) == {previous}, "README does not recommend exactly the announced Action pin")
+    if stage == "pr":
+        final = head
+    else:
+        merge = commit_parents(source_root, head)
+        require(len(merge) == 2 and merge[0] == base, "release is not a two-parent merge commit of its base")
+        final = merge[1]
+        require(pr_head is None or final == sha(pr_head, 40), "merge commit's second parent is not the verified release PR head")
+        require(git(source_root, "rev-parse", final + "^{tree}") == git(source_root, "rev-parse", head + "^{tree}"),
+                "merge tree differs from the release PR head")
+    require(commit_parents(source_root, final) == [own] and own != previous,
+            "doctor's own Action pin is not the one parent of the release PR's last commit")
+    clean = git(source_root, "show", own + ":" + DOCTOR_PATH)
+    require(doctor_action_pins(clean) == (previous, previous, index),
+            f"the Action commit A ({own}) does not hold the previous Action pin on both of doctor's pin lines")
+    # A checkout's own .gitmodules could otherwise hide a gitlink change.
+    rows = git(source_root, "diff-tree", "-r", "-z", "--no-renames", "--ignore-submodules=none", own, head).split(b"\0")
+    require(len(rows) == 3 and rows[1] == DOCTOR_PATH.encode() and rows[2] == b"",
+            "the release differs from its Action commit outside doctor.py")
+    meta = rows[0].decode("ascii").split()
+    require(len(meta) == 5 and meta[:2] == [":100644", "100644"] and meta[4] == "M", "doctor.py mode or change kind differs")
+    before, after = clean.split(b"\n"), raw.split(b"\n")
+    require(len(before) == len(after) and [i for i, (old, new) in enumerate(zip(before, after)) if old != new] == [index]
+            and before[index] == b'_OWN_ACTION_PIN = "' + previous.encode() + b'"'
+            and after[index] == b'_OWN_ACTION_PIN = "' + own.encode() + b'"',
+            "the release changes more than doctor's own Action pin line")
+    return {"applies": True, "action_commit": own, "release_pr_head": final, "previous_action_pin": previous}
+
+
+def validate_native_merge(api, current, own_pin):
+    """GitHub's own parent order binds a merged release to its verified PR head."""
+    if not own_pin["applies"] or current["stage"] == "pr":
+        return
+    commit = api.request("GET", "/repos/" + REPOSITORY + "/git/commits/" + current["head_sha"])
+    parents = commit.get("parents")
+    require(commit.get("sha") == current["head_sha"] and type(parents) is list
+            and [row.get("sha") if type(row) is dict else None for row in parents]
+            == [current["base_sha"], own_pin["release_pr_head"]], "native merge parents differ from the verified release chain")
+
+
 def validate_parents(packet, api, current):
     expected = PREVIOUS[current["stage"]]
     parents = packet.manifest["parents"]
@@ -800,6 +872,9 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
     require(collection.get("parents_sha256") == digest(packet.raw("release/parents-admission.json"))
             and same(packet.json("release/parents-admission.json"), manifest["parents"]), "previous stage admission differs")
     parent = validate_parents(packet, api, current)
+    pr_head = sha(B.strict_json(packet.raw("parents/pr.json"))["head_sha"], 40) if stage == "main" else None
+    own_pin = validate_own_action_pin(source_root, current, announced=B.ACTION_SHA, pr_head=pr_head)
+    validate_native_merge(api, current, own_pin)
     desc, junit, exits, artifacts = validate_product(packet, source_root, trusted_root, collector)
     verdict = validate_verdict(packet, source_root, trusted_root, collector, desc, api, exits)
     validate_visitors(packet, source_root, trusted_root, collector, desc, exits, artifacts)
@@ -807,7 +882,7 @@ def validate_packet(packet, *, source_root, trusted_root, collector, subject_sha
     report = dict(schema_version=1, kind="checkwash.pju-release-verification.v1", status="verified", repository=REPOSITORY,
                 subject=current, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
                 qualification_cases=len(desc["cases"]), junit=junit, verdict=verdict, artifacts=artifacts,
-                previous=parent, checks=[context(stage)], other_platforms="NOT_RUN",
+                previous=parent, own_action_pin=own_pin, checks=[context(stage)], other_platforms="NOT_RUN",
                 trust="owner-admitted immutable receipt; not hardware attestation",
                 publication_authorized=False)
     if stage == "pr":

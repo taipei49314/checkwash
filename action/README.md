@@ -101,20 +101,46 @@ local workflow but cannot verify live branch protection.
 ## Public pin and upgrade
 
 The root README, self-audit workflow and doctor's trusted pin remain tied to a
-published stable release. A tag pin is mutable; use its verified peeled commit.
-A release cannot embed its own commit SHA, so a release commit carries the prior
-release's pin, and once the new release's publication is verified a follow-up on
-main recommends it (since 2026-10-14; before that the recommendation trailed by
-one release). Source changes here do not update that public pin.
+published stable release. A tag pin is mutable; pin a verified commit instead.
+A release cannot embed its own commit SHA. Up to v0.10.0 a release commit
+carried the prior release's pin, and once the new release's publication was
+verified a follow-up on main recommended its peeled commit (since 2026-10-14;
+before that the recommendation trailed by one release). From v0.11.0 (D-194) the
+release pull request's last commit changes one line, doctor's own Action pin,
+to the commit before it. That commit, the tag's second parent's parent, is the
+recommended Action pin once the release's publication is verified; it is not
+the commit the tag points to. The tag differs from it only in that line, and
+the Action runs only `checkwash check`, which does not import doctor. From
+v0.11.0, a release's doctor accepts that release's Action commit and the pin
+recommended before it. Source changes here do not update that public pin.
 The recommended v0.10.0 Action contains this installation repair; v0.7.0 and
 earlier do not. Promoting a security release/pin requires a separate recorded
 publication decision; do not silently re-pin consumers to unreleased source.
+
+Verify the current pins; up to v0.10.0 the Action pin is the tag's peeled commit:
 
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
 git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.10.0^{}'
 ```
+
+From v0.11.0, `git ls-remote` cannot show the recommended pin. Verify it in a
+clone; the diff shows one changed line, in `src/checkwash/doctor.py`:
+
+```bash
+git clone --filter=blob:none https://github.com/taipei49314/checkwash.git
+git -C checkwash rev-parse 'vX.Y.Z^2^1'
+git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z
+```
+
+Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment, so
+they will propose the tag's commit, which doctor rejects (inferred from those
+tools' documentation, not run). For the same reason zizmor's
+`ref-version-mismatch` audit (1.14.0 and later) can report the comment, and its
+pedantic `stale-action-refs` the untagged commit (inferred, not run). The
+Action itself is unaffected: it runs the same check at either commit. doctor 0.10.0 does not accept the 0.11.0 pin, so
+upgrade the CLI and its local hooks first, then the Action pin.
 
 The hosted `action-security` qualification invokes the actual candidate composite
 on all three operating systems. Expected BLOCK/ERROR jobs stay failed; a separate

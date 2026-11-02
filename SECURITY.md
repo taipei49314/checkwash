@@ -56,7 +56,9 @@ explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies th
 same isolation to the separate quality preview Action. Both shipped in v0.8.0
 (2026-10-15). The README recommends the newest verified release's Action, v0.10.0
 since 2026-10-28, with no one-release lag (maintainer decision, 2026-10-14). Pin
-it by its peeled commit ([action/README.md](action/README.md#public-pin-and-upgrade)).
+the commit the README recommends: up to v0.10.0 the tag's peeled commit, from
+v0.11.0 the release's Action commit `vX.Y.Z^2^1`
+([action/README.md](action/README.md#public-pin-and-upgrade)).
 The v0.8.0 and later Actions need setup-python in the same job, a checkout with both refs, and a
 dedicated job that runs no pull-request code before the check.
 

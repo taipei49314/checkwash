@@ -26,13 +26,23 @@ class Note:
 
 _EVENT = "pull_request"
 _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"}
+_ACTION = "taipei49314/checkwash/action"
+# Scheme S (D-194). The Action pin the README recommended when this release was
+# prepared; RELEASING step 8 moves it with the README after publication.
+_PREVIOUS_ACTION_PIN = "100699796d942af30644738ffbcd1f1c939411c5"
+# This release's own Action commit. Only a release PR's last commit changes the
+# next line, to that commit's parent (tools/own_action_pin.py), and the release
+# bridge verifies it. The release tools read both lines in exactly this shape.
+_OWN_ACTION_PIN = "100699796d942af30644738ffbcd1f1c939411c5"
 _PINS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
-    # The newest verified stable tag's peeled commit, moved
-    # forward after each publication is verified (v0.10.0 here, RELEASING step 8).
-    "taipei49314/checkwash/action": "100699796d942af30644738ffbcd1f1c939411c5",
+    # The pin the README and the self-audit workflow use.
+    _ACTION: _PREVIOUS_ACTION_PIN,
 }
+# The exact commits each step may use; nothing is read from the network.
+_ACCEPTED = {owner: (pin,) for owner, pin in _PINS.items()}
+_ACCEPTED[_ACTION] = tuple(dict.fromkeys((_PREVIOUS_ACTION_PIN, _OWN_ACTION_PIN)))
 # Each step's accepted `with:` mappings, and how a reason spells them. The
 # Python versions are the ones pyproject.toml and action/README.md support,
 # each as an exact double-quoted string (#436).
@@ -291,8 +301,20 @@ def _tracked_blob(root: Path, relative: str | Path) -> tuple[bytes | None, str]:
     return blob.stdout, ""
 
 
+def _refs(owner: str) -> tuple[str, ...]:
+    return tuple(f"{owner}@{pin}" for pin in _ACCEPTED[owner])
+
+
 def _uses(props: dict[str, str], owner: str) -> bool:
-    return set(props) == {"uses", "with"} and props["uses"] == f"{owner}@{_PINS[owner]}"
+    return set(props) == {"uses", "with"} and props["uses"] in _refs(owner)
+
+
+def _accepted_text(owner: str) -> str:
+    pins = _ACCEPTED[owner]
+    if len(pins) == 1:
+        return "requires " + pins[0]
+    return (f"accepts {pins[0]} (the Action recommended before this release) "
+            f"or {pins[1]} (this release's Action)")
 
 
 def _pin_issue(props: dict[str, str], owner: str) -> str:
@@ -300,10 +322,10 @@ def _pin_issue(props: dict[str, str], owner: str) -> str:
     actual = props.get("uses", "")
     prefix = owner + "@"
     if not actual.startswith(prefix):
-        return f"expected {prefix}{_PINS[owner]}; found {actual or '(no uses)'}"
+        return f"expected {' or '.join(_refs(owner))}; found {actual or '(no uses)'}"
     ref = actual[len(prefix):]
     kind = "unsupported SHA" if re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", ref) else "tag or non-SHA ref"
-    return f"{owner}: {kind} {ref}; this CLI requires {_PINS[owner]}"
+    return f"{owner}: {kind} {ref}; this CLI {_accepted_text(owner)}"
 
 
 def _with_issue(props: dict[str, str], with_values: dict[str, str], owner: str) -> str | None:
@@ -350,17 +372,16 @@ def _healthy_job(body: list[str], reasons: list[str]) -> bool:
     for (props, with_values), owner in ((checkout, "actions/checkout"), (setup, "actions/setup-python")):
         if _uses(props, owner) and with_values in _WITH[owner]:
             continue
-        if props.get("uses") != f"{owner}@{_PINS[owner]}":
+        if props.get("uses") not in _refs(owner):
             reasons.append(_pin_issue(props, owner))
         elif (issue := _with_issue(props, with_values, owner)) is not None:
             reasons.append(issue)
         return False
     props, with_values = gate
-    remote = set(props) == {"uses"} and not with_values and props["uses"] == (
-        "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]
-    )
-    if not remote and props.get("uses") != "taipei49314/checkwash/action@" + _PINS["taipei49314/checkwash/action"]:
-        reasons.append(_pin_issue(props, "taipei49314/checkwash/action"))
+    pinned = props.get("uses") in _refs(_ACTION)
+    remote = set(props) == {"uses"} and not with_values and pinned
+    if not pinned:
+        reasons.append(_pin_issue(props, _ACTION))
     return remote
 
 

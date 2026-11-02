@@ -20,16 +20,68 @@ def _pyproject() -> dict:
 
 
 def _assert_action_pin_matches_verified_release(
-    trusted_tag: str, pin: str, advertised: dict,
+    trusted_tag: str, pin: str, advertised: dict, action_commit: str | None = None,
 ) -> None:
     # Tag presence is not publication: candidate/paused tags may exist locally.
     assert trusted_tag == advertised["tag"], (
         f"trusted {trusted_tag} is not verified advertised release {advertised['tag']}"
     )
-    assert pin == advertised["commit"], (
+    # From v0.11.0 the pin is the release's Action commit, not its tag commit.
+    expected = advertised["commit"] if action_commit is None else action_commit
+    assert pin == expected, (
         f"trusted {trusted_tag} pin {pin} differs from verified advertised commit "
-        f"{advertised['commit']}"
+        f"{advertised['commit']}" + ("" if action_commit is None else f" (Action commit {action_commit})")
     )
+
+
+def _version_tuple(value: str) -> tuple[int, int, int]:
+    return tuple(int(part) for part in value.removeprefix("v").split("."))
+
+
+def _release_action_commit(root: pathlib.Path, tag: str, tag_commit: str) -> str:
+    """The commit a verified release recommends as its Action pin.
+
+    Up to v0.10.0 it is the tag's peeled commit. From v0.11.0 (scheme S,
+    D-194) the tag commit is a two-parent merge with its second parent's tree;
+    that parent, the release PR's last commit, has one parent A. From A to the
+    tag only doctor.py changes, in place and in mode 100644, and of its bytes
+    only the own Action pin line, from A's previous pin to A. A is `vX.Y.Z^2^1`.
+    """
+    import os
+    import subprocess
+
+    if _version_tuple(tag) < (0, 11, 0):
+        return tag_commit
+    env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
+
+    def git(*args: str) -> bytes:
+        return subprocess.check_output(["git", "-C", str(root), *args], env=env)
+
+    merge = git("rev-list", "--parents", "-n", "1", tag_commit).decode().split()
+    assert merge[:1] == [tag_commit] and len(merge) == 3, f"{tag} is not a two-parent merge commit"
+    assert git("rev-parse", tag_commit + "^{tree}") == git("rev-parse", merge[2] + "^{tree}"), (
+        f"{tag}'s tree is not the tree of {tag}^2"
+    )
+    final = git("rev-list", "--parents", "-n", "1", merge[2]).decode().split()
+    assert len(final) == 2, f"{tag}^2 does not have exactly one parent"
+    action = final[1]
+    rows = git("diff-tree", "-r", "--raw", "-z", "--no-renames", "--ignore-submodules=none", action, tag_commit).split(b"\0")
+    assert len(rows) == 3 and rows[1:] == [b"src/checkwash/doctor.py", b""], (
+        f"{tag} differs from {tag}^2^1 in {[path.decode('utf-8', 'replace') for path in rows[1::2]]}"
+    )
+    meta = rows[0].decode("ascii").split()
+    assert meta[:2] == [":100644", "100644"] and meta[4:] == ["M"], f"{tag} changes doctor.py's mode or kind: {meta}"
+    before, after = (git("show", commit + ":src/checkwash/doctor.py").split(b"\n") for commit in (action, tag_commit))
+    changed = [index for index, (old, new) in enumerate(zip(before, after)) if old != new]
+    assert len(before) == len(after) and len(changed) == 1 and after[changed[0]] == (
+        b'_OWN_ACTION_PIN = "' + action.encode() + b'"'
+    ), f"{tag} changes more than doctor's own Action pin line of {tag}^2^1, to it: lines {changed}"
+    previous = [re.fullmatch(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"', line)
+                for line in before if line.startswith(b"_PREVIOUS_ACTION_PIN")]
+    assert len(previous) == 1 and previous[0] and before[changed[0]] == (
+        b'_OWN_ACTION_PIN = "' + previous[0].group(1) + b'"'
+    ), f"{tag}^2^1 does not hold its previous Action pin on doctor's own line"
+    return action
 
 
 def test_version_matches_pyproject():
@@ -211,24 +263,34 @@ def test_readme_action_snippet_is_zizmor_blanket():
         raise AssertionError("README Greenwash Action pin lost its trusted-tag annotation")
     pin, trusted_tag = greenwash.groups()
     tag = trusted_tag
-    sha = subprocess.check_output(
+    peeled = subprocess.check_output(
         ["git", "rev-parse", "--verify", f"{tag}^{{commit}}"],
         cwd=str(ROOT),
         text=True,
     ).strip()
+    # The release's Action commit: the peeled commit up to v0.10.0, then `vX.Y.Z^2^1`.
+    sha = _release_action_commit(ROOT, tag, peeled)
+    legacy = _version_tuple(tag) < (0, 11, 0)
     checkwash_refs = [
         ref for ref in uses if ref.startswith("taipei49314/checkwash/action@")
     ]
     assert checkwash_refs == [f"taipei49314/checkwash/action@{sha}"], (
-        f"README Action pin is not {tag}'s peeled commit ({sha}). Verify the "
-        "trusted release with `git rev-parse 'vX.Y.Z^{{commit}}'`."
+        f"README Action pin is not {tag}'s Action commit ({sha}). Verify the "
+        "trusted release with `git rev-parse 'vX.Y.Z^2^1'` (up to v0.10.0, "
+        "`git rev-parse 'vX.Y.Z^{commit}'`)."
     )
-    assert "`git rev-parse 'vX.Y.Z^{commit}'`" in readme
+    assert "`git rev-parse 'vX.Y.Z^2^1'`" in readme
+    if legacy:
+        assert "`git rev-parse 'vX.Y.Z^{commit}'`" in readme
     action_doc = (ROOT / "action" / "README.md").read_text(encoding="utf-8")
-    assert (
-        f"git ls-remote https://github.com/taipei49314/checkwash.git "
-        f"'refs/tags/{tag}^{{}}'"
-    ) in action_doc
+    if legacy:
+        assert (
+            f"git ls-remote https://github.com/taipei49314/checkwash.git "
+            f"'refs/tags/{tag}^{{}}'"
+        ) in action_doc
+    else:
+        assert f"git -C checkwash rev-parse '{tag}^2^1'" in action_doc
+        assert f"git -C checkwash diff '{tag}^2^1' {tag}" in action_doc
 
     self_audit = (ROOT / ".github" / "workflows" / "checkwash.yml").read_text(
         encoding="utf-8"
@@ -243,16 +305,16 @@ def test_readme_action_snippet_is_zizmor_blanket():
             "taipei49314/checkwash/action",
         )
     ]
-    assert sha == pin, f"{tag} peels to {sha}, not trusted pin {pin}"
+    assert sha == pin, f"{tag}'s Action commit is {sha}, not trusted pin {pin}"
 
-    def version_tuple(value: str) -> tuple[int, int, int]:
-        return tuple(int(part) for part in value.removeprefix("v").split("."))
-
-    current_version = version_tuple(_pyproject()["project"]["version"])
-    trusted_version = version_tuple(trusted_tag)
+    current_version = _version_tuple(_pyproject()["project"]["version"])
+    trusted_version = _version_tuple(trusted_tag)
     assert trusted_version <= current_version
     manifest = tomllib.loads((ROOT / "release/advertised.toml").read_text(encoding="utf-8"))
-    _assert_action_pin_matches_verified_release(trusted_tag, pin, manifest["release"])
+    assert manifest["release"]["commit"] == peeled, f"advertised commit is not {tag}'s peeled commit {peeled}"
+    _assert_action_pin_matches_verified_release(
+        trusted_tag, pin, manifest["release"], action_commit=sha,
+    )
 
     # Synthetic peeled local tags model the paused v0.9.1/candidate scenario.
     # A newer local tag must not promote itself into the verified ledger.
@@ -276,6 +338,45 @@ def test_readme_action_snippet_is_zizmor_blanket():
         _assert_action_pin_matches_verified_release("v0.9.0", local_tags["v0.9.0"], advanced)
 
     assert "cannot embed its own commit SHA" in readme
+
+
+def test_release_action_commit_follows_scheme_s(tmp_path):
+    """From v0.11.0 the pin is `vX.Y.Z^2^1`, one doctor line away from the tag."""
+    import pytest
+    from own_action_pin_fixtures import DOCTOR, chain, doctor, git, set_own
+
+    good = chain(tmp_path / "good")
+    assert _release_action_commit(good["root"], "v0.11.0", good["M"]) == good["A"]
+    assert _release_action_commit(good["root"], "v0.10.0", good["M"]) == good["M"]
+
+    def readme(root, action):
+        (root / "README.md").write_bytes(b"also changed\n")
+
+    def two_lines(root, action):
+        path = root / DOCTOR
+        path.write_bytes(path.read_bytes().replace(b"_X = 1", b"_X = 2"))
+
+    with pytest.raises(AssertionError, match="not a two-parent merge commit"):
+        _release_action_commit(good["root"], "v0.11.0", good["S"])
+    touched = chain(tmp_path / "readme", edit=readme)
+    with pytest.raises(AssertionError, match="README.md"):
+        _release_action_commit(touched["root"], "v0.11.0", touched["M"])
+    two = chain(tmp_path / "two", edit=two_lines)
+    with pytest.raises(AssertionError, match="changes more than doctor's own Action pin line"):
+        _release_action_commit(two["root"], "v0.11.0", two["M"])
+    # A's own line must hold A's previous pin.
+    unclean = chain(tmp_path / "unclean", doctor_text=doctor(own="c" * 40))
+    with pytest.raises(AssertionError, match="does not hold its previous Action pin on doctor's own line"):
+        _release_action_commit(unclean["root"], "v0.11.0", unclean["M"])
+    # The tag must carry R's tree: this R also edits README, and the tag commit
+    # leaves that out while differing from A only in the own line.
+    root = touched["root"]
+    git(root, "checkout", "-q", "--detach", touched["A"])
+    set_own(root, touched["A"])
+    git(root, "add", "--", DOCTOR)
+    partial = git(root, "commit-tree", git(root, "write-tree"), "-p", touched["B"], "-p", touched["R"], "-m", "not R's tree")
+    with pytest.raises(AssertionError, match="tree is not the tree of"):
+        _release_action_commit(root, "v0.11.0", partial)
 
 
 def test_perf_gate_is_in_default_collection():
