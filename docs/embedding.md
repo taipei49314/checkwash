@@ -26,10 +26,9 @@ commits that landed on the base branch meanwhile are not in the diff.
 Exit 2 does not mean "no findings". With `--emit-ir`, exit 0 comes with the
 IR instead. Treat standard output that does not parse, or that does not carry
 `checkwash_findings_version` 2, as an error whatever the exit status. On exit
-2 standard output is empty, except that from the next release most size
-refusals print `{"unread": [...]}`, naming the side over the limit that
-stopped the run (the [unreleased changes](#unreleased-changes-on-main) list
-the exceptions).
+2 standard output is empty, except that since v0.9.0 most size refusals
+print `{"unread": [...]}`, naming the side over the limit that stopped the
+run (the [v0.9.0 notes](#v080-to-v090) list the exceptions).
 
 - Standard output is UTF-8 bytes whatever the locale (SPEC §8). Decode it as
   UTF-8. Python's `subprocess.run(..., text=True)` decodes with the locale's
@@ -38,9 +37,9 @@ the exceptions).
 - Keep standard error. Some facts appear only there: an exemption whose key
   checkwash no longer accepts
   (`checkwash: <ledger>: ignored exemption: <key>: <reason>`), and, up to
-  v0.8.0, a side over the source size limit that no detector read; the next
-  release also lists most of those under `unread`
-  ([unreleased changes](#unreleased-changes-on-main)). Assertion-coverage gaps
+  v0.8.0, a side over the source size limit that no detector read; since
+  v0.9.0 most of those are also listed under `unread`
+  ([v0.9.0 notes](#v080-to-v090)). Assertion-coverage gaps
   are there too, and in `--coverage-report FILE` and SARIF. An expired exemption is
   dropped without a message; `checkwash doctor` counts it.
 - Configuration and exemptions are read from the base side of the range, so a
@@ -69,10 +68,13 @@ exemptions remain BASE-side; fixture HEAD context never grants authority.
   new number, and an optional key can be absent. The schema allows unknown
   keys for that reason; checkwash's own tests reject any key it emits that the
   schema does not declare.
-- To validate, use any draft 2020-12 validator. The schema is published after
-  v0.8.0 and ships in no package. Its keys and fields are the same in every
-  release since v0.3.0, so the copy on `main` describes the documents of
-  v0.3.0 to v0.8.0; from the next release on, take it from the tag you run.
+- To validate, use any draft 2020-12 validator. The wheel and the zipapp
+  leave the schema out; the sdist carries it as `docs/findings.schema.json`.
+  It first appears in the v0.9.0 tag, and since then only its descriptions
+  have changed. It also describes the documents of v0.3.0 to v0.8.0, whose
+  keys and fields are the same apart from the optional `unread` key that
+  v0.9.0 added. Take it from the tag you run, or from v0.9.0 for an older
+  release.
 
 ## What each field is for
 
@@ -146,12 +148,32 @@ version, review it again and store the new key; the
 
 ### v0.10.0 to v0.11.0
 
-0.11 is not released. These are the changes on the 0.11 candidate branch (D-189); a build
-from main before that release reports `checkwash_version` `0.10.0`.
+These are the changes in 0.11.0. A build from main before the 0.11.0 release
+pull request reports `checkwash_version` `0.10.0`.
 
-- **The document and the IR did not change:** findings version 2, IR version
-  3, the same keys, finding fields, rule ids and fingerprints. `check`
-  computes its verdict as before.
+- **The document and the IR formats did not change:** findings version 2,
+  IR version 3, the same finding fields, rule ids and fingerprints. Values
+  inside an IR can differ for the same input. D-190 can leave a proven
+  failure relay out of `globals.broad_excepts_added`. D-192 can give a lone
+  `pytest.raises` or `pytest.warns` carrier, and the assertions after it,
+  assertion proof keys (`oracle_assertion_contexts`) where 0.10.0 gave none;
+  it also gives some units none and adds the function kind to an
+  `async def` test's. D-193 can empty the proof keys of a new or
+  assertion-gaining Python test that the repository's own pytest
+  configuration does not certainly collect, which then counts in neither
+  `globals.moved_assertion_texts` nor `globals.moved_unit_hashes`; it leaves
+  a surviving copy that configuration does not collect out of
+  `globals.duplicate_unit_hashes`, and records a Python rename out of that
+  collection as a deleted file and an added one.
+- **Some verdicts change.** A broad `except` that relays a failure unchanged
+  to an asyncio future the test awaits is no longer counted as added
+  (D-190), and a `pytest.raises` test folded into a literal `parametrize`
+  table can keep its credit (D-192), so some blocks become passes. A test
+  whose parametrize cells never reach it as written (D-192), and a moved or
+  folded Python test that the repository's own pytest configuration does
+  not certainly collect (D-193), earn no credit, so some passes become
+  blocks. On the fixed comparison sets none of these moves occurred
+  ([0.11.0 release guide](releases/v0.11.0-public-launch.md)).
 - **The Stop hook's `reason`** (`--format hook-json`, `decision: block`) is
   for Claude, and its wording changed. It still names the number of blocking
   findings and the first one, then tells Claude to fix the production code or
@@ -193,43 +215,37 @@ from main before that release reports `checkwash_version` `0.10.0`.
   neither flag, a repository whose shared settings already hold the managed
   Stop or SessionStart handler makes the install exit 2.
 
-### v0.7.0 to v0.8.0
+### v0.9.0 to v0.10.0
 
-- **The document did not change:** the same keys, finding fields, version 2,
-  rule ids, escalator labels and `shape` values (D-140).
-- **Exit codes** of `--format json` did not change. `--format hook-json`, the
-  Claude Code Stop hook format, did: an engine error now exits 0 with a
-  `systemMessage` (D-134).
-- **Fingerprints:** no change to an existing finding's key was recorded
-  (D-140). That rests on the fixtures and each round's tests, not on a sweep of
-  real history. New findings have keys of their own (D-136, D-137, D-138).
-- **Verdicts:** new checks can block (#422, #431, #432), some runs that exited
-  2 now give a verdict (D-131 to D-135, D-139), and a run from a subdirectory
-  reads the repository root (#416).
+These shipped in v0.10.0, a minor release.
 
-A tool that reads the document, and does not store fingerprints, works with
-v0.8.0 unchanged. A `<0.8` upper bound written for v0.7.0 shut v0.8.0 out
-without need.
+- **The document did not change:** findings version 2, the same finding
+  fields and rule ids. `--emit-ir` moved to IR version 3
+  ([IR payloads (0.10.0)](#ir-payloads-0100)).
+- **Policy-shadow fingerprints (D-177).** A GUARDRAIL_TOUCHED finding for a
+  newly winning `.checkwash/config.toml` or `.checkwash/allow.toml` also
+  binds the BASE `.greenwash` predecessor it shadows, so its key moves.
+  Review exemptions and stored keys for it again; nothing translates them
+  ([policy-shadow migration](remediation-upgrade.md#policy-shadow-migration-in-0100-ir3-findings2)).
+- **A label no release printed before:** `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`
+  marks a Python `BROAD_EXCEPT_ADDED` finding with no unit, in a test or
+  conftest file, that an opaque production change in the diff no longer
+  holds at warn (D-176). Such a finding is high, so it blocks at the
+  default threshold where v0.9.0 held it at warn.
+- **Exit codes:** a `--task` file whose syntax checkwash recognises as
+  unsupported or ambiguous, or whose policy fields are duplicated, unknown
+  or misnested, now exits 2 before analysis (D-181).
+- **Sweep summaries** can carry the optional `commit_diagnostics` array
+  ([sweep summaries](#sweep-summaries)).
+- Other verdicts move too (D-177, D-179); the
+  [0.10.0 release guide](releases/v0.10.0-public-launch.md) counts the moves
+  on its fixed comparison sets.
 
-### v0.6.0 to v0.7.0
+<a id="unreleased-changes-on-main"></a>
 
-The document did not change. These round entries in `DECISIONS.md` record
-moved fingerprints of existing findings, which the v0.7.0 release notes do not
-mention: D-097 (CI_WORKFLOW_TOUCHED reasons); D-100 (a skip raised in a test
-body became TEST_DISABLED); D-102, D-103 and D-104 (findings that changed
-rule); and D-102, D-112, D-115 and D-117 (removed tests whose recorded
-assertions changed). D-118 (AVA and tap) records no moved key in its own
-fingerprint section, but its sweep of five JavaScript histories found 39
-records where only a fingerprint or a message changed. Apart from D-118's
-sweep, the list comes from the entries, not from real history. Some Git input
-failures that used to pass exit 2 instead
-([known issues](KNOWN-ISSUES-v0.7.0.md)).
+### v0.8.0 to v0.9.0
 
-### Unreleased changes on main
-
-These ship in the next release, which D-146 says cannot be a patch release. A build from main
-reports `checkwash_version` `0.8.0`, so a tool cannot tell it from the release
-by that field.
+These shipped in v0.9.0, a minor release, as D-146 requires.
 
 - **The finding fields have not changed.** One optional top-level key and
   one escalator label are new (below).
@@ -294,6 +310,37 @@ by that field.
   run that has one. SARIF names each such side in a tool execution
   notification, not a result. `checkwash_findings_version` stays 2.
 
+### v0.7.0 to v0.8.0
+
+- **The document did not change:** the same keys, finding fields, version 2,
+  rule ids, escalator labels and `shape` values (D-140).
+- **Exit codes** of `--format json` did not change. `--format hook-json`, the
+  Claude Code Stop hook format, did: an engine error now exits 0 with a
+  `systemMessage` (D-134).
+- **Fingerprints:** no change to an existing finding's key was recorded
+  (D-140). That rests on the fixtures and each round's tests, not on a sweep of
+  real history. New findings have keys of their own (D-136, D-137, D-138).
+- **Verdicts:** new checks can block (#422, #431, #432), some runs that exited
+  2 now give a verdict (D-131 to D-135, D-139), and a run from a subdirectory
+  reads the repository root (#416).
+
+A tool that reads the document, and does not store fingerprints, works with
+v0.8.0 unchanged. A `<0.8` upper bound written for v0.7.0 shut v0.8.0 out
+without need.
+
+### v0.6.0 to v0.7.0
+
+The document did not change. These round entries in `DECISIONS.md` record
+moved fingerprints of existing findings, which the v0.7.0 release notes do not
+mention: D-097 (CI_WORKFLOW_TOUCHED reasons); D-100 (a skip raised in a test
+body became TEST_DISABLED); D-102, D-103 and D-104 (findings that changed
+rule); and D-102, D-112, D-115 and D-117 (removed tests whose recorded
+assertions changed). D-118 (AVA and tap) records no moved key in its own
+fingerprint section, but its sweep of five JavaScript histories found 39
+records where only a fingerprint or a message changed. Apart from D-118's
+sweep, the list comes from the entries, not from real history. Some Git input
+failures that used to pass exit 2 instead
+([known issues](KNOWN-ISSUES-v0.7.0.md)).
 
 ## Sweep summaries
 

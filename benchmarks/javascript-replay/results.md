@@ -190,6 +190,34 @@ classifying findings true/false or proving full coverage. These in-sample
 counts are not an adjudicated false-positive rate,
 release acceptance or a replacement for the fresh formal stage chain.
 
+## Run 6: actual v0.10.0 against the 0.11.0 candidate
+
+A same-host comparison on 2026-11-02 UTC, on actual LAPTOP-01AGNPJU, Windows,
+CPython 3.11.9, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. The previous engine
+is the published v0.10.0 zipapp (commit
+`100699796d942af30644738ffbcd1f1c939411c5`, asset SHA256
+`9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a`); the
+candidate is the `src/` tree `6f83616ef1d46009e8388cb011920d1420d2a959` of
+main `dd4ec896f48dacda52fc2c3470b4f4abfe19db7b`, run from source. Members are
+the fixed 3,600 of run 5, this set and the Python standard set, each checked
+against its first parent ([release guide](../../docs/releases/v0.11.0-public-launch.md)).
+
+| v0.10.0 -> candidate | Commits |
+|---|---:|
+| pass -> pass | 1,759 |
+| block -> block | 39 |
+| error -> error | 2 |
+| **total** | **1,800** |
+
+Every commit gave the same exit code and the same report apart from run
+metadata with either engine, and so did the Python standard set (1,734 pass,
+66 block). No commit moved, so none went to the owner. The two errors are
+apollo-client `8a51ea63` and undici `0f1f8903`, unchanged since run 5.
+Records, in the private checkwash-lab repository: `252046de`
+(`notes/r29-comparison-011-claude-20261103/`); the release procedure's 0.11.0
+section records the run identities and hashes. These in-sample counts are not
+a false-positive rate.
+
 ## What these runs do not show
 
 - **A false-positive rate.** The 39 commits that v0.7.0 and v0.8.0 both

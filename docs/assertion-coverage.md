@@ -88,7 +88,7 @@ through 307 or the default of two digits;
 negated precision is not assigned the same weakening direction. These additions
 do not implement general JS/TS parsing, arbitrary helper execution, suite
 collection, async completion, or production repair evidence. Since #428
-(unreleased), a `test.each`, `it.each` or `test.for` table is one unit whose
+(v0.9.0), a `test.each`, `it.each` or `test.for` table is one unit whose
 callback is scanned as a test's and whose countable rows are read; a
 `describe.each` table's rows are not.
 
