@@ -1,0 +1,60 @@
+checkwash engine error: git rev-parse --verify failed: fatal: Needed a single revision
+checkwash engine error: git rev-parse --verify failed: fatal: Needed a single revision
+checkwash engine error: git diff --name-status failed: fatal: ambiguous argument 'MISSING_VERDICT_GATE_REF': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+checkwash engine error: git diff --name-status failed: fatal: ambiguous argument 'MISSING_VERDICT_GATE_REF': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+checkwash: analysis incomplete: after tests/billing.test.ts:5:3: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after tests/value.test.ts:3:28: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after test/billing.spec.js:4:34: assert.strictEqual: Node assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after spec/billing.spec.js:2:30: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after test/billing.spec.js:4:34: assert.strictEqual: Node assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after test/billing.spec.js:5:32: assert.strictEqual: Node assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after tests/billing.test.ts:9:5: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after test/billing.spec.js:4:34: assert.strictEqual: Node assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: before src/total.test.ts:5:3: expect(...).to.be.below: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.above: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: before src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.null: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: before src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: before src/total.test.ts:5:3: expect(...).to.equal: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.not.be.ok: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.not.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.ok: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.null: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.equal: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.closeTo: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.below: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.equal: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.null: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.closeTo: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.exists: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.above: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.isAbove: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.undefined: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.false: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.isFalse: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.isDefined: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.undefined: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.isUndefined: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.closeTo: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.closeTo: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:6:3: expect(...).to.be.closeTo: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.be.below: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: assert.equal: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.exist: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after src/total.test.ts:5:3: expect(...).to.not.be.ok: expect assertion candidate is not represented in the assertion scan

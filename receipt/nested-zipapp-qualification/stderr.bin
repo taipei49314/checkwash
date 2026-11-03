@@ -1,0 +1,3 @@
+checkwash engine error: git rev-parse --verify failed: fatal: Needed a single revision
+error: range must be BASE..HEAD, got 'HEAD'
+error: unknown command 'chek'. Did you mean 'check'?

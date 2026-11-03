@@ -1,0 +1,90 @@
+{
+  "artifacts": {
+    "checkwash-0.11.0-py3-none-any.whl": {
+      "bytes": 1018875,
+      "sha256": "5546943d48f94e2e901d22fcce124d2400e7f44b321c38afd888bcecb02744c3"
+    },
+    "checkwash-0.11.0.tar.gz": {
+      "bytes": 5319763,
+      "sha256": "820164c9331c3662132f8074d7b4c421f1d762fad13d33477f1ab5c2d2aca93e"
+    },
+    "checkwash.pyz": {
+      "bytes": 996040,
+      "sha256": "2cbb8f8c3c2b0d1dbbae6ae416ea677097e2793e55b1a5a8490ab7397839511d"
+    }
+  },
+  "base_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836",
+  "check_run_id": 125942050144,
+  "check_run_ids": [
+    125942032130,
+    125942036470,
+    125942040737,
+    125942045361
+  ],
+  "checks": [
+    "checkwash",
+    "candidate assertion contract (source)",
+    "candidate assertion contract (wheel)",
+    "candidate assertion contract (pyz)",
+    "PJU release evidence (pr)"
+  ],
+  "collector_source_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836",
+  "head_sha": "eed70a764d7f0e588fc2014d1cb916b2047fc648",
+  "host": "LAPTOP-01AGNPJU",
+  "junit": {
+    "passed_subtests": 67,
+    "reported_tests": 22511,
+    "skipped": 25,
+    "tests": 22444
+  },
+  "kind": "checkwash.pju-release-verification.v1",
+  "manifest_sha256": "71d8fb833b81bcce745136582f23682f7881c657c69adf6743041fc42c4c83d9",
+  "other_platforms": "NOT_RUN",
+  "own_action_pin": {
+    "action_commit": "257150319fca15235185fc629d8b9c21c17166ca",
+    "applies": true,
+    "previous_action_pin": "100699796d942af30644738ffbcd1f1c939411c5",
+    "release_pr_head": "eed70a764d7f0e588fc2014d1cb916b2047fc648"
+  },
+  "pr_number": 584,
+  "previous": null,
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "publication_authorized": false,
+  "qualification_cases": 283,
+  "receipt_commit": "e20282a71e7e93418122a704eefebc60b398f7a1",
+  "repository": "taipei49314/checkwash",
+  "schema_version": 1,
+  "source_tree": "49f366fd321bf9db2785cb0fd5172d040fc2c375",
+  "status": "verified",
+  "subject": {
+    "base_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836",
+    "event": {
+      "created_at": "2026-11-03T11:43:46Z",
+      "name": "workflow_dispatch",
+      "payload_sha256": "e1de5b654597cc4aa35048461fa5bbbf453e10f353b21b65251a312ee5ece813",
+      "run_attempt": 1,
+      "run_id": 41629859889,
+      "workflow_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836"
+    },
+    "head_sha": "eed70a764d7f0e588fc2014d1cb916b2047fc648",
+    "kind": "checkwash.pju-release-subject.v1",
+    "pr_number": 584,
+    "release_id": null,
+    "repository": "taipei49314/checkwash",
+    "schema_version": 1,
+    "source_tree": "49f366fd321bf9db2785cb0fd5172d040fc2c375",
+    "stage": "pr",
+    "tag": null,
+    "tag_object": null
+  },
+  "trust": "owner-admitted immutable receipt; not hardware attestation",
+  "verdict": {
+    "baseline": "v0.10.0",
+    "cases": 185
+  },
+  "verification_run": {
+    "attempt": 1,
+    "id": 41642766663
+  },
+  "workflow_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836"
+}
