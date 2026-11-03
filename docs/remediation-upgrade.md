@@ -62,7 +62,9 @@ JSON retains it with `allowlisted: true`; the terminal's visible count and
 SARIF omit suppressed findings. Neither the visible count nor a lower severity
 is a record of all originally detected findings.
 
-### Assertion-level rules (next minor, #421)
+<a id="assertion-level-rules-next-minor-421"></a>
+
+### Assertion-level rules (v0.9.0, #421)
 
 Through v0.8.0, ASSERT_WEAKENED, ASSERT_SUBSTITUTED, ASSERT_REMOVED,
 TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED, EXPECTED_VALUE_DERIVED,
@@ -72,7 +74,7 @@ the base still holds that line, an exemption recorded for one rewrite of it
 also allows every other rewrite the same rule reports, and identical copies of
 one assertion share a key.
 
-The next minor release gives these rules content-bound keys as well:
+v0.9.0 gives these rules content-bound keys as well:
 `rule/path/unit/v2:` followed by the complete 64-character SHA256 digest. The
 key binds the old and the new assertion text, what kind of change it is, which
 of several identical copies changed, and the rule's context: a tolerance's old
@@ -87,7 +89,9 @@ its new key with the four steps above. TEST_DISABLED moves in the same minor
 TEST_PATCHES_SUBJECT keep their legacy keys for now. IR_VERSION and
 FINDINGS_VERSION stay 2.
 
-### TEST_DISABLED (next minor, #512)
+<a id="test_disabled-next-minor-512"></a>
+
+### TEST_DISABLED (v0.9.0, #512)
 
 Through v0.8.0, TEST_DISABLED keyed a finding by its rule, path, unit and a
 fixed text: the marker's name, which for an imperative `pytest.skip()` leaves
@@ -99,7 +103,7 @@ also allowed later, different changes to the same unit: an unguarded skip
 after a guarded one was approved, the other guard event, or the deletion of
 any other row.
 
-The next minor gives TEST_DISABLED the same key form, `rule/path/unit/v2:`
+v0.9.0 gives TEST_DISABLED the same key form, `rule/path/unit/v2:`
 and the complete 64-character digest (a file-level focus under the unit
 `<file>`). The key binds what kind of change it is and what changed: an
 added marker's text and its guard, the guard before and after, which rows
@@ -137,7 +141,7 @@ error; new root extraction receives no credit. Consumers must adapt before
 repinning their in-process engine.
 
 SARIF remains 2.1.0. Migrated identities use `partialFingerprints.checkwash/v2`;
-other identities retain `checkwash/v1`. From the next minor (#421), the nine
+other identities retain `checkwash/v1`. Since v0.9.0 (#421), the nine
 assertion-level rules above are migrated identities too, and so is
 TEST_DISABLED (#512). Source location comes from the analyzed
 head snapshot, including an inherited assertion's helper file. When no precise
@@ -340,9 +344,11 @@ and `--shared` apply to `--agent claude-code` only (exit 2).
 ## Release completion
 
 A fixed wheel or zipapp does not update an existing hook, installed CLI, or
-Action pin. Under the current one-release trust lag, publish and qualify the
-fixed minor release first, then advance the recommended Action and doctor's
-supported pin in the next release. Do not call the recommended CI path fixed
+Action pin. Publish and qualify the fixed release first. Since 2026-10-14 its
+step-8 follow-up advances the recommended Action pin to it once its public
+files are verified ([release procedure](RELEASING.md#main-first-then-the-tag)),
+and from v0.11.0 that release's own `doctor` accepts that pin (D-194); before,
+the pin lagged one release behind. Do not call the recommended CI path fixed
 while it still executes an older engine (when these notes were written the
 recommendation was v0.2.12; the [README](../README.md#use-it-in-ci) states
 the current pin). The legacy ledger can become active again on

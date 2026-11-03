@@ -188,6 +188,7 @@ def test_an_unchanged_dot_less_symlink_still_refuses(tmp_path, mode):
         repo = _repo(tmp_path, {**SOURCES, "py/LICENSE": b"Licence terms\n"}, links={link: b"py/LICENSE"})
         _write(repo, NEW_PROVIDER)
         args, _side = _arguments(repo, mode, *NEW_PROVIDER)
+        refusal = f"{NONREGULAR} {link} (a symlink)"
     else:
         # A gitignored POSIX venv, whose `bin/python` is a link: the
         # working-tree inventory lists ignored trees too. The ruling names
@@ -201,10 +202,15 @@ def test_an_unchanged_dot_less_symlink_still_refuses(tmp_path, mode):
         _symlink(repo / link, "python3.12")
         _write(repo, NEW_PROVIDER)
         args, _side = _arguments(repo, mode)
+        # The working-tree batch reader quotes the path and names its side and
+        # entry point (825e2dc2), as test_issue346_config_reads pins.
+        refusal = (f"{NONREGULAR} {link!r} (a symlink); side='worktree', entry='worktree/read_many'. "
+                   "Use a repository-owned regular source at this path; "
+                   "a committed range reads committed bytes only.")
     code, stdout, stderr = _check(repo, *args)
     # Not a size refusal, so stdout stays empty (#454).
     assert (code, stdout) == (2, "")
-    assert f"checkwash engine error: EngineError: {NONREGULAR} {link} (a symlink)" in stderr
+    assert f"checkwash engine error: EngineError: {refusal}" in stderr
 
 
 BUDGET = 1_100_000

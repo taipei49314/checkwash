@@ -1,6 +1,6 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **is alpha**, including the unreleased 0.10.0 candidate. Its versioned interfaces and
+checkwash **is alpha**, including 0.11.0. Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
@@ -17,14 +17,14 @@ requires IR3 proof (`globals.policy_shadows`, present even when empty);
 findings remains 2. Read the [migration procedure and
 runtime limits](remediation-upgrade.md) before upgrading.
 
-**Next minor (unreleased, #421):** nine assertion-level oracle rules get
+**Since v0.9.0 (#421):** nine assertion-level oracle rules get
 content-bound v2 fingerprints that bind the after side too, and retire their
 before-only exemptions; TEST_DISABLED does the same in that minor (#512).
 This moves those namespaces' fingerprints as well, as a minor release may;
 Those changes alone keep IR/findings versions 2; the 0.10.0
 policy-shadow contract moves IR to 3 and keeps findings at 2. The
-[assertion-level notes](remediation-upgrade.md#assertion-level-rules-next-minor-421)
-and the [TEST_DISABLED notes](remediation-upgrade.md#test_disabled-next-minor-512)
+[assertion-level notes](remediation-upgrade.md#assertion-level-rules-v090-421)
+and the [TEST_DISABLED notes](remediation-upgrade.md#test_disabled-v090-512)
 list the rules and the re-review step.
 
 
@@ -43,11 +43,11 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 |---|---|---|
 | Rule IDs | `SPEC.md` §4 | `ASSERT_WEAKENED` will never be renamed or reused for something else. Your allowlist entries and your log greps keep working |
 | Severity model | `SPEC.md` §5 | Every detector reports at `warn`; only the escalator table promotes to `high`/`critical`. A detector will never start blocking on its own |
-| Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not. Since v0.8.0, in `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`; a usage error such as a malformed range still exits 2. The hook is an author-side check; the required CI check remains the gate, and every other format keeps exit 2 for an engine error ([#414](https://github.com/taipei49314/checkwash/issues/414)). From the next minor (unreleased), one engine error is reported as a block there: a size refusal exits 0 with `decision: block` and a `reason` naming path, side, size and limit, only when it is for a change in the diff that decides the verdict (for the Stop hook, HEAD against the working tree) and that change has a head or worktree side over the limit; `SPEC.md` §9 lists the size refusals that keep the message. Every other engine error still carries no `decision`, and term, json and sarif keep exit 2 for every engine error, this size refusal included ([#456](https://github.com/taipei49314/checkwash/issues/456)). With `--hook-input stdin`, the managed Stop handler's flag, a pass may also carry a non-blocking `systemMessage` about the session's commits, a size refusal in their analysis included, and the flag with another format or a range is a usage error, exit 2. `hook session-start`, the managed SessionStart handler, prints nothing and always exits 0 ([#418](https://github.com/taipei49314/checkwash/issues/418)). From 0.11 (unreleased, D-189), a block verdict with `--hook-input stdin` on a stop whose hook input has `stop_hook_active` exactly `true`, with the same blocking set the hook last blocked on in that session, carries no `decision`, only a `systemMessage` for the user; every other block, and the size block on every stop, keeps `decision: block`. `hook pre-tool-use`, the managed PreToolUse handler, prints one JSON object (an `ask`, a `systemMessage` or `{}`) and always exits 0, whatever its arguments, since a PreToolUse hook that exits 2 blocks the tool call |
-| Finding fingerprints | `src/checkwash/findings.py` | Within one minor release line (x.y.0 to x.y.z), a recorded exemption keeps matching. A minor release can move fingerprints in any namespace; its `DECISIONS.md` entry and release notes name the rules and shapes that move ([fingerprint stability](#fingerprint-stability)). v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. The next minor retires the before-only keys of nine assertion-level rules the same way (#421) and TEST_DISABLED's legacy keys (#512), renumbers units that share a name (#424), and no longer gives a dead def a `name#N` place (#499) |
+| Exit codes | `SPEC.md` §9 | `0` pass, `1` block, `2` engine error. A crash is never reported as a block — that distinction is gated by an end-to-end test, because it once was not. Since v0.8.0, in `check --format hook-json` (the Claude Code Stop hook) an engine error, or a config or allowlist parse error under `on_engine_error = "block"`, exits 0 instead, with a JSON `systemMessage` saying the change was not analysed and why, and no `decision`; a usage error such as a malformed range still exits 2. The hook is an author-side check; the required CI check remains the gate, and every other format keeps exit 2 for an engine error ([#414](https://github.com/taipei49314/checkwash/issues/414)). Since v0.9.0, one engine error is reported as a block there: a size refusal exits 0 with `decision: block` and a `reason` naming path, side, size and limit, only when it is for a change in the diff that decides the verdict (for the Stop hook, HEAD against the working tree) and that change has a head or worktree side over the limit; `SPEC.md` §9 lists the size refusals that keep the message. Every other engine error still carries no `decision`, and term, json and sarif keep exit 2 for every engine error, this size refusal included ([#456](https://github.com/taipei49314/checkwash/issues/456)). With `--hook-input stdin`, the managed Stop handler's flag, a pass may also carry a non-blocking `systemMessage` about the session's commits, a size refusal in their analysis included, and the flag with another format or a range is a usage error, exit 2. `hook session-start`, the managed SessionStart handler, prints nothing and always exits 0 ([#418](https://github.com/taipei49314/checkwash/issues/418)). From 0.11.0 (D-189), a block verdict with `--hook-input stdin` on a stop whose hook input has `stop_hook_active` exactly `true`, with the same blocking set the hook last blocked on in that session, carries no `decision`, only a `systemMessage` for the user; every other block, and the size block on every stop, keeps `decision: block`. `hook pre-tool-use`, the managed PreToolUse handler, prints one JSON object (an `ask`, a `systemMessage` or `{}`) and always exits 0, whatever its arguments, since a PreToolUse hook that exits 2 blocks the tool call |
+| Finding fingerprints | `src/checkwash/findings.py` | Within one minor release line (x.y.0 to x.y.z), a recorded exemption keeps matching. A minor release can move fingerprints in any namespace; its `DECISIONS.md` entry and release notes name the rules and shapes that move ([fingerprint stability](#fingerprint-stability)). v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. v0.9.0 retired the before-only keys of nine assertion-level rules the same way (#421) and TEST_DISABLED's legacy keys (#512), renumbered units that share a name (#424), and stopped giving a dead def a `name#N` place (#499) |
 | IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A required-key or existing-field contract change bumps the affected number; optional additions follow the rules below. See the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | Both `.checkwash/config.toml` and `.greenwash/config.toml` are supported, with the precedence below. A malformed config is reported, never silently ignored |
-| Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. This is the standing nine-leg contract. Each release's evidence records its actual coverage; the [0.10.0 candidate guide](releases/v0.10.0-public-launch.md) identifies the missing legs and unexecuted cross-platform comparison |
+| Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. This is the standing nine-leg contract. Each release's evidence records its actual coverage; its release guide (for 0.11.0, [Evidence and scope](releases/v0.11.0-public-launch.md#evidence-and-scope)) identifies the missing legs and unexecuted cross-platform comparison |
 | Zero runtime dependencies | `pyproject.toml` | Gated by a test. It is what makes the single-file build possible |
 | Never executes your code | the whole design | checkwash statically reads the diff. It does not import, run, or evaluate code under review |
 
@@ -55,7 +55,7 @@ Configuration and allowlists are read from the base of the reviewed diff.
 In the managed Stop hook with a recorded session, that base is the commit the
 session started from, so policy committed during a session applies from the
 next one ([#418](https://github.com/taipei49314/checkwash/issues/418)).
-The managed PreToolUse hook (0.11, unreleased, D-189) reads them from the same
+The managed PreToolUse hook (from 0.11.0, D-189) reads them from the same
 commit, or from HEAD without a usable record; it reads no task contract and
 turns `oracle_freeze` on itself. Its before side is the working tree (HEAD's
 copy when only that one parses), not a reviewed base.
@@ -87,7 +87,7 @@ below remain; the v0.3.0 IR adds reviewed-change evidence described in the
 | `skipped_files` | unparseable paths |
 | `config_errors` | parse failures for base-side config/allow, and config values that are not valid |
 | `verdict` | `pass` or `block` |
-| `unread` | from the next minor (unreleased, [#454](https://github.com/taipei49314/checkwash/issues/454)): changed sides over the 1,000,000-byte source limit that no detector had to read, the sides the stderr notes name. One object per side with exactly `path`, `side` (`base`, `head` or `worktree`), `size` and `limit` in bytes, sorted by path, then side. The change holding a listed side was set aside whole, its readable side included; in a range-mode rename with one side over the limit, the readable side's path is not listed (the new path when the base side is over, the old path when the head side is). The skip of a root `poetry.lock` or `uv.lock` over the limit at the base is not listed; its note stays on stderr. When the diff also changes that lockfile, the change's sides over the limit are listed like any other. The key is omitted when empty |
+| `unread` | since v0.9.0 ([#454](https://github.com/taipei49314/checkwash/issues/454)): changed sides over the 1,000,000-byte source limit that no detector had to read, the sides the stderr notes name. One object per side with exactly `path`, `side` (`base`, `head` or `worktree`), `size` and `limit` in bytes, sorted by path, then side. The change holding a listed side was set aside whole, its readable side included; in a range-mode rename with one side over the limit, the readable side's path is not listed (the new path when the base side is over, the old path when the head side is). The skip of a root `poetry.lock` or `uv.lock` over the limit at the base is not listed; its note stays on stderr. When the diff also changes that lockfile, the change's sides over the limit are listed like any other. The key is omitted when empty |
 
 `unread` is the first key that a run can omit. It needs no version bump (a
 new optional field, below), but a consumer that validates the envelope
@@ -123,7 +123,7 @@ silently discarding this required meaning. See embedding.md's IR guidance.
 
 `--format sarif` is a **projection** of the same findings into SARIF
 2.1.0. It does not bump `FINDINGS_VERSION`. Allowlisted findings are
-omitted there. From the next minor (unreleased, #454), each unread side is
+omitted there. Since v0.9.0 (#454), each unread side is
 a `warning` tool execution notification after any coverage gaps, never a
 result: the stderr note as its text, and `checkwash.path`, `checkwash.side`,
 `checkwash.size` and `checkwash.limit` as its properties. A head or
@@ -309,7 +309,7 @@ the focus adds no disable. Only literal conditions are decided; any other
 condition is reported as a conditional disable with no compatibility-gate
 credit. Hooks, block callbacks defined elsewhere, destructured contexts and
 `test.extend` functions stay outside this model. Since
-[#428](https://github.com/taipei49314/checkwash/issues/428) (unreleased), a
+[#428](https://github.com/taipei49314/checkwash/issues/428) (v0.9.0), a
 `test.each`, `it.each` or `test.for` table is one unit, named by its title as
 written, whose liveness is read as any unit's and whose rows are its test
 items: a deleted row, or a plain test turned into a table of no rows or of
@@ -381,8 +381,8 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 
 ## What must change before 1.0
 
-**Status: NOT MET.** Public availability as v0.8.0 is not a 1.0 readiness
-decision. The release needs an evidence-backed acceptance review covering:
+**Status: NOT MET.** Public availability of a 0.x release is not a 1.0
+readiness decision. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
 |---|---|---|

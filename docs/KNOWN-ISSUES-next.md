@@ -1,5 +1,9 @@
 # 0.11 candidate — 2026-10-28
 
+Status, 2026-11-03: the 0.11.0 release pull request carries this section's
+rows into [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md), the page to read
+for 0.11.0. The rows stay here, unchanged, as the dated preparation record.
+
 The 0.11 candidate adds a Claude Code PreToolUse ask and changes how the
 Stop hook blocks ([D-189](../DECISIONS.md)). It also stops counting a
 proven Python failure relay as an added swallow

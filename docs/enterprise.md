@@ -1,6 +1,6 @@
 # Enterprise checklist
 
-One page for a security or platform team evaluating checkwash v0.6.0
+One page for a security or platform team evaluating checkwash 0.x
 (alpha; bounded JS/TS assertion evidence) as a required gate, with a reviewed exemption path.
 Start with a review of its
 [coverage and adoption cost](stability.md#coverage-and-adoption-cost), then
@@ -28,10 +28,11 @@ workflow and the ruleset command are under
 
 3. `checkwash doctor` — it cannot see branch protection; confirm step 2.
 
-The README's Action is hash-pinned to **v0.8.0**, the release its CLI commands
-install. A release commit cannot embed its own SHA, so the pin advances in a
-follow-up once a release's publication is verified. Installing a newer CLI does
-not update an existing Action. Always record both deployed versions. A required check enforces that version's
+The README's Action pin and its CLI commands name the same release, the latest
+one whose public files are verified. The pin advances in a follow-up once a
+release's publication is verified; from v0.11.0 it names the release's Action
+commit, `vX.Y.Z^2^1`, which that release's `doctor` accepts (D-194). Installing
+a newer CLI does not update an existing Action. Always record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 
 Optional PR line comments (T2.2): set `comment-pr: true` and add
@@ -63,10 +64,10 @@ Through v0.8.0 the assertion-level rules (ASSERT_WEAKENED, ASSERT_SUBSTITUTED,
 ASSERT_REMOVED, TOLERANCE_LOOSENED, EXPECTED_VALUE_CHANGED,
 EXPECTED_VALUE_DERIVED, EXPECTATION_DEFINITION_CHANGED, SUBJECT_NORMALIZED and
 SUBJECT_INPUT_CHANGED) were keyed on the old assertion only: one exemption
-allowed every later rewrite of that line. From the next minor (#421) their key
+allowed every later rewrite of that line. Since v0.9.0 (#421) their key
 also binds the new assertion, the kind of change, which identical copy changed
 and the rule's context, and their old keys are retired the same way. Each
-reviewed rewrite needs its own entry. In the same minor (#512), TEST_DISABLED's
+reviewed rewrite needs its own entry. In the same release (#512), TEST_DISABLED's
 key binds what each disabling changed (an added skip's text and guard, the
 guard before and after, which parametrize rows went, a removed test's complete
 assertions, a file-level focus's spelling), and its old keys are retired too.
@@ -140,7 +141,7 @@ unless it is a proven failure relay, which is not counted as added, within
 (THREATMODEL rows 172 to 176).
 [#419](https://github.com/taipei49314/checkwash/issues/419) is closed as a
 documented residual, not a fix ([D-191](../DECISIONS.md)): what still passes
-and what blocks are in [KNOWN-ISSUES-next](KNOWN-ISSUES-next.md) and
+and what blocks are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md) and
 [THREATMODEL](../THREATMODEL.md) item 4 and rows 2, 93, 130, 131 and 172 to
 175. If an author who reads these rules is in your threat model, use one of
 the options below. Each also blocks honest changes, and the cost given is
@@ -168,10 +169,11 @@ from archived rows, not a measurement of 0.11 (see *About the counts*).
 
    `checkwash doctor` proves only a checkwash step with `uses:` and no
    `with:`, so a workflow that sets `fail-on: warn` reports "WARN workflow
-   analysis incomplete" and doctor exits 1. In 0.11 that is expected, and
-   doctor is unchanged. A pull request runs the workflow as it changes it,
-   so one that lowers its own `fail-on` is judged at the lowered threshold,
-   and its workflow edit shows only as `CI_WORKFLOW_TOUCHED` at warn: keep
+   analysis incomplete" and doctor exits 1. In 0.11.0 that is expected:
+   doctor still proves only a step with no `with:`. A pull request runs the
+   workflow as it changes it, so one that lowers its own
+   `fail-on` is judged at the lowered threshold, and its workflow edit
+   shows only as `CI_WORKFLOW_TOUCHED` at warn: keep
    `.github/workflows/` behind CODEOWNERS with a required code-owner review
    (§4).
 
@@ -198,7 +200,7 @@ from archived rows, not a measurement of 0.11 (see *About the counts*).
    `EXPECTATION_DEFINITION_CHANGED` in 20, `ASSERT_REMOVED` in 8,
    `ASSERT_SUBSTITUTED` in 7 and `ASSERT_WEAKENED` in 2, overlapping.
 
-3. **The Claude Code PreToolUse ask** (0.11, not yet released; local hook
+3. **The Claude Code PreToolUse ask** (from 0.11.0; local hook
    installs). `checkwash hook install --agent claude-code` adds a
    PreToolUse handler that judges each Edit, Write or MultiEdit of a Python
    test file alone, with `oracle_freeze` forced, and asks you before the
@@ -210,7 +212,7 @@ from archived rows, not a measurement of 0.11 (see *About the counts*).
    tool, JS/TS tests, other rules, input it cannot read or predict, or
    anything outside an agent session; an approved ask lets the edit through;
    the Stop hook applies no freeze; and pull request checks and the Action
-   are unchanged ([KNOWN-ISSUES-next](KNOWN-ISSUES-next.md)). Cost: in the
+   are unchanged ([KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md)). Cost: in the
    session replay behind [D-189](../DECISIONS.md), 630 Claude Code edits of
    Python test files on one host replayed through the released v0.10.0 pyz,
    not this handler, these five rules asked about 63 edits (10%), 24 of the

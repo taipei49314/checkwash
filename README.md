@@ -20,8 +20,13 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-The install commands below use v0.10.0, the latest published release; 0.11 is
-unreleased on main ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
+This README was written for checkwash 0.11.0. Its install commands and Action
+pin still name v0.10.0, the latest release whose public files had been
+verified when it was written; the
+[README on GitHub](https://github.com/taipei49314/checkwash#readme) moves them
+to 0.11.0 once 0.11.0's are. Once 0.11.0 is on PyPI, you can install it by
+writing `0.11.0` where the commands below say `0.10.0`
+([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
 
 Start in one of three ways, each below: Claude Code hooks, the CLI on a
 repository, or the GitHub Action as a required check.
@@ -43,21 +48,21 @@ machine-local Claude Code settings.
   to stop. On a blocking finding it blocks the stop and gives Claude the
   finding. A SessionStart hook in the same file records where each session
   starts, so the Stop hook also checks what the session commits.
-- From 0.11 (unreleased), a local install also adds a **PreToolUse ask**.
+- From 0.11.0, a local install also adds a **PreToolUse ask**.
   When an Edit, Write or MultiEdit of a Python test file would leave a finding
   of one of five weakening rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`,
   `TEST_DISABLED`, `TOLERANCE_LOOSENED` and `BROAD_EXCEPT_ADDED`) at high, the
   hook asks you before the edit is made. In a `claude -p` run nobody can
   answer, so such an edit is denied; the interactive prompt is not verified in
-  any mode. From 0.11 a local install is the default, and `--shared` writes
+  any mode. From 0.11.0 a local install is the default, and `--shared` writes
   `.claude/settings.json` with no PreToolUse ask.
 
 Both hooks are author-side checks. An edit made through Bash never reaches the
 ask. When the Stop hook cannot analyse a change, it says so and does not block
 the stop, except for a changed file over the size limit (see "Know the
 limits"). Neither hook can stop someone else's merge: the required check under
-"Use it in CI" is the gate. The 0.11 hooks' limits are in the
-[0.11 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md).
+"Use it in CI" is the gate. The 0.11.0 hooks' limits are in the
+[0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
 
 ## Try it on a repository
 
@@ -142,9 +147,9 @@ gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.j
 
 This adds a ruleset; it does not replace existing ones. `checkwash doctor`
 can inspect the local workflow, but cannot verify live branch protection.
-The published 0.10.0 CLI's `doctor` accepts only the Action pin built into it,
-v0.9.0's, so it reports the v0.10.0 pin above as an unsupported SHA ("workflow
-analysis incomplete", exit 1); `doctor` from this repository's main accepts it.
+`doctor` 0.10.0 accepts only the Action pin built into it, v0.9.0's, so it
+reports the v0.10.0 pin above as an unsupported SHA ("workflow analysis
+incomplete", exit 1); `doctor` 0.11.0 accepts it.
 
 ## When checkwash blocks
 
@@ -192,7 +197,7 @@ predecessor, so a change cannot approve its own relaxation either. An entry
 needs a reason and expires after 90 days by default, 180 at most. Keep
 `.checkwash/` and `.greenwash/` behind
 [code owners](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#4-codeowners).
-From 0.11 (unreleased), the Stop hook tells Claude not to add an exemption
+From 0.11.0, the Stop hook tells Claude not to add an exemption
 itself but to tell you which finding blocks and why, and the PreToolUse ask
 asks you to approve only if the weaker test is intended.
 [Exemption rules](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#3-allowlist--reviewed-time-boxed-base-side)
@@ -206,7 +211,7 @@ fixture, and the ledger credits the reporter.
 
 ## Know the limits
 
-**v0.10.0 is alpha.** A pass does not prove that a change is correct or honest.
+**checkwash is alpha.** A pass does not prove that a change is correct or honest.
 Python is the main language supported; JS/TS support covers a limited set of
 test patterns. Known gaps remain.
 
@@ -215,8 +220,8 @@ one line in a template or `AUTHORS`, can still hold a weakened Python or
 JS/TS test at warn, which passes at the default threshold. #419 is closed
 as a documented residual, not fixed
 ([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
-Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
-and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)
+Read the [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
+and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
 before relying on a pass.
 
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
@@ -226,11 +231,11 @@ prove a repair is correct, and an edit that changes nothing can earn it
 which is expected: it proves only a checkwash step with no `with:`), or run
 `checkwash check --task` in a CLI step of your own with a base-side
 `oracle_freeze` contract (the Action has no task input); both block more
-honest changes too. From 0.11 (unreleased), on a local hook install, the
+honest changes too. From 0.11.0, on a local hook install, the
 Claude Code PreToolUse hook asks before an Edit, Write or MultiEdit of a
 Python test leaves a finding of its five weakening rules at high, whatever
 repair evidence the rest of the working tree holds; its limits are in the
-[0.11 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md).
+[0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
 
 In v0.8.0, JS/TS `test.each`, `it.each` and `test.for` tables are not
 scanned: an assertion weakened or deleted in one, an edited row or a deleted
@@ -411,7 +416,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.10.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) · [v0.10.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
+| Installation checks, versions and first use | [v0.10.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) · [v0.10.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md) · [0.11.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

@@ -1,6 +1,112 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-03 (0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-03 (the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-03: the 0.11.0 release pull request
+
+0.11.0 is being released under the pre-1.0 delegation; RELEASING's section
+"v0.11.0 release under the pre-1.0 delegation" records Claude's reading of
+its scope: one attempt at `v0.11.0`, the merge after Nelson approves it, the
+`pypi` deployment only by Nelson's own approval, the tag after Nelson has
+reviewed the fixed-corpus list, which is empty, and other platforms NOT_RUN.
+After publication the decision-log cut and the baseline rotation rest on
+Nelson's 2026-10-28 answer 「開始」 to a message Claude wrote, within the
+bounded shape of last time; RELEASING quotes that message.
+
+The release pull request is content commit A, then R (scheme S, D-194). A:
+
+- Version 0.11.0 in `pyproject.toml`, `src/checkwash/__init__.py`, `uv.lock`
+  and the table below.
+- The README is what PyPI shows for 0.11.0, so its version sentence now says
+  that its install commands and Action pin still name v0.10.0 until the
+  GitHub README moves them; "unreleased" is gone from the 0.11 notes, the
+  known-issues links name the 0.11.0 page, and the `doctor` note names
+  `doctor` 0.11.0. Install commands and the Action pin stay v0.10.0 until
+  step 8.
+- New: the release guide `docs/releases/v0.11.0-public-launch.md`,
+  `docs/KNOWN-ISSUES-v0.11.0.md` (the rows of KNOWN-ISSUES-next's 0.11
+  section, which stays there as the dated record) and the v0.11.0 entry of
+  the release index.
+- RELEASING: the delegation section with the fixed-corpus comparison, the
+  uvloop diagnostic and D-176's remaining-history risk, and the trusted ref
+  of the 0.11.0 chain.
+- New: `docs/d176-cost-disposition-0.11.0.md`, the separate delegated
+  disposition D-190 and D-191 left to this release: Claude accepts D-176's
+  explicitly unmeasured remaining-history risk for 0.11.0 only.
+- `docs/embedding.md`'s v0.10.0 to v0.11.0 notes said that `check` computes
+  its verdict as before, true when D-189 wrote it, not since D-190, D-192 and
+  D-193; they now say which verdicts change.
+- Release labels that had gone stale: the user-facing documents called v0.9.0
+  changes (#421, #424, #428, #454, #456, #499, #512) "unreleased" or "the
+  next minor", and 0.11 features "not yet released". They now name the
+  release that shipped each, in `docs/stability.md`, `docs/embedding.md`,
+  `docs/enterprise.md`, `docs/remediation-upgrade.md` (old anchors kept),
+  `docs/subject-integrity.md`, `docs/assertion-coverage.md`,
+  `docs/integrations.md` and the `unread` description in
+  `docs/findings.schema.json`. `docs/embedding.md`'s v0.9.0 notes, titled
+  "Unreleased changes on main", become "v0.8.0 to v0.9.0" in release order
+  (the old anchor kept), and the missing "v0.9.0 to v0.10.0" notes are
+  added. `docs/enterprise.md` also links the 0.11.0 known issues, and the
+  JS/TS results record gains run 6. THREATMODEL item 4 and
+  row 2 still say the targeted diagnostic is pending and the remaining risk
+  is not yet accepted for 0.11; THREATMODEL is agent-read-only, so they wait
+  for a reviewed change Nelson approves, and this release's records are the
+  disposition they point to.
+
+R is `tools/own_action_pin.py write` on A: it sets `doctor`'s
+`_OWN_ACTION_PIN` to A and nothing else.
+
+A also fixes a test that runs only where it can create symlinks. The
+six-leg batch on the first R, `abb1bf34`, passed on the three Windows legs
+and failed one case on each Linux leg, with byte-equal corpus outputs on all
+six: the working-tree case of
+`tests/test_issue455_q4_unchanged_dot_less_refusal.py` still expected the
+working-tree reader's refusal message from before `825e2dc2` (2026-10-26, in
+v0.10.0), which quotes the path and names its side and entry point. Windows
+without the symlink privilege skips that case, so no PJU receipt ran it. It
+now expects the current message, as `tests/test_issue346_config_reads.py`
+does. Re-run in Docker on the three Linux legs' own environments, the old
+test failed that case and the fixed one passes all eight; on Windows seven
+pass and one skips, as before. `src/` is unchanged, so the fixed-corpus
+comparison and the uvloop results still describe A. The test file and the
+message are unchanged since v0.10.0, so v0.10.0's own suite would fail the
+same way on Linux; that is inferred, not run. This A replaces the first,
+`4a8adec1`; R is rewritten on it, and the batch runs again on the new R.
+
+The fixed-corpus comparison ran on 2026-11-02 UTC on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the published v0.10.0 zipapp
+against the candidate `src/` tree `6f83616e` of main `dd4ec896`; A changes
+that tree only in the version string (D-196). All 3,600 fixed commits gave
+identical exit codes and reports apart from the `run` block: Python 1,734
+pass and 66 block, JS/TS 1,759 pass, 39 block and 2 engine errors, with
+each. No outcome moves, so the
+owner's list is empty. The three uvloop inputs D-187 accepted for 0.10 only
+move from block to pass with no finding (D-190). Records: checkwash-lab
+`252046de` (private). In-sample counts, not a false-positive rate.
+
+Review: a Workflow run of 37 read-only Claude agents (three lenses, one
+adversarial verifier per finding) and one Gemini 4 Argon run, which
+completed, reviewed the first draft `81146cfa`. All 34 workflow findings
+were verified as real; Argon's six include three of the same problems, and
+its "Direct Answers" section states numbers the evidence does not hold,
+which are not used. A second run of 18
+agents re-reviewed the fixes at `c1af1bc7`, the new D-176 record included:
+15 of its 16 findings were real. Every applied fix was checked against the
+source by Claude. Records: checkwash-lab `43c3c2d7` (private).
+
+Status: the release pull request from `claude/v011-release-20261103`; not
+merged. A is on main `fa8a8ea0` (#583's merge, whose `src/` tree is still
+the compared `6f83616e`), and R follows it. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-03 UTC, on A: the 81 test files that read the README, the release
+documents, STATE, the version or the Action pins (6,735 passed and 16
+existing skips, plus 36 subtests, with 0 failures), and checkwash's own check
+of A against main with A's engine and with the published v0.10.0 pyz, which
+passes with one warning, `CI_WORKFLOW_TOUCHED` for `pyproject.toml`. The
+release bridge's `pr` stage runs the full suite on R, and the six-leg batch
+runs on R; its result is recorded with the release. Not run: other
+platforms.
+
 
 ## 2026-11-03: the README puts the start before the release history
 
@@ -36,14 +142,22 @@ the same from main and from v0.10.0's source (LAPTOP-01AGNPJU,
 README as built, so the 0.11 release pull request has to reword the version
 sentence.
 
-Status: a pull request from `claude/v011-readme-20261103`, with main
-`dd4ec896` (D-196) merged in; not merged. Docs only. On LAPTOP-01AGNPJU
+Status: merged. Nelson approved PR #583 at 2026-11-03T05:05:21Z (the
+button labelled 「核准合併 #583」, which Claude wrote, answering Claude's
+「要用 merge commit 合併 #583 嗎？」), and #583 merged as main `fa8a8ea0`
+at 05:05:48Z (a merge commit, parents `dd4ec896` and `5a611e00`). Its PJU
+receipt (head `5a611e00`, base and collector main `dd4ec896`, manifest
+SHA256 `f80e3df2e7f7661ede8423169a10cc44f1f99e2658e2d59b21b621ab083e02e0`)
+is published as `evidence/pr583-f80e3df2e7f7-20261102` (commit `c9b6263a`),
+and intake run 41518608693 set the four required checks. On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
-2026-11-02: the tests that read README.md, with the docs-link,
-documentation-contract, packaging and state tests (133 passed, 9 existing
-symlink-privilege skips), and checkwash's own check of the change, which
-passes with no finding. Not run: other platforms. Not released: package
-metadata stays 0.10.0.
+2026-11-02: the receipt's full suite (`pytest tests`, `tests/gates`
+included, xdist `-n 2`), whose JUnit testsuite counts `tests="22511"`:
+22444 testcase entries, 22419 passed and 25 skipped, plus 67 subtests, with
+0 failures and 0 errors; both Action replays and the source, wheel and pyz
+qualifications exited 0; and checkwash's own check passed with no finding.
+Docs only. Not run: other platforms. Not released: package metadata stays
+0.10.0.
 
 
 ## 2026-11-03: 0.11 keeps scheme S; the fixed-corpus candidate may differ in doctor's own pin line; two 0.12 directions (D-196)
@@ -484,7 +598,8 @@ this change passes all three, plain and under `oracle_freeze`
 targeted three-commit, six-call uvloop diagnostic on the final release src
 tree, because R29's repositories hold no uvloop commit, and the 0.11
 disposition of D-176's remaining history risk, which is not yet accepted
-for 0.11.
+for 0.11. (2026-11-03: both are in the 0.11.0 release pull request; its
+section above gives them.)
 
 Status: merged with D-191 as PR #577, merge commit `c06b10d3`
 (2026-10-30T02:20:19Z); the D-191 status above gives its receipt and checks.
@@ -3839,7 +3954,7 @@ how the measurements moved; their original dates and values remain history.
 
 | authoritative number | value |
 |---|---|
-| version | v0.10.0 |
+| version | v0.11.0 |
 | last published CLI | v0.10.0 |
 | last published CLI commit | 100699796d942af30644738ffbcd1f1c939411c5 |
 | detectors | 22 |

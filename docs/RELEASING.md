@@ -174,6 +174,99 @@ rows SHA256 `9b04bd886cec8a63cd5fc1a02339593e58110611040f078330c9b91a8582baf9`).
 This differential is in-sample between two candidate trees; it is not native
 Linux, a false-positive rate or a new adjudication.
 
+## v0.11.0 release under the pre-1.0 delegation (2026-11-03)
+
+0.11.0 is being released under the delegation recorded at the top of this file:
+Nelson's 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」 and
+「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」, which he
+handed to Claude with 「Checkwash 一樣給你」. Its scope was approved item by
+item; D-189 to D-196 quote his words. This section attributes no further
+words to him.
+
+Agent interpretation: that delegation is this release's one-time
+authorization for version 0.11.0 and tag `v0.11.0`, for one attempt. Claude
+(Claude Code on LAPTOP-01AGNPJU) performs the release pull request and its
+stage evidence, the merge, the tag, the GitHub Release, the release-event and
+public-visitor stages and the step-8 follow-up. Claude asks Nelson before the
+release merge, as for every 0.11 pull request.
+
+After publication Claude also makes the decision-log cut and the
+verdict-baseline rotation, which change agent-read-only files. Their basis is
+not D-188, which covered 0.10.0 only, but Nelson's answer of 2026-10-28. That
+session ran over Remote Control, where the button box may not show, so
+Claude's message at 09:04:19Z listed the choices in its text, the first as
+「開始：同時確認發版後的 decision log 切檔和 baseline 輪替也照上次做。」 (start;
+this also confirms that the decision-log cut and the baseline rotation after
+the release are done as last time), and the button's option text, which
+D-194 quotes, ends 「發版後的切檔與 baseline 輪替也照上次做」. At 09:05:05Z
+Nelson answered 「開始」, the first button's label; the log does not tell a
+click from a typed reply (D-194). Claude wrote both texts and that label, and
+the answer adds no words to them. Last time was the offered reply
+「授權 Claude 做」 of 05:35:56Z the same day, also a label Claude wrote, under
+which #575 made both changes for 0.10.0 (D-188). Agent interpretation: the
+answer covers only changes of that bounded shape, entries moved to the
+archive unchanged and a rotation that adds, retires or re-adjudicates no
+accepted entry. Anything else a rotation run names goes to Nelson for the
+disposition step 9 requires, and the rotation pull request records this
+approval in its own DECISIONS entry, as D-188 did.
+
+The `pypi` deployment waits for Nelson's own approval on the run page: for
+0.10.0 Claude's token could not approve it (HTTP 403), and no protection or
+reviewer setting changes. The fixed-corpus comparison below moved no commit;
+the tag still waits for Nelson's review of its empty list, as the standing
+step requires. Other platforms are NOT_RUN; accepting them as missing for
+this release is the same delegated decision as for 0.10.0, and the six-leg
+PJU batch is supplementary evidence, not a release receipt. Not covered:
+1.0, downstream re-pins of checkwash-corpus and smallestlie, and
+GitHub-hosted test legs.
+
+**Fixed-corpus comparison.** Claude ran it on 2026-11-02 UTC as a same-host
+comparison on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows, CPython 3.11.9): the published v0.10.0 zipapp (`checkwash.pyz`,
+SHA256 `9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a`)
+against the candidate `src/` tree `6f83616ef1d46009e8388cb011920d1420d2a959`
+of main `dd4ec896f48dacda52fc2c3470b4f4abfe19db7b` (the release pull request
+changes that tree only in the version string and `doctor`'s own pin line,
+D-196), on the fixed 3,600 members (SHA256
+`f6281caad596c5d6f054dd8f0050abb21d63a803fa7bf2fa3f6c694d05559de2`), each
+against its first parent, 240 seconds per call, in 2,327 seconds. All 3,600
+gave identical exit codes and identical reports apart from the `run` block
+(3,493 exit 0, 105 exit 1 and 2 exit 2 with each engine, no timeouts): Python
+1,734 pass and 66 block, JS/TS 1,759 pass, 39 block and 2 engine errors, with
+each. Each member's row keeps its identity, whether the two runs matched, and
+each engine's exit, verdict, reported version and timing: the reports, their
+config-error and skipped-file lists included, were compared but not saved,
+since none differed. No outcome moves, so the owner's list is empty.
+The tag waits until
+Nelson has reviewed it: Claude reports it to him with the release pull
+request, and his review is recorded with this release's records, in A if it
+comes before R is written and otherwise in the step-8 follow-up (D-196).
+Records, in the private checkwash-lab repository: `252046de`
+(`notes/r29-comparison-011-claude-20261103/`, rows SHA256
+`c96a277ef3d9eb8ff9107739c50e24e1dff773df867508dbd643c4b90bd4592f`). In-sample,
+not a false-positive rate or an adjudication.
+
+**The targeted uvloop diagnostic (D-176).** A separate run of the same
+script and engines checked the three uvloop inputs D-187 accepted as known
+false blocks for 0.10 only, each
+against its original first parent: v0.10.0 blocks each, with one, one and two
+HIGH `BROAD_EXCEPT_ADDED` findings carrying `OPAQUE_PROD_CHANGE_NOT_EVIDENCE`,
+and the candidate passes each with no finding (D-190), so the three costs
+D-187 accepted for 0.10 need no acceptance for 0.11.0. The records are in the
+same lab directory, under `uvloop/`.
+
+**D-176's remaining-history risk for 0.11.0 (D-190, D-191).** D-187 also
+accepted, for 0.10 only, D-176's explicitly unmeasured remaining-history risk,
+and D-190 and D-191 left its 0.11 disposition to this record, after R29 and
+the targeted diagnostic on the final tree. Neither run measures it: D-176's
+refusal is unchanged in both engines, the fixed corpus holds no uvloop
+commit and moved no commit, and the old R4 census stays partial and consumed.
+Claude accepts that risk, unmeasured, for 0.11.0 only, as its delegated
+decision after independent review, not Nelson's personal review, in a
+separate source-bound record:
+[the 0.11.0 D176 disposition](d176-cost-disposition-0.11.0.md). It is not a
+history PASS, a census, an adjudicated rate or a standing waiver.
+
 ## v0.10.0 checked publication and pin promotion (2026-10-28)
 
 Claude carried out the 0.10.0 publication operations under the delegation
@@ -821,9 +914,10 @@ whose `doctor` accepts only the previous pin. Its design goes to Nelson
 first. Until then this section is the procedure.
 
 **0.11.0 bootstrap.** The 0.11.0 chain is verified from the trusted ref
-`review/collector-d-011-<date>`, cut from main after D-194 merges; its SHA is
-recorded here when it is cut. It is the trusted collector, and the trusted
-workflow for every dispatched run. The release-event capture, which the
+`review/collector-d-011-20261103`, `fa8a8ea0a805d08d53c32390152a7590ea727836`,
+cut on 2026-11-03 from main after #583 merged (D-194 merged earlier, in
+#581). It is the trusted collector, and the trusted workflow for every
+dispatched run. The release-event capture, which the
 `release: published` event starts, runs `release.yml` from the tag M, so M
 must hold the same `release.yml` and audited helpers as that ref. Its
 announced pin is v0.10.0's `100699796d942af30644738ffbcd1f1c939411c5`.

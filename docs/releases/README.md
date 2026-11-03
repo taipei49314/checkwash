@@ -1,17 +1,34 @@
 # Release history
 
 Releases with a summary or a release document in this directory, newest
-first. The summaries are the ones the front-page [README](../../README.md)
-carried for each release, with the same text and link targets. The README
+first. Up to v0.10.0 the summaries are the ones the front-page
+[README](../../README.md) carried for each release, with the same text and
+link targets; from v0.11.0 they are written here. The README
 has the current install commands and Action pin, and the
 [advertised-release manifest](../../release/advertised.toml) records the
 version, commit and download bytes behind them. A new publication record
 starts from the [publication record template](publication-record-template.md).
 
-## 0.11 (unreleased)
+## v0.11.0
 
-On main, not released. [KNOWN-ISSUES-next](../KNOWN-ISSUES-next.md)
-describes the 0.11 candidate's changes and known limits.
+Release candidate, prepared in the release pull request; the publication
+record follows once the public files are verified.
+
+**v0.11.0 asks before a Claude Code edit weakens a Python test, stops counting
+a proven failure relay as a swallow, and lets `doctor` accept the release's
+own Action commit.** A local hook install, now the default, adds a
+PreToolUse ask on five weakening rules, and a Stop block reports the finding
+instead of offering an exemption (D-189). A broad `except` that relays a
+failure to an awaited asyncio future is not counted as added (D-190). A
+`pytest.raises` test folded into a literal `parametrize` table can keep its
+credit, while parametrize cells that never reach the test as written earn
+none (D-192), and a moved Python test pays only where the repository's own
+pytest configuration collects it (D-193). #419 closes as a documented
+residual (D-191). From v0.11.0 the README recommends the release's Action
+commit, `vX.Y.Z^2^1`, not the commit the tag points to (D-194).
+[Release evidence and known limits](v0.11.0-public-launch.md).
+
+Known issues: [v0.11.0](../KNOWN-ISSUES-v0.11.0.md).
 
 ## v0.10.0
 
