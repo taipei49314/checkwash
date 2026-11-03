@@ -1,35 +1,5 @@
 # checkwash
 
-**v0.10.0 binds policy changes to the reviewed BASE and asks for source-bound
-proof before a moved test oracle earns credit.** A newly winning `.checkwash`
-config or allowance is compared with its BASE `.greenwash` predecessor, so a
-change cannot approve its own relaxation; relative `--task` addresses resolve
-from `--repo`; and moving assertion text, keeping assertion mass or keeping a
-test name no longer proves the same oracle. The IR contract is now version 3;
-the findings envelope stays at version 2.
-[Publication evidence](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) ·
-[Release evidence and known limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md).
-A pass does not prove correctness; retain exit 2 and diagnostics as analysis
-errors. With `--format hook-json` (the Claude Code Stop hook) an engine error
-exits 0 with a "not analysed" message. The recommended Action is pinned to
-the same v0.10.0 release.
-
-An edit that changes nothing, such as `+ 0` in a function a test calls or
-one line in a template or `AUTHORS`, can still hold a weakened Python or
-JS/TS test at warn, which passes at the default threshold. #419 is closed
-as a documented residual, not fixed
-([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
-Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
-and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)
-before relying on a pass.
-
-**Development snapshots:** the source in this checkout may be newer than the
-published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
-records the version, commit and download bytes behind the installation commands
-below. New changes require their own candidate evidence and remain unreleased
-until the publication record verifies them; candidate CI success does not mean
-that the recommended Action pin includes them.
-
 [![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/checkwash.svg)](https://pypi.org/project/checkwash/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/taipei49314/checkwash/blob/main/LICENSE)
@@ -50,61 +20,46 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-**v0.3.0 replaces five file-wide exemption rules with content-bound ones.**
-In v0.2.13 those rules could reuse a recorded approval for a later change to
-the same path; v0.3.0 retires their path-only keys. The [upgrade notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md)
-describe the content-bound replacement, retired keys, and installation fixes.
+The install commands below use v0.10.0, the latest published release; 0.11 is
+unreleased on main ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
 
-**v0.4.0 extends detection of runtime suppression, collection changes,
-expectation rewrites and substituted subjects, and recognizes more table refactors.** The proofs retain
-input identity, execution context and conservative handling of unknown code.
-[Release evidence and remaining limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.0-public-launch.md)
+Start in one of three ways, each below: Claude Code hooks, the CLI on a
+repository, or the GitHub Action as a required check.
 
-**v0.4.1 repairs Node assertion recognition ([#164](https://github.com/taipei49314/checkwash/issues/164))**
-and covers Node test-file names, bounded import aliases and lexical shadows.
-Coverage warnings expose known assertion candidates the scanner cannot represent;
-they do not prove complete JS/TS coverage. The same assertion contract checks
-the source, wheel and zipapp. [v0.4.1 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.1-public-launch.md)
+## Use it with Claude Code
 
-**v0.4.2 strengthens JS/TS assertion evidence.** Test callbacks own their
-assertions; changing a scalar expected value or loosening positive
-`toBeCloseTo` precision reaches the existing detectors. Equivalent scalar
-spellings remain equivalent across subject checks. This is bounded syntax
-support, not general JS/TS analysis. [v0.4.2 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.4.2-public-launch.md)
+You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
+hook installer from the root of your repository:
 
-**v0.5.0 closes a round of red-team reports (#172–#181).** A skip in a
-fixture or setup the test runs, a selector over edited tests, a package
-manifest's test command, Jest's `__tests__/` layout, JS block-level and
-imperative skips, JS module mocks, hand-rolled JS tolerances, chai assertions
-and CI control flow that stops a runner now reach the detectors; #173, #180
-and #181 are closed in part. Some existing findings now carry a different fingerprint,
-so allowlist entries for those shapes must be re-recorded; the JSON shape is
-unchanged. [v0.5.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.5.0-public-launch.md)
+```bash
+pipx install checkwash==0.10.0
+checkwash hook install --agent claude-code --local
+```
 
-**v0.6.0 works through the reports and rulings that followed (#196–#261).**
-JS/TS assertions keep their meaning across Jest, chai, Vitest and node:test,
-and the runner a file's imports name decides whether a moved test still runs
-and what a focus stops. Hand-rolled tolerances in both frontends, pytest
-selectors under explicit targets, skip guards in a body, a setup or a conftest
-hook, every `pytestmark` spelling and a CI config the reader cannot read now
-reach the detectors. Some existing findings now carry a different fingerprint,
-so allowlist entries for those shapes must be re-recorded; the JSON shape is
-unchanged. [v0.6.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.6.0-public-launch.md)
+This writes checkwash's hooks to `.claude/settings.local.json`, the
+machine-local Claude Code settings.
 
-**v0.9.0 makes assertion-level exemptions content-bound
-([#421](https://github.com/taipei49314/checkwash/issues/421)).** Through
-v0.8.0, an exemption for one rewrite of an assertion also allowed every later
-rewrite of the same line. Nine assertion-level rules now key a finding by the
-old and the new assertion as well, TEST_DISABLED keys one by what the change
-disabled ([#512](https://github.com/taipei49314/checkwash/issues/512)), and
-their old keys stop matching: re-review and re-record those entries. [Assertion-level notes](https://github.com/taipei49314/checkwash/blob/main/docs/remediation-upgrade.md#assertion-level-rules-next-minor-421)
+- The **Stop hook** checks the working tree against HEAD when Claude is about
+  to stop. On a blocking finding it blocks the stop and gives Claude the
+  finding. A SessionStart hook in the same file records where each session
+  starts, so the Stop hook also checks what the session commits.
+- From 0.11 (unreleased), a local install also adds a **PreToolUse ask**.
+  When an Edit, Write or MultiEdit of a Python test file would leave a finding
+  of one of five weakening rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`,
+  `TEST_DISABLED`, `TOLERANCE_LOOSENED` and `BROAD_EXCEPT_ADDED`) at high, the
+  hook asks you before the edit is made. In a `claude -p` run nobody can
+  answer, so such an edit is denied; the interactive prompt is not verified in
+  any mode. From 0.11 a local install is the default, and `--shared` writes
+  `.claude/settings.json` with no PreToolUse ask.
 
-**v0.10.0 compares a newly winning `.checkwash` policy with its BASE
-predecessor and credits a moved oracle only with source-bound proof.**
-Callers of `--emit-ir` read IR version 3, which adds `policy_shadows`; the
-findings JSON stays at version 2. [v0.10.0 evidence and limits](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md)
+Both hooks are author-side checks. An edit made through Bash never reaches the
+ask. When the Stop hook cannot analyse a change, it says so and does not block
+the stop, except for a changed file over the size limit (see "Know the
+limits"). Neither hook can stop someone else's merge: the required check under
+"Use it in CI" is the gate. The 0.11 hooks' limits are in the
+[0.11 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md).
 
-## Try it
+## Try it on a repository
 
 You need **Python 3.11+ and Git**. Download and try the offline examples first.
 
@@ -142,6 +97,57 @@ and says so in one line on stderr (since v0.8.0,
 [#416](https://github.com/taipei49314/checkwash/issues/416)). Before v0.8.0,
 run it from the repository root.
 
+For JSON/SARIF output and more examples, see the [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) and the [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
+
+## Use it in CI
+
+To stop a merge, make the **`checkwash` status check required** in your
+repository's branch rules. Installing the tool or adding a workflow alone
+does not enforce its verdict.
+
+<a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
+
+Save this as `.github/workflows/checkwash.yml`:
+
+```yaml
+# .github/workflows/checkwash.yml
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  checkwash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: taipei49314/checkwash/action@100699796d942af30644738ffbcd1f1c939411c5 # v0.10.0
+```
+
+After the workflow runs, open **Settings → Rules → Rulesets** and require
+the `checkwash` status context. Keep the job unconditional.
+
+If you administer the repository and have this project's ruleset file,
+you can instead create the rule with:
+
+```bash
+gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
+```
+
+This adds a ruleset; it does not replace existing ones. `checkwash doctor`
+can inspect the local workflow, but cannot verify live branch protection.
+The published 0.10.0 CLI's `doctor` accepts only the Action pin built into it,
+v0.9.0's, so it reports the v0.10.0 pin above as an unsupported SHA ("workflow
+analysis incomplete", exit 1); `doctor` from this repository's main accepts it.
+
+## When checkwash blocks
+
 | Result | What to do |
 |---|---|
 | **Pass · exit 0** | No finding requires blocking under your configuration. Keep running your normal tests and review. |
@@ -149,6 +155,70 @@ run it from the repository root.
 | **Error · exit 2** | Resolve the input or analysis error before relying on the result. |
 
 The default threshold is **high**: a visible **warn** can still pass.
+
+**Read the finding.** Each finding names its rule, its severity, and the file
+and test it is in. If the change at the top is the whole diff, made in
+`test_invoice_total` in `tests/test_billing.py`, the finding reads:
+
+```text
+ASSERT_WEAKENED   HIGH   tests/test_billing.py :: test_invoice_total
+  test_invoice_total: assertion strength EXACT_VALUE(90) -> BOUND(40)
+  why high: NO_PROD_CHANGE_IN_DIFF
+  no de-escalator applied
+  before  assert total == 105.3
+  after   assert total > 0
+```
+
+`EXACT_VALUE(90) -> BOUND(40)` ranks the assertion's strength before and
+after; 90 is not the value the test expected. `why high` names what raised the
+finding: here the diff changes no production file, so no production change
+explains the weaker test. `checkwash check --format json` gives the same
+findings as JSON.
+
+**Fix the change, or record a reviewed exemption.** If the test was weakened
+by mistake, restore it, and fix the code if the restored test fails. If the
+weaker test is intended, the report also prints a `checkwash allow` command
+with the finding's fingerprint, and the ledger file to commit:
+
+```bash
+checkwash allow "<the fingerprint from the report>" --reason "why the weaker test is correct"
+```
+
+Configuration and exemptions are read from the base side of the diff, so a
+change cannot exempt itself: commit the entry through review, and it applies
+to the next diff once it is on the base. Since v0.10.0, a newly winning
+`.checkwash` config or allowance is compared with its BASE `.greenwash`
+predecessor, so a change cannot approve its own relaxation either. An entry
+needs a reason and expires after 90 days by default, 180 at most. Keep
+`.checkwash/` and `.greenwash/` behind
+[code owners](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#4-codeowners).
+From 0.11 (unreleased), the Stop hook tells Claude not to add an exemption
+itself but to tell you which finding blocks and why, and the PreToolUse ask
+asks you to approve only if the weaker test is intended.
+[Exemption rules](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#3-allowlist--reviewed-time-boxed-base-side)
+
+**Report a false block.** If the change is honest and checkwash blocks it,
+look for it in the [failure ledger](https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md)
+first, then open an [issue](https://github.com/taipei49314/checkwash/issues)
+with the **checkwash blocked honest work** template, giving the diff and the
+`checkwash check --format json` output. A report becomes a regression
+fixture, and the ledger credits the reporter.
+
+## Know the limits
+
+**v0.10.0 is alpha.** A pass does not prove that a change is correct or honest.
+Python is the main language supported; JS/TS support covers a limited set of
+test patterns. Known gaps remain.
+
+An edit that changes nothing, such as `+ 0` in a function a test calls or
+one line in a template or `AUTHORS`, can still hold a weakened Python or
+JS/TS test at warn, which passes at the default threshold. #419 is closed
+as a documented residual, not fixed
+([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
+Read the [versioned known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
+and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)
+before relying on a pass.
+
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct, and an edit that changes nothing can earn it
 (#419). To block such changes, set the Action's `fail-on: warn`
@@ -161,14 +231,6 @@ Claude Code PreToolUse hook asks before an Edit, Write or MultiEdit of a
 Python test leaves a finding of its five weakening rules at high, whatever
 repair evidence the rest of the working tree holds; its limits are in the
 [0.11 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md).
-
-For JSON/SARIF output and more examples, see the [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) and the [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
-
-## Know the limits
-
-**v0.10.0 is alpha.** A pass does not prove that a change is correct or honest.
-Python is the main language supported; JS/TS support covers a limited set of
-test patterns. Known gaps remain.
 
 In v0.8.0, JS/TS `test.each`, `it.each` and `test.for` tables are not
 scanned: an assertion weakened or deleted in one, an edited row or a deleted
@@ -189,7 +251,12 @@ readback, not a rewrite of the historical runtime results.
 
 A changed file over 1,000,000 bytes is not read. An image, data file,
 lockfile, document or non-Python production source that large is reported on
-stderr and earns no repair evidence. Since v0.9.0
+stderr and earns no repair evidence.
+
+<details>
+<summary>Which files over the limit stop the run, and how each output and the Stop hook report them</summary>
+
+Since v0.9.0
 ([#454](https://github.com/taipei49314/checkwash/issues/454)), `--format json`
 also lists it under `unread`, SARIF names it in a tool execution
 notification, and the term report adds a `!` line and, when there is no
@@ -246,17 +313,22 @@ base side alone is over the limit, a root manifest over it at the base, and a
 padded file committed before the stop keep the message; the full list is in
 [subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/subject-integrity.md).
 
+</details>
+
 Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
 
-## Use it in CI
-
-To stop a merge, make the **`checkwash` status check required** in your
-repository's branch rules. Installing the tool or adding a workflow alone
-does not enforce its verdict.
+## CI details: doctor and the pin
 
 The recommended Action and the CLI above are both **v0.10.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
+
+**Development snapshots:** the source in this checkout may be newer than the
+published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
+records the version, commit and download bytes behind the installation commands
+above. New changes require their own candidate evidence and remain unreleased
+until the publication record verifies them; candidate CI success does not mean
+that the recommended Action pin includes them.
 
 **Advisory: Action trust boundary.** Every published Action release up to and
 including v0.7.0 runs `python -m pip` and then `checkwash` with the pull
@@ -265,52 +337,9 @@ example a top-level `pip` package) can replace the installer and then the
 checker, and the pull request can tamper with the result it is judged by. Under
 checkwash's threat model that applies to every pull request it judges. v0.8.0
 fixes it ([#372](https://github.com/taipei49314/checkwash/pull/372)); pin the
-v0.10.0 Action below. If you stay on v0.7.0 or earlier, treat a pass as
+v0.10.0 Action above. If you stay on v0.7.0 or earlier, treat a pass as
 advisory, review the pull request before merging and keep `comment-pr` off.
 [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
-
-<a id="required-check--the-only-configuration-that-blocks-a-merge"></a>
-<details>
-<summary>Copy the GitHub Actions workflow and require the check</summary>
-
-Save this as `.github/workflows/checkwash.yml`:
-
-```yaml
-# .github/workflows/checkwash.yml
-on: [pull_request]
-
-permissions:
-  contents: read
-
-jobs:
-  checkwash:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-      - uses: taipei49314/checkwash/action@100699796d942af30644738ffbcd1f1c939411c5 # v0.10.0
-```
-
-After the workflow runs, open **Settings → Rules → Rulesets** and require
-the `checkwash` status context. Keep the job unconditional.
-
-If you administer the repository and have this project's ruleset file,
-you can instead create the rule with:
-
-```bash
-gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
-```
-
-This adds a ruleset; it does not replace existing ones. `checkwash doctor`
-can inspect the local workflow, but cannot verify live branch protection.
-The published 0.10.0 CLI's `doctor` accepts only the Action pin built into it,
-v0.9.0's, so it reports the v0.10.0 pin above as an unsupported SHA ("workflow
-analysis incomplete", exit 1); `doctor` from this repository's main accepts it.
 
 **Which commit is the recommended pin?** A release cannot embed its own commit SHA.
 Up to v0.10.0, the recommended pin is the commit the tag points to:
@@ -332,8 +361,6 @@ upgrade the CLI and its local hooks first, then the Action pin. The recommended
 v0.10.0 Action includes the engine published on 2026-10-28 Asia/Taipei. A CLI
 upgrade does not update an existing Action.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
-
-</details>
 
 ## More options and evidence
 
@@ -384,7 +411,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.10.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) · [v0.10.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md) |
+| Installation checks, versions and first use | [v0.10.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-publication-verification.md) · [v0.10.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.10.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

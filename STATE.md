@@ -1,6 +1,50 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-03 (0.11 candidate: D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-03 (0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-03: the README puts the start before the release history
+
+On 2026-10-28 Nelson answered Claude's five 0.11 questions, and his item 4
+began 「readme等到修復後重排」 (restructure the README after the repairs land;
+D-191 quotes the whole answer). The repairs, D-189 to D-195, are on main
+`066d8698`. Every choice below is Claude's under the 2026-10-27 delegation.
+
+The README now reads: what checkwash does, with one sentence saying the
+install commands use v0.10.0 and 0.11 is unreleased on main; three ways to
+start, "Use it with Claude Code" (the Stop hook, and from 0.11 the local
+default and the PreToolUse ask), "Try it on a repository" (the pyz) and "Use
+it in CI" (the workflow and the required check); "When checkwash blocks" (the
+result table, reading a finding, the reviewed exemption read from the base,
+reporting a false block); "Know the limits"; "CI details: doctor and the
+pin"; "More options and evidence".
+
+The v0.10.0 banner above the badges and the v0.3.0 to v0.10.0 summaries
+moved to a new release index, `docs/releases/README.md`, newest first, text
+and link targets kept with the links made relative; it also lists each other
+release's documents in that directory. Within the README, the #419 residual
+(D-191) and the #419 half of the threshold paragraph moved to "Know the
+limits", whose large-file details are now collapsed; the development-snapshot
+paragraph, the Action trust advisory and the pin explanation (D-194) moved to
+"CI details"; the workflow is no longer collapsed, so that block's summary
+line is gone; two "below"s became "above". Nothing else was dropped. The
+install commands and the Action pin stay v0.10.0, and the workflow fence, the
+pin strings, the `doctor` 0.10.0 note and the documented test count are
+unchanged. The finding shown under "When checkwash blocks" is what `check`
+printed for the README's example diff on a two-commit scratch repository,
+the same from main and from v0.10.0's source (LAPTOP-01AGNPJU,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). The package description is the
+README as built, so the 0.11 release pull request has to reword the version
+sentence.
+
+Status: a pull request from `claude/v011-readme-20261103`, with main
+`dd4ec896` (D-196) merged in; not merged. Docs only. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-02: the tests that read README.md, with the docs-link,
+documentation-contract, packaging and state tests (133 passed, 9 existing
+symlink-privilege skips), and checkwash's own check of the change, which
+passes with no finding. Not run: other platforms. Not released: package
+metadata stays 0.10.0.
+
 
 ## 2026-11-03: 0.11 keeps scheme S; the fixed-corpus candidate may differ in doctor's own pin line; two 0.12 directions (D-196)
 
@@ -20,9 +64,22 @@ install-from-tag command, and said that D-191's residual, deliberate for
 0.11, is to change in 0.12; both designs go to him first. RELEASING and
 KNOWN-ISSUES-next say so; no code or test changes.
 
-Status: a pull request from `claude/v011-decisions-d196-20261103` (main
-`066d8698`); not merged. Docs only. Not run: other platforms. Not released:
-package metadata stays 0.10.0.
+Status: merged. Nelson approved PR #582 at 2026-11-02T19:22:01Z (the
+button labelled 「核准合併 #582」, which Claude wrote, answering Claude's
+「要我用 merge commit 合併 #582 嗎？」), and #582 merged as main `dd4ec896`
+at 19:22:15Z (a merge commit, parents `066d8698` and `683e9786`). Its PJU
+receipt (head `683e9786`, base and collector main `066d8698`, manifest
+SHA256 `3edfbbb31278bd8ddf73fad6a44b416c27b20cbdd989b1b284ff9a561a50085e`)
+is published as `evidence/pr582-3edfbbb31278-20261102` (commit `0ef6f8c4`),
+and intake run 41504508274 set the four required checks. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-02: the receipt's full suite (`pytest tests`, `tests/gates`
+included, xdist `-n 2`), whose JUnit testsuite counts `tests="22511"`:
+22444 testcase entries, 22419 passed and 25 skipped, plus 67 subtests, with
+0 failures and 0 errors; both Action replays and the source, wheel and pyz
+qualifications exited 0; and checkwash's own check passed with no finding.
+Docs only. Not run: other platforms. Not released: package metadata stays
+0.10.0.
 
 ## 2026-11-02: doctor accepts the release's own Action pin (D-194)
 
