@@ -1,0 +1,125 @@
+{
+  "downloads": [
+    {
+      "asset_id": 707259660,
+      "bytes": 1018875,
+      "channel": "github",
+      "name": "checkwash-0.11.0-py3-none-any.whl",
+      "path": "artifacts/checkwash-0.11.0-py3-none-any.whl",
+      "sha256": "5546943d48f94e2e901d22fcce124d2400e7f44b321c38afd888bcecb02744c3",
+      "url": "https://github.com/taipei49314/checkwash/releases/download/v0.11.0/checkwash-0.11.0-py3-none-any.whl"
+    },
+    {
+      "asset_id": 707259795,
+      "bytes": 5319763,
+      "channel": "github",
+      "name": "checkwash-0.11.0.tar.gz",
+      "path": "artifacts/checkwash-0.11.0.tar.gz",
+      "sha256": "820164c9331c3662132f8074d7b4c421f1d762fad13d33477f1ab5c2d2aca93e",
+      "url": "https://github.com/taipei49314/checkwash/releases/download/v0.11.0/checkwash-0.11.0.tar.gz"
+    },
+    {
+      "asset_id": 707259911,
+      "bytes": 996040,
+      "channel": "github",
+      "name": "checkwash.pyz",
+      "path": "artifacts/checkwash.pyz",
+      "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654",
+      "url": "https://github.com/taipei49314/checkwash/releases/download/v0.11.0/checkwash.pyz"
+    },
+    {
+      "bytes": 1018875,
+      "channel": "pypi",
+      "name": "checkwash-0.11.0-py3-none-any.whl",
+      "path": "release/network/pypi-wheel.bin",
+      "sha256": "5546943d48f94e2e901d22fcce124d2400e7f44b321c38afd888bcecb02744c3",
+      "url": "https://files.pythonhosted.org/packages/f5/72/b13227bd71523ea392b097d7fd8bd603c8c1f042ad2a9c5c7d87990705bf/checkwash-0.11.0-py3-none-any.whl"
+    },
+    {
+      "bytes": 5319763,
+      "channel": "pypi",
+      "name": "checkwash-0.11.0.tar.gz",
+      "path": "release/network/pypi-sdist.bin",
+      "sha256": "820164c9331c3662132f8074d7b4c421f1d762fad13d33477f1ab5c2d2aca93e",
+      "url": "https://files.pythonhosted.org/packages/84/56/e62ce65506260a24f1c7f761f26d0a6d7c5146c5f433b5f607b5e9e6f94c/checkwash-0.11.0.tar.gz"
+    }
+  ],
+  "expected_set": {
+    "checkwash-0.11.0-py3-none-any.whl": {
+      "bytes": 1018875,
+      "sha256": "5546943d48f94e2e901d22fcce124d2400e7f44b321c38afd888bcecb02744c3"
+    },
+    "checkwash-0.11.0.tar.gz": {
+      "bytes": 5319763,
+      "sha256": "820164c9331c3662132f8074d7b4c421f1d762fad13d33477f1ab5c2d2aca93e"
+    },
+    "checkwash.pyz": {
+      "bytes": 996040,
+      "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+    }
+  },
+  "expected_set_sha256": "86e3a627cf3bc07813e3ab6dab6cee6cc214a043bf3da526dbfe69582eeae83b",
+  "github_release": "release/network/github-release.bin",
+  "pypi_version": "release/network/pypi-version.bin",
+  "schema_version": 1,
+  "status": "completed",
+  "subject": {
+    "base_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836",
+    "event": {
+      "created_at": "2026-11-04T04:12:47Z",
+      "name": "workflow_dispatch",
+      "payload_sha256": "2b78ffe93958520d48ff71f58593913a8695f9a4c080a780583c20bc8784e7bd",
+      "run_attempt": 1,
+      "run_id": 41771816144,
+      "workflow_sha": "fa8a8ea0a805d08d53c32390152a7590ea727836"
+    },
+    "head_sha": "34555301de3d5ea4b2c8e4470b797a06d0a1e395",
+    "kind": "checkwash.pju-release-subject.v1",
+    "release_id": 433182824,
+    "repository": "taipei49314/checkwash",
+    "schema_version": 1,
+    "source_tree": "49f366fd321bf9db2785cb0fd5172d040fc2c375",
+    "stage": "public-visitor",
+    "tag": "v0.11.0",
+    "tag_object": "2f5ac3fecaddfe5f99ae6e6e129b4d73abb3dfc0"
+  },
+  "visitors": [
+    {
+      "expected_members": "release/github-wheel-expected.json",
+      "identity": "release/github-wheel-identity.json",
+      "install_report": "release/github-wheel-pip.json",
+      "name": "github-wheel",
+      "status": "completed",
+      "target": "C:\\Users\\nelson\\dev\\cw584pub1\\r\\artifacts\\checkwash-0.11.0-py3-none-any.whl"
+    },
+    {
+      "expected_members": "release/github-sdist-expected.json",
+      "identity": "release/github-sdist-identity.json",
+      "install_report": "release/github-sdist-pip.json",
+      "name": "github-sdist",
+      "status": "completed",
+      "target": "C:\\Users\\nelson\\dev\\cw584pub1\\r\\artifacts\\checkwash-0.11.0.tar.gz"
+    },
+    {
+      "expected_members": "release/pypi-wheel-expected.json",
+      "identity": "release/pypi-wheel-identity.json",
+      "install_report": "release/pypi-wheel-pip.json",
+      "name": "pypi-wheel",
+      "status": "completed",
+      "target": "C:\\Users\\nelson\\dev\\cw584pub1\\s\\public-pypi\\checkwash-0.11.0-py3-none-any.whl"
+    },
+    {
+      "expected_members": "release/pypi-sdist-expected.json",
+      "identity": "release/pypi-sdist-identity.json",
+      "install_report": "release/pypi-sdist-pip.json",
+      "name": "pypi-sdist",
+      "status": "completed",
+      "target": "C:\\Users\\nelson\\dev\\cw584pub1\\s\\public-pypi\\checkwash-0.11.0.tar.gz"
+    },
+    {
+      "name": "github-pyz",
+      "path": "artifacts/checkwash.pyz",
+      "status": "completed"
+    }
+  ]
+}
