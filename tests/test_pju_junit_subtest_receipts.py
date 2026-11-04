@@ -222,6 +222,24 @@ def test_release_entrypoint_uses_original_pytest_row_stdout_and_runtime_version(
     assert observed[0] == (XML, {"pytest_stdout": STDOUT, "pytest_version": "9.1.1"}, EXPECTED)
 
 
+@pytest.mark.parametrize("workers, accepted", [("8", True), ("2", False), ("4", False)])
+def test_release_entrypoint_requires_the_collectors_worker_count(evidence, monkeypatch, workers, accepted):
+    # D-198: the release bridge, like the ordinary one, takes the full suite
+    # only at the collector's 8 xdist workers.
+    row = put_real_owned_junit(evidence)
+    assert row["argv"][9:11] == ["-n", "8"]
+    row["argv"][10] = workers
+    invoke, observed, after_junit = release_entrypoint_control(evidence, monkeypatch)
+    if accepted:
+        with pytest.raises(after_junit):
+            invoke()
+        assert len(observed) == 1
+    else:
+        with pytest.raises(ValueError, match="full pytest scope mismatch"):
+            invoke()
+        assert observed == []
+
+
 @pytest.mark.parametrize("mutation", ["another-row-stdout", "wrong-runtime-version", "false-zero", "nonzero-exit", "narrow-scope"])
 def test_release_entrypoint_real_validator_rejects_wrong_context(evidence, monkeypatch, mutation):
     row = put_real_owned_junit(evidence)

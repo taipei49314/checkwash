@@ -9,6 +9,7 @@ PEP 517 behavior (including its network-resolved build dependencies).
 from __future__ import annotations
 
 import argparse
+import contextlib
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -98,9 +99,17 @@ def clean_environment(python, git, bash, temporary):
     }
 
 
-def run_record(name, argv, *, cwd, env, output, timeout, ledger):
+def run_record(name, argv, *, cwd, env, output, timeout, ledger, lock=None):
+    """Run one command; append its row to ``ledger`` and rewrite the ledger file.
+
+    With ``lock``, commands may run on several threads: the lock covers the
+    name check and the ledger update, not the command. The exclusive creation
+    of the command's two log files also refuses a second command of that name.
+    """
+    guard = lock if lock is not None else contextlib.nullcontext()
     require(re.fullmatch(r"[a-z0-9-]+", name), "invalid command name")
-    require(not any(row["name"] == name for row in ledger), "duplicate command name")
+    with guard:
+        require(not any(row["name"] == name for row in ledger), "duplicate command name")
     logs = output / "logs"
     logs.mkdir(parents=True, exist_ok=True)
     stdout, stderr = logs / (name + ".stdout"), logs / (name + ".stderr")
@@ -130,8 +139,9 @@ def run_record(name, argv, *, cwd, env, output, timeout, ledger):
                finished_at=datetime.now(timezone.utc).isoformat(), duration_seconds=time.monotonic() - tick,
                exit_code=exit_code, timed_out=timed_out,
                stdout=stdout.relative_to(output).as_posix(), stderr=stderr.relative_to(output).as_posix())
-    ledger.append(row)
-    save_json(output / "command-ledger.json", ledger)
+    with guard:
+        ledger.append(row)
+        save_json(output / "command-ledger.json", ledger)
     return row
 
 

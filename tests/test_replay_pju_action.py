@@ -1,11 +1,14 @@
 """Fail-closed composite replay boundaries; no engine, install or network runs."""
 from __future__ import annotations
 
+import concurrent.futures
 import hashlib
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import threading
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -203,3 +206,80 @@ def test_nested_trace_keeps_exception_output_types_and_raw_bytes(monkeypatch, tm
     assert (log / "stdout.bin").read_bytes() == raw
     row = json.loads((log / "commands.json").read_text())[0]
     assert row["timed_out"] is timeout
+
+
+def test_locked_run_record_keeps_every_row_of_concurrent_commands(monkeypatch, tmp_path):
+    # The collector runs its three qualification chains on threads (D-198):
+    # with the shared lock, the ledger file ends with every command's row.
+    count = 6
+    together = threading.Barrier(count)
+
+    def spawn(argv, **kwargs):
+        kwargs["stdout"].write(argv[-1].encode() * 3)
+
+        def wait(timeout):
+            together.wait(timeout=10)  # every command is running before any finishes
+            return 0
+        return SimpleNamespace(wait=wait)
+
+    monkeypatch.setattr(replay.subprocess, "Popen", spawn)
+    original_save = replay.save_json
+
+    def slow_save(path, value):
+        # Serialise now, write later, and later still for an earlier, shorter
+        # snapshot: without the lock a stale ledger would land last.
+        snapshot = json.loads(json.dumps(value))
+        time.sleep(0.01 * (count - len(snapshot)))
+        original_save(path, snapshot)
+
+    monkeypatch.setattr(replay, "save_json", slow_save)
+    ledger, lock = [], threading.Lock()
+
+    def one(index):
+        return replay.run_record(f"qualify-{index}", ["helper", str(index)], cwd=tmp_path, env={},
+                                 output=tmp_path, timeout=10, ledger=ledger, lock=lock)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as pool:
+        rows = list(pool.map(one, range(count)))
+    assert sorted(row["name"] for row in ledger) == sorted(f"qualify-{index}" for index in range(count))
+    assert json.loads((tmp_path / "command-ledger.json").read_text()) == ledger
+    assert [(tmp_path / row["stdout"]).read_bytes() for row in rows] == [str(index).encode() * 3 for index in range(count)]
+    with pytest.raises(ValueError, match="duplicate command name"):
+        one(0)
+
+
+def test_nested_trace_offsets_stay_exact_when_a_helper_runs_commands_on_threads(monkeypatch, tmp_path):
+    # verdict_gate.py --jobs runs cases, and so their engine processes, on
+    # threads inside the traced helper (D-198): each row's offset and length
+    # still select exactly its bytes.
+    count = 8
+    together = threading.Barrier(count)
+    outputs = {f"case-{index}": (f"out {index}\n".encode() * (index + 1), f"err {index}\r\n".encode() * (count - index))
+               for index in range(count)}
+
+    def command(argv, **kwargs):
+        together.wait(timeout=10)  # every command is running before any is recorded
+        stdout, stderr = outputs[argv[0]]
+        return subprocess.CompletedProcess(argv, 0, stdout, stderr)
+
+    def helper(argv):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=count) as pool:
+            results = list(pool.map(lambda name: subprocess.run([name], capture_output=True), outputs))
+        assert [result.stdout for result in results] == [value[0] for value in outputs.values()]
+        return 0
+
+    monkeypatch.setattr(collector.subprocess, "run", command)
+    monkeypatch.setattr(collector.runpy, "run_path", lambda *a, **kw: {"main": helper})
+    log = tmp_path / "nested"
+    assert collector.traced_worker("qualify_assertions.py", log, []) == 0
+    rows = json.loads((log / "commands.json").read_text())
+    assert sorted(row["argv"][0] for row in rows) == sorted(outputs)
+    streams = {field: (log / f"{field}.bin").read_bytes() for field in ("stdout", "stderr")}
+    for row in rows:
+        for position, field in enumerate(("stdout", "stderr")):
+            part = row[field]
+            raw = streams[field][part["offset"]:part["offset"] + part["bytes"]]
+            assert raw == outputs[row["argv"][0]][position]
+            assert part["sha256"] == hashlib.sha256(raw).hexdigest()
+    for field in ("stdout", "stderr"):
+        assert len(streams[field]) == sum(row[field]["bytes"] for row in rows)

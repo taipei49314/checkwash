@@ -38,6 +38,10 @@ CONTRACTS = ("tests/data/javascript_assertion_support.json", "tests/data/javascr
 UTILITIES = ("tools/assertion_contract.py", "tools/qualify_assertions.py", "tools/release_inventory.py")
 REQUIRED_EXITS = {"pytest", "action-dogfood", "build-wheel", "build-pyz",
                   *(f"{step}-{d}" for step in ("qualify", "inventory") for d in ("source", "wheel", "pyz"))}
+# The collector's xdist worker count since D-198 (earlier collectors used "2").
+# It spreads the full suite and does not select tests; a receipt with another
+# count is refused, so the count stays bound to the admitted collector.
+PYTEST_WORKERS = "8"
 MAX_FILE = 256 * 1024 * 1024
 MAX_TOTAL = 1024 * 1024 * 1024
 
@@ -689,7 +693,7 @@ def validate_packet(packet, *, repository, pr, base, head, source_tree, collecto
     pytest = next(row for row in exits if row["name"] == "pytest")
     argv = pytest["argv"]
     require(len(argv) == 20 and argv[0] == runtime["python_executable"]
-            and argv[1:16] == ["-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n", "2",
+            and argv[1:16] == ["-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n", PYTEST_WORKERS,
                               "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
             and argv[17] == "--junitxml" and argv[19] == "tests"
             and argv[18].replace("\\", "/").endswith("/" + records["junit"]), "full pytest command scope differs")

@@ -178,7 +178,7 @@ def evidence(tmp_path, monkeypatch):
                        started_at="2026-10-23T00:00:00Z", finished_at="2026-10-23T00:00:01Z", duration_seconds=1.0,
                        exit_code=0, timed_out=False, stdout="stdout.log", stderr="stderr.log") for name in sorted(bridge.REQUIRED_EXITS)], files=[])
     next(row for row in manifest["raw_exits"] if row["name"] == "pytest")["argv"] = [
-        "C:/approved/python.exe", "-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n", "2",
+        "C:/approved/python.exe", "-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n", "8",
         "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp", "C:/scratch/pytest", "--junitxml", "C:/receipt/pytest.xml", "tests"]
     def freeze():
         manifest["files"] = [dict(path=path.relative_to(packet).as_posix(), sha256=hashed(path.read_bytes()), bytes=path.stat().st_size)
@@ -198,6 +198,31 @@ def test_complete_owned_evidence_passes(evidence):
     assert report["qualification_cases"] == 2
     assert report["junit"] == {"tests": 2, "skipped": 1}
     assert report["other_platforms"] == "NOT_RUN"
+
+
+@pytest.mark.parametrize("workers, accepted", [("8", True), ("2", False), ("4", False), ("08", False), ("auto", False), ("", False)])
+def test_full_suite_worker_count_is_the_collectors(evidence, workers, accepted):
+    # Since D-198 the collector spreads the suite over 8 workers; the bridge
+    # requires exactly that, so an earlier collector's "2" is refused too.
+    argv = next(row for row in evidence["manifest"]["raw_exits"] if row["name"] == "pytest")["argv"]
+    assert argv[9:11] == ["-n", "8"]
+    argv[10] = workers
+    if accepted:
+        evidence["validate"]()
+    else:
+        with pytest.raises(ValueError, match="full pytest command scope differs"):
+            evidence["validate"]()
+
+
+def test_collector_worker_count_is_the_bridges_and_its_gate_jobs_are_valid():
+    loaded = {}
+    for name in ("collect_pju_receipts", "collect_pju_release", "verdict_gate"):
+        spec = importlib.util.spec_from_file_location("speed_" + name, ROOT / "tools" / (name + ".py"))
+        loaded[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(loaded[name])
+    assert loaded["collect_pju_receipts"].PYTEST_WORKERS == bridge.PYTEST_WORKERS == "8"
+    # No bridge checks --jobs; the gate's receipt does not depend on it.
+    assert loaded["verdict_gate"]._jobs(loaded["collect_pju_release"].VERDICT_JOBS) > 1
 
 
 @pytest.mark.parametrize("raw", [b'{"x":1,"x":2}', b'{"x":NaN}', b'{"x":Infinity}', b'{"x":-Infinity}'])
