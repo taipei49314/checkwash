@@ -24,7 +24,11 @@ It records the exact clean candidate head/base/tree, hostname, runtime, complete
 commands and raw exits/logs. It builds and qualifies source, wheel and pyz,
 retains the wheel/sdist/pyz bytes, runs the local test suite and replays the
 published composite Action's real Bash blocks with their inputs and outputs.
-Test subprocesses receive no GitHub token. A separate authorized publisher
+Since D-198 it spreads that work over the host's cores: the suite runs with 8
+xdist workers, the three qualification chains run at once, and a release-stage
+collection runs the verdict gate's cases six at a time. What runs and what is
+recorded do not change, and the bridges accept the earlier collectors' 2
+workers too. Test subprocesses receive no GitHub token. A separate authorized publisher
 commits the evidence and supplies its immutable commit and manifest digest
 through a maintainer-authenticated manual dispatch.
 
