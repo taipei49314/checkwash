@@ -413,9 +413,11 @@ the downloaded pyz. Every install reported 0.11.0 with members equal to M's
 source.
 
 The decision-log cut and the verdict-baseline rotation that
-[After the release](#after-the-release) and step 9 require follow in a
-separate pull request, under Nelson's answer of 2026-10-28 quoted in the
-0.11.0 section above.
+[After the release](#after-the-release) and step 9 require came in the
+separate pull request #586, under Nelson's answer of 2026-10-28 quoted in
+the 0.11.0 section above: it moved D-188 to D-196 to
+`DECISIONS-archive-4.md` and rotated the verdict baseline to v0.11.0
+(D-197).
 
 This follow-up promotes `release/advertised.toml` to v0.11.0, with `commit`
 the tag's peeled commit M, and the README's CLI commands to 0.11.0. It moves
