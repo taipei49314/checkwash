@@ -1,0 +1,22 @@
+{
+  "action_receipt_version": 1,
+  "analysis_exit_code": 0,
+  "base": "34555301de3d5ea4b2c8e4470b797a06d0a1e395",
+  "error": null,
+  "exit_code": 0,
+  "fail_on": "high",
+  "head": "1a53c5a37563ce152fb2ac4c6fe9a7a252454728",
+  "identity": {
+    "base_python": "C:\\Users\\nelson\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+    "bytecode_writes_disabled": true,
+    "isolated": true,
+    "package_root": "C:\\Users\\nelson\\dev\\cw585pr1\\s\\candidate-action\\checkwash-action-gwgmq4oh\\environment\\Lib\\site-packages\\checkwash",
+    "python": "C:\\Users\\nelson\\dev\\cw585pr1\\s\\candidate-action\\checkwash-action-gwgmq4oh\\environment\\Scripts\\python.exe",
+    "python_version": "3.11.9",
+    "runtime_files": 218,
+    "source_digest": "6f82442558138b57e6b9ab4c6b19a08214cabf31ffcc369d581508e06a6dc260",
+    "source_root": "C:\\Users\\nelson\\dev\\cw585pr1\\a",
+    "utf8": true,
+    "version": "0.11.0"
+  }
+}

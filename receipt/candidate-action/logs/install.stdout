@@ -1,0 +1,50 @@
+::stop-commands::checkwash-6efd52172a8d4cb3aa6540e6a94d3e4c
+Using pip 24.0 from C:\Users\nelson\dev\cw585pr1\s\candidate-action\checkwash-action-gwgmq4oh\environment\Lib\site-packages\pip (python 3.11)
+Processing c:\users\nelson\dev\cw585pr1\a
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: checkwash
+  Building wheel for checkwash (pyproject.toml): started
+  Building wheel for checkwash (pyproject.toml): finished with status 'done'
+  Created wheel for checkwash: filename=checkwash-0.11.0-py3-none-any.whl size=1018725 sha256=45fc03208771af49da5d2cdbef7a4f08aa79e623536933cf4f27f1630eab0709
+  Stored in directory: C:\Users\nelson\dev\cw585pr1\s\candidate-action\checkwash-action-gwgmq4oh\pip-ephem-wheel-cache-vql3azd5\wheels\6a\91\10\782aa35f8b46e06e325002cb094736cc4f34399147a605279e
+Successfully built checkwash
+Installing collected packages: checkwash
+Successfully installed checkwash-0.11.0
+  Running command pip subprocess to install build dependencies
+  Collecting hatchling
+    Downloading hatchling-1.33.0-py3-none-any.whl.metadata (3.9 kB)
+  Collecting packaging>=24.2 (from hatchling)
+    Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+  Collecting pathspec>=0.10.1 (from hatchling)
+    Downloading pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+  Collecting pluggy>=1.0.0 (from hatchling)
+    Downloading pluggy-1.7.0-py3-none-any.whl.metadata (5.0 kB)
+  Collecting tomlkit>=0.11.1 (from hatchling)
+    Downloading tomlkit-0.15.2-py3-none-any.whl.metadata (3.4 kB)
+  Collecting trove-classifiers (from hatchling)
+    Downloading trove_classifiers-2026.9.21.13-py3-none-any.whl.metadata (2.4 kB)
+  Downloading hatchling-1.33.0-py3-none-any.whl (78 kB)
+     ---------------------------------------- 78.8/78.8 kB 1.1 MB/s eta 0:00:00
+  Downloading packaging-26.3-py3-none-any.whl (129 kB)
+     ---------------------------------------- 130.0/130.0 kB 1.9 MB/s eta 0:00:00
+  Downloading pathspec-1.1.1-py3-none-any.whl (57 kB)
+     ---------------------------------------- 57.3/57.3 kB 2.9 MB/s eta 0:00:00
+  Downloading pluggy-1.7.0-py3-none-any.whl (27 kB)
+  Downloading tomlkit-0.15.2-py3-none-any.whl (52 kB)
+     ---------------------------------------- 52.2/52.2 kB 2.6 MB/s eta 0:00:00
+  Downloading trove_classifiers-2026.9.21.13-py3-none-any.whl (14 kB)
+  Installing collected packages: trove-classifiers, tomlkit, pluggy, pathspec, packaging, hatchling
+  Successfully installed hatchling-1.33.0 packaging-26.3 pathspec-1.1.1 pluggy-1.7.0 tomlkit-0.15.2 trove-classifiers-2026.9.21.13
+
+  [notice] A new release of pip is available: 24.0 -> 26.3
+  [notice] To update, run: C:\Users\nelson\dev\cw585pr1\s\candidate-action\checkwash-action-gwgmq4oh\environment\Scripts\python.exe -m pip install --upgrade pip
+  Running command Getting requirements to build wheel
+  Running command Preparing metadata (pyproject.toml)
+  Running command Building wheel for checkwash (pyproject.toml)
+::checkwash-6efd52172a8d4cb3aa6540e6a94d3e4c::
+Checkwash Action verified 0.11.0 6f82442558138b57e6b9ab4c6b19a08214cabf31ffcc369d581508e06a6dc260
