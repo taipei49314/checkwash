@@ -37,9 +37,12 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = ("tests/data/javascript_assertion_support.json", "tests/data/javascript_foundation_mutations.json")
 UTILITIES = ("tools/assertion_contract.py", "tools/qualify_assertions.py", "tools/release_inventory.py")
 REPOSITORY = "taipei49314/checkwash"
-# Full-suite xdist workers on the 24-core receipt host; the bridges accept
-# this count and the earlier collectors' "2" (receipt speed-up, D-198).
+# Full-suite xdist workers on the 24-core receipt host; both bridges require
+# exactly this count (receipt speed-up, D-198).
 PYTEST_WORKERS = "8"
+# traced_worker rewrites a helper's nested commands.json every this many rows
+# and when the helper ends, not after every row.
+NESTED_FLUSH_ROWS = 500
 
 
 def load_replayer():
@@ -57,8 +60,11 @@ def traced_worker(tool, log_root, arguments):
     top-level success exits. Two append-only byte streams avoid thousands of
     tiny receipt files. Worker subprocesses inherit only the collector allowlist.
     A helper may run subprocesses on several threads (``verdict_gate.py
-    --jobs``): one lock covers each row's stream appends and ledger write, so
+    --jobs``): one lock covers each row's stream appends and ledger append, so
     every recorded offset is exact; the subprocesses themselves run at once.
+    ``commands.json`` is rewritten every ``NESTED_FLUSH_ROWS`` rows and when
+    the helper ends, not after every row: a 4,000-row gate ledger rewritten
+    per row cost minutes inside that lock (D-198 review).
     """
     allowed = {"qualify_assertions.py", "release_inventory.py", "verdict_gate.py",
                "verify_published_source.py", "qualify_zipapp.py"}
@@ -68,6 +74,9 @@ def traced_worker(tool, log_root, arguments):
     original = subprocess.run
     ledger = []
     record = threading.Lock()
+
+    def flush():
+        (log_root / "commands.json").write_text(json.dumps(ledger, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
     def traced(*args, **kwargs):
         started = datetime.now(timezone.utc).isoformat()
@@ -116,7 +125,8 @@ def traced_worker(tool, log_root, arguments):
                         stream.write(raw)
                     row[field] = dict(path=path.name, offset=offset, bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest())
                 ledger.append(row)
-                (log_root / "commands.json").write_text(json.dumps(ledger, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+                if len(ledger) % NESTED_FLUSH_ROWS == 0:
+                    flush()
         if error is not None:
             # subprocess keeps TimeoutExpired output as bytes even in text
             # mode, but CalledProcessError carries the completed text result.
@@ -134,6 +144,9 @@ def traced_worker(tool, log_root, arguments):
         return namespace["main"]()
     finally:
         subprocess.run = original
+        with record:
+            if ledger:
+                flush()
 
 
 def normalized_packages(value):
@@ -357,12 +370,15 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
 
         # The three chains are independent: each writes only its own records,
         # logs and nested ledger, and each inventory reads only its own
-        # qualification. They run at once; the first failure, in distribution
-        # order, is raised after all three have finished.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-            chains = [pool.submit(qualify_and_inventory, d) for d in ("source", "wheel", "pyz")]
-        for chain in chains:
-            chain.result()
+        # qualification. They run at once; after all three have finished,
+        # every failed chain's error is recorded, in distribution order, and
+        # the collection fails.
+        distributions = ("source", "wheel", "pyz")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(distributions)) as pool:
+            chains = [pool.submit(qualify_and_inventory, d) for d in distributions]
+        failed = [(d, chain.exception()) for d, chain in zip(distributions, chains) if chain.exception() is not None]
+        errors.extend(f"{d} chain: {type(exc).__name__}: {exc}" for d, exc in failed)
+        require(not failed, "qualification chain failed: " + ", ".join(d for d, _ in failed))
         if stage_steps is not None:
             stage_steps(context)
         require(action.snapshot(reader, source, args.head_sha) == source_before, "candidate source changed during collection")

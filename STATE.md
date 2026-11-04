@@ -9,22 +9,30 @@ Updated: 2026-11-05 (receipts spread over the receipt host's cores: 8 pytest wor
 receipt verified. Claude asked 「要用 merge commit 合併 #586 嗎？」 and wrote
 the button; Nelson answered 「核准合併 #586」 at 16:37:54Z. Its receipt
 `evidence/pr586-98d797fac38b-20261104` (`b8a95e6b`) was verified by run
-41861846875, which set the five required checks. That ends the 0.11 line.
+41861846875. That run set the four required checks and
+`PJU release evidence (pr)`. That ends the 0.11 line.
 
-Nelson then asked to cut the time a release costs; D-198 quotes him. A
-receipt now spreads its work over the receipt host's cores:
+Earlier that day, while #586's receipt was collecting, Nelson had asked to
+cut the time a release costs. After the merge he chose to start; D-198
+quotes him. A receipt now spreads its work over the receipt host's cores:
 
 - the full suite runs with 8 xdist workers instead of 2, and both bridges
-  accept either count;
+  require 8;
 - the source, wheel and pyz qualify -> inventory chains run at once;
 - a release-stage collection runs `verdict_gate.py --jobs 6`.
 
-What runs and what each receipt records do not change; the gate's receipt
-equals a `--jobs 1` run. Measured on LAPTOP-01AGNPJU
-(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the verdict gate alone took 4 min 12 s instead of 16 min 2 s,
-with an equal receipt. A release-stage collection took 43 minutes instead
-of 82 to 98, and an ordinary one 31.5 instead of 55 to 60. The new bridges
-verified both locally; neither was published. This pull
+What runs and what each record proves do not change. The receipts record
+the new counts, and their ledgers list overlapping commands. The gate's own
+receipt is byte-identical to a `--jobs 1` run's.
+
+Measured on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- the verdict gate alone took 4 min 12 s instead of 16 min 2 s;
+- a release-stage collection took 43 minutes instead of 82 to 86 (98 for
+  #586's);
+- an ordinary collection took 31.5 minutes instead of 55 to 60.
+
+The new bridges verified both collections locally, and neither was
+published. D-198 adds a fourth measurement of the final code. This pull
 request's own receipt is collected by main's collector, the one it
 replaces. Hosted test workflows remain disabled.
 

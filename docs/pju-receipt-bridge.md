@@ -26,9 +26,10 @@ retains the wheel/sdist/pyz bytes, runs the local test suite and replays the
 published composite Action's real Bash blocks with their inputs and outputs.
 Since D-198 it spreads that work over the host's cores: the suite runs with 8
 xdist workers, the three qualification chains run at once, and a release-stage
-collection runs the verdict gate's cases six at a time. What runs and what is
-recorded do not change, and the bridges accept the earlier collectors' 2
-workers too. Test subprocesses receive no GitHub token. A separate authorized publisher
+collection runs the verdict gate's cases six at a time. What runs and what
+each record proves do not change. The ledgers list the overlapping commands
+in completion order, and both bridges require the 8 workers. Test
+subprocesses receive no GitHub token. A separate authorized publisher
 commits the evidence and supplies its immutable commit and manifest digest
 through a maintainer-authenticated manual dispatch.
 

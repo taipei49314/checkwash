@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import subprocess
 import threading
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -222,6 +223,16 @@ def test_locked_run_record_keeps_every_row_of_concurrent_commands(monkeypatch, t
         return SimpleNamespace(wait=wait)
 
     monkeypatch.setattr(replay.subprocess, "Popen", spawn)
+    original_save = replay.save_json
+
+    def slow_save(path, value):
+        # Serialise now, write later, and later still for an earlier, shorter
+        # snapshot: without the lock a stale ledger would land last.
+        snapshot = json.loads(json.dumps(value))
+        time.sleep(0.01 * (count - len(snapshot)))
+        original_save(path, snapshot)
+
+    monkeypatch.setattr(replay, "save_json", slow_save)
     ledger, lock = [], threading.Lock()
 
     def one(index):
@@ -238,8 +249,9 @@ def test_locked_run_record_keeps_every_row_of_concurrent_commands(monkeypatch, t
 
 
 def test_nested_trace_offsets_stay_exact_when_a_helper_runs_commands_on_threads(monkeypatch, tmp_path):
-    # verdict_gate.py --jobs runs engines on threads inside the traced helper
-    # (D-198): each row's offset and length still select exactly its bytes.
+    # verdict_gate.py --jobs runs cases, and so their engine processes, on
+    # threads inside the traced helper (D-198): each row's offset and length
+    # still select exactly its bytes.
     count = 8
     together = threading.Barrier(count)
     outputs = {f"case-{index}": (f"out {index}\n".encode() * (index + 1), f"err {index}\r\n".encode() * (count - index))

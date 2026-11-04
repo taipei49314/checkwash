@@ -300,9 +300,8 @@ def validate_product(packet, source_root, trusted_root, collector):
     exits = validate_exits(packet, required, utc(manifest["subject"]["event"]["created_at"]))
     argv = exits["pytest"]["argv"]
     require(len(argv) == 20 and argv[0] == runtime["python_executable"]
-            and argv[1:10] == ["-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n"]
-            and argv[10] in B.PYTEST_WORKERS
-            and argv[11:16] == ["--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
+            and argv[1:16] == ["-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n", B.PYTEST_WORKERS,
+                              "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
             and argv[17] == "--junitxml" and argv[19] == "tests"
             and argv[18].replace("\\", "/").endswith("/" + records["junit"]), "full pytest scope mismatch")
     junit = B.validate_junit(packet.raw(records["junit"]), pytest_stdout=packet.raw(exits["pytest"]["stdout"]),

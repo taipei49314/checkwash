@@ -1286,6 +1286,33 @@ def test_gate_receipt_does_not_depend_on_jobs(tmp_path, red):
     assert four == one
 
 
+def test_gate_merges_per_case_failures_the_same_whatever_the_jobs(tmp_path, monkeypatch):
+    # Two of the five cases fail to materialize while the others run: with
+    # --jobs 4 the per-case failures, the rows and the verdicts equal a
+    # one-at-a-time run (D-198 review).
+    inputs = e2e_inputs(tmp_path)
+    original = VG.materialize
+
+    def failing(case, repo):
+        if case.id in ("i900/A2", "chai:c1"):
+            raise VG.GateError(f"{case.id}: forced materialization failure")
+        return original(case, repo)
+
+    monkeypatch.setattr(VG, "materialize", failing)
+    engines = {"baseline": (inputs.baseline.pyz, inputs.baseline.source),
+               "candidate": (inputs.candidate.pyz, inputs.candidate.source),
+               "canary-old": (inputs.baseline.pyz, inputs.baseline.source),
+               "canary-new": (inputs.candidate.pyz, inputs.candidate.source)}
+    one, four = (VG.run_gate(mode="gate", pins_path=inputs.pins, cases_dir=inputs.cases, engines=engines,
+                             labels_path=inputs.labels, accepted_path=inputs.accepted,
+                             work_dir=tmp_path / f"work {jobs}", jobs=jobs) for jobs in (1, 4))
+    assert one["status"] == "failed"
+    assert sorted(item["case"] for item in one["failures"] if item["code"] == "case-materialize") == ["chai:c1", "i900/A2"]
+    assert sorted(item["id"] for item in one["cases"] if item["not_run"] == "materialization failed") == ["chai:c1", "i900/A2"]
+    assert len([item for item in one["cases"] if item["runs"]]) == 3
+    assert four == one
+
+
 def test_jobs_takes_a_bounded_positive_integer(tmp_path):
     assert [VG._jobs(value) for value in ("1", "6", str(VG.MAX_JOBS))] == [1, 6, VG.MAX_JOBS]
     for value in ("0", "-1", "06", "1.5", "x", "", str(VG.MAX_JOBS + 1)):

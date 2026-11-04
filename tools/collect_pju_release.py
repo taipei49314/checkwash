@@ -27,8 +27,8 @@ API = "https://api.github.com/repos/" + REPOSITORY
 STAGES = {"pr": set(), "main": {"pr"}, "tag": {"main"}, "release-event": {"tag"}, "public-visitor": {"release-event"}}
 MAX_JSON = 2 * 1024 * 1024
 MAX_ARTIFACT = 256 * 1024 * 1024
-# Verdict-gate cases run at once on the receipt host; the receipt does not
-# depend on it (receipt speed-up, D-198).
+# Verdict-gate cases run at once on the receipt host; the gate's own receipt
+# does not depend on it (receipt speed-up, D-198).
 VERDICT_JOBS = "6"
 # Tag and later reports carry the raw published-baseline responses (up to
 # 16 MiB in published_release_identity), far over MAX_JSON; the verifier

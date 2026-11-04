@@ -85,60 +85,80 @@ rotation.
 
 ## D-198 (2026-11-05): receipts spread over the receipt host's cores
 
-After the v0.11.0 cycle, on 2026-11-04 at 14:35:46Z, Nelson wrote
+After v0.11.0's publication, while its rotation PR #586 was still collecting
+its receipt, Nelson wrote on 2026-11-04 at 14:35:46Z
 「現在做一版checkwash 成本開始提升上來了」 (a release now costs more). Claude
-counted where the time went. Since 2026-11-02, 15 PJU collections had taken
-966 minutes, and the v0.11.0 critical path took about 24.5 hours. Asked
+counted where the time went. Since 2026-11-02, 14 finished PJU collections
+had taken 966 minutes, counting each to the minute, and a fifteenth was
+running. The v0.11.0 critical path took about 24.5 hours. Asked
 "Should I draft a concrete plan to cut each checkwash release's cost?",
 Nelson chose the button 「出方案」 at 14:38:39Z and added at 14:39:42Z
 「要特別去看時間成本」 (look at the time cost in particular). Claude's plan then
-broke one receipt down from its command ledgers: an ordinary receipt took
-about 56 minutes (qualify 31.5, pytest 20) and a release-stage receipt about
-83 (qualify 32, verdict gate 23, pytest 23), almost all on one core at a time
-of LAPTOP-01AGNPJU, a 24-core host. Claude's multiple-choice question listed
+broke receipts down from their command ledgers. An ordinary receipt of the
+cycle took about 56 minutes (qualify 31.5, pytest 20), and the v0.11.0
+tag-stage receipt about 83 (qualify 32, verdict gate 23, pytest 23). The three
+qualifications ran one after another and pytest used two workers, on
+LAPTOP-01AGNPJU, a 24-core host. Claude's multiple-choice question listed
 four options. One was 「收據加速」, described as
 「改收集器和兩個 bridge：pytest 從 2 個 worker 改成約 6 個，三輪 qualify 同時跑。粗估每張收據省 25～40 分鐘、每版關鍵路徑省約 3 小時。先在 PJU 實測三次，另開 PR，0.12 前做。」.
 At 14:42:29Z Nelson selected it together with two other options. At 14:44:38Z
 he withdrew one of those two and wrote 「做綁機器的時間成本就可以 主要是要減少時間成本」
 (the time bound to the machine is enough; the point is to cut time). At
-14:45:53Z he withdrew the other: 「拉長發版間隔 這個也不用」. Asked "Should I start
-the receipt speed-up now in this session?", he chose the button 「現在開始」 at
-16:44:02Z. Claude wrote the questions, the option labels and their
-descriptions. The rest of this entry is Claude's under the pre-1.0
-delegation.
+14:45:53Z he withdrew the other: 「拉長發版間隔 這個也不用」. #586 merged at
+16:38:49Z. Asked "Should I start the receipt speed-up now in this
+session?", he chose the button 「現在開始」 at 16:44:02Z. Claude wrote the
+questions, the option labels and their descriptions. The rest of this entry
+is Claude's under the pre-1.0 delegation.
 
 What changes:
 
 - The collector runs the full suite with 8 xdist workers instead of 2.
   The option text said about 6. Claude chose 8 because the host has 24
-  cores and two full local runs with 10 workers took 8 min 46 s and 11 min 28 s.
-  Both bridges accept 2, from the earlier collectors, and 8. A
-  dispatch can verify a receipt collected before this merge, and the
-  count does not change which tests run. Any other count is refused.
+  cores and two full local runs with 10 workers took 8 min 46 s and
+  11 min 28 s. Both bridges require exactly 8, so the count stays bound to
+  the admitted collector. It does not change which tests run. A receipt
+  from an earlier collector, with 2 workers, no longer verifies after the
+  merge. No merge or release needs one:
+  - main requires a pull request to be up to date, so after the merge a
+    pull request's new head needs a new receipt;
+  - a release-stage receipt's verdict helper must equal the bridge's, and
+    this change alters `tools/verdict_gate.py`.
 - The source, wheel and pyz qualify -> inventory chains run at once. Each
   writes only its own records, logs and nested ledger, and each inventory
   reads only its own qualification. `run_record` takes a lock around the
-  shared command-ledger update. The first failure, in distribution order,
-  is raised after all three chains finish.
+  shared command-ledger update. After all three finish, every failed
+  chain's error is recorded, in distribution order, and the collection
+  fails.
 - `tools/verdict_gate.py` gains `--jobs N` (default 1). Up to N cases run at
   once, each in its own repository, and a case's engines still run one
-  after another. Failures merge in case order, so the receipt equals a
-  `--jobs 1` run. The release collector passes `--jobs 6`. This was not in
-  the option text; Claude added it under 「做綁機器的時間成本就可以」, because
-  the gate took 23 of a release-stage receipt's 83 minutes.
+  after another. Failures merge in case order, so the gate's receipt
+  equals a `--jobs 1` run. The release collector passes `--jobs 6`. This
+  was not in the option text, and Claude's plan had named a different step,
+  overlapping the gate with the qualifications. Under
+  「做綁機器的時間成本就可以」 Claude ran the gate's cases at once instead,
+  because the gate took 23 of a release-stage receipt's 83 minutes and its
+  cases are independent.
 - `traced_worker` takes a lock around each nested row's stream appends and
-  ledger write. A helper's subprocesses can then run on threads while every
+  ledger append. A helper's subprocesses can then run on threads while every
   recorded offset still selects exactly that command's bytes. The bridges
   already match nested verdict rows to cases by argv and directory, not by
-  order, so they did not need to change for this.
+  order, so they did not need to change for this. `commands.json` is
+  rewritten every 500 rows and when the helper ends, not after every row.
+  Inside the lock, rewriting the gate's 4,000-row ledger after every row
+  had cost minutes.
+
+What runs and what each record proves do not change. The receipts now
+record `-n 8` and `--jobs 6`, and their command and nested ledgers list
+overlapping commands in completion order. Summing those durations therefore
+no longer gives the elapsed time. The bridges depend on none of this.
 
 Measurements on LAPTOP-01AGNPJU (Windows, CPython 3.11.9,
 `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
 
 1. The gate alone. The 185 cases and 4 engines of the v0.11.0 rotation
-   proposal run (D-197) were run again with `--jobs 6`. The receipt equals,
-   as parsed JSON, that run's serial receipt (`98d04534…`). It took
-   4 min 12 s instead of 16 min 2 s.
+   proposal run (D-197) were run again with `--jobs 6`, and the receipt is
+   byte-identical to that run's serial receipt (SHA256 `98d04534…`). It
+   took 4 min 12 s instead of 16 min 2 s.
 2. A full release-stage `pr` collection of this branch's `94e87cea`, by
    the new collector (capture run 41877624633), took 43 minutes. v0.11.0's
    release-stage collections took 82 to 86 minutes, and #586's took 98.
@@ -147,14 +167,18 @@ Measurements on LAPTOP-01AGNPJU (Windows, CPython 3.11.9,
    qualification 15.0 to 16.4 minutes; one after another they had taken
    about 35. The verdict gate took 7.1 minutes, and its 185 cases passed.
    The new release bridge's dry run verified the receipt locally, with the
-   five check names and 22,456 collected tests. The receipt was not
-   published.
+   five check names and 22,456 collected tests.
 3. An ordinary receipt of the same commit, by the new collector, took
    31.5 minutes. v0.11.0's ordinary receipts took 55 to 60. pytest took
    11.2 minutes, and the chains took 18.0. The new ordinary bridge's
    `verify` mode verified it locally, with four checks, 22,456 tests and
-   283 qualification cases. It was not published.
+   283 qualification cases.
+4. @@CAL_FINAL@@
+
+The review's changes came after measurements 2 and 3: the exact worker
+count, the recorded chain errors and the nested ledger's rewrite.
+Measurement 4 covers the final code.
 
 Hosted test workflows remain disabled. This pull request's own receipt is
-collected by main's collector, the one it replaces; receipts collected after
-the merge use the new one. None of the three measurements was published.
+collected by main's collector, the one it replaces. Receipts collected after
+the merge use the new one. None of the measurements was published.
