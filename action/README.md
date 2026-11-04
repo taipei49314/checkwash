@@ -113,25 +113,32 @@ the commit the tag points to. The tag differs from it only in that line, and
 the Action runs only `checkwash check`, which does not import doctor. From
 v0.11.0, a release's doctor accepts that release's Action commit and the pin
 recommended before it. Source changes here do not update that public pin.
-The recommended v0.10.0 Action contains this installation repair; v0.7.0 and
+The recommended v0.11.0 Action contains this installation repair; v0.7.0 and
 earlier do not. Promoting a security release/pin requires a separate recorded
 publication decision; do not silently re-pin consumers to unreleased source.
 
-Verify the current pins; up to v0.10.0 the Action pin is the tag's peeled commit:
+Verify the current pins. The checkout and setup-python pins are their tags'
+peeled commits:
 
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.10.0^{}'
 ```
 
-From v0.11.0, `git ls-remote` cannot show the recommended pin. Verify it in a
-clone; the diff shows one changed line, in `src/checkwash/doctor.py`:
+The recommended checkwash pin, v0.11.0's Action commit, is not the commit the
+tag points to, so `git ls-remote` cannot show it. Verify it in a clone; the
+diff shows one changed line, in `src/checkwash/doctor.py`:
 
 ```bash
 git clone --filter=blob:none https://github.com/taipei49314/checkwash.git
-git -C checkwash rev-parse 'vX.Y.Z^2^1'
-git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z
+git -C checkwash rev-parse 'v0.11.0^2^1'
+git -C checkwash diff 'v0.11.0^2^1' v0.11.0
+```
+
+A pin up to v0.10.0 is the tag's peeled commit:
+
+```bash
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.10.0^{}'
 ```
 
 Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment, so

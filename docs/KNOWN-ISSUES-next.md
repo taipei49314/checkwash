@@ -1,8 +1,10 @@
 # 0.11 candidate — 2026-10-28
 
-Status, 2026-11-03: the 0.11.0 release pull request carries this section's
-rows into [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md), the page to read
-for 0.11.0. The rows stay here, unchanged, as the dated preparation record.
+Status, 2026-11-04: shipped in v0.11.0
+([publication record](releases/v0.11.0-publication-verification.md)). The
+release pull request carried this section's rows into
+[KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md), the page to read for
+0.11.0. The rows stay here, unchanged, as the dated preparation record.
 
 The 0.11 candidate adds a Claude Code PreToolUse ask and changes how the
 Stop hook blocks ([D-189](../DECISIONS.md)). It also stops counting a
@@ -61,7 +63,7 @@ source.
 The changes below shipped in v0.9.0. The previous unreleased/NOT_RUN
 wording is retained as a dated preparation record. Publication at the time:
 [v0.9.0 verification](releases/v0.9.0-publication-verification.md). The
-current release is v0.10.0 ([publication record](releases/v0.10.0-publication-verification.md)).
+current release is v0.11.0 ([publication record](releases/v0.11.0-publication-verification.md)).
 
 ## 2026-10-23: measured #345 / #469 residual exits
 

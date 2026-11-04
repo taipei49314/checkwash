@@ -1,6 +1,32 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-03 (the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-04 (v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-04: v0.11.0 published
+
+v0.11.0 is the verified public release: GitHub Release 433182824 and PyPI
+0.11.0 serve the same bytes, from M `34555301de3d5ea4b2c8e4470b797a06d0a1e395`
+(tag object `2f5ac3fecaddfe5f99ae6e6e129b4d73abb3dfc0`). The PR, main, tag,
+release-event and public-visitor stages each passed on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), all collected and verified from
+`review/collector-d-011-20261103` (`fa8a8ea0`); other platforms remain
+NOT_RUN. Nelson approved the release merge, reviewed the fixed-corpus
+comparison's empty list before the tag and personally approved the PyPI
+deployment; RELEASING quotes each question and answer.
+Details: [RELEASING](docs/RELEASING.md#v0110-checked-publication-and-pin-promotion-2026-11-04)
+and the [publication record](docs/releases/v0.11.0-publication-verification.md).
+
+The advertised manifest and the README CLI commands now name v0.11.0, and the
+README, `doctor`, the self-audit workflow and the receipt tools pin the
+Action commit A `257150319fca15235185fc629d8b9c21c17166ca` (`v0.11.0^2^1`,
+D-194), so a fresh PJU receipt's pinned Action checkout is A. The
+decision-log cut and the baseline rotation to v0.11.0 follow in a separate
+reviewed PR. The PyPI 0.11.0 description is the release merge commit's
+README, which still names v0.10.0; KNOWN-ISSUES-v0.11.0 says so. On
+Nelson's answer 「可以改」, THREATMODEL item 4 and row 2 now state the 0.11.0
+record: the targeted diagnostic passed the three uvloop commits with no
+finding, and Claude's delegated disposition accepts the remaining risk,
+unmeasured, for 0.11.0 only. 1.0 is NOT_MET and needs Nelson's decision.
 
 ## 2026-11-03: the 0.11.0 release pull request
 
@@ -3955,8 +3981,8 @@ how the measurements moved; their original dates and values remain history.
 | authoritative number | value |
 |---|---|
 | version | v0.11.0 |
-| last published CLI | v0.10.0 |
-| last published CLI commit | 100699796d942af30644738ffbcd1f1c939411c5 |
+| last published CLI | v0.11.0 |
+| last published CLI commit | 34555301de3d5ea4b2c8e4470b797a06d0a1e395 |
 | detectors | 22 |
 | human-commit block rate | 46/1800 = 2.56% |
 | adjudicated false positive | 31/1800 = 1.72% |

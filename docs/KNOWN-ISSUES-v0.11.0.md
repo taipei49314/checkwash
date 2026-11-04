@@ -1,8 +1,9 @@
 # Known issues for 0.11.0
 
-Status, 2026-11-03: the 0.11.0 release candidate, prepared in the release
-pull request; not a published release record. The publication record follows
-once the public files are verified.
+Status, 2026-11-04: limits of the published v0.11.0
+([publication record](releases/v0.11.0-publication-verification.md)). The
+rows were written for the release candidate in the release pull request; the
+Publication section was updated after publication.
 
 0.11.0 adds a Claude Code PreToolUse ask and changes how the Stop hook blocks
 ([D-189](../DECISIONS.md)), stops counting a proven Python failure relay as an
@@ -83,7 +84,9 @@ correctness guarantee.
   merge commit. Its install commands and Action pin still name v0.10.0, the
   release verified before 0.11.0 was published, and its version sentence says
   so; the [GitHub README](https://github.com/taipei49314/checkwash#readme)
-  moves them to 0.11.0 once its public files are verified.
+  has named 0.11.0 since the
+  [publication record](releases/v0.11.0-publication-verification.md)
+  verified its public files.
 - **`doctor` across the upgrade.** `doctor` 0.10.0 rejects the 0.11.0 Action
   pin (exit 1), so upgrade the CLI and its local hooks before the Action pin.
   Pin updaters such as Dependabot and Renovate will propose the tag's commit,

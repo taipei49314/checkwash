@@ -11,8 +11,8 @@ starts from the [publication record template](publication-record-template.md).
 
 ## v0.11.0
 
-Release candidate, prepared in the release pull request; the publication
-record follows once the public files are verified.
+Published 2026-11-04; its public files are verified in the
+[publication record](v0.11.0-publication-verification.md).
 
 **v0.11.0 asks before a Claude Code edit weakens a Python test, stops counting
 a proven failure relay as a swallow, and lets `doctor` accept the release's
@@ -26,6 +26,7 @@ none (D-192), and a moved Python test pays only where the repository's own
 pytest configuration collects it (D-193). #419 closes as a documented
 residual (D-191). From v0.11.0 the README recommends the release's Action
 commit, `vX.Y.Z^2^1`, not the commit the tag points to (D-194).
+[Publication evidence](v0.11.0-publication-verification.md) ·
 [Release evidence and known limits](v0.11.0-public-launch.md).
 
 Known issues: [v0.11.0](../KNOWN-ISSUES-v0.11.0.md).

@@ -213,7 +213,10 @@ Every commit gave the same exit code and the same report apart from run
 metadata with either engine, and so did the Python standard set (1,734 pass,
 66 block). No commit moved, so none went to the owner. The two errors are
 apollo-client `8a51ea63` and undici `0f1f8903`, unchanged since run 5.
-Records, in the private checkwash-lab repository: `252046de`
+The reports were compared during the run but not kept: each commit's record
+keeps its identity, whether the two runs matched, and each engine's exit,
+verdict, reported version and timing. Records, in the private
+checkwash-lab repository: `252046de`
 (`notes/r29-comparison-011-claude-20261103/`); the release procedure's 0.11.0
 section records the run identities and hashes. These in-sample counts are not
 a false-positive rate.
