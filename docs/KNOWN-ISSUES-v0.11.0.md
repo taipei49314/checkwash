@@ -83,7 +83,9 @@ correctness guarantee.
   merge commit. Its install commands and Action pin still name v0.10.0, the
   release verified before 0.11.0 was published, and its version sentence says
   so; the [GitHub README](https://github.com/taipei49314/checkwash#readme)
-  moves them to 0.11.0 once its public files are verified.
+  has named 0.11.0 since the
+  [publication record](releases/v0.11.0-publication-verification.md)
+  verified its public files.
 - **`doctor` across the upgrade.** `doctor` 0.10.0 rejects the 0.11.0 Action
   pin (exit 1), so upgrade the CLI and its local hooks before the Action pin.
   Pin updaters such as Dependabot and Renovate will propose the tag's commit,

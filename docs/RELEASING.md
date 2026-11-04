@@ -267,6 +267,164 @@ separate source-bound record:
 [the 0.11.0 D176 disposition](d176-cost-disposition-0.11.0.md). It is not a
 history PASS, a census, an adjudicated rate or a standing waiver.
 
+## v0.11.0 checked publication and pin promotion (2026-11-04)
+
+Claude carried out the 0.11.0 publication operations under the delegation
+above. Nelson's own decisions in it were each an answer to a question Claude
+asked with buttons; Claude wrote every question and button label, and the log
+does not tell a click from a typed reply:
+
+- **The release merge.** At 2026-11-03T06:52:44Z Claude asked
+  「要用 merge commit 合併 #584 嗎？」 with the buttons 「核准合併 #584」 and
+  「先不要」, and at 07:19:46Z Nelson answered 「核准合併 #584」. The
+  supplementary six-leg batch then failed on Linux, one old #455 test in each
+  Linux leg, so Claude did not merge. At 08:02:25Z it asked
+  「0.11.0 要先修這個測試再合併嗎？」 with the buttons 「先修再合併」 and
+  「照現在合併」, offering to rebuild A and R, run the PR stage and the six
+  legs again and then merge without asking again; at 11:31:00Z Nelson
+  answered 「先修再合併」. Both passed, and #584 merged as M.
+- **The fixed-corpus review (D-196).** At 14:36:07Z Claude asked
+  「R29 的空清單可以讓我打 tag 嗎？」 with the buttons 「看過，可以打 tag」 and
+  「先給我看紀錄」, and at 14:51:26Z Nelson answered 「先給我看紀錄」.
+  Claude published a private record page with the comparison's rows, inputs
+  and uvloop records and an independent review of them (below), and at
+  16:11:49Z asked the same question with the buttons 「看過，可以打 tag」 and
+  「還有問題」. At 16:19:15Z Nelson answered 「看過，可以打 tag」. This is the
+  owner's review of the empty list that the tag waited for; the tag was made
+  after it, at 18:17:10Z.
+- **The PyPI deployment.** Run 41726974214's `pypi` job waited for the
+  `pypi` environment review from 22:06:39Z, and Claude did not try to approve
+  it. At 22:08:36Z Claude asked 「要核准 checkwash 0.11.0 的 PyPI 部署嗎？」 with
+  the buttons 「已在頁面核准」 and 「先不要上 PyPI」, and on 2026-11-04 at
+  01:06:31Z Nelson answered 「已在頁面核准」. GitHub still showed the
+  deployment waiting with no review, so Claude did not go on; at 01:08:39Z it
+  asked 「要在 run 頁面重按一次 PyPI 核准嗎？」 with the buttons 「已重新核准」 and
+  「先不要上 PyPI」, and at 03:53:56Z Nelson answered 「已重新核准」. GitHub
+  again showed no review, and at 03:56:39Z Claude asked
+  「能在 GitHub 頁面上按到 Approve and deploy 嗎？」 with the buttons
+  「GitHub 上已按好」 and 「找不到按鈕」. GitHub records Nelson's approval
+  (reviewer taipei49314, state approved), with the deployment queued at
+  04:05:59Z, and at 04:07:00Z Nelson answered 「GitHub 上已按好」.
+- **THREATMODEL item 4 and row 2.** At 04:21:02Z Claude asked
+  「THREATMODEL 第 4 項和 row 2 要照 0.11.0 的紀錄改寫嗎？」 (whether to
+  rewrite them to match the 0.11.0 record) with the buttons 「可以改」 and
+  「先不要改」, and at 05:47:58Z Nelson answered 「可以改」. THREATMODEL is
+  agent-read-only, and this follow-up changes only those two passages. They
+  had said that the targeted diagnostic was pending and that the remaining
+  risk was not yet accepted for 0.11; they now state the diagnostic's result
+  above and the [0.11.0 D176 disposition](d176-cost-disposition-0.11.0.md).
+
+M is `34555301de3d5ea4b2c8e4470b797a06d0a1e395`; its first parent is the
+reviewed base `fa8a8ea0a805d08d53c32390152a7590ea727836`, and its tree equals
+R's, `49f366fd321bf9db2785cb0fd5172d040fc2c375`. Annotated tag `v0.11.0`
+(object `2f5ac3fecaddfe5f99ae6e6e129b4d73abb3dfc0`, tagger Claude, unsigned)
+peels to M and was pushed alone, after Claude had read the tag object back
+locally. GitHub Release 433182824 was published without assets at
+2026-11-03T20:28:33Z; its real `release: published` event, run by M's own
+workflow, was captured before the release-event collection.
+Run 41726974214's `publish-assets` job then attached the three receipt
+artifacts and read them back, and after Nelson's approval its `pypi` job
+uploaded the wheel and sdist through trusted publishing; PyPI 0.11.0 serves
+the same bytes as the Release. Every stage's evidence ran on
+LAPTOP-01AGNPJU, Windows, CPython 3.11.9
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Other platforms are NOT_RUN; the
+separately recorded acceptance covers this release only. The
+[publication record](releases/v0.11.0-publication-verification.md) lists
+each stage's native capture, receipt, verification run and check.
+
+Every stage was collected and verified from the reviewed ref
+`review/collector-d-011-20261103` (`fa8a8ea0`), which carries the three fixes
+0.10.0's later stages needed; no fix to it was needed. Two attempts are kept
+as they are. The PR stage first ran, and verified, on the earlier head
+`abb1bf34fa256442b17148c9ad0273ad879bb4c5`, which the fix above replaced. The
+main stage's first receipt (`356c041a`) was never dispatched: its local dry
+run refused it, because Claude had linked the PR stage check instead of the
+PR head's `checkwash` check (125942032130), and main was collected again with
+that link. From the tag stage on, Claude also ran the trusted
+`validate_parents`, and for the release event `publication_authority`, on
+each collection's inputs before starting it.
+
+Before the PyPI upload Claude checked the candidate wheel, whose bytes every
+stage rebuilt identically
+(`5546943d48f94e2e901d22fcce124d2400e7f44b321c38afd888bcecb02744c3`), as
+[Check the public package page](#check-the-public-package-page) asks: name
+`checkwash`, version 0.11.0, `Requires-Python >=3.11`, license expression
+Apache-2.0, the GitHub homepage, and a Markdown description equal to M's
+README byte for byte. All 45 of its links are absolute; each one into this
+repository names a file, and where given an anchor, a heading or anchor that
+exists at M, and every other one returned HTTP 200. `twine check` passed in
+every stage. After the upload, Claude read both PyPI pages in a browser
+(PyPI answers a non-browser request with a JavaScript client challenge): the
+0.11.0 page and the project page show 0.11.0 as the latest release, with the
+same metadata and provenance for both files; the description renders M's
+README, its eight in-page anchors resolve, and the wheel and sdist
+downloaded from PyPI equal the GitHub assets byte for byte (details in the
+[publication record](releases/v0.11.0-publication-verification.md)).
+
+**Review of the fixed-corpus records.** Before Nelson's review, Claude's own
+script and an independent read-only review (ten agents) checked the records
+behind the empty list. None of their findings changes the list; these are
+recorded here because the lab notes are frozen at `252046de`:
+
+- The 3,600-commit run read the clones the 0.10.0 comparison had made
+  (`cw10-r29/clones`); only the uvloop run used this run's clones. They point
+  at the same mirrors, have `core.autocrlf=false`, were not changed after
+  2026-10-27 and hold every object, so the result is unaffected; the lab
+  README does not say so.
+- The reports were compared but not saved (the rows keep each engine's exit,
+  verdict, reported version and timing), so a re-check of "identical
+  reports" needs a new run. This file said so; the lab README and the release
+  pull request did not, and the release guide called the records raw, which
+  this follow-up corrects. The two engine errors match only by both exiting
+  2.
+- Both engines report version 0.10.0: the candidate is main `dd4ec896`'s
+  `src/`, before the version bump (allowed by "Candidate" below), and the run
+  did not record which code it loaded. Re-hashed after the run, the directory
+  still held that tree, and the uvloop run from the same directory moved
+  three commits from block to pass.
+- The candidate ran without `-I` on a host Python whose site-packages holds
+  other projects' editable `.pth` files and an editable checkwash 0.2.8; by
+  import order neither engine loads them. The run recorded the delegation
+  but not a separate individual run approval.
+- The comparison script's `classify_moves` ignores the exit code when both
+  verdicts fail to parse, so a 0-to-1 exit move without a verdict would read
+  as error to error. No row had that shape here; the script needs a fix
+  before the next run.
+- The uvloop run went first, from 20:21:43Z (6.9 seconds), and the 3,600
+  commits ran from 20:21:50Z to 21:00:37Z (2,327.1 seconds). The lab README's
+  statement that the 0.11 changes do not reach these 3,600 says more than the
+  comparison shows, which is that no outcome changed.
+
+What the comparison cannot show, and the record page told Nelson: no Python
+repository in the set has a `set_exception` relay, so D-190's only real-commit
+evidence is the three uvloop inputs; the 0.11 hook behaviour has no list of
+its own, only the exploratory replay rate D-189 and the known issues name;
+and the comparison ran on Windows CPython 3.11.9 only, while the README's
+required check runs on Linux and Python 3.12.
+
+The public-visitor stage passed (check 126413847189, run
+[41781156488](https://github.com/taipei49314/checkwash/actions/runs/41781156488)).
+Its native capture came after the PyPI upload. It downloaded the three
+GitHub assets and the two PyPI files, confirmed each PyPI file equals its
+GitHub copy, installed each wheel and sdist into a fresh environment, and ran
+the downloaded pyz. Every install reported 0.11.0 with members equal to M's
+source.
+
+The decision-log cut and the verdict-baseline rotation that
+[After the release](#after-the-release) and step 9 require follow in a
+separate pull request, under Nelson's answer of 2026-10-28 quoted in the
+0.11.0 section above.
+
+This follow-up promotes `release/advertised.toml` to v0.11.0, with `commit`
+the tag's peeled commit M, and the README's CLI commands to 0.11.0. It moves
+the README Action pin and its annotation, this repository's self-audit
+workflow, `doctor`'s `_PREVIOUS_ACTION_PIN`, the two receipt-tool
+`ACTION_SHA` values, SECURITY.md's current pin and the two pin literals in
+`tests/test_doctor.py` to A, `257150319fca15235185fc629d8b9c21c17166ca`;
+later PJU receipts replay the v0.11.0 Action at A. `action/action.yml` did
+not change in 0.11.0, so `ACTION_YAML_SHA256` stays. No downstream re-pin is
+authorized. 1.0 remains NOT_MET and needs Nelson's decision.
+
 ## v0.10.0 checked publication and pin promotion (2026-10-28)
 
 Claude carried out the 0.10.0 publication operations under the delegation
@@ -928,15 +1086,15 @@ A standing step since 2026-10-19 (owner ruling 2026-10-19, R29, with R27 and
 R3; [#212](https://github.com/taipei49314/checkwash/issues/212)). It runs
 once the candidate commit is fixed, before step 5.
 
-- **Sets.** The previous published release (v0.9.0,
-  `d6eda4f695fabb8e7d138f7a87b099d2028f0294`, for the v0.9.1 preparation above)
-  and the candidate each check two fixed in-sample sets: the
+- **Sets.** The previous published release (for 0.11.0, v0.10.0,
+  `100699796d942af30644738ffbcd1f1c939411c5`) and the candidate each check
+  two fixed in-sample sets: the
   Python `standard` set, 300 commits from each of attrs, click, flask, httpx,
   rich and starlette (D-141, arm 1), and the JS/TS set of
   [`benchmarks/javascript-replay/`](../benchmarks/javascript-replay/README.md),
   300 commits from each of six repositories. Each commit is checked against
-  its first parent with `check --format json`, once per engine, as the two
-  JS/TS runs so far did
+  its first parent with `check --format json`, once per engine, as every
+  JS/TS run so far did
   ([results](../benchmarks/javascript-replay/results.md)).
 - **Candidate.** The commit to be tagged, or a commit whose `src/` tree
   differs from it only in the version string in `src/checkwash/__init__.py`
