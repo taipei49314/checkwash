@@ -98,6 +98,17 @@ schema_version = 1
 # 159 -> 160 with no case removed. Q5a keeps its pass label. The chai file
 # is the same blob at 1006997 as at d6eda4f, so [t3.cases] stays, and the
 # [canary] pair and its 71 block -> pass IDs are not rotated.
+# 2026-11-04: rotated to v0.11.0 (docs/RELEASING.md step 9, D-197), under
+# Nelson's answer 「開始」 of 2026-10-28, which RELEASING's 0.11.0 delegation
+# section quotes. [baseline] pins release commit 3455530 (tag object
+# 2f5ac3fe) and the Release's checkwash.pyz: 996040 bytes, the SHA256 the
+# publication record and the GitHub Releases API report. A PJU proposal run
+# with this [baseline] (LAPTOP-01AGNPJU, HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL;
+# candidate f38a2307, src equal to main 78dba277) ran all 185 cases (159 T1,
+# 26 T3): 160 block -> block, 25 pass -> pass, zero reported and no failure.
+# v0.11.0 blocks the same 160 cases as v0.10.0, so [baseline_blocked] stays.
+# The chai file is the same blob at 3455530 as at 1006997, so [t3.cases]
+# stays, and the [canary] pair and its 71 block -> pass IDs are not rotated.
 [baseline]
 tag = "v0.11.0"
 version = "0.11.0"
