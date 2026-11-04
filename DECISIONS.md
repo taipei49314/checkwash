@@ -173,7 +173,15 @@ Measurements on LAPTOP-01AGNPJU (Windows, CPython 3.11.9,
    11.2 minutes, and the chains took 18.0. The new ordinary bridge's
    `verify` mode verified it locally, with four checks, 22,456 tests and
    283 qualification cases.
-4. @@CAL_FINAL@@
+4. The final code. A release-stage `pr` collection of `0ebd5ad8`, by the
+   final collector (capture run 41895389125), took 36.75 minutes. pytest
+   took 10.9 minutes (22,436 passed, 25 skipped, 67 subtests), the three
+   chains 15.6 minutes together, and the verdict gate 6.2 minutes; its 185
+   cases passed. With the nested ledgers written in batches, the wheel
+   inventory took 2.1 minutes instead of 3.7 and the gate 6.2 instead of
+   7.1. The final release bridge's dry run, which requires 8 workers,
+   verified the receipt locally, with the five check names and 22,461
+   collected tests.
 
 The review's changes came after measurements 2 and 3: the exact worker
 count, the recorded chain errors and the nested ledger's rewrite.

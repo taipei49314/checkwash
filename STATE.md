@@ -29,10 +29,12 @@ Measured on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
 - the verdict gate alone took 4 min 12 s instead of 16 min 2 s;
 - a release-stage collection took 43 minutes instead of 82 to 86 (98 for
   #586's);
-- an ordinary collection took 31.5 minutes instead of 55 to 60.
+- an ordinary collection took 31.5 minutes instead of 55 to 60;
+- after the review, the final code's release-stage collection took 36.75
+  minutes.
 
-The new bridges verified both collections locally, and neither was
-published. D-198 adds a fourth measurement of the final code. This pull
+The new bridges verified all three collections locally, and none was
+published. This pull
 request's own receipt is collected by main's collector, the one it
 replaces. Hosted test workflows remain disabled.
 
