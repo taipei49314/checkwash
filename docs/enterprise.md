@@ -140,7 +140,7 @@ unless it is a proven failure relay, which is not counted as added, within
 0.10's count (D-190), or one of five spellings that give no finding at all
 (THREATMODEL rows 172 to 176).
 [#419](https://github.com/taipei49314/checkwash/issues/419) is closed as a
-documented residual, not a fix ([D-191](../DECISIONS.md)): what still passes
+documented residual, not a fix ([D-191](../DECISIONS-archive-4.md)): what still passes
 and what blocks are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md) and
 [THREATMODEL](../THREATMODEL.md) item 4 and rows 2, 93, 130, 131 and 172 to
 175. If an author who reads these rules is in your threat model, use one of
@@ -213,7 +213,7 @@ from archived rows, not a measurement of 0.11 (see *About the counts*).
    anything outside an agent session; an approved ask lets the edit through;
    the Stop hook applies no freeze; and pull request checks and the Action
    are unchanged ([KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md)). Cost: in the
-   session replay behind [D-189](../DECISIONS.md), 630 Claude Code edits of
+   session replay behind [D-189](../DECISIONS-archive-4.md), 630 Claude Code edits of
    Python test files on one host replayed through the released v0.10.0 pyz,
    not this handler, these five rules asked about 63 edits (10%), 24 of the
    32 labelled real loosenings among them, and 12 of the 62 labelled asks

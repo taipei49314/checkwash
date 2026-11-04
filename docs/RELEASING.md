@@ -413,9 +413,11 @@ the downloaded pyz. Every install reported 0.11.0 with members equal to M's
 source.
 
 The decision-log cut and the verdict-baseline rotation that
-[After the release](#after-the-release) and step 9 require follow in a
-separate pull request, under Nelson's answer of 2026-10-28 quoted in the
-0.11.0 section above.
+[After the release](#after-the-release) and step 9 require came in the
+separate pull request #586, under Nelson's answer of 2026-10-28 quoted in
+the 0.11.0 section above: it moved D-188 to D-196 to
+`DECISIONS-archive-4.md` and rotated the verdict baseline to v0.11.0
+(D-197).
 
 This follow-up promotes `release/advertised.toml` to v0.11.0, with `commit`
 the tag's peeled commit M, and the README's CLI commands to 0.11.0. It moves
@@ -896,7 +898,12 @@ under the standing route above. A source edit alone is not a passing receipt.
    Protected `tests/gates/verdict_gate_accepted.toml` and `DECISIONS.md` still
    need the maintainer's exact disposition; remove only the stale entries
    actually named by the rotation run. This remains separate from Action pin
-   promotion and downstream re-pins.
+   promotion and downstream re-pins. While hosted test workflows are
+   disabled, the gate runs on PJU: a proposal run on the pins commit, then
+   the rotation pull request's own release-stage `pr` receipt
+   (`tools/collect_pju_release.py`), which downloads the public pyz again and
+   runs the full gate with the rotated pins; an ordinary PR receipt does not
+   run the gate (#575, #586).
 
 Preparation for 1.0 stops before steps 5–9. The readiness report distinguishes
 implemented publication checks from future execution against public objects
@@ -912,7 +919,7 @@ was prepared, and `_OWN_ACTION_PIN`, the release's own Action commit A. Each is
 one line at column 0, `_NAME = "<40 lowercase hex>"`, with no trailing
 comment; the release tools read that shape. After publication the README
 recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
-([D-194](../DECISIONS.md)).
+([D-194](../DECISIONS-archive-4.md)).
 
 - **A, the content commit.** The version bump, release notes and every other
   change of the release PR, with both pin lines equal to the README's Action
@@ -1000,15 +1007,18 @@ recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
   base's. The announced pin defaults to `ACTION_SHA` in
   `tools/pju_receipt_bridge.py`. Before each dispatch, also dry-run the
   verifier against the real receipt, as for v0.10.0.
-- **From 0.12.** The Action pin, the previous release's A, differs from the
-  advertised and verdict-baseline commit, that release's tag commit.
-  `tools/collect_pju_release.py` falls back to the pinned Action checkout for
-  `--advertised-source` and `--verdict-baseline-source`, so each stage
-  collection must pass separate checkouts at those commits; otherwise it
-  stops on the checkout mismatch, after the full suite. The maintainer's
-  local stage scripts, which pass the Action checkout as both sources, and
-  `prepare-stage.sh`'s pinned-checkout assertion (`v0.10.0^{commit}` today,
-  `v0.11.0^2^1` after 0.11.0's step 8) must change accordingly.
+- **From step 8 on.** Once step 8 moves the Action pin to a release's A, the
+  pin differs from the advertised commit, that release's tag commit, and from
+  the verdict-baseline commit, also a tag commit: the previous release's
+  until step 9 rotates it. This holds for every later release-stage
+  collection, from the step-9 rotation pull request's `pr` receipt (#586 for
+  0.11.0) to the next release's stages. `tools/collect_pju_release.py` falls
+  back to the pinned Action checkout for `--advertised-source` and
+  `--verdict-baseline-source`, so each such collection must pass separate
+  checkouts at those commits; otherwise it stops on the checkout mismatch,
+  after the full suite. The maintainer's local stage scripts were changed
+  after 0.11.0's step 8: they pin the Action checkout at A and can add a
+  checkout of the release commit for both sources.
 
 What the release bridge checks (`validate_own_action_pin`, after the
 previous-stage link and before the product evidence; the report records

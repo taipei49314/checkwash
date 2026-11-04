@@ -1,6 +1,6 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-04 (v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-04 (v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
 
 ## 2026-11-04: v0.11.0 published
 
@@ -19,9 +19,11 @@ and the [publication record](docs/releases/v0.11.0-publication-verification.md).
 The advertised manifest and the README CLI commands now name v0.11.0, and the
 README, `doctor`, the self-audit workflow and the receipt tools pin the
 Action commit A `257150319fca15235185fc629d8b9c21c17166ca` (`v0.11.0^2^1`,
-D-194), so a fresh PJU receipt's pinned Action checkout is A. The
-decision-log cut and the baseline rotation to v0.11.0 follow in a separate
-reviewed PR. The PyPI 0.11.0 description is the release merge commit's
+D-194), so a fresh PJU receipt's pinned Action checkout is A. Under
+Nelson's 2026-10-28 answer 「開始」, which RELEASING quotes, #586 then moved
+D-188 to D-196 to [DECISIONS-archive-4](DECISIONS-archive-4.md) and rotated
+the verdict baseline to v0.11.0 (D-197); no case moved, so the blocked pin
+stays 160. The PyPI 0.11.0 description is the release merge commit's
 README, which still names v0.10.0; KNOWN-ISSUES-v0.11.0 says so. On
 Nelson's answer 「可以改」, THREATMODEL item 4 and row 2 now state the 0.11.0
 record: the targeted diagnostic passed the three uvloop commits with no
@@ -189,7 +191,7 @@ Docs only. Not run: other platforms. Not released: package metadata stays
 ## 2026-11-03: 0.11 keeps scheme S; the fixed-corpus candidate may differ in doctor's own pin line; two 0.12 directions (D-196)
 
 On 2026-11-02 Nelson answered three questions Claude had left open after
-D-194's review (quoted in [D-196](DECISIONS.md)). 0.11 keeps scheme S, and
+D-194's review (quoted in [D-196](DECISIONS-archive-4.md)). 0.11 keeps scheme S, and
 he accepts with documentation that pin updaters such as Dependabot and
 Renovate propose the tag's commit, which `doctor` rejects, and that
 zizmor's `ref-version-mismatch` audit can report the README pin's comment
@@ -303,7 +305,7 @@ results `93e602c`; D-189) labelled 12 agent edits of Python tests as
 loosenings with no reason in their context. Five of them were still on main
 `0e6acc35`, in checkwash's own tests. Nelson chose to bring them into 0.11
 on 2026-11-02 (the option labelled 「帶進 0.11 (Recommended)」, which Claude
-wrote; quoted in [D-195](DECISIONS.md)); every detail is Claude's under the
+wrote; quoted in [D-195](DECISIONS-archive-4.md)); every detail is Claude's under the
 2026-10-27 delegation.
 
 Each time, an agent session wrote the strict check, loosened or deleted it
@@ -495,7 +497,7 @@ other platforms. Not released: package metadata stays 0.10.0.
 
 Nelson's 2026-10-28 ruling 「2.用寫清楚結案」, then his clicks of the
 buttons labelled 「接著做 0.11」 and 「用 C，開始改 PR-A」 (Claude wrote each
-label and option text, quoted in [D-191](DECISIONS.md), and only the label
+label and option text, quoted in [D-191](DECISIONS-archive-4.md), and only the label
 may have been sent), close #419 as a documented residual of E1's repair
 evidence, not a fix; D-191 supersedes the 2026-10-19 closing condition. No
 engine code changes. 0.11.0 still holds a weakened Python oracle at warn
@@ -562,7 +564,7 @@ Claude Code hook lifecycle run. Not released: package metadata stays
 
 Nelson chose how checkwash reads uvloop's failure relays by clicking the
 button labelled 「用 C，開始改 PR-A」; Claude wrote its label and option
-text, quoted in [D-190](DECISIONS.md), and only the label may have been
+text, quoted in [D-190](DECISIONS-archive-4.md), and only the label may have been
 sent. A broad handler in a Python test whose first statement hands the
 caught exception unchanged to an asyncio future that the test awaits is a
 proven failure relay, by the bounded rules of SPEC §4 *Python failure
@@ -648,14 +650,14 @@ package metadata stays 0.10.0.
 Nelson chose the 0.11 agent path by clicking the button labelled
 「加 PreToolUse ask」; its label and option text were written by Claude, and
 only the label may have been sent (the option text is quoted in
-[D-189](DECISIONS.md)). As implemented, 0.11 adds a Claude Code PreToolUse
+[D-189](DECISIONS-archive-4.md)). As implemented, 0.11 adds a Claude Code PreToolUse
 ask on the five weakening rules, and first fixes the Stop hook's block
 message and its `stop_hook_active` handling. This replaces
 the approved scope's "stop hook 自動凍結": the Stop hook applying
 `oracle_freeze` by default is deferred. The detailed choices are Claude's
 under the 2026-10-27 delegation. The owner decision, replay evidence,
 design, lifecycle receipt and unverified points are in
-[D-189](DECISIONS.md); the named residuals are in
+[D-189](DECISIONS-archive-4.md); the named residuals are in
 [KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md).
 
 `checkwash hook pre-tool-use` asks before an Edit, Write or MultiEdit of a
