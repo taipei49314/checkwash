@@ -99,11 +99,11 @@ schema_version = 1
 # is the same blob at 1006997 as at d6eda4f, so [t3.cases] stays, and the
 # [canary] pair and its 71 block -> pass IDs are not rotated.
 [baseline]
-tag = "v0.10.0"
-version = "0.10.0"
-commit = "100699796d942af30644738ffbcd1f1c939411c5"
-sha256 = "9a58d3d48f4f314a46b153bc0b7ad5182829c210a3ce9dae575c46f2f3bc535a"
-size = 952399
+tag = "v0.11.0"
+version = "0.11.0"
+commit = "34555301de3d5ea4b2c8e4470b797a06d0a1e395"
+sha256 = "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+size = 996040
 
 [baseline_blocked]
 count = 160
