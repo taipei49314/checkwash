@@ -350,9 +350,11 @@ stage rebuilt identically
 [Check the public package page](#check-the-public-package-page) asks: name
 `checkwash`, version 0.11.0, `Requires-Python >=3.11`, license expression
 Apache-2.0, the GitHub homepage, and a Markdown description equal to M's
-README byte for byte. All 45 of its links are absolute; each one into this
-repository names a file, and where given an anchor, a heading or anchor that
-exists at M, and every other one returned HTTP 200. `twine check` passed in
+README byte for byte. All 45 of its links are absolute. Each of the 29 that
+name a file in this repository names one that exists at M, and where given
+an anchor, a heading or anchor that exists there; each of the other 16, the
+issue, pull-request and release-download links among them, returned HTTP
+200. `twine check` passed in
 every stage. After the upload, Claude read both PyPI pages in a browser
 (PyPI answers a non-browser request with a JavaScript client challenge): the
 0.11.0 page and the project page show 0.11.0 as the latest release, with the

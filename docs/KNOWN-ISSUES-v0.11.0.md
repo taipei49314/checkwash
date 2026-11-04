@@ -1,8 +1,9 @@
 # Known issues for 0.11.0
 
-Status, 2026-11-03: the 0.11.0 release candidate, prepared in the release
-pull request; not a published release record. The publication record follows
-once the public files are verified.
+Status, 2026-11-04: limits of the published v0.11.0
+([publication record](releases/v0.11.0-publication-verification.md)). The
+rows were written for the release candidate in the release pull request; the
+Publication section was updated after publication.
 
 0.11.0 adds a Claude Code PreToolUse ask and changes how the Stop hook blocks
 ([D-189](../DECISIONS.md)), stops counting a proven Python failure relay as an
