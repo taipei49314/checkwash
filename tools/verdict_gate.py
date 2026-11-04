@@ -6,6 +6,9 @@ two-commit repository per case. Case engines use no network and execute no test
 code: only git and the selected checkwash processes run. A tag run separately
 captures bounded native public Release/tag metadata before applying its baseline
 identity rule; ordinary runs without ``--tag-run`` do no metadata network reads.
+With ``--jobs N`` up to N cases run at once, each in its own repository; a
+case's engines still run one after another, and the receipt is the same as
+with ``--jobs 1``.
 
 Engines
 -------
@@ -147,6 +150,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import concurrent.futures
 import datetime
 import hashlib
 import importlib.util
@@ -198,6 +202,7 @@ _require_same = _QA._require_same
 
 SCHEMA_VERSION = 1
 DEFAULT_TIMEOUT = 120.0
+MAX_JOBS = 32
 GIT_TIMEOUT = 120.0
 SEVERITY_ORDER = {"info": 0, "warn": 1, "high": 2, "critical": 3}
 LABELS = ("block", "pass", "undecided")
@@ -1694,10 +1699,15 @@ def _row(case: Case) -> dict:
 def run_gate(*, mode: str, pins_path: Path, cases_dir: Path, engines: dict[str, tuple[Path, Path]],
              python: str | None = None, labels_path: Path | None = None, accepted_path: Path | None = None,
              work_dir: Path | None = None, timeout: float = DEFAULT_TIMEOUT, tag_run: str | None = None,
-             repo: Path | None = None, context: dict[str, str] | None = None) -> dict:
-    """Run the gate (``mode="gate"``) or the canary alone (``mode="canary"``); return the receipt."""
+             repo: Path | None = None, context: dict[str, str] | None = None, jobs: int = 1) -> dict:
+    """Run the gate (``mode="gate"``) or the canary alone (``mode="canary"``); return the receipt.
+
+    ``jobs`` cases run at once; the receipt does not depend on it.
+    """
     if mode not in ("gate", "canary"):
         raise ValueError("mode must be 'gate' or 'canary'")
+    if type(jobs) is not int or not 1 <= jobs <= MAX_JOBS:
+        raise ValueError(f"jobs must be an integer from 1 to {MAX_JOBS}")
     roles = ROLES if mode == "gate" else CANARY_ROLES
     failures: list[dict] = []
     receipt: dict = {
@@ -1828,20 +1838,27 @@ def run_gate(*, mode: str, pins_path: Path, cases_dir: Path, engines: dict[str, 
         identity_ok = all(not record["errors"] for record in identities.values())
         cases = sorted(t1_cases + t3_cases, key=lambda case: case.id)
         rows = {case.id: _row(case) for case in cases}
-        for index, case in enumerate(cases):
+
+        def run_case(index: int, case: Case) -> list[dict]:
+            """Materialize, run and remove one case; return its failures.
+
+            A case touches only its own row and its own directory, and its
+            engines run one after another, so cases can run at once.
+            """
             row = rows[case.id]
+            problems: list[dict] = []
             if not identity_ok:
                 row["not_run"] = "engine identity failed"
-                continue
+                return problems
             case_dir = work / "cases" / f"{index:04d} {case.id.replace('/', ' ').replace(':', ' ')}"
             row["git_shape"], problem = materialize_safely(case, case_dir)
             if problem is not None:
-                failures.append(_failure("case-materialize", problem, case.id))
+                problems.append(_failure("case-materialize", problem, case.id))
                 row["not_run"] = "materialization failed"
                 problem = remove_safely(case_dir)
                 if problem:
-                    failures.append(_failure("case-cleanup", problem, case.id))
-                continue
+                    problems.append(_failure("case-cleanup", problem, case.id))
+                return problems
             needed = roles if case.tier == "T1" else GATE_ROLES
             for role in needed:
                 owner = identities[role]["observations_from"] or role
@@ -1855,7 +1872,16 @@ def run_gate(*, mode: str, pins_path: Path, cases_dir: Path, engines: dict[str, 
             row["runs"] = {role: row["runs"][role] for role in needed}
             problem = remove_safely(case_dir)
             if problem:
-                failures.append(_failure("case-cleanup", problem, case.id))
+                problems.append(_failure("case-cleanup", problem, case.id))
+            return problems
+
+        if jobs == 1:
+            outcomes = [run_case(index, case) for index, case in enumerate(cases)]
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+                outcomes = list(pool.map(run_case, range(len(cases)), cases))
+        for problems in outcomes:
+            failures.extend(problems)
         for role in roles:
             finalize_identity(engine_objects[role], identities[role])
             failures.extend(_failure("engine-identity", f"{role}: {error}") for error in identities[role]["errors"])
@@ -1969,6 +1995,13 @@ def _context(values: list[str]) -> dict[str, str]:
     return context
 
 
+def _jobs(value: str) -> int:
+    """``--jobs``: a decimal integer from 1 to ``MAX_JOBS``."""
+    if not re.fullmatch(r"[1-9][0-9]*", value) or int(value) > MAX_JOBS:
+        raise argparse.ArgumentTypeError(f"--jobs takes an integer from 1 to {MAX_JOBS}, got {value!r}")
+    return int(value)
+
+
 def _emit(receipt: dict, args: argparse.Namespace) -> int:
     _write_json(args.receipt, receipt)
     if args.summary is not None:
@@ -1995,6 +2028,8 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_argument("--cases", type=Path, required=True, help="tests/verdict_gate/cases")
         sub.add_argument("--python", default=sys.executable, help="absolute Python that runs every pyz")
         sub.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="seconds per engine run")
+        sub.add_argument("--jobs", type=_jobs, default=1, metavar="N",
+                         help=f"cases run at once, 1 to {MAX_JOBS} (default 1); the receipt does not depend on it")
         sub.add_argument("--work-dir", type=Path, help="empty scratch directory (default: a new temporary one)")
         sub.add_argument("--context", action="append", default=[], metavar="KEY=VALUE",
                          help="recorded verbatim in the receipt (run id, commit, event)")
@@ -2042,7 +2077,7 @@ def main(argv: list[str] | None = None) -> int:
             mode=args.command, pins_path=args.pins, cases_dir=args.cases, engines=engines, python=args.python,
             labels_path=getattr(args, "labels", None), accepted_path=getattr(args, "accepted", None),
             work_dir=args.work_dir, timeout=args.timeout, tag_run=getattr(args, "tag_run", None),
-            repo=getattr(args, "repo", None), context=_context(args.context))
+            repo=getattr(args, "repo", None), context=_context(args.context), jobs=args.jobs)
         return _emit(receipt, args)
     if args.command == "identity":
         pin = None

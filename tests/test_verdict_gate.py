@@ -5,6 +5,7 @@ JSON and exits 0/1/2 per case, built into a pyz at test time from a committed fa
 source tree. Nothing in the tool is patched; every engine is a real process.
 """
 
+import argparse
 import base64
 import hashlib
 import importlib.util
@@ -1266,6 +1267,33 @@ def test_context_keys_are_unique():
     for values in (["run_id=1", "run_id=2"], ["no separator"], ["=value"]):
         with pytest.raises(SystemExit):
             VG._context(values)
+
+
+@pytest.mark.parametrize("red", [False, True], ids=["passing", "failing"])
+def test_gate_receipt_does_not_depend_on_jobs(tmp_path, red):
+    # --jobs only spreads the cases over threads (receipt speed-up, D-198):
+    # every row, failure, report and proposal equals a one-at-a-time run.
+    inputs = e2e_inputs(tmp_path, red=red)
+    engines = {"baseline": (inputs.baseline.pyz, inputs.baseline.source),
+               "candidate": (inputs.candidate.pyz, inputs.candidate.source),
+               "canary-old": (inputs.baseline.pyz, inputs.baseline.source),
+               "canary-new": (inputs.candidate.pyz, inputs.candidate.source)}
+    one, four = (VG.run_gate(mode="gate", pins_path=inputs.pins, cases_dir=inputs.cases, engines=engines,
+                             labels_path=inputs.labels, accepted_path=inputs.accepted,
+                             work_dir=tmp_path / f"work {jobs}", jobs=jobs) for jobs in (1, 4))
+    assert one["status"] == ("failed" if red else "passed")
+    assert len(one["cases"]) >= (1 if red else 4) and all(item["runs"] for item in one["cases"])
+    assert four == one
+
+
+def test_jobs_takes_a_bounded_positive_integer(tmp_path):
+    assert [VG._jobs(value) for value in ("1", "6", str(VG.MAX_JOBS))] == [1, 6, VG.MAX_JOBS]
+    for value in ("0", "-1", "06", "1.5", "x", "", str(VG.MAX_JOBS + 1)):
+        with pytest.raises(argparse.ArgumentTypeError):
+            VG._jobs(value)
+    for jobs in (0, VG.MAX_JOBS + 1, True, 2.0):
+        with pytest.raises(ValueError, match="jobs must be an integer"):
+            VG.run_gate(mode="canary", pins_path=tmp_path / "pins.toml", cases_dir=tmp_path, engines={}, jobs=jobs)
 
 
 def test_canary_mode_is_deterministic(tmp_path):

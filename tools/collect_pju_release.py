@@ -27,6 +27,9 @@ API = "https://api.github.com/repos/" + REPOSITORY
 STAGES = {"pr": set(), "main": {"pr"}, "tag": {"main"}, "release-event": {"tag"}, "public-visitor": {"release-event"}}
 MAX_JSON = 2 * 1024 * 1024
 MAX_ARTIFACT = 256 * 1024 * 1024
+# Verdict-gate cases run at once on the receipt host; the receipt does not
+# depend on it (receipt speed-up, D-198).
+VERDICT_JOBS = "6"
 # Tag and later reports carry the raw published-baseline responses (up to
 # 16 MiB in published_release_identity), far over MAX_JSON; the verifier
 # admits each packet file up to 256 MiB.
@@ -406,6 +409,7 @@ class ReleaseCollection:
         arguments = ["gate", "--pins", str(ctx["source"] / "tests/verdict_gate/baseline.toml"),
             "--cases", str(ctx["source"] / "tests/verdict_gate/cases"), "--labels", str(ctx["source"] / "tests/verdict_gate/labels.toml"),
             "--accepted", str(ctx["source"] / "tests/gates/verdict_gate_accepted.toml"), "--python", str(ctx["python"]),
+            "--jobs", VERDICT_JOBS,
             "--work-dir", str(ctx["scratch"] / "verdict-work"), "--receipt", str(ctx["output"] / "release/verdict-gate.json"),
             "--summary", str(ctx["output"] / "release/verdict-gate.md")]
         for role, pin in expected.items():

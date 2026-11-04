@@ -15,6 +15,7 @@ runtime environments are deliberately not published in the evidence packet.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -28,6 +29,7 @@ import runpy
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import tomllib
 
@@ -35,6 +37,9 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = ("tests/data/javascript_assertion_support.json", "tests/data/javascript_foundation_mutations.json")
 UTILITIES = ("tools/assertion_contract.py", "tools/qualify_assertions.py", "tools/release_inventory.py")
 REPOSITORY = "taipei49314/checkwash"
+# Full-suite xdist workers on the 24-core receipt host; the bridges accept
+# this count and the earlier collectors' "2" (receipt speed-up, D-198).
+PYTEST_WORKERS = "8"
 
 
 def load_replayer():
@@ -51,6 +56,9 @@ def traced_worker(tool, log_root, arguments):
     Expected detector exits 1/2 belong in this nested ledger, not in the ten
     top-level success exits. Two append-only byte streams avoid thousands of
     tiny receipt files. Worker subprocesses inherit only the collector allowlist.
+    A helper may run subprocesses on several threads (``verdict_gate.py
+    --jobs``): one lock covers each row's stream appends and ledger write, so
+    every recorded offset is exact; the subprocesses themselves run at once.
     """
     allowed = {"qualify_assertions.py", "release_inventory.py", "verdict_gate.py",
                "verify_published_source.py", "qualify_zipapp.py"}
@@ -59,6 +67,7 @@ def traced_worker(tool, log_root, arguments):
     log_root.mkdir(parents=True, exist_ok=False)
     original = subprocess.run
     ledger = []
+    record = threading.Lock()
 
     def traced(*args, **kwargs):
         started = datetime.now(timezone.utc).isoformat()
@@ -94,19 +103,20 @@ def traced_worker(tool, log_root, arguments):
                        exit_code=getattr(result, "returncode", getattr(error, "returncode", None)),
                        timed_out=isinstance(error, subprocess.TimeoutExpired),
                        error=None if error is None else type(error).__name__)
-            for field in ("stdout", "stderr"):
-                raw = getattr(result, field, None) if result is not None else getattr(error, field, None)
-                if raw is None:
-                    raw = b""
-                if not isinstance(raw, bytes):
-                    raise ValueError("trusted helper subprocess did not return binary output")
-                path = log_root / (field + ".bin")
-                with path.open("ab") as stream:
-                    offset = stream.tell()
-                    stream.write(raw)
-                row[field] = dict(path=path.name, offset=offset, bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest())
-            ledger.append(row)
-            (log_root / "commands.json").write_text(json.dumps(ledger, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+            with record:
+                for field in ("stdout", "stderr"):
+                    raw = getattr(result, field, None) if result is not None else getattr(error, field, None)
+                    if raw is None:
+                        raw = b""
+                    if not isinstance(raw, bytes):
+                        raise ValueError("trusted helper subprocess did not return binary output")
+                    path = log_root / (field + ".bin")
+                    with path.open("ab") as stream:
+                        offset = stream.tell()
+                        stream.write(raw)
+                    row[field] = dict(path=path.name, offset=offset, bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest())
+                ledger.append(row)
+                (log_root / "commands.json").write_text(json.dumps(ledger, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         if error is not None:
             # subprocess keeps TimeoutExpired output as bytes even in text
             # mode, but CalledProcessError carries the completed text result.
@@ -205,9 +215,11 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
         manifest.pop("pr_number")
         manifest.update(kind="checkwash.pju-release-receipt.v1", **release_context)
     errors = []
+    ledger_lock = threading.Lock()
 
     def run(name, argv, *, cwd=scratch, timeout=1800):
-        row = action.run_record(name, argv, cwd=cwd, env=env, output=output, timeout=timeout, ledger=ledger)
+        row = action.run_record(name, argv, cwd=cwd, env=env, output=output, timeout=timeout, ledger=ledger,
+                                lock=ledger_lock)
         require(row["exit_code"] == 0 and not row["timed_out"], "command failed: " + name)
         return (output / row["stdout"]).read_bytes()
 
@@ -320,11 +332,13 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
         run("test-editable-install", [*py, "-m", "pip", "--isolated", "--disable-pip-version-check", "--no-input",
                                      "install", "--no-index", "--no-deps", "--no-build-isolation", "--no-compile",
                                      "--report", str(output / "test-install-report.json"), "-e", str(source)])
-        run("pytest", [*py, "-m", "pytest", "-p", "xdist.plugin", "-n", "2", "--dist", "worksteal",
+        run("pytest", [*py, "-m", "pytest", "-p", "xdist.plugin", "-n", PYTEST_WORKERS, "--dist", "worksteal",
                        "-p", "no:cacheprovider", "--basetemp", str(scratch / "pytest"),
                        "--junitxml", str(output / "junit.xml"), "tests"], cwd=source, timeout=14400)
 
-        for distribution in ("source", "wheel", "pyz"):
+        worker = [*py, str(Path(__file__).resolve()), "--internal-helper"]
+
+        def qualify_and_inventory(distribution):
             qualification = output / manifest["records"]["qualifications"][distribution]
             inventory = output / manifest["records"]["inventories"][distribution]
             qualify_args = ["--source-root", str(source), "--distribution", distribution, "--output", str(qualification)]
@@ -332,7 +346,6 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
             if artifact:
                 qualify_args += ["--artifact", str(artifact)]
             qualify_args += ["--", str(wheel_python if distribution == "wheel" else python)]
-            worker = [*py, str(Path(__file__).resolve()), "--internal-helper"]
             run("qualify-" + distribution, [*worker, "qualify_assertions.py",
                 str(output / ("nested-qualify-" + distribution)), *qualify_args], timeout=7200)
             inventory_args = ["--source-root", str(source), "--distribution", distribution,
@@ -341,6 +354,15 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
                 inventory_args += ["--artifact", str(item)]
             run("inventory-" + distribution, [*worker, "release_inventory.py",
                 str(output / ("nested-inventory-" + distribution)), *inventory_args], timeout=1800)
+
+        # The three chains are independent: each writes only its own records,
+        # logs and nested ledger, and each inventory reads only its own
+        # qualification. They run at once; the first failure, in distribution
+        # order, is raised after all three have finished.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            chains = [pool.submit(qualify_and_inventory, d) for d in ("source", "wheel", "pyz")]
+        for chain in chains:
+            chain.result()
         if stage_steps is not None:
             stage_steps(context)
         require(action.snapshot(reader, source, args.head_sha) == source_before, "candidate source changed during collection")

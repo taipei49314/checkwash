@@ -200,6 +200,29 @@ def test_complete_owned_evidence_passes(evidence):
     assert report["other_platforms"] == "NOT_RUN"
 
 
+@pytest.mark.parametrize("workers, accepted", [("2", True), ("8", True), ("4", False), ("auto", False), ("", False)])
+def test_full_suite_worker_count_is_an_admitted_collectors(evidence, workers, accepted):
+    # "2" before D-198, "8" since; any other spreading of the suite is refused.
+    argv = next(row for row in evidence["manifest"]["raw_exits"] if row["name"] == "pytest")["argv"]
+    assert argv[9:11] == ["-n", "2"]
+    argv[10] = workers
+    if accepted:
+        evidence["validate"]()
+    else:
+        with pytest.raises(ValueError, match="full pytest command scope differs"):
+            evidence["validate"]()
+
+
+def test_collectors_spread_the_suite_and_the_verdict_cases_the_bridges_accept():
+    loaded = {}
+    for name in ("collect_pju_receipts", "collect_pju_release", "verdict_gate"):
+        spec = importlib.util.spec_from_file_location("speed_" + name, ROOT / "tools" / (name + ".py"))
+        loaded[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(loaded[name])
+    assert loaded["collect_pju_receipts"].PYTEST_WORKERS in bridge.PYTEST_WORKERS
+    assert loaded["verdict_gate"]._jobs(loaded["collect_pju_release"].VERDICT_JOBS) > 1
+
+
 @pytest.mark.parametrize("raw", [b'{"x":1,"x":2}', b'{"x":NaN}', b'{"x":Infinity}', b'{"x":-Infinity}'])
 def test_ambiguous_json_rejected(raw):
     with pytest.raises(ValueError):
