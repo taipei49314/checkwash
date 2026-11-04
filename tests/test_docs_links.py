@@ -58,3 +58,33 @@ def test_every_relative_markdown_link_resolves():
     # that failure four times, so the count is asserted too.
     assert checked >= 20, f"only {checked} relative links found; the regex broke"
     assert not broken, "documents link to files that do not exist:\n  " + "\n  ".join(broken)
+
+
+# `[D-194](../DECISIONS.md)`: a link named after a decision entry, to the log or
+# one of its archives, with or without a fragment.
+_DECISION_LINK = re.compile(
+    r"\[(D-\d+)\]\((\.{0,2}/?(?:[A-Za-z0-9._-]+/)*DECISIONS(?:-archive-\d+)?\.md)(?:#[A-Za-z0-9._-]+)?\)"
+)
+_DECISION_HEADING = re.compile(r"^## (D-\d+)\b", re.MULTILINE)
+
+
+def test_decision_links_reach_the_file_that_holds_the_entry():
+    # The release-time cut (RELEASING, "After the release") moves entries from
+    # DECISIONS.md into the next archive. At the v0.11.0 cut (D-197), 50 links
+    # named a moved entry, D-188 to D-196, and still pointed at DECISIONS.md:
+    # the file existed, so the test above passed, but the entry had left it.
+    headings: dict[pathlib.Path, set[str]] = {}
+    stale = []
+    checked = 0
+    for path in _documents():
+        for entry, link in _DECISION_LINK.findall(path.read_text(encoding="utf-8")):
+            target = (path.parent / link).resolve()
+            if target not in headings:
+                text = target.read_text(encoding="utf-8") if target.exists() else ""
+                headings[target] = set(_DECISION_HEADING.findall(text))
+            checked += 1
+            if entry not in headings[target]:
+                stale.append(f"{path.relative_to(ROOT)}: [{entry}] -> {link}")
+
+    assert checked >= 20, f"only {checked} decision links found; the regex broke"
+    assert not stale, "decision links miss the file that holds the entry:\n  " + "\n  ".join(stale)

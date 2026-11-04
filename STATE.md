@@ -191,7 +191,7 @@ Docs only. Not run: other platforms. Not released: package metadata stays
 ## 2026-11-03: 0.11 keeps scheme S; the fixed-corpus candidate may differ in doctor's own pin line; two 0.12 directions (D-196)
 
 On 2026-11-02 Nelson answered three questions Claude had left open after
-D-194's review (quoted in [D-196](DECISIONS.md)). 0.11 keeps scheme S, and
+D-194's review (quoted in [D-196](DECISIONS-archive-4.md)). 0.11 keeps scheme S, and
 he accepts with documentation that pin updaters such as Dependabot and
 Renovate propose the tag's commit, which `doctor` rejects, and that
 zizmor's `ref-version-mismatch` audit can report the README pin's comment
@@ -305,7 +305,7 @@ results `93e602c`; D-189) labelled 12 agent edits of Python tests as
 loosenings with no reason in their context. Five of them were still on main
 `0e6acc35`, in checkwash's own tests. Nelson chose to bring them into 0.11
 on 2026-11-02 (the option labelled 「帶進 0.11 (Recommended)」, which Claude
-wrote; quoted in [D-195](DECISIONS.md)); every detail is Claude's under the
+wrote; quoted in [D-195](DECISIONS-archive-4.md)); every detail is Claude's under the
 2026-10-27 delegation.
 
 Each time, an agent session wrote the strict check, loosened or deleted it
@@ -497,7 +497,7 @@ other platforms. Not released: package metadata stays 0.10.0.
 
 Nelson's 2026-10-28 ruling 「2.用寫清楚結案」, then his clicks of the
 buttons labelled 「接著做 0.11」 and 「用 C，開始改 PR-A」 (Claude wrote each
-label and option text, quoted in [D-191](DECISIONS.md), and only the label
+label and option text, quoted in [D-191](DECISIONS-archive-4.md), and only the label
 may have been sent), close #419 as a documented residual of E1's repair
 evidence, not a fix; D-191 supersedes the 2026-10-19 closing condition. No
 engine code changes. 0.11.0 still holds a weakened Python oracle at warn
@@ -564,7 +564,7 @@ Claude Code hook lifecycle run. Not released: package metadata stays
 
 Nelson chose how checkwash reads uvloop's failure relays by clicking the
 button labelled 「用 C，開始改 PR-A」; Claude wrote its label and option
-text, quoted in [D-190](DECISIONS.md), and only the label may have been
+text, quoted in [D-190](DECISIONS-archive-4.md), and only the label may have been
 sent. A broad handler in a Python test whose first statement hands the
 caught exception unchanged to an asyncio future that the test awaits is a
 proven failure relay, by the bounded rules of SPEC §4 *Python failure
@@ -650,14 +650,14 @@ package metadata stays 0.10.0.
 Nelson chose the 0.11 agent path by clicking the button labelled
 「加 PreToolUse ask」; its label and option text were written by Claude, and
 only the label may have been sent (the option text is quoted in
-[D-189](DECISIONS.md)). As implemented, 0.11 adds a Claude Code PreToolUse
+[D-189](DECISIONS-archive-4.md)). As implemented, 0.11 adds a Claude Code PreToolUse
 ask on the five weakening rules, and first fixes the Stop hook's block
 message and its `stop_hook_active` handling. This replaces
 the approved scope's "stop hook 自動凍結": the Stop hook applying
 `oracle_freeze` by default is deferred. The detailed choices are Claude's
 under the 2026-10-27 delegation. The owner decision, replay evidence,
 design, lifecycle receipt and unverified points are in
-[D-189](DECISIONS.md); the named residuals are in
+[D-189](DECISIONS-archive-4.md); the named residuals are in
 [KNOWN-ISSUES-next](docs/KNOWN-ISSUES-next.md).
 
 `checkwash hook pre-tool-use` asks before an Edit, Write or MultiEdit of a

@@ -52,7 +52,7 @@ stay in [the D-185 dispositions](oracle-context-dispositions-0.10.0.md) and
   honest or not, lose their credit and block at high, where 0.9.0 passed
   them; a file that lost only raises tests without `match=` never reaches D5
   either. This is a conservative false block, not a missed cheat. 0.11 fixes
-  it ([D-192](../DECISIONS.md)); on 0.10.0 an exemption in the base-side
+  it ([D-192](../DECISIONS-archive-4.md)); on 0.10.0 an exemption in the base-side
   `allow.toml` is the way through.
 
 ## TASK and quality

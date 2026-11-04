@@ -914,7 +914,7 @@ was prepared, and `_OWN_ACTION_PIN`, the release's own Action commit A. Each is
 one line at column 0, `_NAME = "<40 lowercase hex>"`, with no trailing
 comment; the release tools read that shape. After publication the README
 recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
-([D-194](../DECISIONS.md)).
+([D-194](../DECISIONS-archive-4.md)).
 
 - **A, the content commit.** The version bump, release notes and every other
   change of the release PR, with both pin lines equal to the README's Action

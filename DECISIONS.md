@@ -38,7 +38,10 @@ The cut moves D-188 to D-196, the whole log at release commit `34555301`, to
 [DECISIONS-archive-4.md](DECISIONS-archive-4.md): line 1 retitled, line 2
 one provenance line, lines 3-2631 byte-identical to `DECISIONS.md` at
 `34555301` and at their old numbers. No document links to an anchor in a
-moved entry.
+moved entry, but 50 links in seven documents were named after a moved entry
+and pointed at `DECISIONS.md`; they now point at the archive, and
+`tests/test_docs_links.py` checks that a link named after an entry reaches
+the file that holds it.
 
 The baseline becomes public v0.11.0, version 0.11.0, release commit
 `34555301de3d5ea4b2c8e4470b797a06d0a1e395` (tag object
