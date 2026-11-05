@@ -197,7 +197,9 @@ def test_a_python_test_wrapped_in_an_empty_parameter_set_is_no_removal_for_d8():
             "tests/test_case.py": DOUBLE_WRAPPED}
     changes = [FileChange("tests/test_case.py", "modified", DOUBLE_TEST, DOUBLE_WRAPPED),
                FileChange("src/app/prod.py", "modified", DOUBLE, head["src/app/prod.py"])]
-    search = lambda needles: search_source_mapping(head, needles)  # noqa: E731
+    def search(needles):
+        return search_source_mapping(head, needles)
+
     _ir, findings, verdict = run(changes, known_modules={"app", "pytest"}, self_modules={"app"},
                                  head_reader=head.get, head_searcher=search, root_reader=head.get,
                                  root_searcher=search)
