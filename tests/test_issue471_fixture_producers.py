@@ -430,8 +430,10 @@ def test_the_one_hop_callers_route_is_not_followed_from_a_producer():
         {"shop/ledger.py": FACTORY_BEFORE, "tests/test_billing.py": inline_before},
         {"shop/ledger.py": FACTORY_AFTER, "tests/test_billing.py": inline_before.replace("== 1.0", "> 0")},
     )
-    assert inline == [("ASSERT_WEAKENED", "warn", ("REPAIR_EVIDENCE",), ())]
-    assert verdict == "pass"
+    # Inline, the hop reaches the finding; since D-199 a weakened assertion
+    # refuses that evidence, and the label tells the two spellings apart.
+    assert inline == [("ASSERT_WEAKENED", "high", (), ("REPAIR_EVIDENCE_REFUSED",))]
+    assert verdict == "block"
 
 
 def test_a_conftest_the_diff_edits_is_read_from_each_side_and_the_before_side_governs():

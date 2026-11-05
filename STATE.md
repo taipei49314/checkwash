@@ -1,6 +1,42 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-05 (receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-06 (0.12 candidate: the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval asked by name, D-199; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-06: the weakening, stand-in and subject rules take no repair evidence (D-199)
+
+#587 merged as `7cd8549c5a556a82c967e74cfae46f1a86053abc` at
+2026-11-04T23:19:07Z, with parents `003e12dd` and `c51d4762` and the tree its
+receipt verified. Claude asked 「要用 merge commit 合併 #587 嗎？」 and wrote
+the buttons; Nelson answered 「核准合併 #587」 at 23:18:33Z. Its receipt
+`evidence/pr587-0973126bd7be-20261105` (`b30c8f52`) was verified by run
+41913448234, which set the four required checks.
+
+D-196 planned two changes for 0.12, each designed and priced before it is
+built. This is the second: D-191's residual. Claude's design priced five
+Python options and three JS/TS options on main `7cd8549c`; Nelson chose R
+for Python and the loosening shapes for JS/TS, then asked for the
+implementation. D-199 quotes him.
+
+- In a Python test or conftest, `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
+  `TEST_DISABLED`, `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`,
+  `TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`,
+  `SUBJECT_INPUT_CHANGED` and `EXPECTED_VALUE_DERIVED` take no repair
+  evidence, symbol or opaque. In a JS/TS test, a weakened or loosened
+  assertion, a broad catch and a skip added to a live test take none.
+- Such a finding that the evidence reached, and that nothing else holds, is
+  high with the new E1 label `REPAIR_EVIDENCE_REFUSED`.
+- On main `7cd8549c` this moves 18 of the fixed corpus's 3,600 commits pass
+  → block (7 Python, 11 JS/TS) and 53 of D-088's 1,263, among them the 11
+  that stopped #464; none is adjudicated, and no commit moves the other way.
+- Still open: a rewritten expected value or a substituted assertion beside
+  a no-op edit, a renamed private symbol escorting a test deletion into D8,
+  and in JS/TS a removed assertion or test beside any module edit
+  (THREATMODEL item 4, rows 2, 56, 93, 130, 131).
+- 21 fixtures keep their inputs and move from `_neg` (one from `_warn`) to
+  `_pos`; `conftest_hook_guard_opaque_prod_neg` keeps its name and is now
+  held by `COMPAT_GATE`. Unit tests that pinned the old warn are listed in
+  D-199. Nelson's approval of the text and of each move is asked for on the
+  pull request.
 
 ## 2026-11-05: receipts spread over the receipt host's cores (D-198)
 

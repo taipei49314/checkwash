@@ -308,16 +308,24 @@ def test_issue_rows(before, after, header, verdict, rule):
 
 
 @pytest.mark.parametrize("before,after", [
-    ("expect(value).toBeNull();", "expect(value).to.exist;"),
     ("expect(value).toBe(78.75);", "assert.equal(value, 75);"),
     ("expect(value).not.toBeNull();", "expect(value).to.exist;"),
     ("expect(value).toBeFalsy();", "expect(value).to.not.be.ok;"),
 ])
 def test_a_production_change_keeps_the_verdict_pass(before, after):
-    # S1, S2, S4, S5: the harm is on test-only diffs; repair evidence holds a finding at warn.
+    # S2, S4, S5: the harm is on test-only diffs; repair evidence holds a finding at warn.
     observed, findings, _messages = _outcome(before, after, VITEST, True)
     assert observed == PASS
     assert all(severity == "warn" for _rule, severity in findings)
+
+
+def test_a_weakened_js_assertion_refuses_the_production_change():
+    # S1: `toBeNull()` -> `to.exist` is an ASSERT_WEAKENED in a JS/TS test,
+    # which takes no repair evidence since D-199; the label says the
+    # production change reached it.
+    observed, findings, _messages = _outcome("expect(value).toBeNull();", "expect(value).to.exist;", VITEST, True)
+    assert observed == BLOCK
+    assert ("ASSERT_WEAKENED", "high") in findings
 
 
 def test_widening_inside_the_exact_family_is_held_at_warn():

@@ -70,7 +70,8 @@ fix generalises.
 > but simply *does this file's content invoke a test runner* — no shape check
 > at all, so it does not inherit the enumeration it exists to backstop. All
 > eleven measured cases now block; the two over-reach guards
-> (`runner_build_makefile_neg`, `runner_opaque_native_neg`) stay green.
+> (`runner_build_makefile_neg`, `runner_opaque_native_neg`; since D-199
+> `runner_build_makefile_pos` and `runner_opaque_native_pos`) stay green.
 >
 > **#419 (D-141, D-171, D-176, D-191).** #464 made a build Makefile's or a
 > native source's edit stop holding a weakened assertion in a Python test at
@@ -80,7 +81,12 @@ fix generalises.
 > control, which refused it already (THREATMODEL row 72), since v0.10.0
 > only a broad `except` added in a Python test or conftest refuses that
 > credit (D-176). In 0.11, D-191 closes #419 as a documented residual, not
-> a fix (THREATMODEL item 4, row 2).
+> a fix (THREATMODEL item 4, row 2). From 0.12, D-199 refuses every repair
+> evidence to the weakening, stand-in and subject rules in a Python test or
+> conftest and to the loosening shapes in a JS/TS test, so a build
+> Makefile's or a native source's edit no longer holds a weakened assertion
+> at warn; the two over-reach guards now pin that the edit still counts as
+> production, through the `REPAIR_EVIDENCE_REFUSED` label.
 
 
 Widening the list is the obvious move and it is the weaker half. The list will

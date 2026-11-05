@@ -216,12 +216,15 @@ def test_a_second_bare_skip_is_a_marker_added_not_a_removed_guard():
     assert [f.message for f in found] == ["test_total: disabling marker added (pytest.skip)"]
 
 
-def test_a_production_change_explains_it_as_any_disable():
+def test_a_production_change_no_longer_explains_it_as_any_disable():
+    # Until D-199 a production change the test reaches held a removed guard
+    # at warn, as it held any disable. TEST_DISABLED now takes no repair
+    # evidence; the label says the change reached the finding.
     billing = FileChange("app/billing.py", "modified", BILLING, b"def total():\n    return 78.7\n")
     found, verdict = analyze_test(GUARDED, BARE, billing)
-    assert verdict == "pass", found
-    assert len(found) == 1 and found[0].severity == "warn"
-    assert "REPAIR_EVIDENCE" in found[0].deescalators
+    assert verdict == "block", found
+    assert len(found) == 1 and found[0].severity == "high"
+    assert found[0].deescalators == [] and found[0].escalators == ["REPAIR_EVIDENCE_REFUSED"]
 
 
 def test_a_loop_body_records_no_condition():

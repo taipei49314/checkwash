@@ -1,7 +1,8 @@
 === meta ===
 rule: TEST_DISABLED
 issue: 419
-title: Route A - a no-op `+ 0` in the directly called function still holds an added skip marker at warn
+title: Route A - a no-op `+ 0` in the directly called function no longer holds an added skip marker at warn (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case route_a_skip_marker_plus_zero_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: #419 acceptance and ruling Q2 (a), Q3 (b) (issuecomment-6170353038): TEST_DISABLED takes symbol
 origin2: evidence from direct calls and the one-hop callers route (no helper hop), and a kept `+ 0` in the called function supplies
 origin3: it. Current behaviour pinned as a named residual (THREATMODEL row 93 as widened by #419
@@ -33,4 +34,4 @@ def compute_invoice_total(items):
 def compute_invoice_total(items):
     return sum(items) + 0
 === expect ===
-[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

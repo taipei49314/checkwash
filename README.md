@@ -214,8 +214,11 @@ test patterns. Known gaps remain.
 
 An edit that changes nothing, such as `+ 0` in a function a test calls or
 one line in a template or `AUTHORS`, can still hold a weakened Python or
-JS/TS test at warn, which passes at the default threshold. #419 is closed
-as a documented residual, not fixed
+JS/TS test at warn in 0.11.0, which passes at the default threshold. From
+0.12.0 a weakened, removed, skipped or loosened Python assertion takes no
+such evidence, and neither does a weakened, loosened or skipped JS/TS one
+(D-199); a rewritten expected value or a substituted assertion still does,
+and in JS/TS a removed assertion or test
 ([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
 Read the [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
 and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
@@ -223,7 +226,9 @@ before relying on a pass.
 
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct, and an edit that changes nothing can earn it
-(#419). To block such changes, set the Action's `fail-on: warn`
+(#419). From 0.12.0, `REPAIR_EVIDENCE_REFUSED` marks a finding that such a
+change reached and whose rule takes none (D-199). To block the rest, set the
+Action's `fail-on: warn`
 (`checkwash doctor` then reports "workflow analysis incomplete" and exits 1,
 which is expected: it proves only a checkwash step with no `with:`), or run
 `checkwash check --task` in a CLI step of your own with a base-side
@@ -428,5 +433,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 22461 tests (collection denominator).
+Alpha pre-release. 22 detectors, 22466 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

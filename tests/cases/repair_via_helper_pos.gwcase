@@ -1,6 +1,7 @@
 === meta ===
 rule: ASSERT_WEAKENED
-title: a same-file helper that calls the changed prod symbol is one hop of repair evidence
+title: a same-file helper that calls the changed prod symbol is one hop of evidence, refused for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case repair_via_helper_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: T1.9 — test calls render(), render() calls invoice_total, which changed
 === before: billing.py ===
 def invoice_total(items, tax):
@@ -29,4 +30,4 @@ def render(items):
 def test_invoice_renders():
     assert render([50.0, 50.0]) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

@@ -146,6 +146,30 @@ version, review it again and store the new key; the
 
 ## Upgrade notes
 
+### v0.11.0 to v0.12.0
+
+The 0.12 candidate, not yet released. A build from main before the 0.12.0
+release pull request reports `checkwash_version` `0.11.0`.
+
+- **A new escalator label,** `REPAIR_EVIDENCE_REFUSED` (D-199). E1 prints it
+  on a finding whose rule takes no repair evidence and that a production
+  change reached as evidence: in a Python test or conftest
+  `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
+  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`, `TEST_PATCHES_SUBJECT`,
+  `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED`
+  and `EXPECTED_VALUE_DERIVED`; in a JS/TS test `ASSERT_WEAKENED`,
+  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED` and a `TEST_DISABLED` marker on
+  a live test. It comes after `COLLECTION_CONTROL_UNEXPLAINED` and
+  `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` and before `PROD_CHANGE_NOT_EVIDENCE`.
+  Labels are outside the fingerprint: findings version 2 and IR version 3
+  do not change.
+- **Some verdicts change, passes to blocks only.** Those findings lose the
+  `REPAIR_EVIDENCE` de-escalator, so where nothing else holds them they
+  move from warn to high. On main `7cd8549c` that moves 18 of the fixed
+  corpus's 3,600 commits pass → block (7 Python, 11 JS/TS) and 53 of
+  D-088's 1,263, none adjudicated; an existing exemption keeps its
+  fingerprint and still applies.
+
 ### v0.10.0 to v0.11.0
 
 These are the changes in 0.11.0. A build from main before the 0.11.0 release

@@ -1,0 +1,835 @@
+{
+ "schema_version": 1,
+ "decision": "D-199",
+ "purpose": "price option R (chosen) and the alternatives for D-196 item 4 before building it",
+ "classification": "in-sample commits, nobody adjudicated: counts of commits, not false-block rates",
+ "host": "LAPTOP-01AGNPJU",
+ "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+ "platforms_not_run": "every platform but Windows CPython 3.11.9: NOT_RUN",
+ "python": "3.11.9",
+ "engines": {
+  "base": "main 7cd8549c5a556a82c967e74cfae46f1a86053abc src/ (tree 160f5d982c0ab3af23965e678ceba7efcab288d0)",
+  "options": "the same src/ with only src/checkwash/gating.py changed per option"
+ },
+ "command": "checkwash check <first parent>..<commit> --repo <clone> --format json",
+ "samples": {
+  "R29": {
+   "members": 3600,
+   "members_sha256": "f6281caad596c5d6f054dd8f0050abb21d63a803fa7bf2fa3f6c694d05559de2",
+   "what": "the fixed corpus: the last 300 non-merge commits of six Python and six JS/TS repositories"
+  },
+  "d088": {
+   "members": 1263,
+   "members_sha256": "6e2e7d7cd370af0ecc99a47ea30191dbaaf0cd77567494da425d86953368cb74",
+   "what": "D-088's sets: the 895 commits of ten Python histories that change a conftest or a skip or xfail line, and 368 of pytest's"
+  }
+ },
+ "base_blocks": {
+  "R29_python": 66,
+  "R29_js_ts": 39,
+  "d088": 369
+ },
+ "options": {
+  "A": {
+   "rule": "the five weakening rules refuse repair evidence in every language",
+   "R29_python": [
+    7,
+    30
+   ],
+   "R29_js_ts": [
+    55,
+    383
+   ],
+   "d088": [
+    50,
+    135
+   ],
+   "fixtures": 18
+  },
+  "R": {
+   "rule": "A and the stand-in and subject rules in Python; in JS/TS only the loosening shapes (chosen)",
+   "R29_python": [
+    7,
+    30
+   ],
+   "R29_js_ts": [
+    11,
+    27
+   ],
+   "d088": [
+    53,
+    140
+   ],
+   "fixtures": 22
+  },
+  "R8": {
+   "rule": "R, and the D8 compensation never applies",
+   "R29_python": [
+    17,
+    86
+   ],
+   "R29_js_ts": [
+    11,
+    27
+   ],
+   "d088": [
+    88,
+    552
+   ],
+   "fixtures": 25
+  },
+  "C": {
+   "rule": "no oracle finding takes REPAIR_EVIDENCE, PACKAGE_REPAIR or DEPENDENCY_DRIFT",
+   "R29_python": [
+    55,
+    182
+   ],
+   "R29_js_ts": [
+    86,
+    596
+   ],
+   "d088": [
+    91,
+    256
+   ],
+   "fixtures": 51
+  },
+  "B": {
+   "rule": "oracle_freeze forced",
+   "R29_python": [
+    73,
+    265
+   ],
+   "R29_js_ts": [
+    92,
+    706
+   ],
+   "d088": [
+    188,
+    922
+   ],
+   "fixtures": 100
+  }
+ },
+ "option_cells": "[pass -> block commits, new high findings]; no option moves block -> pass or changes an error",
+ "implementation_rerun_equals_option_R": "@@IMPL@@",
+ "moved_by_R": {
+  "R29": [
+   {
+    "repository": "hono",
+    "commit": "5463db2735476959b8af67756f4e513f4fe19115",
+    "set": "javascript",
+    "subject": "Merge commit from fork",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "hono",
+    "commit": "c831020fb1fa2e929d222f6c84e1abfe013e512b",
+    "set": "javascript",
+    "subject": "Merge commit from fork",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "hono",
+    "commit": "f0b094db8474696344d98e5665a4ac2a6d5f346e",
+    "set": "javascript",
+    "subject": "Merge commit from fork",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "typeorm",
+    "commit": "324c46cd8669270dd5f22173cd78a7cab591349c",
+    "set": "javascript",
+    "subject": "fix(persistence): preserve select false columns on the in-memory entity after save() (#12501)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 4
+   },
+   {
+    "repository": "typeorm",
+    "commit": "46d5b843d62ea80192b443a5683736238ac94637",
+    "set": "javascript",
+    "subject": "fix: scope invalidWhereValuesBehavior to high-level abstractions only (#11878)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "typeorm",
+    "commit": "b9aa8355c050d4212be0bc3aacd19e1898e4a15d",
+    "set": "javascript",
+    "subject": "fix(persistence): handle non-nullable FK in orphaned row nullification (#11982)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "typeorm",
+    "commit": "c6745f3df4f93d2ea93acd59182edac079474118",
+    "set": "javascript",
+    "subject": "feat(invalid-where-values-behavior): make throw the default (#11710)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 10
+   },
+   {
+    "repository": "typeorm",
+    "commit": "df09802e58dcf41bc5db0084e5775504e3ba9587",
+    "set": "javascript",
+    "subject": "fix(cockroachdb): adjust join in loadTables to load correct table columns (#12413)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "typeorm",
+    "commit": "ff00a3cda2e6e4b9c34d705f879a5553e540a9bb",
+    "set": "javascript",
+    "subject": "refactor(repository)!: remove deprecated findOneById methods (#12198)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "undici",
+    "commit": "2764d9963eb6764b15b43ca39a59e57fe7cfbfff",
+    "set": "javascript",
+    "subject": "feat: Added @perseveranza-pets/milo as alternative experimental HTTP parser (#5492)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "vue-core",
+    "commit": "8b44b02167abeb31b18b10a7eb42a03aa18d7f1b",
+    "set": "javascript",
+    "subject": "chore(deps): update all non-major dependencies (#15244)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "click",
+    "commit": "ad39d749be85af02bf191636062eef51323ad5ab",
+    "set": "standard",
+    "subject": "Add `capture` parameter to `CliRunner` and revert default-mode `fileno` exposure",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "httpx",
+    "commit": "1d73150c1f663757d63585aecfcb329d0ec00825",
+    "set": "standard",
+    "subject": "Cleanup response.json() method (#2911)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "httpx",
+    "commit": "57daabf673705954afa94686c0002801c93d31f3",
+    "set": "standard",
+    "subject": "Drop `rfc3986` requirement. (#2252)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 18
+   },
+   {
+    "repository": "httpx",
+    "commit": "8e36f2bc685dfbe43cd7503bc1c422a6ed6e05a5",
+    "set": "standard",
+    "subject": "Introduce new `SSLContext` API & escalate deprecations. (#3319)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 4
+   },
+   {
+    "repository": "httpx",
+    "commit": "b82fbe2c139162e10d1a3ee1b4579cc8d72b3535",
+    "set": "standard",
+    "subject": "Drop private import of 'format_form_param' from tests (#2500)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 4
+   },
+   {
+    "repository": "rich",
+    "commit": "b93d3b6d98547b88320a5c82c362d5825bcdca4b",
+    "set": "standard",
+    "subject": "test single cell widths",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "starlette",
+    "commit": "2c614b910b95f1889d6d39d447ba7e5a6b8542a8",
+    "set": "standard",
+    "subject": "Drop deprecated `method` parameter from `FileResponse` (#3147)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   }
+  ],
+  "d088": [
+   {
+    "repository": "attrs",
+    "commit": "3040bdabbc627fc6a4d151a9cb2e6f9d4177b6f2",
+    "set": "d088",
+    "subject": "Refactor class creation (#272)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "attrs",
+    "commit": "cf9de77409db04c09aa4e64d3fcf73521f352957",
+    "set": "d088",
+    "subject": "Update closure cell rewriting to use CodeType.replace() on 3.8 (#562)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "attrs",
+    "commit": "ddf0256527fdcf3133ffeae3c950795505c4abe2",
+    "set": "d088",
+    "subject": "Rename skip to filter and reverse logic",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "click",
+    "commit": "43c2e7f331e78684d2549439c3338335f0ddb854",
+    "set": "d088",
+    "subject": "format_filename replaces invalid bytes",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "click",
+    "commit": "ad39d749be85af02bf191636062eef51323ad5ab",
+    "set": "d088",
+    "subject": "Add `capture` parameter to `CliRunner` and revert default-mode `fileno` exposure",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "click",
+    "commit": "c8ca29bd3581d3c5e36ea0254f6c8cf0bf6c40c4",
+    "set": "d088",
+    "subject": "use pathlib to resolve symlinks",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "flask",
+    "commit": "1232d698600e11dcb83bb5dc349ca785eae02d2f",
+    "set": "d088",
+    "subject": "inline conditional imports for cli behaviors",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "flask",
+    "commit": "6650764e9719402de2aaa6f321bdec587699c6b2",
+    "set": "d088",
+    "subject": "remove previously deprecated code",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "flask",
+    "commit": "980168d08498c00a14ab0f687ffac8cc50edb326",
+    "set": "d088",
+    "subject": "send_file doesn't allow StringIO",
+    "rules": [
+     "ASSERT_REMOVED",
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 9
+   },
+   {
+    "repository": "httpx",
+    "commit": "0296c2bbb9885bbe1b1e3210d9e3efa7a817038d",
+    "set": "d088",
+    "subject": "Type check tests (#1054)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "httpx",
+    "commit": "3046e920ea899c95987a7b912dee0cafcb6630ce",
+    "set": "d088",
+    "subject": "Httpcore interface (#804)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "httpx",
+    "commit": "620b0670db07ae844aa6fae40d9209a856440c9d",
+    "set": "d088",
+    "subject": "Increase test coverage - take 2 (#1012)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "httpx",
+    "commit": "8e36f2bc685dfbe43cd7503bc1c422a6ed6e05a5",
+    "set": "d088",
+    "subject": "Introduce new `SSLContext` API & escalate deprecations. (#3319)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 4
+   },
+   {
+    "repository": "pytest",
+    "commit": "158e160823c6fe8f6b92a971de32824cbe9bb9e3",
+    "set": "d088",
+    "subject": "merging and refining examples,  also refining skipping documentation.",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 13
+   },
+   {
+    "repository": "pytest",
+    "commit": "4d49ba65297102110ae8aeecdb3b82b23a231fba",
+    "set": "d088",
+    "subject": "Drop Python 2.7 and 3.4 support",
+    "rules": [
+     "ASSERT_REMOVED",
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 14
+   },
+   {
+    "repository": "pytest",
+    "commit": "4ee3831ac957f0fcfb57bce3ed3f74108ea05e08",
+    "set": "d088",
+    "subject": "start reorganizing docs, write more docs, shift plugin docs, to proper documentation, use sphinx, remove old docs ... work in progress.",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 7
+   },
+   {
+    "repository": "pytest",
+    "commit": "505c3340bf852f7636eae1490a8638f5ffab266d",
+    "set": "d088",
+    "subject": "Fix pytest with mixed up filename casing.",
+    "rules": [
+     "SUBJECT_NORMALIZED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "pytest",
+    "commit": "6ba3475448d3ab78b4bf7de9aa81baa47357a70d",
+    "set": "d088",
+    "subject": "Make capsys more like stdio streams in python3.  Resolves #1407.",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "pytest",
+    "commit": "8aa5a932c53814e47f6bf029e353d28f6a08a28f",
+    "set": "d088",
+    "subject": "fix: rm_rf now handles directories without S_IXUSR permission (#7940)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "pytest",
+    "commit": "8fb067f9329e0a9fd94293b538c2c27c040c0b09",
+    "set": "d088",
+    "subject": "monkeypatch: deprecate call to `fixup_namespace_packages` in `syspath_prepend`",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "pytest",
+    "commit": "ae090740c5e2de0fc0ecd3164ad597c4ca0c6ccd",
+    "set": "d088",
+    "subject": "always dupfile if os.dup is available",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "pytest",
+    "commit": "b6ec5a575db7e907784bffb1dfb67b61042822af",
+    "set": "d088",
+    "subject": "get option settings from ini-file.  make getting configuration options from conftest.py only an internal feature.",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "pytest",
+    "commit": "cf5b544db35478afe540eb78d75ef97ed798e1f1",
+    "set": "d088",
+    "subject": "Revert \"Merge pull request #5792 from dynatrace-oss-contrib/bugfix/badcase\"",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "pytest",
+    "commit": "ef732fc51d9d2ace3166cbbad21a608a3d4bfc4d",
+    "set": "d088",
+    "subject": "Remove code for unsupported Python versions",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "pytest",
+    "commit": "f6caf230f8be2bbc7613a2f7f296340c9e2d5aa4",
+    "set": "d088",
+    "subject": "fix for issue615: _format_boolop must escape %",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "requests",
+    "commit": "2a6f290bc09324406708a4d404a88a45d848ddf9",
+    "set": "d088",
+    "subject": "Add automatic code formatting to Requests (#6095)",
+    "rules": [
+     "SUBJECT_INPUT_CHANGED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "rich",
+    "commit": "9247705bd8cb8da3381c3e30045cb5d739ddce33",
+    "set": "d088",
+    "subject": "Allow override of lexer in Syntax.from_path",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "rich",
+    "commit": "d9a0d479464d27ee180aad8297774775e26e764e",
+    "set": "d088",
+    "subject": "Add Rule.__rich_measure__ and tests vs behaviour in tables",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "27092b2cb703f2910b0a255a1b8250623999e12c",
+    "set": "d088",
+    "subject": "Small download handler fixes and improvements (#7441)",
+    "rules": [
+     "ASSERT_WEAKENED",
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "scrapy",
+    "commit": "3d2e0e1ca1cb466dd4b157a7d2a27767cf758ea9",
+    "set": "d088",
+    "subject": "Add an UPLOAD_TIMEOUT setting (#8162)",
+    "rules": [
+     "TEST_PATCHES_SUBJECT"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "3f0c2fae5e18c448bd1791920500c976d44fc321",
+    "set": "d088",
+    "subject": "Skip test_skip_bad_links based on the w3lib version",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "3f46d1a8b5e2b474ef64fdf70900c3a0b881f9a2",
+    "set": "d088",
+    "subject": "Use compression.zstd/backports.zstd and make zstd support mandatory (#8009)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "407349865279795387b9ff84afb9011e2303bb9d",
+    "set": "d088",
+    "subject": "port utils.python",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 4
+   },
+   {
+    "repository": "scrapy",
+    "commit": "48bb971f3f690a88cd25a8d48f4a718193796bae",
+    "set": "d088",
+    "subject": "Support appending to GCS feeds via composite objects (#8173)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "scrapy",
+    "commit": "506555bf9d79501c07c21e86760d8293b49c22b1",
+    "set": "d088",
+    "subject": "Avoid decoding response bodies for html/xml selectors when possible (#8195)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "5e997587d9b13344a0afa9bb4cf781829a66ce23",
+    "set": "d088",
+    "subject": "Remove dead boto2 code, deprecate is_botocore() (#4776)",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "scrapy",
+    "commit": "609f64c55d8603710218113ad42b1bbf940b3978",
+    "set": "d088",
+    "subject": "Make brotli a hard dependency (#7929)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "744f352d09a9ec519c84ec5243e62eef78c66f08",
+    "set": "d088",
+    "subject": "Do not process cookies from headers",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "scrapy",
+    "commit": "7a398b70868856f6bd17d36b7359e344f08f1440",
+    "set": "d088",
+    "subject": "Deprecation removals for Scrapy 1.7",
+    "rules": [
+     "ASSERT_REMOVED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "scrapy",
+    "commit": "7a51d370f3a59bcfe118f3ba079c5ea6eda5af75",
+    "set": "d088",
+    "subject": "Regex-based guess_scheme() + refactor tests",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 13
+   },
+   {
+    "repository": "scrapy",
+    "commit": "813fd9f1ac424229f8614346de8a20739481b395",
+    "set": "d088",
+    "subject": "Restore brotlicffi support (#7160)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "a5731c1944d8aa7b1921c543b7ad616ad131853e",
+    "set": "d088",
+    "subject": "Move most of the test utils inside tests.",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "scrapy",
+    "commit": "b746d85f4ca11f7f0149d06f7a4b58501ad3ee23",
+    "set": "d088",
+    "subject": "PY3 port csv exporter",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 3
+   },
+   {
+    "repository": "scrapy",
+    "commit": "c5627af15bcf413c04539aeb47dd07cf8b3e4092",
+    "set": "d088",
+    "subject": "Centralize request fingerprints (#4524)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "d0dabbc09706b082e2250790cd7a00c033ad8021",
+    "set": "d088",
+    "subject": "Enable AsyncioSelectorReactor by default. (#6713)",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 6
+   },
+   {
+    "repository": "scrapy",
+    "commit": "d1bd8eb49f7aba9289e4ff692006cead8bcd9080",
+    "set": "d088",
+    "subject": "Async API for download handlers. (#7164)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "scrapy",
+    "commit": "ec98dabfab60283303a9208ccd8177d9f995ba72",
+    "set": "d088",
+    "subject": "Support for dataclass and attrs items (#3881)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 4
+   },
+   {
+    "repository": "starlette",
+    "commit": "e396f079a5b9a9610ad7d241f17f2e34fd4283ad",
+    "set": "d088",
+    "subject": "Version 0.11 (#402)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 2
+   },
+   {
+    "repository": "uvicorn",
+    "commit": "ad761362b49278606520a1ae4712f68c8016cfb5",
+    "set": "d088",
+    "subject": "Change reload to be configurable with glob patterns (#820)",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "werkzeug",
+    "commit": "51b8402ec419b7afdc098cbd37953c8e125df10c",
+    "set": "d088",
+    "subject": "reloader uses sys.orig_argv",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "werkzeug",
+    "commit": "ab6150fa49afc61b0c5eed6d9545d03d1958e384",
+    "set": "d088",
+    "subject": "apply code style",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "werkzeug",
+    "commit": "dfb6465703dad7d03e7ab81a020dbd3ac32c9fbd",
+    "set": "d088",
+    "subject": "support scrypt",
+    "rules": [
+     "TEST_DISABLED"
+    ],
+    "new_high_findings": 1
+   },
+   {
+    "repository": "werkzeug",
+    "commit": "f78174827c725a8ab297b338d44d98f95a666347",
+    "set": "d088",
+    "subject": "refactor test client cookie implementation",
+    "rules": [
+     "ASSERT_WEAKENED"
+    ],
+    "new_high_findings": 1
+   }
+  ]
+ }
+}

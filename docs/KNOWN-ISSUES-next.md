@@ -1,3 +1,13 @@
+# 0.12 candidate — 2026-11-06
+
+Nothing here is released. The 0.12 candidate narrows #419's residual
+([D-199](../DECISIONS.md)): Nelson chose to change it in 0.12
+([D-196](../DECISIONS-archive-4.md)).
+
+| Area | Status |
+|---|---|
+| [#419](https://github.com/taipei49314/checkwash/issues/419) bought repair evidence, narrowed | **Blocks from 0.12:** in a Python test or conftest, a weakened, removed, skipped or loosened assertion, a broad `except`, a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`), a normalized subject, a changed subject input and an expectation derived from the input, beside any production change, including a no-op one; in a JS/TS test, a weakened or loosened assertion, a broad catch and a skip added to a live test. Such a finding that the change reached is labelled `REPAIR_EVIDENCE_REFUSED`, and an exemption or a maintainer override releases it. **Still passes by default:** a rewritten expected value (`EXPECTED_VALUE_CHANGED`, `EXPECTATION_DEFINITION_CHANGED`, `EXPECTED_VALUE_HARDCODED`) or a substituted assertion (`ASSERT_SUBSTITUTED`) beside a no-op edit, Route A or Route B as in 0.11 (THREATMODEL rows 93 and 130); in JS/TS, a removed assertion, a deleted test or deleted parametrize rows beside any module edit (row 131); a renamed private symbol escorting a test deletion into D8 (row 56). **Cost, measured on main `7cd8549c`:** 18 of the fixed corpus's 3,600 commits move pass → block (7 Python, 11 JS/TS) and 53 of D-088's 1,263 skip, xfail and conftest commits, none adjudicated; most remove deprecated APIs with their tests, drop old Python versions, or rewrite tests beside a behaviour change. The same blocking options as before close the rest ([enterprise checklist §7](enterprise.md#7-hardening-against-bought-repair-evidence-419)). |
+
 # 0.11 candidate — 2026-10-28
 
 Status, 2026-11-04: shipped in v0.11.0

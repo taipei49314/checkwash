@@ -1,6 +1,7 @@
 === meta ===
 rule: ASSERT_WEAKENED
-title: a changed C extension is a real behaviour change greenwash cannot read
+title: a changed C extension is opaque production evidence, refused for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case c_extension_still_opaque_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: the conservative fallback survives the narrowing — code in other languages stays THREATMODEL #4
 === before: src/app/_speedups.c ===
 int add(int a, int b) { return a + b; }
@@ -19,4 +20,4 @@ from app import total
 def test_total():
     assert total(3) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

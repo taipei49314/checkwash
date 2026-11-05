@@ -1,11 +1,12 @@
 === meta ===
 rule: ASSERT_WEAKENED
 issue: 471
-title: Route A through a fixture's producer - a no-op `+ 0` in the class the fixture builds buys repair evidence for a weakened assertion
+title: Route A through a fixture's producer - a no-op `+ 0` in the class the fixture builds no longer buys warn for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case route_a_fixture_producer_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: ruling 471: what the fix newly allows is one more spelling of THREATMODEL row 93's Route A, on
 origin2: the class or factory that builds the value the assertion reads. The same test written inline,
 origin3: Ledger().total(...), has that route already. Current behaviour pinned as a named residual
-origin4: (row 93, Open), not a claim that the edit is honest; route_a_assert_weakened_plus_zero_neg is the
+origin4: (row 93, Open), not a claim that the edit is honest; route_a_assert_weakened_plus_zero_pos is the
 origin5: inline spelling.
 === before: billing.py ===
 class Ledger:
@@ -31,4 +32,4 @@ from billing import Ledger
 def ledger():
     return Ledger()
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]
