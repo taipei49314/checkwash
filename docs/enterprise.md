@@ -31,8 +31,11 @@ workflow and the ruleset command are under
 The README's Action pin and its CLI commands name the same release, the latest
 one whose public files are verified. The pin advances in a follow-up once a
 release's publication is verified; from v0.11.0 it names the release's Action
-commit, `vX.Y.Z^2^1`, which that release's `doctor` accepts (D-194). Installing
-a newer CLI does not update an existing Action. Always record both deployed versions. A required check enforces that version's
+commit, which that release's `doctor` accepts (D-194): for v0.11.0
+`v0.11.0^2^1`, and from v0.12.0 the commit the tag points to (D-200). Install
+the CLI from PyPI or the pyz: from v0.12.0 a CLI installed through Git from a
+release tag rejects that release's own Action pin in `doctor`. Installing a
+newer CLI does not update an existing Action. Always record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
 
 Optional PR line comments (T2.2): set `comment-pr: true` and add

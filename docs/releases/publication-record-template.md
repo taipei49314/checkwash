@@ -14,7 +14,7 @@ receipt. Before public publication, public-only executions remain PENDING.
 | Final PR verdict gate | PENDING head SHA, run ID, attempt | PENDING |
 | Main commit and verdict gate | PENDING merge SHA/tree, run ID, attempt | PENDING |
 | Previous verdict baseline | PENDING tag, commit and protected disposition | PENDING |
-| Real public tag identity | PENDING name, native tag object, peeled commit, tree | PENDING PUBLICATION |
+| Real public tag identity | PENDING name, native tag object, peeled commit and tree; from v0.12.0 both commits: the Action commit A the tag peels to, and the release merge M its `Release-Merge` line names, with A = `M^2^1` | PENDING PUBLICATION |
 | Public-tag full CI / source / visitor / verdict | PENDING exact commit, run IDs and attempts | PENDING PUBLICATION |
 | Release-event source and installed-tag identity | PENDING receipt, installed commit/version | PENDING PUBLICATION |
 | Actual release build / inventories | PENDING event SHA, run ID, attempt, all distributions | PENDING PUBLICATION |

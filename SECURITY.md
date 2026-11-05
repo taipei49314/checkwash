@@ -56,8 +56,9 @@ explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies th
 same isolation to the separate quality preview Action. Both shipped in v0.8.0
 (2026-10-15). The README recommends the newest verified release's Action, v0.11.0's
 since 2026-11-04, with no one-release lag (maintainer decision, 2026-10-14). Pin
-the commit the README recommends: up to v0.10.0 the tag's peeled commit, from
-v0.11.0 the release's Action commit `vX.Y.Z^2^1`
+the commit the README recommends: the tag's peeled commit, which from v0.12.0
+is the release's Action commit (D-200), and for v0.11.0 the release's Action
+commit `v0.11.0^2^1`
 ([action/README.md](action/README.md#public-pin-and-upgrade)).
 The v0.8.0 and later Actions need setup-python in the same job, a checkout with both refs, and a
 dedicated job that runs no pull-request code before the check.
@@ -91,5 +92,7 @@ maintainer before disclosure.
 checkwash has **zero runtime dependencies** — pure standard-library Python.
 That is a deliberate security property for a tool that inspects other code: a
 monitor with a large dependency tree is itself an attack surface. Releases are
-built from the tagged commit; the CI matrix and the cross-OS byte-compare job
-run on every push.
+built from the release merge commit, which up to v0.11.0 is the tagged commit;
+from v0.12.0 the tag points at the release's Action commit, which differs from
+the merge in one `doctor` line (D-200). The CI matrix and the cross-OS
+byte-compare job run on every push.

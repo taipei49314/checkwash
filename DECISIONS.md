@@ -190,3 +190,198 @@ Measurement 4 covers the final code.
 Hosted test workflows remain disabled. This pull request's own receipt is
 collected by main's collector, the one it replaces. Receipts collected after
 the merge use the new one. None of the measurements was published.
+
+## D-200 (2026-11-06): from v0.12.0 the release tag points at the release's Action commit A, and the README installs the CLI only from PyPI and the pyz
+
+**Status: proposed.** Claude wrote this entry in the pull request that
+implements it. `DECISIONS.md` is maintainer text (AGENTS.md), so the entry
+takes effect only when Nelson approves it by name, with that pull request.
+
+**Authority.**
+
+- D-196 item 3 ([DECISIONS-archive-4](DECISIONS-archive-4.md), 2026-11-02)
+  records the approval. At 15:24:21Z Nelson answered Claude's three
+  questions with one message of three lines, 「1.接受寫文件」 / 「2.核可」 /
+  「3.放寬」; its second line approved pointing the tag at the Action commit
+  A. Told of its cost, that a CLI installed from the tag would be A, whose
+  `doctor` does not accept its own release's pin, he chose at 15:30:53Z the
+  button 「0.11 照 S，0.12 改」 (0.11 with scheme S, change it in 0.12).
+  D-196 left the design to go to him before it was built.
+- Claude's design of 2026-11-05 (written on LAPTOP-01AGNPJU, not in the
+  repository; one read-only Claude sub-agent reviewed its draft against main
+  `7cd8549c`, and Claude verified and applied all 11 findings) gave the
+  places to change and four options for a CLI installed from the tag. At
+  about 17:40:16Z on 2026-11-05 Nelson chose the option labelled
+  「甲：拿掉那行（建議）」 (甲: remove that line, recommended): the README's
+  "or from the release tag" install line goes. At 17:42:17Z he chose the
+  button 「開始實作」 (start implementing) to Claude's question
+  「0.12 這兩項要開始實作嗎？」 (start implementing these two 0.12 items?).
+  The second item, the change to D-191's residual, is a separate change.
+- Claude wrote the questions, the options and the button labels. These
+  answers choose the change; they are not Nelson's review of this text or of
+  the code. Every detail not quoted above is Claude's, under Nelson's
+  2026-10-27 delegation (「Checkwash 一樣給你」: 0.x autonomous, stop before
+  1.0; [RELEASING](docs/RELEASING.md)), including the boundary's form, the
+  tag message's format, every check below and this entry's wording.
+
+**Why.** Under scheme S (D-194) the README recommends the Action commit A,
+`vX.Y.Z^2^1`, while the tag points at the release merge M. Pin updaters such
+as Dependabot and Renovate then propose the tag's commit, which `doctor`
+rejects; zizmor's `ref-version-mismatch` can report the pin's comment; and
+`git ls-remote` cannot show the pin. With the tag on A, the recommended pin is
+the tag's commit again (each inferred from the tools' documentation, not
+run). A release still has two commits, because a commit cannot name itself:
+the distributions are built from M, whose `doctor` accepts A.
+
+**What is decided.**
+
+1. *One version boundary.* A release tag at or above v0.12.0 points at the
+   release's Action commit A, and its message holds exactly one line
+   `Release-Merge: <M>`, M's 40 lowercase hex digits, where A = `M^2^1` and M
+   has scheme S's shape (D-194). A tag up to v0.11.x points at M, as before.
+   The version selects one rule, never either. The boundary, the message
+   parse and the doctor rewrite of item 5 live once, in
+   `tools/published_release_identity.py`, which every release tool already
+   loads or audits. A line that starts with the key in another case or after
+   spaces counts as a second line, and a carriage return is refused.
+2. *The release bridge* (`tools/pju_release_bridge.py`). At `tag`,
+   `release-event` and `public-visitor`, `live_subject` reads R's commit
+   object from GitHub after M's, which it already read: M's parents are
+   [base, R], R has one parent, A, and the tag must peel to A. The tag's
+   message must name the subject's head M, and at `release-event` the capture
+   run's workflow commit must be A. `validate_visitors` binds the tag source
+   receipt and the tag visitor to A and A's tree. M stays every stage's
+   head. `verify_admitted` also compares the trusted checkout's
+   `published_release_identity.py` with the trusted ref, since the bridge now
+   applies the tag rule from it.
+3. *The release-event capture.* The `release: published` event runs at the
+   commit the tag points to, A. From v0.12.0 the capture reads M from the
+   tag's message, checks through GitHub's commit objects that `M^2^1` is the
+   event's commit, and records M as the head, so the subject's base, tree and
+   head stay M's. It reads only the tag, tag-object and commit endpoints the
+   capture and its native check already read. Whether M is the real release
+   merge, the chain decides: the tag stage's head, the main stage's report,
+   `refs/heads/main` and the merged pull request.
+4. *The collector* (`tools/collect_pju_release.py`). At `tag` and later the
+   local annotated tag must peel to `M^2^1` and its message must name M. A new
+   argument, `--tag-source`, a clean checkout of A with the tag, is required
+   from v0.12.0 and refused before it and at `pr` and `main`. The tag source
+   receipt runs on it, since `tools/verify_published_source.py` requires the
+   source commit to be checked out, and the tag visitor expects its members.
+   That receipt now proves that the tag and A agree, not that the tag and M
+   agree; scheme S's one-line relation and the bridge's native reads carry
+   the binding from A to M.
+5. *The verdict gate* (`tools/verdict_gate.py`, option A of the design). On
+   a tag run from v0.12.0, HEAD is M, the pushed tag must point at
+   `HEAD^2^1`, and its message must name HEAD. For a pinned engine whose tag
+   is at or above v0.12.0, its commit is the tag's, A, and the pyz's
+   `checkwash/*` members must equal A's `src/checkwash` with `doctor.py`'s own
+   Action pin line set to A, which is what R does and what the release bridge
+   verified when M's tree was R's. The line is set only when A's two pin
+   lines are equal; otherwise the identity fails, so a wrong rewrite can only
+   fail to match a pinned pyz. The bridge's `validate_verdict` applies the
+   same rule (`engine_source_members`). The pins format does not change.
+6. *`tools/own_action_pin.py`.* `tag --head <M> --base <base>` prints
+   `git tag -a vX.Y.Z <A> -m "CheckWash vX.Y.Z" -m "Release-Merge: <M>"`
+   for a v0.12.0 or later release merge that the scheme S rule verifies, and
+   refuses an earlier one. From v0.12.0 `check --stage tag` also takes
+   `--main-report` and `--trusted`, and before the push it checks: the local
+   annotated tag points at A, which the rule found to be `M^2^1` with the
+   one-line relation, and its message names M; M is the head of the main
+   stage's verified report and the remote's `refs/heads/main`, since a
+   test-merge commit of an open pull request also has A as its `^2^1`; and
+   A holds the trusted ref's bytes of `release.yml`, the release bridge and
+   the helpers they load or audit, which the release-event capture runs from
+   A. Before v0.12.0 `check` refuses those two arguments and runs as before.
+   These checks are advisory and local, not release evidence.
+7. *Option 甲.* The README's "or from the release tag" install line is
+   removed, and the README installs the CLI only from PyPI and the pyz,
+   which are built from M. The README's pin section, action/README,
+   `docs/enterprise.md` and KNOWN-ISSUES-next say that from v0.12.0 a CLI
+   installed through Git from the tag is A's and its `doctor` rejects that
+   release's own pin. `doctor`'s code does not change.
+8. *Documents.* RELEASING (steps 5 to 9, the scheme S section with a new
+   *From v0.12.0* part and a 0.12.0 bootstrap note, the published-source
+   paragraph, the responsibility checks and the verdict-gate sequence), the
+   README and action/README pin sections, SECURITY.md, `docs/enterprise.md`,
+   KNOWN-ISSUES-next (a new 0.12 candidate section),
+   `docs/published-release-baseline.md`, `docs/pju-release-handoff.md`,
+   `docs/releases/README.md`, the publication record template (which now
+   records both A and M), the header comment of
+   `tests/verdict_gate/baseline.toml` and the verdict gate's docstring
+   describe 0.12 with 0.11.0 as the exception. The disabled `ci.yml`,
+   `assertion-qualification.yml` and `verdict-gate.yml` note that their
+   tag-push path does not follow this entry; none is re-enabled.
+
+**What is not changed.**
+
+- Scheme S's core: A, R as the last commit, the merge commit only, M with
+  R's tree, a `doctor` that accepts the previous pin and its own A, and the
+  CLI upgraded before the Action pin.
+- v0.11.0 as published: its tag stays on M, its pin on `v0.11.0^2^1`, and its
+  pin-updater and zizmor consequences (D-194, D-196) stay.
+- `src/`: `doctor`'s code and `check`'s verdicts, exit codes and messages.
+  SPEC, THREATMODEL, `tests/gates/**`, the gating severity table, the
+  strength lattice, alignment parameters and every `.gwcase` expectation.
+- `release/advertised.toml`'s format, meaning and values: `commit` is the
+  tag's peeled commit, M for v0.11.0 and A from v0.12.0.
+- The receipt, subject, admission and dispatch schemas, the verification
+  report's fields, and the workflow inputs. The subject's head is M at every
+  stage.
+- `tools/verify_published_source.py`, `tools/release_inventory.py`,
+  `tools/replay_pju_action.py`, `quality-candidate-intake.yml`, and the
+  `publish-assets` and `pypi` jobs of `release.yml`, which check out the
+  admitted head, M.
+- The owner-ruled fixed-corpus candidate rule (R29, amended by D-196). Its
+  text names the commit to be tagged, which from v0.12.0 is A. A's `src/`
+  differs from M's only in `doctor`'s own pin line, which the rule already
+  allows, so the candidates it admits are unchanged and its text is not
+  edited.
+
+**Risk.** The new path first runs against a real tag and a real release
+event at 0.12.0: the bridge's tag rule, the release-event capture, the
+collector's tag stages, the verdict gate's tag rule and, after step 9, the
+baseline binding. A tag cannot be moved, and the release-event capture runs
+the bridge from A, so a fault found after the push may cost a v0.12.1, as
+D-196 said. What lowers it: each new check runs both ways on owned Git
+chains and owned native metadata, the capture included, which had no test
+before; the message parse is calibrated on the real v0.11.0 tag object, read
+with a read-only `gh api` call on 2026-11-06 Asia/Taipei, whose `message` is
+the tag object's bytes after its headers, with LF line breaks; the capture reads no
+new endpoint; and `check --stage tag` runs the three checks before the push.
+A private rehearsal repository with a real tag and release, which the design
+offered at about half a day, was not made.
+
+**Maintainer text.** This entry only. RELEASING's fixed-corpus *Candidate*
+and *Record* bullets, which carry the owner ruling, are not edited.
+
+**Test expectations.** No `.gwcase` fixture and nothing under `tests/gates`
+changes. Existing assertions edited, all in `tests/test_packaging.py`:
+
+- `_release_action_commit` covers three eras. From v0.12.0 it reads M from
+  the tag's message, on one `Release-Merge:` line, rebinds `tag_commit` to M
+  so that v0.11.x's checks run on M unchanged, and then requires the tag's
+  peeled commit to be `M^2^1`. Below v0.12.0 every outcome is unchanged.
+- `test_readme_action_snippet_is_zizmor_blanket`: two `if legacy:` guards
+  become `if legacy or tagged_at_action:`, so from v0.12.0 the README's
+  `^{commit}` string and action/README's `git ls-remote` line for the tag
+  are required again. One assertion message changes. At v0.11.0, the trusted
+  tag today, every outcome is unchanged.
+- `test_readme_install_refs_match_advertised_release`: option 甲 removes the
+  README's only `@vX.Y.Z` install reference, so `pinned` also takes the
+  versions of the `pipx install checkwash==X.Y.Z` lines, as tags, and a new
+  assertion refuses any CLI install from a tag. `assert pinned` then
+  requires any install reference instead of a Git or pre-commit one: a
+  relaxation, recorded here to be reviewed by reading.
+
+New: `tests/test_release_tag_at_action_commit.py` (67 tests) and
+`tests/test_packaging.py::test_release_action_commit_from_v0_12_0_is_the_tag_commit`.
+The documented test count moves to 22529 collected.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the targeted release-tool tests,
+the full suite (`pytest tests`, `tests/gates` included), checkwash's own check
+of the pull request's range at `--fail-on high`, and the pull request's PJU
+receipt. The design asks for three Claude review sub-agents on the frozen
+change, and no Argon run. No `src/` change, so no R29 or other differential
+runs. Other platforms: NOT_RUN.

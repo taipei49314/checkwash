@@ -343,25 +343,32 @@ v0.11.0 Action above. If you stay on v0.7.0 or earlier, treat a pass as
 advisory, review the pull request before merging and keep `comment-pr` off.
 [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
 
-**Which commit is the recommended pin?** A release cannot embed its own commit SHA.
-Up to v0.10.0, the recommended pin is the commit the tag points to:
-`git rev-parse 'vX.Y.Z^{commit}'`. From v0.11.0 (D-194), it is the release's
-Action commit, the tag's second parent's parent: `git rev-parse 'vX.Y.Z^2^1'`.
-It is not the commit the tag points to. The release pull request's last commit
-changes one line, `doctor`'s own Action pin, to that Action commit, and the tag
-differs from the Action commit only in that line. The Action runs only
-`checkwash check`, which does not import `doctor`. From v0.11.0, a release's
-`doctor` accepts two Action pins: the one recommended before the release and
-the release's own Action commit.
+**Which commit is the recommended pin?** The commit the tag points to,
+`git rev-parse 'vX.Y.Z^{commit}'`, except for v0.11.0.
+A release cannot embed its own commit SHA, so from v0.11.0 (D-194) a release
+has two commits: its Action commit, and the release merge, which differs from
+it in one line, `doctor`'s own Action pin, set to the Action commit. The PyPI
+package and the pyz are built from the merge. The Action runs only
+`checkwash check`, which does not import `doctor`, so it runs the same check
+at either commit. A release's `doctor` accepts two Action pins: the one
+recommended before the release and the release's own Action commit. From
+v0.12.0 (D-200) the tag points at the Action commit. v0.11.0's tag points at its merge, so its
+recommended pin, the pin above, is the tag's second parent's parent:
+`git rev-parse 'vX.Y.Z^2^1'`.
 
-Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment, so
-they will propose the tag's commit, which `doctor` rejects (inferred from those
-tools' documentation, not run). For the same reason zizmor's
-`ref-version-mismatch` audit can report the comment (inferred, not run). The
-Action itself is unaffected: it runs the same check at either commit. `doctor` 0.10.0 does not accept the 0.11.0 pin, so
-upgrade the CLI and its local hooks first, then the Action pin. The recommended
-v0.11.0 Action includes the engine published on 2026-11-04 Asia/Taipei. A CLI
-upgrade does not update an existing Action.
+From v0.12.0, a CLI installed through Git from a release tag is the Action
+commit's, and its `doctor` rejects that release's own Action pin ("workflow
+analysis incomplete", exit 1). Install the CLI from PyPI or the pyz instead.
+
+For the v0.11.0 pin, pin updaters such as Dependabot and Renovate follow the
+`# v0.11.0` comment, so they will propose the tag's commit, which `doctor`
+rejects (inferred from those tools' documentation, not run). For the same
+reason zizmor's `ref-version-mismatch` audit can report the comment (inferred,
+not run). From v0.12.0 the pin is the tag's commit, so neither should happen
+(inferred, not run). `doctor` 0.10.0 does not accept the 0.11.0 pin, so upgrade
+the CLI and its local hooks first, then the Action pin. The recommended v0.11.0
+Action includes the engine published on 2026-11-04 Asia/Taipei. A CLI upgrade
+does not update an existing Action.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 ## More options and evidence
@@ -374,8 +381,6 @@ If you already use pipx, install the fixed version:
 
 ```bash
 pipx install checkwash==0.11.0
-# or from the release tag:
-pipx install git+https://github.com/taipei49314/checkwash@v0.11.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline

@@ -1,5 +1,10 @@
 name: ci
 
+# Disabled, like the other hosted test workflows: PJU receipts run the suite.
+# Its tag-push path does not follow D-200. From v0.12.0 a release tag points
+# at the release's Action commit A, not at the release merge M that the
+# distributions are built from, so a tag push would test A and the
+# published-source job would bind the tag to A only, not to M.
 on:
   push:
     branches: [main]

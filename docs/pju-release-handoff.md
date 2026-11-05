@@ -46,7 +46,7 @@ fresh artifact installations plus the Git-tag visitor, and exercises public pyz.
 | --- | --- | --- |
 | `pr` | Owner manual dispatch; live open same-repository PR number/head/base/tree | None; `parents` is `{}` |
 | `main` | Owner manual dispatch; live main commit/tree and first parent | New PR stage report, PR stage check and four required contexts |
-| `tag` | Owner manual dispatch; annotated public tag object and peeled source | Main stage report/check |
+| `tag` | Owner manual dispatch; annotated public tag object and the release merge it names: up to v0.11.x its peeled commit, from v0.12.0 its message's `Release-Merge` line, with the tag on the merge's Action commit | Main stage report/check |
 | `release-event` | Real `release: published` event, Release ID/tag/source/run/attempt | Tag stage report/check |
 | `public-visitor` | Owner manual dispatch; exact existing Release/tag/source and public files | Release-event report/check |
 
@@ -79,6 +79,19 @@ binds the pin text, its single static binding and a single doctor module;
 doctor's other logic, and code elsewhere that could change it at import, are
 the release PR's reviewed content. A pre-0.11 release has no own-pin lines, so
 this bridge no longer re-verifies one.
+
+From v0.12.0 the tag points at the release's Action commit A, not at the
+release merge M, which stays the subject's head at every stage and the commit
+the distributions are built from ([D-200](../DECISIONS.md); RELEASING). The
+tag's message names M on exactly one line, `Release-Merge: <M>`. At `tag` and
+later, the bridge reads M's and R's commit objects from GitHub and requires
+the tag to peel to A = M^2^1, the message to name M and, at `release-event`,
+the capture run's workflow commit to be A. The release-event capture, which
+runs at A, reads M from the tag's message, checks that M^2^1 is the event's
+commit and takes M as the head. The tag source receipt and the tag visitor
+bind A, on a separate checkout of A (`--tag-source`). Up to v0.11.x the tag
+points at M, and these stages keep the old rule. The version decides which
+rule applies, never either.
 
 ## 1. Prepare reviewed sources and capture native metadata
 
@@ -118,8 +131,8 @@ product-test workflows disabled. Other manual captures use `release.yml`,
 | Stage | `head` | `tag` | `release_id` | `pr_number` |
 | --- | --- | --- | --- | --- |
 | `main` | Exact current main commit | `null` | `null` | Omit |
-| `tag` | Exact release commit | `"v0.9.1"` | `null` | Omit |
-| `public-visitor` | Same release commit | `"v0.9.1"` | Actual integer Release ID | Omit |
+| `tag` | Exact release merge commit M, also from v0.12.0, when the tag points at M^2^1 | `"v0.9.1"` | `null` | Omit |
+| `public-visitor` | Same release merge commit | `"v0.9.1"` | Actual integer Release ID | Omit |
 
 ```powershell
 @{mode='capture'; admission=($Capture | ConvertTo-Json -Compress)} |
@@ -129,8 +142,13 @@ product-test workflows disabled. Other manual captures use `release.yml`,
 
 There is no manual `release-event` capture admission. The authorized GitHub
 Release's real published event triggers capture automatically, after the tag's
-own evidence has passed. The reviewed workflow must already exist on that tagged
-commit. This first event uploads metadata only, not distributions; fresh event
+own evidence has passed. The reviewed workflow must already exist on the commit
+the tag points to, and the capture runs the bridge from there. From v0.12.0 that
+commit is the Action commit A: the capture reads the release merge M from the
+tag's message, checks that M^2^1 is A, and records M as the head, so A's
+`release.yml`, bridge and audited helpers must be the trusted ref's bytes
+(`tools/own_action_pin.py check --stage tag` checks that before the push).
+This first event uploads metadata only, not distributions; fresh event
 evidence cannot exist before the event.
 
 Read back the exact capture run/attempt/event/workflow path/SHA/source/actor and
@@ -219,7 +237,12 @@ $CollectorArguments = @(
 
 Baseline and advertised source default to pinned Action only when its exact
 commit matches those pins. Supply `--verdict-baseline-source` and
-`--advertised-source` if different. Canary checkouts retain their fixed
+`--advertised-source` if different. From v0.12.0 the `tag`, `release-event`
+and `public-visitor` collections also take `--tag-source`, a clean checkout of
+the commit the tag points to, the release's own Action commit A, with the tag
+fetched: the tag source receipt runs on it, and the tag visitor must install
+its members. Up to v0.11.x the tag points at the candidate and the flag is
+refused. Canary checkouts retain their fixed
 v0.4.2/v0.5.0 source commits/tags; the collector downloads and verifies their
 real public pinned pyz files rather than building substitutes.
 

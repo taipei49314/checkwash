@@ -450,12 +450,20 @@ def test_perf_gate_is_in_default_collection():
 
 
 def test_readme_install_refs_match_advertised_release():
-    """Public install commands name the separately verified published release."""
+    """Public install commands name the separately verified published release.
+
+    From v0.12.0 (D-200) a release tag points at the Action commit, whose
+    `doctor` rejects that release's own Action pin, so the README installs the
+    CLI from PyPI or the pyz and names no install from a tag.
+    """
     manifest = tomllib.loads((ROOT / "release/advertised.toml").read_text(encoding="utf-8"))
     advertised = manifest["release"]
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     pinned = set(re.findall(r"@(v\d+\.\d+\.\d+)", readme)) | set(
         re.findall(r"rev:\s*(v\d+\.\d+\.\d+)", readme)
+    ) | {"v" + version for version in re.findall(r"pipx install checkwash==(\d+\.\d+\.\d+)", readme)}
+    assert not re.findall(r"git\+https://github\.com/taipei49314/checkwash(?:\.git)?@", readme), (
+        "README installs the CLI from a release tag, whose doctor rejects that release's own Action pin"
     )
     assert pinned, "README should pin at least one install ref"
     assert pinned == {advertised["tag"]}, f"README pins {pinned}, advertised release is {advertised['tag']}"

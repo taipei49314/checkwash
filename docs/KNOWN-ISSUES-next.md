@@ -1,3 +1,22 @@
+# 0.12 candidate, 2026-11-06
+
+Nothing here is released. From v0.12.0 the release tag points at the
+release's Action commit A, the commit the README recommends as the Action
+pin, instead of at the release merge M. The distributions are still built
+from M, whose second parent's parent is A and whose `doctor` differs from A's
+only in its own Action pin line, set to A ([D-200](../DECISIONS.md)). The
+rows below are what that changes for you and what the new release path has
+not shown yet. The 0.11 section below stays as the dated record of that
+release's preparation.
+
+| Scope | Known limit and what it means for you |
+| --- | --- |
+| A CLI installed from a release tag | From v0.12.0 a CLI installed through Git from the tag, such as `pipx install git+https://github.com/taipei49314/checkwash@v0.12.0`, is A. A commit cannot name itself, so A's `doctor` holds the previous release's pin on both pin lines, and `checkwash doctor` rejects v0.12.0's own Action pin, the one the README recommends: "workflow analysis incomplete", exit 1. The PyPI package and the pyz are built from M, whose `doctor` accepts A, and the README installs only those. `check`, the Action, pre-commit and the Claude Code hooks never import `doctor`, so they run the same at A and at M. |
+| The Release page's source archives | From v0.12.0 the "Source code" archives GitHub attaches to the Release are A's tree, which differs from the sdist's source in `doctor`'s own Action pin line. |
+| v0.11.0 stays as published | Its tag stays on M and its recommended pin on `v0.11.0^2^1`, with the pin-updater and zizmor consequences in the 0.11 `doctor` row below. From v0.12.0 Dependabot, Renovate, zizmor and `git ls-remote` see the recommended pin as the tag's commit (inferred from those tools' documentation, not run). Upgrade the CLI and its local hooks before the Action pin, as before. |
+| The new release path first runs for real at 0.12.0 | The tag, release-event and public-visitor stages, the verdict gate's tag rule and the baseline binding under the new rule have run only on owned synthetic chains on LAPTOP-01AGNPJU (human-authorized local PJU, NOT EC pool). Their first run against a real tag and a real release event is v0.12.0's. A tag cannot be moved, and the release-event capture runs the tools at A, so a failure found after the push may cost a v0.12.1. `tools/own_action_pin.py check --stage tag` runs three local checks before the push. |
+| The disabled hosted workflows | On a tag push from v0.12.0, `ci.yml`, `assertion-qualification.yml` and `verdict-gate.yml` would run at A, not at M, and `verdict-gate.yml`'s tag rule fails there by design. They stay disabled; the PJU release chain runs each stage at M. |
+
 # 0.11 candidate — 2026-10-28
 
 Status, 2026-11-04: shipped in v0.11.0
