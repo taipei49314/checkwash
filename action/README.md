@@ -113,10 +113,11 @@ from the Action commit only in that line. The Action commit is the recommended
 Action pin once the release's publication is verified. The Action runs only
 `checkwash check`, which does not import doctor, so it runs the same check at
 either commit. A release's doctor accepts that release's Action commit and the
-pin recommended before it. From v0.12.0 (D-200) the tag points at the Action
-commit, so the recommended pin is the tag's peeled commit again. Only
-v0.11.0's tag points at its merge, and its recommended pin is the tag's second
-parent's parent. Source changes here do not update that public pin.
+pin recommended before it. The v0.11.0 tag points at the merge, so its
+recommended pin is the tag's second parent's parent. From v0.12.0 (unreleased,
+D-200) the tag will point at the Action commit, so the recommended pin will be
+the tag's peeled commit again. Source changes here do not update that public
+pin.
 The recommended v0.11.0 Action contains this installation repair; v0.7.0 and
 earlier do not. Promoting a security release/pin requires a separate recorded
 publication decision; do not silently re-pin consumers to unreleased source.
@@ -139,7 +140,7 @@ git -C checkwash rev-parse 'v0.11.0^2^1'
 git -C checkwash diff 'v0.11.0^2^1' v0.11.0
 ```
 
-A pin up to v0.10.0, and from v0.12.0, is the tag's peeled commit:
+A pin up to v0.10.0, and from v0.12.0 (unreleased), is the tag's peeled commit:
 
 ```bash
 git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.10.0^{}'
@@ -150,12 +151,13 @@ For the v0.11.0 pin, pin updaters such as Dependabot and Renovate follow the
 rejects (inferred from those tools' documentation, not run). For the same
 reason zizmor's `ref-version-mismatch` audit (1.14.0 and later) can report the
 comment, and its pedantic `stale-action-refs` the untagged commit (inferred,
-not run). From v0.12.0 the pin is the tag's commit, so neither should happen
+not run). With v0.12.0's pin at the tag's commit, neither should happen
 (inferred, not run). The Action itself is unaffected: it runs the same check
 at either commit. doctor 0.10.0 does not accept the 0.11.0 pin, so upgrade the
-CLI and its local hooks first, then the Action pin. From v0.12.0 a CLI
-installed through Git from the release tag is the Action commit's, and its
-doctor rejects that release's own pin: install the CLI from PyPI or the pyz.
+CLI and its local hooks first, then the Action pin. From v0.12.0 (unreleased)
+a CLI installed through Git from the release tag will be the Action commit's,
+and its doctor will reject that release's own pin: install the CLI from PyPI
+or the pyz.
 
 The hosted `action-security` qualification invokes the actual candidate composite
 on all three operating systems. Expected BLOCK/ERROR jobs stay failed; a separate

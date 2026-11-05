@@ -37,7 +37,7 @@ R = load_bridge()
 CAPTURE_FILES = (".github/workflows/release.yml", "tools/pju_release_bridge.py", "tools/pju_receipt_bridge.py",
                  "tools/receipt_execution_route.py", "tools/published_release_identity.py", "tools/verdict_gate.py",
                  "tools/verify_published_source.py", "tools/qualify_zipapp.py", "tools/qualify_assertions.py",
-                 "tools/assertion_contract.py")
+                 "tools/assertion_contract.py", "tools/release_inventory.py")
 
 
 def git(root, *args):
@@ -114,6 +114,10 @@ def pre_push(repo, name, current, action, main_report, trusted, remote):
     R.require([b"tag", name.encode()] in headers, f"the local tag object of {name} is not named {name}")
     tagged = resolve(repo, ref)
     R.require(tagged == action, f"the local tag {name} points at {tagged}, not at the Action commit {action}, {merge}^2^1")
+    # The bridge reads the tag object's own target, so a tag of another tag
+    # that peels to A would pass `^{commit}` here and fail after the push.
+    R.require(headers[:2] == [[b"object", action.encode()], [b"type", b"commit"]],
+              f"the local tag object of {name} does not point at the Action commit {action} itself")
     R.require(R.P.release_merge(R.P.tag_message(raw)) == merge,
               f"the local tag {name}'s message does not name the release merge {merge}")
     # 2. M is the head of the main stage's verified report and the remote's main;

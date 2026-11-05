@@ -243,7 +243,10 @@ the distributions are built from M, whose `doctor` accepts A.
    parse and the doctor rewrite of item 5 live once, in
    `tools/published_release_identity.py`, which every release tool already
    loads or audits. A line that starts with the key in another case or after
-   spaces counts as a second line, and a carriage return is refused.
+   spaces counts as a second line, and any character other than printable
+   ASCII and a line feed is refused: a carriage return or a Unicode line
+   separator can split a line for a reader, and an invisible character can
+   hide the key.
 2. *The release bridge* (`tools/pju_release_bridge.py`). At `tag`,
    `release-event` and `public-visitor`, `live_subject` reads R's commit
    object from GitHub after M's, which it already read: M's parents are
@@ -265,7 +268,10 @@ the distributions are built from M, whose `doctor` accepts A.
 4. *The collector* (`tools/collect_pju_release.py`). At `tag` and later the
    local annotated tag must peel to `M^2^1` and its message must name M. A new
    argument, `--tag-source`, a clean checkout of A with the tag, is required
-   from v0.12.0 and refused before it and at `pr` and `main`. The tag source
+   from v0.12.0 and refused before it and at `pr` and `main`. Preflight
+   checks it, clean at A and holding the subject's tag object, before the
+   suite and the builds run, and the stage steps compare it again after
+   them. The tag source
    receipt runs on it, since `tools/verify_published_source.py` requires the
    source commit to be checked out, and the tag visitor expects its members.
    That receipt now proves that the tag and A agree, not that the tag and M
@@ -284,9 +290,10 @@ the distributions are built from M, whose `doctor` accepts A.
 6. *`tools/own_action_pin.py`.* `tag --head <M> --base <base>` prints
    `git tag -a vX.Y.Z <A> -m "CheckWash vX.Y.Z" -m "Release-Merge: <M>"`
    for a v0.12.0 or later release merge that the scheme S rule verifies, and
-   refuses an earlier one. From v0.12.0 `check --stage tag` also takes
+   refuses an earlier one. From v0.12.0 `check --stage tag` requires
    `--main-report` and `--trusted`, and before the push it checks: the local
-   annotated tag points at A, which the rule found to be `M^2^1` with the
+   annotated tag object is named for the release and points at A itself,
+   not at another tag, A being what the rule found to be `M^2^1` with the
    one-line relation, and its message names M; M is the head of the main
    stage's verified report and the remote's `refs/heads/main`, since a
    test-merge commit of an open pull request also has A as its `^2^1`; and
@@ -341,16 +348,27 @@ the distributions are built from M, whose `doctor` accepts A.
 **Risk.** The new path first runs against a real tag and a real release
 event at 0.12.0: the bridge's tag rule, the release-event capture, the
 collector's tag stages, the verdict gate's tag rule and, after step 9, the
-baseline binding. A tag cannot be moved, and the release-event capture runs
-the bridge from A, so a fault found after the push may cost a v0.12.1, as
-D-196 said. What lowers it: each new check runs both ways on owned Git
-chains and owned native metadata, the capture included, which had no test
-before; the message parse is calibrated on the real v0.11.0 tag object, read
-with a read-only `gh api` call on 2026-11-06 Asia/Taipei, whose `message` is
-the tag object's bytes after its headers, with LF line breaks; the capture reads no
-new endpoint; and `check --stage tag` runs the three checks before the push.
-A private rehearsal repository with a real tag and release, which the design
-offered at about half a day, was not made.
+baseline binding. D-196 said the new path's first real run would be a
+release. A tag cannot be moved, and the release-event capture runs the
+bridge from A, so a fault found after the push may cost a v0.12.1. What
+lowers it: each new check runs both ways on owned Git chains and owned
+native metadata, the capture included, which had no test before; the message
+parse is calibrated on the real v0.11.0 tag object, read with a read-only
+`gh api` call on 2026-11-06 Asia/Taipei, whose `message` is the tag object's
+bytes after its headers, with LF line breaks; the capture reads no new
+endpoint; and `check --stage tag` runs the three checks before the push. The
+design also planned to re-run the tag stage's offline parts with the new
+tools before the push. Only `check --stage tag` can run then: the
+collector's tag stage starts from the captured subject, and the verdict
+gate's tag rule reads the pushed tag's public metadata, so both first run on
+the pushed tag. A private rehearsal repository with a real tag and release,
+which the design offered at about half a day, was not made. One check still
+reads the tag's commit as the head: the published baseline evidence compares
+each relevant tag with the pushed tag's commit, A from v0.12.0, while the
+local set of merged tags is read from HEAD, M. A relevant tag that M reaches
+and A does not fails the tag rule with an ancestry message. Scheme S's
+merge-tree rule leaves room for one only when the release pull request
+already carries that tag's changes, so it is left as it is.
 
 **Maintainer text.** This entry only. RELEASING's fixed-corpus *Candidate*
 and *Record* bullets, which carry the owner ruling, are not edited.
@@ -370,7 +388,10 @@ changes. Existing assertions edited, all in `tests/test_packaging.py`:
 - `test_readme_install_refs_match_advertised_release`: option 甲 removes the
   README's only `@vX.Y.Z` install reference, so `pinned` also takes the
   versions of the `pipx install checkwash==X.Y.Z` lines, as tags, and a new
-  assertion refuses any CLI install from a tag. `assert pinned` then
+  assertion refuses a README line that installs the CLI through Git from
+  this repository (`git+https://github.com/taipei49314/checkwash@…`), at a
+  tag or any other revision; it does not read `git+ssh` or source-archive
+  URLs, which the README does not use. `assert pinned` then
   requires any install reference instead of a Git or pre-commit one: a
   relaxation, recorded here to be reviewed by reading. checkwash's own check
   reports it: on the range from main `7cd8549c`, with this tree's engine,
@@ -381,18 +402,54 @@ changes. Existing assertions edited, all in `tests/test_packaging.py`:
   read from the base side, so the pull request's PJU receipt, whose Action
   replay must pass at `--fail-on high`, can pass only after an
   owner-approved entry for that key is on main, as #543's were
-  (`e94fe840`). The alternative that needs no exemption, a pre-commit
-  snippet with `rev: vX.Y.Z` in the README, which the test already reads,
-  adds an install route nobody asked for, so it is not taken here.
+  (`e94fe840`). The review built the alternative that needs no exemption,
+  and checkwash passed it: the old test unchanged, the new assertion in a
+  new test, and a pre-commit snippet with `rev: v0.11.0` in the README,
+  which the old test reads. It brings back the README's pre-commit snippet,
+  dropped on 2026-09-06 when the README became a quick introduction, so it
+  is not taken here without Nelson's choice.
 
-New: `tests/test_release_tag_at_action_commit.py` (67 tests) and
+New: `tests/test_release_tag_at_action_commit.py` (79 tests) and
 `tests/test_packaging.py::test_release_action_commit_from_v0_12_0_is_the_tag_commit`.
-The documented test count moves to 22529 collected.
+The documented test count moves to 22541 collected.
 
 **What runs before merge.** On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the targeted release-tool tests,
 the full suite (`pytest tests`, `tests/gates` included), checkwash's own check
 of the pull request's range at `--fail-on high`, and the pull request's PJU
-receipt. The design asks for three Claude review sub-agents on the frozen
-change, and no Argon run. No `src/` change, so no R29 or other differential
-runs. Other platforms: NOT_RUN.
+receipt. No `src/` change, so no R29 or other differential runs. Other
+platforms: NOT_RUN.
+
+**Review.** Three Claude review sub-agents reviewed the frozen `051b608a`,
+one on the code, one on the tests and bypasses, one on the text, with no
+Argon run, as the design set. Claude checked each of their 19 findings
+against the source; all held, none critical or high. The review commit
+fixes or records each:
+
+- a tag of a tag, which peels to A, passed `check --stage tag` while the
+  bridge, which reads the tag object's own target, refuses it after the
+  push: the check now requires the tag object's `object` to be A and its
+  `type` a commit;
+- the message parse read one line where a reader could see two (a Unicode
+  line separator) or miss a key behind an invisible character: item 1;
+- `--tag-source` was first checked after the suite and the builds: item 4;
+- the files A must share with the trusted ref left out
+  `tools/release_inventory.py`, which the bridge loads and audits;
+- the tag records and the verdict engines were bound to A only by the
+  code's shape: the bridge's `validate_tag_records` and
+  `verdict_engine_source` now hold those bindings and run in tests;
+- untested checks, now tested: the tag object's name, the main report's
+  kind, the identity helper's trusted bytes, the capture's ref and tag
+  names, R's native commit, a form feed in `doctor.py`, and a tag source
+  that changes during the collection. Each of 15 mutants, one per check
+  above that the review found untested or the fixes add, fails a test;
+- the published baseline evidence's ancestry still reads A: the risk
+  paragraph above;
+- the text: RELEASING's local checks gave a v0.12.0 command the tool
+  refuses; user documents stated unreleased v0.12.0 behaviour as current;
+  SECURITY.md said the hosted CI matrix runs on every push; RELEASING
+  described a hosted build job that no longer exists, from the tagged
+  commit; the design's offline rerun was dropped without a word; v0.11.0
+  was called the only tag on a merge; the publication template named the
+  event SHA as the build's; and D-196 and the README test were quoted more
+  broadly than they say.

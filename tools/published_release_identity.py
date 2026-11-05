@@ -235,10 +235,13 @@ def release_merge(message):
 
     The message holds exactly one line `Release-Merge: <40 lowercase hex>`. A
     line that starts with that key in another case or after spaces counts as a
-    second one, and a carriage return, which can split a line for a reader, is
-    refused.
+    second one. Any character other than printable ASCII and a line feed is
+    refused: a carriage return or a Unicode line separator can split a line
+    for a reader, and an invisible character can hide the key. The command
+    `tools/own_action_pin.py tag` prints writes neither.
     """
-    require(type(message) is str and "\r" not in message, "release tag message absent or holds a carriage return")
+    require(type(message) is str and all(char == "\n" or " " <= char <= "~" for char in message),
+            "release tag message absent or holds a character other than printable ASCII and a line feed")
     lines = [line for line in message.split("\n") if line.lstrip().lower().startswith("release-merge")]
     require(len(lines) == 1, "the release tag message must hold exactly one Release-Merge line")
     match = RELEASE_MERGE.fullmatch(lines[0])

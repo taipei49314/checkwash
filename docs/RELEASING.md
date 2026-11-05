@@ -848,8 +848,9 @@ under the standing route above. A source edit alone is not a passing receipt.
    `tools/own_action_pin.py check --stage tag --head <M> --base <base> --main-report <report> --trusted <ref>`
    checks the local tag, with the main stage's published report and the
    chain's trusted ref:
-   1. the tag points at A, and A is `M^2^1` with scheme S's one-line
-      relation (the rule below);
+   1. the tag object is named for the release and points at A itself, not
+      at another tag, and A is `M^2^1` with scheme S's one-line relation
+      (the rule below);
    2. its message names M, M is the main report's verified head and the
       remote's `refs/heads/main`: a test-merge commit GitHub makes for an
       open pull request also has A as its `^2^1`;
@@ -1043,9 +1044,11 @@ at A ([D-200](../DECISIONS.md), below).
   `test_check_never_imports_doctor` (D-194).
 - **Local checks**, advisory and not evidence: before collecting,
   `python tools/own_action_pin.py check --stage pr --head <R> --base <base>`;
-  before tagging, `check --stage tag --head <M> --base <base>`, and from
-  v0.12.0 the same with `--main-report` and `--trusted` after the local tag
-  is made and before it is pushed (step 5). The tag
+  before tagging, up to v0.11.x `check --stage tag --head <M> --base <base>`,
+  and from v0.12.0 `tag --head <M> --base <base>`, which runs the same rule
+  and prints the tag command, then, after the local tag is made and before
+  it is pushed, `check --stage tag` with `--main-report` and `--trusted`,
+  which it requires from v0.12.0 (step 5). The tag
   stage applies the rule unconditionally, while at `main` it is skipped, and
   `check` only warns, when M's version equals its advertised version and its
   base's. The announced pin defaults to `ACTION_SHA` in
@@ -1149,7 +1152,10 @@ below, and a tag up to v0.11.x keeps the rule above. No tool accepts either.
   `M^2^1` and name M, and the tag source receipt runs on `--tag-source`, a
   clean checkout of A with the tag fetched, since
   `tools/verify_published_source.py` requires the source commit to be the
-  checked-out one. Its receipt then proves that the tag and A
+  checked-out one. Preflight checks that checkout, clean at A and holding
+  the subject's tag object, before the suite and the builds run, and the
+  stage steps compare it again after them. Its receipt then proves that the
+  tag and A
   agree, no longer that the tag and the build commit M agree: the one-line
   relation of scheme S and the bridge's native reads bind A to M.
 - *The verdict gate.* On a tag run, HEAD is M, the tag points at `HEAD^2^1`,
@@ -1166,7 +1172,10 @@ below, and a tag up to v0.11.x keeps the rule above. No tool accepts either.
   KNOWN-ISSUES-next says so.
 - *What has not run.* The new path has run only on owned synthetic chains
   and owned native metadata. Its first real tag and release event is
-  v0.12.0's, and a failure after the push may cost a v0.12.1.
+  v0.12.0's, and a failure after the push may cost a v0.12.1. Before the
+  push only `check --stage tag` can run: the collector's tag stage starts
+  from the captured subject, and the verdict gate's tag rule reads the
+  pushed tag's public metadata.
 
 **0.12.0 bootstrap.** The 0.12.0 chain is verified from a trusted ref cut
 from main after D-200 merges, as `review/collector-d-011-20261103` was for
@@ -1826,9 +1835,10 @@ is authorized, and no ended-session local workload grant is reused.
 ## Release responsibility checks
 
 - README pipx version and download URL match the explicit advertised
-  public identity, and the README names no CLI install from a tag, whose
-  `doctor` from v0.12.0 rejects that release's own pin (D-200):
-  `test_readme_install_refs_match_advertised_release`.
+  public identity, and the README installs no CLI through Git from this
+  repository (`git+https://github.com/taipei49314/checkwash@…`), since from
+  v0.12.0 a CLI from the tag rejects that release's own pin in `doctor`
+  (D-200): `test_readme_install_refs_match_advertised_release`.
 - Candidate source/package versions agree: `test_version_matches_pyproject`.
 - The Action recommendation is hash-pinned and, since 2026-10-14, advances
   to the newest verified release instead of lagging one release behind:
@@ -1893,18 +1903,23 @@ supplies no such acceptance.
 
 ## What ships with a release
 
-The `release` workflow builds these on a published release, and refuses to
-build if the version and the tag disagree:
+The PJU release collector builds these from each stage's head, the release
+pull request's last commit R at `pr` and then the release merge M, never
+from the commit a v0.12.0 or later tag points to, and refuses if the version
+and the tag disagree. The `release` workflow's `publish-assets` job uploads
+the receipt's verified files to the published Release:
 
-- `checkwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into a fresh
-  venv in CI, which asserts `pip freeze` contains checkwash and nothing else
+- `checkwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into fresh
+  venvs by the collector's visitors, which allow no installed distribution
+  besides checkwash, pip and setuptools
 - `checkwash.pyz` — the single-file build, gated by `tests/test_zipapp.py`
 
 ### Assertion capability qualification
 
-Before uploading release assets or publishing to PyPI, the release workflow
-runs `tools/qualify_assertions.py` on the source, the actual built zipapp and
-the wheel installed into a fresh venv. All three execute the same owned
+Before uploading release assets or publishing to PyPI, the release chain
+requires the receipt's runs of `tools/qualify_assertions.py` on the source,
+the actual built zipapp and the wheel installed into a fresh venv. All three
+execute the same owned
 assertion support contract in `tests/data/javascript_assertion_support.json`
 and the separate `javascript_foundation_mutations.json` supplement through
 real Git commits and the CLI. Each loss must report the expected
@@ -1949,12 +1964,13 @@ python tools/qualify_assertions.py --distribution wheel --artifact dist/checkwas
 python tools/qualify_assertions.py --distribution pyz --artifact dist/checkwash.pyz --output work/assertion-pyz.json
 ```
 
-Fixture analysis is zero-network and never executes fixture tests. CI uses
-build/install tooling separately to create the candidate distributions.
+Fixture analysis is zero-network and never executes fixture tests. The
+collector uses build/install tooling separately to create the candidate
+distributions.
 
 ### pyz reproducibility
 
-The release job builds the zipapp with:
+The collector builds the zipapp with:
 
 ```bash
 python -m zipapp src -m "checkwash.zipapp_entry:run" -o dist/checkwash.pyz -c
@@ -1965,11 +1981,11 @@ tree, same `-m` entry, compressed. It is **not** bit-identical across
 Python versions or zip implementations. Visitors should treat the
 GitHub release asset as the artifact and verify it by running
 `python checkwash.pyz --version` and `python checkwash.pyz demo`.
-`tests/test_zipapp.py` on every push is the gate that the recipe still
-works; the release job is what people download.
+`tests/test_zipapp.py`, in every receipt's full suite, is the gate that the
+recipe still works; the Release asset is what people download.
 
 Workflow `uses:` are hash-pinned (T2.6). `contents: write` exists only
-on the `build` job, only to attach assets to an already-published
+on the `publish-assets` job, only to attach assets to an already-published
 release. PyPI uses OIDC (`id-token: write`) and no stored token.
 
 ## PyPI

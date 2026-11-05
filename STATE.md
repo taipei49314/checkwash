@@ -42,10 +42,10 @@ accepts either rule.
   0.11.0 as the exception, and the disabled hosted workflows note that their
   tag-push path does not follow D-200.
 
-New: `tests/test_release_tag_at_action_commit.py`, 67 tests that run each new
+New: `tests/test_release_tag_at_action_commit.py`, 79 tests that run each new
 check both ways on owned Git chains and owned native metadata, and
 `test_release_action_commit_from_v0_12_0_is_the_tag_commit`; the documented
-count is 22529. A read-only `gh api` read of the real v0.11.0 tag object
+count is 22541. A read-only `gh api` read of the real v0.11.0 tag object
 calibrated the message parse: GitHub's `message` is the tag object's bytes
 after its headers, with LF line breaks. No `src/` change.
 

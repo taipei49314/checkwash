@@ -343,28 +343,29 @@ v0.11.0 Action above. If you stay on v0.7.0 or earlier, treat a pass as
 advisory, review the pull request before merging and keep `comment-pr` off.
 [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
 
-**Which commit is the recommended pin?** The commit the tag points to,
-`git rev-parse 'vX.Y.Z^{commit}'`, except for v0.11.0.
-A release cannot embed its own commit SHA, so from v0.11.0 (D-194) a release
-has two commits: its Action commit, and the release merge, which differs from
-it in one line, `doctor`'s own Action pin, set to the Action commit. The PyPI
-package and the pyz are built from the merge. The Action runs only
-`checkwash check`, which does not import `doctor`, so it runs the same check
-at either commit. A release's `doctor` accepts two Action pins: the one
-recommended before the release and the release's own Action commit. From
-v0.12.0 (D-200) the tag points at the Action commit. v0.11.0's tag points at its merge, so its
-recommended pin, the pin above, is the tag's second parent's parent:
-`git rev-parse 'vX.Y.Z^2^1'`.
+**Which commit is the recommended pin?** For v0.11.0, the release's Action
+commit, the tag's second parent's parent: `git rev-parse 'vX.Y.Z^2^1'`. A
+release cannot embed its own commit SHA, so from v0.11.0 (D-194) a release has
+two commits: its Action commit, and the release merge, which differs from it
+in one line, `doctor`'s own Action pin, set to the Action commit. The PyPI
+package and the pyz are built from the merge, and the v0.11.0 tag points at
+the merge. The Action runs only `checkwash check`, which does not import
+`doctor`, so it runs the same check at either commit. A release's `doctor`
+accepts two Action pins: the one recommended before the release and the
+release's own Action commit. Up to v0.10.0 the pin was the commit the tag
+points to, `git rev-parse 'vX.Y.Z^{commit}'`, and from v0.12.0 (unreleased,
+D-200) it will be again: the tag will point at the Action commit.
 
-From v0.12.0, a CLI installed through Git from a release tag is the Action
-commit's, and its `doctor` rejects that release's own Action pin ("workflow
-analysis incomplete", exit 1). Install the CLI from PyPI or the pyz instead.
+From v0.12.0 (unreleased), a CLI installed through Git from a release tag will
+be the Action commit's, and its `doctor` will reject that release's own Action
+pin ("workflow analysis incomplete", exit 1). Install the CLI from PyPI or the
+pyz.
 
 For the v0.11.0 pin, pin updaters such as Dependabot and Renovate follow the
 `# v0.11.0` comment, so they will propose the tag's commit, which `doctor`
 rejects (inferred from those tools' documentation, not run). For the same
 reason zizmor's `ref-version-mismatch` audit can report the comment (inferred,
-not run). From v0.12.0 the pin is the tag's commit, so neither should happen
+not run). With v0.12.0's pin at the tag's commit, neither should happen
 (inferred, not run). `doctor` 0.10.0 does not accept the 0.11.0 pin, so upgrade
 the CLI and its local hooks first, then the Action pin. The recommended v0.11.0
 Action includes the engine published on 2026-11-04 Asia/Taipei. A CLI upgrade
@@ -433,5 +434,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 22529 tests (collection denominator).
+Alpha pre-release. 22 detectors, 22541 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

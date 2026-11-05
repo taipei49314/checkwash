@@ -484,6 +484,11 @@ class ReleaseCollection:
                         "local tag message names another release merge")
                 require(tag_source is not None, "from v0.12.0 a tag or later stage needs --tag-source, "
                         "a checkout of the tag's commit, the release's Action commit")
+                # A clean checkout of A holding the same tag object, checked
+                # here, before the long steps, and again after them (D-200).
+                ctx["tag_source"] = self.source_snapshot(ctx, tag_source, tagged)
+                require(ctx["reader"].text(ctx["tag_source"][0], "rev-parse", "--verify", tag_ref) == self.subject["tag_object"],
+                        "the --tag-source checkout does not hold the release tag")
             else:
                 require(tag_source is None, "--tag-source is only for v0.12.0 and later tags")
         else:
@@ -506,8 +511,9 @@ class ReleaseCollection:
                 source, before = ctx["source"], ctx["source_before"]
             else:
                 # From v0.12.0 the tag points at the Action commit A: its source
-                # receipt runs on a checkout of A, and its visitor installs A (D-200).
-                source, before = self.source_snapshot(ctx, self.args.tag_source, tagged)
+                # receipt runs on a checkout of A, and its visitor installs A
+                # (D-200). Preflight took the checkout's snapshot.
+                source, before = ctx["tag_source"]
             self.tag_source(ctx, "tag", source, self.subject["tag"], tagged, self.subject["tag_object"])
             visitor = self.visitor(ctx, "tag", "git+" + PUBLIC_GIT + "@" + self.subject["tag"], ctx["project"]["version"],
                                    before, source_identity=tagged)

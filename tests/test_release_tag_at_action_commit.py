@@ -10,6 +10,7 @@ import ast
 import copy
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import re
@@ -18,6 +19,7 @@ import subprocess
 import sys
 from types import SimpleNamespace
 import zipapp
+import zipfile
 
 import pytest
 
@@ -119,8 +121,15 @@ def test_release_merge_reads_its_one_line(message):
     (f"Release-Merge: {MERGE} \n", "is not 'Release-Merge: <40 lowercase hex>'"),
     (f"Release-Merge: {MERGE[:39]}\n", "is not 'Release-Merge: <40 lowercase hex>'"),
     (f" Release-Merge: {MERGE}\n", "is not 'Release-Merge: <40 lowercase hex>'"),
-    (f"Release-Merge: {MERGE}\r\n", "carriage return"),
-    (f"note\rRelease-Merge: {MERGE}\n", "carriage return"),
+    (f"Release-Merge: {MERGE}\r\n", "other than printable ASCII"),
+    (f"note\rRelease-Merge: {MERGE}\n", "other than printable ASCII"),
+    # A reader may break a line where the tools do not, or miss a hidden prefix.
+    (f"Release-Merge: {MERGE}\nnote Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"Release-Merge: {MERGE}\nnote\x85Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"Release-Merge: {MERGE}\nnote\x0bRelease-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"Release-Merge: {MERGE}\n﻿Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"Release-Merge: {MERGE}\n\tRelease-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"CheckWash v0.12.0 — notes\nRelease-Merge: {MERGE}\n", "other than printable ASCII"),
     (None, "absent"),
 ])
 def test_release_merge_refuses_anything_but_one_exact_line(message, needle):
@@ -152,6 +161,8 @@ def test_released_doctor_sets_only_the_own_line_and_only_when_the_pins_are_equal
     for needle, raw in refused.items():
         with pytest.raises(ValueError, match=needle):
             P.released_doctor(raw, action)
+    with pytest.raises(ValueError, match="carriage return or form feed"):
+        P.released_doctor((doctor() + "\x0c\n").encode(), action)
     with pytest.raises(ValueError, match="full commit"):
         P.released_doctor(doctor().encode(), "c" * 39)
 
@@ -257,6 +268,14 @@ def test_a_v0_12_0_tag_that_breaks_the_rule_is_refused(case):
         R.live_subject(native_chain(value, **kwargs), value)
 
 
+def test_a_v0_12_0_tag_needs_the_native_last_commit_it_asked_for():
+    value = release_subject("tag")
+    api = native_chain(value)
+    api.data[PREFIX + "/git/commits/" + R_]["sha"] = "6" * 40
+    with pytest.raises(ValueError, match="does not have one native parent"):
+        R.live_subject(api, value)
+
+
 def test_the_release_event_capture_must_have_run_at_the_tag_commit():
     for workflow in (M_, "e" * 40):
         value = release_subject("release-event", workflow=workflow)
@@ -327,6 +346,14 @@ def test_the_release_event_capture_needs_an_annotated_tag(tmp_path):
     api.data[PREFIX + "/git/ref/tags/v0.12.0"]["object"] = {"type": "commit", "sha": A_}
     with pytest.raises(ValueError, match="annotated public tag required"):
         R.capture(api, capture_env(tmp_path, "v0.12.0", A_))
+    # The ref and the tag object must both be the event's tag.
+    for path, field, value, needle in (
+            (PREFIX + "/git/ref/tags/v0.12.0", "ref", "refs/tags/v0.12.1", "annotated public tag required"),
+            (PREFIX + "/git/tags/" + TAG_OBJECT, "tag", "v0.12.1", "does not point at the release event's commit")):
+        api = native_chain(release_subject("release-event"))
+        api.data[path][field] = value
+        with pytest.raises(ValueError, match=needle):
+            R.capture(api, capture_env(tmp_path, "v0.12.0", A_))
 
 
 # ---------------------------------------------------------------- the release bridge, local
@@ -353,7 +380,30 @@ def test_the_tag_source_and_visitor_bind_the_commit_the_tag_points_at(tmp_path):
     nested = git(root, "commit-tree", c["R"] + "^{tree}", "-p", c["B"], "-p", c["M"], "-m", "merge of a merge")
     with pytest.raises(ValueError, match="does not have one parent"):
         R.tag_commit(root, dict(current, head_sha=nested))
-    assert calls(function("tools/pju_release_bridge.py", "validate_visitors")).count("tag_commit") == 1
+    assert calls(function("tools/pju_release_bridge.py", "validate_tag_records")).count("tag_commit") == 1
+    assert calls(function("tools/pju_release_bridge.py", "validate_visitors")).count("validate_tag_records") == 1
+
+
+@pytest.mark.parametrize("name", ["v0.12.0", "v0.11.9"])
+def test_the_tag_records_are_held_to_the_commit_the_tag_points_at(tmp_path, monkeypatch, name):
+    c = chain(tmp_path / "repo", version=name[1:])
+    root = c["root"]
+    tagged = c["A"] if name == "v0.12.0" else c["M"]
+    current = dict(stage="tag", tag=name, tag_object=TAG_OBJECT, head_sha=c["M"], base_sha=c["B"],
+                   source_tree=git(root, "rev-parse", c["M"] + "^{tree}"))
+    seen = []
+    monkeypatch.setattr(R, "validate_source_receipt", lambda receipt, **kwargs: seen.append(("source", receipt, kwargs)))
+    monkeypatch.setattr(R, "validate_visitor", lambda packet, visitor, exits, source_root, commit, version, *, source_identity:
+                        seen.append(("visitor", visitor, commit, version, source_identity)))
+    visitor = dict(schema_version=1, status="completed", subject=current,
+                   visitor=dict(target="git+https://github.com/" + R.REPOSITORY + ".git@" + name))
+    packet = SimpleNamespace(json={"tag-source.json": {"receipt": "owned"}, "tag-visitor.json": visitor}.__getitem__)
+    records = dict(tag_source="tag-source.json", tag_visitor="tag-visitor.json")
+    assert R.validate_tag_records(packet, records, root, "trusted", "collector", current, name[1:], "exits") == tagged
+    tree = git(root, "rev-parse", tagged + "^{tree}")
+    assert seen == [("source", {"receipt": "owned"}, dict(tag=name, commit=tagged, tag_object=TAG_OBJECT, tree=tree,
+                                                         trusted_root="trusted", collector="collector")),
+                    ("visitor", visitor["visitor"], tagged, name[1:], tagged)]
 
 
 def test_a_v0_12_0_baseline_binds_the_merge_built_pyz_to_its_action_commit(tmp_path):
@@ -369,8 +419,50 @@ def test_a_v0_12_0_baseline_binds_the_merge_built_pyz_to_its_action_commit(tmp_p
     with pytest.raises(ValueError, match="pins differ"):
         R.engine_source_members(unclean["root"], unclean["A"], pin)
     verdict = function("tools/pju_release_bridge.py", "validate_verdict")
-    assert "engine_source_members" in calls(verdict)
+    assert "verdict_engine_source" in calls(verdict)
     assert not [node for node in ast.walk(verdict) if isinstance(node, ast.Constant) and node.value == "src/checkwash"]
+
+
+def engine_pyz(root, commit):
+    """A pyz whose package is the commit's `src/checkwash`."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("__main__.py", "owned\n")
+        for name, raw in sorted(R.B.tree_files(root, commit, "src/checkwash").items()):
+            archive.writestr("checkwash/" + name, raw)
+    return buffer.getvalue()
+
+
+def test_a_verdict_engine_is_held_to_its_pin_and_its_source(tmp_path):
+    c = chain(tmp_path / "repo", version="0.12.0")
+    root = c["root"]
+    built, own = engine_pyz(root, c["M"]), engine_pyz(root, c["A"])
+
+    def run(role, raw, commit, pins):
+        packet = SimpleNamespace(raw={"engine.pyz": raw}.__getitem__,
+                                 json={"q.json": {"artifact_sha256": R.digest(raw)}}.__getitem__,
+                                 manifest={"records": {"qualifications": {"pyz": "q.json"}}})
+        item = dict(source_sha=commit, pyz="engine.pyz", sha256=R.digest(raw), bytes=len(raw), runtime_path="owned")
+        return R.verdict_engine_source(packet, root, role, item, pins, c["M"])
+
+    def pins(raw, name):
+        pin = dict(tag=name, version=name[1:], commit=c["A"], sha256=R.digest(raw), size=len(raw))
+        return {"baseline": pin, "canary": {"old": pin, "new": pin}}
+
+    # A v0.12.0 pin's commit is A, and its pyz is built from M, A's tree with doctor's own line set to A.
+    commit, raw, members = run("baseline", built, c["A"], pins(built, "v0.12.0"))
+    assert (commit, raw) == (c["A"], built) and "checkwash/doctor.py" in members
+    with pytest.raises(ValueError, match="verdict engine archive/source members differ"):
+        run("baseline", own, c["A"], pins(own, "v0.12.0"))
+    # Before v0.12.0 the pinned commit's own tree is the pyz's, for the baseline and the canaries.
+    for role in ("baseline", "canary-old", "canary-new"):
+        assert run(role, own, c["A"], pins(own, "v0.11.9"))[0] == c["A"]
+        with pytest.raises(ValueError, match="verdict engine archive/source members differ"):
+            run(role, built, c["A"], pins(built, "v0.11.9"))
+    # The candidate is the head's tree and its qualified pyz.
+    assert run("candidate", built, c["M"], pins(own, "v0.12.0"))[0] == c["M"]
+    with pytest.raises(ValueError, match="verdict engine source mismatch"):
+        run("candidate", built, c["A"], pins(own, "v0.12.0"))
 
 
 # ---------------------------------------------------------------- the verdict gate
@@ -541,19 +633,50 @@ def collector_case(tmp_path, name, target, lines=RELEASE_MESSAGE, stage="tag"):
     helpers = {path: {"sha256": "owned"} for path in ("tools/verdict_gate.py", "tools/published_release_identity.py",
                                                        "tools/verify_published_source.py", "tools/qualify_zipapp.py")}
     ctx = dict(source_before=helpers, trusted_before=helpers, source=c["root"], reader=Reader(),
-               project={"version": name[1:]},
+               project={"version": name[1:]}, output=tmp_path / "out", scratch=tmp_path / "scratch",
                manifest={"runtime": {"os": "Windows", "python_version": "3.11.9", "dependencies": {"twine": "owned"}}})
     return c, value, ctx
+
+
+def tag_source_checkout(tmp_path, c):
+    """A clean clone of the chain at A, with its tags."""
+    path = tmp_path / "tag-source"
+    git(tmp_path, "clone", "-q", str(c["root"]), str(path))
+    git(path, "checkout", "-q", "--detach", c["A"])
+    for key, value in {"user.name": "Owned tag source", "user.email": "fixture@example.invalid"}.items():
+        git(path, "config", key, value)
+    return path
 
 
 @pytest.mark.parametrize("stage", ["tag", "release-event"])
 def test_the_collector_checks_a_v0_12_0_tag_on_the_action_commit(tmp_path, stage):
     c, value, ctx = collector_case(tmp_path, "v0.12.0", "A", stage=stage)
-    with_source = collection(tmp_path / "a", value, tag_source=tmp_path / "tag-source")
+    with_source = collection(tmp_path / "a", value, tag_source=tag_source_checkout(tmp_path, c))
     with_source.preflight(ctx)
     assert with_source.tag_commit(ctx) == c["A"]
     with pytest.raises(ValueError, match="needs --tag-source"):
         collection(tmp_path / "b", value).preflight(ctx)
+
+
+def test_the_collector_checks_the_tag_source_before_the_long_steps(tmp_path):
+    c, value, ctx = collector_case(tmp_path, "v0.12.0", "A")
+    path = tag_source_checkout(tmp_path, c)
+    coll = collection(tmp_path / "a", value, tag_source=path)
+    coll.preflight(ctx)
+    assert ctx["tag_source"] == (path, coll.action.snapshot(ctx["reader"], path, c["A"]))
+    # A checkout at M, a dirty one and one whose tag is another object are refused at once.
+    git(path, "checkout", "-q", "--detach", c["M"])
+    with pytest.raises(ValueError, match="checkout HEAD mismatch"):
+        collection(tmp_path / "b", value, tag_source=path).preflight(ctx)
+    git(path, "checkout", "-q", "--detach", c["A"])
+    (path / "stray.txt").write_text("stray\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="dirty source checkout"):
+        collection(tmp_path / "c", value, tag_source=path).preflight(ctx)
+    (path / "stray.txt").unlink()
+    git(path, "tag", "-d", "v0.12.0")
+    tag(path, "v0.12.0", c["A"], *filled(RELEASE_MESSAGE, c, "v0.12.0"), "again")
+    with pytest.raises(ValueError, match="does not hold the release tag"):
+        collection(tmp_path / "d", value, tag_source=path).preflight(ctx)
 
 
 COLLECTOR_REFUSALS = {
@@ -591,10 +714,7 @@ def test_the_tag_source_receipt_and_visitor_bind_the_tag_commit(tmp_path, name):
     coll = collection(tmp_path / "collection", value, tag_source=tag_source if at_action else None)
     seen = []
     snapshot = {"src/checkwash/doctor.py": {"sha256": "A's doctor"}}
-
-    def source_snapshot(ctx, path, commit):
-        seen.append(("snapshot", path, commit))
-        return path, snapshot
+    later = [snapshot]
 
     def tag_source_receipt(ctx, label, source, tag_name, commit, tag_object):
         seen.append(("tag-source", source, commit, tag_object))
@@ -605,19 +725,26 @@ def test_the_tag_source_receipt_and_visitor_bind_the_tag_commit(tmp_path, name):
 
     def after(reader, path, commit):
         seen.append(("after", path, commit))
-        return snapshot
+        return later[0]
 
     coll.preflight = lambda ctx: None
     coll.qualify_zipapp = coll.verdict = coll.advertised = lambda ctx, *args: None
-    coll.source_snapshot, coll.tag_source, coll.visitor = source_snapshot, tag_source_receipt, visitor
+    coll.tag_source, coll.visitor = tag_source_receipt, visitor
     coll.action = SimpleNamespace(snapshot=after)
     ctx.update(run=lambda *args, **kwargs: b"", output=tmp_path / "out", py=["python"], wheel="w", sdist="s",
                source_before={"src/checkwash/doctor.py": {"sha256": "M's doctor"}})
+    if at_action:
+        # Preflight took the checkout's snapshot.
+        ctx["tag_source"] = (tag_source, snapshot)
     coll.stage_steps(ctx)
     target = "git+" + COLLECT.PUBLIC_GIT + "@" + name
     if at_action:
-        assert seen == [("snapshot", tag_source, c["A"]), ("tag-source", tag_source, c["A"], value["tag_object"]),
+        assert seen == [("tag-source", tag_source, c["A"], value["tag_object"]),
                         ("visitor", target, snapshot, c["A"]), ("after", tag_source, c["A"])]
+        # The checkout must not change while the collection runs.
+        later[0] = {"src/checkwash/doctor.py": {"sha256": "changed"}}
+        with pytest.raises(ValueError, match="tag source changed"):
+            coll.stage_steps(ctx)
     else:
         assert seen == [("tag-source", c["root"], c["M"], value["tag_object"]),
                         ("visitor", target, ctx["source_before"], c["M"])]
@@ -635,6 +762,19 @@ def release_repository(root):
     r = commit(root, "R")
     m = git(root, "commit-tree", r + "^{tree}", "-p", b, "-p", r, "-m", "merge")
     return dict(root=root, B=b, A=a, R=r, M=m)
+
+
+def test_the_capture_files_are_the_helpers_the_release_tools_load_or_audit():
+    def names(node):
+        return {"tools/" + item.value.removeprefix("tools/") for item in ast.walk(node)
+                if isinstance(item, ast.Constant) and type(item.value) is str and item.value.endswith(".py")}
+
+    trusted = names(function("tools/pju_release_bridge.py", "verify_admitted"))
+    assert "tools/published_release_identity.py" in trusted
+    tree = ast.parse((ROOT / "tools/collect_pju_release.py").read_text(encoding="utf-8"))
+    preflight = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "preflight")
+    audited = names(preflight) | set(R.B.UTILITIES) | {"tools/receipt_execution_route.py"}
+    assert set(T.CAPTURE_FILES) == trusted | audited | {".github/workflows/release.yml"}
 
 
 def main_report(path, c, **changes):
@@ -712,11 +852,24 @@ def test_the_pre_push_tag_check_refuses_each_broken_link(tmp_path, capsys):
         git(root, "tag", "-d", "v0.12.0")
         tag(root, "v0.12.0", target, *lines)
         refused(capsys, args, needle)
+    # A tag of a tag peels to A, but the bridge reads the tag object's own target.
+    git(root, "tag", "-d", "v0.12.0")
+    tag(root, "inner", c["A"], "inner")
+    tag(root, "v0.12.0", "inner", "CheckWash v0.12.0", f"Release-Merge: {c['M']}")
+    git(root, "tag", "-d", "inner")
+    refused(capsys, args, "does not point at the Action commit")
+    # A tag object named for another release.
+    git(root, "tag", "-d", "v0.12.0")
+    body = (f"object {c['A']}\ntype commit\ntag v0.12.1\ntagger Owned <owned@example.invalid> 0 +0000\n\n"
+            f"CheckWash v0.12.0\n\nRelease-Merge: {c['M']}\n")
+    misnamed = subprocess.run(["git", "-C", str(root), "mktag"], input=body.encode(), capture_output=True, check=True)
+    git(root, "update-ref", "refs/tags/v0.12.0", misnamed.stdout.decode().strip())
+    refused(capsys, args, "is not named v0.12.0")
     git(root, "tag", "-d", "v0.12.0")
     tag(root, "v0.12.0", c["A"], "CheckWash v0.12.0", f"Release-Merge: {c['M']}")
     # 2. M is the main stage report's verified head and the remote's main; a
     #    test-merge commit of an open pull request also has A as its ^2^1.
-    for changes in (dict(status="failed"), dict(repository="other/repo"),
+    for changes in (dict(kind="checkwash.pju-release-verification.v2"), dict(status="failed"), dict(repository="other/repo"),
                     dict(subject=dict(stage="tag", head_sha=c["M"], base_sha=c["B"])),
                     dict(subject=dict(stage="main", head_sha=c["R"], base_sha=c["B"])),
                     dict(subject=dict(stage="main", head_sha=c["M"], base_sha=c["A"]))):

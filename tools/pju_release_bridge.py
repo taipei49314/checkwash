@@ -444,6 +444,33 @@ def engine_source_members(source_root, commit, pin):
     return {"checkwash/" + name: {"bytes": len(contents), "sha256": digest(contents)} for name, contents in source.items()}
 
 
+def verdict_engine_source(packet, source_root, role, item, pins, head):
+    """A verdict engine's source commit, pyz bytes and members, held to its pin and source.
+
+    The candidate's are the head's `src/checkwash` and its qualified pyz; the
+    baseline's and the canaries' are their pins'. From a v0.12.0 or later pin,
+    the pinned commit is the tag's, the Action commit A, and the members are
+    A's with doctor's own Action pin line set to A (D-200, option A).
+    """
+    exact_keys(item, "source_sha pyz sha256 bytes runtime_path", "verdict engine")
+    pin = None if role == "candidate" else pins["baseline"] if role == "baseline" else pins["canary"]["old" if role == "canary-old" else "new"]
+    expected_commit = head if pin is None else pin["commit"]
+    require(item["source_sha"] == expected_commit, "verdict engine source mismatch")
+    raw = packet.raw(item["pyz"])
+    require(type(item["bytes"]) is int and item["bytes"] == len(raw) and item["sha256"] == digest(raw), "verdict pyz bytes mismatch")
+    if pin is not None:
+        require(item["sha256"] == pin["sha256"] and item["bytes"] == pin["size"], "verdict historical pyz pin mismatch")
+    else:
+        q = packet.json(packet.manifest["records"]["qualifications"]["pyz"])
+        require(item["sha256"] == q["artifact_sha256"], "verdict candidate is not qualified artifact")
+    members = B.archive_members(raw, "engine.pyz")
+    expected_members = engine_source_members(source_root, expected_commit, pin)
+    require({name: row for name, row in members.items() if name.startswith("checkwash/")
+             and "__pycache__" not in PurePosixPath(name).parts and not name.endswith(".pyc")} == expected_members,
+            "verdict engine archive/source members differ")
+    return expected_commit, raw, members
+
+
 def validate_verdict(packet, source_root, trusted_root, collector, desc, api, exits):
     records = packet.manifest["records"]["release"]
     value = packet.json(records["verdict"])
@@ -494,22 +521,7 @@ def validate_verdict(packet, source_root, trusted_root, collector, desc, api, ex
         return raw[part["offset"]:part["offset"] + part["bytes"]]
 
     for role, item in inventory["engines"].items():
-        exact_keys(item, "source_sha pyz sha256 bytes runtime_path", "verdict engine")
-        pin = None if role == "candidate" else pins["baseline"] if role == "baseline" else pins["canary"]["old" if role == "canary-old" else "new"]
-        expected_commit = head if pin is None else pin["commit"]
-        require(item["source_sha"] == expected_commit, "verdict engine source mismatch")
-        raw = packet.raw(item["pyz"])
-        require(type(item["bytes"]) is int and item["bytes"] == len(raw) and item["sha256"] == digest(raw), "verdict pyz bytes mismatch")
-        if pin is not None:
-            require(item["sha256"] == pin["sha256"] and item["bytes"] == pin["size"], "verdict historical pyz pin mismatch")
-        else:
-            q = packet.json(packet.manifest["records"]["qualifications"]["pyz"])
-            require(item["sha256"] == q["artifact_sha256"], "verdict candidate is not qualified artifact")
-        members = B.archive_members(raw, "engine.pyz")
-        expected_members = engine_source_members(source_root, expected_commit, pin)
-        require({name: row for name, row in members.items() if name.startswith("checkwash/")
-                 and "__pycache__" not in PurePosixPath(name).parts and not name.endswith(".pyc")} == expected_members,
-                "verdict engine archive/source members differ")
+        expected_commit, raw, members = verdict_engine_source(packet, source_root, role, item, pins, head)
         require(not vg.archive_extras(packet.root / item["pyz"])
                 and members["__main__.py"]["sha256"] == digest(vg.ZIPAPP_MAIN), "verdict pyz extras/entrypoint")
         record = value["engines"][role]
@@ -667,6 +679,24 @@ def validate_network(packet):
     return names
 
 
+def validate_tag_records(packet, records, source_root, trusted_root, collector, current, version, exits):
+    """The tag source receipt and the tag visitor, bound to the commit the tag points at.
+
+    Up to v0.11.x that is the head, the release merge M; from v0.12.0 the
+    Action commit A = M^2^1 and its tree (D-200).
+    """
+    tagged, tagged_tree = tag_commit(source_root, current)
+    validate_source_receipt(packet.json(records["tag_source"]), tag=current["tag"], commit=tagged,
+        tag_object=current["tag_object"], tree=tagged_tree, trusted_root=trusted_root, collector=collector)
+    visitor = packet.json(records["tag_visitor"])
+    exact_keys(visitor, "schema_version status subject visitor", "tag visitor")
+    require(type(visitor["schema_version"]) is int and visitor["schema_version"] == 1
+            and visitor["status"] == "completed" and same(visitor["subject"], current), "tag visitor subject differs")
+    validate_visitor(packet, visitor["visitor"], exits, source_root, tagged, version, source_identity=tagged)
+    require(visitor["visitor"]["target"] == "git+https://github.com/" + REPOSITORY + ".git@" + current["tag"], "tag visitor target differs")
+    return tagged
+
+
 def validate_visitors(packet, source_root, trusted_root, collector, desc, exits, artifacts):
     manifest, records = packet.manifest, packet.manifest["records"]["release"]
     exact_keys(records, "subject verdict verdict_inventory advertised tag_source tag_visitor publication", "release-specific records")
@@ -692,15 +722,7 @@ def validate_visitors(packet, source_root, trusted_root, collector, desc, exits,
     if current["stage"] in ("pr", "main"):
         require(records["tag_source"] is records["tag_visitor"] is records["publication"] is None, "pre-tag stage claims future tag/publication")
     else:
-        tagged, tagged_tree = tag_commit(source_root, current)
-        validate_source_receipt(packet.json(records["tag_source"]), tag=current["tag"], commit=tagged,
-            tag_object=current["tag_object"], tree=tagged_tree, trusted_root=trusted_root, collector=collector)
-        visitor = packet.json(records["tag_visitor"])
-        exact_keys(visitor, "schema_version status subject visitor", "tag visitor")
-        require(type(visitor["schema_version"]) is int and visitor["schema_version"] == 1
-                and visitor["status"] == "completed" and same(visitor["subject"], current), "tag visitor subject differs")
-        validate_visitor(packet, visitor["visitor"], exits, source_root, tagged, version, source_identity=tagged)
-        require(visitor["visitor"]["target"] == "git+https://github.com/" + REPOSITORY + ".git@" + current["tag"], "tag visitor target differs")
+        validate_tag_records(packet, records, source_root, trusted_root, collector, current, version, exits)
         if current["stage"] != "public-visitor":
             require(records["publication"] is None, "pre-public receipt claims public distribution installs")
     if current["stage"] == "public-visitor":
