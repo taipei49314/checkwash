@@ -1,6 +1,72 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-05 (receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-06 (from v0.12.0 the release tag is to point at the release's Action commit A and name the release merge M, and the README installs the CLI only from PyPI and the pyz; D-200 is proposed, the change is not merged, and checkwash's own check blocks on the README test's intended relaxation until an owner-approved exemption is on main; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-06: from v0.12.0 the release tag points at the Action commit (D-200, proposed)
+
+On 2026-11-02 Nelson approved pointing the release tag at the Action commit
+A from 0.12 (D-196 item 3), with the design to go to him first. Claude's
+design went to him on 2026-11-05. Asked how to handle a CLI installed from
+the tag, whose `doctor` rejects its own release's pin, he chose the option
+Claude wrote, 「甲：拿掉那行（建議）」, at about 17:40:16Z, and at 17:42:17Z the
+button 「開始實作」. Claude wrote the questions and the options. D-200 quotes
+them and is proposed in this change for Nelson to approve by name.
+
+From v0.12.0 a release tag points at A = `M^2^1`, and its message names the
+release merge M on one line, `Release-Merge: <M>`. M stays the head of every
+release stage and the commit the distributions are built from. Up to v0.11.x
+the tag points at M, as before. One boundary, in
+`tools/published_release_identity.py`, serves every tool, and no tool
+accepts either rule.
+
+- The release bridge reads M's and R's commit objects at `tag` and later,
+  requires the tag to peel to A and its message to name M, and at
+  `release-event` requires the capture's workflow commit to be A. The
+  release-event capture reads M from the tag's message, checks `M^2^1`
+  against the event's commit and records M as the head, with no new
+  endpoint. The tag source receipt and the tag visitor bind A.
+- The collector checks the local tag the same way. From v0.12.0 it takes
+  `--tag-source`, a checkout of A, for the tag source receipt and visitor.
+- The verdict gate's tag rule requires the tag at `HEAD^2^1` and its message
+  to name HEAD. From a v0.12.0 or later baseline pin, the pyz's members must
+  equal A's `src/checkwash` with `doctor.py`'s own pin line set to A, and
+  only when A's two pin lines are equal; the release bridge applies the same
+  rule.
+- `tools/own_action_pin.py tag` prints the tag command. From v0.12.0
+  `check --stage tag` checks, before the push, the local tag, the main
+  stage's report and the remote's main, and A's bytes of the files the
+  release-event capture runs against the trusted ref.
+- `test_packaging` checks the Action pin in three eras. The README no longer
+  offers an install from the release tag, and its pin section and
+  KNOWN-ISSUES-next say why. The release documents describe 0.12 with
+  0.11.0 as the exception, and the disabled hosted workflows note that their
+  tag-push path does not follow D-200.
+
+New: `tests/test_release_tag_at_action_commit.py`, 67 tests that run each new
+check both ways on owned Git chains and owned native metadata, and
+`test_release_action_commit_from_v0_12_0_is_the_tag_commit`; the documented
+count is 22529. A read-only `gh api` read of the real v0.11.0 tag object
+calibrated the message parse: GitHub's `message` is the tag object's bytes
+after its headers, with LF line breaks. No `src/` change.
+
+Status: branch `claude/tag-at-action-commit-20261106` from main `7cd8549c`;
+not pushed, not merged. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
+2026-11-06 Asia/Taipei: the full suite (`pytest tests`, `tests/gates`
+included, xdist `-n 8`), whose JUnit testsuite counts `tests="22596"`:
+22529 testcase entries, 22504 passed and 25 skipped, plus 67 subtests,
+with 0 failures and 0 errors, on the final tree before a README reflow and
+two comment edits; after them, the 61 test files that read the README, the
+documents, DECISIONS, STATE, the verdict pins or the workflows: 5474 passed
+and 14 existing skips, plus 36 subtests, with 0 failures. checkwash's own
+check of the range from main at `--fail-on high`, with this tree's engine,
+whose `src/` is main's, blocks: one high finding, `SUBJECT_NORMALIZED` on
+`test_readme_install_refs_match_advertised_release`, the relaxation option
+甲 makes, and five warnings. The pull request's receipt can pass only after
+an owner-approved exemption for that key is on main (D-200). Not run: the
+published v0.11.0 pyz's check of the range, the review, the pull request's
+PJU receipt, other platforms, and any real tag or release event: the new
+path first runs for real at 0.12.0.
 
 ## 2026-11-05: receipts spread over the receipt host's cores (D-198)
 

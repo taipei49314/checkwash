@@ -372,7 +372,18 @@ changes. Existing assertions edited, all in `tests/test_packaging.py`:
   versions of the `pipx install checkwash==X.Y.Z` lines, as tags, and a new
   assertion refuses any CLI install from a tag. `assert pinned` then
   requires any install reference instead of a Git or pre-commit one: a
-  relaxation, recorded here to be reviewed by reading.
+  relaxation, recorded here to be reviewed by reading. checkwash's own check
+  reports it: on the range from main `7cd8549c`, with this tree's engine,
+  whose `src/` is main's, it blocks with one finding at high,
+  `SUBJECT_NORMALIZED` on this test (key
+  `SUBJECT_NORMALIZED/tests/test_packaging.py/test_readme_install_refs_match_advertised_release/v2:3aba30218692c60c75aa029a6b5027befa2bf3a4326425b921397c84cb3f30a2`,
+  for this before and after pair), and five warnings. The allow file is
+  read from the base side, so the pull request's PJU receipt, whose Action
+  replay must pass at `--fail-on high`, can pass only after an
+  owner-approved entry for that key is on main, as #543's were
+  (`e94fe840`). The alternative that needs no exemption, a pre-commit
+  snippet with `rev: vX.Y.Z` in the README, which the test already reads,
+  adds an install route nobody asked for, so it is not taken here.
 
 New: `tests/test_release_tag_at_action_commit.py` (67 tests) and
 `tests/test_packaging.py::test_release_action_commit_from_v0_12_0_is_the_tag_commit`.
