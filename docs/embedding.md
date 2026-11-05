@@ -153,13 +153,14 @@ release pull request reports `checkwash_version` `0.11.0`.
 
 - **A new escalator label,** `REPAIR_EVIDENCE_REFUSED` (D-199). E1 prints it
   on a finding whose rule takes no repair evidence and that a production
-  change reached as evidence: in a Python test or conftest
+  change reached as evidence: in a `.py` file, in practice a test or
+  conftest, and for an import-shadow stand-in wherever it is reported,
   `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
   `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`, `TEST_PATCHES_SUBJECT`,
   `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED`
   and `EXPECTED_VALUE_DERIVED`; in a JS/TS test `ASSERT_WEAKENED`,
-  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED` and a `TEST_DISABLED` marker on
-  a live test. It comes after `COLLECTION_CONTROL_UNEXPLAINED` and
+  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED` and a `TEST_DISABLED` that is
+  no removal: a marker on a live test, or a table left with no row to run. It comes after `COLLECTION_CONTROL_UNEXPLAINED` and
   `OPAQUE_PROD_CHANGE_NOT_EVIDENCE` and before `PROD_CHANGE_NOT_EVIDENCE`.
   Labels are outside the fingerprint: findings version 2 and IR version 3
   do not change.
@@ -169,8 +170,9 @@ release pull request reports `checkwash_version` `0.11.0`.
   corpus's 3,600 commits pass → block (7 Python, 11 JS/TS) and 53 of
   D-088's 1,263, none adjudicated; an existing exemption keeps its
   fingerprint and still applies. D8 also stops holding a parametrize row
-  marked off with `marks=skip`, or a plain test wrapped in an empty or
-  uncountable table, beside a removed symbol: neither is a removal (D-199).
+  marked off with `marks=skip`, rows deleted beside one, or a table left
+  with no row to run (a plain test wrapped in an empty parameter set among
+  them), beside a removed symbol: none is a removal (D-199).
 
 ### v0.10.0 to v0.11.0
 

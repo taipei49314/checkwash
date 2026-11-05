@@ -223,8 +223,9 @@ evidence at all, and neither does a weakened, loosened or skipped JS/TS one
 assertion on it, a test rewritten beside a behaviour change. Each needs a
 reviewed exemption. A rewritten expected value or a substituted assertion
 still takes the evidence, a weakening respelled as one of them included,
-and in JS/TS so do a removed assertion or test, a test parked in dead code
-and a stand-in for the code under test
+and so does a test deletion that a renamed private symbol escorts; in JS/TS
+so do a removed assertion or test, deleted parametrize rows, a test parked
+in dead code and a stand-in or subject change
 ([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
 Read the [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
 and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
@@ -440,5 +441,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 22481 tests (collection denominator).
+Alpha pre-release. 22 detectors, 22489 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

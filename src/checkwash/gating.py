@@ -20,6 +20,7 @@ from checkwash.findings import (
     SHAPE_GUARD_WEAKENED,
     SHAPE_INERT_MARK,
     SHAPE_PARAM_CASES_REMOVED,
+    SHAPE_UNIT_REMOVED,
     Finding,
 )
 from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_false, unit_is_live
@@ -97,8 +98,10 @@ OPAQUE_REFUSED_RULES: frozenset[str] = frozenset()
 # weaken, delete or skip the oracle, loosen its tolerance, swallow it in a
 # broad except, patch the subject, normalize it, change its input or derive
 # the expectation from it. For a finding in a `.py` file every such rule
-# refuses: in practice a test or conftest, and an import-shadow stand-in
-# reported on the production module it shadows. The expectation family
+# refuses: in practice a test or conftest. An import-shadow stand-in is a
+# Python finding wherever it is reported, on the production module it
+# shadows or on the pytest configuration or runner script that lets it win
+# (apply_gates). The expectation family
 # (EXPECTED_VALUE_CHANGED, EXPECTATION_DEFINITION_CHANGED, ASSERT_SUBSTITUTED,
 # EXPECTED_VALUE_HARDCODED) keeps the credit, because a behaviour change
 # rewrites expectations and repair evidence is how an honest one is told
@@ -117,10 +120,10 @@ REPAIR_REFUSED_PYTHON: frozenset[str] = frozenset({
 })
 # For a finding in any other file, which is a JS/TS test (whose production
 # code checkwash never parses) or a unit-less stand-in reported on
-# `package.json` or `pytest.ini`, only the loosening shapes refuse: a
-# weakened or loosened assertion, a broad catch, and a TEST_DISABLED that is
-# no removal shape (`_prod_removal_shape` is false: a marker on a live test,
-# rows marked off, or a plain test wrapped in an empty or uncountable table).
+# `package.json`, only the loosening shapes refuse: a weakened or loosened
+# assertion, a broad catch, and a TEST_DISABLED that is no removal shape
+# (`_prod_removal_shape` is false: a marker on a live test, or a table left
+# with no row to run, a plain test wrapped in an empty table among them).
 # A deleted test, deleted parametrize rows and ASSERT_REMOVED keep the
 # credit: JS/TS has no D8 or D10 to tell a removed feature's tests apart.
 # Refusing those too would block 44 more of the fixed corpus's 1,800 JS/TS
@@ -294,37 +297,44 @@ def _prod_removal_shape(f: Finding, unit: Unit | None) -> bool:
     both events at once, so this reads Finding.shape, never the English
     message (E2 / review 2026-08-11 Issue 3).
 
+    The unit that disappeared is the finding's own shape, not the unit the
+    index returns: two JS/TS tests can share a title, and the index keeps the
+    last, so a skip on one beside the deletion of its namesake read as a
+    removal (D-199 second review).
+
     Rows "left" only when they were deleted from a table the test already
-    had, and the table that remains can be counted (D-199 review). The count
-    rule also counts as lost a row marked off with `pytest.param(...,
-    marks=skip)` and a plain test wrapped in a table of no rows or of rows
-    that cannot be counted (`test.each([])`, 428.Q2a); both disable a live
-    test in place, so neither is a removal. Before D-199 both read as one,
-    which let D8 hold a marked-off row beside a removed symbol, against its
-    own SPEC row ("never an added marker").
+    had, none was marked off, and the table still runs a row (D-199 review).
+    The count rule also counts as lost a row marked off with `pytest.param(...,
+    marks=skip)`, a plain test wrapped in a table of no rows (`test.each([])`,
+    428.Q2a, and Python's proven empty parameter set, which gives the plain
+    side a count of one) and a table emptied where it stands; each disables a
+    live test in place, so none is a removal. Before D-199 they read as one,
+    which let D8 hold them beside a removed symbol, against its own SPEC row
+    ("never an added marker"). Two readings stay as they were: a JS/TS plain
+    test paired with a table whose rows cannot be counted (428.Q2a) is a
+    removal, because tests folded into an imported table read the same way;
+    and a row marked off where the rows cannot be paired (a column added, the
+    table moved into a constant or a function) is counted as deleted.
     """
-    if unit is None:
-        return False
-    if unit.after is None and unit.before is not None:
+    if f.shape == SHAPE_UNIT_REMOVED:
         return True
-    delta = unit.delta
-    if delta is None or f.shape != SHAPE_PARAM_CASES_REMOVED:
+    if f.shape != SHAPE_PARAM_CASES_REMOVED or unit is None or unit.delta is None:
         return False
-    return (
-        delta.param_cases_removed - delta.param_cases_disabled > 0
-        and unit.before is not None
-        and unit.before.param_cases is not None
-        and unit.after is not None
-        and not unit.after.param_rows_unknown
-    )
+    before, after, delta = unit.before, unit.after, unit.delta
+    if before is None or after is None or delta.param_cases_removed <= 0 or delta.param_cases_disabled:
+        return False
+    if after.param_rows_unknown:
+        return before.param_cases is None
+    return before.param_cases is not None and after.param_cases != 0
 
 
 def _refuses_repair_evidence(f: Finding, unit: Unit | None, python: bool) -> bool:
     """Does this oracle finding refuse every repair evidence (D-199)?
 
-    A Python test or conftest refuses for each rule in REPAIR_REFUSED_PYTHON.
-    A JS/TS test refuses for REPAIR_REFUSED_JS and for a TEST_DISABLED that
-    is not a removal shape, the same split D8 reads.
+    A Python finding (one in a `.py` file, or an import-shadow stand-in
+    wherever it is reported) refuses for each rule in REPAIR_REFUSED_PYTHON.
+    Any other finding refuses for REPAIR_REFUSED_JS and for a TEST_DISABLED
+    that is not a removal shape, the same split D8 reads.
     """
     if python:
         return f.rule in REPAIR_REFUSED_PYTHON
@@ -696,6 +706,11 @@ def apply_gates(
     # from the IR so gating stays a pure function of it. A JS/TS test is
     # judged as a test too, and must not be mistaken for a Python one (#419).
     python_files = {f.path for f in ir.files if f.language == "python"}
+    # An import-shadow stand-in (shadow.py, Python's import resolution) is
+    # reported on the file whose change lets it win: the production module,
+    # or a pytest configuration or runner script. It is a Python finding
+    # wherever it lands (D-199 second review).
+    shadow_paths = {entry[0] for entry in ir.globals.runtime_subject_shadows}
     file_constants = {f.path: f.constants for f in ir.files}
     proven_assertions, proven_units = arrival_credits(
         ir, lambda file, side: unit_is_live(side, file_constants.get(file.path)))
@@ -1030,8 +1045,9 @@ def apply_gates(
         # and conftest commits, 53. The moved commits remove deprecated APIs
         # and their tests, drop old Python versions, or rewrite tests beside a
         # behaviour change; a few are detector misreadings that repair evidence
-        # used to absorb (httpx 0296c2bb, requests 2a6f290b). An exemption or
-        # a maintainer override releases each one.
+        # used to absorb (httpx 0296c2bb, requests 2a6f290b). A reviewed
+        # exemption, merged to the base first, or a maintainer merging past
+        # the required check releases each one.
         #
         # What stays open, stated plainly (THREATMODEL item 4, rows 56, 93,
         # 130, 131), each beside a no-op edit unless said otherwise:
@@ -1041,13 +1057,18 @@ def apply_gates(
         #   expected value changed from 4 to True) and an expectation computed
         #   from the subject through a module alias (`calc.compute(2)`);
         # - a renamed private symbol escorting a test deletion into D8;
-        # - in JS/TS: a deleted test or assertion, a test parked where no code
-        #   runs (`if (false) { test(...) }` reads as a deletion), and the
-        #   stand-in and subject rules (`vi.mock`, a `test.each` input cell);
-        # - in Python, an import-shadow stand-in reported on `pytest.ini`.
+        # - D8 counting a row marked off as deleted where the rows cannot be
+        #   paired (a column added, the table moved into a constant);
+        # - in JS/TS: a deleted test or assertion (a plain test paired with a
+        #   table whose rows cannot be counted reads as one, as tests folded
+        #   into an imported table do), a test parked where no code runs
+        #   (`if (false) { test(...) }` reads as a deletion), and the
+        #   stand-in and subject rules (`vi.mock`, a `test.each` input cell).
         # Only executing the old tests against the new code would close the
         # no-op routes, and checkwash never executes your code.
-        refused_repair = has_evidence and _refuses_repair_evidence(f, unit, f.path in python_files)
+        python = f.path in python_files or (
+            f.rule == "TEST_PATCHES_SUBJECT" and f.unit is None and f.path in shadow_paths)
+        refused_repair = has_evidence and _refuses_repair_evidence(f, unit, python)
         if refused_repair:
             has_evidence = False
         package_only = (

@@ -238,22 +238,34 @@ Nelson's personal review.
    `TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`,
    `SUBJECT_INPUT_CHANGED` and `EXPECTED_VALUE_DERIVED`. That is SPEC §5's
    clauses 1 and 2 (Route A) and clause 3 (Route B) alike
-   (`gating.REPAIR_REFUSED_PYTHON`, option R). An import-shadow stand-in can
-   be reported on the production module it shadows, and is refused there too.
-2. For a finding in any other file, which is a JS/TS test or a unit-less
-   stand-in reported on `package.json` or `pytest.ini`, `ASSERT_WEAKENED`,
+   (`gating.REPAIR_REFUSED_PYTHON`, option R). An import-shadow stand-in is
+   a Python finding wherever it is reported, on the production module it
+   shadows or on the pytest configuration or runner script whose search path
+   lets it win, and is refused there too.
+2. For any other finding, which is in a JS/TS test or a unit-less stand-in
+   reported on `package.json`, `ASSERT_WEAKENED`,
    `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED` and a `TEST_DISABLED` that is
    no removal shape take none (`gating.REPAIR_REFUSED_JS`). A removed
    assertion, a deleted test and rows deleted from a table keep clause 3,
    the only evidence a JS/TS test can earn.
-3. The removal shapes are a unit that disappeared and rows deleted from a
-   parametrize table the test already had, the remaining table countable.
-   A row marked off with `pytest.param(..., marks=skip)` and a plain test
-   wrapped in a table of no rows or of rows that cannot be counted are in-place
-   disables, not removals. Before the D-199 review `_prod_removal_shape`
-   read both as removals, which also let D8 hold a marked-off row beside a
-   removed symbol, against D8's SPEC row ("never an added marker"); D8
-   follows the stricter reading too.
+3. The removal shapes are a unit that disappeared, as the finding's own
+   shape says, and rows deleted from a parametrize table the test already
+   had while a row still runs and none is marked off. A row marked off with
+   `pytest.param(..., marks=skip)`, rows deleted beside one, and a table
+   left with no row to run (a plain test wrapped in an empty table, Python's
+   proven empty parameter set among them, or a table emptied where it
+   stands) are in-place disables, not removals, and only the finding of the
+   lost rows reads them, not a skip guard made always true on the same
+   unit. Before the D-199 reviews
+   `_prod_removal_shape` read all of them as removals, which also let D8
+   hold them beside a removed symbol, against D8's SPEC row ("never an
+   added marker"); D8 follows the stricter reading too. Two readings stay as
+   on main: a JS/TS plain test paired with a table whose rows cannot be
+   counted is a removal (428.Q2a), because tests folded into an imported
+   table read the same way and a deleted JS/TS test keeps the credit
+   anyway; and where the two tables' rows cannot be paired (a column added,
+   the table moved into a constant or a function) a row marked off counts
+   as deleted.
 4. A refused finding that the evidence reached, and that nothing else
    holds, is high with the new E1 label `REPAIR_EVIDENCE_REFUSED`. One that
    no evidence reached keeps the label it had. The label stays outside the
@@ -290,7 +302,16 @@ parentheses; each needs one exemption to pass. No option moves a commit
 block → pass or changes an error. Base blocks 66 R29 Python commits, 39
 R29 JS/TS commits and 369 of D-088's. C also refused `PACKAGE_REPAIR` and
 D9: 30 of its 55 R29 Python commits lost only those two credits.
-@@IMPL_RERUN@@
+Built, the implementation was re-run on both samples three times, each
+time with a copy of the branch's `src/`: at `421f8b94`, after the first
+review (`cca0d696`) and after the second (`src/` tree `8ef8bb69`,
+`gating.py` SHA256 `f069f5fe…`). Each time every member's exit, verdict and
+findings equal option R's, rule, path, unit, fingerprint, severity,
+de-escalators and shape included. Only the labels differ:
+`REPAIR_EVIDENCE_REFUSED` where R printed `PROD_CHANGE_NOT_EVIDENCE`, on
+1,093 of D-088's findings and 76 of R29's. So nothing the two reviews
+changed (item 3 and the import shadow) moves a member of either sample, and
+the costs above are the implementation's.
 
 The moved commits, by option R:
 
@@ -315,7 +336,10 @@ misreadings that repair evidence used to absorb: httpx `0296c2bb` adds an
 only drops `u''` prefixes. One more honest shape blocks that the samples do
 not show: a skip added for an optional dependency in the change that adds
 it (`pytest.importorskip`, a `find_spec` `skipif`), because D6 credits only
-interpreter and OS conditions on a test's own marker.
+interpreter and OS conditions on a test's own marker. And removing one
+assertion is treated more harshly than deleting its test: an assertion
+removed together with the deprecated API it checks blocks, while the whole
+test deleted beside the same removal is held by D8.
 
 **What stays open** (THREATMODEL item 4 and rows 2, 56, 93, 130, 131), each
 beside a no-op edit:
@@ -326,12 +350,13 @@ beside a no-op edit:
   comparison (`assert (total > 0) == True` reads as an expected value
   changed) and an expectation computed from the subject through a module
   alias (`calc.compute(2)` reads as `EXPECTATION_DEFINITION_CHANGED`);
-- a renamed private symbol escorting a test deletion into D8;
-- in JS/TS, a removed assertion or a deleted test, a test parked where no
-  code runs (`if (false) { test(...) }`, which row 159 gives a deletion's
-  key), and the stand-in and subject rules (`vi.mock`, a `test.each` input
-  cell), beside any module edit;
-- an import-shadow stand-in reported on `pytest.ini`.
+- a renamed private symbol escorting a test deletion into D8, and D8
+  counting a row marked off as deleted where the rows cannot be paired;
+- in JS/TS, a removed assertion or a deleted test (a plain test paired with
+  a table whose rows cannot be counted reads as one), a test parked where
+  no code runs (`if (false) { test(...) }`, which row 159 gives a
+  deletion's key), and the stand-in and subject rules (`vi.mock`, a
+  `test.each` input cell), beside any module edit.
 
 Static analysis cannot close the no-op routes. Running the old tests
 against the new code would, and checkwash does not run the code it checks.
@@ -379,6 +404,13 @@ against the new code would, and checkwash does not run the code it checks.
     a row marked off is no removal for D8; and pins for the open routes
     (the respelled weakening, the module alias, the D8 rename, the JS/TS
     stand-in, the parked JS/TS test) and for the optional-dependency cost.
+    The second review added eight: rows deleted beside a row marked off, a
+    table emptied where it stands, a Python test wrapped in an empty
+    parameter set, a guard made always true beside deleted rows, a skip
+    beside a deleted namesake and an import shadow reported on a pytest
+    configuration, each failing on `cca0d696`'s or `421f8b94`'s code, and
+    open-route pins for a row marked off where the rows cannot be paired
+    and for tests folded into an imported table.
   - `tests/test_oracle_rules_pinned.py`: freezes both refusal sets.
   - `tests/test_issue419_narrow_broad_except.py`: #464's former members
     refuse every evidence, and a named but missing unit blocks with the
@@ -408,12 +440,15 @@ against the new code would, and checkwash does not run the code it checks.
     "evidence refused".
 
 **Maintainer text.** This entry; SPEC §4 (the `EXPECTED_VALUE_DERIVED`,
-`SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED` and `TEST_PATCHES_SUBJECT`
-rows and the `BROAD_EXCEPT_ADDED` paragraph) and §5 (the D1, E1 and D8
-rows, clause 3 and the new *Rules that take no repair evidence* paragraph);
-THREATMODEL item 4 and rows 2, 56, 68, 72, 74, 87, 89, 93, 103, 106, 107,
-116, 130, 131, 135, 137, 146 and 158; and `gating.py`'s escalation policy
-(the two refusal sets and `_prod_removal_shape`).
+`EXPECTATION_DEFINITION_CHANGED`, `SUBJECT_NORMALIZED`,
+`SUBJECT_INPUT_CHANGED` and `TEST_PATCHES_SUBJECT` rows and the
+`BROAD_EXCEPT_ADDED` paragraph) and §5 (the D1, E1 and D8 rows, clause 3
+and the new *Rules that take no repair evidence* paragraph); THREATMODEL
+item 4 and rows 2, 56, 68, 72, 74, 87, 89, 93, 103, 104, 106, 107, 116,
+130, 131, 135, 137, 146 and 158; and `gating.py`'s escalation policy: the
+two refusal sets, `_prod_removal_shape`, `_refuses_repair_evidence`, and
+the lines of `apply_gates` that decide which findings are Python, apply
+the refusal and choose the E1 label.
 
 **What runs before merge.** On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the full suite at the final
@@ -458,3 +493,31 @@ Two holes the bypass hunt found predate D-199 and go to follow-ups: a
 test-only rewrite of a container expectation that `MILD_WEAKENING` holds at
 warn (`== [0, 2, 4]` to `== list((1, 3, 5))`), and weakenings that give no
 finding at all (`type(x) == int`).
+
+Frozen at `cca0d696`, the fixes had two Claude re-reviews, one on the code
+and tests and one on the text. Claude checked each finding with a toy
+repository, and the second review changed:
+
+- `_prod_removal_shape` again (item 3). A unit that disappeared is read
+  from the finding's own shape: two JS/TS tests can share a title, the unit
+  index keeps the last, and a skip on one beside the deletion of its
+  namesake read as a removal. Rows deleted beside a row marked off, and a
+  table left with no row to run, are no removal: Python's proven empty
+  parameter set gives the plain side a count of one, so D8 still held a
+  test wrapped in it. A JS/TS plain test paired with a table whose rows
+  cannot be counted is a removal again, as on main: the first review's
+  reading blocked tests folded into an imported table beside a module
+  edit, which neither sample has, and closed nothing a deleted test does
+  not already keep.
+- Which findings are Python. An import-shadow stand-in reported on a
+  pytest configuration took the JS/TS list and kept the credit, while
+  THREATMODEL row 130 called the route closed; it is refused now.
+- The text: the open-route lists, the reach of the PreToolUse ask (it does
+  ask before a Python test deletion, row 56's included), THREATMODEL rows
+  72, 93 and 104, which still described the old behaviour, row 131's
+  commit descriptions, SPEC §4's `EXPECTATION_DEFINITION_CHANGED` row, the
+  scope wording, the cost of removing one assertion against deleting its
+  test, and this entry's maintainer-text list.
+- Eight new pins (above).
+
+Then the final code was re-run on both samples (*What it costs*).

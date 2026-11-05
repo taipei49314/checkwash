@@ -112,7 +112,23 @@
   }
  },
  "option_cells": "[pass -> block commits, new high findings]; no option moves block -> pass or changes an error",
- "implementation_rerun_equals_option_R": "@@IMPL@@",
+ "implementation_rerun_equals_option_R": true,
+ "implementation_rerun": {
+  "src": "the src/ of the commit that adds this field (tree 8ef8bb69298df173d07094e86e0d7021fe2c0a06), after the second D-199 review",
+  "gating_sha256": "f069f5fe9d62174e1e7ea32be0c85744215b6992e8e6bfcc7efacf84598c93e9",
+  "compared_with": "option R's measured member, member for member",
+  "compared": "each member's exit and verdict, and every finding's rule, path, unit, fingerprint, severity, deescalators, allowlisted and shape",
+  "labels": "only escalators differ: where option R printed an older E1 label on a refused finding the evidence reached, the implementation prints REPAIR_EVIDENCE_REFUSED",
+  "R29": {
+   "equal": true,
+   "labels_changed": 76
+  },
+  "d088": {
+   "equal": true,
+   "labels_changed": 1093
+  },
+  "earlier": "the src/ of 421f8b94 and of cca0d696 gave the same result on both samples: equal to option R member for member, with 76 of R29's and 1,093 of D-088's labels changed"
+ },
  "moved_by_R": {
   "R29": [
    {

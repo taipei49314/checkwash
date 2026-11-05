@@ -148,13 +148,16 @@ and what blocks in 0.11.0 are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md)
 removed, skipped or loosened Python assertion, a broad `except`, a patched
 or normalized subject, a changed input and a derived expectation, and to a
 weakened or loosened JS/TS assertion, a broad catch and a skip added to a
-live JS/TS test; such a finding blocks, labelled `REPAIR_EVIDENCE_REFUSED`.
-What it leaves open is in [KNOWN-ISSUES-next](KNOWN-ISSUES-next.md): a
-rewritten expected value or a substituted assertion beside a no-op edit, a
-weakening respelled as one of them included, and in JS/TS a removed
-assertion or test, a test parked in dead code and a stand-in for the code
-under test. Options 1 and 2 below block it; option 3, the PreToolUse ask,
-does not, as it asks only on the five weakening rules in a Python test. If an author who reads these rules is in your threat model, use one of
+live JS/TS test; such a finding blocks unless something other than repair
+evidence holds it, labelled `REPAIR_EVIDENCE_REFUSED`. What it leaves open
+is in [KNOWN-ISSUES-next](KNOWN-ISSUES-next.md): a rewritten expected value
+or a substituted assertion beside a no-op edit, a weakening respelled as
+one of them included; a test deletion that a renamed private symbol
+escorts into D8; and in JS/TS a removed assertion or test, deleted
+parametrize rows, a test parked in dead code and a stand-in or subject
+change. Options 1 and 2 below block it. Option 3, the PreToolUse ask,
+blocks only the Python test deletion among them, as it asks only on the
+five weakening rules in a Python test. If an author who reads these rules is in your threat model, use one of
 the options below. Each also blocks honest changes, and the cost given is
 from archived rows, not a measurement of 0.11 (see *About the counts*).
 

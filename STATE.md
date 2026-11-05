@@ -18,16 +18,20 @@ for Python and the loosening shapes for JS/TS, and then chose the button
 「開始實作」 when Claude asked whether to start implementing. D-199 quotes
 him.
 
-- In a Python test or conftest, `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
+- In a `.py` file, in practice a test or conftest, and for an import-shadow
+  stand-in wherever it is reported, `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
   `TEST_DISABLED`, `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`,
   `TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`,
   `SUBJECT_INPUT_CHANGED` and `EXPECTED_VALUE_DERIVED` take no repair
   evidence, symbol or opaque. In a JS/TS test, a weakened or loosened
-  assertion, a broad catch, a skip added to a live test and a plain test
-  wrapped in an empty or uncountable table take none.
-- A row marked off with `pytest.param(..., marks=skip)` and a plain test
-  wrapped in such a table are no longer read as removals, for D8 too, as
-  D8's SPEC row always said.
+  assertion, a broad catch, a skip added to a live test and a table left
+  with no row to run take none.
+- A row marked off with `pytest.param(..., marks=skip)`, rows deleted beside
+  one, and a table left with no row to run, a plain test wrapped in an empty
+  parameter set among them, are no longer read as removals, for D8 too, as
+  D8's SPEC row always said. A JS/TS plain test paired with a table whose
+  rows cannot be counted still reads as a deletion, as tests folded into an
+  imported table do.
 - Such a finding that the evidence reached, and that nothing else holds, is
   high with the new E1 label `REPAIR_EVIDENCE_REFUSED`.
 - On main `7cd8549c` this moves 18 of the fixed corpus's 3,600 commits pass
@@ -37,7 +41,8 @@ him.
   expected value or a substituted assertion beside a no-op edit, a weakening
   respelled as an exact comparison and an expectation computed through a
   module alias included; a renamed private symbol escorting a test deletion
-  into D8; and in JS/TS a removed assertion or test, a test parked in dead
+  into D8, and D8 counting a row marked off as deleted where the rows cannot
+  be paired; and in JS/TS a removed assertion or test, a test parked in dead
   code and a stand-in or subject change, beside any module edit.
 - 21 fixtures keep their inputs and move from `_neg` (one from `_warn`) to
   `_pos`; `conftest_hook_guard_opaque_prod_neg` keeps its name and is now

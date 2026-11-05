@@ -337,7 +337,8 @@ rows 2 and 131;
 [enterprise checklist §7](enterprise.md#7-hardening-against-bought-repair-evidence-419)).
 From 0.12 (unreleased), D-199 refuses every repair evidence, this credit
 and the symbol routes alike, to the weakening, stand-in and subject rules
-in a Python test or conftest and to the loosening shapes in a JS/TS test
+in a Python test or conftest (any `.py` file, and an import-shadow stand-in
+wherever it is reported) and to the loosening shapes in a JS/TS test
 (SPEC §5); the sentences above describe 0.11.0, and the credit still holds
 the other rules (THREATMODEL rows 130 and 131).
 A package manifest's test command is not production
