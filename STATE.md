@@ -49,24 +49,24 @@ count is 22541. A read-only `gh api` read of the real v0.11.0 tag object
 calibrated the message parse: GitHub's `message` is the tag object's bytes
 after its headers, with LF line breaks. No `src/` change.
 
-Status: branch `claude/tag-at-action-commit-20261106` from main `7cd8549c`;
-not pushed, not merged. On LAPTOP-01AGNPJU
+Status: branch `claude/tag-at-action-commit-20261106` from main `7cd8549c`,
+not merged. Three Claude review sub-agents reviewed `051b608a`; their 19
+findings held, none critical or high, and `a2d4b5a6` and `3fee787b` fix or
+record each (D-200's review paragraph). On LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) on
-2026-11-06 Asia/Taipei: the full suite (`pytest tests`, `tests/gates`
-included, xdist `-n 8`), whose JUnit testsuite counts `tests="22596"`:
-22529 testcase entries, 22504 passed and 25 skipped, plus 67 subtests,
-with 0 failures and 0 errors, on the final tree before a README reflow and
-two comment edits; after them, the 61 test files that read the README, the
-documents, DECISIONS, STATE, the verdict pins or the workflows: 5474 passed
-and 14 existing skips, plus 36 subtests, with 0 failures. checkwash's own
-check of the range from main at `--fail-on high`, with this tree's engine,
-whose `src/` is main's, blocks: one high finding, `SUBJECT_NORMALIZED` on
+2026-11-06 Asia/Taipei, at `3fee787b`: the full suite (`pytest tests`,
+`tests/gates` included, xdist `-n 8`), whose JUnit testsuite counts
+`tests="22608"`: 22541 testcase entries, 22516 passed and 25 skipped, plus
+67 subtests, with 0 failures and 0 errors; and checkwash's own check of the
+range from main at `--fail-on high`, with this tree's engine, whose `src/`
+is main's and differs from the published v0.11.0 Action commit's only in
+`doctor`'s two pin lines, which `check` does not import. It blocks with one
+high finding, `SUBJECT_NORMALIZED` on
 `test_readme_install_refs_match_advertised_release`, the relaxation option
 甲 makes, and five warnings. The pull request's receipt can pass only after
 an owner-approved exemption for that key is on main (D-200). Not run: the
-published v0.11.0 pyz's check of the range, the review, the pull request's
-PJU receipt, other platforms, and any real tag or release event: the new
-path first runs for real at 0.12.0.
+pull request's PJU receipt, other platforms, and any real tag or release
+event: the new path first runs for real at 0.12.0.
 
 ## 2026-11-05: receipts spread over the receipt host's cores (D-198)
 
