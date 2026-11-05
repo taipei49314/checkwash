@@ -168,7 +168,9 @@ release pull request reports `checkwash_version` `0.11.0`.
   move from warn to high. On main `7cd8549c` that moves 18 of the fixed
   corpus's 3,600 commits pass → block (7 Python, 11 JS/TS) and 53 of
   D-088's 1,263, none adjudicated; an existing exemption keeps its
-  fingerprint and still applies.
+  fingerprint and still applies. D8 also stops holding a parametrize row
+  marked off with `marks=skip`, or a plain test wrapped in an empty or
+  uncountable table, beside a removed symbol: neither is a removal (D-199).
 
 ### v0.10.0 to v0.11.0
 

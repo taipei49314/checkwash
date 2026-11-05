@@ -142,16 +142,19 @@ proven failure relay, which is not counted as added, within 0.10's count
 rows 172 to 176).
 [#419](https://github.com/taipei49314/checkwash/issues/419) was closed as a
 documented residual, not a fix ([D-191](../DECISIONS-archive-4.md)): what still passes
-and what blocks in 0.11.0 are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md) and
+and what blocks in 0.11.0 are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md);
 [THREATMODEL](../THREATMODEL.md) item 4 and rows 2, 93, 130, 131 and 172 to
-175. From 0.12.0, D-199 refuses every repair evidence to a weakened,
+175 now describe main. From 0.12 (unreleased), D-199 refuses every repair evidence to a weakened,
 removed, skipped or loosened Python assertion, a broad `except`, a patched
 or normalized subject, a changed input and a derived expectation, and to a
 weakened or loosened JS/TS assertion, a broad catch and a skip added to a
 live JS/TS test; such a finding blocks, labelled `REPAIR_EVIDENCE_REFUSED`.
-What it leaves open, a rewritten expected value or a substituted assertion
-beside a no-op edit, and in JS/TS a removed assertion or test, is in
-[KNOWN-ISSUES-next](KNOWN-ISSUES-next.md); the options below block it. If an author who reads these rules is in your threat model, use one of
+What it leaves open is in [KNOWN-ISSUES-next](KNOWN-ISSUES-next.md): a
+rewritten expected value or a substituted assertion beside a no-op edit, a
+weakening respelled as one of them included, and in JS/TS a removed
+assertion or test, a test parked in dead code and a stand-in for the code
+under test. Options 1 and 2 below block it; option 3, the PreToolUse ask,
+does not, as it asks only on the five weakening rules in a Python test. If an author who reads these rules is in your threat model, use one of
 the options below. Each also blocks honest changes, and the cost given is
 from archived rows, not a measurement of 0.11 (see *About the counts*).
 

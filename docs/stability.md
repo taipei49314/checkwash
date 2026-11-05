@@ -335,9 +335,11 @@ was turned off after the combined sweep's pre-registered stop (D-171), and
 D-191 closes #419 in 0.11 as a documented residual (THREATMODEL item 4,
 rows 2 and 131;
 [enterprise checklist §7](enterprise.md#7-hardening-against-bought-repair-evidence-419)).
-From 0.12, D-199 refuses every repair evidence, this credit and the symbol
-routes alike, to the weakening, stand-in and subject rules in a Python test
-or conftest and to the loosening shapes in a JS/TS test (SPEC §5).
+From 0.12 (unreleased), D-199 refuses every repair evidence, this credit
+and the symbol routes alike, to the weakening, stand-in and subject rules
+in a Python test or conftest and to the loosening shapes in a JS/TS test
+(SPEC §5); the sentences above describe 0.11.0, and the credit still holds
+the other rules (THREATMODEL rows 130 and 131).
 A package manifest's test command is not production
 (issue #174): when a diff changes what `package.json` runs as its tests —
 `scripts.test`, `test:*` scripts, scripts that invoke a recognised runner, and

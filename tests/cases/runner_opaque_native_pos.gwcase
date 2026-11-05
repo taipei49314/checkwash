@@ -2,7 +2,7 @@
 rule: ASSERT_WEAKENED
 title: A genuinely unreadable production file is opaque evidence, refused for a weakened assertion (D-199)
 d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case runner_opaque_native_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
-origin: FP guard — the 2026-08-11 widening must not turn every unreadable prod change into a block
+origin: FP guard — the 2026-08-11 widening must not turn every unreadable prod change into a block; since D-199 the guard is the label REPAIR_EVIDENCE_REFUSED (the file still counts as opaque production), not the verdict
 === before: src/core.rs ===
 pub fn invoice_total(items: &[f64], tax: f64) -> f64 {
     items.iter().sum::<f64>()

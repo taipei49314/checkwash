@@ -14,29 +14,40 @@ the buttons; Nelson answered 「核准合併 #587」 at 23:18:33Z. Its receipt
 D-196 planned two changes for 0.12, each designed and priced before it is
 built. This is the second: D-191's residual. Claude's design priced five
 Python options and three JS/TS options on main `7cd8549c`; Nelson chose R
-for Python and the loosening shapes for JS/TS, then asked for the
-implementation. D-199 quotes him.
+for Python and the loosening shapes for JS/TS, and then chose the button
+「開始實作」 when Claude asked whether to start implementing. D-199 quotes
+him.
 
 - In a Python test or conftest, `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
   `TEST_DISABLED`, `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`,
   `TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`,
   `SUBJECT_INPUT_CHANGED` and `EXPECTED_VALUE_DERIVED` take no repair
   evidence, symbol or opaque. In a JS/TS test, a weakened or loosened
-  assertion, a broad catch and a skip added to a live test take none.
+  assertion, a broad catch, a skip added to a live test and a plain test
+  wrapped in an empty or uncountable table take none.
+- A row marked off with `pytest.param(..., marks=skip)` and a plain test
+  wrapped in such a table are no longer read as removals, for D8 too, as
+  D8's SPEC row always said.
 - Such a finding that the evidence reached, and that nothing else holds, is
   high with the new E1 label `REPAIR_EVIDENCE_REFUSED`.
 - On main `7cd8549c` this moves 18 of the fixed corpus's 3,600 commits pass
   → block (7 Python, 11 JS/TS) and 53 of D-088's 1,263, among them the 11
   that stopped #464; none is adjudicated, and no commit moves the other way.
-- Still open: a rewritten expected value or a substituted assertion beside
-  a no-op edit, a renamed private symbol escorting a test deletion into D8,
-  and in JS/TS a removed assertion or test beside any module edit
-  (THREATMODEL item 4, rows 2, 56, 93, 130, 131).
+- Still open (THREATMODEL item 4, rows 2, 56, 93, 130, 131): a rewritten
+  expected value or a substituted assertion beside a no-op edit, a weakening
+  respelled as an exact comparison and an expectation computed through a
+  module alias included; a renamed private symbol escorting a test deletion
+  into D8; and in JS/TS a removed assertion or test, a test parked in dead
+  code and a stand-in or subject change, beside any module edit.
 - 21 fixtures keep their inputs and move from `_neg` (one from `_warn`) to
   `_pos`; `conftest_hook_guard_opaque_prod_neg` keeps its name and is now
   held by `COMPAT_GATE`. Unit tests that pinned the old warn are listed in
-  D-199. Nelson's approval of the text and of each move is asked for on the
-  pull request.
+  D-199, with the tests the review added. Nelson's approval of the text and
+  of each move is asked for on the pull request, and so is a separate
+  allow-keys pull request for the findings this pull request's own check
+  raises on its test rewrites, as #554 was for D-171.
+- The 0.12.0 release needs a new D-176 cost disposition: the 0.11.0 one
+  covers only that release's `src/` tree.
 
 ## 2026-11-05: receipts spread over the receipt host's cores (D-198)
 

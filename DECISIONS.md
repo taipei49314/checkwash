@@ -209,6 +209,9 @@ the merge use the new one. None of the measurements was published.
 - At 2026-11-05T17:38:56Z Nelson wrote 「選R」 (choose R), in reply to
   Claude's message that listed the open questions, among them
   「Python 收到哪一層（建議 R）」 (how far to narrow Python; R recommended).
+  That message showed options C and B on D-088 as still running; they
+  finished at 17:52:34Z, after all three answers. Option R's own cost was
+  measured before the choice.
 - At 17:40:16Z, to Claude's multiple-choice question on the JS/TS part, he
   chose the option labelled 「只收放寬類（建議）」 (only the loosening shapes,
   recommended), whose description read
@@ -229,25 +232,36 @@ Nelson's personal review.
 
 **What is decided.**
 
-1. In a Python test or conftest, these rules take no repair evidence:
-   `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
-   `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`, `TEST_PATCHES_SUBJECT`,
-   `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED`
-   and `EXPECTED_VALUE_DERIVED`. That is SPEC §5's clauses 1 and 2 (Route A)
-   and clause 3 (Route B) alike (`gating.REPAIR_REFUSED_PYTHON`, option R).
-2. In a JS/TS test, `ASSERT_WEAKENED`, `TOLERANCE_LOOSENED`,
-   `BROAD_EXCEPT_ADDED` and a `TEST_DISABLED` that is no removal shape (a
-   marker on a live test) take none (`gating.REPAIR_REFUSED_JS`). A removed
-   assertion, a deleted test and deleted parametrize rows keep clause 3, the
-   only evidence a JS/TS test can earn.
-3. A refused finding that the evidence reached, and that nothing else
+1. For a finding in a `.py` file, which in practice is a test or conftest,
+   these rules take no repair evidence: `ASSERT_WEAKENED`, `ASSERT_REMOVED`,
+   `TEST_DISABLED`, `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`,
+   `TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`, `SUBJECT_NORMALIZED`,
+   `SUBJECT_INPUT_CHANGED` and `EXPECTED_VALUE_DERIVED`. That is SPEC §5's
+   clauses 1 and 2 (Route A) and clause 3 (Route B) alike
+   (`gating.REPAIR_REFUSED_PYTHON`, option R). An import-shadow stand-in can
+   be reported on the production module it shadows, and is refused there too.
+2. For a finding in any other file, which is a JS/TS test or a unit-less
+   stand-in reported on `package.json` or `pytest.ini`, `ASSERT_WEAKENED`,
+   `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED` and a `TEST_DISABLED` that is
+   no removal shape take none (`gating.REPAIR_REFUSED_JS`). A removed
+   assertion, a deleted test and rows deleted from a table keep clause 3,
+   the only evidence a JS/TS test can earn.
+3. The removal shapes are a unit that disappeared and rows deleted from a
+   parametrize table the test already had, the remaining table countable.
+   A row marked off with `pytest.param(..., marks=skip)` and a plain test
+   wrapped in a table of no rows or of rows that cannot be counted are in-place
+   disables, not removals. Before the D-199 review `_prod_removal_shape`
+   read both as removals, which also let D8 hold a marked-off row beside a
+   removed symbol, against D8's SPEC row ("never an added marker"); D8
+   follows the stricter reading too.
+4. A refused finding that the evidence reached, and that nothing else
    holds, is high with the new E1 label `REPAIR_EVIDENCE_REFUSED`. One that
    no evidence reached keeps the label it had. The label stays outside the
    fingerprint; `FINDINGS_VERSION` and `IR_VERSION` do not change.
-4. Nothing else in gating moves: D2, D4 to D8 and D10, `MILD_WEAKENING`,
-   the expected-value rules' and `ASSERT_SUBSTITUTED`'s evidence,
+5. Nothing else in gating moves: D2, D4 to D7 and D10, `MILD_WEAKENING`, the
+   expected-value rules' and `ASSERT_SUBSTITUTED`'s evidence,
    `PACKAGE_REPAIR` and D9, suite controls and E2.
-5. This supersedes D-171's K1 for these rules. D-141's stop line ("any
+6. This supersedes D-171's K1 for these rules. D-141's stop line ("any
    verdict move stops the round") does not apply to this change: its moves
    were measured, listed and priced before Nelson chose among A, R, R8, C
    and B.
@@ -274,18 +288,21 @@ line, about 2.6% of their 34,873 non-merge commits, and 368 of pytest's.
 Each cell counts pass → block commits, with the new high findings in
 parentheses; each needs one exemption to pass. No option moves a commit
 block → pass or changes an error. Base blocks 66 R29 Python commits, 39
-R29 JS/TS commits and 369 of D-088's. @@IMPL_RERUN@@
+R29 JS/TS commits and 369 of D-088's. C also refused `PACKAGE_REPAIR` and
+D9: 30 of its 55 R29 Python commits lost only those two credits.
+@@IMPL_RERUN@@
 
 The moved commits, by option R:
 
 - R29 Python: httpx `8e36f2bc`, `57daabf6`, `b82fbe2c` and `1d73150c`;
   starlette `2c614b91`; rich `b93d3b6d`; click `ad39d749`.
 - R29 JS/TS: hono `5463db27`, `c831020f` and `f0b094db`, three
-  security-advisory merges; typeorm `324c46cd`, `46d5b843`, `b9aa8355`,
-  `c6745f3d`, `df09802e` and `ff00a3cd`; undici `2764d996`; vue-core
-  `8b44b021`.
-- D-088: 53 commits, among them all 11 that stopped #464 (D-171): httpx
-  `0296c2bb`, starlette `e396f079`, werkzeug `ab6150fa`, scrapy
+  security-advisory fixes, each titled "Merge commit from fork"; typeorm
+  `324c46cd`, `46d5b843`, `b9aa8355`, `c6745f3d`, `df09802e` and
+  `ff00a3cd`, behaviour fixes, a new default and a deprecated-method
+  removal; undici `2764d996`; vue-core `8b44b021`.
+- D-088: 53 commits, among them all 11 that stopped #464 (D-171, D-172):
+  httpx `0296c2bb`, starlette `e396f079`, werkzeug `ab6150fa`, scrapy
   `d0dabbc0` and `d1bd8eb4`, and pytest `158e1608`, `4d49ba65`,
   `4ee3831a`, `cf5b544d`, `ef732fc5` and `f6caf230`.
   [benchmarks/d199-repair-refusal.json](benchmarks/d199-repair-refusal.json)
@@ -295,17 +312,29 @@ They remove deprecated APIs with their tests, drop old Python versions or
 dependencies, or rewrite tests beside a behaviour change. Some are detector
 misreadings that repair evidence used to absorb: httpx `0296c2bb` adds an
 `isinstance` check beside an unchanged equality, and requests `2a6f290b`
-only drops `u''` prefixes.
+only drops `u''` prefixes. One more honest shape blocks that the samples do
+not show: a skip added for an optional dependency in the change that adds
+it (`pytest.importorskip`, a `find_spec` `skipif`), because D6 credits only
+interpreter and OS conditions on a test's own marker.
 
-**What stays open** (THREATMODEL item 4 and rows 2, 56, 93, 130, 131):
+**What stays open** (THREATMODEL item 4 and rows 2, 56, 93, 130, 131), each
+beside a no-op edit:
 
 - an expected value rewritten to the code's wrong output, or an assertion
-  substituted for one of equal strength, beside a no-op edit;
+  substituted for one of equal strength, and two spellings the review found
+  that carry a refused event there: a weakening written as an exact
+  comparison (`assert (total > 0) == True` reads as an expected value
+  changed) and an expectation computed from the subject through a module
+  alias (`calc.compute(2)` reads as `EXPECTATION_DEFINITION_CHANGED`);
 - a renamed private symbol escorting a test deletion into D8;
-- in JS/TS, a removed assertion or a deleted test beside any module edit.
+- in JS/TS, a removed assertion or a deleted test, a test parked where no
+  code runs (`if (false) { test(...) }`, which row 159 gives a deletion's
+  key), and the stand-in and subject rules (`vi.mock`, a `test.each` input
+  cell), beside any module edit;
+- an import-shadow stand-in reported on `pytest.ini`.
 
-Static analysis cannot close them. Running the old tests against the new
-code would, and checkwash does not run the code it checks.
+Static analysis cannot close the no-op routes. Running the old tests
+against the new code would, and checkwash does not run the code it checks.
 
 **Expectation moves (AGENTS.md rule 2).**
 
@@ -327,7 +356,11 @@ code would, and checkwash does not run the code it checks.
   `assert_weakened_with_prod_change`. `conftest_hook_guard_opaque_prod_neg`
   keeps its name and inputs and is held by `COMPAT_GATE` instead of
   `REPAIR_EVIDENCE`, as under #464. Eight of these are D-171's restored
-  set.
+  set. `oracle_freeze_pos` keeps its expectation, which still matches, but
+  its finding now carries `REPAIR_EVIDENCE_REFUSED` beside `ORACLE_FREEZE`
+  and would block without the freeze; the new
+  `oracle_freeze_expected_value_pos` is the case where E2 still changes a
+  severity.
 - **Unit tests.**
   - `tests/test_issue419_residual.py` pins D-199's statement instead of
     D-191's. The four unit-scoped weakening rules refuse both routes. New
@@ -340,6 +373,13 @@ code would, and checkwash does not run the code it checks.
     `COMPAT_GATE` beside an opaque edit. The `fail_on = "warn"` and
     `oracle_freeze` tests use the open route, and a new test pins the
     refusal label beside `ORACLE_FREEZE`.
+  - `tests/test_d199_repair_refusal.py`, new: the Python stand-in and
+    derived-expectation refusals; the JS/TS tolerance refusal, rows deleted
+    from a table (kept) and a plain test wrapped in an empty table (refused);
+    a row marked off is no removal for D8; and pins for the open routes
+    (the respelled weakening, the module alias, the D8 rename, the JS/TS
+    stand-in, the parked JS/TS test) and for the optional-dependency cost.
+  - `tests/test_oracle_rules_pinned.py`: freezes both refusal sets.
   - `tests/test_issue419_narrow_broad_except.py`: #464's former members
     refuse every evidence, and a named but missing unit blocks with the
     refusal label.
@@ -361,16 +401,60 @@ code would, and checkwash does not run the code it checks.
   - `tests/test_task_repo_relative_authority.py`: its scenario becomes a
     rewritten expected value, so the contract still decides the verdict;
     the pinned fingerprint follows.
+  - `tests/test_finding_shape.py`: its synthetic unit becomes a table that
+    lost a row, the shape `_prod_removal_shape` still reads as a removal.
+  - `tests/test_subject_snapshot_integration.py`: pins the exact label
+    `PROD_CHANGE_NOT_EVIDENCE`, which alone now tells "no evidence" from
+    "evidence refused".
 
-**Maintainer text.** This entry; SPEC §5 (the D1 and E1 rows, clause 3,
-the new *Rules that take no repair evidence* paragraph and the
-`BROAD_EXCEPT_ADDED` paragraph); THREATMODEL item 4 and rows 2, 56, 68, 87,
-89, 93, 103, 106, 130 and 131; and `gating.py`'s escalation policy.
+**Maintainer text.** This entry; SPEC §4 (the `EXPECTED_VALUE_DERIVED`,
+`SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED` and `TEST_PATCHES_SUBJECT`
+rows and the `BROAD_EXCEPT_ADDED` paragraph) and §5 (the D1, E1 and D8
+rows, clause 3 and the new *Rules that take no repair evidence* paragraph);
+THREATMODEL item 4 and rows 2, 56, 68, 72, 74, 87, 89, 93, 103, 106, 107,
+116, 130, 131, 135, 137, 146 and 158; and `gating.py`'s escalation policy
+(the two refusal sets and `_prod_removal_shape`).
 
-**What runs before merge.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the full
-suite at the final head, the documentation and count tests, checkwash's own
-check on the pull request's range at `--fail-on high`, and the pull
-request's PJU receipt, whose intake sets the four required checks. Other
-platforms: NOT_RUN. Hosted test workflows remain disabled. The 0.12.0
-release's fixed-corpus comparison lists the moved commits for Nelson before
-the tag, as every release's does. @@REVIEW@@
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the full suite at the final
+head, the documentation and count tests, and the pull request's PJU
+receipt, whose intake sets the four required checks. Other platforms:
+NOT_RUN. Hosted test workflows remain disabled. checkwash's own check on
+the pull request's range blocks on the findings its test rewrites raise,
+whatever the engine, as #553's did for D-171; as #554 did then, a separate
+allow-keys pull request, approved by Nelson fingerprint by fingerprint,
+merges first. The 0.12.0 release needs a new D-176 cost disposition, as
+the 0.11.0 one covers only that release's `src/` tree, and its
+fixed-corpus comparison lists the moved commits for Nelson before the tag.
+
+**Review.** Frozen at `421f8b94`, the change was reviewed by five Claude
+sub-agents, each with one lens (gate logic, a bypass hunt, the protected
+text, tests and fixtures, docs and records), and by one Gemini 4 Argon run.
+`agy` updated itself to 1.5.1 during Argon's first run, which also failed on
+a path the model mistyped; the new binary was re-verified, read-guard test
+included, and the rerun completed. Claude checked every finding against the
+source, the records or a toy repository before using it, and the review
+changed:
+
+- `_prod_removal_shape` (item 3), raised by Argon (its F3 and F4) and the
+  gate-logic lens;
+- the scope wording of items 1 and 2: the code always applied the Python
+  list to `.py` files, not to tests and conftests only;
+- the open-route lists, which left out the JS/TS stand-in and subject rules
+  (Argon F1, F2), the parked JS/TS test (Argon F3), and the respelled
+  weakening and the module alias (bypass hunt);
+- SPEC §4's four rows, THREATMODEL rows 72, 74, 87, 103, 107, 116, 135, 137,
+  146 and 158, and comments in `gating.py`, `ir/model.py` and four
+  detectors, which still described the old behaviour (Argon F5 to F8 and
+  three lenses);
+- the tests: both refusal sets frozen, `tests/test_d199_repair_refusal.py`,
+  a label pin that had lost its power, the E2 fixture and fixture meta
+  lines;
+- this entry: C's description, the timing of C and B on D-088, the
+  allow-keys step, the D-176 disposition and the attributions above.
+
+Findings raised by Argon are used as "raised by Argon, verified by Claude".
+Two holes the bypass hunt found predate D-199 and go to follow-ups: a
+test-only rewrite of a container expectation that `MILD_WEAKENING` holds at
+warn (`== [0, 2, 4]` to `== list((1, 3, 5))`), and weakenings that give no
+finding at all (`type(x) == int`).

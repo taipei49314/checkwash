@@ -3,7 +3,7 @@ rule: ASSERT_SUBSTITUTED
 issue: 471
 credit: @talhayme (#471)
 title: class-method tests with an annotated fixture parameter reach the producer's evidence, which SUBJECT_INPUT_CHANGED refuses (D-199)
-d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case fixture_producer_annotated_class_methods_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
+d199: D-199 (0.12) refuses repair evidence to the SUBJECT_INPUT_CHANGED finding here; its six expected-value findings keep it. The inputs are unchanged; they were the case fixture_producer_annotated_class_methods_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: #471, @talhayme's report and comment 6264130796 on punt-labs/langlearn-tts b4bc4e63 (MIT),
 origin2: "fix: change ElevenLabs default voice from rachel to matilda (#30)". Each before-side assertion
 origin3: reads `elevenlabs_provider`; its conftest fixture (annotated, a docstring, then one return)

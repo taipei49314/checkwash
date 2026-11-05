@@ -3,7 +3,7 @@ rule: BROAD_EXCEPT_ADDED
 issue: 419
 title: a JS broad catch beside a template edit no longer holds at warn: the opaque credit is refused (D-199)
 d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case issue419_narrow_js_broad_template_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
-status: D-176 development candidate; #212 remains independent
+status: written as a D-176 development candidate; since D-199 a JS/TS broad catch refuses the credit; #212 remains independent
 origin: Existing js_catch_assertion_swallowed_pos shape plus an existing template edit
 === before: app/templates/status.html ===
 <!-- status -->

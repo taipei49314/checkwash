@@ -321,8 +321,8 @@ def test_a_production_change_keeps_the_verdict_pass(before, after):
 
 def test_a_weakened_js_assertion_refuses_the_production_change():
     # S1: `toBeNull()` -> `to.exist` is an ASSERT_WEAKENED in a JS/TS test,
-    # which takes no repair evidence since D-199; the label says the
-    # production change reached it.
+    # which takes no repair evidence since D-199, so it blocks beside the
+    # production change that used to hold it at warn.
     observed, findings, _messages = _outcome("expect(value).toBeNull();", "expect(value).to.exist;", VITEST, True)
     assert observed == BLOCK
     assert ("ASSERT_WEAKENED", "high") in findings

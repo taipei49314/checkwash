@@ -4,7 +4,7 @@ title: the same wrapping beside a production change blocks: SUBJECT_NORMALIZED t
 d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case subject_normalized_repaired_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: the bound this rule needs — `sorted(...)` appears the day a function
 origin2: stops guaranteeing order, and `.strip()` the day it stops trimming.
-origin3: Base severity warn; only an unexplained wrap escalates.
+origin3: Base severity warn; until D-199 only an unexplained wrap escalated.
 === before: src/urls/__init__.py ===
 def list_tags(doc):
     return sorted(doc.tags)
