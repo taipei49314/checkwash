@@ -124,12 +124,12 @@ def test_release_merge_reads_its_one_line(message):
     (f"Release-Merge: {MERGE}\r\n", "other than printable ASCII"),
     (f"note\rRelease-Merge: {MERGE}\n", "other than printable ASCII"),
     # A reader may break a line where the tools do not, or miss a hidden prefix.
-    (f"Release-Merge: {MERGE}\nnote Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"Release-Merge: {MERGE}\nnote\u2028Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
     (f"Release-Merge: {MERGE}\nnote\x85Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
     (f"Release-Merge: {MERGE}\nnote\x0bRelease-Merge: {'e' * 40}\n", "other than printable ASCII"),
-    (f"Release-Merge: {MERGE}\n﻿Release-Merge: {'e' * 40}\n", "other than printable ASCII"),
+    (f"Release-Merge: {MERGE}\n\ufeffRelease-Merge: {'e' * 40}\n", "other than printable ASCII"),
     (f"Release-Merge: {MERGE}\n\tRelease-Merge: {'e' * 40}\n", "other than printable ASCII"),
-    (f"CheckWash v0.12.0 — notes\nRelease-Merge: {MERGE}\n", "other than printable ASCII"),
+    (f"CheckWash v0.12.0 \u2014 notes\nRelease-Merge: {MERGE}\n", "other than printable ASCII"),
     (None, "absent"),
 ])
 def test_release_merge_refuses_anything_but_one_exact_line(message, needle):
