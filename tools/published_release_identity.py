@@ -3,7 +3,8 @@
 This is metadata acquisition and validation, never product execution. A bare
 tag or the absence of a public Release does not prove publication history, nor
 does an anonymous response establish whether a private draft exists. The native
-publisher refreshes this evidence independently before relying on it.
+publisher refreshes this evidence independently before relying on it. The
+release tag rule the release tools share (D-200) lives here too.
 """
 from __future__ import annotations
 
@@ -208,6 +209,75 @@ def catalog(pages):
 def semver(tag):
     match = SEMVER.fullmatch(tag) if type(tag) is str else None
     return tuple(int(part) for part in match.groups()) if match else None
+
+
+# The release tag rule every release tool shares (D-200). A release is two
+# commits: the Action commit A and the release merge M, whose second parent's
+# parent is A and whose doctor differs from A's only in the own Action pin
+# line, set to A (scheme S, D-194). The distributions are built from M. Up to
+# v0.11.x the tag points at M. From v0.12.0 it points at A, and its message
+# names M on exactly one line, `Release-Merge: <M>`.
+ACTION_COMMIT_TAG = (0, 12, 0)
+RELEASE_MERGE = re.compile(r"Release-Merge: ([0-9a-f]{40})")
+DOCTOR_PREVIOUS = re.compile(rb'_PREVIOUS_ACTION_PIN = "([0-9a-f]{40})"')
+DOCTOR_OWN = re.compile(rb'_OWN_ACTION_PIN = "([0-9a-f]{40})"')
+
+
+def tag_at_action_commit(tag):
+    """Whether the release tag points at the release's Action commit A (from v0.12.0) or at M."""
+    version = semver(tag)
+    require(version is not None, "release tag is not vX.Y.Z")
+    return version >= ACTION_COMMIT_TAG
+
+
+def release_merge(message):
+    """The release merge M that a v0.12.0 or later tag message names.
+
+    The message holds exactly one line `Release-Merge: <40 lowercase hex>`. A
+    line that starts with that key in another case or after spaces counts as a
+    second one, and a carriage return, which can split a line for a reader, is
+    refused.
+    """
+    require(type(message) is str and "\r" not in message, "release tag message absent or holds a carriage return")
+    lines = [line for line in message.split("\n") if line.lstrip().lower().startswith("release-merge")]
+    require(len(lines) == 1, "the release tag message must hold exactly one Release-Merge line")
+    match = RELEASE_MERGE.fullmatch(lines[0])
+    require(match is not None, "the release tag message's Release-Merge line is not 'Release-Merge: <40 lowercase hex>'")
+    return match.group(1)
+
+
+def tag_message(raw):
+    """The message of a raw annotated tag object, as `git cat-file tag` prints it."""
+    require(type(raw) is bytes and raw.startswith(b"object "), "not an annotated tag object")
+    _headers, separator, message = raw.partition(b"\n\n")
+    require(bool(separator), "the annotated tag object has no message")
+    try:
+        return message.decode("utf-8")
+    except UnicodeDecodeError:
+        raise EvidenceError("the annotated tag message is not UTF-8") from None
+
+
+def released_doctor(raw, commit):
+    """doctor.py as a release's distributions ship it, from its Action commit's doctor.py.
+
+    From v0.12.0 a release's tag commit is its Action commit A, and its pyz is
+    built from the release merge, whose doctor differs from A's only in the own
+    Action pin line, set to A. A holds the previous pin on both pin lines, read
+    as the release bridge reads them. The line is set only when the two lines
+    are equal, so a wrong replacement can only fail to match a pinned artifact.
+    """
+    require(type(raw) is bytes and type(commit) is str and SHA.fullmatch(commit), "doctor.py bytes and a full commit required")
+    require(b"\r" not in raw and b"\x0c" not in raw, "doctor.py holds a carriage return or form feed")
+    lines = raw.split(b"\n")
+    previous = [index for index, line in enumerate(lines) if line.startswith(b"_PREVIOUS_ACTION_PIN")]
+    own = [index for index, line in enumerate(lines) if line.startswith(b"_OWN_ACTION_PIN")]
+    require(len(previous) == len(own) == 1, "doctor must hold exactly one previous and one own Action pin line")
+    old, new = DOCTOR_PREVIOUS.fullmatch(lines[previous[0]]), DOCTOR_OWN.fullmatch(lines[own[0]])
+    require(old is not None and new is not None, "doctor's Action pin lines differ from the exact shape")
+    require(old.group(1) == new.group(1),
+            "the tag commit's doctor pins differ, so it is not a release's Action commit")
+    lines[own[0]] = b'_OWN_ACTION_PIN = "' + commit.encode() + b'"'
+    return b"\n".join(lines)
 
 
 def relevant_releases(releases, pin, pushed):

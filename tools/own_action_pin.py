@@ -1,11 +1,14 @@
-"""Write or check a release PR's last commit R (scheme S, D-194).
+"""Write or check a release PR's last commit R, and tag the release (scheme S, D-194; D-200).
 
 `write` stages R on a clean checkout of the release PR's content commit A,
 whose two pin lines are equal: R changes only doctor's own Action pin line, to
 A. It prints the commit command and never commits; a refusal leaves doctor.py
-as it found it. `check` runs the release bridge's trusted rule on local
-commits: an advisory pre-push and pre-tag check, not release evidence.
-Neither imports or runs checkwash.
+as it found it. `tag` prints the annotated tag command of a v0.12.0 or later
+release, whose tag points at A and whose message names the release merge M.
+`check` runs the release bridge's trusted rule on local commits, and from
+v0.12.0 at the tag stage also checks the local tag before it is pushed: an
+advisory pre-push and pre-tag check, not release evidence. None of them
+imports or runs checkwash.
 """
 from __future__ import annotations
 
@@ -27,6 +30,14 @@ def load_bridge():
 
 
 R = load_bridge()
+# The release-event capture runs release.yml from the tag's commit, with the
+# release bridge and the tools it loads; the rest are the bridge's audited
+# release helpers. From v0.12.0 the tag's commit is A, so before the tag is
+# pushed A must hold the trusted ref's bytes of each (D-200).
+CAPTURE_FILES = (".github/workflows/release.yml", "tools/pju_release_bridge.py", "tools/pju_receipt_bridge.py",
+                 "tools/receipt_execution_route.py", "tools/published_release_identity.py", "tools/verdict_gate.py",
+                 "tools/verify_published_source.py", "tools/qualify_zipapp.py", "tools/qualify_assertions.py",
+                 "tools/assertion_contract.py")
 
 
 def git(root, *args):
@@ -35,6 +46,11 @@ def git(root, *args):
     result = subprocess.run(["git", "-C", str(root), *args], env=env, capture_output=True, timeout=60)
     R.require(result.returncode == 0, "git " + " ".join(args) + " failed: " + result.stderr.decode("utf-8", "replace").strip())
     return result.stdout
+
+
+def resolve(repo, rev):
+    R.require(not rev.startswith("-"), "a revision cannot start with '-'")
+    return git(repo, "rev-parse", "--verify", rev + "^{commit}").decode().strip()
 
 
 def write(repo):
@@ -70,14 +86,67 @@ def write(repo):
     return 0
 
 
-def check(repo, stage, head, base, pr_head, announced):
-    def commit(rev):
-        R.require(not rev.startswith("-"), "a revision cannot start with '-'")
-        return git(repo, "rev-parse", "--verify", rev + "^{commit}").decode().strip()
+def tag_name(repo, merge):
+    """The release tag of a release merge, and whether it points at the Action commit (D-200)."""
+    name = "v" + R.B.release_versions(repo, merge)[0]
+    return name, R.P.tag_at_action_commit(name)
 
-    current = {"stage": stage, "head_sha": commit(head), "base_sha": commit(base)}
+
+def tag(repo, head, base, announced):
+    current = {"stage": "tag", "head_sha": resolve(repo, head), "base_sha": resolve(repo, base)}
+    name, at_action = tag_name(repo, current["head_sha"])
+    R.require(at_action, f"{name} points at its release merge; only from v0.12.0 does a tag point at the Action commit")
+    action = R.validate_own_action_pin(repo, current, announced=announced or R.B.ACTION_SHA)["action_commit"]
+    print(f'git tag -a {name} {action} -m "CheckWash {name}" -m "Release-Merge: {current["head_sha"]}"')
+    return 0
+
+
+def pre_push(repo, name, current, action, main_report, trusted, remote):
+    """The three local checks before a v0.12.0 or later tag is pushed (D-200)."""
+    R.require(main_report is not None and trusted is not None,
+              f"from v0.12.0, check --stage tag needs --main-report and --trusted ({name})")
+    merge, ref = current["head_sha"], "refs/tags/" + name
+    # 1. The local annotated tag points at A, which the rule found to be M^2^1
+    #    with scheme S's one-line relation, and its message names M once.
+    R.require(git(repo, "cat-file", "-t", ref).decode().strip() == "tag", f"the local tag {name} is not an annotated tag")
+    raw = git(repo, "cat-file", "tag", ref)
+    headers = [line.split(b" ", 1) for line in raw.partition(b"\n\n")[0].split(b"\n")]
+    R.require([b"tag", name.encode()] in headers, f"the local tag object of {name} is not named {name}")
+    tagged = resolve(repo, ref)
+    R.require(tagged == action, f"the local tag {name} points at {tagged}, not at the Action commit {action}, {merge}^2^1")
+    R.require(R.P.release_merge(R.P.tag_message(raw)) == merge,
+              f"the local tag {name}'s message does not name the release merge {merge}")
+    # 2. M is the head of the main stage's verified report and the remote's main;
+    #    a test-merge commit of an open pull request also has M^2^1 = A.
+    report = R.B.strict_json(Path(main_report).read_bytes())
+    subject = report.get("subject") if type(report) is dict else None
+    R.require(type(subject) is dict and report.get("kind") == "checkwash.pju-release-verification.v1"
+              and report.get("status") == "verified" and report.get("repository") == R.REPOSITORY
+              and subject.get("stage") == "main" and subject.get("head_sha") == merge
+              and subject.get("base_sha") == current["base_sha"],
+              "the main stage report is not a verified main report of this release merge")
+    R.require(not remote.startswith("-"), "a remote cannot start with '-'")
+    row = git(repo, "ls-remote", "--exit-code", remote, "refs/heads/main").decode().split()
+    R.require(row == [merge, "refs/heads/main"], f"main at {remote} is not the release merge {merge}")
+    # 3. The release-event capture runs at A, so A holds the trusted ref's bytes.
+    trusted_commit = resolve(repo, trusted)
+    differ = [path for path in CAPTURE_FILES
+              if git(repo, "show", action + ":" + path) != git(repo, "show", trusted_commit + ":" + path)]
+    R.require(not differ, "the Action commit differs from the trusted ref in " + ", ".join(differ))
+    return {"name": name, "tag_object": git(repo, "rev-parse", "--verify", ref).decode().strip(),
+            "action_commit": action, "release_merge": merge, "trusted": trusted_commit}
+
+
+def check(repo, stage, head, base, pr_head, announced, main_report=None, trusted=None, remote="origin"):
+    current = {"stage": stage, "head_sha": resolve(repo, head), "base_sha": resolve(repo, base)}
     result = R.validate_own_action_pin(repo, current, announced=announced or R.B.ACTION_SHA,
-                                       pr_head=None if pr_head is None else commit(pr_head))
+                                       pr_head=None if pr_head is None else resolve(repo, pr_head))
+    name, at_action = tag_name(repo, current["head_sha"]) if stage == "tag" else (None, False)
+    if at_action:
+        result["tag"] = pre_push(repo, name, current, result["action_commit"], main_report, trusted, remote)
+    else:
+        R.require(main_report is None and trusted is None,
+                  "--main-report and --trusted are for the tag stage of a v0.12.0 or later release")
     print(json.dumps(result, sort_keys=True))
     if not result["applies"]:
         print(f"warning: the rule does not apply at the {stage} stage, since the head's version equals its advertised "
@@ -89,6 +158,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_subparsers(dest="mode", required=True)
     modes.add_parser("write", help="stage R on a clean checkout of the content commit").add_argument("--repo", default=".")
+    tagging = modes.add_parser("tag", help="print the annotated tag command of a v0.12.0 or later release")
+    tagging.add_argument("--repo", default=".")
+    tagging.add_argument("--head", required=True, help="the release merge M")
+    tagging.add_argument("--base", required=True)
+    tagging.add_argument("--announced", help="previous Action pin (default: tools/pju_receipt_bridge.py ACTION_SHA)")
     rule = modes.add_parser("check", help="run the release bridge's rule on local commits (advisory)")
     rule.add_argument("--repo", default=".")
     rule.add_argument("--stage", choices=("pr", "main", "tag"), required=True)
@@ -96,11 +170,17 @@ def main(argv=None):
     rule.add_argument("--base", required=True)
     rule.add_argument("--pr-head")
     rule.add_argument("--announced", help="previous Action pin (default: tools/pju_receipt_bridge.py ACTION_SHA)")
+    rule.add_argument("--main-report", help="from v0.12.0, at the tag stage: the main stage's verified report")
+    rule.add_argument("--trusted", help="from v0.12.0, at the tag stage: the release chain's trusted ref")
+    rule.add_argument("--remote", default="origin", help="from v0.12.0, at the tag stage: the remote whose main is M")
     args = parser.parse_args(argv)
     try:
         if args.mode == "write":
             return write(args.repo)
-        return check(args.repo, args.stage, args.head, args.base, args.pr_head, args.announced)
+        if args.mode == "tag":
+            return tag(args.repo, args.head, args.base, args.announced)
+        return check(args.repo, args.stage, args.head, args.base, args.pr_head, args.announced,
+                     args.main_report, args.trusted, args.remote)
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print("refused: " + str(error), file=sys.stderr)
         return 2

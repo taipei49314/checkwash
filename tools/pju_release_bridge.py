@@ -37,6 +37,8 @@ def load_trusted(name):
 
 
 B = load_trusted("pju_receipt_bridge")
+# Native publication metadata, and the release tag rule every release tool shares (D-200).
+P = load_trusted("published_release_identity")
 require, exact_keys, sha, digest, canonical, same = B.require, B.exact_keys, B.sha, B.digest, B.canonical, B.same
 Packet, git = B.Packet, B.git
 REPOSITORY, HOST, PROVENANCE = B.REPOSITORY, B.HOST, B.PROVENANCE
@@ -101,7 +103,7 @@ class GitHub(B.GitHub):
     def publication_response(self, url):
         # Fixed-origin, no-redirect authenticated metadata read. The helper
         # retains raw HTTP failures rather than interpreting them as absence.
-        return load_trusted("published_release_identity").request(url, token=self.token)
+        return P.request(url, token=self.token)
 
     def binary(self, method, path, raw, content_type="application/octet-stream"):
         require(path.startswith(f"/repos/{REPOSITORY}/releases/") and method == "POST", "unexpected upload path")
@@ -132,6 +134,46 @@ def public_download(url, expected_size=None):
     return raw
 
 
+def native_action_commit(api, commit):
+    """The Action commit A = M^2^1, from GitHub's own commit objects (D-200).
+
+    ``commit`` is the release merge M's native commit, a two-parent merge whose
+    second parent, the release PR's last commit R, has one parent: A.
+    """
+    parents = commit.get("parents")
+    require(type(parents) is list and len(parents) == 2 and all(type(row) is dict for row in parents),
+            "native release merge is not a two-parent merge commit")
+    final = sha(parents[1].get("sha"), 40)
+    last = api.request("GET", "/repos/" + REPOSITORY + "/git/commits/" + final)
+    rows = last.get("parents")
+    require(last.get("sha") == final and type(rows) is list and len(rows) == 1 and type(rows[0]) is dict,
+            "the release PR's last commit does not have one native parent")
+    return sha(rows[0].get("sha"), 40)
+
+
+def release_event_merge(api, tag, action):
+    """The release merge M of a v0.12.0 or later release event (D-200).
+
+    The event runs at the commit the tag points to, the Action commit A. The
+    annotated tag's message names M, and M^2^1 must be A. Whether M is a real
+    release merge the later chain decides: the tag stage's head, the main
+    stage's report and the merged pull request. Only the tag and commit
+    endpoints the capture already reads are used.
+    """
+    prefix = "/repos/" + REPOSITORY
+    ref = api.request("GET", prefix + "/git/ref/tags/" + tag)
+    require(ref.get("ref") == "refs/tags/" + tag and ref.get("object", {}).get("type") == "tag",
+            "annotated public tag required")
+    obj = api.request("GET", prefix + "/git/tags/" + sha(ref["object"].get("sha"), 40))
+    require(obj.get("tag") == tag and obj.get("object", {}).get("type") == "commit"
+            and obj["object"].get("sha") == action, "the published tag does not point at the release event's commit")
+    merge = P.release_merge(obj.get("message"))
+    commit = api.request("GET", prefix + "/git/commits/" + merge)
+    require(commit.get("sha") == merge and native_action_commit(api, commit) == action,
+            "the tag message's release merge does not have the release event's commit as its Action commit")
+    return merge
+
+
 def live_subject(api, value, *, check_event=True):
     stage = subject(value)
     prefix = "/repos/" + REPOSITORY
@@ -150,9 +192,19 @@ def live_subject(api, value, *, check_event=True):
         require(ref.get("ref") == "refs/tags/" + value["tag"] and ref.get("object", {}).get("type") == "tag"
                 and ref["object"].get("sha") == value["tag_object"], "native annotated tag changed")
         tag = api.request("GET", prefix + "/git/tags/" + value["tag_object"])
+        # Up to v0.11.x the tag points at the release merge M, the head. From
+        # v0.12.0 it points at the Action commit A = M^2^1, its message names
+        # M, and the release-event capture runs at A (D-200).
+        at_action = P.tag_at_action_commit(value["tag"])
+        tagged = native_action_commit(api, commit) if at_action else value["head_sha"]
         require(tag.get("sha") == value["tag_object"] and tag.get("tag") == value["tag"]
                 and tag.get("object", {}).get("type") == "commit"
-                and tag["object"].get("sha") == value["head_sha"], "tag peeled source mismatch")
+                and tag["object"].get("sha") == tagged, "tag peeled source mismatch")
+        if at_action:
+            require(P.release_merge(tag.get("message")) == value["head_sha"],
+                    "the tag message's Release-Merge is not the release merge")
+            require(stage != "release-event" or value["event"]["workflow_sha"] == tagged,
+                    "the release-event capture did not run at the tag's commit")
         if stage in ("release-event", "public-visitor"):
             release = api.request("GET", prefix + "/releases/" + str(value["release_id"]))
             require(type(release.get("id")) is int and release["id"] == value["release_id"]
@@ -377,6 +429,21 @@ def validate_published_baseline(vg, source_root, tag, pin, value, api, execution
     return refreshed
 
 
+def engine_source_members(source_root, commit, pin):
+    """The ``checkwash/*`` members a verdict engine's pyz must hold.
+
+    The candidate's and an earlier pin's are the commit's ``src/checkwash``.
+    From a v0.12.0 or later pin, the commit is the tag's, the Action commit A,
+    and the pyz is built from the release merge, so doctor's own Action pin
+    line is set to A (D-200, option A).
+    """
+    source = B.tree_files(source_root, commit, "src/checkwash")
+    if pin is not None and P.tag_at_action_commit(pin["tag"]):
+        require("doctor.py" in source, "the pinned Action commit has no doctor.py")
+        source["doctor.py"] = P.released_doctor(source["doctor.py"], commit)
+    return {"checkwash/" + name: {"bytes": len(contents), "sha256": digest(contents)} for name, contents in source.items()}
+
+
 def validate_verdict(packet, source_root, trusted_root, collector, desc, api, exits):
     records = packet.manifest["records"]["release"]
     value = packet.json(records["verdict"])
@@ -439,8 +506,7 @@ def validate_verdict(packet, source_root, trusted_root, collector, desc, api, ex
             q = packet.json(packet.manifest["records"]["qualifications"]["pyz"])
             require(item["sha256"] == q["artifact_sha256"], "verdict candidate is not qualified artifact")
         members = B.archive_members(raw, "engine.pyz")
-        source = B.tree_files(source_root, expected_commit, "src/checkwash")
-        expected_members = {"checkwash/" + name: {"bytes": len(contents), "sha256": digest(contents)} for name, contents in source.items()}
+        expected_members = engine_source_members(source_root, expected_commit, pin)
         require({name: row for name, row in members.items() if name.startswith("checkwash/")
                  and "__pycache__" not in PurePosixPath(name).parts and not name.endswith(".pyc")} == expected_members,
                 "verdict engine archive/source members differ")
@@ -626,13 +692,14 @@ def validate_visitors(packet, source_root, trusted_root, collector, desc, exits,
     if current["stage"] in ("pr", "main"):
         require(records["tag_source"] is records["tag_visitor"] is records["publication"] is None, "pre-tag stage claims future tag/publication")
     else:
-        validate_source_receipt(packet.json(records["tag_source"]), tag=current["tag"], commit=current["head_sha"],
-            tag_object=current["tag_object"], tree=current["source_tree"], trusted_root=trusted_root, collector=collector)
+        tagged, tagged_tree = tag_commit(source_root, current)
+        validate_source_receipt(packet.json(records["tag_source"]), tag=current["tag"], commit=tagged,
+            tag_object=current["tag_object"], tree=tagged_tree, trusted_root=trusted_root, collector=collector)
         visitor = packet.json(records["tag_visitor"])
         exact_keys(visitor, "schema_version status subject visitor", "tag visitor")
         require(type(visitor["schema_version"]) is int and visitor["schema_version"] == 1
                 and visitor["status"] == "completed" and same(visitor["subject"], current), "tag visitor subject differs")
-        validate_visitor(packet, visitor["visitor"], exits, source_root, current["head_sha"], version, source_identity=current["head_sha"])
+        validate_visitor(packet, visitor["visitor"], exits, source_root, tagged, version, source_identity=tagged)
         require(visitor["visitor"]["target"] == "git+https://github.com/" + REPOSITORY + ".git@" + current["tag"], "tag visitor target differs")
         if current["stage"] != "public-visitor":
             require(records["publication"] is None, "pre-public receipt claims public distribution installs")
@@ -708,6 +775,22 @@ def commit_parents(root, commit):
     row = git(root, "rev-list", "--parents", "-n", "1", commit).decode().split()
     require(row[:1] == [commit], "commit identity differs")
     return row[1:]
+
+
+def tag_commit(source_root, current):
+    """The commit a tag or later subject's tag points at, and its tree.
+
+    Up to v0.11.x it is the head, the release merge M. From v0.12.0 it is the
+    Action commit A = M^2^1, which `validate_own_action_pin` binds to M by
+    scheme S's one-line relation (D-200).
+    """
+    if not P.tag_at_action_commit(current["tag"]):
+        return current["head_sha"], current["source_tree"]
+    merge = commit_parents(source_root, current["head_sha"])
+    require(len(merge) == 2 and merge[0] == current["base_sha"], "release is not a two-parent merge commit of its base")
+    final = commit_parents(source_root, merge[1])
+    require(len(final) == 1, "the release PR's last commit does not have one parent")
+    return final[0], git(source_root, "rev-parse", final[0] + "^{tree}").decode().strip()
 
 
 def validate_own_action_pin(source_root, current, *, announced, pr_head=None):
@@ -965,6 +1048,10 @@ def capture(api, env, *, admission=None):
         release = event["release"]
         stage, tag, release_id = "release-event", release["tag_name"], positive(release["id"], "release ID")
         head = sha(env["GITHUB_SHA"], 40)
+        # From v0.12.0 the event runs at the tag's commit, the Action commit A;
+        # the subject's head is the release merge M its message names (D-200).
+        if P.tag_at_action_commit(tag):
+            head = release_event_merge(api, tag, head)
     else:
         extra = " pr_number" if requested_stage == "pr" else ""
         exact_keys(admission, "schema_version kind stage head tag release_id trusted_workflow_sha" + extra, "capture admission")
@@ -1004,7 +1091,8 @@ def verify_admitted(api, admission, *, receipt_root, source_root, trusted_root, 
     admit_environment(admission["trusted_workflow_sha"], env, stage=admission["stage"])
     require(git(trusted_root, "rev-parse", "HEAD").decode().strip() == admission["trusted_workflow_sha"], "trusted checkout differs")
     require(Path(__file__).resolve() == (Path(trusted_root) / "tools/pju_release_bridge.py").resolve(), "verifier executed outside the admitted trusted checkout")
-    for name in ("pju_release_bridge.py", "pju_receipt_bridge.py", "verdict_gate.py", "qualify_assertions.py", "assertion_contract.py"):
+    for name in ("pju_release_bridge.py", "pju_receipt_bridge.py", "published_release_identity.py", "verdict_gate.py",
+                 "qualify_assertions.py", "assertion_contract.py"):
         path = Path(trusted_root) / "tools" / name
         require(path.read_bytes() == git(trusted_root, "show", admission["trusted_workflow_sha"] + ":tools/" + name), "trusted verifier bytes changed")
     require(git(Path(receipt_root).parent, "rev-parse", "HEAD").decode().strip() == admission["receipt_commit"], "immutable receipt checkout differs")

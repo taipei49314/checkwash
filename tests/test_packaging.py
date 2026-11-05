@@ -41,11 +41,14 @@ def _version_tuple(value: str) -> tuple[int, int, int]:
 def _release_action_commit(root: pathlib.Path, tag: str, tag_commit: str) -> str:
     """The commit a verified release recommends as its Action pin.
 
-    Up to v0.10.0 it is the tag's peeled commit. From v0.11.0 (scheme S,
-    D-194) the tag commit is a two-parent merge with its second parent's tree;
-    that parent, the release PR's last commit, has one parent A. From A to the
-    tag only doctor.py changes, in place and in mode 100644, and of its bytes
-    only the own Action pin line, from A's previous pin to A. A is `vX.Y.Z^2^1`.
+    Three eras. Up to v0.10.0 it is the tag's peeled commit. For v0.11.x
+    (scheme S, D-194) the tag commit is a two-parent merge with its second
+    parent's tree; that parent, the release PR's last commit, has one parent A.
+    From A to the tag only doctor.py changes, in place and in mode 100644, and
+    of its bytes only the own Action pin line, from A's previous pin to A. A is
+    `vX.Y.Z^2^1`. From v0.12.0 (D-200) the tag points at A itself: its message
+    names the release merge M on one `Release-Merge:` line, M has the v0.11.x
+    tag's shape, and A is `M^2^1`, so the pin is the tag's peeled commit again.
     """
     import os
     import subprocess
@@ -57,6 +60,15 @@ def _release_action_commit(root: pathlib.Path, tag: str, tag_commit: str) -> str
     def git(*args: str) -> bytes:
         return subprocess.check_output(["git", "-C", str(root), *args], env=env)
 
+    peeled = tag_commit
+    if _version_tuple(tag) >= (0, 12, 0):
+        # From here on `tag_commit` is the release merge the message names.
+        message = git("cat-file", "tag", "refs/tags/" + tag).partition(b"\n\n")[2].decode("utf-8")
+        named = [line for line in message.split("\n") if line.lstrip().lower().startswith("release-merge")]
+        assert len(named) == 1 and re.fullmatch(r"Release-Merge: [0-9a-f]{40}", named[0]), (
+            f"{tag}'s message does not name its release merge on one Release-Merge line: {named}"
+        )
+        tag_commit = named[0].removeprefix("Release-Merge: ")
     merge = git("rev-list", "--parents", "-n", "1", tag_commit).decode().split()
     assert merge[:1] == [tag_commit] and len(merge) == 3, f"{tag} is not a two-parent merge commit"
     assert git("rev-parse", tag_commit + "^{tree}") == git("rev-parse", merge[2] + "^{tree}"), (
@@ -81,6 +93,8 @@ def _release_action_commit(root: pathlib.Path, tag: str, tag_commit: str) -> str
     assert len(previous) == 1 and previous[0] and before[changed[0]] == (
         b'_OWN_ACTION_PIN = "' + previous[0].group(1) + b'"'
     ), f"{tag}^2^1 does not hold its previous Action pin on doctor's own line"
+    if _version_tuple(tag) >= (0, 12, 0):
+        assert peeled == action, f"{tag} points at {peeled}, not at {tag_commit}^2^1, its Action commit {action}"
     return action
 
 
@@ -268,22 +282,24 @@ def test_readme_action_snippet_is_zizmor_blanket():
         cwd=str(ROOT),
         text=True,
     ).strip()
-    # The release's Action commit: the peeled commit up to v0.10.0, then `vX.Y.Z^2^1`.
+    # The release's Action commit: the peeled commit up to v0.10.0, `vX.Y.Z^2^1`
+    # for v0.11.x, and the peeled commit again from v0.12.0 (D-200).
     sha = _release_action_commit(ROOT, tag, peeled)
     legacy = _version_tuple(tag) < (0, 11, 0)
+    tagged_at_action = _version_tuple(tag) >= (0, 12, 0)
     checkwash_refs = [
         ref for ref in uses if ref.startswith("taipei49314/checkwash/action@")
     ]
     assert checkwash_refs == [f"taipei49314/checkwash/action@{sha}"], (
         f"README Action pin is not {tag}'s Action commit ({sha}). Verify the "
-        "trusted release with `git rev-parse 'vX.Y.Z^2^1'` (up to v0.10.0, "
-        "`git rev-parse 'vX.Y.Z^{commit}'`)."
+        "trusted release with `git rev-parse 'vX.Y.Z^{commit}'` (for v0.11.x, "
+        "`git rev-parse 'vX.Y.Z^2^1'`)."
     )
     assert "`git rev-parse 'vX.Y.Z^2^1'`" in readme
-    if legacy:
+    if legacy or tagged_at_action:
         assert "`git rev-parse 'vX.Y.Z^{commit}'`" in readme
     action_doc = (ROOT / "action" / "README.md").read_text(encoding="utf-8")
-    if legacy:
+    if legacy or tagged_at_action:
         assert (
             f"git ls-remote https://github.com/taipei49314/checkwash.git "
             f"'refs/tags/{tag}^{{}}'"
@@ -377,6 +393,36 @@ def test_release_action_commit_follows_scheme_s(tmp_path):
     partial = git(root, "commit-tree", git(root, "write-tree"), "-p", touched["B"], "-p", touched["R"], "-m", "not R's tree")
     with pytest.raises(AssertionError, match="tree is not the tree of"):
         _release_action_commit(root, "v0.11.0", partial)
+
+
+def test_release_action_commit_from_v0_12_0_is_the_tag_commit(tmp_path):
+    """From v0.12.0 (D-200) the tag points at A, and its message names M, whose `^2^1` is A."""
+    import pytest
+    from own_action_pin_fixtures import chain, git
+
+    good = chain(tmp_path / "good", version="0.12.0")
+    root, action, merge = good["root"], good["A"], good["M"]
+
+    def tag(name, target, *lines):
+        git(root, "tag", "-a", name, target, *(part for line in lines for part in ("-m", line)))
+
+    tag("v0.12.0", action, "CheckWash v0.12.0", f"Release-Merge: {merge}")
+    assert _release_action_commit(root, "v0.12.0", action) == action
+    # v0.11.x keeps its tag on M and recommends M^2^1.
+    tag("v0.11.9", merge, "CheckWash v0.11.9")
+    assert _release_action_commit(root, "v0.11.9", merge) == action
+    refused = {
+        "v0.12.1": (merge, [f"Release-Merge: {merge}"], "not at .*\\^2\\^1, its Action commit"),
+        "v0.12.2": (good["B"], [f"Release-Merge: {merge}"], "not at .*\\^2\\^1, its Action commit"),
+        "v0.12.3": (action, ["CheckWash v0.12.3"], "one Release-Merge line"),
+        "v0.12.4": (action, [f"Release-Merge: {merge}", f"release-merge: {merge}"], "one Release-Merge line"),
+        "v0.12.5": (action, [f"Release-Merge: {merge.upper()}"], "one Release-Merge line"),
+        "v0.12.6": (action, [f"Release-Merge: {good['S']}"], "not a two-parent merge commit"),
+    }
+    for name, (target, lines, message) in refused.items():
+        tag(name, target, *lines)
+        with pytest.raises(AssertionError, match=message):
+            _release_action_commit(root, name, target)
 
 
 def test_perf_gate_is_in_default_collection():
