@@ -16,7 +16,10 @@ Engines
   (``tests/verdict_gate/baseline.toml``). It fails unless sha256 and size match,
   its ``checkwash/*`` members equal the pinned commit's ``src/checkwash``
   (``archive_files``, ``package_files`` and ``_require_same`` from
-  ``tools/qualify_assertions.py``, imported by path), the source checkout is at
+  ``tools/qualify_assertions.py``, imported by path; from a v0.12.0 or later
+  pin, whose commit is the tag's, the release's Action commit, with
+  ``doctor.py``'s own Action pin line set to that commit, as in the release
+  merge the pyz is built from, D-200), the source checkout is at
   the pinned commit with no local changes, every report's
   ``run.checkwash_version`` matches, and the clean-range (``HEAD..HEAD``: exit 0,
   verdict pass, no findings, no config errors, no skipped files) and invalid-ref
@@ -119,7 +122,11 @@ The gate fails on:
   label; drift of the pinned ``baseline_blocked = {count, sha256 of sorted ids}``;
   a canary set mismatch; on a tag-push run, a baseline that is not the highest
   other published stable Release merged into HEAD, or a HEAD that is not the
-  pushed tag's commit. The tag rule retains complete twice-read public Release
+  pushed tag's release merge: up to v0.11.x the tag's commit; from v0.12.0 the
+  commit whose second parent's parent ``HEAD^2^1`` the tag points at and whose
+  id the tag message's one ``Release-Merge:`` line gives (D-200). So from
+  v0.12.0 a run on the tag's own commit fails, as a hosted tag-push run would.
+  The tag rule retains complete twice-read public Release
   catalog bytes/HTTP status/Link/times/hashes and native relevant tag ref/peels.
   Its baseline's uploaded canonical pyz must match the unchanged artifact pin.
   Bare tags without a currently public Release remain visible; this is no claim
@@ -1196,6 +1203,18 @@ def source_changes(source: Path) -> list[str]:
     return sorted(changed)
 
 
+def released_package(expected: dict[str, str], source: Path, commit: str) -> dict[str, str]:
+    """The ``checkwash/*`` members a v0.12.0 or later release's pyz holds (D-200, option A).
+
+    From v0.12.0 the pinned commit is the tag's, the release's Action commit A,
+    and the pyz is built from the release merge, whose ``doctor.py`` differs
+    from A's only in the own Action pin line, set to A. A's two pin lines hold
+    the previous pin; ``released_doctor`` refuses a doctor whose lines differ.
+    """
+    raw = (source / "src" / "checkwash" / "doctor.py").read_bytes()
+    return {**expected, "checkwash/doctor.py": _sha256(_PUBLICATION.released_doctor(raw, commit))}
+
+
 def verify_identity(engine: Engine, work_dir: Path, timeout: float = DEFAULT_TIMEOUT,
                     reuse: dict | None = None) -> dict:
     """Pin, member, commit, version and control checks; never runs bytes that fail a static check.
@@ -1232,6 +1251,8 @@ def verify_identity(engine: Engine, work_dir: Path, timeout: float = DEFAULT_TIM
         expected = package_files(engine.source / "src" / "checkwash")
         if not expected:
             raise ValueError("source checkout has no src/checkwash package")
+        if pin is not None and _PUBLICATION.tag_at_action_commit(pin["tag"]):
+            expected = released_package(expected, engine.source, pin["commit"])
         members = archive_files(engine.pyz)
         record["members"], record["members_sha256"] = len(members), digest(members)
         _require_same(expected, members, "artifact checkwash/* members")
@@ -1584,6 +1605,24 @@ def highest_other_tag(pushed: str, tags: list[str]) -> tuple[str | None, list[st
     return (max(others, key=parsed.__getitem__) if others else None), sorted(ignored)
 
 
+def action_commit_tag_errors(repo: Path, pushed: str, tagged: str, head: str) -> list[str]:
+    """From v0.12.0: the pushed tag points at HEAD^2^1 and its message names HEAD (D-200)."""
+    try:
+        action = _git_text(repo, "rev-parse", "--verify", "--quiet", "HEAD^2^1^{commit}")
+    except GateError:
+        return [f"HEAD {head} has no Action commit HEAD^2^1 for the pushed tag {pushed}"]
+    errors = []
+    if tagged != action:
+        errors.append(f"the pushed tag {pushed} points at {tagged}, not at HEAD's Action commit HEAD^2^1 ({action})")
+    try:
+        merge = _PUBLICATION.release_merge(_PUBLICATION.tag_message(_git(repo, "cat-file", "tag", f"refs/tags/{pushed}")))
+    except ValueError as error:
+        return errors + [f"pushed tag {pushed}: {error}"]
+    if merge != head:
+        errors.append(f"the pushed tag {pushed} names the release merge {merge}, not HEAD {head}")
+    return errors
+
+
 def check_tag_rule(repo: Path, pushed: str, pin: dict, *, publication: dict | None = None) -> tuple[list[str], dict]:
     errors = []
     info = {"pushed": pushed, "highest_other": None, "ignored_tags": [],
@@ -1597,11 +1636,16 @@ def check_tag_rule(repo: Path, pushed: str, pin: dict, *, publication: dict | No
     if pushed not in tags:
         errors.append(f"pushed tag {pushed} is not merged into HEAD")
     else:
-        # The release gate runs on the exact tagged SHA, not on a descendant.
+        # The release gate runs on the exact release merge commit, not on a
+        # descendant. Up to v0.11.x the pushed tag points at it; from v0.12.0
+        # at its Action commit HEAD^2^1, and the tag's message names HEAD
+        # (D-200). One rule per version, never either.
         try:
             tagged = _git_text(repo, "rev-parse", "--verify", "--quiet", f"refs/tags/{pushed}^{{commit}}")
             head = _git_text(repo, "rev-parse", "--verify", "HEAD^{commit}")
-            if tagged != head:
+            if _PUBLICATION.tag_at_action_commit(pushed):
+                errors.extend(action_commit_tag_errors(repo, pushed, tagged, head))
+            elif tagged != head:
                 errors.append(f"HEAD {head} is not the commit of the pushed tag {pushed} ({tagged})")
         except GateError as error:
             errors.append(f"pushed tag {pushed}: {error}")

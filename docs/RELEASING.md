@@ -761,6 +761,12 @@ and `.pre-commit-hooks.yaml`, and rejects dirty public surfaces. Every Git
 command must succeed. Source, tree, tag object and peeled commit are retained
 in the receipt. Owned temporary Git repositories exercise these same checks in
 ordinary CI; a local/private synthetic tag is never evidence of publication.
+From v0.12.0 (D-200) the tag points at the release's Action commit A, so this
+validator's receipt, here and in the PJU tag stages, proves that the tag and A
+agree. It no longer binds the tag to the release merge M that the
+distributions are built from: scheme S's one-line relation from A to M and
+the release bridge's native reads of M and R carry that binding. This hosted
+job is disabled, and on a v0.12.0 or later tag push it would bind A only.
 
 The current release workflow captures its real `release: published` event.
 A fresh PJU collection after that event repeats native source/visitor
@@ -832,24 +838,50 @@ under the standing route above. A source edit alone is not a passing receipt.
    Do not rotate the baseline to obtain a green release verdict.
 5. Only under the explicit publication grant, and once the fixed-corpus
    comparison (below) has run and the owner has reviewed every commit it
-   lists, or the grant waives it, make the final annotated tag on
-   the qualified merge commit and push only that tag. From v0.11.0 the
-   comparison may run on A, or on any commit whose `src/` tree differs from
-   M's only in the version string and `doctor`'s own pin line (D-196, below), and
-   `tools/own_action_pin.py check --stage tag --head <M> --base <base>` runs
-   on M before the tag is made: the tag stage applies the rule
-   unconditionally, and a failure there cannot be fixed by moving the tag.
-   No ruleset is unlocked or restored any more (2026-10-14, below); the
-   grant is what permits the push. Never move or delete an existing public
-   tag to fix a failed check.
+   lists, or the grant waives it, make the final annotated tag and push only
+   that tag. From v0.12.0 (D-200) the tag points at the release's Action
+   commit A = `M^2^1`, not at the qualified merge commit M, and its message
+   names M on exactly one line, `Release-Merge: <M>`, with no `Source:` or
+   `Tree:` line that a reader could take for the tag's commit.
+   `tools/own_action_pin.py tag --head <M> --base <base>` prints the
+   command. Before the push,
+   `tools/own_action_pin.py check --stage tag --head <M> --base <base> --main-report <report> --trusted <ref>`
+   checks the local tag, with the main stage's published report and the
+   chain's trusted ref:
+   1. the tag object is named for the release and points at A itself, not
+      at another tag, and A is `M^2^1` with scheme S's one-line relation
+      (the rule below);
+   2. its message names M, M is the main report's verified head and the
+      remote's `refs/heads/main`: a test-merge commit GitHub makes for an
+      open pull request also has A as its `^2^1`;
+   3. A's `.github/workflows/release.yml`, `tools/pju_release_bridge.py`
+      and the helpers they load or audit are the trusted ref's bytes, since
+      the release-event capture runs them from A.
+
+   Up to v0.11.x the tag is made on M, after
+   `tools/own_action_pin.py check --stage tag --head <M> --base <base>` on M.
+   From v0.11.0 the comparison may run on A, or on any commit whose `src/`
+   tree differs from M's only in the version string and `doctor`'s own pin
+   line (D-196, below). The tag stage applies the rule unconditionally, and a
+   failure there cannot be fixed by moving the tag. No ruleset is unlocked or
+   restored any more (2026-10-14, below); the grant is what permits the push.
+   Never move or delete an existing public tag to fix a failed check.
 6. Require that tag's own native annotated identity, actual tag visitor,
    fresh PJU full CI/qualification, `verdict gate` receipts and successful tag
-   stage check, all bound to the release commit. Record native capture/run IDs
-   and attempts. Failure leaves the tag public and the release stopped;
-   the maintainer decides the remedy. README still advertises the previously
-   verified release rather than prematurely offering this incomplete target.
+   stage check, all bound to the release commit M, which stays the head of
+   the tag and later stages. From v0.12.0 the bridge requires the tag to point
+   at A = `M^2^1`, read from GitHub's own commit objects, and its message to
+   name M, and the tag source receipt and the tag visitor bind A, on a
+   separate checkout of A (`--tag-source`). Up to v0.11.x the tag points at M.
+   Record native capture/run IDs and attempts. Failure leaves the tag public
+   and the release stopped; the maintainer decides the remedy. README still
+   advertises the previously verified release rather than prematurely
+   offering this incomplete target.
 7. Publish the authorized GitHub Release only after those receipts exist.
-   Its real published event is captured first. Prepare fresh post-event PJU
+   Its real published event is captured first. The capture runs at the
+   commit the tag points to; from v0.12.0 that is A, and it reads M from the
+   tag's message, checks that `M^2^1` is A and takes M as the head (D-200).
+   Prepare fresh post-event PJU
    source, suite, visitor, qualification and inventory evidence, together with
    the exact version/source authorization and any concrete missing-platform
    acceptance. Admit its immutable packet through the manual publisher.
@@ -870,21 +902,27 @@ under the standing route above. A source edit alone is not a passing receipt.
    the matching README CLI pins and the README Action pin to this release in a
    reviewed follow-up only once these checks pass. Failed historical receipts
    remain failed. From v0.11.0 the follow-up moves these to the release's
-   Action commit A = `vX.Y.Z^2^1`, which the publication record names: the
+   Action commit A, which the publication record names: the
    README Action pin and its `# vX.Y.Z` annotation,
    `.github/workflows/checkwash.yml`, `doctor`'s `_PREVIOUS_ACTION_PIN` (its
    `_OWN_ACTION_PIN` is already A), `ACTION_SHA` in
    `tools/pju_receipt_bridge.py` and `tools/replay_pju_action.py`,
    SECURITY.md's current pin and the two pin literals in
    `tests/test_doctor.py`; and, when `action/action.yml` changed,
-   `ACTION_YAML_SHA256` in `tools/replay_pju_action.py`. action/README's
-   verification block moves to the new tag: the clone,
+   `ACTION_YAML_SHA256` in `tools/replay_pju_action.py`.
+   `release/advertised.toml` advances to the tag with `commit` the tag's
+   peeled commit. From v0.12.0 (D-200) that is A, so the README Action pin,
+   the advertised commit and the commit the tag points to are one commit,
+   and action/README's current verification of the checkwash pin becomes the
+   `git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/vX.Y.Z^{}'`
+   line, with the concrete tag; v0.11.0's clone, `rev-parse` and `diff`
+   lines stay as the verification of the v0.11.0 pin. For v0.11.0 A was
+   `v0.11.0^2^1` and the advertised commit M: action/README's verification
+   block moved to the clone,
    `git -C checkwash rev-parse 'vX.Y.Z^2^1'` and
    `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` lines, with the concrete tag,
-   become the current verification of the checkwash pin, and the v0.10.0
-   `ls-remote` line becomes the legacy verification for pins up to v0.10.0
-   (the checkout and setup-python lines stay). `release/advertised.toml`
-   advances to the tag with `commit` the tag's peeled commit M, not A. The
+   and the v0.10.0 `ls-remote` line became the verification for pins up to
+   v0.10.0 (the checkout and setup-python lines stay). The
    follow-up also carries the release PR's receipt and lifecycle records
    and any fixed-corpus records not already in the release PR (D-196). It
    is the next merge after the release, by procedure: until it
@@ -894,6 +932,10 @@ under the standing route above. A source edit alone is not a passing receipt.
 9. Separately rotate the verdict baseline after publication. `[baseline]`
    pins the new tag/version/commit and its actual pyz size/SHA256;
    `baseline_blocked` and `[t3.cases]` follow the gate's recorded proposal.
+   `commit` is the tag's peeled commit. From v0.12.0 that is A, and the gate
+   and the bridge bind the pyz, built from M, to A's `src/checkwash` with
+   `doctor.py`'s own Action pin line set to A, provided A's two pin lines are
+   equal (D-200).
    `[canary]` keeps its v0.4.2 to v0.5.0 pair unless separately reviewed.
    Protected `tests/gates/verdict_gate_accepted.toml` and `DECISIONS.md` still
    need the maintainer's exact disposition; remove only the stale entries
@@ -918,8 +960,9 @@ accepts two exact Action commits, both in its own source:
 was prepared, and `_OWN_ACTION_PIN`, the release's own Action commit A. Each is
 one line at column 0, `_NAME = "<40 lowercase hex>"`, with no trailing
 comment; the release tools read that shape. After publication the README
-recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
-([D-194](../DECISIONS-archive-4.md)).
+recommends A. For v0.11.0 that is `v0.11.0^2^1`, not the commit the tag
+points to ([D-194](../DECISIONS-archive-4.md)); from v0.12.0 the tag points
+at A ([D-200](../DECISIONS.md), below).
 
 - **A, the content commit.** The version bump, release notes and every other
   change of the release PR, with both pin lines equal to the README's Action
@@ -1001,24 +1044,35 @@ recommends A, `vX.Y.Z^2^1`, not the commit the tag points to
   `test_check_never_imports_doctor` (D-194).
 - **Local checks**, advisory and not evidence: before collecting,
   `python tools/own_action_pin.py check --stage pr --head <R> --base <base>`;
-  before tagging, `check --stage tag --head <M> --base <base>`. The tag
+  before tagging, up to v0.11.x `check --stage tag --head <M> --base <base>`,
+  and from v0.12.0 `tag --head <M> --base <base>`, which runs the same rule
+  and prints the tag command, then, after the local tag is made and before
+  it is pushed, `check --stage tag` with `--main-report` and `--trusted`,
+  which it requires from v0.12.0 (step 5). The tag
   stage applies the rule unconditionally, while at `main` it is skipped, and
   `check` only warns, when M's version equals its advertised version and its
   base's. The announced pin defaults to `ACTION_SHA` in
   `tools/pju_receipt_bridge.py`. Before each dispatch, also dry-run the
   verifier against the real receipt, as for v0.10.0.
-- **From step 8 on.** Once step 8 moves the Action pin to a release's A, the
-  pin differs from the advertised commit, that release's tag commit, and from
-  the verdict-baseline commit, also a tag commit: the previous release's
-  until step 9 rotates it. This holds for every later release-stage
+- **From step 8 on.** Once step 8 moved the Action pin to v0.11.0's A, the
+  pin differed from the advertised commit, that release's tag commit M, and
+  from the verdict-baseline commit, also a tag commit: the previous
+  release's until step 9 rotated it. This held for every later release-stage
   collection, from the step-9 rotation pull request's `pr` receipt (#586 for
-  0.11.0) to the next release's stages. `tools/collect_pju_release.py` falls
-  back to the pinned Action checkout for `--advertised-source` and
-  `--verdict-baseline-source`, so each such collection must pass separate
-  checkouts at those commits; otherwise it stops on the checkout mismatch,
-  after the full suite. The maintainer's local stage scripts were changed
-  after 0.11.0's step 8: they pin the Action checkout at A and can add a
-  checkout of the release commit for both sources.
+  0.11.0) to the next release's stages, 0.12.0's included.
+  `tools/collect_pju_release.py` falls back to the pinned Action checkout
+  for `--advertised-source` and `--verdict-baseline-source`, so each such
+  collection must pass separate checkouts at those commits; otherwise it
+  stops on the checkout mismatch, after the full suite. The maintainer's
+  local stage scripts were changed after 0.11.0's step 8: they pin the
+  Action checkout at A and can add a checkout of the release commit for both
+  sources. From v0.12.0 (D-200) the tag points at A, so after 0.12.0's step 8
+  the Action pin and the advertised commit are the same commit, and after
+  its step 9 the baseline commit is too: the fallback serves again. Every
+  `tag`, `release-event` and `public-visitor` collection from v0.12.0 also
+  passes `--tag-source`, a checkout of that release's own A, which the
+  Action checkout is not until step 8; the local stage scripts
+  (`prepare-stage.sh`, `run-stage.sh`) must add it.
 
 What the release bridge checks (`validate_own_action_pin`, after the
 previous-stage link and before the product evidence; the report records
@@ -1062,10 +1116,10 @@ that use it, and code in other modules that could change `doctor` at
 import, are the release PR's reviewed content. The ordinary receipt bridge
 reads the pin lines the same way.
 
-Users verify the pin in a clone: `git -C checkwash rev-parse 'vX.Y.Z^2^1'`
-gives A, and `git -C checkwash diff 'vX.Y.Z^2^1' vX.Y.Z` shows the one
+Users verify the v0.11.0 pin in a clone: `git -C checkwash rev-parse 'v0.11.0^2^1'`
+gives A, and `git -C checkwash diff 'v0.11.0^2^1' v0.11.0` shows the one
 `doctor` line ([Action reference](../action/README.md#public-pin-and-upgrade)).
-Pin updaters that follow the `# vX.Y.Z` comment, such as Dependabot and
+Pin updaters that follow the `# v0.11.0` comment, such as Dependabot and
 Renovate, will propose the tag's commit, which `doctor` rejects (inferred from
 their documentation, not run); Nelson accepted that with documentation
 (D-194). For the same reason zizmor's `ref-version-mismatch` audit (1.14.0
@@ -1073,15 +1127,64 @@ and later) can report the README pin's comment, and its pedantic
 `stale-action-refs` the untagged commit (inferred, not run); Nelson accepted
 that with documentation for 0.11 (D-196).
 
-**Planned for 0.12 (D-196).** Nelson approved pointing the tag at the
-Action commit A from 0.12, so that pin updaters, zizmor and `git ls-remote`
-see the README pin as the tag's commit. That release must also rework the
-tag stage, the tag visitor and the published-source identity, which today
-require the tag to peel to the qualified merge commit,
-`release/advertised.toml`'s commit and the `tests/test_packaging.py`
-relation, and the README's install-from-tag command, which would install A,
-whose `doctor` accepts only the previous pin. Its design goes to Nelson
-first. Until then this section is the procedure.
+**From v0.12.0 the tag points at A (D-200).** Nelson approved this for 0.12
+in D-196, so that pin updaters, zizmor and `git ls-remote` see the README pin
+as the tag's commit (inferred from those tools' documentation, not run).
+Scheme S does not change: A, R, the merge commit only, and M with R's tree.
+The distributions are still built from M, and the `main`, `tag`,
+`release-event` and `public-visitor` subjects are still M. One version
+boundary applies everywhere: a tag at or above v0.12.0 follows the rule
+below, and a tag up to v0.11.x keeps the rule above. No tool accepts either.
+
+- *The tag.* An annotated tag on A whose message holds exactly one line
+  `Release-Merge: <M>`, made with the command `tools/own_action_pin.py tag`
+  prints and checked before the push by `check --stage tag` (step 5).
+- *The release bridge.* At `tag` and later it reads M's and R's commit
+  objects from GitHub and requires the tag to peel to A = `M^2^1` and its
+  message to name M; at `release-event` the capture run's workflow commit
+  must be A. The release-event capture reads M from the tag's message,
+  checks that `M^2^1` is the event's commit and takes M as the head; it reads
+  only the tag and commit endpoints it already used. Whether M is the real
+  release merge, the chain decides: the tag stage's head, the main stage's
+  report, `refs/heads/main` and the merged pull request. The tag source
+  receipt and the tag visitor bind A.
+- *The collector.* At `tag` and later the local annotated tag must point at
+  `M^2^1` and name M, and the tag source receipt runs on `--tag-source`, a
+  clean checkout of A with the tag fetched, since
+  `tools/verify_published_source.py` requires the source commit to be the
+  checked-out one. Preflight checks that checkout, clean at A and holding
+  the subject's tag object, before the suite and the builds run, and the
+  stage steps compare it again after them. Its receipt then proves that the
+  tag and A
+  agree, no longer that the tag and the build commit M agree: the one-line
+  relation of scheme S and the bridge's native reads bind A to M.
+- *The verdict gate.* On a tag run, HEAD is M, the tag points at `HEAD^2^1`,
+  and its message names HEAD. From a v0.12.0 or later baseline pin, whose
+  commit is the tag's A, the pyz's `checkwash/*` members must equal A's
+  `src/checkwash` with `doctor.py`'s own Action pin line set to A, and only
+  when A's two pin lines are equal: what R does, and what the release bridge
+  verified when M's tree was R's (option A of the design). `release/advertised.toml`
+  keeps its format and meaning: `commit` is the tag's commit, A from v0.12.0.
+- *A CLI installed from the tag.* It is A's, whose `doctor` holds the
+  previous pin on both lines, so it rejects that release's own pin. The
+  README installs the CLI only from PyPI and the pyz, which are built from M
+  (the option Nelson chose, 「甲：拿掉那行（建議）」, D-200), and
+  KNOWN-ISSUES-next says so.
+- *What has not run.* The new path has run only on owned synthetic chains
+  and owned native metadata. Its first real tag and release event is
+  v0.12.0's, and a failure after the push may cost a v0.12.1. Before the
+  push only `check --stage tag` can run: the collector's tag stage starts
+  from the captured subject, and the verdict gate's tag rule reads the
+  pushed tag's public metadata.
+
+**0.12.0 bootstrap.** The 0.12.0 chain is verified from a trusted ref cut
+from main after D-200 merges, as `review/collector-d-011-20261103` was for
+0.11.0, and recorded here when it is cut. No release tool changes between
+that ref and the release pull request's A. The release-event capture runs
+`release.yml` and the release bridge from A, so A must hold that ref's bytes
+of them and of the helpers they load or audit, which `check --stage tag`
+checks before the push. Its announced pin is v0.11.0's A,
+`257150319fca15235185fc629d8b9c21c17166ca`.
 
 **0.11.0 bootstrap.** The 0.11.0 chain is verified from the trusted ref
 `review/collector-d-011-20261103`, `fa8a8ea0a805d08d53c32390152a7590ea727836`,
@@ -1731,17 +1834,23 @@ is authorized, and no ended-session local workload grant is reused.
 
 ## Release responsibility checks
 
-- README CLI tag, pipx version and download URL match the explicit advertised
-  public identity: `test_readme_install_refs_match_advertised_release`.
+- README pipx version and download URL match the explicit advertised
+  public identity, and the README installs no CLI through Git from this
+  repository (`git+https://github.com/taipei49314/checkwash@…`), since from
+  v0.12.0 a CLI from the tag rejects that release's own pin in `doctor`
+  (D-200): `test_readme_install_refs_match_advertised_release`.
 - Candidate source/package versions agree: `test_version_matches_pyproject`.
 - The Action recommendation is hash-pinned and, since 2026-10-14, advances
   to the newest verified release instead of lagging one release behind:
-  `test_readme_action_snippet_is_zizmor_blanket` checks the pinning. Up to
-  v0.10.0 the pin is the tag's peeled commit; from v0.11.0 it is the
-  release's Action commit `vX.Y.Z^2^1`, and the test requires the tag to be a
-  two-parent merge with its second parent's tree, that parent to have one
-  parent A, and the tag to differ from A only in `doctor`'s own pin line, in
-  place and in mode 100644, from A's previous pin to A.
+  `test_readme_action_snippet_is_zizmor_blanket` checks the pinning, in
+  three eras. Up to v0.10.0 the pin is the tag's peeled commit. For v0.11.x
+  it is the release's Action commit `vX.Y.Z^2^1`, and the test requires the
+  tag to be a two-parent merge with its second parent's tree, that parent to
+  have one parent A, and the tag to differ from A only in `doctor`'s own pin
+  line, in place and in mode 100644, from A's previous pin to A. From
+  v0.12.0 it is the tag's peeled commit A again, and the test requires the
+  tag's message to name the release merge M on one `Release-Merge:` line, M
+  to have the v0.11.x tag's shape, and A to be `M^2^1`.
 - From v0.11.0 (scheme S, D-194), the release bridge's
   `validate_own_action_pin` checks R, the merge commit and the tag at each
   release stage it applies to, with GitHub's native merge parents; the
@@ -1750,6 +1859,13 @@ is authorized, and no ended-session local workload grant is reused.
   runs the same rule locally, as an advisory check.
   `tests/test_pju_own_action_pin.py`, `tests/test_own_action_pin.py` and
   `tests/test_doctor_own_action_pin.py` exercise them on owned Git chains.
+- From v0.12.0 (D-200) the tag points at A: the bridge's native tag rule and
+  release-event capture, the collector's local tag and tag source, the
+  verdict gate's tag rule and baseline binding, and
+  `tools/own_action_pin.py tag` and `check --stage tag` are exercised both
+  ways, a v0.12.0 tag under the new rule and a v0.11.x tag under the old one,
+  by `tests/test_release_tag_at_action_commit.py` on owned Git chains and
+  owned native metadata.
 - The actual public tag exists and its complete install surfaces have the
   expected source/native identity: `tools/verify_published_source.py`, in the
   advertised visitor, tag-event job and release prerequisite. Its failure
@@ -1778,25 +1894,32 @@ candidate/tag divergence as an expected development failure is superseded by
 this explicit separation; no test selection or `continue-on-error` hides it.
 
 The verdict gate continues to require success on the release PR's final head,
-then the exact release commit on main, then that same commit on the public tag.
-A failed, cancelled or missing run stops publication. A BLOCK-to-PASS still
+then the exact release commit on main, then that same commit at the tag stage:
+up to v0.11.x the commit the public tag points to, and from v0.12.0 the
+release merge whose Action commit the tag points to and whose id its message
+gives (D-200). A failed, cancelled or missing run stops publication. A BLOCK-to-PASS still
 requires a repair or the maintainer's recorded acceptance; this phase change
 supplies no such acceptance.
 
 ## What ships with a release
 
-The `release` workflow builds these on a published release, and refuses to
-build if the version and the tag disagree:
+The PJU release collector builds these from each stage's head, the release
+pull request's last commit R at `pr` and then the release merge M, never
+from the commit a v0.12.0 or later tag points to, and refuses if the version
+and the tag disagree. The `release` workflow's `publish-assets` job uploads
+the receipt's verified files to the published Release:
 
-- `checkwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into a fresh
-  venv in CI, which asserts `pip freeze` contains checkwash and nothing else
+- `checkwash-X.Y.Z-py3-none-any.whl` and the sdist — installed into fresh
+  venvs by the collector's visitors, which allow no installed distribution
+  besides checkwash, pip and setuptools
 - `checkwash.pyz` — the single-file build, gated by `tests/test_zipapp.py`
 
 ### Assertion capability qualification
 
-Before uploading release assets or publishing to PyPI, the release workflow
-runs `tools/qualify_assertions.py` on the source, the actual built zipapp and
-the wheel installed into a fresh venv. All three execute the same owned
+Before uploading release assets or publishing to PyPI, the release chain
+requires the receipt's runs of `tools/qualify_assertions.py` on the source,
+the actual built zipapp and the wheel installed into a fresh venv. All three
+execute the same owned
 assertion support contract in `tests/data/javascript_assertion_support.json`
 and the separate `javascript_foundation_mutations.json` supplement through
 real Git commits and the CLI. Each loss must report the expected
@@ -1841,12 +1964,13 @@ python tools/qualify_assertions.py --distribution wheel --artifact dist/checkwas
 python tools/qualify_assertions.py --distribution pyz --artifact dist/checkwash.pyz --output work/assertion-pyz.json
 ```
 
-Fixture analysis is zero-network and never executes fixture tests. CI uses
-build/install tooling separately to create the candidate distributions.
+Fixture analysis is zero-network and never executes fixture tests. The
+collector uses build/install tooling separately to create the candidate
+distributions.
 
 ### pyz reproducibility
 
-The release job builds the zipapp with:
+The collector builds the zipapp with:
 
 ```bash
 python -m zipapp src -m "checkwash.zipapp_entry:run" -o dist/checkwash.pyz -c
@@ -1857,11 +1981,11 @@ tree, same `-m` entry, compressed. It is **not** bit-identical across
 Python versions or zip implementations. Visitors should treat the
 GitHub release asset as the artifact and verify it by running
 `python checkwash.pyz --version` and `python checkwash.pyz demo`.
-`tests/test_zipapp.py` on every push is the gate that the recipe still
-works; the release job is what people download.
+`tests/test_zipapp.py`, in every receipt's full suite, is the gate that the
+recipe still works; the Release asset is what people download.
 
 Workflow `uses:` are hash-pinned (T2.6). `contents: write` exists only
-on the `build` job, only to attach assets to an already-published
+on the `publish-assets` job, only to attach assets to an already-published
 release. PyPI uses OIDC (`id-token: write`) and no stored token.
 
 ## PyPI

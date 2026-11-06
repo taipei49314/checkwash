@@ -29,7 +29,11 @@ or redirect to a caller-selected location.
 The selected baseline needs a non-draft, non-prerelease, published stable Release
 and exactly one uploaded canonical `checkwash.pyz` asset whose digest and size
 equal the existing pin. The engine's independent actual-byte, source-member,
-version and clean/invalid-control checks still apply. A higher merged published
+version and clean/invalid-control checks still apply. From a v0.12.0 or later
+baseline the pinned commit is the tag's, the release's Action commit, and the
+source members are its `src/checkwash` with `doctor.py`'s own Action pin line
+set to that commit, because the pyz is built from the release merge
+([D-200](../DECISIONS.md)). A higher merged published
 Release stays in selection even if its pyz is missing, duplicated or malformed:
 that asset failure blocks the gate instead of making the older baseline pass.
 A stable-name public Release marked prerelease is refused explicitly. A private
@@ -44,7 +48,9 @@ as an identity or ancestry proof. Native compare requests use `per_page=1` for
 the request-bound base, merge-base and status fields; their original Link headers
 remain retained, but the unrelated paginated commit/diff list is neither traversed
 nor called complete historical analysis. The pushed tag is still excluded from previous
-release selection and must still point to exactly HEAD. Its future Release/assets
+release selection. Up to v0.11.x it must point to exactly HEAD. From v0.12.0 it must
+point to HEAD's Action commit `HEAD^2^1`, and its message must name HEAD on its one
+`Release-Merge:` line (D-200). Its future Release/assets
 are not prerequisites for checking the tag before publication.
 
 Merged tags without a currently public Release remain visible in the report.

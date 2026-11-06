@@ -192,6 +192,17 @@ def load_backend():
     return module
 
 
+def load_publication():
+    """The release tag rule the release tools share (D-200), from the trusted checkout."""
+    spec = importlib.util.spec_from_file_location("_pju_collection_publication", ROOT / "tools/published_release_identity.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+PUBLICATION = load_publication()
+
+
 class ReleaseCollection:
     def __init__(self, args, backend):
         self.args, self.backend = args, backend
@@ -445,19 +456,43 @@ class ReleaseCollection:
         for source, commit, before in source_inputs:
             require(self.action.snapshot(ctx["reader"], source, commit) == before, "verdict pinned source changed")
 
+    def tag_commit(self, ctx):
+        """The commit the subject's tag points at: up to v0.11.x the release
+        merge, the head; from v0.12.0 its Action commit, head^2^1 (D-200)."""
+        if not PUBLICATION.tag_at_action_commit(self.subject["tag"]):
+            return self.subject["head_sha"]
+        return ctx["reader"].text(ctx["source"], "rev-parse", "--verify", self.subject["head_sha"] + "^2^1^{commit}")
+
     def preflight(self, ctx):
         for path in ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py"):
             require(ctx["source_before"][path] == ctx["trusted_before"][path], "candidate differs from audited release helper: " + path)
         if self.subject["stage"] != "pr":
             require(ctx["reader"].text(ctx["source"], "rev-parse", self.subject["head_sha"] + "^1") == self.subject["base_sha"],
                     "release source first parent differs")
+        tag_source = getattr(self.args, "tag_source", None)
         if self.subject["stage"] not in ("pr", "main"):
             require("v" + ctx["project"]["version"] == self.subject["tag"], "release source version differs from tag")
             tag_ref = "refs/tags/" + self.subject["tag"]
+            tagged = self.tag_commit(ctx)
             require(ctx["reader"].text(ctx["source"], "cat-file", "-t", tag_ref) == "tag"
                     and ctx["reader"].text(ctx["source"], "rev-parse", tag_ref) == self.subject["tag_object"]
-                    and ctx["reader"].text(ctx["source"], "rev-parse", tag_ref + "^{commit}") == self.subject["head_sha"],
+                    and ctx["reader"].text(ctx["source"], "rev-parse", tag_ref + "^{commit}") == tagged,
                     "local annotated tag identity differs")
+            if tagged != self.subject["head_sha"]:
+                message = PUBLICATION.tag_message(ctx["reader"].read(ctx["source"], "cat-file", "tag", tag_ref))
+                require(PUBLICATION.release_merge(message) == self.subject["head_sha"],
+                        "local tag message names another release merge")
+                require(tag_source is not None, "from v0.12.0 a tag or later stage needs --tag-source, "
+                        "a checkout of the tag's commit, the release's Action commit")
+                # A clean checkout of A holding the same tag object, checked
+                # here, before the long steps, and again after them (D-200).
+                ctx["tag_source"] = self.source_snapshot(ctx, tag_source, tagged)
+                require(ctx["reader"].text(ctx["tag_source"][0], "rev-parse", "--verify", tag_ref) == self.subject["tag_object"],
+                        "the --tag-source checkout does not hold the release tag")
+            else:
+                require(tag_source is None, "--tag-source is only for v0.12.0 and later tags")
+        else:
+            require(tag_source is None, "--tag-source is only for tag and later stages")
         runtime = ctx["manifest"]["runtime"]
         require(runtime["os"] == "Windows" and runtime["python_version"] == "3.11.9", "release collector covers Windows/Python 3.11.9 only")
         require("twine" in self.backend.normalized_packages(runtime["dependencies"]),
@@ -471,10 +506,20 @@ class ReleaseCollection:
         self.verdict(ctx)
         self.advertised(ctx)
         if self.subject["stage"] not in ("pr", "main"):
-            self.tag_source(ctx, "tag", ctx["source"], self.subject["tag"], self.subject["head_sha"], self.subject["tag_object"])
+            tagged = self.tag_commit(ctx)
+            if tagged == self.subject["head_sha"]:
+                source, before = ctx["source"], ctx["source_before"]
+            else:
+                # From v0.12.0 the tag points at the Action commit A: its source
+                # receipt runs on a checkout of A, and its visitor installs A
+                # (D-200). Preflight took the checkout's snapshot.
+                source, before = ctx["tag_source"]
+            self.tag_source(ctx, "tag", source, self.subject["tag"], tagged, self.subject["tag_object"])
             visitor = self.visitor(ctx, "tag", "git+" + PUBLIC_GIT + "@" + self.subject["tag"], ctx["project"]["version"],
-                                   ctx["source_before"], source_identity=self.subject["head_sha"])
+                                   before, source_identity=tagged)
             save(ctx["output"] / "release/tag-visitor.json", dict(schema_version=1, status="completed", subject=self.subject, visitor=visitor))
+            if source != ctx["source"]:
+                require(self.action.snapshot(ctx["reader"], source, tagged) == before, "tag source changed")
         if self.subject["stage"] == "public-visitor":
             for channel in ("github-wheel", "github-sdist", "pypi-wheel", "pypi-sdist"):
                 path = self.public_paths[channel]
@@ -511,7 +556,7 @@ def main(argv=None):
     for name in ("source-root", "action-root", "python", "git", "bash", "output", "scratch", "dependency-lock",
                  "subject", "event-payload", "parents", "parent-report-root", "verdict-canary-old-source", "verdict-canary-new-source"):
         parser.add_argument("--" + name, type=Path, required=True)
-    for name in ("candidate-action-root", "advertised-source", "verdict-baseline-source", "release-artifacts",
+    for name in ("candidate-action-root", "advertised-source", "verdict-baseline-source", "tag-source", "release-artifacts",
                  "release-authorization", "platform-acceptance"):
         parser.add_argument("--" + name, type=Path)
     for name in ("collector-source-sha", "dependency-lock-sha256", "subject-sha256", "parents-sha256"):

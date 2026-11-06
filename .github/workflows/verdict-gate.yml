@@ -8,6 +8,13 @@ name: verdict gate
 # v0.4.2 -> v0.5.0 canary proves the harness still sees the known escapes.
 # Advisory on pull requests and main (#201 Decision 3); #201's release
 # integration requires a green run on the release commit and on the pushed tag.
+#
+# Disabled, like the other hosted test workflows: the PJU release chain runs
+# the gate. Its tag-push path does not follow D-200. From v0.12.0 a release
+# tag points at the release's Action commit A, not at the release merge M, so
+# a tag push checks out A, and the tag rule, which from v0.12.0 requires HEAD
+# to be the merge whose HEAD^2^1 the tag points at, fails there by design.
+# Do not re-enable it for tags without running the gate at M instead.
 on:
   pull_request:
   push:

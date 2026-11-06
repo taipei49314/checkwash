@@ -1,5 +1,9 @@
 name: assertion qualification
 
+# Disabled, like the other hosted test workflows: PJU receipts qualify the
+# source, wheel and pyz. Its tag-push path does not follow D-200. From v0.12.0
+# a release tag points at the release's Action commit A, not at the release
+# merge M that the distributions are built from, so a tag push would qualify A.
 on:
   pull_request:
   push:

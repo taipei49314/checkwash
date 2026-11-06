@@ -24,8 +24,9 @@ failure to an awaited asyncio future is not counted as added (D-190). A
 credit, while parametrize cells that never reach the test as written earn
 none (D-192), and a moved Python test pays only where the repository's own
 pytest configuration collects it (D-193). #419 closes as a documented
-residual (D-191). From v0.11.0 the README recommends the release's Action
-commit, `vX.Y.Z^2^1`, not the commit the tag points to (D-194).
+residual (D-191). The README recommends v0.11.0's Action commit,
+`v0.11.0^2^1`, not the commit the tag points to (D-194); from v0.12.0 the tag
+points at the release's Action commit (D-200).
 [Publication evidence](v0.11.0-publication-verification.md) ·
 [Release evidence and known limits](v0.11.0-public-launch.md).
 

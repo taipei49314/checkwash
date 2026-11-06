@@ -3,7 +3,11 @@
 # [baseline]   the previous release's checkwash.pyz. The gate fails unless the
 #              downloaded asset has this sha256 and size, its checkwash/*
 #              members equal src/checkwash at this commit, and the CLI reports
-#              this version.
+#              this version. `commit` is the tag's commit: up to v0.11.x the
+#              release merge the pyz is built from; from v0.12.0 the release's
+#              Action commit, and the members are its src/checkwash with
+#              doctor.py's own Action pin line set to it, as in the release
+#              merge the pyz is built from (D-200).
 # [canary]     v0.4.2 against v0.5.0 over the T1 cases; must reproduce
 #              block_to_pass exactly. Not rotated with the baseline.
 # [t3.cases]   chai:<id> = input_sha256 of every "verdict": "block" record of
