@@ -193,9 +193,14 @@ the merge use the new one. None of the measurements was published.
 
 ## D-200 (2026-11-06): from v0.12.0 the release tag points at the release's Action commit A, and the README installs the CLI only from PyPI and the pyz
 
-**Status: proposed.** Claude wrote this entry in the pull request that
-implements it. `DECISIONS.md` is maintainer text (AGENTS.md), so the entry
-takes effect only when Nelson approves it by name, with that pull request.
+**Approval.** Claude wrote this entry in the pull request that implements
+it, #589. `DECISIONS.md` is maintainer text (AGENTS.md), so the pull
+request asked Nelson to approve it by name, with its test changes and one
+allow key (L1 to L3). At 2026-11-06T11:49:53Z, to Claude's question
+"Approve #588's L1–L4 and #589's L1–L3 as their PR descriptions list
+them?", he chose the button 「兩個 PR 全部核可」 (approve everything in both
+pull requests), which Claude wrote. The answer approves the listed items,
+not the merge.
 
 **Authority.**
 
