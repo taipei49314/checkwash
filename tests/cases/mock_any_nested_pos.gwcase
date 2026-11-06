@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: a nested display of nothing but ANY checks only its shape (D-201)
+origin: D-201 round-2 review (Argon, verified by Claude): `{"a": {"b": ANY}}` read as a mild weakening
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert record() == {"a": {"b": 1}}
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert record() == {"a": {"b": ANY}}
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

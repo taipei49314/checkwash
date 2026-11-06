@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `assertEqual((total(3), 0), (ANY, 0))` checks no position: a tautology (D-201)
+origin: D-201 round-2 review (Argon, verified by Claude): the padded tuple read as exact and gave no finding; main too
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual(total(3), 6)
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual((total(3), 0), (ANY, 0))
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

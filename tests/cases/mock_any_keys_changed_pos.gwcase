@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 182
+rule: EXPECTED_VALUE_CHANGED
+title: a dict of nothing but ANY keeps the keys it checks (D-201)
+origin: D-201 round-2 review (Argon, verified by Claude): `{"total": ANY}` -> `{"other": ANY}` passed; main blocks it
+=== before: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert record() == {"total": ANY, "tax": ANY}
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert record() == {"other": ANY}
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

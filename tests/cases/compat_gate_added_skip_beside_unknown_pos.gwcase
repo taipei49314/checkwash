@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 44
+rule: TEST_DISABLED
+title: a body skip added opposite an existing one, with an unknown part, leaves no environment shown to run (D-201)
+origin: D-201 round-2 review: the added skip is false on Windows, where the existing one fires, and unknown elsewhere
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if sys.platform == "win32":
+        pytest.skip("r")
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if sys.platform == "win32":
+        pytest.skip("r")
+    if sys.platform != "win32" and bool(sys.modules):
+        pytest.skip("r")
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

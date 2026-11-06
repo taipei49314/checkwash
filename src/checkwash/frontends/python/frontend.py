@@ -427,12 +427,34 @@ def _is_approx_call(node: ast.AST) -> bool:
 # checked.
 
 
+def _rebound_names(tree: ast.AST) -> set[str]:
+    """Every name the module binds other than by an import: assignments,
+    loop, `with`, `except` and comprehension targets, parameters, and
+    function and class names, at any depth."""
+    bound: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            bound.add(node.id)
+        elif isinstance(node, ast.arg):
+            bound.add(node.arg)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            bound.add(node.name)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            bound.add(node.name)
+    return bound
+
+
 def _mock_any_import_names(tree: ast.AST | None) -> frozenset[str]:
     """The spellings that name unittest.mock.ANY in a module.
 
     pytest-mock's fixture attribute, `mocker.ANY`, is read by name. Without
     a parsed module (an oracle helper's own offsets) only the dotted
-    spellings are, which a project constant cannot be.
+    spellings are, which a project constant cannot be. A bare name the
+    file also binds by anything but an import (`ANY = 6`, a parameter
+    called `ANY`) is not read: which binding an assertion sees is not worked
+    out. A module's name is read whatever else the file calls by it, since a
+    local mock called `mock` is common and its `.ANY` compared in an
+    assertion is not.
     """
     names = {"mocker.ANY"}
     if tree is None:
@@ -451,7 +473,8 @@ def _mock_any_import_names(tree: ast.AST | None) -> frozenset[str]:
                     names.add(alias.asname + ".ANY" if alias.asname else "unittest.mock.ANY")
                 elif alias.name == "unittest":
                     names.add((alias.asname or "unittest") + ".mock.ANY")
-    return frozenset(names)
+    rebound = _rebound_names(tree)
+    return frozenset(name for name in names if "." in name or name not in rebound)
 
 
 def _mock_any_names(text) -> frozenset[str]:
@@ -470,17 +493,56 @@ def _is_mock_any(node: ast.AST | None, text) -> bool:
 
 
 def _only_any(node: ast.AST | None, text) -> bool:
-    """A list, tuple or dict display every entry of which is mock's ANY (D-201).
+    """A list, tuple or dict every checked entry of which is mock's ANY (D-201).
 
     `[ANY, ANY, ANY]` or `{"total": ANY}` checks only the shape: a length,
-    or the keys. A set display is not one: its entries are hashed, not
-    compared.
+    or the keys. So do the nested displays (`{"a": {"b": ANY}}`), a
+    repetition (`[ANY] * 3`), a comprehension of ANY (`[ANY for _ in
+    range(3)]`, `{k: ANY for k in keys}`) and `dict.fromkeys(keys, ANY)`. A
+    set display is not one: its entries are hashed, not compared.
     """
     if isinstance(node, (ast.List, ast.Tuple)):
-        return bool(node.elts) and all(_is_mock_any(e, text) for e in node.elts)
+        return bool(node.elts) and all(_any_like(e, text) for e in node.elts)
     if isinstance(node, ast.Dict):
-        return bool(node.values) and None not in node.keys and all(_is_mock_any(v, text) for v in node.values)
+        return bool(node.values) and None not in node.keys and all(_any_like(v, text) for v in node.values)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        return _only_any(node.left, text) or _only_any(node.right, text)
+    if isinstance(node, ast.ListComp):
+        return _any_like(node.elt, text)
+    if isinstance(node, ast.DictComp):
+        return _any_like(node.value, text)
+    if isinstance(node, ast.Call) and _dotted(node.func) == "dict.fromkeys" and len(node.args) == 2:
+        return _any_like(node.args[1], text)
     return False
+
+
+def _any_like(node: ast.AST | None, text) -> bool:
+    """Mock's ANY, or a display of nothing but it: compares as anything of its shape."""
+    return _is_mock_any(node, text) or _only_any(node, text)
+
+
+def _elementwise_unchecked(left: ast.AST | None, right: ast.AST | None, text) -> bool:
+    """Two displays of one kind and length no position of which is checked (D-201).
+
+    `(total(), 0) == (ANY, 0)` and `(total(), ANY) == (ANY, 6)` hold for
+    every value: each position has ANY on one side, or the same literal on
+    both.
+    """
+    if not (isinstance(left, (ast.List, ast.Tuple)) and type(left) is type(right)
+            and len(left.elts) == len(right.elts) and left.elts):
+        return False
+    for a, b in zip(left.elts, right.elts):
+        if _any_like(a, text) or _any_like(b, text):
+            continue
+        if _is_literal(a) and _is_literal(b) and _norm(text.seg(a) or "") == _norm(text.seg(b) or ""):
+            continue
+        return False
+    return True
+
+
+def _holds_any(node: ast.AST | None, text) -> bool:
+    """A list, tuple or set display with mock's ANY as an entry: `x in [ANY]` holds for every x."""
+    return isinstance(node, (ast.List, ast.Tuple, ast.Set)) and any(_is_mock_any(e, text) for e in node.elts)
 
 
 def _operand_approx_call(node: ast.AST) -> ast.Call | None:
@@ -870,6 +932,17 @@ def _unevaluated(node: ast.AST | None, text) -> str | None:
     return source if len(source) <= 4096 else None
 
 
+def _any_shape(node: ast.AST | None) -> str | None:
+    """An all-ANY display's source, as the expectation it states: its length or its keys (D-201)."""
+    if node is None:
+        return None
+    try:
+        source = ast.unparse(node)
+    except (ValueError, RecursionError):
+        return None
+    return source if len(source) <= 4096 else None
+
+
 def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True) -> _Classified:
     """A tolerance call (#222) as the approximate comparison it states.
 
@@ -1048,6 +1121,12 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # value, so a rewrite into it passed and its cleanup back into
         # `approx(100.0)` read as a call replaced by a literal (#462).
         expected = _approx_expected(approx)
+        # `approx(ANY)` compares as ANY does: pytest hands a value it cannot
+        # treat as a number to `==` (D-201).
+        if positive and isinstance(op, ast.Eq) and _is_mock_any(expected, text):
+            return _Classified("tautology", S.TAUTOLOGY)
+        if positive and isinstance(op, ast.Eq) and _only_any(expected, text):
+            return _Classified("type_shape", S.TYPE_SHAPE)
         return _Classified(
             "approx",
             S.APPROX,
@@ -1083,8 +1162,10 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # bypass); prefer whichever side is the literal.
         subject_node = left
         single = len(test.ops) == 1
-        if (comparators and (_is_literal(left) or single and literal_string_replace(left) is not None)
-                and not _is_literal(comparators[-1])
+        # ANY on the left is the expectation, as a literal is (D-201).
+        if (comparators and (_is_literal(left) or single and _any_like(left, text)
+                             or single and literal_string_replace(left) is not None)
+                and not (_is_literal(comparators[-1]) or single and _any_like(comparators[-1], text))
                 and (not single or literal_string_replace(comparators[-1]) is None)):
             expect_node, subject_node = left, comparators[-1]
         # A chained comparison is a range oracle: the non-literal operand is
@@ -1127,6 +1208,10 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             c.operand_source = _operand_source(expect_node, text)
         if single and c.form in _EXPECTED_FORMS:
             c.unevaluated_expected = _unevaluated(expect_node, text)
+        elif single and c.form == "type_shape" and _only_any(expect_node, text):
+            # `[ANY, ANY, ANY]` -> `[ANY]` changes the length it checks
+            # (D-201); main read the display as an expectation and saw that.
+            c.unevaluated_expected = _any_shape(expect_node)
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
         # from those nodes rather than being re-derived. EXPECTED_VALUE_DERIVED
@@ -1134,6 +1219,14 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         c.left_names = _referenced_names(subject_node)
         c.right_names = _referenced_names(expect_node)
         return c
+    if (isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not) and isinstance(test.operand, ast.Compare)
+            and len(test.operand.ops) == 1 and isinstance(test.operand.ops[0], ast.NotEq)):
+        # `assert not (x != ANY)` is `assert x == ANY` (D-201).
+        pair = (test.operand.left, test.operand.comparators[0])
+        if any(_is_mock_any(n, text) for n in pair):
+            return _Classified("tautology", S.TAUTOLOGY)
+        if any(_only_any(n, text) for n in pair):
+            return _Classified("type_shape", S.TYPE_SHAPE)
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         # `assert not x` is the negated form of `assert x`. A negated tolerance
         # call (#222) passes when the values are far apart, so its tolerance
@@ -1778,6 +1871,8 @@ def _classify_compare_op(
         if isinstance(op, ast.Eq) and len(comparators) == 1 and (
                 _is_mock_any(left, text) or _is_mock_any(comparators[0], text)):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and _elementwise_unchecked(left, comparators[0], text):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
         if isinstance(op, ast.Eq) and len(comparators) == 1 and (
                 _only_any(left, text) or _only_any(comparators[0], text)):
             return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
@@ -1788,6 +1883,13 @@ def _classify_compare_op(
         return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
     if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
         return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val, positive=pos)
+    if isinstance(op, ast.In) and len(comparators) == 1:
+        # `x in [ANY]` holds for every x, and `ANY in items()` only says
+        # that items() is not empty (D-201).
+        if _holds_any(comparators[0], text):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if _is_mock_any(left, text):
+            return _Classified("truthy", S.TRUTHY, left_text)
     if isinstance(op, (ast.In, ast.NotIn)):
         return _Classified("membership", S.PATTERN, left_text, right_lit, right_val, positive=pos)
     if isinstance(op, (ast.Is, ast.IsNot)):
@@ -1954,8 +2056,10 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         subject_node = args[0]
         if len(args) > 1:
             expect_node = args[1]
-            # Same literal-side flip as bare assert: `assertEqual(3, calc())`.
-            if _is_literal(args[0]) and not _is_literal(args[1]):
+            # Same literal-side flip as bare assert: `assertEqual(3, calc())`,
+            # and `assertEqual(ANY, calc())` (D-201).
+            if ((_is_literal(args[0]) or _any_like(args[0], text))
+                    and not (_is_literal(args[1]) or _any_like(args[1], text))):
                 expect_node, subject_node = args[0], args[1]
         left_text = text.seg(subject_node) if subject_node is not None else None
         if expect_node is not None:
@@ -2020,10 +2124,21 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             and (_is_mock_any(subject_node, text) or _is_mock_any(expect_node, text))):
         form, level = "tautology", S.TAUTOLOGY
         epsilon = epsilon_kind = None
+    elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual")
+            and _elementwise_unchecked(subject_node, expect_node, text)):
+        form, level = "tautology", S.TAUTOLOGY
     elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertDictEqual",
-                                  "assertSequenceEqual")
+                                  "assertSequenceEqual", "assertCountEqual")
             and (_only_any(subject_node, text) or _only_any(expect_node, text))):
+        # assertCountEqual pairs each entry with one that compares equal, and
+        # ANY compares equal to every entry, so only the length is left.
         form, level = "type_shape", S.TYPE_SHAPE
+    elif method == "assertIn" and len(args) > 1 and _holds_any(args[1], text):
+        # `assertIn(x, [ANY])` holds for every x; `assertIn(ANY, items())`
+        # says only that items() is not empty (D-201).
+        form, level = "tautology", S.TAUTOLOGY
+    elif method == "assertIn" and len(args) > 1 and _is_mock_any(args[0], text):
+        form, level = "truthy", S.TRUTHY
     return _Classified(
         form,
         level,
@@ -2042,7 +2157,9 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
         *_unittest_bound(method, form, args, subject_node, expect_node, text),
-        unevaluated_expected=_unevaluated(expect_node, text) if form in _EXPECTED_FORMS else None,
+        unevaluated_expected=(_unevaluated(expect_node, text) if form in _EXPECTED_FORMS
+                              else _any_shape(expect_node) if form == "type_shape" and _only_any(expect_node, text)
+                              else None),
     )
 
 

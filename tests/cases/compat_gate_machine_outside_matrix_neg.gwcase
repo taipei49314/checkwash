@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a skip on a machine the matrix lacks runs on the machines it holds: compat credit kept (D-201)
+origin: D-201 round-2 review (code lens): `== "s390x"` stayed unknown everywhere, so the honest gate blocked
+=== before: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(platform.machine() == "s390x", reason="r")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

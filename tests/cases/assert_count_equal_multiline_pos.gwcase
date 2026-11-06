@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: assertMultiLineEqual -> assertCountEqual compares a string's characters in any order (D-201)
+origin: D-201 round-2 review (code lens): main gives no finding
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertMultiLineEqual(text(), 'ab')
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertCountEqual(text(), 'ab')
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

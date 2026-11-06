@@ -1,0 +1,33 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a dependency skip whose message says "platform." takes no part in the joint check (D-201)
+origin: D-201 round-2 review (code lens): the joint check searched the message and refused every gate added beside it
+=== before: tests/test_calc.py ===
+import os
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if not hasattr(os, "fork"):
+        pytest.skip("fork is not available on this platform.")
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import os
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="r")
+def test_total():
+    if not hasattr(os, "fork"):
+        pytest.skip("fork is not available on this platform.")
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

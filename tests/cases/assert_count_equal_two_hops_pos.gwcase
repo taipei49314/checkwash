@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: a subject hoisted through two names is still the subject (D-201)
+origin: D-201 round-2 review (text lens): `raw = items(); result = raw` gave no finding
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual(items(), [1, 2, 3])
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        raw = items()
+        result = raw
+        self.assertCountEqual(result, [1, 2, 3])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

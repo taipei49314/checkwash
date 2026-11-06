@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: assertCountEqual against a list of nothing but ANY checks only the length (D-201)
+origin: D-201 round-2 review (code lens): `[1, 2, 3]` -> `[ANY, ANY, ANY]` read as a mild weakening
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertCountEqual(items(), [1, 2, 3])
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertCountEqual(items(), [ANY, ANY, ANY])
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

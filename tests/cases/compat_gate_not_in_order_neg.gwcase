@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `not in` asks every entry, so the order of the entries does not decide the credit (D-201)
+origin: D-201 round-2 review (Argon, verified by Claude): with the unknown name first, PyPy was never read
+=== before: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(platform.python_implementation() not in ("IronPython", "PyPy"), reason="r")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `pytest.approx(ANY)` hands ANY to `==`, so it holds for every value (D-201)
+origin: D-201 round-2 review (text lens): `approx(6.0)` -> `approx(ANY)` gave no finding; main too
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert total(3) == pytest.approx(6.0)
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert total(3) == pytest.approx(ANY)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

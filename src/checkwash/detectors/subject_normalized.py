@@ -41,9 +41,12 @@ from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import IR, Assertion, judged_as_test
 
 # unittest's order-sensitive equalities, and the one that compares contents
-# as a multiset (D-201). Python 2's `assertItemsEqual` is not read as an
+# as a multiset (D-201). assertDictEqual checks values that assertCountEqual,
+# iterating a dict's keys, does not; assertMultiLineEqual checks the order
+# of the characters. Python 2's `assertItemsEqual` is not read as an
 # assertion at all, so a rewrite into it reads as one removed.
-_ORDERED_EQUALITY = frozenset({"assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual"})
+_ORDERED_EQUALITY = frozenset({"assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual",
+                               "assertDictEqual", "assertMultiLineEqual"})
 _UNORDERED_EQUALITY = frozenset({"assertCountEqual"})
 # The two operands' parameter names, first ones first.
 _OPERAND_KEYWORDS = ("first", "list1", "tuple1", "seq1", "second", "list2", "tuple2", "seq2")
@@ -84,35 +87,82 @@ def _kind(node: ast.AST) -> str | None:
     return None
 
 
-def _canonical(node: ast.AST, bindings: dict[str, str]) -> ast.AST | None:
-    """An operand as compared: through the unit's bindings once, `list(...)`/`tuple(...)` taken off.
+def _unwrapped(node: ast.AST) -> ast.AST | None:
+    """The iterable `list(x)`, `tuple(x)`, `[*x]` or `(*x,)` copies, else None."""
+    if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ("list", "tuple")
+            and len(node.args) == 1 and not node.keywords and not isinstance(node.args[0], ast.Starred)):
+        return node.args[0]
+    if isinstance(node, (ast.List, ast.Tuple)) and len(node.elts) == 1 and isinstance(node.elts[0], ast.Starred):
+        return node.elts[0].value
+    return None
 
-    assertCountEqual iterates both operands, so `list(items())` and
-    `items()` are one operand to it, and `result = items()` hoists the
-    subject without changing it.
+
+def _canonical(node: ast.AST, bindings: dict[str, str]) -> ast.AST | None:
+    """An operand as compared: through the unit's bindings, copies into a list or tuple taken off.
+
+    assertCountEqual iterates both operands, so `list(items())`, `[*items()]`
+    and `items()` are one operand to it, and `result = items()` hoists the
+    subject without changing it. A name is followed through the bindings
+    and a copy taken off until neither changes it, a few steps at most.
     """
-    resolved = resolve_through(ast.unparse(node), bindings)
-    parsed = parse_expr(resolved) if resolved else None
-    if (isinstance(parsed, ast.Call) and isinstance(parsed.func, ast.Name) and parsed.func.id in ("list", "tuple")
-            and len(parsed.args) == 1 and not parsed.keywords and not isinstance(parsed.args[0], ast.Starred)):
-        return parsed.args[0]
-    return parsed
+    current: ast.AST | None = node
+    seen: set[str] = set()
+    for _ in range(8):
+        if current is None:
+            return None
+        inner = _unwrapped(current)
+        if inner is not None:
+            current = inner
+            continue
+        if not isinstance(current, ast.Name) or current.id in seen:
+            return current
+        seen.add(current.id)
+        resolved = resolve_through(current.id, bindings)
+        if resolved == current.id:
+            return current
+        current = parse_expr(resolved) if resolved else None
+    return current
+
+
+def _same_operand(old: ast.AST, new: ast.AST) -> bool:
+    """One operand, as assertCountEqual compares it: a list or tuple display's entries in any order."""
+    if ast.dump(old) == ast.dump(new):
+        return True
+    if isinstance(old, (ast.List, ast.Tuple)) and isinstance(new, (ast.List, ast.Tuple)):
+        return sorted(map(ast.dump, old.elts)) == sorted(map(ast.dump, new.elts))
+    return False
+
+
+_DISPLAYS = (ast.Constant, ast.List, ast.Tuple, ast.Set, ast.Dict, ast.ListComp, ast.SetComp, ast.DictComp)
+
+
+def _same_comparison(old: list[ast.AST], new: list[ast.AST]) -> bool:
+    """Do the two calls compare the same thing: one subject that is not a display, or both operands?
+
+    A literal both sides happen to share (`[]`) is not a subject: two
+    different assertions can compare against it.
+    """
+    if any(_same_operand(o, n) and not isinstance(o, _DISPLAYS) for o in old for n in new):
+        return True
+    return (_same_operand(old[0], new[0]) and _same_operand(old[1], new[1])) or (
+        _same_operand(old[0], new[1]) and _same_operand(old[1], new[0]))
 
 
 def _order_dropped(path: str, b: Assertion, a: Assertion, before_bindings: dict[str, str],
                    after_bindings: dict[str, str]) -> tuple[str, str, bool] | None:
-    """An order-sensitive equality rewritten as a multiset one on the same operands (D-201).
+    """An order-sensitive equality rewritten as a multiset one (D-201).
 
     `self.assertEqual(items(), [1, 2, 3])` -> `self.assertCountEqual(items(),
     [1, 2, 3])` stops checking order, as `sorted(...)` around the subject
     does, but both read as one form and one strength and there is no wrapper
     to see, so the rewrite gave no finding at all, beside a production change
-    that reordered the result included. Both operands must be the same once
-    each is resolved through the unit's bindings and a `list(...)` or
-    `tuple(...)` around it is taken off: a different operand or a wrapped
-    subject is another rule's finding. A set operand never had an order, so
-    that rewrite changes nothing. A dict operand loses more than order,
-    since assertCountEqual iterates a dict's keys: the third value says so.
+    that reordered the result included. The pair must still compare the same
+    subject, once each operand is followed through the unit's bindings and a
+    copy into a list or tuple is taken off: the expected list may change
+    with it, reordered or spelled as a tuple, which assertCountEqual cannot
+    tell apart. A set operand never had an order, so that rewrite changes
+    nothing. A dict loses more than order, since assertCountEqual iterates
+    a dict's keys: the third value says so.
     """
     if not path.endswith(".py") or not (b.positive and a.positive):
         return None
@@ -126,12 +176,12 @@ def _order_dropped(path: str, b: Assertion, a: Assertion, before_bindings: dict[
         return None
     old = [_canonical(node, before_bindings) for node in old]
     new = [_canonical(node, after_bindings) for node in new]
-    if None in old or None in new or sorted(map(ast.dump, old)) != sorted(map(ast.dump, new)):
+    if None in old or None in new or not _same_comparison(old, new):
         return None
-    kinds = {_kind(node) for node in old}
-    if "set" in kinds:
+    if "set" in {_kind(node) for node in old}:
         return None
-    return before.func.attr, after.func.attr, "dict" in kinds
+    keys_only = before.func.attr == "assertDictEqual" or "dict" in {_kind(node) for node in (*old, *new)}
+    return before.func.attr, after.func.attr, keys_only
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -164,7 +214,7 @@ def detect(ir: IR) -> list[Finding]:
                             severity="warn",
                             message=(
                                 f"{unit.qualname}: the comparison stopped checking {what} "
-                                f"({old_method} -> {new_method}) while both operands stayed the same"
+                                f"({old_method} -> {new_method})"
                             ),
                             path=file.path,
                             unit=unit.qualname,

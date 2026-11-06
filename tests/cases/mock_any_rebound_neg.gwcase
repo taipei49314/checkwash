@@ -1,0 +1,26 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a module that binds `ANY = 6` after importing mock's ANY compares with 6 (D-201)
+origin: D-201 round-2 review (code lens): the import walk read the rebound name as mock's and blocked; main gives no finding
+=== before: tests/test_items.py ===
+from unittest.mock import ANY
+ANY = 6
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert total(3) == 6
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+ANY = 6
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert total(3) == ANY
+=== expect ===
+[]

@@ -5,12 +5,12 @@
    ASSERT_WEAKENED, which takes neither D9's DEPENDENCY_DRIFT nor, in Python,
    repair evidence (D-199). `ANY` is read through the file's imports.
 2. D6 COMPAT_GATE: a single test's skip condition must be provably false in some
-   environment of the matrix, and every interpreter/OS gate on the unit
-   together must leave one. The matrix holds CPython, and PyPy at 3.11, each
-   platform's machines and five-tuple versions. A suite-level collection
-   control, and liveness, keep the old reading.
+   environment of the matrix, and the gates a change adds must leave one
+   together with the gates the test had. The matrix holds CPython, and PyPy
+   at 3.11, and each platform's machines; the micro release is unknown. A
+   suite-level collection control, and liveness, keep the old reading.
 3. An order-sensitive unittest equality rewritten as `assertCountEqual` on the
-   same operands is SUBJECT_NORMALIZED, as `sorted()` around the subject is.
+   same subject is SUBJECT_NORMALIZED, as `sorted()` around the subject is.
 
 The fixtures `mock_any_*`, `project_any_constant_is_not_mock_pos`,
 `compat_gate_*` named in D-201, `standin_behind_unknown_gate_pos` and
@@ -21,7 +21,16 @@ import ast
 
 import pytest
 
-from checkwash.compat import MAYBE, _ENV_MATRIX, _discriminates, _eval_condition, guard_always_skips, unit_is_live
+from checkwash.compat import (
+    MAYBE,
+    _ENV_MATRIX,
+    _discriminates,
+    _eval_condition,
+    _Release,
+    _VersionString,
+    guard_always_skips,
+    unit_is_live,
+)
 from checkwash.detectors.subject_normalized import _order_dropped
 from checkwash.frontends.python.frontend import _Offsets, _classify_assert, _classify_unittest_call, parse_python
 from checkwash.ir import strength as S
@@ -94,10 +103,86 @@ def test_other_comparisons_with_any_keep_their_reading(expr, imports, form, stre
     "items() == [ANY, ANY, ANY]",
     "(ANY, ANY) == pair()",
     'record() == {"total": ANY, "count": ANY}',
+    # Nested, repeated, generated, and built from keys (D-201 review).
+    'record() == {"a": {"b": ANY}}',
+    "matrix() == [[ANY, ANY], [ANY]]",
+    "items() == [ANY] * 3",
+    "items() == 3 * (ANY,)",
+    "items() == [ANY for _ in range(3)]",
+    "record() == {k: ANY for k in KEYS}",
+    "record() == dict.fromkeys(KEYS, ANY)",
+    "total() == pytest.approx([ANY, ANY])",
+    "not (items() != [ANY, ANY])",
 ])
 def test_a_display_of_nothing_but_any_checks_only_its_shape(expr):
     c = _classify(expr)
     assert (c.form, c.strength) == ("type_shape", S.TYPE_SHAPE)
+
+
+def test_a_display_of_any_keeps_the_shape_it_checks_as_its_expectation():
+    """`[ANY, ANY, ANY]` -> `[ANY]` changes the length checked: main saw that
+    as an expectation changed, and the shape reading must not hide it."""
+    assert _classify("items() == [ANY, ANY, ANY]").unevaluated_expected == "[ANY, ANY, ANY]"
+    assert _classify('{"total": ANY} == record()').unevaluated_expected == "{'total': ANY}"
+    assert _unittest("assertEqual(items(), [ANY])").unevaluated_expected == "[ANY]"
+
+
+@pytest.mark.parametrize("expr", [
+    # No position is checked: ANY on one side, or one literal on both.
+    "(total(), 0) == (ANY, 0)",
+    "(total(), ANY) == (ANY, 6)",
+    "[total(), items()] == [ANY, [ANY]]",
+    # Membership in a display holding ANY.
+    "total() in [ANY]",
+    "total() in (6, ANY)",
+    # `not (x != ANY)` is `x == ANY`, and approx hands ANY to `==`.
+    "not (total() != ANY)",
+    "total() == pytest.approx(ANY)",
+    "total() == approx(ANY, rel=0.1)",
+])
+def test_other_spellings_that_hold_for_every_value(expr):
+    c = _classify(expr)
+    assert (c.form, c.strength) == ("tautology", S.TAUTOLOGY)
+
+
+@pytest.mark.parametrize("expr, form, strength", [
+    # `ANY in items()` says only that items() is not empty.
+    ("ANY in items()", "truthy", S.TRUTHY),
+    # A checked position is still checked.
+    ("(total(), 0) == (ANY, 1)", "compare_eq", S.EXACT_VALUE),
+    ("(total(), items()) == (ANY, [1, 2])", "compare_eq", S.EXACT_VALUE),
+    # A list and a tuple never compare equal.
+    ("(total(), 0) == [ANY, 0]", "compare_eq", S.EXACT_VALUE),
+    ("ANY not in items()", "membership", S.PATTERN),
+])
+def test_spellings_that_still_check_something(expr, form, strength):
+    c = _classify(expr)
+    assert (c.form, c.strength) == (form, strength)
+
+
+def test_any_on_the_left_is_the_expectation():
+    """As a literal on the left is: the subject stays the subject (D-201 review)."""
+    assert _classify("ANY == total()").left == "total()"
+    assert _classify("[ANY, ANY] == items()").left == "items()"
+    assert _unittest("assertEqual(ANY, total())").left == "total()"
+
+
+@pytest.mark.parametrize("imports", [
+    # Rebound by an assignment, a parameter or a loop, anywhere in the file.
+    "from unittest.mock import ANY\nANY = 6\n",
+    "from unittest.mock import ANY\ndef helper(ANY):\n    return ANY\n",
+    "from unittest.mock import ANY\nfor ANY in range(3):\n    pass\n",
+])
+def test_a_name_the_file_also_binds_is_not_read_as_mock_any(imports):
+    c = _classify("total() == ANY", imports)
+    assert (c.form, c.strength) == ("compare_eq", S.EXACT_VALUE)
+
+
+def test_a_local_called_mock_does_not_hide_the_module():
+    """`with mock.patch(...) as mock:` elsewhere in the file leaves `mock.ANY` mock's."""
+    imports = "from unittest import mock\ndef helper():\n    with mock.patch('x') as mock:\n        pass\n"
+    c = _classify("total() == mock.ANY", imports)
+    assert (c.form, c.strength) == ("tautology", S.TAUTOLOGY)
 
 
 def test_a_set_of_any_is_not_a_shape():
@@ -125,10 +210,26 @@ def test_assert_equal_with_any_is_a_tautology(call):
     "assertEqual(items(), [ANY, ANY, ANY])",
     "assertListEqual(items(), [ANY, ANY])",
     'assertDictEqual(record(), {"total": ANY})',
+    'assertEqual(record(), {"a": {"b": ANY}})',
+    "assertEqual(items(), [ANY] * 3)",
+    # Each entry pairs with one that compares equal: only the length is left.
+    "assertCountEqual(items(), [ANY])",
+    "assertCountEqual(items(), [ANY, ANY, ANY])",
 ])
 def test_assert_equal_with_a_display_of_any_checks_only_its_shape(call):
     c = _unittest(call)
     assert (c.form, c.strength) == ("type_shape", S.TYPE_SHAPE)
+
+
+@pytest.mark.parametrize("call, form, strength", [
+    ("assertEqual((total(), 0), (ANY, 0))", "tautology", S.TAUTOLOGY),
+    ("assertTupleEqual((total(), ANY), (ANY, 6))", "tautology", S.TAUTOLOGY),
+    ("assertIn(total(), [ANY])", "tautology", S.TAUTOLOGY),
+    ("assertIn(ANY, items())", "truthy", S.TRUTHY),
+])
+def test_other_unittest_spellings_of_any(call, form, strength):
+    c = _unittest(call)
+    assert (c.form, c.strength) == (form, strength)
 
 
 @pytest.mark.parametrize("call", [
@@ -137,8 +238,9 @@ def test_assert_equal_with_a_display_of_any_checks_only_its_shape(call):
     "assertNotAlmostEqual(total(), ANY)",
     # The typed variants check the operand's type first, so they fail.
     "assertListEqual(items(), ANY)",
+    # assertCountEqual iterates its operands, and ANY is not iterable.
     "assertCountEqual(items(), ANY)",
-    "assertCountEqual(items(), [ANY])",
+    "assertNotIn(total(), [ANY])",
 ])
 def test_other_unittest_calls_with_any_keep_their_reading(call):
     c = _unittest(call)
@@ -175,32 +277,56 @@ def _parts(condition: str):
     ("sys.version_info < (2, 5) or '__pypy__' in sys.builtin_module_names", True, True),
     ("hasattr(sys, 'pypy_version_info')", True, True),
     ("'__pypy__' not in sys.builtin_module_names", True, True),
-    # An interpreter or a module the matrix does not hold stays unknown, so the
-    # old reading does not change.
+    # An interpreter the matrix does not hold stays unknown in the old reading,
+    # which does not change; the question whether the test runs somewhere
+    # reads each environment's own interpreter, so these are true everywhere.
     ("platform.python_implementation() != 'IronPython'", True, False),
     ("sys.implementation.name != 'graalpy'", True, False),
+    # A module the matrix does not hold stays unknown.
     ("sys.platform == 'win32' or '_ctypes' in sys.builtin_module_names", True, False),
     ("sys.platform == 'win32' or sys.builtin_module_names == ()", True, False),
     ("sys.platform == 'win32' or sys.builtin_module_names != ()", True, False),
     ("sys.platform == 'win32' or hasattr(sys, 'gettotalrefcount')", True, False),
-    # The machine each platform reports.
+    # The machine each platform reports, read exactly for the second question:
+    # on x86_64, `== 's390x'` is false (D-201 review).
     ("platform.machine() == 'arm64'", True, True),
     ("platform.machine().lower() in ('arm64', 'aarch64')", True, True),
     ("platform.machine().startswith('arm')", True, True),
     ("platform.machine() != 'Plan9'", True, False),
-    ("platform.machine().startswith('riscv')", True, False),
+    ("platform.machine() == 's390x'", True, True),
+    ("platform.machine().startswith('riscv')", True, True),
+    ("platform.machine() in ('ppc64le', 'aarch64')", True, True),
+    ("platform.python_implementation() == 'GraalVM'", True, True),
+    # `in` asks every entry, in any order.
+    ("platform.python_implementation() not in ('IronPython', 'PyPy')", True, True),
+    ("platform.python_implementation() not in ('PyPy', 'IronPython')", True, True),
     ("platform.architecture()[0] == '32bit'", True, True),
-    ("platform.architecture()[0] == '16bit'", True, False),
-    # Versions as five-tuples and as strings.
+    ("platform.architecture()[0] == '16bit'", True, True),
+    ("platform.architecture()[0] != '32bit'", True, False),
+    # The micro release is unknown: a gate that runs only on x.y.0 is not
+    # shown to run anywhere (D-201 review).
     ("sys.version_info > (3, 11, 0)", False, False),
-    ("sys.version_info >= (3, 11, 1)", True, True),
+    ("sys.version_info >= (3, 11, 1)", True, False),
+    ("sys.version_info != (3, 11, 0, 'final', 0)", True, False),
+    ("sys.version_info[2] != 0", True, False),
+    ("sys.version_info[:3] >= (3, 11, 4)", True, False),
+    ("sys.version_info < (3, 11, 4)", True, True),
+    ("sys.version_info[:2] == (3, 11)", True, True),
     ("platform.python_version_tuple() < ('3', '12')", True, True),
     ("platform.python_version() == '3.11.0'", True, True),
+    ("platform.python_version() != '3.11.0'", True, False),
+    ("platform.python_version() < '3.12'", True, True),
+    ("platform.python_version().startswith('3.11')", True, True),
     ("sys.version_info.micro < 2", True, False),
-    # List and set displays, as tuples.
+    # List and set displays.
     ("sys.platform not in ['linux', 'darwin']", True, True),
     ("sys.platform in {'win32', 'cygwin'}", True, True),
     ("sys.platform in ['win32', HELPER]", True, False),
+    # An unknown entry leaves a tuple unknown, not unequal (D-201 review).
+    ("sys.platform in (HELPER,)", True, False),
+    ("(sys.platform,) == (HELPER,)", True, False),
+    # A list never equals a tuple, as under Python.
+    ("sys.version_info[:2] != [3, 11]", False, False),
     # Always true, read as before.
     ("sys.version_info >= (3, 8)", False, False),
     ("True or sys.platform == 'win32'", False, False),
@@ -237,6 +363,71 @@ def test_the_machine_is_read_per_platform():
         assert _eval_condition(node, env) is (env["machine"] == "arm64"), env
     unknown = ast.parse("platform.machine() == 'riscv64'", mode="eval").body
     assert all(_eval_condition(unknown, env) is MAYBE for env in _ENV_MATRIX)
+    assert all(_eval_condition(unknown, env, exact=True) is False for env in _ENV_MATRIX)
+
+
+@pytest.mark.parametrize("value, op, other, answer", [
+    # The micro release is unknown, but not every comparison reaches it.
+    ((3, 11), "gt", (3, 11, 0), True),
+    ((3, 11), "ge", (3, 11, 0), True),
+    ((3, 11), "lt", (3, 12), True),
+    ((3, 12), "ge", (3, 12), True),
+    ((3, 11), "eq", (3, 11), False),
+    ((3, 11), "ge", (3, 11, 1), MAYBE),
+    ((3, 11), "lt", (3, 11, 4), MAYBE),
+    ((3, 11), "eq", (3, 11, 0, "final", 0), MAYBE),
+    ((3, 12), "eq", (3, 11, 0, "final", 0), False),
+    ((3, 11), "lt", (3, 11, "x"), MAYBE),
+])
+def test_a_release_with_an_unknown_micro(value, op, other, answer):
+    import operator
+    release = _Release(value, ("final", 0))
+    try:
+        got = getattr(operator, op)(release, other)
+    except TypeError:
+        got = MAYBE
+    assert got is answer
+
+
+def test_a_release_is_indexed_and_sliced_as_the_tuple_it_is():
+    release = _Release((3, 12), ("final", 0))
+    assert (release[0], release[1], release[3], release[-1], len(release)) == (3, 12, "final", 0, 5)
+    assert release[:2] == (3, 12)
+    with pytest.raises(TypeError):
+        release[2]
+    assert release[:3] < (3, 13)
+    with pytest.raises(TypeError):
+        release[:3] == (3, 12, 1)
+
+
+@pytest.mark.parametrize("op, other, answer", [
+    ("lt", "3.12", True),
+    ("gt", "3.10", True),
+    ("eq", "3.11", False),
+    ("gt", "3.11", True),
+    ("eq", "3.11.0", MAYBE),
+    ("lt", "3.11.10", MAYBE),
+])
+def test_a_version_string_with_an_unknown_micro(op, other, answer):
+    import operator
+    try:
+        got = getattr(operator, op)(_VersionString(3, 11), other)
+    except TypeError:
+        got = MAYBE
+    assert got is answer
+    assert _VersionString(3, 11).startswith(("2.7", "3.11")) is True
+    assert _VersionString(3, 11).startswith("3.12") is False
+    with pytest.raises(TypeError):
+        _VersionString(3, 11).startswith("3.11.1")
+
+
+def test_membership_does_not_depend_on_the_order_of_the_entries():
+    """Python's `in` stopped at the first entry it could not compare."""
+    for spelling in ("platform.python_implementation() in ('IronPython', 'PyPy')",
+                     "platform.python_implementation() in ('PyPy', 'IronPython')"):
+        node = ast.parse(spelling, mode="eval").body
+        answers = {env["implementation"]: _eval_condition(node, env) for env in _ENV_MATRIX}
+        assert answers == {"PyPy": True, "CPython": MAYBE}, spelling
 
 
 def test_the_matrix():
@@ -254,6 +445,10 @@ def test_a_guard_naming_an_interpreter_the_matrix_lacks_is_not_always_true():
     """The old reading, which judges a suite control's guard, does not change."""
     assert guard_always_skips("platform.python_implementation() != 'IronPython'", None) is False
     assert guard_always_skips("sys.implementation.name != 'graalpy'", None) is False
+    # No environment is 32-bit, so "32bit" is a value the matrix does not hold.
+    assert guard_always_skips("platform.architecture()[0] != '32bit'", None) is False
+    # A fact the matrix holds: every 3.11 release is later than 3.11.0.
+    assert guard_always_skips("sys.version_info > (3, 11, 0)", None) is True
 
 
 def test_liveness_keeps_the_old_reading():
@@ -281,6 +476,8 @@ def _assertion(text: str, left: str = "items()", positive: bool = True) -> Asser
     ("assertListEqual", "assertCountEqual"),
     ("assertTupleEqual", "assertCountEqual"),
     ("assertSequenceEqual", "assertCountEqual"),
+    # The order of a string's characters (D-201 review).
+    ("assertMultiLineEqual", "assertCountEqual"),
 ])
 def test_an_order_sensitive_equality_rewritten_as_a_multiset_one_drops_order(before, after):
     b = _assertion(f"self.{before}(items(), [1, 2, 3])")
@@ -291,34 +488,50 @@ def test_an_order_sensitive_equality_rewritten_as_a_multiset_one_drops_order(bef
 @pytest.mark.parametrize("b, a, before_bindings, after_bindings", [
     # The operands swapped.
     ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual([1, 2, 3], items())", {}, {}),
-    # list() is the same operand to assertCountEqual.
+    # list(), tuple() and a starred display are the same operand to assertCountEqual.
     ("self.assertEqual(list(items()), [1, 2, 3])", "self.assertCountEqual(items(), [1, 2, 3])", {}, {}),
+    ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual([*items()], [1, 2, 3])", {}, {}),
+    ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(tuple(items()), (1, 2, 3))", {}, {}),
     # A hoisted subject or expected value, through the unit's bindings.
     ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(result, [1, 2, 3])", {}, {"result": "items()"}),
     ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(items(), expected)", {}, {"expected": "[1, 2, 3]"}),
+    # Through two bindings, and list() around a hoisted name (D-201 review).
+    ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(result, [1, 2, 3])", {},
+     {"result": "raw", "raw": "items()"}),
+    ("self.assertEqual(list(result), [1, 2, 3])", "self.assertCountEqual(result, [1, 2, 3])",
+     {"result": "items()"}, {"result": "items()"}),
+    # The same subject, with the expected list reordered or renamed.
+    ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(items(), [3, 2, 1])", {}, {}),
+    ("self.assertEqual(items(), EXPECTED_A)", "self.assertCountEqual(items(), EXPECTED_B)", {}, {}),
     # By keyword.
     ("self.assertEqual(first=items(), second=[1, 2, 3])", "self.assertCountEqual(items(), [1, 2, 3])", {}, {}),
+    ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(items(), second=[1, 2, 3])", {}, {}),
 ])
-def test_the_same_operands_however_spelled(b, a, before_bindings, after_bindings):
+def test_the_same_subject_however_spelled(b, a, before_bindings, after_bindings):
     result = _order_dropped("tests/test_items.py", _assertion(b), _assertion(a), before_bindings, after_bindings)
     assert result is not None and result[2] is False
 
 
-def test_a_dict_operand_loses_its_values():
-    b = _assertion('self.assertEqual(record(), {"total": 6})', left="record()")
-    a = _assertion('self.assertCountEqual(record(), {"total": 6})', left="record()")
-    assert _order_dropped("tests/test_record.py", b, a, {}, {}) == ("assertEqual", "assertCountEqual", True)
+@pytest.mark.parametrize("b, a", [
+    ('self.assertEqual(record(), {"total": 6})', 'self.assertCountEqual(record(), {"total": 6})'),
+    # assertDictEqual checked the values, which assertCountEqual never reads.
+    ('self.assertDictEqual(record(), expected)', 'self.assertCountEqual(record(), expected)'),
+])
+def test_a_dict_operand_loses_its_values(b, a):
+    b, a = _assertion(b, left="record()"), _assertion(a, left="record()")
+    assert _order_dropped("tests/test_record.py", b, a, {}, {})[2] is True
 
 
 @pytest.mark.parametrize("path, b, a", [
     # The other way round starts checking order.
     ("tests/test_items.py", _assertion("self.assertCountEqual(items(), [1, 2, 3])"),
      _assertion("self.assertEqual(items(), [1, 2, 3])")),
-    # A different subject or expected value is another rule's question.
+    # Another subject compared with a literal both happen to share is
+    # another assertion, another rule's question.
     ("tests/test_items.py", _assertion("self.assertEqual(items(), [1, 2, 3])"),
      _assertion("self.assertCountEqual(other(), [1, 2, 3])", left="other()")),
-    ("tests/test_items.py", _assertion("self.assertEqual(items(), EXPECTED_A)"),
-     _assertion("self.assertCountEqual(items(), EXPECTED_B)")),
+    ("tests/test_items.py", _assertion("self.assertEqual(items(), [])"),
+     _assertion("self.assertCountEqual(other(), [])", left="other()")),
     # A set never had an order.
     ("tests/test_items.py", _assertion("self.assertEqual(set(items()), {1, 2, 3})", left="set(items())"),
      _assertion("self.assertCountEqual(set(items()), {1, 2, 3})", left="set(items())")),
