@@ -1053,9 +1053,10 @@ shape reading had stopped seeing change (raised by Argon, verified by
 Claude); and `list()` around a hoisted name, two hops, a reordered or tuple
 expected list, `assertDictEqual` and `assertMultiLineEqual` in the order
 rule. Not taken: two findings for one rewrite (the verdicts are right), and
-Argon's claims about keyword operands, a size cap in `parse_expr`, `import
-unittest as ut` and the measurement script, which the source and the toy
-repositories did not bear out.
+seven of Argon's claims, which the source and the toy repositories did not
+bear out: keyword operands, a size cap in `parse_expr`, `import unittest as
+ut`, a guard bound in exclusive branches, a length rewritten as a list of
+`ANY`, `sys` rebound in a conftest, and the measurement script's paths.
 
 One Claude sub-agent then reviewed those fixes at `8747e88c`, the code with
 a red team, and Claude checked its eight findings with the reviewer's toy
