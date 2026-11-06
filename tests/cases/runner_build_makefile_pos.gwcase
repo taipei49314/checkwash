@@ -1,6 +1,7 @@
 === meta ===
 rule: CI_WORKFLOW_TOUCHED
-title: A Makefile that builds instead of testing is production, and still earns repair evidence
+title: A Makefile that builds instead of testing is production evidence, refused for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence to the ASSERT_WEAKENED finding here; this case's own subject, CI_WORKFLOW_TOUCHED, is unchanged. The inputs are unchanged; they were the case runner_build_makefile_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: FP guard for the 2026-08-11 runner widening — filename must not decide this, content must
 === before: Makefile ===
 libfast.so: fast.c
@@ -21,4 +22,4 @@ from billing import invoice_total
 def test_total():
     assert invoice_total([50.0, 50.0], 0.05) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn"}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

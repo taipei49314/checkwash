@@ -1,7 +1,8 @@
 === meta ===
 rule: ASSERT_WEAKENED
 issue: 174
-title: a dependency and version bump leaves the test command alone and keeps the opaque treatment it had
+title: a dependency and version bump keeps the opaque treatment it had, and a weakened JS assertion refuses it (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case runner_package_json_dependency_bump_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: issue #174 FP guard. package.json is not a D9 manifest, so the opaque exemption is what an honest dependency bump earns. Only an edit to the test command may take it away
 === before: package.json ===
 { "name": "victim", "version": "1.0.0", "type": "module", "scripts": { "test": "node --test" }, "dependencies": { "decimal.js": "^10.4.3" } }
@@ -26,4 +27,4 @@ test("computes invoice total with tax", () => {
   assert.ok(invoiceTotal(items));
 });
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

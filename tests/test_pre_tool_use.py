@@ -709,8 +709,10 @@ IMPORTING = "from billing import total\n\n\ndef test_total():\n    assert total(
 def test_bought_repair_evidence_does_not_stop_the_ask(repo, bought):
     # #419: the ask judges the one edit with oracle_freeze forced, so a kept
     # no-op in a called function (Route A) or a comment in a template (Route
-    # B) in the working tree does not lower its five rules. The Stop hook,
-    # with no freeze, passes the same change at the default fail_on.
+    # B) in the working tree does not lower its five rules. Before D-199 the
+    # Stop hook, with no freeze, passed the same change at the default
+    # fail_on; since D-199 the weakened assertion takes no repair evidence,
+    # so it blocks there too.
     template = repo / "app" / "templates" / "invoice.html"
     template.parent.mkdir(parents=True)
     template.write_bytes(b"<p>{{ total }}</p>\n")
@@ -724,7 +726,8 @@ def test_bought_repair_evidence_does_not_stop_the_ask(repo, bought):
     reason = asked(edit(repo, "== 5", "> 0"))
     assert reason is not None and "ASSERT_WEAKENED" in reason
     (repo / TEST).write_bytes(IMPORTING.replace("== 5", "> 0").encode())
-    assert json.loads(cli(repo, "check", "--format", "hook-json").stdout) == {}
+    stop = json.loads(cli(repo, "check", "--format", "hook-json").stdout)
+    assert stop["decision"] == "block" and "ASSERT_WEAKENED" in stop["reason"]
 
 
 def _block_on_engine_errors(repo):

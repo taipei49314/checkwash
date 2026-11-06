@@ -105,27 +105,32 @@ def test_production_handler_does_not_join_oracle_refusal():
     ("aliased_skip_marker_pos", "TEST_DISABLED"),
     ("tolerance_loosened_pos", "TOLERANCE_LOOSENED"),
 ])
-def test_other_former_refusal_rules_keep_opaque_credit(case_name, rule):
-    # Reuse unchanged source pairs, not their expected labels. Adding an
-    # existing opaque edit must keep D-171 for each former member separately.
+def test_other_former_refusal_rules_refuse_every_evidence(case_name, rule):
+    # Reuse unchanged source pairs, not their expected labels. D-171 kept the
+    # opaque credit for each former member of #464's set; since D-199 each
+    # refuses every repair evidence, and the label says the edit reached it.
+    # #464's opaque-only set itself stays empty.
     path = Path(__file__).parent / "cases" / f"{case_name}.gwcase"
     case = parse_case(path.read_text(encoding="utf-8"))
     _ir, findings, verdict = run(*case_to_changes(case), TEMPLATE)
     hit, = [finding for finding in findings if finding.rule == rule]
     assert hit.unit is not None
     assert (hit.severity, hit.escalators, hit.deescalators) == (
-        "warn", [], ["REPAIR_EVIDENCE"])
-    assert verdict == "pass"
+        "high", ["REPAIR_EVIDENCE_REFUSED"], [])
+    assert verdict == "block"
     assert OPAQUE_REFUSED_RULES == frozenset()
 
 
 @pytest.mark.parametrize("finding_unit, expected", [
     (None, ("high", ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"], [], "block")),
-    ("missing_test_unit", ("warn", [], ["REPAIR_EVIDENCE"], "pass")),
+    ("missing_test_unit", ("high", ["REPAIR_EVIDENCE_REFUSED"], [], "block")),
 ])
 def test_missing_lookup_is_not_a_unitless_finding(finding_unit, expected):
     # The detector currently always writes unit=None. Pin the gate boundary
-    # directly so a future unresolved nonempty name cannot widen D-176.
+    # directly so a future unresolved nonempty name cannot widen D-176. Since
+    # D-199 both block, because a Python broad except takes no repair
+    # evidence at all; only the unit-less one is refused it by D-176, and the
+    # label tells the two apart.
     path = "tests/test_sample.py"
     ir = IR(
         base="base", head="head",

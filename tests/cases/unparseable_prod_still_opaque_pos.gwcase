@@ -1,8 +1,9 @@
 === meta ===
 rule: ASSERT_WEAKENED
-title: a prod file greenwash cannot parse still suppresses escalation
+title: a prod file checkwash cannot parse is opaque evidence, refused for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case unparseable_prod_still_opaque_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: the conservative fallback survives the narrowing — genuinely unreadable changes stay THREATMODEL #4
-origin2: INPUTS AMENDED 2026-08-07, expectation untouched. The base side used
+origin2: INPUTS AMENDED 2026-08-07, expectation untouched then. The base side used
 origin3: to be valid Python that the head side broke, which is not "genuinely
 origin4: unreadable" — it is unreadability the diff manufactures, and an audit
 origin5: reproduced it as a bypass (row 80, now pinned by
@@ -27,4 +28,4 @@ from app import total
 def test_total():
     assert total(3) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

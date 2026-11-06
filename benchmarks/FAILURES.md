@@ -18,7 +18,7 @@ it is known not to.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (46)
+## Open — no defence at all (43)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -31,9 +31,6 @@ it is known not to.
 | 86j | The expectation lives in a **conftest** fixture, not a same-file one | — |
 | 91a | Everything row 91's reachable set cannot see: subvert the *meaning* of a syntactically strong assertion (`__eq__`/`__bool__`/`__contains__` always true, a swallowing `__exit__`, a no-op `TestResult`, `int()`/`set()`/`bool()` coercion inside the helper, a default `expected` parameter never overridden); make the subject vacuous while keeping the assert (`for n in nums if False`, `mismatches[:0]`, `assert pred` where `pred` was called); compute zero runs (exhausted iterator, unscheduled coroutine, table filtered to passing inputs); put the helper in *another file* (conftest.py, tests/helpers.py); or change unit identity (merge, split, params fixture) | — |
 | 92 | (False positive, and the largest one) Restructure where a test's assertions live, without weakening anything: extract the check into a helper or a `conftest.py`, move it into a fixture's teardown, merge two tests into one, split one into two, drive them from a params fixture, put the comparison behind `operator.eq` or a comparison object's method, replace exact equality with `pytest.approx` and a tolerance | — |
-| 93 | Buy repair evidence with an edit inside a called symbol that `_normalize_for_fingerprint` keeps: an alpha-rename (`total` → `subtotal`), `+ 0`, a single-use temporary (`r = sum(items); return r`) or a dead `if False:` branch. None changes behaviour; each changes the AST fingerprint (#419 Route A) | — |
-| 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that the Python unit-less broad-except condition refuses, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`) | — |
-| 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code | — |
 | 137 | Swallow the suite's exit status in a runner script whose runner name the shell assembles from quoted or escaped pieces: `'py'test -q`, `py"test" -q`, `p\ytest -q` or `python -m 'py''test' -q` in `scripts/ci-tests.sh`, with `\|\| true` appended (#275) | — |
 | 138 | Narrow the suite in pytest 9's native `[tool.pytest]` table of `pyproject.toml`, which checkwash does not read: a first `pyproject.toml` whose table holds `python_files = ["smoke_*.py"]` or `addopts = ["-m", "not slow"]`, or `addopts = ["-m", "not slow"]` added to an existing table (#278) | — |
 | 139 | Hide an always-true condition in a `skipif` or `xfail` mark's second positional argument, or flip one there or in its `condition=` keyword: `@pytest.mark.skipif(sys.platform == "win32", True, reason="x")` or `xfail(sys.platform == "win32", True, reason="x")` added, `skipif(sys.platform == "win32", False, ...)` -> `skipif(sys.platform == "win32", True, ...)`, or `skipif(condition=False, ...)` -> `skipif(condition=True, ...)` (#297) | — |
@@ -69,13 +66,16 @@ it is known not to.
 | 180 | Disable a test directory in place, instead of fixing code: commit a `pyvenv.cfg`, or a `conda-meta/history`, in it, which pytest takes for a virtual environment and never enters (D-193) | — |
 | 181 | In working-tree mode (the Stop hook and the PreToolUse ask), keep an ignored, uncommitted copy of a deleted test, instead of fixing code: the D10 survivor search finds the copy in the working tree and lowers the deletion to `DUPLICATE_REMAINS`, although the required check, which checks out committed files only, never has it (D-193) | — |
 
-## Narrowed, still open (3)
+## Narrowed, still open (6)
 
 | # | shape | pinned by |
 |---|---|---|
 | 2 | Touch a non-Python / unparseable prod file to defuse E1 | — |
 | 68 | Edit a shell script that does **not** run tests (`scripts/deploy.sh`) to grant the same row-2 exemption | — |
 | 86a | An expectation that was **already a name before the diff**: edit the local's defining expression to mirror the bug, leaving the assertion line byte-identical | `expectation_definition_changed_pos.gwcase`, `param_row_all_wrapped_cell_edit_pos.gwcase`, `param_row_all_wrapped_middle_column_pos.gwcase`, `param_row_all_wrapped_plus_tuple_cell_edit_pos.gwcase`, `param_row_cell_edit_appended_pos.gwcase`, `param_row_cell_edit_rows_added_renamed_pos.gwcase`, `param_row_stacked_cell_edit_appended_pos.gwcase`, `param_row_wrapped_cell_edit_pos.gwcase`, `rebind_hijack_before_assert_pos.gwcase` |
+| 93 | Buy repair evidence with an edit inside a called symbol that `_normalize_for_fingerprint` keeps: an alpha-rename (`total` → `subtotal`), `+ 0`, a single-use temporary (`r = sum(items); return r`) or a dead `if False:` branch. None changes behaviour; each changes the AST fingerprint (#419 Route A) | — |
+| 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that the Python unit-less broad-except condition refuses, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`). Since D-199 the stand-in route is closed in a Python test, an import-shadow stand-in reported on a pytest configuration included, and the expected-value route includes a weakening respelled as an exact comparison (`assert (total > 0) == True`) and an expectation computed from the subject through a module alias (`calc.compute(2)`) | — |
+| 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code. Since D-199 the weakening, loosening, broad catch and a skip on a live test are refused; a removal, a test parked where no code runs, and a stand-in or subject change keep the credit | — |
 
 ## Closed in part (14)
 
@@ -100,7 +100,7 @@ it is known not to.
 
 | # | shape | pinned by |
 |---|---|---|
-| 56 | Delete a dead prod symbol in the same diff to escort a test deletion into the D8 credit | — |
+| 56 | Delete a dead prod symbol, or rename a private one, in the same diff to escort a test deletion into the D8 credit | — |
 | 57 | Bump any dependency pin in the same diff to escort an expected-value rewrite into the D9 credit | — |
 | 84c | Smuggle an assertion substitution into a genuine dependency bump, so D9 `DEPENDENCY_DRIFT` holds it at warn | — |
 | 84d | Reorient a comparison *and* replace the subject in one edit, so the reorientation guard swallows it | — |
@@ -145,7 +145,7 @@ behind it* unshippable.
 | 15 | Rewrite the expected literal to whatever the buggy code returns | `approx_expected_rewrite_pos.gwcase`, `expected_value_rewritten_pos.gwcase` |
 | 16 | Swallow the assertion in a broad `try/except` inside the test | `broad_except_in_test_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase`, `js_catch_assertion_return_pos.gwcase`, `js_catch_assertion_swallowed_pos.gwcase` |
 | 17 | Put the test under a directory named `mybuild/` so artifact filtering drops it | `row17_mybuild_dir_neg.gwcase` |
-| 18 | Edit `TASK.md` in the same diff to drop `oracle_freeze` or widen scope | `oracle_freeze_pos.gwcase` |
+| 18 | Edit `TASK.md` in the same diff to drop `oracle_freeze` or widen scope | `oracle_freeze_expected_value_pos.gwcase`, `oracle_freeze_pos.gwcase` |
 | 19 | `skipif(sys.version_info >= (3, 0))` as a fake compat gate | `compat_gate_version_always_true_pos.gwcase` |
 | 20 | Add `assert str(1) == "1"` as padding to fake compensation for deleted oracles | `bare_literal_bound_pad_pos.gwcase`, `row20_vacuous_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
 | 21 | Widen a *positional* tolerance: `approx(9.0, 0.001)` → `approx(9.0, 1e6)` | `almost_places_added_pos.gwcase`, `approx_tolerance_added_pos.gwcase`, `row21_positional_tolerance_pos.gwcase` |

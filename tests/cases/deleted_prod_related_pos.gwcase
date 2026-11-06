@@ -1,6 +1,7 @@
 === meta ===
 rule: ASSERT_WEAKENED
-title: adapting the test of a deleted symbol is explained by the deletion
+title: adapting the test of a deleted symbol is evidence the removal and weakening rules refuse (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case deleted_prod_related_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: opaque-exemption audit 2026-08-03 — the deleted file's symbols are known exactly, so evidence stays symbol-relevant instead of blanket
 === before: src/app/legacy.py ===
 def old_render(x):
@@ -20,5 +21,5 @@ from app import fallback_render
 def test_render_compat():
     assert fallback_render(3) is not None
 === expect ===
-[{"rule": "ASSERT_REMOVED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]},
- {"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_REMOVED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]},
+ {"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

@@ -411,8 +411,9 @@ def test_the_one_hop_callers_route_is_not_followed_from_a_producer():
     and 306 Sub-Q8 match their callees directly only. The analysis the
     ruling adopted has the producer take that route (its sections 2.2 and
     4.5), so D-155 records this as a departure, which the owner kept on
-    2026-10-19. Following the route would flip this pin to warn with
-    REPAIR_EVIDENCE.
+    2026-10-19. Following the route would flip this pin to the inline
+    spelling's label, REPAIR_EVIDENCE_REFUSED (warn with REPAIR_EVIDENCE
+    before D-199).
     """
     test_before = "def test_total(ledger):\n    assert ledger.total([1.0]) == 1.0\n"
     _ir_, through_fixture, verdict = _judge(
@@ -430,8 +431,10 @@ def test_the_one_hop_callers_route_is_not_followed_from_a_producer():
         {"shop/ledger.py": FACTORY_BEFORE, "tests/test_billing.py": inline_before},
         {"shop/ledger.py": FACTORY_AFTER, "tests/test_billing.py": inline_before.replace("== 1.0", "> 0")},
     )
-    assert inline == [("ASSERT_WEAKENED", "warn", ("REPAIR_EVIDENCE",), ())]
-    assert verdict == "pass"
+    # Inline, the hop reaches the finding; since D-199 a weakened assertion
+    # refuses that evidence, and the label tells the two spellings apart.
+    assert inline == [("ASSERT_WEAKENED", "high", (), ("REPAIR_EVIDENCE_REFUSED",))]
+    assert verdict == "block"
 
 
 def test_a_conftest_the_diff_edits_is_read_from_each_side_and_the_before_side_governs():

@@ -1,6 +1,7 @@
 === meta ===
 rule: ASSERT_WEAKENED
-title: a shell script that does not run tests is still an unreadable prod change
+title: a shell script that runs no tests is still opaque production evidence, refused for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case deploy_script_still_opaque_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: the honest residual of the 2026-08-07 round, pinned rather than
 origin2: described: only scripts that run the suite were reclassified, so any
 origin3: other script still grants THREATMODEL #4. Open row, with a probe task.
@@ -25,4 +26,4 @@ from app.billing import invoice_total
 def test_invoice_total():
     assert invoice_total([{"price": 50.0, "qty": 2}], 0.053) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

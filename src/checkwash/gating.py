@@ -16,7 +16,13 @@ from checkwash.allowlist import AllowEntry, active_fingerprints
 from checkwash.ci_control_flow import became_unanalysable
 from checkwash.config import SEVERITY_ORDER, Config
 from checkwash.contract import Contract
-from checkwash.findings import SHAPE_GUARD_WEAKENED, SHAPE_INERT_MARK, SHAPE_MARKER_ADDED, Finding
+from checkwash.findings import (
+    SHAPE_GUARD_WEAKENED,
+    SHAPE_INERT_MARK,
+    SHAPE_PARAM_CASES_REMOVED,
+    SHAPE_UNIT_REMOVED,
+    Finding,
+)
 from checkwash.compat import compat_gate_for, guard_always_skips, guard_can_be_false, unit_is_live
 from checkwash.ir.astutil import dotted_name as _dotted_name
 from checkwash.ir.markers import bare_names, marker_call, parse_expr
@@ -33,18 +39,20 @@ ORACLE_RULES = {
     "TOLERANCE_LOOSENED",
     "EXPECTED_VALUE_CHANGED",
     # The expectation replaced by a recomputation of the subject's own inputs.
-    # Same family as EXPECTED_VALUE_CHANGED and legitimate for the same reason
-    # — production may genuinely have changed under it — so it takes the same
-    # repair-evidence path rather than escalating on its own (THREATMODEL 84a).
+    # Same family as EXPECTED_VALUE_CHANGED, and it took the same
+    # repair-evidence path until D-199 (THREATMODEL 84a). Since D-199 a Python
+    # finding of it takes no repair evidence (REPAIR_REFUSED_PYTHON); a JS/TS
+    # one still does.
     "EXPECTED_VALUE_DERIVED",
     # The same edit seen from the other side of the `==`: the expected value
     # and the strength are untouched and the subject is wrapped until the
-    # buggy output passes. Routine when production changed under it, which
-    # is exactly what repair evidence measures.
+    # buggy output passes. It took repair evidence until D-199; a Python
+    # finding of it now takes none, a JS/TS one still does.
     "SUBJECT_NORMALIZED",
     # The expectation and the operator are untouched and the subject's
     # *input data* changed, so the bug is no longer exercised (issue #93).
-    # Routine when production changed under it — same repair-evidence path.
+    # It took repair evidence until D-199; a Python finding of it now takes
+    # none, a JS/TS one still does.
     "SUBJECT_INPUT_CHANGED",
     # E3 used to escalate this unconditionally, which blocked the single most
     # common honest repair there is: change a constant, update its test.
@@ -55,7 +63,9 @@ ORACLE_RULES = {
     "CONFTEST_PATCHES_PROD",
     # The same swap one scope lower, inserted under an assertion that already
     # existed. Legitimate when production moved under the test, which is what
-    # repair evidence measures — so it takes the same path, not its own.
+    # repair evidence measures — so it took the same path, not its own, until
+    # D-199. Since D-199 a Python finding of it or of CONFTEST_PATCHES_PROD
+    # takes no repair evidence; a JS/TS one still does.
     "TEST_PATCHES_SUBJECT",
     # The expectation's *definition* moved while the assertion line stayed
     # byte-identical (THREATMODEL 86a). Shipped at info in v0.1.19 because the
@@ -76,8 +86,54 @@ ORACLE_RULES = {
 # The original broad refusal (ruling Q1 (b), 2026-10-14:
 # ASSERT_REMOVED, ASSERT_WEAKENED, TEST_DISABLED, TOLERANCE_LOOSENED and
 # BROAD_EXCEPT_ADDED) fired its pre-registered stop in the v0.9.0 combined
-# sweep and is turned off (D-171). #419 stays open for a redesign.
+# sweep and is turned off (D-171). D-199 is the redesign: the two sets
+# below refuse every repair evidence, symbol and opaque alike.
 OPAQUE_REFUSED_RULES: frozenset[str] = frozenset()
+
+# D-199 (0.12, D-196 item 4): the rules whose finding takes no repair
+# evidence at all, neither a changed symbol the test reaches (Route A) nor
+# an opaque production change (Route B). A no-op edit (`+ 0`, a renamed
+# parameter, a comment in a template or a CHANGELOG line) bought warn for
+# each of them, and none needs to know the code's wrong output to cheat:
+# weaken, delete or skip the oracle, loosen its tolerance, swallow it in a
+# broad except, patch the subject, normalize it, change its input or derive
+# the expectation from it. For a finding in a `.py` file every such rule
+# refuses: in practice a test or conftest. An import-shadow stand-in is a
+# Python finding wherever it is reported, on the production module it
+# shadows or on the pytest configuration or runner script that lets it win
+# (apply_gates). The expectation family
+# (EXPECTED_VALUE_CHANGED, EXPECTATION_DEFINITION_CHANGED, ASSERT_SUBSTITUTED,
+# EXPECTED_VALUE_HARDCODED) keeps the credit, because a behaviour change
+# rewrites expectations and repair evidence is how an honest one is told
+# apart (THREATMODEL 130).
+REPAIR_REFUSED_PYTHON: frozenset[str] = frozenset({
+    "ASSERT_WEAKENED",
+    "ASSERT_REMOVED",
+    "TEST_DISABLED",
+    "TOLERANCE_LOOSENED",
+    "BROAD_EXCEPT_ADDED",
+    "TEST_PATCHES_SUBJECT",
+    "CONFTEST_PATCHES_PROD",
+    "SUBJECT_NORMALIZED",
+    "SUBJECT_INPUT_CHANGED",
+    "EXPECTED_VALUE_DERIVED",
+})
+# For a finding in any other file, which is a JS/TS test (whose production
+# code checkwash never parses) or a unit-less stand-in reported on
+# `package.json`, only the loosening shapes refuse: a weakened or loosened
+# assertion, a broad catch, and a TEST_DISABLED that is no removal shape
+# (`_prod_removal_shape` is false: a marker on a live test, or a table left
+# with no row to run, a plain test wrapped in an empty table among them).
+# A deleted test, deleted parametrize rows and ASSERT_REMOVED keep the
+# credit: JS/TS has no D8 or D10 to tell a removed feature's tests apart.
+# Refusing those too would block 44 more of the fixed corpus's 1,800 JS/TS
+# commits, mostly deprecation removals, reverts and moved tests (D-199,
+# THREATMODEL 131).
+REPAIR_REFUSED_JS: frozenset[str] = frozenset({
+    "ASSERT_WEAKENED",
+    "TOLERANCE_LOOSENED",
+    "BROAD_EXCEPT_ADDED",
+})
 
 # Report order: most severe rule classes first within a path.
 RULE_ORDER = [
@@ -240,15 +296,50 @@ def _prod_removal_shape(f: Finding, unit: Unit | None) -> bool:
     the cheat this rule exists to catch, and stays out. One unit can carry
     both events at once, so this reads Finding.shape, never the English
     message (E2 / review 2026-08-11 Issue 3).
+
+    The unit that disappeared is the finding's own shape, not the unit the
+    index returns: two JS/TS tests can share a title, and the index keeps the
+    last, so a skip on one beside the deletion of its namesake read as a
+    removal (D-199 second review).
+
+    Rows "left" only when they were deleted from a table the test already
+    had, none was marked off, and the table still runs a row (D-199 review).
+    The count rule also counts as lost a row marked off with `pytest.param(...,
+    marks=skip)`, a plain test wrapped in a table of no rows (`test.each([])`,
+    428.Q2a, and Python's proven empty parameter set, which gives the plain
+    side a count of one) and a table emptied where it stands; each disables a
+    live test in place, so none is a removal. Before D-199 they read as one,
+    which let D8 hold them beside a removed symbol, against its own SPEC row
+    ("never an added marker"). Two readings stay as they were: a JS/TS plain
+    test paired with a table whose rows cannot be counted (428.Q2a) is a
+    removal, because tests folded into an imported table read the same way;
+    and a row marked off where the rows cannot be paired (a column added, the
+    table moved into a constant or a function) is counted as deleted.
     """
-    if unit is None:
-        return False
-    if unit.after is None and unit.before is not None:
+    if f.shape == SHAPE_UNIT_REMOVED:
         return True
-    return (
-        unit.delta is not None
-        and unit.delta.param_cases_removed > 0
-        and f.shape != SHAPE_MARKER_ADDED
+    if f.shape != SHAPE_PARAM_CASES_REMOVED or unit is None or unit.delta is None:
+        return False
+    before, after, delta = unit.before, unit.after, unit.delta
+    if before is None or after is None or delta.param_cases_removed <= 0 or delta.param_cases_disabled:
+        return False
+    if after.param_rows_unknown:
+        return before.param_cases is None
+    return before.param_cases is not None and after.param_cases != 0
+
+
+def _refuses_repair_evidence(f: Finding, unit: Unit | None, python: bool) -> bool:
+    """Does this oracle finding refuse every repair evidence (D-199)?
+
+    A Python finding (one in a `.py` file, or an import-shadow stand-in
+    wherever it is reported) refuses for each rule in REPAIR_REFUSED_PYTHON.
+    Any other finding refuses for REPAIR_REFUSED_JS and for a TEST_DISABLED
+    that is not a removal shape, the same split D8 reads.
+    """
+    if python:
+        return f.rule in REPAIR_REFUSED_PYTHON
+    return f.rule in REPAIR_REFUSED_JS or (
+        f.rule == "TEST_DISABLED" and not _prod_removal_shape(f, unit)
     )
 
 
@@ -398,7 +489,9 @@ def _repair_evidence(
 
     `opaque=False` refuses the opaque-change fallback and leaves every
     symbol-level route below exactly as it is (#419: a weakening-class
-    finding in a Python test or conftest; the caller decides).
+    finding in a Python test or conftest; the caller decides). D-199's
+    refusal is not made here: the caller asks this, then refuses the answer
+    for the rules in REPAIR_REFUSED_PYTHON and REPAIR_REFUSED_JS.
 
     `assertion` is the before half of the finding's assertion
     (`_finding_assertion`), for the producer of a fixture it reads (#471);
@@ -613,6 +706,11 @@ def apply_gates(
     # from the IR so gating stays a pure function of it. A JS/TS test is
     # judged as a test too, and must not be mistaken for a Python one (#419).
     python_files = {f.path for f in ir.files if f.language == "python"}
+    # An import-shadow stand-in (shadow.py, Python's import resolution) is
+    # reported on the file whose change lets it win: the production module,
+    # or a pytest configuration or runner script. It is a Python finding
+    # wherever it lands (D-199 second review).
+    shadow_paths = {entry[0] for entry in ir.globals.runtime_subject_shadows}
     file_constants = {f.path: f.constants for f in ir.files}
     proven_assertions, proven_units = arrival_credits(
         ir, lambda file, side: unit_is_live(side, file_constants.get(file.path)))
@@ -841,6 +939,9 @@ def apply_gates(
         # narrow file-scoped BROAD_EXCEPT_ADDED condition below is enabled.
         # The following historical broad design remains disabled for all
         # other rules; it is retained to explain the earlier experiment.
+        # D-199 replaced it with a wider refusal of every repair evidence,
+        # after `has_evidence` below; read what follows as #464's design, not
+        # as what this code does now.
         #
         # A weakening-class finding in a Python test or conftest does not
         # take the opaque-change credit (#419, ruling Q1 (b), 2026-10-14).
@@ -929,6 +1030,47 @@ def apply_gates(
                 assertion=_finding_assertion(f, unit) if f.rule != "TEST_DISABLED" else None,
             )
         )
+        # D-199 (0.12, D-196 item 4; THREATMODEL 2, 93, 130, 131). Static
+        # repair evidence cannot tell an honest production change from a kept
+        # no-op one, so for these rules it no longer explains the test edit
+        # at all (REPAIR_REFUSED_PYTHON, REPAIR_REFUSED_JS). The evidence is
+        # still computed, so that E1 can say a production change reached the
+        # finding and was refused. Every compensation, MILD_WEAKENING and the
+        # info routes (ASSERTION_MOVED, DUPLICATE_REMAINS) are unchanged, and a
+        # refused finding reaches them. PACKAGE_REPAIR and DEPENDENCY_DRIFT
+        # never applied to these rules.
+        #
+        # What it costs, on the fixed R29 corpus (3,600 commits): 7 Python and
+        # 11 JS/TS commits move pass -> block; on D-088's 1,263 skip, xfail
+        # and conftest commits, 53. The moved commits remove deprecated APIs
+        # and their tests, drop old Python versions, or rewrite tests beside a
+        # behaviour change; a few are detector misreadings that repair evidence
+        # used to absorb (httpx 0296c2bb, requests 2a6f290b). A reviewed
+        # exemption, merged to the base first, or a maintainer merging past
+        # the required check releases each one.
+        #
+        # What stays open, stated plainly (THREATMODEL item 4, rows 56, 93,
+        # 130, 131), each beside a no-op edit unless said otherwise:
+        # - an expected value or its definition rewritten, or an assertion
+        #   substituted for one of equal strength, including a weakening
+        #   respelled as an exact comparison (`(x > 0) == True` reads as an
+        #   expected value changed from 4 to True) and an expectation computed
+        #   from the subject through a module alias (`calc.compute(2)`);
+        # - a renamed private symbol escorting a test deletion into D8;
+        # - D8 counting a row marked off as deleted where the rows cannot be
+        #   paired (a column added, the table moved into a constant);
+        # - in JS/TS: a deleted test or assertion (a plain test paired with a
+        #   table whose rows cannot be counted reads as one, as tests folded
+        #   into an imported table do), a test parked where no code runs
+        #   (`if (false) { test(...) }` reads as a deletion), and the
+        #   stand-in and subject rules (`vi.mock`, a `test.each` input cell).
+        # Only executing the old tests against the new code would close the
+        # no-op routes, and checkwash never executes your code.
+        python = f.path in python_files or (
+            f.rule == "TEST_PATCHES_SUBJECT" and f.unit is None and f.path in shadow_paths)
+        refused_repair = has_evidence and _refuses_repair_evidence(f, unit, python)
+        if refused_repair:
+            has_evidence = False
         package_only = (
             not has_evidence
             and f.rule in ("EXPECTED_VALUE_CHANGED", "EXPECTATION_DEFINITION_CHANGED")
@@ -1056,10 +1198,20 @@ def apply_gates(
             # this one keep their conditions and come first: a suite control
             # keeps D-066's test, inert files included, and a refused opaque
             # change keeps its own label.
-            if suite_control and (has_evidence or ir.globals.prod_files_changed):
+            #
+            # D-199 adds `REPAIR_EVIDENCE_REFUSED`, after those two and before
+            # `PROD_CHANGE_NOT_EVIDENCE`: a production change did reach this
+            # finding as repair evidence, and its rule takes none. Saying "no
+            # evidence reached the change" there would be false, and would
+            # suggest that a change which reaches the test would be accepted.
+            # A refused finding whose evidence never existed keeps the label
+            # it had. Still E1, outside the fingerprint.
+            if suite_control and (has_evidence or refused_repair or ir.globals.prod_files_changed):
                 reason = "COLLECTION_CONTROL_UNEXPLAINED"
             elif refuses_opaque and ir.globals.prod_opaque_change:
                 reason = "OPAQUE_PROD_CHANGE_NOT_EVIDENCE"
+            elif refused_repair:
+                reason = "REPAIR_EVIDENCE_REFUSED"
             elif prod_changed:
                 reason = "PROD_CHANGE_NOT_EVIDENCE"
             else:

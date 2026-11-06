@@ -25,8 +25,9 @@ a mock. So three conditions, all required:
    `billing.invoice_total` under `assert billing.invoice_total(...) == 105.3`
    replaces the subject of the oracle.
 
-Like every oracle rule it earns severity from repair evidence (SPEC §5 E1):
+Like every oracle rule it earned severity from repair evidence (SPEC §5 E1):
 swapping a collaborator out is routine when production moved under the test.
+Since D-199 (0.12) a Python finding of it takes no repair evidence; a JS/TS one still does (SPEC §5).
 
 A target built at runtime is read one hop (#196 188.5): a name bound once to
 a string literal, `__name__`, and an f-string or `+` of those. One that

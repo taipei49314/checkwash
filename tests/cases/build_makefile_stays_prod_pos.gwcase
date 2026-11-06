@@ -1,6 +1,7 @@
 === meta ===
 rule: ASSERT_WEAKENED
-title: a Makefile that builds is production; a Makefile that runs the suite is not
+title: a Makefile that builds is production, so its edit reaches the weakened test as evidence, which the rule refuses (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case build_makefile_stays_prod_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: the discriminator is content, not the filename — a C build recipe is
 origin2: real repair evidence for a test that changed with it, and demoting it
 origin3: to ci would have invented false positives in every extension project.
@@ -27,4 +28,4 @@ from app import fast_add
 def test_fast_add():
     assert fast_add(3, 4) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

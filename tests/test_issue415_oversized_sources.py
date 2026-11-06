@@ -119,21 +119,22 @@ def _summary(findings):
 # --- the engine: an unread side earns nothing -------------------------------------------------------
 
 EVIDENCE_CASES = {
-    # Readable: the documented evidence, symbol-matched and opaque.
-    "py_read": (FileChange("billing.py", "modified", BILLING, FIXED), "warn"),
-    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "warn"),
+    # Readable: the documented evidence, symbol-matched and opaque. It
+    # reaches the weakened assertion, which refuses it since D-199.
+    "py_read": (FileChange("billing.py", "modified", BILLING, FIXED), "REPAIR_EVIDENCE_REFUSED"),
+    "data_read": (FileChange("data/rates.csv", "modified", b"rate,1\n", b"rate,2\n"), "REPAIR_EVIDENCE_REFUSED"),
     # Unread on either side, or both: no evidence of either kind (#419). A
     # Python module that large refuses instead (PY_MODULES below).
     "js_head_unread": (FileChange("src/billing.js", "modified", BILLING_JS, None,
-                                  unread=(unread("src/billing.js", "head"),)), "high"),
+                                  unread=(unread("src/billing.js", "head"),)), "NO_PROD_CHANGE_IN_DIFF"),
     "js_base_unread": (FileChange("src/billing.js", "modified", None, BILLING_JS,
-                                  unread=(unread("src/billing.js", "base"),)), "high"),
+                                  unread=(unread("src/billing.js", "base"),)), "NO_PROD_CHANGE_IN_DIFF"),
     "js_both_unread": (FileChange("src/billing.js", "modified", None, None,
                                   unread=(unread("src/billing.js", "base"), unread("src/billing.js", "head"))),
-                       "high"),
+                       "NO_PROD_CHANGE_IN_DIFF"),
     "data_unread": (FileChange("data/rates.csv", "modified", None, None,
                                unread=(unread("data/rates.csv", "base"), unread("data/rates.csv", "head"))),
-                    "high"),
+                    "NO_PROD_CHANGE_IN_DIFF"),
 }
 # The expectation family keeps opaque-change evidence (#419 Q1 (b)): the
 # expected literal rewritten, as assert_weakened_repair_neg rewrites it.
@@ -142,17 +143,15 @@ REWRITTEN = TEST.replace(b"assert total == 105.3", b"assert total == 110.57")
 
 @pytest.mark.parametrize("case", sorted(EVIDENCE_CASES))
 def test_an_unread_side_earns_no_repair_evidence(case):
-    change, severity = EVIDENCE_CASES[case]
+    # Since D-199 the weakened assertion blocks either way; the E1 label still
+    # tells a read side, whose change reached it, from an unread one.
+    change, label = EVIDENCE_CASES[case]
     changes = [FileChange("tests/test_billing.py", "modified", TEST, WEAKENED), change]
     _ir, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY)
-    assert [(f.rule, f.severity) for f in findings] == [("ASSERT_WEAKENED", severity)]
-    if severity == "warn":
-        assert "REPAIR_EVIDENCE" in findings[0].deescalators
-        assert verdict == "pass"
-    else:
-        assert findings[0].escalators == ["NO_PROD_CHANGE_IN_DIFF"]
-        assert findings[0].deescalators == []
-        assert verdict == "block"
+    assert [(f.rule, f.severity) for f in findings] == [("ASSERT_WEAKENED", "high")]
+    assert findings[0].escalators == [label]
+    assert findings[0].deescalators == []
+    assert verdict == "block"
 
 
 def test_a_read_data_edit_still_explains_a_rewritten_expected_value():
@@ -489,32 +488,32 @@ def _base_files(extra):
 
 
 ROWS = {
-    # name: (base extra files, head edit, verdict, unread sides named on stderr)
+    # name: (base extra files, head edit, E1 label, unread sides named on stderr)
     "image_added": (lambda: {}, lambda repo: _write(repo, {"assets/logo.png": blob(1_500_000, "logo")}),
-                    "block", [described("assets/logo.png", "head", 1_500_000)]),
+                    "NO_PROD_CHANGE_IN_DIFF", [described("assets/logo.png", "head", 1_500_000)]),
     # A production source that is not Python: no provider pass reads it.
     "js_source_added": (lambda: {}, lambda repo: _write(repo, {"src/billing.js": blob(LIMIT + 1, "billing.js")}),
-                        "block", [described("src/billing.js", "head")]),
+                        "NO_PROD_CHANGE_IN_DIFF", [described("src/billing.js", "head")]),
     "data_deleted": (lambda: {"data/table.csv": blob(LIMIT + 1, "table")},
                      lambda repo: (repo / "data" / "table.csv").unlink(),
-                     "block", [described("data/table.csv", "base")]),
+                     "NO_PROD_CHANGE_IN_DIFF", [described("data/table.csv", "base")]),
     "data_renamed": (lambda: {"data/table.csv": blob(LIMIT + 1, "table")},
                      lambda repo: git(repo, "mv", "data/table.csv", "data/moved.csv"),
-                     "block", [described("data/table.csv", "base"), described("data/moved.csv", "head")]),
+                     "NO_PROD_CHANGE_IN_DIFF", [described("data/table.csv", "base"), described("data/moved.csv", "head")]),
     "data_edited_over_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
                                    lambda repo: _write(repo, {"data/table.csv": blob(LIMIT + 1, "edited")}),
-                                   "block", [described("data/table.csv", "head")]),
+                                   "NO_PROD_CHANGE_IN_DIFF", [described("data/table.csv", "head")]),
     # Exactly at the limit, the data file is read: the opaque-change evidence
-    # it has always earned holds the weakening at warn.
+    # it has always earned reaches the weakening, which refuses it since D-199.
     "data_edited_at_the_limit": (lambda: {"data/table.csv": blob(LIMIT, "table")},
                                  lambda repo: _write(repo, {"data/table.csv": blob(LIMIT, "edited")}),
-                                 "pass", []),
+                                 "REPAIR_EVIDENCE_REFUSED", []),
 }
 
 
 @pytest.mark.parametrize("row", sorted(ROWS))
 def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
-    base, edit, verdict, named = ROWS[row]
+    base, edit, label, named = ROWS[row]
     repo = _repo(tmp_path, _base_files(base()))
     edit(repo)
     _write(repo, {"tests/test_billing.py": WEAKENED})
@@ -522,16 +521,11 @@ def test_a_range_beside_an_oversized_file_gives_a_verdict(tmp_path, row):
     code, stdout, stderr = _check(repo, "HEAD~1..HEAD", "--format", "json")
     assert "engine error" not in stderr, stderr
     payload = json.loads(stdout)
-    assert payload["verdict"] == verdict
+    assert payload["verdict"] == "block"
     finding = _weakened(payload)
-    if verdict == "block":
-        assert code == 1
-        assert finding["severity"] == "high"
-        assert "NO_PROD_CHANGE_IN_DIFF" in finding["escalators"]
-    else:
-        assert code == 0
-        assert finding["severity"] == "warn"
-        assert "REPAIR_EVIDENCE" in finding["deescalators"]
+    assert code == 1
+    assert finding["severity"] == "high"
+    assert label in finding["escalators"]
     notes = [line for line in stderr.splitlines() if "not read, over the source byte limit" in line]
     assert notes == [f"checkwash: not read, over the source byte limit: {side}; it earns no repair evidence"
                      for side in named]

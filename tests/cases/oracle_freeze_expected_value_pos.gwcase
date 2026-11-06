@@ -1,0 +1,38 @@
+=== meta ===
+bypass: 18
+rule: EXPECTED_VALUE_CHANGED
+title: an oracle_freeze contract raises a rewritten expected value that repair evidence holds at warn
+note: Since D-199 a weakened assertion blocks beside a production change without the freeze, so oracle_freeze_pos no longer shows E2 changing a severity. A rewritten expected value still takes repair evidence, so it is the case where the freeze is what blocks (D-199 review).
+=== task ===
+---
+greenwash:
+  scope:
+    allow:
+      - "billing.py"
+      - "tests/test_billing.py"
+  oracle_freeze: true
+  intent: "fix rounding bug in invoice total"
+---
+Fix the rounding bug described in issue #482.
+=== before: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.3
+=== after: tests/test_billing.py ===
+from billing import compute_invoice_total
+
+
+def test_invoice_total():
+    total = compute_invoice_total([10.5, 94.8])
+    assert total == 105.30000000000001
+=== before: billing.py ===
+def compute_invoice_total(items):
+    return sum(items)
+=== after: billing.py ===
+def compute_invoice_total(items):
+    return round(sum(items), 2)
+=== expect ===
+[{"rule": "EXPECTED_VALUE_CHANGED", "severity": "high", "escalators": ["ORACLE_FREEZE"], "deescalators": ["REPAIR_EVIDENCE"]}]

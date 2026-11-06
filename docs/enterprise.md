@@ -134,20 +134,34 @@ stop-hook target is p95 < 2 s on a medium diff; 1.5 s is the hard gate.
 
 ## 7. Hardening against bought repair evidence (#419)
 
-checkwash holds a weakened test assertion at **warn** when the same change
-carries repair evidence, and the default threshold, `high`, passes warn. An
-edit that changes nothing can supply that evidence: one line in a template,
-a JS/TS module or `AUTHORS` (Route B), or `+ 0` in a function the test calls
-(Route A). A broad `except` added around an assertion in a Python test or
-conftest is the exception: it blocks beside any production change (D-176),
-unless it is a proven failure relay, which is not counted as added, within
-0.10's count (D-190), or one of five spellings that give no finding at all
-(THREATMODEL rows 172 to 176).
-[#419](https://github.com/taipei49314/checkwash/issues/419) is closed as a
+checkwash holds an oracle finding at **warn** when the same change carries
+repair evidence, and the default threshold, `high`, passes warn. An edit
+that changes nothing can supply that evidence: one line in a template, a
+JS/TS module or `AUTHORS` (Route B), or `+ 0` in a function the test calls
+(Route A). In 0.11.0 that held a weakened test assertion at warn; a broad
+`except` added around an assertion in a Python test or conftest was the
+exception: it blocks beside any production change (D-176), unless it is a
+proven failure relay, which is not counted as added, within 0.10's count
+(D-190), or one of five spellings that give no finding at all (THREATMODEL
+rows 172 to 176).
+[#419](https://github.com/taipei49314/checkwash/issues/419) was closed as a
 documented residual, not a fix ([D-191](../DECISIONS-archive-4.md)): what still passes
-and what blocks are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md) and
+and what blocks in 0.11.0 are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md);
 [THREATMODEL](../THREATMODEL.md) item 4 and rows 2, 93, 130, 131 and 172 to
-175. If an author who reads these rules is in your threat model, use one of
+175 now describe main. From 0.12 (unreleased), D-199 refuses every repair evidence to a weakened,
+removed, skipped or loosened Python assertion, a broad `except`, a patched
+or normalized subject, a changed input and a derived expectation, and to a
+weakened or loosened JS/TS assertion, a broad catch and a skip added to a
+live JS/TS test; such a finding blocks unless something other than repair
+evidence holds it, labelled `REPAIR_EVIDENCE_REFUSED`. What it leaves open
+is in [KNOWN-ISSUES-next](KNOWN-ISSUES-next.md): a rewritten expected value
+or a substituted assertion beside a no-op edit, a weakening respelled as
+one of them included; a test deletion that a renamed private symbol
+escorts into D8; and in JS/TS a removed assertion or test, deleted
+parametrize rows, a test parked in dead code and a stand-in or subject
+change. Options 1 and 2 below block it. Option 3, the PreToolUse ask,
+blocks only the Python test deletion among them, as it asks only on the
+five weakening rules in a Python test. If an author who reads these rules is in your threat model, use one of
 the options below. Each also blocks honest changes, and the cost given is
 from archived rows, not a measurement of 0.11 (see *About the counts*).
 
