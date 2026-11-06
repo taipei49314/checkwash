@@ -1072,9 +1072,11 @@ and a name inside the subject; `dict(k=ANY)`, a length or keys taken from
 the subject, and `x in {ANY}`, which raises; and three honest gates and an
 honest rewrite the second round blocked (a slice or `int()` of the version,
 a `sorted(...)` subject). Not taken: the opposite gate added to a test that
-ran only outside the matrix, and the spellings of `ANY` that wrap a
-comparison in another or go through mock's call objects (both stated above).
-These fixes were not reviewed again; the 218 toy cases of all three rounds
-were run on them, and the 31 that moved each moved as intended. The full
-suite then found the new reading of a bare name recursing on a megabyte-deep
-expression; since `bffc1f55` it is walked with an explicit stack.
+ran only outside the matrix, the spellings of `ANY` that wrap a comparison
+in another or go through mock's call objects (all stated above), and
+`set(...)` around both sides beside a production change, as on main
+(THREATMODEL row 14). These fixes were not reviewed again; the 218 toy cases
+of all three rounds were run on them, and the 31 that moved each moved as
+intended. The full suite then found the new reading of a bare name recursing
+on a megabyte-deep expression; since `bffc1f55` it is walked with an
+explicit stack.
