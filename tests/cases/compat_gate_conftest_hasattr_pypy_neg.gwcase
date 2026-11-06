@@ -1,0 +1,35 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `hasattr(sys, "pypy_version_info")` is read in a conftest fixture's guard too (D-201 review)
+origin: D-201 review: the guard's names were qualified as conftest.sys, which the evaluator did not read
+=== before: tests/conftest.py ===
+import sys
+
+import pytest
+=== after: tests/conftest.py ===
+import sys
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def no_old_or_pypy():
+    if sys.version_info < (3, 12) or hasattr(sys, "pypy_version_info"):
+        pytest.skip("needs CPython 3.12")
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+
+
+# Gated by the conftest fixture.
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

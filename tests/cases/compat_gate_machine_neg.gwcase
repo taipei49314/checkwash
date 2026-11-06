@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `skipif(platform.machine() == "arm64")` provably runs on x86-64: compat credit kept (D-201)
+origin: D-201 review: the matrix did not hold the machine, so the strict reading refused this honest gate
+=== before: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(platform.machine() == "arm64", reason="no wheels for arm64")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

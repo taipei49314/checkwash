@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `assertEqual(len(x), ANY)` holds for every x (D-201 review)
+origin: D-201 review: the len() subject made the pair TYPE_SHAPE before ANY was read, and it gave no finding
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(len(items()), 3)
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(len(items()), ANY)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

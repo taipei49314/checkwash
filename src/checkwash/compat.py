@@ -26,19 +26,26 @@ _COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
 
 # Environments the condition is evaluated against. A real compatibility gate
 # skips somewhere and runs somewhere; one that is true everywhere is an
-# unconditional kill wearing a compat costume. The interpreter is CPython or
-# PyPy (D-201): once a single test's gate must provably run somewhere,
-# `skipif(platform.python_implementation() == "PyPy")`, which names the
-# `platform.` token and earned the credit as an unknown, must be read.
+# unconditional kill wearing a compat costume.
+#
+# D-201 asks a single test's gate to provably run somewhere, so the matrix
+# reads what honest gates name and it once left unknown: the interpreter
+# (CPython, and PyPy at 3.11, the version it ships), the machine each
+# platform reports (`platform.machine()`), and `sys.version_info` as the
+# five-tuple it is, so `sys.version_info > (3, 11, 0)` is true on 3.11.0 as
+# it is on a real interpreter.
+_PLATFORMS = (
+    ("win32", "nt", "Windows", ("AMD64", "ARM64")),
+    ("linux", "posix", "Linux", ("x86_64", "aarch64")),
+    ("darwin", "posix", "Darwin", ("x86_64", "arm64")),
+)
 _ENV_MATRIX = tuple(
-    {"version_info": version, "platform": plat, "os_name": osname, "system": system, "implementation": impl}
-    for version in ((3, 11, 0), (3, 12, 0), (3, 13, 0), (3, 14, 0))
-    for plat, osname, system in (
-        ("win32", "nt", "Windows"),
-        ("linux", "posix", "Linux"),
-        ("darwin", "posix", "Darwin"),
-    )
-    for impl in ("CPython", "PyPy")
+    {"version_info": (3, minor, 0, "final", 0), "platform": plat, "os_name": osname, "system": system,
+     "implementation": impl, "machine": machine}
+    for impl, minors in (("CPython", (11, 12, 13, 14)), ("PyPy", (11,)))
+    for minor in minors
+    for plat, osname, system, machines in _PLATFORMS
+    for machine in machines
 )
 
 _EVAL_CMP_OPS: dict[type, object] = {
@@ -94,6 +101,53 @@ class _Module:
 _PYTEST_MODULES = {name: _Module(name) for name in ("os", "sys", "platform")}
 
 
+class _KnownString:
+    """An environment fact read only for the values the matrix holds (D-201).
+
+    The matrix holds CPython and PyPy, so `platform.python_implementation()
+    == "PyPy"` is known in every environment. A comparison with any other
+    name (`!= "IronPython"`) stays unknown, as it was before the interpreter
+    joined the matrix: naming an interpreter the matrix does not hold must
+    not make a condition true everywhere. The TypeError is the evaluator's
+    MAYBE, and `!=` and `in` reach `__eq__` too.
+    """
+
+    __slots__ = ("value", "known")
+
+    def __init__(self, value: str, known: frozenset[str]) -> None:
+        self.value = value
+        self.known = known
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str) and other in self.known:
+            return other == self.value
+        raise TypeError("a value the environment matrix does not hold")
+
+
+_INTERPRETERS = frozenset({"CPython", "PyPy"})
+_INTERPRETER_NAMES = frozenset({"cpython", "pypy"})
+_MACHINES = frozenset(machine for *_, machines in _PLATFORMS for machine in machines)
+_ARCHITECTURES = frozenset({"32bit", "64bit"})
+
+
+def _known_method(target: _KnownString, method: str, args: list) -> object:
+    """A string method on a fact the matrix knows, as `platform.machine().lower()`.
+
+    `lower` and `upper` keep the value known. `startswith` and `endswith`
+    answer only for an affix some value the matrix holds has: asking about
+    one it holds none of (`.startswith("riscv")`) stays unknown, as a
+    comparison with a name it does not hold does.
+    """
+    if method in ("lower", "upper") and not args:
+        return _KnownString(getattr(target.value, method)(), frozenset(getattr(k, method)() for k in target.known))
+    if method in ("startswith", "endswith") and len(args) == 1:
+        affixes = args[0] if isinstance(args[0], tuple) else (args[0],)
+        if all(isinstance(affix, str) for affix in affixes) and any(
+                getattr(k, method)(affixes) for k in target.known):
+            return getattr(target.value, method)(affixes)
+    raise TypeError("a value the environment matrix does not hold")
+
+
 class _BuiltinModuleNames:
     """`sys.builtin_module_names`, read for the one question a gate asks of it (D-201).
 
@@ -144,6 +198,11 @@ def _eval_condition(
             return node.value
         if isinstance(node, ast.Tuple):
             return tuple(ev(e, resolving, pytest) for e in node.elts)
+        if isinstance(node, (ast.List, ast.Set)):
+            # `sys.platform not in ["linux", "darwin"]` is the list spelling
+            # of the tuple one (D-201). An unknown element leaves it unknown.
+            items = tuple(ev(e, resolving, pytest) for e in node.elts)
+            return MAYBE if any(item is MAYBE for item in items) else items
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
             inner = ev(node.operand, resolving, pytest)
             return MAYBE if inner is MAYBE else not inner
@@ -173,6 +232,11 @@ def _eval_condition(
                 left = right
             return True
         if isinstance(node, ast.Subscript):
+            if (isinstance(node.value, ast.Call) and not node.value.args
+                    and _dotted_name(node.value.func) in ("platform.architecture", "architecture")
+                    and isinstance(node.slice, ast.Constant) and node.slice.value == 0):
+                # `platform.architecture()[0]`: every environment is 64-bit.
+                return _KnownString("64bit", _ARCHITECTURES)
             value = ev(node.value, resolving, pytest)
             # `sys.version_info[:2] < (3, 12)` is one of the two commonest
             # ways to spell a real version gate; refusing to evaluate it would
@@ -195,7 +259,13 @@ def _eval_condition(
             if name in ("platform.system", "system"):
                 return env["system"]
             if name in ("platform.python_implementation", "python_implementation"):
-                return env["implementation"]
+                return _KnownString(env["implementation"], _INTERPRETERS)
+            if name in ("platform.machine", "machine") and not node.args:
+                return _KnownString(env["machine"], _MACHINES)
+            if name in ("platform.python_version", "python_version") and not node.args:
+                return "%d.%d.%d" % env["version_info"][:3]
+            if name in ("platform.python_version_tuple", "python_version_tuple") and not node.args:
+                return tuple(str(part) for part in env["version_info"][:3])
             # `hasattr(sys, "pypy_version_info")`, pytest's own PYPY constant.
             if (name == "hasattr" and len(node.args) == 2 and not node.keywords
                     and _dotted_name(node.args[0]) == "sys"
@@ -211,6 +281,11 @@ def _eval_condition(
                 "upper",
             ):
                 target = ev(node.func.value, resolving, pytest)
+                if isinstance(target, _KnownString):
+                    try:
+                        return _known_method(target, node.func.attr, [ev(a, resolving, pytest) for a in node.args])
+                    except TypeError:
+                        return MAYBE
                 if isinstance(target, str):
                     args = [ev(a, resolving, pytest) for a in node.args]
                     method = getattr(target, node.func.attr)
@@ -238,7 +313,7 @@ def _eval_condition(
         if name in ("os.name", "name"):
             return env["os_name"]
         if name == "sys.implementation.name":
-            return env["implementation"].lower()
+            return _KnownString(env["implementation"].lower(), _INTERPRETER_NAMES)
         if name == "sys.builtin_module_names":
             return _BuiltinModuleNames(env["implementation"])
         if consts and name and "." not in name and name not in resolving and len(resolving) < 16:
@@ -324,17 +399,15 @@ def _parse_constants(raw: dict[str, str]) -> dict[str, ast.AST]:
     return {name: expr for name, expr in ((n, parse_expr(t)) for n, t in raw.items()) if expr is not None}
 
 
-def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -> bool:
-    """Is this single marker a qualified interpreter/OS gate?
+def _gate_parts(m, raw: dict[str, str]) -> tuple[str, list[tuple[ast.AST, bool]]] | None:
+    """The canonical name and the condition parts of a marker that can be a gate, or None.
 
     Marker names carry their condition (`skipif(cond)`), so the canonical
-    part before the parenthesis is matched. Names in the condition resolve
-    through the engine-built constant environment, so `skipif(WIN)` is judged
-    by what `WIN` is bound to — not by whether the marker text happens to
-    contain the string `sys.platform` (FP sweep: click b761eda, attrs
-    7373d88). The compat-token filter runs over the condition text *plus*
-    those resolved expressions, keeping the credit scoped to interpreter/OS
-    gates rather than becoming general skip amnesty.
+    part before the parenthesis is matched. The condition is the conjunction
+    of its parts, each with whether pytest compiles it from a string (#263).
+    None for a strict xfail (it inverts the oracle instead of skipping it),
+    for a condition or guard that does not parse, and for a marker with no
+    condition to judge.
     """
     canonical = m.name.split("(", 1)[0]
     parts: list[tuple[ast.AST, bool]] = []
@@ -344,18 +417,18 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
         # is their conjunction (#260 Q2).
         call = marker_call(m.text)
         if canonical == "pytest.mark.xfail" and call is not None and _xfail_strict(call):
-            return False
+            return None
         if m.guard:
             guard = parse_expr(m.guard)
             if guard is None:
-                return False
+                return None
             parts.append((guard, False))
         if canonical in _GATE_DECORATORS and call is not None and call.args:
             # A string condition is the expression pytest compiles from it;
             # one that does not compile earns nothing (#263).
             condition = mark_condition(call)
             if condition is None:
-                return False
+                return None
             parts.append((condition, is_string_condition(call)))
     elif (
         canonical in _GATE_CALLS or is_setup_skip(canonical) or is_helper_skip(canonical) or is_rebound(canonical)
@@ -369,8 +442,38 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
         if guard is not None:
             parts.append((guard, False))
     if not parts:
-        return False
+        return None
+    return canonical, parts
+
+
+def _names_the_environment(m, raw: dict[str, str], parts: list[tuple[ast.AST, bool]]) -> bool:
+    """Does the condition, with its constants resolved, name the interpreter or OS?"""
     searched = " ".join([m.text, m.guard or "", *(text for node, _ in parts for text in _expansion_texts(node, raw))])
+    return any(tok in searched for tok in _COMPAT_TOKENS)
+
+
+def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST], credit: bool = False) -> bool:
+    """Is this single marker a qualified interpreter/OS gate?
+
+    Names in the condition resolve through the engine-built constant
+    environment, so `skipif(WIN)` is judged by what `WIN` is bound to — not
+    by whether the marker text happens to contain the string `sys.platform`
+    (FP sweep: click b761eda, attrs 7373d88). The compat-token filter runs
+    over the condition text *plus* those resolved expressions, keeping the
+    credit scoped to interpreter/OS gates rather than becoming general skip
+    amnesty.
+
+    `credit` asks D-201's question for D6's hold on an added skip: a single
+    test's gate must provably run somewhere. Liveness (`unit_is_live`) keeps
+    the old reading: it decides whether a moved test still runs, which a
+    gate carried along with it does not change, and whether a stand-in
+    installation is looked for at all, where reading an unknown gate as
+    dead would hide the installation.
+    """
+    gate = _gate_parts(m, raw)
+    if gate is None:
+        return False
+    canonical, parts = gate
     # The compat-token filter keeps the credit from becoming general skip
     # amnesty for individual tests. A *suite-level collection control* is a
     # different object: its guard is the whole justification, and the
@@ -382,13 +485,41 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
     # always-true guard is a disable wearing a condition. A collection hook
     # is judged the same way, so pytest's `--runslow` recipe holds as its
     # `collect_ignore` spelling does (D-028, #209 Q1).
-    if canonical not in _SUITE_GATES and not any(
-        tok in searched for tok in _COMPAT_TOKENS
-    ):
+    if canonical not in _SUITE_GATES and not _names_the_environment(m, raw, parts):
         return False
-    # always true, or unverifiable: not a gate, a disable. A single test's
-    # gate must also provably run somewhere (D-201).
-    return _discriminates(parts, consts, runs_somewhere=canonical not in _SUITE_GATES)
+    # always true, or unverifiable: not a gate, a disable. For the credit, a
+    # single test's gate must also provably run somewhere (D-201).
+    return _discriminates(parts, consts, runs_somewhere=credit and canonical not in _SUITE_GATES)
+
+
+def _runs_somewhere_jointly(markers, raw: dict[str, str], consts: dict[str, ast.AST]) -> bool:
+    """Is there an environment where every interpreter/OS gate on the unit is provably false? (D-201)
+
+    Two gates that each run somewhere can still cover every environment
+    between them: `skipif(sys.platform == "win32")` beside an added
+    `skipif(sys.platform != "win32")`, or a mark beside the opposite body
+    skip. Only gates that name the interpreter or OS take part: a skip on an
+    optional dependency (`skipif(not HAS_NUMPY)`) says nothing about where
+    the test runs, and counting it would refuse every platform gate added
+    beside one. A suite-level collection control is not the unit's own.
+    """
+    conditions = []
+    for m in markers:
+        gate = _gate_parts(m, raw)
+        if gate is None:
+            continue
+        canonical, parts = gate
+        if canonical in _SUITE_GATES or not _names_the_environment(m, raw, parts):
+            continue
+        conditions.append(parts)
+    if len(conditions) < 2:
+        return True
+
+    def off(parts, env) -> bool:
+        values = [_eval_condition(node, env, consts, pytest_names) for node, pytest_names in parts]
+        return any(value is not MAYBE and not bool(value) for value in values)
+
+    return any(all(off(parts, env) for parts in conditions) for env in _ENV_MATRIX)
 
 
 def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:
@@ -419,7 +550,10 @@ def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: s
         return False
     raw = constants or {}
     consts = _parse_constants(raw)
-    return all(_marker_is_compat_gate(m, raw, consts) for m in markers)
+    if not all(_marker_is_compat_gate(m, raw, consts, credit=True) for m in markers):
+        return False
+    # Each gate runs somewhere; together they must too (D-201).
+    return _runs_somewhere_jointly(unit.after.markers, raw, consts)
 
 
 def guard_always_skips(guard: str, constants: dict[str, str] | None) -> bool:
@@ -508,10 +642,12 @@ def unit_is_live(side, constants: dict[str, str] | None) -> bool:
     with its own `skipif(WIN)` marker dead on arrival, which blocked three
     pure test-file splits in the FP corpus (click a391797d00, 700798252a).
     A unit is live when every marker on it is a D6-qualified compat gate:
-    the same evaluator, the same constants, the same refusal for `skip`,
-    always-true conditions, and anything unverifiable. Bypass #9 (the
-    sacrificial `@pytest.mark.skip` absorber) stays closed because an
-    unconditional skip qualifies for nothing.
+    the same evaluator, the same constants, the same refusal for `skip` and
+    always-true conditions. Bypass #9 (the sacrificial `@pytest.mark.skip`
+    absorber) stays closed because an unconditional skip qualifies for
+    nothing. Liveness keeps the reading from before D-201: a condition with
+    a part checkwash cannot read is live unless it is true whatever that part
+    is (`_marker_is_compat_gate`'s `credit`; THREATMODEL row 55).
     """
     if not side.markers:
         return True

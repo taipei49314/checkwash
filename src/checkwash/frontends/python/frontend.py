@@ -294,6 +294,8 @@ class _Offsets:
         # conversions (#226), asked lazily as the two above are.
         self.module_bindings: tuple | None = None
         self.conversion_names: dict[str, str] | None = None
+        # The spellings that name unittest.mock.ANY in this file (D-201).
+        self.mock_any_names: frozenset[str] | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -415,17 +417,70 @@ def _is_approx_call(node: ast.AST) -> bool:
 
 
 # `unittest.mock.ANY` equals every value, so an equality with it as a whole
-# operand can never fail, however exact it looks. `assert total() == ANY` was
-# read as an expectation changed to another name, which D9's
-# DEPENDENCY_DRIFT holds at warn beside any version bump in a manifest
-# (D-201). Read by name, as `approx` is: the spellings mock's documentation
-# uses, and pytest-mock's fixture attribute. Only a whole operand: in
-# `{"id": ANY, "name": "x"}` the other entries are still checked.
-_MOCK_ANY = frozenset({"ANY", "mock.ANY", "unittest.mock.ANY", "mocker.ANY"})
+# operand passes whatever the other side is, however exact it looks.
+# `assert total() == ANY` was read as an expectation changed to another name,
+# which D9's DEPENDENCY_DRIFT holds at warn beside any version bump in a
+# manifest (D-201). Read through the file's imports, so a project's own
+# `ANY` constant is not mock's and an alias is: `from unittest.mock import
+# ANY as anything`, `from unittest import mock as um` -> `um.ANY`. Only a
+# whole operand: in `{"id": ANY, "name": "x"}` the other entries are still
+# checked.
 
 
-def _is_mock_any(node: ast.AST | None) -> bool:
-    return node is not None and _dotted(node) in _MOCK_ANY
+def _mock_any_import_names(tree: ast.AST | None) -> frozenset[str]:
+    """The spellings that name unittest.mock.ANY in a module.
+
+    pytest-mock's fixture attribute, `mocker.ANY`, is read by name. Without
+    a parsed module (an oracle helper's own offsets) only the dotted
+    spellings are, which a project constant cannot be.
+    """
+    names = {"mocker.ANY"}
+    if tree is None:
+        return frozenset(names | {"mock.ANY", "unittest.mock.ANY"})
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 0:
+            if node.module in ("unittest.mock", "mock"):
+                names.update(alias.asname or "ANY" for alias in node.names if alias.name in ("ANY", "*"))
+            elif node.module == "unittest":
+                names.update((alias.asname or "mock") + ".ANY" for alias in node.names if alias.name == "mock")
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "mock":
+                    names.add((alias.asname or "mock") + ".ANY")
+                elif alias.name == "unittest.mock":
+                    names.add(alias.asname + ".ANY" if alias.asname else "unittest.mock.ANY")
+                elif alias.name == "unittest":
+                    names.add((alias.asname or "unittest") + ".mock.ANY")
+    return frozenset(names)
+
+
+def _mock_any_names(text) -> frozenset[str]:
+    """The spellings that name unittest.mock.ANY in this file, worked out once per file."""
+    if getattr(text, "mock_any_names", None) is None:
+        names = _mock_any_import_names(getattr(text, "tree", None))
+        try:
+            text.mock_any_names = names
+        except AttributeError:
+            return names
+    return text.mock_any_names
+
+
+def _is_mock_any(node: ast.AST | None, text) -> bool:
+    return node is not None and _dotted(node) in _mock_any_names(text)
+
+
+def _only_any(node: ast.AST | None, text) -> bool:
+    """A list, tuple or dict display every entry of which is mock's ANY (D-201).
+
+    `[ANY, ANY, ANY]` or `{"total": ANY}` checks only the shape: a length,
+    or the keys. A set display is not one: its entries are hashed, not
+    compared.
+    """
+    if isinstance(node, (ast.List, ast.Tuple)):
+        return bool(node.elts) and all(_is_mock_any(e, text) for e in node.elts)
+    if isinstance(node, ast.Dict):
+        return bool(node.values) and None not in node.keys and all(_is_mock_any(v, text) for v in node.values)
+    return False
 
 
 def _operand_approx_call(node: ast.AST) -> ast.Call | None:
@@ -1012,6 +1067,12 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         comparators = test.comparators
         all_literal = _is_literal(left) and all(_is_literal(c) for c in comparators)
         if all_literal:
+            return _Classified("tautology", S.TAUTOLOGY)
+        # A chain of `==` each link of which has `ANY` on one side holds for
+        # every value: `total() == ANY == 6` (D-201).
+        chain = [left, *comparators]
+        if len(test.ops) > 1 and all(isinstance(o, ast.Eq) for o in test.ops) and all(
+                _is_mock_any(chain[i], text) or _is_mock_any(chain[i + 1], text) for i in range(len(test.ops))):
             return _Classified("tautology", S.TAUTOLOGY)
         op = test.ops[0]
         # Chained comparisons (`0 < x < 10`): the last comparator carries the
@@ -1712,10 +1773,14 @@ def _classify_compare_op(
         ):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
         # An equality with `ANY` holds for every value (D-201). `!=` with it
-        # never holds, which is no weakening, so it keeps its reading.
+        # never holds, which is no weakening, so it keeps its reading. A
+        # display of nothing but `ANY` checks only its shape.
         if isinstance(op, ast.Eq) and len(comparators) == 1 and (
-                _is_mock_any(left) or _is_mock_any(comparators[0])):
+                _is_mock_any(left, text) or _is_mock_any(comparators[0], text)):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and (
+                _only_any(left, text) or _only_any(comparators[0], text)):
+            return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if isinstance(subject, ast.Call) and _dotted(subject.func) == "len":
             return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
@@ -1945,12 +2010,20 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             _strip_identity(expect_node, text)
         ):
             form, level = "tautology", S.TAUTOLOGY
-    # `self.assertEqual(x, ANY)` holds for every x, as `x == ANY` does
-    # (D-201). Only assertEqual: the typed variants check an operand's type
-    # first, and assertCountEqual iterates it.
-    if (form == "compare_eq" and positive and method == "assertEqual"
-            and (_is_mock_any(subject_node) or _is_mock_any(expect_node))):
+    # `self.assertEqual(x, ANY)` holds for every x, as `x == ANY` does, and so
+    # does `assertAlmostEqual(x, ANY)`, which returns as soon as the two
+    # compare equal (D-201). Whatever the subject reads as: a `len(x)`
+    # subject has already made the pair TYPE_SHAPE. Not the typed variants,
+    # which check an operand's type first, nor assertCountEqual, which
+    # iterates it, nor the negated methods, which can then never pass.
+    if (positive and method in ("assertEqual", "assertAlmostEqual")
+            and (_is_mock_any(subject_node, text) or _is_mock_any(expect_node, text))):
         form, level = "tautology", S.TAUTOLOGY
+        epsilon = epsilon_kind = None
+    elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertDictEqual",
+                                  "assertSequenceEqual")
+            and (_only_any(subject_node, text) or _only_any(expect_node, text))):
+        form, level = "type_shape", S.TYPE_SHAPE
     return _Classified(
         form,
         level,

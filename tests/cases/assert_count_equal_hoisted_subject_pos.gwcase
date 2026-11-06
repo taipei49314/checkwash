@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: hoisting the subject into a name does not hide `assertCountEqual` (D-201 review)
+origin: D-201 review (red team): `result = items()` changed the subject's text
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(items(), [1, 2, 3])
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        result = items()
+        self.assertCountEqual(result, [1, 2, 3])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

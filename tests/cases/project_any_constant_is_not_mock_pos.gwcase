@@ -1,0 +1,24 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: a project's own `ANY` constant is not mock's, so dropping its comparison is a weakening (D-201 review)
+origin: D-201 review (red team): reading ANY by name made the old assertion a tautology and this weakening passed; main blocks it
+=== before: tests/test_mode.py ===
+from app import ANY, mode
+
+
+def test_mode():
+    assert mode() == ANY
+=== after: tests/test_mode.py ===
+from app import ANY, mode
+
+
+def test_mode():
+    assert mode()
+=== head: app.py ===
+ANY = "*"
+
+
+def mode():
+    return "*"
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

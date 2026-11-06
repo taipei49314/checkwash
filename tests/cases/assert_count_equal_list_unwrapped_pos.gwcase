@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: `assertEqual(list(items()), ...)` -> `assertCountEqual(items(), ...)` drops order: list() is the same operand to it (D-201 review)
+origin: D-201 review (red team): the subject's text changed, so the rule did not fire
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(list(items()), [1, 2, 3])
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertCountEqual(items(), [1, 2, 3])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

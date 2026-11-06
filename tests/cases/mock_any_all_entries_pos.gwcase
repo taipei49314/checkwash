@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: a list of nothing but ANY checks only its length (D-201 review)
+origin: D-201 review (red team): in the unittest spelling `[ANY, ANY, ANY]` read as a mild weakening and passed, on main too
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(items(), [1, 2, 3])
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(items(), [ANY, ANY, ANY])
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,24 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: a set never had an order, so `assertEqual` -> `assertCountEqual` against a set display changes nothing (D-201's boundary)
+origin: D-201 review: the rule fired on set operands
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertEqual(set(items()), {1, 2, 3})
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items
+
+
+class ItemsTest(unittest.TestCase):
+    def test_items(self):
+        self.assertCountEqual(set(items()), {1, 2, 3})
+=== expect ===
+[]

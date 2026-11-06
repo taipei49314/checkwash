@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: assertCountEqual iterates a dict's keys, so `assertEqual` -> `assertCountEqual` against a dict display stops checking the values (D-201)
+origin: D-201 review: the rule fired and called it an order change
+=== before: tests/test_items.py ===
+import unittest
+
+from app import record
+
+
+class ItemsTest(unittest.TestCase):
+    def test_record(self):
+        self.assertEqual(record(), {"total": 6})
+=== after: tests/test_items.py ===
+import unittest
+
+from app import record
+
+
+class ItemsTest(unittest.TestCase):
+    def test_record(self):
+        self.assertCountEqual(record(), {"total": 6})
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

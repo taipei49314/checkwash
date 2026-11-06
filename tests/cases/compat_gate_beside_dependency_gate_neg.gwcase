@@ -1,0 +1,31 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a platform gate added beside an optional-dependency skip keeps the credit; the dependency skip says nothing about where the test runs (D-201's boundary)
+origin: D-201 counts only gates that name the interpreter or OS when it judges them together
+=== before: tests/test_calc.py ===
+import importlib.util
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(importlib.util.find_spec("numpy") is None, reason="needs numpy")
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import importlib.util
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.platform == "darwin", reason="not on macOS")
+@pytest.mark.skipif(importlib.util.find_spec("numpy") is None, reason="needs numpy")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

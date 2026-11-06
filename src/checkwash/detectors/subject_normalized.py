@@ -35,43 +35,103 @@ from checkwash.findings import (
     make_fingerprint,
 )
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through, same_expr
+from checkwash.ir.astutil import argument_wraps, dotted_name, expr_wraps, resolve_through, same_expr
 from checkwash.ir.expectation_identity import same_known_js_scalar
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import IR, Assertion, judged_as_test
 
-# unittest's order-sensitive equalities, and the ones that compare contents
-# as a multiset (D-201). `assertItemsEqual` is the Python 2 name.
+# unittest's order-sensitive equalities, and the one that compares contents
+# as a multiset (D-201). Python 2's `assertItemsEqual` is not read as an
+# assertion at all, so a rewrite into it reads as one removed.
 _ORDERED_EQUALITY = frozenset({"assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual"})
-_UNORDERED_EQUALITY = frozenset({"assertCountEqual", "assertItemsEqual"})
+_UNORDERED_EQUALITY = frozenset({"assertCountEqual"})
+# The two operands' parameter names, first ones first.
+_OPERAND_KEYWORDS = ("first", "list1", "tuple1", "seq1", "second", "list2", "tuple2", "seq2")
 
 
-def _unittest_method(text: str) -> str | None:
-    """The method an assertion's own call names, as `self.assertEqual` -> assertEqual."""
+def _unittest_call(text: str) -> ast.Call | None:
+    """The method call an assertion's own text is, as `self.assertEqual(a, b)`."""
     node = parse_expr(text.strip())
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-        return node.func.attr
+        return node
     return None
 
 
-def _order_dropped(path: str, b: Assertion, a: Assertion) -> tuple[str, str] | None:
-    """An order-sensitive equality rewritten as a multiset one on the same subject (D-201).
+def _operands(call: ast.Call) -> list[ast.AST] | None:
+    """The two compared operands, by position or by name; None if unbound."""
+    if any(isinstance(arg, ast.Starred) for arg in call.args) or any(k.arg is None for k in call.keywords):
+        return None
+    operands = list(call.args[:2])
+    named = {k.arg: k.value for k in call.keywords}
+    for name in _OPERAND_KEYWORDS:
+        if name in named and len(operands) < 2:
+            operands.append(named[name])
+    return operands if len(operands) == 2 else None
+
+
+def _kind(node: ast.AST) -> str | None:
+    """`set` or `dict` when an operand is plainly one, else None."""
+    if isinstance(node, (ast.Set, ast.SetComp)):
+        return "set"
+    if isinstance(node, (ast.Dict, ast.DictComp)):
+        return "dict"
+    if isinstance(node, ast.Call):
+        name = dotted_name(node.func)
+        if name in ("set", "frozenset"):
+            return "set"
+        if name == "dict":
+            return "dict"
+    return None
+
+
+def _canonical(node: ast.AST, bindings: dict[str, str]) -> ast.AST | None:
+    """An operand as compared: through the unit's bindings once, `list(...)`/`tuple(...)` taken off.
+
+    assertCountEqual iterates both operands, so `list(items())` and
+    `items()` are one operand to it, and `result = items()` hoists the
+    subject without changing it.
+    """
+    resolved = resolve_through(ast.unparse(node), bindings)
+    parsed = parse_expr(resolved) if resolved else None
+    if (isinstance(parsed, ast.Call) and isinstance(parsed.func, ast.Name) and parsed.func.id in ("list", "tuple")
+            and len(parsed.args) == 1 and not parsed.keywords and not isinstance(parsed.args[0], ast.Starred)):
+        return parsed.args[0]
+    return parsed
+
+
+def _order_dropped(path: str, b: Assertion, a: Assertion, before_bindings: dict[str, str],
+                   after_bindings: dict[str, str]) -> tuple[str, str, bool] | None:
+    """An order-sensitive equality rewritten as a multiset one on the same operands (D-201).
 
     `self.assertEqual(items(), [1, 2, 3])` -> `self.assertCountEqual(items(),
     [1, 2, 3])` stops checking order, as `sorted(...)` around the subject
     does, but both read as one form and one strength and there is no wrapper
     to see, so the rewrite gave no finding at all, beside a production change
-    that reordered the result included. The expected value is the caller's
-    to compare; the subject must be the same.
+    that reordered the result included. Both operands must be the same once
+    each is resolved through the unit's bindings and a `list(...)` or
+    `tuple(...)` around it is taken off: a different operand or a wrapped
+    subject is another rule's finding. A set operand never had an order, so
+    that rewrite changes nothing. A dict operand loses more than order,
+    since assertCountEqual iterates a dict's keys: the third value says so.
     """
     if not path.endswith(".py") or not (b.positive and a.positive):
         return None
-    before, after = _unittest_method(b.text), _unittest_method(a.text)
-    if before not in _ORDERED_EQUALITY or after not in _UNORDERED_EQUALITY:
+    before, after = _unittest_call(b.text), _unittest_call(a.text)
+    if before is None or after is None:
         return None
-    if not same_expr(b.left, a.left):
+    if before.func.attr not in _ORDERED_EQUALITY or after.func.attr not in _UNORDERED_EQUALITY:
         return None
-    return before, after
+    old, new = _operands(before), _operands(after)
+    if old is None or new is None:
+        return None
+    old = [_canonical(node, before_bindings) for node in old]
+    new = [_canonical(node, after_bindings) for node in new]
+    if None in old or None in new or sorted(map(ast.dump, old)) != sorted(map(ast.dump, new)):
+        return None
+    kinds = {_kind(node) for node in old}
+    if "set" in kinds:
+        return None
+    return before.func.attr, after.func.attr, "dict" in kinds
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -89,6 +149,40 @@ def detect(ir: IR) -> list[Finding]:
                 b, a = b_by_id.get(pair.before_id), a_by_id.get(pair.after_id)
                 if b is None or a is None:
                     continue
+                # An order-sensitive unittest equality rewritten as
+                # assertCountEqual drops order with no wrapper to see (D-201).
+                # Asked first: hoisting the expected list into a name lowers
+                # the strength the lattice reads, which ends the pair below.
+                dropped = _order_dropped(file.path, b, a, unit.before.bindings, unit.after.bindings)
+                if dropped is not None:
+                    old_method, new_method, keys_only = dropped
+                    what = ("the values (assertCountEqual compares only a dict's keys)" if keys_only
+                            else "order")
+                    findings.append(
+                        Finding(
+                            rule="SUBJECT_NORMALIZED",
+                            severity="warn",
+                            message=(
+                                f"{unit.qualname}: the comparison stopped checking {what} "
+                                f"({old_method} -> {new_method}) while both operands stayed the same"
+                            ),
+                            path=file.path,
+                            unit=unit.qualname,
+                            before=Evidence(text=b.text, span=b.span),
+                            after=Evidence(text=a.text, span=a.span),
+                            fingerprint=make_assertion_fingerprint(
+                                "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                before=b.text, after=a.text,
+                                kind="keys_only" if keys_only else "order_dropped",
+                                position=assertion_position(unit.before, b),
+                                context=[old_method, new_method],
+                            ),
+                        )
+                    )
+                    legacy.add(make_fingerprint(
+                        "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                    ))
+                    continue
                 # A weakened pair is ASSERT_WEAKENED's finding, and a rewritten
                 # expectation is EXPECTED_VALUE_CHANGED's. This rule is for the
                 # case where both of those look untouched.
@@ -97,33 +191,6 @@ def detect(ir: IR) -> list[Finding]:
                 if not same_known_js_scalar(file.path, b, a) and (
                     b.right_value != a.right_value or b.right_literal != a.right_literal
                 ):
-                    continue
-                dropped = _order_dropped(file.path, b, a)
-                if dropped is not None:
-                    findings.append(
-                        Finding(
-                            rule="SUBJECT_NORMALIZED",
-                            severity="warn",
-                            message=(
-                                f"{unit.qualname}: the comparison stopped checking order "
-                                f"({dropped[0]} -> {dropped[1]}) while the subject and the expected value "
-                                "stayed the same"
-                            ),
-                            path=file.path,
-                            unit=unit.qualname,
-                            before=Evidence(text=b.text, span=b.span),
-                            after=Evidence(text=a.text, span=a.span),
-                            fingerprint=make_assertion_fingerprint(
-                                "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
-                                before=b.text, after=a.text, kind="order_dropped",
-                                position=assertion_position(unit.before, b),
-                                context=list(dropped),
-                            ),
-                        )
-                    )
-                    legacy.add(make_fingerprint(
-                        "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
-                    ))
                     continue
                 # One hop of indirection, and argument positions.
                 #
