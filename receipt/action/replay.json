@@ -1,0 +1,65 @@
+{
+  "action_sha": "257150319fca15235185fc629d8b9c21c17166ca",
+  "action_tree": "b85333459c36d5a76eae796dd0273c1084ca7435",
+  "action_yaml_sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83",
+  "base_sha": "19f400ca966b10f2402b3f7438a225ebdae76ccf",
+  "comment_pr": false,
+  "errors": [],
+  "fail_on": "high",
+  "files": {
+    "action_yaml": "action.yml",
+    "check_receipt": "runtime-receipts/check-receipt.json",
+    "check_run": "check.bash",
+    "check_stderr": "logs/check.stderr",
+    "check_stdout": "logs/check.stdout",
+    "engine_stderr": "runtime-receipts/stderr.txt",
+    "engine_stdout": "runtime-receipts/stdout.txt",
+    "identity": "runtime-receipts/identity.json",
+    "install_report": "runtime-receipts/install-report.json",
+    "install_run": "install.bash",
+    "install_stderr": "logs/install.stderr",
+    "install_stdout": "logs/install.stdout",
+    "pip_stderr": "runtime-receipts/install-stderr.txt",
+    "pip_stdout": "runtime-receipts/install-stdout.txt"
+  },
+  "head_sha": "4460ebdf0352092cca0e119d12f90b729229118b",
+  "host": "LAPTOP-01AGNPJU",
+  "kind": "checkwash.pju-action-replay.v1",
+  "provenance": "PJU_LOCAL_COMPOSITE_REPLAY",
+  "resolved_outputs": {
+    "exit-code": "0",
+    "identity-path": "C:\\Users\\nelson\\dev\\cw588r1\\s\\action\\checkwash-action-tccbef3x\\identity.json",
+    "receipt-path": "C:\\Users\\nelson\\dev\\cw588r1\\s\\action\\checkwash-action-tccbef3x\\check-receipt.json"
+  },
+  "schema_version": 1,
+  "status": "completed",
+  "steps": [
+    {
+      "exit_code": 0,
+      "id": "install",
+      "outputs": {
+        "directory": "C:\\Users\\nelson\\dev\\cw588r1\\s\\action\\checkwash-action-tccbef3x",
+        "identity_path": "C:\\Users\\nelson\\dev\\cw588r1\\s\\action\\checkwash-action-tccbef3x\\identity.json",
+        "python": "C:\\Users\\nelson\\dev\\cw588r1\\s\\action\\checkwash-action-tccbef3x\\environment\\Scripts\\python.exe"
+      },
+      "run_sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4",
+      "stderr": "logs/install.stderr",
+      "stdout": "logs/install.stdout"
+    },
+    {
+      "exit_code": 0,
+      "id": "check",
+      "outputs": {
+        "analysis_exit_code": "0",
+        "base": "19f400ca966b10f2402b3f7438a225ebdae76ccf",
+        "exit_code": "0",
+        "fail_on": "high",
+        "head": "4460ebdf0352092cca0e119d12f90b729229118b",
+        "receipt_path": "C:\\Users\\nelson\\dev\\cw588r1\\s\\action\\checkwash-action-tccbef3x\\check-receipt.json"
+      },
+      "run_sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93",
+      "stderr": "logs/check.stderr",
+      "stdout": "logs/check.stdout"
+    }
+  ]
+}
