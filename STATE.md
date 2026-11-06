@@ -38,9 +38,9 @@ three holes first), which Claude wrote. D-201 quotes the question.
   findings, none adjudicated. No existing fixture or unit-test expectation
   moves, and `gating.py` does not change.
 
-New: `tests/test_d201_section7_holes.py` (43 tests) and 10 fixtures
+New: `tests/test_d201_section7_holes.py` (44 tests) and 10 fixtures
 (`mock_any_*`, `compat_gate_unknown_*`, `compat_gate_pypy_neg`,
-`assert_count_equal_*`); the documented count is 22622. On main `54113c06`
+`assert_count_equal_*`); the documented count is 22623. On main `54113c06`
 the six `_pos` fixtures fail as the holes do and the four `_neg` ones pass.
 
 Status: branch `claude/d201-section7-gaps-20261107` from main `54113c06`,

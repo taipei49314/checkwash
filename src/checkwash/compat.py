@@ -114,10 +114,8 @@ class _BuiltinModuleNames:
         raise TypeError("unknown builtin module")
 
     def __eq__(self, other: object) -> bool:
+        # `!=` reaches this too, and defining it leaves the class unhashable.
         raise TypeError("unknown builtin module names")
-
-    __ne__ = __eq__
-    __hash__ = None  # type: ignore[assignment]
 
 
 def _eval_condition(

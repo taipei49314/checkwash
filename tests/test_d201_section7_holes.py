@@ -108,6 +108,7 @@ def _parts(condition: str):
     # Any other question about the builtin modules is unknown.
     ("sys.platform == 'win32' or '_ctypes' in sys.builtin_module_names", True, False),
     ("sys.platform == 'win32' or sys.builtin_module_names == ()", True, False),
+    ("sys.platform == 'win32' or sys.builtin_module_names != ()", True, False),
     # Always true, read as before.
     ("sys.version_info >= (3, 8)", False, False),
     ("True or sys.platform == 'win32'", False, False),
