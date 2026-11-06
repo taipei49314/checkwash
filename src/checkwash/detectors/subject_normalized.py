@@ -213,9 +213,13 @@ def _order_dropped(path: str, b: Assertion, a: Assertion, before_bindings: dict[
     new = _operands(after)
     if old is None or new is None:
         return None
-    old = [_canonical(node, before_bindings) for node in old]
-    new = [_canonical(node, after_bindings) for node in new]
-    if None in old or None in new or not _same_comparison(old, new):
+    try:
+        old = [_canonical(node, before_bindings) for node in old]
+        new = [_canonical(node, after_bindings) for node in new]
+        if None in old or None in new or not _same_comparison(old, new):
+            return None
+    except (RecursionError, ValueError):
+        # An operand too deep to unparse or compare is not judged here.
         return None
     # A set never had an order, and neither does what `sorted(...)` already
     # put in order: nothing is lost.
