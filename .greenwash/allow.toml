@@ -795,3 +795,235 @@ reason = "LOCAL PROPOSAL ONLY; not effective until separately accepted into BASE
 author = "Codex (delegated source review proposal; not Nelson personal review)"
 created = "2026-10-27"
 expires = "2026-11-03"
+
+[[allow]]
+fingerprint = "ASSERT_WEAKENED/tests/test_pre_tool_use.py/test_bought_repair_evidence_does_not_stop_the_ask/v2:b39f0c25d3eea4b606f86aa50c5d7f5d8d94f7c71c60c6cb3b70c9b070ae9cd0"
+rule = "ASSERT_WEAKENED"
+reason = "PR #588 (D-199): this pin asserted that the Stop hook (`check --format hook-json`) printed `{}` for a weakened assertion beside a kept no-op and a template edit; D-199 refuses repair evidence to ASSERT_WEAKENED, so the Stop hook now blocks it and the pin asserts the block and its rule; the PreToolUse ask the test is named for is asserted unchanged (tests/test_pre_tool_use.py:727 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue196_guard_removal.py/test_a_production_change_explains_it_as_any_disable/v2:a57cc0ff5aa4a5ec63866405cce084e75ea30085ecc42c0766ac2aa059458292"
+rule = "TEST_DISABLED"
+reason = "PR #588 (D-199): this test asserted that a production change held a removed guard at warn (REPAIR_EVIDENCE, verdict pass); D-199 refuses repair evidence to TEST_DISABLED in a .py file, so it is renamed test_a_production_change_no_longer_explains_it_as_any_disable and asserts high, block and REPAIR_EVIDENCE_REFUSED (tests/test_issue196_guard_removal.py:219 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue196_setup_guards.py/test_a_removed_setup_guard_beside_a_production_change_holds_at_warn/v2:988565c2a7cc75ac718f0f4fc427fb997a42ed7210c29d8ad7a408981a160871"
+rule = "TEST_DISABLED"
+reason = "PR #588 (D-199): this test asserted that a removed setup guard beside a production change was held at warn (REPAIR_EVIDENCE, verdict pass); D-199 refuses repair evidence to TEST_DISABLED in a .py file, so it is renamed test_a_removed_setup_guard_beside_a_production_change_blocks and asserts high, block and REPAIR_EVIDENCE_REFUSED (tests/test_issue196_setup_guards.py:313 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_residual.py/test_an_except_guarded_suite_control_takes_route_b/v2:65355d031e511b0bfdbc3da8d55605c91698ede0febbff910a21ed242100d547"
+rule = "TEST_DISABLED"
+reason = "PR #588 (D-199): this test asserted that a template edit held an except-guarded suite control at warn (Route B); D-199 refuses that evidence to TEST_DISABLED in a .py file, so it is renamed test_an_except_guarded_suite_control_refuses_route_b and asserts REPAIR_EVIDENCE_REFUSED; its line for the control alone is unchanged (tests/test_issue419_residual.py:350 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_issue419_residual.py/test_js_ts_tests_keep_route_b/v2:d121dbf149def0e4726dcc332d22fc947bd30c0b6f5334db1ebbbe8978fd98fb"
+rule = "TEST_DISABLED"
+reason = "PR #588 (D-199): this test asserted that every JS/TS weakening kept Route B (row 131 under D-191); D-199 splits JS/TS, so it is replaced by test_js_ts_loosening_shapes_refuse_route_b (a weakened assertion, a skip on a live test and a broad catch are refused) and test_js_ts_removals_keep_route_b (a removed assertion and a deleted test keep it) (tests/test_issue419_residual.py:327 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_js_predicate.py/test_a_production_change_keeps_the_verdict_pass/v2:e78b2cfe20a76626c6a1e6f8a5342209b62f3c3b1805b318e7f21bc5b25935a4"
+rule = "TEST_DISABLED"
+reason = "PR #588 (D-199): the S1 row (`toBeNull()` -> `to.exist`) is deleted from this table of rows a production change still holds at warn, and moves to the new test_a_weakened_js_assertion_refuses_the_production_change, which asserts that it blocks: D-199 refuses repair evidence to ASSERT_WEAKENED in a JS/TS test (tests/test_js_predicate.py:316 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue208_209_suite_guards.py/test_a_guarded_control_keeps_its_own_gate_beside_an_unguarded_one/v2:9727548d670041d1ac2ab3b0059ddc020d12e9e48f9fe3eb121acfb2130b0d0e"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the guarded hook's expected tuple changes from (warn, REPAIR_EVIDENCE) to (warn, COMPAT_GATE): D-199 refuses the opaque edit's evidence to TEST_DISABLED, and the hook's guard, which can be false, earns D6's COMPAT_GATE, so it stays at warn on its own gate; the test is renamed from test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one to say so (tests/test_issue208_209_suite_guards.py:383 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue415_oversized_sources.py/test_a_range_beside_an_oversized_file_gives_a_verdict/v2:607aad3f42011af6d3170f6e821598bdc2ddf1551ef0c4e2c29a947e73bc6ae1"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the row table's third column was the verdict and is now the E1 label, and the verdict is asserted as block for every row: since D-199 the weakened assertion takes no repair evidence, and the label still tells the data file read at the limit (REPAIR_EVIDENCE_REFUSED) from the unread ones (NO_PROD_CHANGE_IN_DIFF) (tests/test_issue415_oversized_sources.py:525 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue415_oversized_sources.py/test_an_unread_side_earns_no_repair_evidence/v2:08ef540d9b23b92b6a787ffa77e4ab029c281e2e2b99bb881d3051ba16acbc1a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the case table's second column was the severity and is now the E1 label, and the severity is asserted as high for every case: since D-199 the weakened assertion takes no repair evidence, and the label still tells a read side (REPAIR_EVIDENCE_REFUSED) from an unread one (NO_PROD_CHANGE_IN_DIFF) (tests/test_issue415_oversized_sources.py:148 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_a_finding_with_no_unit_takes_route_b_only/v2:9324c79c4aeb08125a7ebe92173a9662705b5e70b4feae126e8319647fb865e0"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the template edit's expected result changes from HELD to REFUSED: the edit still reaches the unit-less CONFTEST_PATCHES_PROD (Route B), and D-199 refuses it that evidence (tests/test_issue419_residual.py:259 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_an_if_guarded_suite_control_is_held_with_or_without_production/v2:5e4b0a7cae3ddb668b3f2b4f32fbc24bb190e1b276616227528539fadbdea649"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected result beside the template edit changes from HELD (REPAIR_EVIDENCE) to compat (COMPAT_GATE): D-199 refuses that evidence to TEST_DISABLED, so D6's COMPAT_GATE holds the guarded control at warn, as it already did without production (tests/test_issue419_residual.py:369 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_residual_row93_a_call_on_a_call_result_gives_no_hop/v2:db5ecdb4f181df6d612a88f2cd57a22bc6638ee4e4ffc2d1f53e3dd9b691bc8d"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the bound-name case's expected result changes from HELD to REFUSED: the hop still reaches the weakened assertion (row 93 is unchanged), and D-199 refuses it the evidence (tests/test_issue419_residual.py:220 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_residual_row93_one_hop_matches_leaf_name_in_any_module/v2:97fb739541b8e025ecc6c80608a48f2871fbde5e7dc7e971c6ba5f4f2f3c6679"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected result changes from HELD to REFUSED: the same-named caller in an unrelated module still reaches the weakened assertion (row 93 is unchanged), and D-199 refuses it the evidence (tests/test_issue419_residual.py:150 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_residual_row93_one_hop_reads_callers_in_path_order/v2:382a7a7e77a222f4a441f4e6add5c4e8f2f9cf3187d982d44a41be3398192bdd"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the swapped-paths case's expected result changes from HELD to REFUSED: the hop still reaches the weakened assertion in that order (row 93 is unchanged), and D-199 refuses it the evidence (tests/test_issue419_residual.py:196 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_route_a_is_refused_to_the_four_rules/v2:a03fd8cb9604cf4ab6cd2fd815bd5af1a7e956f2bb2597846f9cc3c62d9a3bb3"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected result changes from HELD to REFUSED, and the test is renamed from test_route_a_holds_the_four_rules_at_warn: D-199 refuses Route A's evidence to the four unit-scoped weakening rules; a new test pins that a rewritten expected value is still HELD (row 93) (tests/test_issue419_residual.py:117 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_route_a_reaches_a_production_symbol_a_same_file_helper_calls/v2:6406de96c174318a9d838c255c6fa483334b3246fcc9caab181aa9a5b972c691"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected result changes from HELD to REFUSED: Route A still reaches the production symbol through the same-file helper, and D-199 refuses that evidence to ASSERT_WEAKENED (tests/test_issue419_residual.py:231 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_route_a_reaches_the_whole_class_a_test_calls/v2:06abe2baae15dd9b01411ceda3e0e859ca5d2d570bdd9c2ae9a5bb9ae6a8ecf3"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected result changes from HELD to REFUSED: Route A still reaches the whole class, and D-199 refuses that evidence to ASSERT_WEAKENED; the test now also asserts that a rewritten expected value beside the same edit is still HELD (row 93) (tests/test_issue419_residual.py:134 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_issue419_residual.py/test_route_b_is_refused_to_the_four_rules/v2:63402f12f4b090bf9cd5e43f470d30d0eea1327b01d4844faa87341c75a38418"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected result changes from HELD to REFUSED, and the test is renamed from test_route_b_holds_the_four_rules_at_warn: D-199 refuses Route B's evidence to the four unit-scoped weakening rules; the rewritten-expected-value test beside it now runs over every opaque edit and still asserts HELD (row 130) (tests/test_issue419_residual.py:98 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_test_support_paths.py/test_unreadable_production_data_outside_them_is_still_evidence/v2:502eaff79dd94803afc6e8a1f372fb318b12a15e38796e78d1f2cab81d37add2"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected verdict changes from pass to block and the summary from (warn, REPAIR_EVIDENCE) to (high, REPAIR_EVIDENCE_REFUSED), and the test is renamed from test_unreadable_production_data_outside_them_keeps_the_exemption: the data edit is still opaque production evidence (THREATMODEL item 4), and D-199 refuses it to a weakened JS/TS assertion (tests/test_test_support_paths.py:91 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_test_support_paths.py/test_unreadable_production_data_outside_them_is_still_evidence/v2:85f9db6191b2f86396cb69f8e6bb19a0e3bfaf93427166e6a88a31019c95abab"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "PR #588 (D-199): the expected verdict changes from pass to block and the summary from (warn, REPAIR_EVIDENCE) to (high, REPAIR_EVIDENCE_REFUSED), and the test is renamed from test_unreadable_production_data_outside_them_keeps_the_exemption: the data edit is still opaque production evidence (THREATMODEL item 4), and D-199 refuses it to a weakened JS/TS assertion (tests/test_test_support_paths.py:90 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_issue419_residual.py/test_an_if_guarded_suite_control_is_held_with_or_without_production/v2:bb8a6c2c158d5bcc60895432bf74ec6cdfe92b1c7a8157ae9dc97f5643e1b0b8"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): same line as this test's EXPECTED_VALUE_CHANGED entry: the expectation's name changes from HELD to the test's own compat tuple, because D-199 refuses the template edit's evidence to TEST_DISABLED and D6's COMPAT_GATE holds the guarded control at warn (tests/test_issue419_residual.py:369 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_issue419_residual.py/test_residual_row93_one_hop_matches_leaf_name_in_any_module/v2:3d47258669ecc2169a74823c032081c1c95056d79d73f1eabfe6866f933bfcd6"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): same line as this test's EXPECTED_VALUE_CHANGED entry: the expectation's name changes from HELD to REFUSED, because D-199 refuses the hop's evidence to ASSERT_WEAKENED (tests/test_issue419_residual.py:150 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_issue419_residual.py/test_residual_row93_one_hop_reads_callers_in_path_order/v2:b0ce6d47181ba0a13c30b85d5a6a3d6a3d9d26868512b7f6ff78883e7ee053de"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): same line as this test's EXPECTED_VALUE_CHANGED entry: the expectation's name changes from HELD to REFUSED, because D-199 refuses the hop's evidence to ASSERT_WEAKENED (tests/test_issue419_residual.py:196 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_issue419_residual.py/test_route_a_reaches_a_production_symbol_a_same_file_helper_calls/v2:5c40d88d5c6870af784661d4a28583090913b1aa85bc5923fd9ee4df05bff15a"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): same line as this test's EXPECTED_VALUE_CHANGED entry: the expectation's name changes from HELD to REFUSED, because D-199 refuses Route A's evidence to ASSERT_WEAKENED (tests/test_issue419_residual.py:231 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_task_repo_relative_authority.py/test_genuine_absence_fallback_is_repo_bound_and_root_only/v2:903d99b7857188a2c452b72aecdf9690bbdb9097f93bfb83cb51c133e22cf3c3"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): this pin compares the finding with the module constant FINGERPRINT, which changes from an ASSERT_WEAKENED key to an EXPECTED_VALUE_CHANGED key: the shared toy's test edit becomes a rewritten expected value (`== 4` -> `== 5`) instead of a weakening (`== 4` -> `> 0`), because these tests pin that the task contract's oracle_freeze decides the verdict, which needs a finding repair evidence can hold at warn, and since D-199 a weakened assertion blocks either way (tests/test_task_repo_relative_authority.py:17 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_task_repo_relative_authority.py/test_repo_relative_scope_matches_same_explicit_absolute_base_contract/v2:77cebf3ce5843d7d61fa261e7d38042115e7f7080443646ad405c6d8ae82c0e6"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): this pin compares the finding with the module constant FINGERPRINT, which changes from an ASSERT_WEAKENED key to an EXPECTED_VALUE_CHANGED key: the shared toy's test edit becomes a rewritten expected value (`== 4` -> `== 5`) instead of a weakening (`== 4` -> `> 0`), because these tests pin that the task contract's oracle_freeze decides the verdict, which needs a finding repair evidence can hold at warn, and since D-199 a weakened assertion blocks either way (tests/test_task_repo_relative_authority.py:17 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_task_repo_relative_authority.py/test_task_contract_binds_original_repo_not_cwd_or_reroot/v2:42da8d8321ba74961fe1260ecb7c665d2b3e196831f3afa6ad6200efbe9894c3"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): this pin compares the finding with the module constant FINGERPRINT, which changes from an ASSERT_WEAKENED key to an EXPECTED_VALUE_CHANGED key: the shared toy's test edit becomes a rewritten expected value (`== 4` -> `== 5`) instead of a weakening (`== 4` -> `> 0`), because these tests pin that the task contract's oracle_freeze decides the verdict, which needs a finding repair evidence can hold at warn, and since D-199 a weakened assertion blocks either way (tests/test_task_repo_relative_authority.py:17 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTATION_DEFINITION_CHANGED/tests/test_task_repo_relative_authority.py/test_windows_addresses_use_native_join_against_original_repo/v2:a2f90dc43219f6d1d969264fa48940846a9c01d78c654eb8a8bc5c98be3e40de"
+rule = "EXPECTATION_DEFINITION_CHANGED"
+reason = "PR #588 (D-199): this pin compares the finding with the module constant FINGERPRINT, which changes from an ASSERT_WEAKENED key to an EXPECTED_VALUE_CHANGED key: the shared toy's test edit becomes a rewritten expected value (`== 4` -> `== 5`) instead of a weakening (`== 4` -> `> 0`), because these tests pin that the task contract's oracle_freeze decides the verdict, which needs a finding repair evidence can hold at warn, and since D-199 a weakened assertion blocks either way (tests/test_task_repo_relative_authority.py:17 on main); the owner chose this change on 2026-11-05 (\"選R\", typed by the owner, and option \"只收放寬類（建議）\", written by the assistant) and on 2026-11-06 approved this pin and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "SUBJECT_NORMALIZED/tests/test_packaging.py/test_readme_install_refs_match_advertised_release/v2:3aba30218692c60c75aa029a6b5027befa2bf3a4326425b921397c84cb3f30a2"
+rule = "SUBJECT_NORMALIZED"
+reason = "PR #589 (D-200): the option Nelson chose for 0.12 removes the README's only `@vX.Y.Z` install line (installing the CLI from the release tag), so this test's `pinned` also takes the `pipx install checkwash==X.Y.Z` versions, as tags, and a new assertion refuses a README line that installs the CLI through Git from this repository; `assert pinned` then accepts any install reference instead of a Git or pre-commit one, a relaxation D-200 records (tests/test_packaging.py:415 on main); the owner chose this change on 2026-11-05 (option \"甲：拿掉那行（建議）\", written by the assistant) and on 2026-11-06 approved this test change and recording its key (button \"兩個 PR 全部核可\", written by the assistant, answering whether to approve L1-L4 of #588 and L1-L3 of #589 as their descriptions list them)"
+author = "taipei49314"
+created = "2026-11-06"
+expires = "2026-12-06"
