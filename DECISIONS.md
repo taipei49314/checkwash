@@ -224,8 +224,14 @@ recommendations; for a button answer the log holds only the label. These
 answers choose the change; they are not Nelson's review of its text. This
 entry, the SPEC and THREATMODEL text, `gating.py`'s escalation policy and
 each fixture and test expectation that moves (below) are agent-read-only
-or rule 2 changes, and the pull request asks him to approve them by name
-before it merges. The next pull request's STATE records that approval.
+or rule 2 changes, and the pull request asked him to approve them by name
+before it merges. At 2026-11-06T11:49:53Z, to Claude's question
+"Approve #588's L1–L4 and #589's L1–L3 as their PR descriptions list
+them?", he chose the button 「兩個 PR 全部核可」 (approve everything in both
+pull requests), which Claude wrote. L1 to L4 of #588, this pull request,
+are this entry with the SPEC and THREATMODEL text and the escalation
+policy, the 22 fixture moves and the new fixture, the test pins, and the
+28 allow keys. The answer approves the listed items, not the merge.
 Every detail not quoted above is Claude's under the 2026-10-27 delegation
 (「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0). None of it is
 Nelson's personal review.
