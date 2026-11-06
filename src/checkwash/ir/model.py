@@ -493,9 +493,11 @@ class DiffGlobals:
     # Python that does not parse; never a deletion, and never unparseability
     # the diff itself caused, engine.py has the conditions). Conservatively
     # suppresses E1 — see THREATMODEL #4 — except where gating refuses it: an
-    # unguarded suite control (D-028), and a finding in a Python test or
-    # conftest whose rule is in gating.OPAQUE_REFUSED_RULES (#419; empty in
-    # this release, so no rule). The flag
+    # unguarded suite control (D-028), a finding in a Python test or conftest
+    # whose rule is in gating.OPAQUE_REFUSED_RULES (#419; empty, so no rule),
+    # the Python unit-less broad except (D-176), and since D-199 every
+    # finding whose rule takes no repair evidence (gating.REPAIR_REFUSED_PYTHON
+    # and REPAIR_REFUSED_JS). The flag
     # itself stays a diff-level fact: the sweep counts it and the snapshot
     # rule reads it exactly as before (#463 Q3 (a) keeps that).
     prod_opaque_change: bool = False

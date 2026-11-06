@@ -20,7 +20,7 @@ import pathlib
 import re
 
 from checkwash.detectors import REGISTRY
-from checkwash.gating import ORACLE_RULES
+from checkwash.gating import ORACLE_RULES, REPAIR_REFUSED_JS, REPAIR_REFUSED_PYTHON
 
 SPEC = pathlib.Path(__file__).resolve().parents[1] / "SPEC.md"
 
@@ -83,3 +83,36 @@ def test_no_member_row_claims_it_cannot_gate():
         f"SPEC §4 says these ORACLE_RULES members cannot gate: {liars}. "
         "One of the two documents is wrong, and both are frozen."
     )
+
+
+# D-199 (0.12): the rules whose finding takes no repair evidence. Pinned for
+# the same reason as ORACLE_RULES: dropping a member reopens the no-op-edit
+# route for that rule with every fixture green (D-199 review).
+FROZEN_REFUSED_PYTHON = {
+    "ASSERT_WEAKENED",
+    "ASSERT_REMOVED",
+    "TEST_DISABLED",
+    "TOLERANCE_LOOSENED",
+    "BROAD_EXCEPT_ADDED",
+    "TEST_PATCHES_SUBJECT",
+    "CONFTEST_PATCHES_PROD",
+    "SUBJECT_NORMALIZED",
+    "SUBJECT_INPUT_CHANGED",
+    "EXPECTED_VALUE_DERIVED",
+}
+FROZEN_REFUSED_JS = {"ASSERT_WEAKENED", "TOLERANCE_LOOSENED", "BROAD_EXCEPT_ADDED"}
+
+
+def test_repair_refusal_sets_are_frozen_here():
+    assert (set(REPAIR_REFUSED_PYTHON), set(REPAIR_REFUSED_JS)) == (FROZEN_REFUSED_PYTHON, FROZEN_REFUSED_JS), (
+        "A D-199 refusal set changed. That decides which findings a no-op "
+        "production edit can hold at warn: update this pin in the same "
+        "commit, with the decision that changes it."
+    )
+
+
+def test_repair_refusal_sets_name_oracle_rules():
+    # BROAD_EXCEPT_ADDED is the one conditional oracle rule (see FROZEN).
+    oracle = ORACLE_RULES | {"BROAD_EXCEPT_ADDED"}
+    assert REPAIR_REFUSED_PYTHON <= oracle and REPAIR_REFUSED_JS <= oracle
+    assert REPAIR_REFUSED_JS <= REPAIR_REFUSED_PYTHON

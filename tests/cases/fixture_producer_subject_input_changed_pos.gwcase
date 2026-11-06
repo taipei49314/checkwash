@@ -2,7 +2,8 @@
 rule: SUBJECT_INPUT_CHANGED
 issue: 471
 credit: @talhayme (#471)
-title: a changed subject input on an assertion that reads the provider fixture takes its producer's evidence
+title: a changed subject input on an assertion that reads the provider fixture reaches its producer's evidence, which the rule refuses (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case fixture_producer_subject_input_changed_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: #471, built from the reporter's description of punt-labs/langlearn-tts b4bc4e63 (MIT): the
 origin2: SUBJECT_INPUT_CHANGED finding of TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none.
 origin3: The assertion reads `elevenlabs_provider`, whose conftest fixture returns
@@ -59,4 +60,4 @@ def mock_elevenlabs_client():
 def elevenlabs_provider(mock_elevenlabs_client):
     return ElevenLabsProvider(client=mock_elevenlabs_client)
 === expect ===
-[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"], "unit": "TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none"}]
+[{"rule": "SUBJECT_INPUT_CHANGED", "severity": "high", "unit": "TestElevenLabsProviderLanguageSupport.test_infer_language_returns_none", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

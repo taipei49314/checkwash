@@ -367,8 +367,9 @@ def _mentions_test_runner(change) -> bool:
     Deliberately independent of `_runner_shape`: a file whose name checkwash
     does not recognise still loses the opaque exemption if it runs the tests.
     It does **not** become `ci` — a Makefile that builds a C extension has no
-    runner token, stays production, and keeps its full repair-evidence weight
-    (`runner_build_makefile_neg`).
+    runner token, stays production, and its edit is repair evidence wherever
+    the rule still takes some (D-199 refuses it for the weakening rules, and
+    `runner_build_makefile_pos` pins that the evidence reached the finding).
     """
     return _runs_tests(change.before) or _runs_tests(change.after)
 
@@ -441,7 +442,7 @@ def _test_commands(path: str, data: bytes | None) -> dict[str, str] | None:
     script that is a member only because it invokes a runner does not hop:
     `prepublishOnly: npm run build && npm test` runs the suite, but `build`
     is not part of what `npm test` runs, and a build hop stays production
-    (SPEC section 4, `runner_one_hop_build_neg`). `pretest`/`posttest` are
+    (SPEC section 4, `runner_one_hop_build_pos`). `pretest`/`posttest` are
     not members: npm stops before `posttest` when `test` fails and a
     failing `pretest` fails the run, so neither can turn a red suite green.
 

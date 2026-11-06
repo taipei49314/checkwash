@@ -1052,10 +1052,11 @@ These still get no evidence from the fixture, as known limits:
   departure, which the owner accepted on 2026-10-19 as a disclosed limit
   (D-155).
 
-A kept no-op edit in the class a fixture builds now holds a weakened
-assertion on the fixture's value at warn, as the same test written inline
-already does (THREATMODEL row 93, Route A). `fail_on = "warn"` or
-`oracle_freeze` blocks such findings.
+A kept no-op edit in the class a fixture builds reaches an assertion on the
+fixture's value as repair evidence, as the same test written inline already
+does (THREATMODEL row 93, Route A). Since D-199 a weakened assertion refuses
+that evidence and blocks; a rewritten expected value is still held at warn,
+and `fail_on = "warn"` or `oracle_freeze` blocks it.
 
 ## Make unrepresented assertion candidates visible
 

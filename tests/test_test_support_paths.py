@@ -84,11 +84,13 @@ def test_the_rows_that_already_blocked_still_block(test, extra):
     assert (verdict, _summary(findings)) == ("block", BLOCKED)
 
 
-def test_unreadable_production_data_outside_them_keeps_the_exemption():
-    # As runner_opaque_native_neg pins: THREATMODEL #4 is unchanged elsewhere.
+def test_unreadable_production_data_outside_them_is_still_evidence():
+    # As runner_opaque_native_pos pins: THREATMODEL #4 is unchanged elsewhere,
+    # so the data edit is opaque production evidence. D-199 refuses it to a
+    # weakened JS/TS assertion, and the label says it reached the finding.
     _ir, findings, verdict = _analyze([JEST, _edit("src/data.json", DATA, NOTED)])
-    assert verdict == "pass"
-    assert _summary(findings) == [("ASSERT_WEAKENED", "warn", (), ("REPAIR_EVIDENCE",))]
+    assert verdict == "block"
+    assert _summary(findings) == [("ASSERT_WEAKENED", "high", ("REPAIR_EVIDENCE_REFUSED",), ())]
 
 
 def test_test_data_moved_into_production_was_not_production_at_base():

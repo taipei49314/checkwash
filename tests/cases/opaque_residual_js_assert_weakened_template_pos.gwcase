@@ -1,0 +1,28 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+issue: 419
+title: a JS test weakened beside a template edit blocks: the opaque credit is refused (D-199, THREATMODEL 131)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case opaque_residual_js_assert_weakened_template_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
+origin: #419 ruling Q1 (b) (issuecomment-6170353038): JS/TS tests keep opaque-change evidence until #212
+origin2: prices the change, so js_expect_weakened_pos plus a comment edit in an existing template held
+origin3: at warn until D-199, a pinned residual (Route B for JS/TS tests), not a claim that the edit explained it.
+=== before: app/templates/invoice.html ===
+<!-- invoice summary -->
+<p>Total: {{ total }}</p>
+=== after: app/templates/invoice.html ===
+<!-- invoice summary, two decimals -->
+<p>Total: {{ total }}</p>
+=== before: tests/invoice.test.js ===
+const { total } = require("../src/invoice");
+
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBe(105);
+});
+=== after: tests/invoice.test.js ===
+const { total } = require("../src/invoice");
+
+test("applies tax", () => {
+  expect(total([50, 50], 0.05)).toBeTruthy();
+});
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

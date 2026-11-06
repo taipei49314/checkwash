@@ -1,6 +1,8 @@
 === meta ===
 rule: ASSERT_WEAKENED
-note: weakened while prod changed — stays warn, annotated with repair evidence
+title: a weakened assertion beside a change to the function it calls blocks: the rule takes no repair evidence (D-199)
+d199: D-199 (0.12) refuses repair evidence for this rule. The inputs are unchanged; they were the case assert_weakened_with_prod_change_warn, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
+note: weakened while prod changed; before D-199 it stayed warn, annotated with repair evidence
 === before: tests/test_billing.py ===
 from billing import compute_invoice_total
 
@@ -22,4 +24,4 @@ def compute_invoice_total(items):
 def compute_invoice_total(items):
     return round(sum(items), 2)
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

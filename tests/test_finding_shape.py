@@ -34,8 +34,10 @@ def test_prod_removal_reads_shape_not_message():
         kind="test_function",
         qualname="test_x",
         match="by_name",
-        before=UnitSide(span=(0, 1)),
-        after=UnitSide(span=(0, 1)),
+        # A table that lost a row: since D-199 only rows deleted from a table
+        # the test already had are a removal (`_prod_removal_shape`).
+        before=UnitSide(span=(0, 1), param_cases=2),
+        after=UnitSide(span=(0, 1), param_cases=1),
         delta=UnitDelta(param_cases_removed=1, markers_added=["skip"]),
     )
     marker = Finding(

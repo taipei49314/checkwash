@@ -173,8 +173,9 @@ ASSERT_WEAKENED   HIGH   tests/test_billing.py :: test_invoice_total
 
 `EXACT_VALUE(90) -> BOUND(40)` ranks the assertion's strength before and
 after; 90 is not the value the test expected. `why high` names what raised the
-finding: here the diff changes no production file, so no production change
-explains the weaker test. `checkwash check --format json` gives the same
+finding: here the diff changes no production file
+(`NO_PROD_CHANGE_IN_DIFF`); from 0.12 a weakened test blocks beside a
+production change too (`REPAIR_EVIDENCE_REFUSED`). `checkwash check --format json` gives the same
 findings as JSON.
 
 **Fix the change, or record a reviewed exemption.** If the test was weakened
@@ -214,8 +215,17 @@ test patterns. Known gaps remain.
 
 An edit that changes nothing, such as `+ 0` in a function a test calls or
 one line in a template or `AUTHORS`, can still hold a weakened Python or
-JS/TS test at warn, which passes at the default threshold. #419 is closed
-as a documented residual, not fixed
+JS/TS test at warn in 0.11.0, which passes at the default threshold. From
+0.12 (unreleased; [0.12 candidate known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)) a
+weakened, removed, skipped or loosened Python assertion takes no repair
+evidence at all, and neither does a weakened, loosened or skipped JS/TS one
+(D-199). That blocks honest changes too: a deprecated API removed with an
+assertion on it, a test rewritten beside a behaviour change. Each needs a
+reviewed exemption. A rewritten expected value or a substituted assertion
+still takes the evidence, a weakening respelled as one of them included,
+and so does a test deletion that a renamed private symbol escorts; in JS/TS
+so do a removed assertion or test, deleted parametrize rows, a test parked
+in dead code and a stand-in or subject change
 ([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
 Read the [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
 and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
@@ -223,7 +233,10 @@ before relying on a pass.
 
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct, and an edit that changes nothing can earn it
-(#419). To block such changes, set the Action's `fail-on: warn`
+(#419). From 0.12 (unreleased), `REPAIR_EVIDENCE_REFUSED` marks a finding
+that such a change reached and whose rule takes none (D-199). To block the
+rest, set the
+Action's `fail-on: warn`
 (`checkwash doctor` then reports "workflow analysis incomplete" and exits 1,
 which is expected: it proves only a checkwash step with no `with:`), or run
 `checkwash check --task` in a CLI step of your own with a base-side
@@ -428,5 +441,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 22461 tests (collection denominator).
+Alpha pre-release. 22 detectors, 22489 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

@@ -1,6 +1,7 @@
 === meta ===
 rule: CI_WORKFLOW_TOUCHED
-title: A script that builds, called from the same place, is still production
+title: A script that builds, called from the same place, is production evidence, refused for a weakened assertion (D-199)
+d199: D-199 (0.12) refuses repair evidence to the ASSERT_WEAKENED finding here; this case's own subject, CI_WORKFLOW_TOUCHED, is unchanged. The inputs are unchanged; they were the case runner_one_hop_build_neg, held at warn by that evidence. REPAIR_EVIDENCE_REFUSED pins that the production change still reached the finding.
 origin: FP guard — one hop must terminate in a test runner, or every build script becomes ci
 === head: scripts/compile.sh ===
 #!/bin/sh -e
@@ -24,4 +25,4 @@ from billing import invoice_total
 def test_total():
     assert invoice_total([50.0, 50.0], 0.05) > 0
 === expect ===
-[{"rule": "ASSERT_WEAKENED", "severity": "warn"}]
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

@@ -14,10 +14,10 @@ past it, found this on its first attempt (THREATMODEL 74).
 
 Wrapping the subject is also completely routine: `sorted(...)` appears the day
 a function stops guaranteeing order, `.strip()` the day it stops trimming. So
-this leans on the same escalator as every other oracle rule — warn on its own,
+this leaned on the same escalator as every other oracle rule — warn on its own,
 high only when the diff offers no production change that explains it (SPEC §5
 E1). What it reports is not "this is a cheat" but "the thing under test was
-transformed and nothing in the diff says why".
+transformed and nothing in the diff says why". Since D-199 (0.12) a Python finding of it takes no repair evidence; a JS/TS one still does (SPEC §5).
 """
 
 from __future__ import annotations

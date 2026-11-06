@@ -375,14 +375,17 @@ OPAQUE_PROD = FileChange(
 )
 
 
-def test_a_guarded_control_takes_repair_evidence_beside_an_unguarded_one():
+def test_a_guarded_control_keeps_its_own_gate_beside_an_unguarded_one():
     # Each finding asks about its own control: the unguarded drop refuses the
-    # evidence, and the guarded hook beside it keeps it (#208, #209 Q4).
+    # evidence, and the guarded hook beside it is held at warn (#208, #209
+    # Q4). Until D-199 the opaque edit's repair evidence held it; D-199
+    # refuses that evidence to TEST_DISABLED, and the hook's guard, which can
+    # be false, earns D6's COMPAT_GATE instead.
     after = hook(NETWORK) + "\ncollect_ignore = [\"test_billing.py\"]\n"
     _ir, found, verdict = analyze_change(FileChange(CONFTEST, "modified", HEAD.encode(), after.encode()), OPAQUE_PROD)
     assert sorted((f.message.rsplit("(", 1)[1], f.severity, tuple(f.deescalators)) for f in found) == [
         ("conftest.collect_ignore)", "high", ()),
-        ("conftest.pytest_collection_modifyitems)", "warn", ("REPAIR_EVIDENCE",)),
+        ("conftest.pytest_collection_modifyitems)", "warn", ("COMPAT_GATE",)),
     ]
     assert verdict == "block"
 

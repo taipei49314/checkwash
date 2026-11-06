@@ -310,10 +310,13 @@ def test_a_new_test_requesting_a_guarded_fixture_is_not_a_disable():
     assert analyze_test(before, after) == ([], "pass")
 
 
-def test_a_removed_setup_guard_beside_a_production_change_holds_at_warn():
+def test_a_removed_setup_guard_beside_a_production_change_blocks():
+    # Held at warn by repair evidence until D-199, which refuses it to
+    # TEST_DISABLED; the label says the change reached the finding.
     repair = FileChange("app/billing.py", "modified", BILLING, b"def total():\n    return round(78.75, 2)\n")
     finding, verdict = one(module(PLATFORM), module(BARE), repair)
-    assert (finding.severity, finding.deescalators, verdict) == ("warn", ["REPAIR_EVIDENCE"], "pass")
+    assert (finding.severity, finding.deescalators, finding.escalators, verdict) == (
+        "high", [], ["REPAIR_EVIDENCE_REFUSED"], "block")
 
 
 def test_xunit_guard_removal_names_the_callback():

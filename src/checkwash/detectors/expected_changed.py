@@ -292,8 +292,9 @@ def detect_derived(ir: IR) -> list[Finding]:
     dependencies of the new expectation intersect the names in the subject.
 
     Legitimate when production changed under it, like every oracle rule here,
-    so it earns severity through repair evidence rather than on its own
-    (SPEC §5 E1).
+    so it earned severity through repair evidence rather than on its own
+    (SPEC §5 E1). Since D-199 (0.12) a Python finding of it takes no repair
+    evidence; a JS/TS one still does (SPEC §5).
     """
     findings: list[Finding] = []
     for file in ir.files:

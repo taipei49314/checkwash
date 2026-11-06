@@ -33,8 +33,9 @@ A changed argument that resolves to the *same* value is a rename, not an
 input change (the #87 control). A computed argument, an ambiguous provider,
 a changed callable, a new test, a row reorder and a pure row addition all
 stay silent — no invented literal evidence. Like every oracle rule this
-escalates through repair evidence rather than on its own (SPEC §5 E1):
+escalated through repair evidence rather than on its own (SPEC §5 E1):
 feeding a test different data is routine when production changed under it.
+Since D-199 (0.12) a Python finding of it takes no repair evidence; a JS/TS one still does (SPEC §5).
 """
 
 from __future__ import annotations

@@ -1,22 +1,26 @@
-"""#419 closes as a documented residual (D-191): what 0.11 does with bought repair evidence.
+"""#419's residual after D-199 (0.12): what checkwash does with bought repair evidence.
 
-E1 asks whether a production change explains a test change. A weakened
-oracle beside repair evidence is held at warn, and the default
-`fail_on = "high"` passes warn. D-191 closes #419 by stating exactly what
-0.11.0 does, not by narrowing E1, so each test here pins one sentence of
-that statement (THREATMODEL item 4 and rows 2, 93, 130 and 131; SPEC §5;
+E1 asks whether a production change explains a test change. An oracle
+finding beside repair evidence is held at warn, and the default
+`fail_on = "high"` passes warn. D-191 closed #419 by stating what 0.11.0
+did; D-199 narrows it: the weakening, stand-in and subject rules take no
+repair evidence at all. Each test here pins one sentence of that statement
+(THREATMODEL item 4 and rows 2, 93, 130 and 131; SPEC §5;
 KNOWN-ISSUES-next; docs/enterprise.md §7):
 
 - Route B: a modification of an existing production file checkwash cannot
-  read, a template or `AUTHORS` among them, holds the four unit-scoped
-  weakening rules at warn;
+  read, a template or `AUTHORS` among them, reaches the four unit-scoped
+  weakening rules, and D-199 refuses it (`REPAIR_EVIDENCE_REFUSED`); it
+  still holds the expectation family at warn (row 130);
 - Route A: an edit the fingerprint keeps inside a symbol the test reaches,
   `+ 0`, `pass`, `...` or a renamed parameter, does the same for a finding
-  that has a test unit; a finding with none takes Route B only;
+  that has a test unit (row 93); a finding with none takes Route B only;
 - a broad `except` added in a Python test refuses Route B (D-176), unless it
   is a proven failure relay (D-190), and Route A never reaches it;
-- JS/TS tests keep Route B (row 131);
-- `fail_on = "warn"` and `oracle_freeze` block both routes.
+- a JS/TS test refuses Route B for a weakened assertion, a skip on a live
+  test and a broad catch, and keeps it for a removed assertion or test
+  (row 131);
+- `fail_on = "warn"` and `oracle_freeze` block the routes that stay open.
 
 The tests named `test_residual_row<N>_...` pin today's behaviour of an open
 THREATMODEL row. A fix changes that expectation, as a recorded change, and
@@ -88,20 +92,24 @@ def noop(name):
 
 
 HELD = ("warn", ["REPAIR_EVIDENCE"], [], "pass")
+# D-199: the evidence reached the finding, and its rule takes none.
+REFUSED = ("high", [], ["REPAIR_EVIDENCE_REFUSED"], "block")
+REWRITTEN = BEFORE.replace(b"== 105.3", b"== 105.4")
 
 
 # --- Route B: an opaque modification is evidence for the whole diff ---------------------------------
 
 @pytest.mark.parametrize("opaque", OPAQUE, ids=lambda change: change.path)
 @pytest.mark.parametrize("rule", RULES)
-def test_route_b_holds_the_four_rules_at_warn(rule, opaque):
-    assert one([weakened(rule), opaque], rule) == HELD
+def test_route_b_is_refused_to_the_four_rules(rule, opaque):
+    assert one([weakened(rule), opaque], rule) == REFUSED
 
 
-def test_route_b_holds_a_rewritten_expected_value_at_warn():
+@pytest.mark.parametrize("opaque", OPAQUE, ids=lambda change: change.path)
+def test_route_b_holds_a_rewritten_expected_value_at_warn(opaque):
     # The expectation family keeps opaque-change evidence in every language (row 130).
-    rewritten = FileChange(TEST, "modified", BEFORE, BEFORE.replace(b"== 105.3", b"== 105.4"))
-    assert one([rewritten, TEMPLATE], "EXPECTED_VALUE_CHANGED") == HELD
+    rewritten = FileChange(TEST, "modified", BEFORE, REWRITTEN)
+    assert one([rewritten, opaque], "EXPECTED_VALUE_CHANGED") == HELD
 
 
 @pytest.mark.parametrize("rule", RULES)
@@ -113,8 +121,15 @@ def test_without_production_the_four_rules_block(rule):
 
 @pytest.mark.parametrize("name", list(NOOPS))
 @pytest.mark.parametrize("rule", RULES)
-def test_route_a_holds_the_four_rules_at_warn(rule, name):
-    assert one([weakened(rule), noop(name)], rule) == HELD
+def test_route_a_is_refused_to_the_four_rules(rule, name):
+    assert one([weakened(rule), noop(name)], rule) == REFUSED
+
+
+@pytest.mark.parametrize("name", list(NOOPS))
+def test_route_a_holds_a_rewritten_expected_value_at_warn(name):
+    # Row 93 stays open for the expectation family.
+    rewritten = FileChange(TEST, "modified", BEFORE, REWRITTEN)
+    assert one([rewritten, noop(name)], "EXPECTED_VALUE_CHANGED") == HELD
 
 
 CALC = b"class Calc:\n    def total(self, items):\n        return sum(items)\n\n    def other(self):\n        return 1\n"
@@ -131,7 +146,9 @@ def test_route_a_reaches_the_whole_class_a_test_calls(edit):
     test = b"from billing import Calc\n\n\ndef test_total():\n    assert Calc().total([1.0]) == 1.0\n"
     changes = [FileChange(TEST, "modified", test, test.replace(b"== 1.0", b"> 0")),
                FileChange("billing.py", "modified", CALC, CLASS_EDITS[edit])]
-    assert one(changes, "ASSERT_WEAKENED") == HELD
+    assert one(changes, "ASSERT_WEAKENED") == REFUSED
+    changes[0] = FileChange(TEST, "modified", test, test.replace(b"== 1.0", b"== 2.0"))
+    assert one(changes, "EXPECTED_VALUE_CHANGED") == HELD
 
 
 def test_residual_row93_one_hop_matches_leaf_name_in_any_module():
@@ -139,15 +156,17 @@ def test_residual_row93_one_hop_matches_leaf_name_in_any_module():
 
     The test calls `app.views.format_invoice`, which the diff does not
     touch; a same-named function in an unrelated changed module calls a
-    changed method, and that holds the weakened assertion at warn. A fix of
-    the one-hop module check changes this expectation, as a recorded change.
+    changed method, and that is evidence for the weakened assertion, which
+    D-199 refuses (`REPAIR_EVIDENCE_REFUSED`, not `PROD_CHANGE_NOT_EVIDENCE`).
+    A fix of the one-hop module check changes this expectation, as a
+    recorded change.
     """
     test = b"from app.views import format_invoice\n\n\ndef test_fmt():\n    assert format_invoice([1.0]) == 1.0\n"
     other = (b"class Calc:\n    def total(self, items):\n        return sum(items)\n\n\n"
              b"def format_invoice(items):\n    c = Calc()\n    return c.total(items)\n")
     changes = [FileChange(TEST, "modified", test, test.replace(b"== 1.0", b"> 0")),
                FileChange("lib/other.py", "modified", other, other.replace(b"return sum(items)", b"return sum(items) + 0"))]
-    assert one(changes, "ASSERT_WEAKENED") == HELD
+    assert one(changes, "ASSERT_WEAKENED") == REFUSED
 
 
 def test_residual_row93_issue420_top_level_callee_gives_no_hop():
@@ -187,23 +206,23 @@ def test_residual_row93_one_hop_reads_callers_in_path_order():
     The changed files are read in path order, and each file's callers are
     matched against the symbols changed so far, so a caller in
     `app/a_caller.py` gets no hop for a method changed in `app/z_calc.py`
-    and the honest test update blocks; with the two paths swapped it is held
-    at warn. A fix of the path order changes this expectation, as a recorded
-    change.
+    (`PROD_CHANGE_NOT_EVIDENCE`); with the two paths swapped the hop reaches
+    the finding, which D-199 refuses (`REPAIR_EVIDENCE_REFUSED`). A fix of
+    the path order changes this expectation, as a recorded change.
     """
     assert one(_caller_changes("app/a_caller.py", "app/z_calc.py"), "ASSERT_WEAKENED") == (
         "high", [], ["PROD_CHANGE_NOT_EVIDENCE"], "block")
-    assert one(_caller_changes("app/z_caller.py", "app/a_calc.py"), "ASSERT_WEAKENED") == HELD
+    assert one(_caller_changes("app/z_caller.py", "app/a_calc.py"), "ASSERT_WEAKENED") == REFUSED
 
 
 def test_residual_row93_a_call_on_a_call_result_gives_no_hop():
     """A call made on another call's result is recorded as the inner call alone (row 93, D-191).
 
     `Calc().total(items)` is recorded as a call of `Calc`, so the changed
-    `Calc.total` gives `format_invoice` no hop and the honest test update
-    blocks; through a bound name, `c = Calc()` then `c.total(items)`, it is
-    held at warn. A fix of the call reading changes this expectation, as a
-    recorded change.
+    `Calc.total` gives `format_invoice` no hop (`PROD_CHANGE_NOT_EVIDENCE`);
+    through a bound name, `c = Calc()` then `c.total(items)`, the hop reaches
+    the finding, which D-199 refuses. A fix of the call reading changes this
+    expectation, as a recorded change.
     """
     test = b"from billing import format_invoice\n\n\ndef test_fmt():\n    assert format_invoice([1.0]) == 1.0\n"
     calc = b"class Calc:\n    def total(self, items):\n        return sum(items)\n\n\ndef format_invoice(items):\n"
@@ -217,7 +236,7 @@ def test_residual_row93_a_call_on_a_call_result_gives_no_hop():
     chained = b"    return Calc().total(items)\n"
     assert parse_python(calc + chained, collect_tests=False).symbol_calls["format_invoice"] == ("Calc",)
     assert one(changes(chained), "ASSERT_WEAKENED") == ("high", [], ["PROD_CHANGE_NOT_EVIDENCE"], "block")
-    assert one(changes(b"    c = Calc()\n    return c.total(items)\n"), "ASSERT_WEAKENED") == HELD
+    assert one(changes(b"    c = Calc()\n    return c.total(items)\n"), "ASSERT_WEAKENED") == REFUSED
 
 
 def test_route_a_reaches_a_production_symbol_a_same_file_helper_calls():
@@ -228,7 +247,7 @@ def test_route_a_reaches_a_production_symbol_a_same_file_helper_calls():
               b"def _total():\n    return compute_invoice_total([10.5, 94.8])\n\n\n"
               b"def test_invoice_total():\n    assert _total() == 105.3\n")
     weak = before.replace(b"assert _total() == 105.3", b"assert _total() > 0")
-    assert one([FileChange(TEST, "modified", before, weak), noop("plus_zero")], "ASSERT_WEAKENED") == HELD
+    assert one([FileChange(TEST, "modified", before, weak), noop("plus_zero")], "ASSERT_WEAKENED") == REFUSED
     in_helper = weak.replace(b"return compute_invoice_total([10.5, 94.8])",
                              b"return compute_invoice_total([10.5, 94.8]) + 0")
     assert one([FileChange(TEST, "modified", before, in_helper)], "ASSERT_WEAKENED") == (
@@ -239,8 +258,8 @@ def test_a_finding_with_no_unit_takes_route_b_only():
     """Route A needs a finding with a test unit; one with none takes Route B only (D-191).
 
     `CONFTEST_PATCHES_PROD` has no unit, so a kept no-op in the very function
-    the conftest patches is no evidence for it and it blocks, while a
-    template edit holds it at warn (row 130).
+    the conftest patches is no evidence for it (`PROD_CHANGE_NOT_EVIDENCE`),
+    while a template edit is, and D-199 refuses it to this rule.
     """
     production = b"def total():\n    return 0\n"
     before = b"import pytest\nimport pricing\n"
@@ -256,7 +275,7 @@ def test_a_finding_with_no_unit_takes_route_b_only():
         return hit.unit, hit.severity, hit.deescalators, hit.escalators, verdict
 
     assert judged(plus_zero) == (None, "high", [], ["PROD_CHANGE_NOT_EVIDENCE"], "block")
-    assert judged(TEMPLATE) == (None, *HELD)
+    assert judged(TEMPLATE) == (None, *REFUSED)
 
 
 # --- the broad except: D-176 refuses Route B, and Route A never reaches it ---------------------------
@@ -307,7 +326,7 @@ def test_a_proven_failure_relay_is_not_reported_beside_a_production_change():
         "high", [], ["OPAQUE_PROD_CHANGE_NOT_EVIDENCE"], "block")
 
 
-# --- JS/TS keeps Route B (row 131) --------------------------------------------------------------------
+# --- JS/TS: the loosening shapes refuse Route B, removals keep it (row 131) -------------------------
 
 JS_TEST = "tests/invoice.test.js"
 JS = b'const { total } = require("../src/invoice");\n\ntest("applies tax", () => {\n  expect(total([50, 50], 0.05)).toBe(105);\n});\n'
@@ -320,14 +339,26 @@ JS_WEAKENINGS = {
 }
 JS_MODULE = FileChange("src/invoice.js", "modified", b"exports.total = (xs, t) => 1;\n",
                        b"// c\nexports.total = (xs, t) => 1;\n")
+JS_LOOSENING = ["ASSERT_WEAKENED", "TEST_DISABLED", "BROAD_EXCEPT_ADDED"]
+JS_TWO = JS + b'\ntest("rounds", () => {\n  expect(total([1], 0)).toBe(1);\n});\n'
 
 
 @pytest.mark.parametrize("opaque", [TEMPLATE, JS_MODULE], ids=["template", "js_module"])
-@pytest.mark.parametrize("rule", list(JS_WEAKENINGS))
-def test_js_ts_tests_keep_route_b(rule, opaque):
-    # The broad catch included: D-176's refusal needs a Python file.
+@pytest.mark.parametrize("rule", JS_LOOSENING)
+def test_js_ts_loosening_shapes_refuse_route_b(rule, opaque):
+    # A weakened assertion, a skip added to a live test and a broad catch (D-199).
     change = FileChange(JS_TEST, "modified", JS, JS_WEAKENINGS[rule])
-    assert one([change, opaque], rule) == HELD
+    assert one([change, opaque], rule) == REFUSED
+
+
+@pytest.mark.parametrize("opaque", [TEMPLATE, JS_MODULE], ids=["template", "js_module"])
+def test_js_ts_removals_keep_route_b(opaque):
+    # A removed assertion and a deleted test keep the credit: JS/TS has no
+    # D8 or D10 to tell a removed feature's tests apart (row 131, D-199).
+    removed = FileChange(JS_TEST, "modified", JS, JS_WEAKENINGS["ASSERT_REMOVED"])
+    assert one([removed, opaque], "ASSERT_REMOVED") == HELD
+    deleted = FileChange(JS_TEST, "modified", JS_TWO, JS_TWO.replace(JS, b'const { total } = require("../src/invoice");\n'))
+    assert one([deleted, opaque], "TEST_DISABLED") == HELD
 
 
 @pytest.mark.parametrize("rule", list(JS_WEAKENINGS))
@@ -347,47 +378,57 @@ def test_an_unguarded_suite_control_refuses_route_b():
     assert one([unguarded, TEMPLATE], "TEST_DISABLED") == ("high", [], ["COLLECTION_CONTROL_UNEXPLAINED"], "block")
 
 
-def test_an_except_guarded_suite_control_takes_route_b():
+def test_an_except_guarded_suite_control_refuses_route_b():
     # A guard D6 cannot read earns no COMPAT_GATE, and the control is not
-    # unguarded either, so Route B holds it at warn; alone it blocks.
+    # unguarded either, so Route B reached it, and D-199 refuses it to
+    # TEST_DISABLED; alone it blocks with the old label.
     guarded = FileChange(CONFTEST, "modified", b"import os\n", (
         b'import os\n\ncollect_ignore = []\ntry:\n    os.environ["FULL"]\n'
         b'except KeyError:\n    collect_ignore.append("test_billing.py")\n'))
-    assert one([guarded, TEMPLATE], "TEST_DISABLED") == HELD
+    assert one([guarded, TEMPLATE], "TEST_DISABLED") == REFUSED
     assert one([guarded], "TEST_DISABLED") == ("high", [], ["NO_PROD_CHANGE_IN_DIFF"], "block")
 
 
 def test_an_if_guarded_suite_control_is_held_with_or_without_production():
     # A guard that can be false earns D6's COMPAT_GATE, which is no #419
-    # route; beside an opaque edit, REPAIR_EVIDENCE holds it first.
+    # route. Beside an opaque edit REPAIR_EVIDENCE held it first until
+    # D-199, which refuses that evidence to TEST_DISABLED.
     guarded = FileChange(CONFTEST, "modified", b"import os\nimport sys\n", (
         b'import os\nimport sys\n\ncollect_ignore = []\nif sys.platform == "win32":\n'
         b'    collect_ignore.append("test_billing.py")\n'))
     compat = ("warn", ["COMPAT_GATE"], [], "pass")
     assert one([guarded], "TEST_DISABLED") == compat
     assert one([guarded, noop("plus_zero")], "TEST_DISABLED") == compat
-    assert one([guarded, TEMPLATE], "TEST_DISABLED") == HELD
+    assert one([guarded, TEMPLATE], "TEST_DISABLED") == compat
 
 
-# --- what blocks both routes ------------------------------------------------------------------------
+# --- what blocks the routes that stay open ----------------------------------------------------------
 
 ROUTES = {"route_a": noop("plus_zero"), "route_b": TEMPLATE}
 
 
 @pytest.mark.parametrize("route", list(ROUTES))
-@pytest.mark.parametrize("rule", RULES)
-def test_fail_on_warn_blocks_both_routes(rule, route):
-    assert one([weakened(rule), ROUTES[route]], rule, config=Config(fail_on="warn")) == (
+def test_fail_on_warn_blocks_both_routes(route):
+    rewritten = FileChange(TEST, "modified", BEFORE, REWRITTEN)
+    assert one([rewritten, ROUTES[route]], "EXPECTED_VALUE_CHANGED", config=Config(fail_on="warn")) == (
         "warn", ["REPAIR_EVIDENCE"], [], "block")
 
 
 @pytest.mark.parametrize("route", list(ROUTES))
-@pytest.mark.parametrize("rule", RULES)
-def test_oracle_freeze_blocks_both_routes(rule, route):
+def test_oracle_freeze_blocks_both_routes(route):
     # E2 sets high after the evidence holds the finding at warn.
     freeze = Contract(present=True, oracle_freeze=True)
-    assert one([weakened(rule), ROUTES[route]], rule, contract=freeze) == (
+    rewritten = FileChange(TEST, "modified", BEFORE, REWRITTEN)
+    assert one([rewritten, ROUTES[route]], "EXPECTED_VALUE_CHANGED", contract=freeze) == (
         "high", ["REPAIR_EVIDENCE"], ["ORACLE_FREEZE"], "block")
+
+
+@pytest.mark.parametrize("route", list(ROUTES))
+@pytest.mark.parametrize("rule", RULES)
+def test_oracle_freeze_keeps_the_refusal_label(rule, route):
+    freeze = Contract(present=True, oracle_freeze=True)
+    assert one([weakened(rule), ROUTES[route]], rule, contract=freeze) == (
+        "high", [], ["REPAIR_EVIDENCE_REFUSED", "ORACLE_FREEZE"], "block")
 
 
 # --- D-191: five BROAD_EXCEPT_ADDED routes that 0.10 already misses (THREATMODEL rows 172 to 176) -----

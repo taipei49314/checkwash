@@ -118,6 +118,11 @@ def test_equivalent_provider_does_not_excuse_an_assertion_weakening():
     weakened = [f for f in findings if f.rule == "ASSERT_WEAKENED"]
     assert len(weakened) == 1 and weakened[0].severity == "high"
     assert not set(weakened[0].deescalators) & {"REPAIR_EVIDENCE", "PACKAGE_REPAIR"}
+    # The provider is no evidence at all: since D-199 a weakened assertion
+    # would block beside evidence too, so only the label tells "the provider
+    # was excluded" (PROD_CHANGE_NOT_EVIDENCE) from "it reached the finding
+    # and was refused" (REPAIR_EVIDENCE_REFUSED).
+    assert weakened[0].escalators == ["PROD_CHANGE_NOT_EVIDENCE"]
 
 
 def test_shadow_inventory_missing_a_selected_source_fails_closed():

@@ -14,7 +14,12 @@ from checkwash.cli import main
 FREEZE = b"---\ncheckwash:\n  oracle_freeze: true\n---\n"
 LOOSE = b"---\ncheckwash:\n  oracle_freeze: false\n---\n"
 TEST = b"from calc import calc\n\ndef test_calc():\n    assert calc(2) == 4\n"
-FINGERPRINT = "ASSERT_WEAKENED/tests/test_calc.py/test_calc/v2:04f0f96c59052f24ac2eede4e0054b388b9433d93a8d6f3ca6d9b5a25d2fefde"
+# A rewritten expected value beside a no-op edit takes repair evidence, so
+# the contract decides the verdict: warn and pass without oracle_freeze,
+# high and block with it. A weakened assertion would block either way
+# since D-199, which refuses it that evidence.
+RULE = "EXPECTED_VALUE_CHANGED"
+FINGERPRINT = "EXPECTED_VALUE_CHANGED/tests/test_calc.py/test_calc/v2:4101feee100359998b8b1dbbaf29bec103eced8dfb21235f0bedd79d60f1495b"
 
 
 def _git(repo, *args):
@@ -46,12 +51,12 @@ def _repository(tmp_path, root_task=FREEZE):
     _git(repo, "commit", "-q", "-m", "BASE owns two distinct contracts")
     base = _git(repo, "rev-parse", "HEAD")
     _write(repo, "calc.py", b"def calc(x):\n    return x * 2 + 0\n")
-    _write(repo, "tests/test_calc.py", TEST.replace(b"== 4", b"> 0"))
+    _write(repo, "tests/test_calc.py", TEST.replace(b"== 4", b"== 5"))
     # The HEAD contracts contradict BASE deliberately: neither governs itself.
     _write(repo, "TASK.md", LOOSE)
     _write(repo, "pkg/TASK.md", FREEZE)
     _git(repo, "add", ".")
-    _git(repo, "commit", "-q", "-m", "static weakening with opposite HEAD contracts")
+    _git(repo, "commit", "-q", "-m", "a rewritten expected value with opposite HEAD contracts")
     head = _git(repo, "rev-parse", "HEAD")
     # The range keeps its after commit; the worktree compares BASE with the
     # same after bytes instead of accidentally reviewing a clean HEAD.
@@ -86,7 +91,7 @@ def _review(fixture, monkeypatch, capsys, cwd, given, task, mode="range", fmt="j
 def _assert_freeze(code, payload, frozen):
     assert code == (1 if frozen else 0)
     assert payload["verdict"] == ("block" if frozen else "pass")
-    findings = [finding for finding in payload["findings"] if finding["rule"] == "ASSERT_WEAKENED"]
+    findings = [finding for finding in payload["findings"] if finding["rule"] == RULE]
     assert len(findings) == 1
     assert findings[0]["fingerprint"] == FINGERPRINT
     assert ("ORACLE_FREEZE" in findings[0]["escalators"]) is frozen
