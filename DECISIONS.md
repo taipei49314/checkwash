@@ -830,114 +830,184 @@ autonomous, stop before 1.0), including each rule's reach below.
 
 1. *`ANY` is a tautology.* `unittest.mock.ANY` equals every value, so an
    `==`, a `self.assertEqual` or a `self.assertAlmostEqual` with it as one
-   whole operand passes whatever the other side is (with `ANY` on the
-   right, unless the left operand's own `__eq__` answers first). The
-   Python frontend reads it as TAUTOLOGY (SPEC §3), so `== 6` -> `== ANY`
-   is `ASSERT_WEAKENED`, which takes neither D9's `DEPENDENCY_DRIFT` nor,
-   in a Python test, repair evidence (D-199). It read as an expectation
-   changed to another name (`EXPECTATION_DEFINITION_CHANGED`), which D9
-   held at warn beside any version bump; the unittest spelling, `mocker.ANY`
-   and `ANY` on the left gave no finding at all. `ANY` is read through the
-   file's imports (`from unittest.mock import ANY`, `from mock import ANY`,
-   an alias of either, `mock.ANY` or an alias of the module after its
-   import, `unittest.mock.ANY`), so a project's own `ANY` constant is not
-   mock's; pytest-mock's `mocker.ANY` is read by name. A chain of `==`
-   each link of which has `ANY` on one side (`== ANY == 6`) is one too. A
-   list, tuple or dict display of nothing but `ANY` checks only its shape
-   and reads as TYPE_SHAPE. `!=` with `ANY` never holds and keeps its
-   reading; so do the typed unittest variants, which check the operand's
-   type first, and `ANY` as one entry of a display beside checked entries,
-   a mild weakening. Still open (THREATMODEL row 182): `ANY` reached
-   through a binding, a parametrize column or a module constant, which
-   reads as an expectation changed and is held at warn beside a version
-   bump or repair evidence (rows 57, 93); `pytest.approx(ANY)`;
-   `assert not (x != ANY)`; and `self.assertTrue(x == ANY)`: no rewrite
-   inside a truthy spelling gives a finding, `== 6` -> `== 7` included
-   (row 149's family, deferred until after 1.0).
+   whole operand passes whatever the other side is (with `ANY` on the right,
+   unless the left operand's own `__eq__` answers first). The Python
+   frontend reads it as TAUTOLOGY (SPEC §3), so `== 6` -> `== ANY` is
+   `ASSERT_WEAKENED`, which takes neither D9's `DEPENDENCY_DRIFT` nor, in a
+   Python test, repair evidence (D-199). It read as an expectation changed
+   to another name (`EXPECTATION_DEFINITION_CHANGED`), which D9 held at warn
+   beside any version bump; the unittest spelling, `mocker.ANY` and `ANY` on
+   the left gave no finding at all. `ANY` is read through the file's imports
+   (`from unittest.mock import ANY`, `from mock import ANY`, an alias of
+   either, `mock.ANY` or an alias of the module after its import,
+   `unittest.mock.ANY`), so a project's own `ANY` constant is not mock's;
+   pytest-mock's `mocker.ANY` is read by name. A bare name is read as Python
+   reads it: the innermost function that binds it decides, then the module,
+   so `ANY = 6` makes it a value, a parameter called `ANY` in another
+   function changes nothing, and a name bound to mock's ANY (`wild = ANY`, a
+   default of `mock.ANY`) is mock's ANY. The other spellings that hold for
+   every value are read the same way: a chain of `==` each link of which has
+   `ANY` on one side (`== ANY == 6`), `not (x != ANY)`,
+   `pytest.approx(ANY)`, membership in a display that holds `ANY` (`x in
+   [ANY]`, `assertIn(x, [ANY])`), and two displays of one kind and length no
+   position of which is checked (`(total(), 0) == (ANY, 0)`), and a display
+   shaped by the subject itself (`items() == [ANY] * len(items())`,
+   `dict.fromkeys(record(), ANY)` against `record()`). A list, tuple or dict
+   of nothing but `ANY`, nested, repeated (`[ANY] * 3`), a comprehension of
+   it, `dict(total=ANY)` or `dict.fromkeys(keys, ANY)`, checks only its
+   shape and reads as TYPE_SHAPE, against `assertCountEqual` too, which
+   pairs each entry with one that compares equal. It keeps its source as its
+   expectation, so `[ANY, ANY, ANY]` -> `[ANY]` is an expected value changed
+   (main, which read the display as an exact expectation, blocked it as
+   `EXPECTATION_DEFINITION_CHANGED`). `ANY in items()` says only that
+   items() is not empty and reads as TRUTHY. `ANY` on the left is the
+   expectation, as a literal there is. `!=` with `ANY` never holds and keeps
+   its reading; so do the typed unittest variants, which check the operand's
+   type first, and `ANY` as one entry of a display beside checked entries, a
+   mild weakening. Still open (THREATMODEL row 182): `ANY` reached through a
+   parametrize column, a fixture, another module's constant or a call, which
+   reads as an expectation changed and is held at warn beside a version bump
+   or repair evidence (rows 57, 93); a comparison wrapped in another (`(x ==
+   ANY) is True`, `assertEqual(x == ANY, True)`) and a chain that joins `==
+   ANY` to another operator, held the same way; mock's call objects
+   (`call(ANY)`) and `assert_called_with(ANY)`, which are not read as
+   assertions; and `self.assertTrue(x == ANY)`: no rewrite inside a truthy
+   spelling gives a finding, `== 6` -> `== 7` included (row 149's family,
+   deferred until after 1.0).
 2. *A single test's skip must provably run somewhere.* D6 grants
    `COMPAT_GATE` to a single test's skip, in every D6 form except a
-   conftest's suite-level collection control (a mark, a non-strict xfail, a
-   `pytestmark`, a string condition, and an imperative skip in the body, in
-   the setup the test runs, in a helper or under a later rebinding), only
-   when its condition is provably false in at least one environment of the
-   matrix, so the test provably runs there. A part checkwash cannot read
-   may be true: `skipif(sys.version_info >= (3, 0) and bool(sys.modules))`
-   and `skipif(sys.platform == "win32" or bool(sys.modules))` earn nothing,
-   while `skipif(MAC and not sys._is_gil_enabled())` keeps the credit, as
-   it is false off macOS whatever the call returns. Before, the credit was
-   refused only when the condition was true under every assignment of the
-   unknown parts, so an unknown part stood in for the false case. Every
-   interpreter/OS gate on the unit, taken together, must also leave an
-   environment where the test runs: a gate added opposite an existing one
-   (`skipif(sys.platform != "win32")` beside `skipif(sys.platform ==
-   "win32")`) earns nothing; a skip on an optional dependency names no
-   environment and takes no part. The matrix reads what honest gates name:
-   CPython 3.11 to 3.14 and PyPy at 3.11, the version it ships; each
-   platform's two machines (`platform.machine()`: AMD64 and ARM64,
-   x86_64 and aarch64, x86_64 and arm64); `sys.version_info` as the
-   five-tuple it is, so `> (3, 11, 0)` is true on 3.11.0;
-   `platform.architecture()[0]` as 64-bit; `platform.python_version()` and
-   `python_version_tuple()`; and list and set displays as tuples. A
-   comparison with an interpreter or machine the matrix does not hold
-   (`!= "IronPython"`, `!= "Plan9"`) stays unknown. Four spellings of "on
-   PyPy" are read: `platform.python_implementation()`,
-   `sys.implementation.name`, `'__pypy__' in sys.builtin_module_names` and
-   `hasattr(sys, "pypy_version_info")`, also in a conftest's or helper's
-   guard. The last three are not compat tokens, so they earn the credit
-   only in a condition that also names one. A suite-level collection
-   control keeps the old reading (D-028, #209 Q1): its guard is its whole
-   justification, and an optional-dependency guard
+   conftest's suite-level collection control (a `skipif` mark, a non-strict
+   xfail, a `pytestmark`, a string condition, an imperative skip in the
+   body, in the setup the test runs or in a helper, and a later binding of
+   the test's name), only when its condition is provably false in at least
+   one environment of the matrix, so the test provably runs there. A part
+   checkwash cannot read may be true: `skipif(sys.version_info >= (3, 0) and
+   bool(sys.modules))` and `skipif(sys.platform == "win32" or
+   bool(sys.modules))` earn nothing, while `skipif(MAC and not
+   sys._is_gil_enabled())` keeps the credit, as it is false off macOS
+   whatever the call returns. Before, the credit was refused only when the
+   condition was true under every assignment of the unknown parts, so an
+   unknown part stood in for the false case. This question reads each
+   environment's interpreter, machine and architecture as they are, so a
+   gate on one the matrix does not hold (`platform.machine() == "s390x"`,
+   `platform.python_implementation() == "GraalVM"`) runs on those it holds,
+   and one that lets the test run only there (`!= "s390x"`) is not shown to
+   run anywhere. The gates a change adds must also leave, with the gates the
+   test had, an environment where the test runs: one where every added gate
+   is provably false and no gate it had is provably true. So a gate added
+   opposite an existing one (`skipif(sys.platform != "win32")` beside
+   `skipif(sys.platform == "win32")`, a `unittest.skipIf` or a strict xfail,
+   by position or by `condition=`) earns nothing. Every gate whose condition
+   the matrix can read somewhere, true or false, takes part, however it
+   names the interpreter; a skip on an optional dependency is unknown
+   everywhere and takes none, whatever its message says. A gate the test had
+   is the same marker and condition on the base side (a quote respelled is
+   the same), or, for a skip in the setup the test runs, in a helper or
+   under a later binding, the same marker whose guard the change rewrote, as
+   a branch added to a fixture's skips does; body skips are paired only by
+   their conditions. A test its gates already kept from every environment
+   the matrix holds (a Python 2 only test) gains and loses none, so only the
+   added gate's own question is asked. The matrix reads what honest gates
+   name: CPython 3.11 to 3.14 and PyPy at 3.11, the version it ships; each
+   platform's two machines (`platform.machine()`: AMD64 and ARM64, x86_64
+   and aarch64, x86_64 and arm64); `platform.architecture()[0]` as 64-bit;
+   `sys.version_info`, `platform.python_version()` and
+   `python_version_tuple()` with the micro release unknown, so `> (3, 11,
+   0)` is true on every 3.11 release and `>= (3, 11, 1)`, which lets the
+   test run only on 3.11.0, is not shown to run anywhere, while a slice or a
+   substring of the version string inside its known part and `int()` of a
+   version part are read; each equal, as a tuple or a string is, to nothing
+   of another type (`sys.version_info != None` is true everywhere); `in`
+   over a tuple, list or set display, each entry asked, so their order does
+   not decide it; and an unknown entry of a tuple, which leaves it unknown
+   rather than unequal. Four spellings of "on PyPy" are read:
+   `platform.python_implementation()`, `sys.implementation.name`,
+   `'__pypy__' in sys.builtin_module_names` and `hasattr(sys,
+   "pypy_version_info")`, also in a conftest's or helper's guard. The last
+   three are not compat tokens, so they earn the credit only when the mark
+   or its guard also names one, its reason included. A suite-level
+   collection control keeps the old reading (D-028, #209 Q1): its guard is
+   its whole justification, and an optional-dependency guard
    (`find_spec("redis") is None`) is unknown everywhere. Liveness
    (`unit_is_live`), which decides whether a moved test still runs and
-   whether a stand-in installation is looked for, keeps the old reading
-   too: reading an unknown gate as dead would refuse an honest move and
-   hide a stand-in. Where the old reading meets the facts the matrix now
-   holds, it reads them: `if sys.version_info > (3, 11, 0):` around a
-   collection control is now always true.
-3. *`assertCountEqual` drops order.* An order-sensitive unittest equality
+   whether a stand-in installation is looked for, keeps the old reading too:
+   reading an unknown gate as dead would refuse an honest move and hide a
+   stand-in. The old reading keeps a comparison with an interpreter or
+   machine the matrix does not hold (`!= "IronPython"`) unknown, and reads
+   the facts the matrix holds: `if sys.version_info > (3, 11, 0):` around a
+   collection control is always true. Still open (THREATMODEL row 44): a
+   conftest's drop and an opposite gate on the test it drops are judged
+   apart; and a test that already ran only outside the matrix (on Python
+   3.10 or older, on FreeBSD, on 32-bit) is not asked, so a gate added
+   opposite one it had passes, as on main.
+3. *`assertCountEqual` drops order.* An order-sensitive equality
    (`assertEqual`, `assertListEqual`, `assertTupleEqual`,
-   `assertSequenceEqual`) rewritten as `assertCountEqual` on the same two
-   operands is `SUBJECT_NORMALIZED` (SPEC §4), as `sorted(...)` around the
-   subject is: the comparison stops checking order. Both read as one form
-   and one strength, and there is no wrapper to see, so it gave no finding
-   at all, beside a production change that reordered the result included.
-   The operands are compared once each is resolved through the unit's
-   bindings and a `list(...)` or `tuple(...)` around it is taken off, so a
-   hoisted subject or expected value is the same rewrite, and the rule is
-   asked before the strength check that hoisting the expected list
-   lowers. A set operand never had an order, so that rewrite gives no
-   finding; against a dict, assertCountEqual compares only the keys, and
-   the finding says so. In a Python test the rule takes no repair evidence
-   (D-199). The other direction, `assertCountEqual` -> `assertEqual`,
-   starts checking order and gives no finding. Python 2's
-   `assertItemsEqual` is not read as an assertion, so a rewrite into it
-   reads as one removed (`ASSERT_REMOVED`).
-4. *Documents.* SPEC §3 (TAUTOLOGY and TYPE_SHAPE), §4
+   `assertSequenceEqual`, `assertMultiLineEqual`, `assertDictEqual`, whose
+   values assertCountEqual never reads, or a bare `assert a == b`) rewritten
+   as `assertCountEqual` on the same subject is `SUBJECT_NORMALIZED` (SPEC
+   §4), as `sorted(...)` around the subject is: the comparison stops
+   checking order. Both read as one form and one strength, and there is no
+   wrapper to see, so it gave no finding at all, beside a production change
+   that reordered the result included. The operands are compared once each
+   is followed through the unit's bindings and a copy into a list or tuple
+   (`list(...)`, `tuple(...)`, `[*...]`) is taken off, eight steps at most,
+   and each name inside an operand is followed one hop (`client.items()`
+   with `client = self.client`), so a hoisted subject or expected value is
+   the same rewrite. The expected list may change with it, reordered or
+   spelled as a tuple, which assertCountEqual cannot tell apart; a literal
+   both sides share is not a subject. The rule is asked before the strength
+   check that hoisting the expected list lowers. A set operand never had an
+   order, nor one `sorted(...)` already ordered, so that rewrite gives no
+   finding; against a dict, assertCountEqual compares only the keys, and the
+   finding says so. In a Python test the rule takes no repair evidence
+   (D-199). The other direction, `assertCountEqual` -> `assertEqual`, starts
+   checking order and gives no finding. Python 2's `assertItemsEqual` is not
+   read as an assertion, so a rewrite into it reads as one removed
+   (`ASSERT_REMOVED`).
+4. *Documents.* SPEC §3 (TAUTOLOGY, TYPE_SHAPE and TRUTHY), §4
    (`SUBJECT_NORMALIZED`) and §5 (D6); THREATMODEL item 6 and rows 14, 44,
-   55 and 57, which overstated what was closed: row 14 said order
-   laundering was closed, row 44 and row 55 that unverifiable conditions
-   earn nothing or count as dead, and row 57 that D9 covers only
+   55 and 57, which overstated what was closed: row 14 said order laundering
+   was closed, row 44 and row 55 that unverifiable conditions earn nothing
+   or count as dead, and row 57 that D9 covers only
    `EXPECTED_VALUE_CHANGED`; and a new row 182 for the `ANY` rewrite, partly
    closed. KNOWN-ISSUES-next's 0.12 section and STATE describe the change.
 
 **What it costs.** Measured on LAPTOP-01AGNPJU
-(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) against
-main `54113c06`'s engine, whose rows on the two samples are D-199's last
-re-run (its `src/` tree, `8ef8bb69`, is main's). @@FINAL_RUN@@ The D-088
-commit that moves, scrapy `583df9f7d0` ("Simplify skipping uvloop tests"),
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) with the
+engine at `bffc1f55` against main `54113c06`'s, whose rows on the two
+samples are D-199's last re-run (its `src/` tree, `8ef8bb69`, is main's). On
+D-088's 1,263 commits it moves two from pass to block, on R29's 3,600 one,
+and on either it changes no other finding. The commit in both is rich
+`655b5210cb`, which adds `skipif(sys.version_info.minor == 14 and
+sys.version_info.major == 3)` to four tests already skipped on 3.11, 3.12
+and 3.13: each then runs only on Pythons older than the matrix, for which a
+single `skipif(sys.version_info >= (3, 11))` has never earned the credit
+either. The other, scrapy `583df9f7d0` ("Simplify skipping uvloop tests"),
 moves the uvloop skips of five tests into an autouse fixture that skips on
 PyPy, on Windows or on one Twisted version. checkwash cannot read the
 Twisted version, nor the fixture's check for the tests' marker, so the
 fixture reaches all 110 tests in the two changed files and cannot be shown
 to let them run anywhere: their `TEST_DISABLED` findings move from warn to
-high. The rule was tuned on D-088: before the four PyPy spellings were
-read, three more of its commits changed (pytest `4445685285`, `af893aab26`
-and `d37af98db3`), so the out-of-sample run is the fairer rate. Neither
-sample holds an `== ANY` or an `assertCountEqual` rewrite, so those two
-rules' cost is unmeasured; in toy repositories they also block honest
-edits: an exact expectation made `ANY` because the value became generated,
-and a test made order-blind on purpose. These are commits nobody
-adjudicated: counts, not false-positive rates.
+high. The out-of-sample set is every commit in D-088's six repositories
+whose Python diff adds or removes a line naming `skip` or `xfail`, outside
+both samples: 1,273 commits. On it the engine moves six commits from pass to
+block, all from pytest's history between 2007 and 2013, when it ran on
+Python 2: three skip on Windows through the py library's
+`py.std.sys.platform`, which checkwash does not read (`96355656ce`,
+`9643b7d6f8`, `0b7854d722`); two mark 30 tests each with `sys.platform ==
+'win32' or getattr(os, '_name', None) == 'nt'`, whose second part it cannot
+read (`5715bbd6f5`, `536252cb2e`); and one skips under `sys.version_info >=
+(2,7) and` the output of a subprocess (`2a7c79dbf5`). One more,
+`4d598370b4`, which blocks on main too, has 14 findings move from warn to
+high. 85 of the commits could not be checked by either engine. The rule was
+tuned on D-088 and, in its later rounds, on that out-of-sample set: the
+engine at `2a05a379` moved seven of those commits from pass to block, two of
+them through mistakes the next round fixed, so the set is no longer out of
+sample either. Neither sample holds an `== ANY` or an `assertCountEqual`
+rewrite, so those two rules' cost is unmeasured; in toy repositories they
+also block honest edits: an exact expectation made `ANY` because the value
+became generated, and a test made order-blind on purpose. These are commits
+nobody adjudicated: counts, not false-positive rates.
 
 **What is not changed.**
 
@@ -952,17 +1022,58 @@ adjudicated: counts, not false-positive rates.
   interpreter or OS, which never earned the credit.
 
 **Review.** Five Claude review sub-agents reviewed `e67f6fd6`, one lens
-each: the code, bypasses, the cost, this text and the tests. Claude
-checked every finding against the source or a toy repository before acting
-on it. They found that the stricter reading, applied to liveness as well,
-hid a stand-in installation and refused an honest move of a gated test
-(liveness now keeps the old reading); that two complementary gates, a list
-or set display, a five-tuple version, a PyPy environment at a version PyPy
-does not ship, an interpreter the matrix does not hold, `hasattr(sys, ...)`
-in a conftest's guard, an import alias of `ANY`, a project's own `ANY`
-constant, a chain, a display of nothing but `ANY`, a `len()` subject,
+each: the code, bypasses, the cost, this text and the tests. Claude checked
+every finding against the source or a toy repository before acting on it.
+They found that the stricter reading, applied to liveness as well, hid a
+stand-in installation and refused an honest move of a gated test (liveness
+now keeps the old reading); that two complementary gates, a list or set
+display, a five-tuple version, a PyPy environment at a version PyPy does not
+ship, an interpreter the matrix does not hold, `hasattr(sys, ...)` in a
+conftest's guard, an import alias of `ANY`, a project's own `ANY` constant,
+a chain, a display of nothing but `ANY`, a `len()` subject,
 `assertAlmostEqual`, a hoisted or `list()`-wrapped operand, and a set or
 dict operand were read wrongly (each fixed, with a fixture or a test); that
 `assertItemsEqual` is never an assertion (dropped from the rule); and that
 the cost numbers left out what the samples do not hold (stated above).
-@@REREVIEW@@
+
+Two Claude sub-agents, one for the code with a red team and one for this
+text, and a Gemini 4 Argon (High) run then reviewed the fixes at `2a05a379`;
+Claude checked their findings the same way. Fixed, each with a fixture or a
+test: the micro release, which the matrix held at 0, so a gate letting the
+test run only on 3.11.0 earned the credit; a tuple with an unknown entry,
+read as unequal; `in`, whose answer depended on the order of the entries; a
+machine or interpreter the matrix lacks, which made honest gates block; the
+joint check, which took in a dependency skip by its message, missed
+`unittest.skipIf`, `skipUnless` and a strict xfail, refused a test its gates
+already kept from every Python in the matrix, and read a fixture's rewritten
+guard as a new gate; `ANY` nested, repeated, in a comprehension, in a padded
+tuple, as a member, under `not (... != ANY)` and in `approx(ANY)`, a rebound
+`ANY`, and the length or keys of a display of nothing but `ANY`, which the
+shape reading had stopped seeing change (raised by Argon, verified by
+Claude); and `list()` around a hoisted name, two hops, a reordered or tuple
+expected list, `assertDictEqual` and `assertMultiLineEqual` in the order
+rule. Not taken: two findings for one rewrite (the verdicts are right), and
+Argon's claims about keyword operands, a size cap in `parse_expr`, `import
+unittest as ut` and the measurement script, which the source and the toy
+repositories did not bear out.
+
+One Claude sub-agent then reviewed those fixes at `8747e88c`, the code with
+a red team, and Claude checked its eight findings with the reviewer's toy
+repositories and its own. Two were regressions the second round made: a
+parameter or loop variable called `ANY` anywhere in the file turned the
+reading of `ANY` off (now read through Python's scopes), and
+`sys.version_info != None` read as unknown, so a guard made always true went
+unseen (the release now equals nothing but a tuple, as a tuple does). Fixed
+too: the joint check took gates in by a token in their text, paired body
+skips by name in file order, keyed gates by their text and missed
+`skipIf(condition=...)`; a bare `assert ==` rewritten as assertCountEqual
+and a name inside the subject; `dict(k=ANY)`, a length or keys taken from
+the subject, and `x in {ANY}`, which raises; and three honest gates and an
+honest rewrite the second round blocked (a slice or `int()` of the version,
+a `sorted(...)` subject). Not taken: the opposite gate added to a test that
+ran only outside the matrix, and the spellings of `ANY` that wrap a
+comparison in another or go through mock's call objects (both stated above).
+These fixes were not reviewed again; the 218 toy cases of all three rounds
+were run on them, and the 31 that moved each moved as intended. The full
+suite then found the new reading of a bare name recursing on a megabyte-deep
+expression; since `bffc1f55` it is walked with an explicit stack.

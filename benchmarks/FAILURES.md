@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **201 bypasses** are documented, of which **76 are not closed**.
+- **201 bypasses** are documented, of which **77 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -77,11 +77,12 @@ it is known not to.
 | 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that the Python unit-less broad-except condition refuses, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`). Since D-199 the stand-in route is closed in a Python test, an import-shadow stand-in reported on a pytest configuration included, and the expected-value route includes a weakening respelled as an exact comparison (`assert (total > 0) == True`) and an expectation computed from the subject through a module alias (`calc.compute(2)`) | — |
 | 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code. Since D-199 the weakening, loosening, broad catch and a skip on a live test are refused; a removal, a test parked where no code runs, and a stand-in or subject change keep the credit | — |
 
-## Closed in part (15)
+## Closed in part (16)
 
 | # | shape | pinned by |
 |---|---|---|
 | 7a | conftest runtime control: an execution/report hook (#84), or a no-op swapped in for `item.runtest`/`obj`/`_obj`, an item class's `runtest` or a native `unittest.TestCase` method — `report.outcome = 'passed'` in `pytest_runtest_makereport`, `item.runtest = lambda: None` in a hook, `pytest.Function.runtest = lambda self: None` or `unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None` at module scope | `conftest_gate_lends_to_report_hook_pos.gwcase`, `conftest_item_class_runtest_noop_pos.gwcase`, `conftest_item_runtest_noop_pos.gwcase`, `conftest_testcase_assert_equal_noop_pos.gwcase`, `conftest_testcase_call_test_method_noop_pos.gwcase` |
+| 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | `assert_count_equal_bare_assert_pos.gwcase`, `assert_count_equal_beside_reorder_pos.gwcase`, `assert_count_equal_dict_equal_pos.gwcase`, `assert_count_equal_dict_pos.gwcase`, `assert_count_equal_hoisted_subject_pos.gwcase`, `assert_count_equal_list_around_hoisted_pos.gwcase`, `assert_count_equal_list_unwrapped_pos.gwcase`, `assert_count_equal_multiline_pos.gwcase`, `assert_count_equal_order_dropped_pos.gwcase`, `assert_count_equal_permuted_reorder_pos.gwcase`, `assert_count_equal_receiver_hoisted_pos.gwcase`, `assert_count_equal_two_hops_pos.gwcase`, `row14_sorted_wrap_pos.gwcase` |
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 | 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | `subject_argument_wrap_pos.gwcase`, `subject_hoisted_wrap_pos.gwcase` |
 | 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | `expectation_derived_inline_pos.gwcase`, `expectation_derived_pos.gwcase` |
@@ -122,7 +123,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash / use a tool the PreToolUse matcher does not name | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (122)
+## Closed — each pinned by something that runs (121)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -142,7 +143,6 @@ behind it* unshippable.
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | — |
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
 | 13 | Replace an exact comparison with a wide `pytest.approx(...)` | `row13_exact_to_approx_pos.gwcase` |
-| 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | `assert_count_equal_bare_assert_pos.gwcase`, `assert_count_equal_beside_reorder_pos.gwcase`, `assert_count_equal_dict_equal_pos.gwcase`, `assert_count_equal_dict_pos.gwcase`, `assert_count_equal_hoisted_subject_pos.gwcase`, `assert_count_equal_list_around_hoisted_pos.gwcase`, `assert_count_equal_list_unwrapped_pos.gwcase`, `assert_count_equal_multiline_pos.gwcase`, `assert_count_equal_order_dropped_pos.gwcase`, `assert_count_equal_permuted_reorder_pos.gwcase`, `assert_count_equal_receiver_hoisted_pos.gwcase`, `assert_count_equal_two_hops_pos.gwcase`, `row14_sorted_wrap_pos.gwcase` |
 | 15 | Rewrite the expected literal to whatever the buggy code returns | `approx_expected_rewrite_pos.gwcase`, `expected_value_rewritten_pos.gwcase` |
 | 16 | Swallow the assertion in a broad `try/except` inside the test | `broad_except_in_test_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase`, `js_catch_assertion_return_pos.gwcase`, `js_catch_assertion_swallowed_pos.gwcase` |
 | 17 | Put the test under a directory named `mybuild/` so artifact filtering drops it | `row17_mybuild_dir_neg.gwcase` |
