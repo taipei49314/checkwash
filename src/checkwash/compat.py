@@ -52,7 +52,10 @@ class _Release:
     comparison is answered when every micro release gives the same answer:
     `> (3, 11, 0)` is true on 3.11 whatever the micro release is, and
     `>= (3, 12)` never reaches it. One that depends on it (`>= (3, 11, 1)`,
-    `[2] == 0`) raises the TypeError the evaluator reads as unknown.
+    `[2] == 0`) raises the TypeError the evaluator reads as unknown. As a
+    tuple does, it equals nothing but a tuple, so `!= None` is true, and a
+    release compared with itself (or a slice of itself) shares its micro
+    release.
     """
 
     __slots__ = ("head", "tail", "numeric")
@@ -80,14 +83,23 @@ class _Release:
             micros = {"0"}
         return [(*self.head, micro, *self.tail) for micro in micros]
 
+    def _at(self, micro: int) -> tuple:
+        return (*self.head, micro if self.numeric else str(micro), *self.tail)
+
     def _decide(self, op, other: object) -> bool:
-        answers = {bool(op(sample, other)) for sample in self._samples(other)}
+        if isinstance(other, _Release):
+            # Both are the one interpreter's: the same micro release.
+            answers = {bool(op(self._at(micro), other._at(micro))) for micro in (0, 1)}
+        else:
+            answers = {bool(op(sample, other)) for sample in self._samples(other)}
         if len(answers) != 1:
             raise TypeError("depends on the micro release")
         return answers.pop()
 
     def __eq__(self, other: object) -> bool:
         # `!=` is its negation, and defining it leaves the class unhashable.
+        if not isinstance(other, (tuple, _Release)):
+            return False
         return self._decide(operator.eq, other)
 
     def __lt__(self, other: object) -> bool:
@@ -127,9 +139,11 @@ class _Release:
 class _VersionString:
     """`platform.python_version()`, `"3.<minor>.<micro>"` with the micro release unknown (D-201).
 
-    A comparison or a prefix test is answered when the known part decides
-    it: `< "3.12"` on 3.11, `.startswith("3.11")`. One that reaches the
-    micro digits (`== "3.11.0"`) is unknown.
+    A comparison, a prefix test, a slice or a substring test is answered
+    when the known part decides it: `< "3.12"` on 3.11,
+    `.startswith("3.11")`, `[:4] == "3.11"`, `"3.11" in`. One that reaches
+    the micro digits (`== "3.11.0"`) is unknown. As a string does, it
+    equals nothing but a string.
     """
 
     __slots__ = ("prefix",)
@@ -150,6 +164,10 @@ class _VersionString:
 
     def __eq__(self, other: object) -> bool:
         # `!=` is its negation, and defining it leaves the class unhashable.
+        if other is self:
+            return True
+        if not isinstance(other, str):
+            return False
         return self._decide(operator.eq, other)
 
     def __lt__(self, other: object) -> bool:
@@ -163,6 +181,27 @@ class _VersionString:
 
     def __ge__(self, other: object) -> bool:
         return self._decide(operator.ge, other)
+
+    def __getitem__(self, index: object) -> str:
+        if isinstance(index, slice):
+            if (index.start in (None, 0) and index.step is None and type(index.stop) is int
+                    and 0 <= index.stop <= len(self.prefix)):
+                return self.prefix[:index.stop]
+        elif type(index) is int and 0 <= index < len(self.prefix):
+            return self.prefix[index]
+        raise TypeError("reaches the micro release")
+
+    def __contains__(self, item: object) -> bool:
+        if not isinstance(item, str):
+            raise TypeError("a substring is text")
+        if item in self.prefix:
+            return True
+        # It could only run into the micro release's digits from the end of
+        # the known part: "11.2" might, "3.13" cannot.
+        for cut in range(len(item)):
+            if self.prefix.endswith(item[:cut]) and item[cut:].isdigit():
+                raise TypeError("depends on the micro release")
+        return False
 
     def startswith(self, affixes: object) -> bool:
         answers = set()
@@ -471,6 +510,15 @@ def _eval_condition(
                 return _VersionString(*env["version_info"].head)
             if name in ("platform.python_version_tuple", "python_version_tuple") and not node.args:
                 return _Release(tuple(str(part) for part in env["version_info"].head), numeric=False)
+            # `int(platform.python_version_tuple()[1])`: a version part as a number.
+            if name == "int" and len(node.args) == 1 and not node.keywords:
+                value = ev(node.args[0], resolving, pytest)
+                if isinstance(value, str):
+                    try:
+                        return int(value)
+                    except ValueError:
+                        return MAYBE
+                return value if type(value) is int else MAYBE
             # `hasattr(sys, "pypy_version_info")`, pytest's own PYPY constant.
             if (name == "hasattr" and len(node.args) == 2 and not node.keywords
                     and _dotted_name(node.args[0]) == "sys"
@@ -729,9 +777,14 @@ def _joint_parts(m, raw: dict[str, str]) -> list[tuple[ast.AST, bool]] | None:
     canonical = m.name.split("(", 1)[0]
     if canonical in _UNITTEST_CONDITIONAL:
         call = marker_call(m.text)
-        if call is None or not call.args or isinstance(call.args[0], ast.Starred):
+        if call is None:
             return None
-        condition = call.args[0]
+        if call.args and not isinstance(call.args[0], ast.Starred):
+            condition = call.args[0]
+        else:
+            condition = next((k.value for k in call.keywords if k.arg == "condition"), None)
+            if condition is None:
+                return None
         if _UNITTEST_CONDITIONAL[canonical]:
             condition = ast.UnaryOp(op=ast.Not(), operand=condition)
         parts = [(condition, False)]
@@ -745,25 +798,27 @@ def _joint_parts(m, raw: dict[str, str]) -> list[tuple[ast.AST, bool]] | None:
     return None if gate is None else gate[1]
 
 
-def _environment_gates(side, raw: dict[str, str]) -> list[tuple[tuple[str, str | None], list[tuple[ast.AST, bool]]]]:
-    """The gates on a unit's side whose condition names the interpreter or OS, keyed by marker.
+def _environment_gates(side, raw: dict[str, str], consts: dict[str, ast.AST]) -> list[tuple]:
+    """The gates on a unit's side the matrix can read: (key, canonical name, parts).
 
-    Judged by the condition and its constants alone: a skip on an optional
-    dependency (`skipif(not HAS_NUMPY)`) says nothing about where the test
-    runs, whatever its message says ("not available on this platform.").
-    A suite-level collection control is not the unit's own.
+    A gate takes part when its condition is known, true or false, in some
+    environment: a skip on an optional dependency (`skipif(not HAS_NUMPY)`)
+    is unknown everywhere and says nothing about where the test runs,
+    whatever its message says ("not available on this platform."), while one
+    on PyPy spelled without a compat token (`sys.implementation.name ==
+    "pypy"`) does. A suite-level collection control is not the unit's own.
+    The key is the gate's name and its parsed parts, so respelling a quote
+    is not a new gate.
     """
     gates = []
     for m in side.markers:
-        if m.name.split("(", 1)[0] in _SUITE_GATES:
+        canonical = m.name.split("(", 1)[0]
+        if canonical in _SUITE_GATES:
             continue
         parts = _joint_parts(m, raw)
-        if parts is None:
+        if parts is None or all(_fires(parts, env, consts) is MAYBE for env in _ENV_MATRIX):
             continue
-        searched = " ".join([*(ast.unparse(node) for node, _ in parts),
-                             *(text for node, _ in parts for text in _expansion_texts(node, raw))])
-        if any(tok in searched for tok in _COMPAT_TOKENS):
-            gates.append(((m.name, m.guard), parts))
+        gates.append(((canonical, tuple(ast.dump(node) for node, _ in parts)), canonical, parts))
     return gates
 
 
@@ -776,11 +831,13 @@ def _runs_somewhere_jointly(unit: Unit, raw: dict[str, str], consts: dict[str, a
     skip. So there must be an environment where every gate the change added
     is provably false and no gate the test already had is provably true.
 
-    A gate the test already had is one with the same marker and guard on
-    the base side, or the same marker whose guard the change rewrote (a
-    fixture's skips are one marker under their merged conditions, so a
-    branch added to it rewrites that guard): the rewrite is the guard rules'
-    to judge. Each is read with the constants the change leaves, as every D6
+    A gate the test already had is one with the same marker and condition
+    on the base side, or, for a skip in the setup the test runs, in a helper
+    or under a later binding, the same marker whose guard the change
+    rewrote: a fixture's skips are one marker under their merged
+    conditions, so a branch added to it rewrites that guard, and the rewrite
+    is the guard rules' to judge. Body skips share one name, so only their
+    conditions pair them. Each is read with the constants the change leaves, as every D6
     reading is, and one the matrix cannot read leaves the environment open:
     the change did not add it. A test the gates it had already kept from
     every environment the matrix holds (a Python 2 only test,
@@ -788,26 +845,26 @@ def _runs_somewhere_jointly(unit: Unit, raw: dict[str, str], consts: dict[str, a
     none, so nothing is asked of it here; each added gate still has to run
     somewhere on its own.
     """
-    after = _environment_gates(unit.after, raw)
+    after = _environment_gates(unit.after, raw, consts)
     if len(after) < 2:
         return True
-    before = _environment_gates(unit.before, raw) if unit.before is not None else []
+    before = _environment_gates(unit.before, raw, consts) if unit.before is not None else []
     if before and not any(
-            all(_fires(parts, env, consts) is not True for _, parts in before) for env in _ENV_MATRIX):
+            all(_fires(parts, env, consts) is not True for _, _, parts in before) for env in _ENV_MATRIX):
         return True
-    same = Counter(key for key, _ in before)
-    named = Counter(name for (name, _), _ in before)
+    same = Counter(key for key, _, _ in before)
+    named = Counter(name for _, name, _ in before)
     kept, pending = [], []
-    for key, parts in after:
+    for key, name, parts in after:
         if same[key]:
             same[key] -= 1
-            named[key[0]] -= 1
+            named[name] -= 1
             kept.append(parts)
         else:
-            pending.append((key, parts))
+            pending.append((name, parts))
     added = []
-    for (name, _), parts in pending:
-        if named[name]:
+    for name, parts in pending:
+        if named[name] and (is_setup_skip(name) or is_helper_skip(name) or is_rebound(name)):
             named[name] -= 1
             kept.append(parts)
         else:

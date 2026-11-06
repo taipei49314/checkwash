@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: a name inside the subject is followed one hop: `client.items()` with `client = self.client` (D-201)
+origin: D-201 round-3 review (code lens): only a bare-name operand was resolved
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual(self.client.items(), [1, 2, 3])
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items, record, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        client = self.client
+        self.assertCountEqual(client.items(), [1, 2, 3])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

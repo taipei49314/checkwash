@@ -427,44 +427,24 @@ def _is_approx_call(node: ast.AST) -> bool:
 # checked.
 
 
-def _rebound_names(tree: ast.AST) -> set[str]:
-    """Every name the module binds other than by an import: assignments,
-    loop, `with`, `except` and comprehension targets, parameters, and
-    function and class names, at any depth."""
-    bound: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
-            bound.add(node.id)
-        elif isinstance(node, ast.arg):
-            bound.add(node.arg)
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            bound.add(node.name)
-        elif isinstance(node, ast.ExceptHandler) and node.name:
-            bound.add(node.name)
-    return bound
+_MOCK_MODULES = frozenset({"unittest.mock", "mock"})
 
 
-def _mock_any_import_names(tree: ast.AST | None) -> frozenset[str]:
-    """The spellings that name unittest.mock.ANY in a module.
+def _mock_any_dotted(tree: ast.AST | None) -> frozenset[str]:
+    """The dotted spellings of unittest.mock.ANY a module's imports allow, wherever they are.
 
     pytest-mock's fixture attribute, `mocker.ANY`, is read by name. Without
-    a parsed module (an oracle helper's own offsets) only the dotted
-    spellings are, which a project constant cannot be. A bare name the
-    file also binds by anything but an import (`ANY = 6`, a parameter
-    called `ANY`) is not read: which binding an assertion sees is not worked
-    out. A module's name is read whatever else the file calls by it, since a
-    local mock called `mock` is common and its `.ANY` compared in an
-    assertion is not.
+    a parsed module (an oracle helper's own offsets) the plain module
+    spellings are. A module's name is read whatever else the file calls by
+    it, since a local mock called `mock` is common and its `.ANY` compared in
+    an assertion is not.
     """
     names = {"mocker.ANY"}
     if tree is None:
         return frozenset(names | {"mock.ANY", "unittest.mock.ANY"})
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.level == 0:
-            if node.module in ("unittest.mock", "mock"):
-                names.update(alias.asname or "ANY" for alias in node.names if alias.name in ("ANY", "*"))
-            elif node.module == "unittest":
-                names.update((alias.asname or "mock") + ".ANY" for alias in node.names if alias.name == "mock")
+        if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module == "unittest":
+            names.update((alias.asname or "mock") + ".ANY" for alias in node.names if alias.name == "mock")
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name == "mock":
@@ -473,23 +453,183 @@ def _mock_any_import_names(tree: ast.AST | None) -> frozenset[str]:
                     names.add(alias.asname + ".ANY" if alias.asname else "unittest.mock.ANY")
                 elif alias.name == "unittest":
                     names.add((alias.asname or "unittest") + ".mock.ANY")
-    rebound = _rebound_names(tree)
-    return frozenset(name for name in names if "." in name or name not in rebound)
+    return frozenset(names)
 
 
-def _mock_any_names(text) -> frozenset[str]:
-    """The spellings that name unittest.mock.ANY in this file, worked out once per file."""
-    if getattr(text, "mock_any_names", None) is None:
-        names = _mock_any_import_names(getattr(text, "tree", None))
+class _ScopeBindings(ast.NodeVisitor):
+    """The names one scope binds, each "mock" (bound to mock's ANY) or "other" (D-201).
+
+    A bare `ANY` means whatever the innermost scope binding it binds it to,
+    as Python reads it: `from unittest.mock import ANY` (or `*`), an alias
+    of it, or an assignment or parameter default whose value is mock's ANY
+    is "mock"; any other binding, an import from elsewhere included, is
+    "other". Nested functions and classes are scopes of their own, and a
+    comprehension's targets are its own.
+    """
+
+    def __init__(self, dotted: frozenset[str], outer: dict[str, set[str]] | None = None) -> None:
+        self.dotted = dotted
+        self.outer = outer or {}
+        self.names: dict[str, set[str]] = {}
+
+    def bind(self, name: str, kind: str) -> None:
+        self.names.setdefault(name, set()).add(kind)
+
+    def is_any(self, node: ast.AST | None) -> bool:
+        if isinstance(node, ast.Name):
+            return (self.names.get(node.id) or self.outer.get(node.id)) == {"mock"}
+        return node is not None and _dotted(node) in self.dotted
+
+    def bind_target(self, target: ast.AST, kind: str) -> None:
+        if isinstance(target, ast.Name):
+            self.bind(target.id, kind)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            for elt in target.elts:
+                self.bind_target(elt, "other")
+        elif isinstance(target, ast.Starred):
+            self.bind_target(target.value, "other")
+
+    def visit_FunctionDef(self, node) -> None:
+        self.bind(node.name, "other")
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+    def visit_ClassDef(self, node) -> None:
+        self.bind(node.name, "other")
+
+    def visit_Lambda(self, node) -> None:
+        return
+
+    def visit_ListComp(self, node) -> None:
+        return
+
+    visit_SetComp = visit_DictComp = visit_GeneratorExp = visit_ListComp
+
+    def visit_Import(self, node) -> None:
+        for alias in node.names:
+            self.bind(alias.asname or alias.name.split(".", 1)[0], "other")
+
+    def visit_ImportFrom(self, node) -> None:
+        mock = node.level == 0 and node.module in _MOCK_MODULES
+        for alias in node.names:
+            if alias.name == "*":
+                if mock:
+                    self.bind("ANY", "mock")
+                continue
+            self.bind(alias.asname or alias.name, "mock" if mock and alias.name == "ANY" else "other")
+
+    def visit_Assign(self, node) -> None:
+        self.visit(node.value)
+        kind = "mock" if self.is_any(node.value) else "other"
+        for target in node.targets:
+            self.bind_target(target, kind)
+
+    def visit_AnnAssign(self, node) -> None:
+        if node.value is not None:
+            self.visit(node.value)
+        self.bind_target(node.target, "mock" if self.is_any(node.value) else "other")
+
+    def visit_AugAssign(self, node) -> None:
+        self.visit(node.value)
+        self.bind_target(node.target, "other")
+
+    def visit_NamedExpr(self, node) -> None:
+        self.visit(node.value)
+        self.bind_target(node.target, "other")
+
+    def visit_For(self, node) -> None:
+        self.bind_target(node.target, "other")
+        self.generic_visit(node)
+
+    visit_AsyncFor = visit_For
+
+    def visit_withitem(self, node) -> None:
+        if node.optional_vars is not None:
+            self.bind_target(node.optional_vars, "other")
+        self.visit(node.context_expr)
+
+    def visit_ExceptHandler(self, node) -> None:
+        if node.name:
+            self.bind(node.name, "other")
+        self.generic_visit(node)
+
+    def visit_MatchAs(self, node) -> None:
+        if node.name:
+            self.bind(node.name, "other")
+        self.generic_visit(node)
+
+    def visit_MatchStar(self, node) -> None:
+        if node.name:
+            self.bind(node.name, "other")
+
+    def visit_MatchMapping(self, node) -> None:
+        if node.rest:
+            self.bind(node.rest, "other")
+        self.generic_visit(node)
+
+
+def _any_scopes(tree: ast.AST | None) -> tuple:
+    """The dotted spellings, the module's own bindings, and each function's span and bindings."""
+    dotted = _mock_any_dotted(tree)
+    if tree is None:
+        return dotted, {}, []
+    module = _ScopeBindings(dotted)
+    for stmt in getattr(tree, "body", []):
+        module.visit(stmt)
+    functions = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not hasattr(node, "end_lineno"):
+            continue
+        scope = _ScopeBindings(dotted, module.names)
+        args = node.args
+        positional = [*args.posonlyargs, *args.args]
+        defaults = [None] * (len(positional) - len(args.defaults)) + list(args.defaults)
+        for arg, default in [*zip(positional, defaults), *zip(args.kwonlyargs, args.kw_defaults)]:
+            # A default is evaluated where the function is defined; the
+            # module's reading is the one checked.
+            scope.bind(arg.arg, "mock" if default is not None and module.is_any(default) else "other")
+        for arg in (args.vararg, args.kwarg):
+            if arg is not None:
+                scope.bind(arg.arg, "other")
+        for stmt in node.body:
+            scope.visit(stmt)
+        functions.append(((node.lineno, node.col_offset), (node.end_lineno, node.end_col_offset), scope.names))
+    return dotted, module.names, functions
+
+
+def _mock_any_scopes(text) -> tuple:
+    """`_any_scopes` for this file, worked out once per file."""
+    if getattr(text, "mock_any_scopes", None) is None:
+        scopes = _any_scopes(getattr(text, "tree", None))
         try:
-            text.mock_any_names = names
+            text.mock_any_scopes = scopes
         except AttributeError:
-            return names
-    return text.mock_any_names
+            return scopes
+    return text.mock_any_scopes
 
 
 def _is_mock_any(node: ast.AST | None, text) -> bool:
-    return node is not None and _dotted(node) in _mock_any_names(text)
+    """Is this operand mock's ANY? (D-201)
+
+    A dotted spelling is read through the file's imports. A bare name is
+    read as Python reads it: the innermost function enclosing it that binds
+    the name decides, then the module, so a parameter or loop variable
+    called `ANY` in another function changes nothing here, and `ANY = 6` in
+    the module or in this function makes it a value.
+    """
+    if node is None:
+        return False
+    dotted, module, functions = _mock_any_scopes(text)
+    if not isinstance(node, ast.Name):
+        return _dotted(node) in dotted
+    if not hasattr(node, "lineno"):
+        return module.get(node.id) == {"mock"}
+    where = (node.lineno, node.col_offset)
+    enclosing = sorted((f for f in functions if f[0] <= where < f[1]), key=lambda f: f[0], reverse=True)
+    for _start, _end, names in enclosing:
+        if node.id in names:
+            return names[node.id] == {"mock"}
+    return module.get(node.id) == {"mock"}
 
 
 def _only_any(node: ast.AST | None, text) -> bool:
@@ -513,6 +653,31 @@ def _only_any(node: ast.AST | None, text) -> bool:
         return _any_like(node.value, text)
     if isinstance(node, ast.Call) and _dotted(node.func) == "dict.fromkeys" and len(node.args) == 2:
         return _any_like(node.args[1], text)
+    if (isinstance(node, ast.Call) and _dotted(node.func) == "dict" and not node.args and node.keywords
+            and all(k.arg is not None and _any_like(k.value, text) for k in node.keywords)):
+        return True
+    return False
+
+
+def _shaped_by(display: ast.AST | None, subject: ast.AST | None, text) -> bool:
+    """An all-ANY display whose length or keys come from the subject itself (D-201).
+
+    `[ANY] * len(items())` against `items()`, or `dict.fromkeys(record(),
+    ANY)` against `record()`, has the subject's own shape, so the equality
+    holds whatever the subject is.
+    """
+    if display is None or subject is None:
+        return False
+    same = _norm(text.seg(subject) or "")
+    if isinstance(display, ast.BinOp) and isinstance(display.op, ast.Mult):
+        for one, count in ((display.left, display.right), (display.right, display.left)):
+            if (isinstance(one, (ast.List, ast.Tuple)) and len(one.elts) == 1 and _any_like(one.elts[0], text)
+                    and isinstance(count, ast.Call) and _dotted(count.func) == "len" and len(count.args) == 1
+                    and same and _norm(text.seg(count.args[0]) or "") == same):
+                return True
+    if (isinstance(display, ast.Call) and _dotted(display.func) == "dict.fromkeys" and len(display.args) == 2
+            and _any_like(display.args[1], text) and same and _norm(text.seg(display.args[0]) or "") == same):
+        return True
     return False
 
 
@@ -541,8 +706,11 @@ def _elementwise_unchecked(left: ast.AST | None, right: ast.AST | None, text) ->
 
 
 def _holds_any(node: ast.AST | None, text) -> bool:
-    """A list, tuple or set display with mock's ANY as an entry: `x in [ANY]` holds for every x."""
-    return isinstance(node, (ast.List, ast.Tuple, ast.Set)) and any(_is_mock_any(e, text) for e in node.elts)
+    """A list or tuple display with mock's ANY as an entry: `x in [ANY]` holds for every x.
+
+    Not a set display: ANY cannot be hashed, so `{ANY}` raises.
+    """
+    return isinstance(node, (ast.List, ast.Tuple)) and any(_is_mock_any(e, text) for e in node.elts)
 
 
 def _operand_approx_call(node: ast.AST) -> ast.Call | None:
@@ -1871,7 +2039,9 @@ def _classify_compare_op(
         if isinstance(op, ast.Eq) and len(comparators) == 1 and (
                 _is_mock_any(left, text) or _is_mock_any(comparators[0], text)):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
-        if isinstance(op, ast.Eq) and len(comparators) == 1 and _elementwise_unchecked(left, comparators[0], text):
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and (
+                _elementwise_unchecked(left, comparators[0], text)
+                or _shaped_by(comparators[0], left, text) or _shaped_by(left, comparators[0], text)):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
         if isinstance(op, ast.Eq) and len(comparators) == 1 and (
                 _only_any(left, text) or _only_any(comparators[0], text)):
@@ -2124,8 +2294,10 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             and (_is_mock_any(subject_node, text) or _is_mock_any(expect_node, text))):
         form, level = "tautology", S.TAUTOLOGY
         epsilon = epsilon_kind = None
-    elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual")
-            and _elementwise_unchecked(subject_node, expect_node, text)):
+    elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual",
+                                  "assertDictEqual")
+            and (_elementwise_unchecked(subject_node, expect_node, text) or _shaped_by(expect_node, subject_node, text)
+                 or _shaped_by(subject_node, expect_node, text))):
         form, level = "tautology", S.TAUTOLOGY
     elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertDictEqual",
                                   "assertSequenceEqual", "assertCountEqual")

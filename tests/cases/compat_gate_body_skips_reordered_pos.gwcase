@@ -1,0 +1,33 @@
+=== meta ===
+bypass: 44
+rule: TEST_DISABLED
+title: an added body skip is not taken for the one the test had because it comes first (D-201)
+origin: D-201 round-3 review (code lens): body skips were paired by name in file order
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if sys.platform == "win32":
+        pytest.skip("r")
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if sys.platform != "win32" and bool(sys.modules):
+        pytest.skip("r")
+    if sys.platform.startswith("win"):
+        pytest.skip("r")
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

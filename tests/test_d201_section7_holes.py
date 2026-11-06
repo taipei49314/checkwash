@@ -111,6 +111,7 @@ def test_other_comparisons_with_any_keep_their_reading(expr, imports, form, stre
     "items() == [ANY for _ in range(3)]",
     "record() == {k: ANY for k in KEYS}",
     "record() == dict.fromkeys(KEYS, ANY)",
+    "record() == dict(total=ANY, tax=ANY)",
     "total() == pytest.approx([ANY, ANY])",
     "not (items() != [ANY, ANY])",
 ])
@@ -139,6 +140,10 @@ def test_a_display_of_any_keeps_the_shape_it_checks_as_its_expectation():
     "not (total() != ANY)",
     "total() == pytest.approx(ANY)",
     "total() == approx(ANY, rel=0.1)",
+    # The length or the keys taken from the subject itself (D-201 round 3).
+    "items() == [ANY] * len(items())",
+    "len(items()) * [ANY] == items()",
+    "record() == dict.fromkeys(record(), ANY)",
 ])
 def test_other_spellings_that_hold_for_every_value(expr):
     c = _classify(expr)
@@ -154,6 +159,10 @@ def test_other_spellings_that_hold_for_every_value(expr):
     # A list and a tuple never compare equal.
     ("(total(), 0) == [ANY, 0]", "compare_eq", S.EXACT_VALUE),
     ("ANY not in items()", "membership", S.PATTERN),
+    # ANY cannot be hashed, so `x in {ANY}` raises rather than holding.
+    ("total() in {ANY}", "membership", S.PATTERN),
+    # Another subject's length is a length still checked.
+    ("items() == [ANY] * len(other())", "type_shape", S.TYPE_SHAPE),
 ])
 def test_spellings_that_still_check_something(expr, form, strength):
     c = _classify(expr)
@@ -167,15 +176,47 @@ def test_any_on_the_left_is_the_expectation():
     assert _unittest("assertEqual(ANY, total())").left == "total()"
 
 
+def _classify_in_function(src: str):
+    """Classify the one assert inside `def test_it()` of a module, as the frontend sees it."""
+    tree = ast.parse(src)
+    off = _Offsets(src)
+    off.tree = tree
+    function = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "test_it")
+    node = next(n for n in ast.walk(function) if isinstance(n, ast.Assert))
+    return _classify_assert(node, off)
+
+
 @pytest.mark.parametrize("imports", [
-    # Rebound by an assignment, a parameter or a loop, anywhere in the file.
+    # Rebound at module level by an assignment or a loop, after the import.
     "from unittest.mock import ANY\nANY = 6\n",
-    "from unittest.mock import ANY\ndef helper(ANY):\n    return ANY\n",
     "from unittest.mock import ANY\nfor ANY in range(3):\n    pass\n",
 ])
-def test_a_name_the_file_also_binds_is_not_read_as_mock_any(imports):
+def test_a_name_the_module_also_binds_is_not_read_as_mock_any(imports):
     c = _classify("total() == ANY", imports)
     assert (c.form, c.strength) == ("compare_eq", S.EXACT_VALUE)
+
+
+@pytest.mark.parametrize("src, tautology", [
+    # Another function's parameter or loop variable changes nothing here (D-201 round 3).
+    ("from unittest.mock import ANY\ndef helper(ANY=None):\n    return ANY\n"
+     "def test_it():\n    assert total() == ANY\n", True),
+    ("from unittest.mock import ANY\ndef test_other():\n    for ANY in (1, 2):\n        pass\n"
+     "def test_it():\n    assert total() == ANY\n", True),
+    # This function's own binding does.
+    ("from unittest.mock import ANY\ndef test_it():\n    ANY = 6\n    assert total() == ANY\n", False),
+    ("from unittest.mock import ANY\ndef test_it(ANY):\n    assert total() == ANY\n", False),
+    # A local import, and a parameter or alias whose value is mock's ANY.
+    ("def test_it():\n    from unittest.mock import ANY\n    assert total() == ANY\n", True),
+    ("from unittest import mock\ndef test_it(ANY=mock.ANY):\n    assert total() == ANY\n", True),
+    ("from unittest.mock import ANY\nANY = ANY\ndef test_it():\n    assert total() == ANY\n", True),
+    ("from unittest import mock\nWILD = mock.ANY\ndef test_it():\n    assert total() == WILD\n", True),
+    # A project's ANY at module level, beside mock's imported inside another function.
+    ("from app import ANY\ndef helper():\n    from unittest.mock import ANY\n    return ANY\n"
+     "def test_it():\n    assert total() == ANY\n", False),
+])
+def test_a_bare_any_is_read_through_pythons_scopes(src, tautology):
+    c = _classify_in_function(src)
+    assert (c.form == "tautology") is tautology, (c.form, c.strength)
 
 
 def test_a_local_called_mock_does_not_hide_the_module():
@@ -317,6 +358,11 @@ def _parts(condition: str):
     ("platform.python_version() != '3.11.0'", True, False),
     ("platform.python_version() < '3.12'", True, True),
     ("platform.python_version().startswith('3.11')", True, True),
+    # A slice, a substring or a number read from the known part (D-201 round 3).
+    ("platform.python_version()[:4] == '3.13'", True, True),
+    ("'3.13' in platform.python_version()", True, True),
+    ("int(platform.python_version_tuple()[1]) >= 13", True, True),
+    ("platform.python_version()[5:] == '0'", True, False),
     ("sys.version_info.micro < 2", True, False),
     # List and set displays.
     ("sys.platform not in ['linux', 'darwin']", True, True),
@@ -451,6 +497,19 @@ def test_a_guard_naming_an_interpreter_the_matrix_lacks_is_not_always_true():
     assert guard_always_skips("sys.version_info > (3, 11, 0)", None) is True
 
 
+@pytest.mark.parametrize("guard", [
+    # As a tuple does, the release equals nothing but a tuple, and itself
+    # (D-201 round 3: these read as unknown and the always-true guard hid).
+    "sys.version_info != None",
+    "sys.version_info != '3'",
+    "sys.version_info >= sys.version_info",
+    "sys.version_info[:2] == sys.version_info[:2]",
+    "platform.python_version() != 3",
+])
+def test_an_always_true_guard_over_the_release_is_read(guard):
+    assert guard_always_skips(guard, None) is True
+
+
 def test_liveness_keeps_the_old_reading():
     """A moved test, or one a stand-in may replace, is live unless its gate is
     true whatever its unknown part is: reading it as dead would hide a
@@ -506,6 +565,11 @@ def test_an_order_sensitive_equality_rewritten_as_a_multiset_one_drops_order(bef
     # By keyword.
     ("self.assertEqual(first=items(), second=[1, 2, 3])", "self.assertCountEqual(items(), [1, 2, 3])", {}, {}),
     ("self.assertEqual(items(), [1, 2, 3])", "self.assertCountEqual(items(), second=[1, 2, 3])", {}, {}),
+    # A bare `assert ==` is an ordered equality, and a name inside the
+    # subject is followed one hop (D-201 round 3).
+    ("assert items() == [1, 2, 3]", "self.assertCountEqual(items(), [1, 2, 3])", {}, {}),
+    ("self.assertEqual(self.client.items(), [1, 2, 3])", "self.assertCountEqual(client.items(), [1, 2, 3])",
+     {}, {"client": "self.client"}),
 ])
 def test_the_same_subject_however_spelled(b, a, before_bindings, after_bindings):
     result = _order_dropped("tests/test_items.py", _assertion(b), _assertion(a), before_bindings, after_bindings)
@@ -541,11 +605,14 @@ def test_a_dict_operand_loses_its_values(b, a):
     # Only Python's unittest has these names.
     ("tests/items.test.js", _assertion("self.assertEqual(items(), [1, 2, 3])"),
      _assertion("self.assertCountEqual(items(), [1, 2, 3])")),
-    # A bare assert names no method, and Python 2's assertItemsEqual is not read.
-    ("tests/test_items.py", _assertion("assert items() == [1, 2, 3]"),
-     _assertion("self.assertCountEqual(items(), [1, 2, 3])")),
+    # Python 2's assertItemsEqual is not read, and a bare assert other than `==` is no equality.
     ("tests/test_items.py", _assertion("self.assertEqual(items(), [1, 2, 3])"),
      _assertion("self.assertItemsEqual(items(), [1, 2, 3])")),
+    ("tests/test_items.py", _assertion("assert items() != [1, 2, 3]"),
+     _assertion("self.assertCountEqual(items(), [1, 2, 3])")),
+    # What `sorted(...)` put in order loses nothing (D-201 round 3).
+    ("tests/test_items.py", _assertion("self.assertListEqual(sorted(items()), [1, 2, 3])", left="sorted(items())"),
+     _assertion("self.assertCountEqual(sorted(items()), [1, 2, 3])", left="sorted(items())")),
 ])
 def test_other_pairs_drop_nothing(path, b, a):
     assert _order_dropped(path, b, a, {}, {}) is None

@@ -37,7 +37,7 @@ from checkwash.findings import (
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import argument_wraps, dotted_name, expr_wraps, resolve_through, same_expr
 from checkwash.ir.expectation_identity import same_known_js_scalar
-from checkwash.ir.markers import parse_expr
+from checkwash.ir.markers import parse_expr, parse_text
 from checkwash.ir.model import IR, Assertion, judged_as_test
 
 # unittest's order-sensitive equalities, and the one that compares contents
@@ -58,6 +58,36 @@ def _unittest_call(text: str) -> ast.Call | None:
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
         return node
     return None
+
+
+def _bare_equality(text: str) -> list[ast.AST] | None:
+    """The two sides of a bare `assert a == b`, the order-sensitive equality pytest spells."""
+    tree = parse_text(text.strip(), mode="exec")
+    body = getattr(tree, "body", None)
+    if not body or len(body) != 1 or not isinstance(body[0], ast.Assert):
+        return None
+    test = body[0].test
+    if isinstance(test, ast.Compare) and len(test.ops) == 1 and isinstance(test.ops[0], ast.Eq):
+        return [test.left, test.comparators[0]]
+    return None
+
+
+class _Substitute(ast.NodeTransformer):
+    """Each name inside an operand replaced by what the unit bound it to, one hop each."""
+
+    def __init__(self, bindings: dict[str, str]) -> None:
+        self.bindings = bindings
+        self.budget = 8
+
+    def visit_Name(self, node: ast.Name) -> ast.AST:
+        if self.budget <= 0 or not isinstance(node.ctx, ast.Load):
+            return node
+        resolved = resolve_through(node.id, self.bindings)
+        parsed = parse_expr(resolved) if resolved and resolved != node.id else None
+        if parsed is None:
+            return node
+        self.budget -= 1
+        return parsed
 
 
 def _operands(call: ast.Call) -> list[ast.AST] | None:
@@ -114,7 +144,11 @@ def _canonical(node: ast.AST, bindings: dict[str, str]) -> ast.AST | None:
         if inner is not None:
             current = inner
             continue
-        if not isinstance(current, ast.Name) or current.id in seen:
+        if not isinstance(current, ast.Name):
+            # The names inside it, one hop each: `client.items()` with
+            # `client = self.client` is `self.client.items()`.
+            return _Substitute(bindings).visit(parse_expr(ast.unparse(current)))
+        if current.id in seen:
             return current
         seen.add(current.id)
         resolved = resolve_through(current.id, bindings)
@@ -160,28 +194,36 @@ def _order_dropped(path: str, b: Assertion, a: Assertion, before_bindings: dict[
     subject, once each operand is followed through the unit's bindings and a
     copy into a list or tuple is taken off: the expected list may change
     with it, reordered or spelled as a tuple, which assertCountEqual cannot
-    tell apart. A set operand never had an order, so that rewrite changes
-    nothing. A dict loses more than order, since assertCountEqual iterates
-    a dict's keys: the third value says so.
+    tell apart. A bare `assert a == b` is an ordered equality too. A set
+    operand never had an order, nor one `sorted(...)` already ordered, so
+    that rewrite changes nothing. A dict loses more than order, since
+    assertCountEqual iterates a dict's keys: the third value says so.
     """
     if not path.endswith(".py") or not (b.positive and a.positive):
         return None
-    before, after = _unittest_call(b.text), _unittest_call(a.text)
-    if before is None or after is None:
+    after = _unittest_call(a.text)
+    if after is None or after.func.attr not in _UNORDERED_EQUALITY:
         return None
-    if before.func.attr not in _ORDERED_EQUALITY or after.func.attr not in _UNORDERED_EQUALITY:
-        return None
-    old, new = _operands(before), _operands(after)
+    before = _unittest_call(b.text)
+    if before is not None and before.func.attr in _ORDERED_EQUALITY:
+        old_method, old = before.func.attr, _operands(before)
+    else:
+        # `assert items() == [1, 2, 3]` checks order as assertEqual does.
+        old_method, old = "==", _bare_equality(b.text)
+    new = _operands(after)
     if old is None or new is None:
         return None
     old = [_canonical(node, before_bindings) for node in old]
     new = [_canonical(node, after_bindings) for node in new]
     if None in old or None in new or not _same_comparison(old, new):
         return None
-    if "set" in {_kind(node) for node in old}:
+    # A set never had an order, and neither does what `sorted(...)` already
+    # put in order: nothing is lost.
+    if "set" in {_kind(node) for node in old} or any(
+            isinstance(node, ast.Call) and dotted_name(node.func) == "sorted" for node in old):
         return None
-    keys_only = before.func.attr == "assertDictEqual" or "dict" in {_kind(node) for node in (*old, *new)}
-    return before.func.attr, after.func.attr, keys_only
+    keys_only = old_method == "assertDictEqual" or "dict" in {_kind(node) for node in (*old, *new)}
+    return old_method, after.func.attr, keys_only
 
 
 def detect(ir: IR) -> list[Finding]:
