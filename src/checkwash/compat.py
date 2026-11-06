@@ -26,15 +26,19 @@ _COMPAT_TOKENS = ("sys.version_info", "sys.platform", "platform.", "os.name")
 
 # Environments the condition is evaluated against. A real compatibility gate
 # skips somewhere and runs somewhere; one that is true everywhere is an
-# unconditional kill wearing a compat costume.
+# unconditional kill wearing a compat costume. The interpreter is CPython or
+# PyPy (D-201): once a single test's gate must provably run somewhere,
+# `skipif(platform.python_implementation() == "PyPy")`, which names the
+# `platform.` token and earned the credit as an unknown, must be read.
 _ENV_MATRIX = tuple(
-    {"version_info": version, "platform": plat, "os_name": osname, "system": system}
+    {"version_info": version, "platform": plat, "os_name": osname, "system": system, "implementation": impl}
     for version in ((3, 11, 0), (3, 12, 0), (3, 13, 0), (3, 14, 0))
     for plat, osname, system in (
         ("win32", "nt", "Windows"),
         ("linux", "posix", "Linux"),
         ("darwin", "posix", "Darwin"),
     )
+    for impl in ("CPython", "PyPy")
 )
 
 _EVAL_CMP_OPS: dict[type, object] = {
@@ -88,6 +92,32 @@ class _Module:
 
 
 _PYTEST_MODULES = {name: _Module(name) for name in ("os", "sys", "platform")}
+
+
+class _BuiltinModuleNames:
+    """`sys.builtin_module_names`, read for the one question a gate asks of it (D-201).
+
+    `'__pypy__' in sys.builtin_module_names` is the oldest spelling of "on
+    PyPy" (pytest 4445685285 adds it to a version gate). Membership of any
+    other name is unknown, so it raises the TypeError the evaluator turns
+    into MAYBE.
+    """
+
+    __slots__ = ("implementation",)
+
+    def __init__(self, implementation: str) -> None:
+        self.implementation = implementation
+
+    def __contains__(self, name: object) -> bool:
+        if name == "__pypy__":
+            return self.implementation == "PyPy"
+        raise TypeError("unknown builtin module")
+
+    def __eq__(self, other: object) -> bool:
+        raise TypeError("unknown builtin module names")
+
+    __ne__ = __eq__
+    __hash__ = None  # type: ignore[assignment]
 
 
 def _eval_condition(
@@ -166,6 +196,13 @@ def _eval_condition(
             name = _dotted_name(node.func)
             if name in ("platform.system", "system"):
                 return env["system"]
+            if name in ("platform.python_implementation", "python_implementation"):
+                return env["implementation"]
+            # `hasattr(sys, "pypy_version_info")`, pytest's own PYPY constant.
+            if (name == "hasattr" and len(node.args) == 2 and not node.keywords
+                    and _dotted_name(node.args[0]) == "sys"
+                    and isinstance(node.args[1], ast.Constant) and node.args[1].value == "pypy_version_info"):
+                return env["implementation"] == "PyPy"
             # `sys.platform.startswith("win")` — the other commonest spelling.
             # Keyed on the attribute itself, not the dotted name: a chained
             # call like `platform.system().lower()` has no dotted name at all.
@@ -202,6 +239,10 @@ def _eval_condition(
             return env["platform"]
         if name in ("os.name", "name"):
             return env["os_name"]
+        if name == "sys.implementation.name":
+            return env["implementation"].lower()
+        if name == "sys.builtin_module_names":
+            return _BuiltinModuleNames(env["implementation"])
         if consts and name and "." not in name and name not in resolving and len(resolving) < 16:
             expr = consts.get(name)
             if expr is not None:
@@ -211,7 +252,9 @@ def _eval_condition(
     return ev(node)
 
 
-def _discriminates(parts: list[tuple[ast.AST, bool]], consts: dict[str, ast.AST] | None) -> bool:
+def _discriminates(
+    parts: list[tuple[ast.AST, bool]], consts: dict[str, ast.AST] | None, runs_somewhere: bool = False
+) -> bool:
     """Does this condition actually depend on the environment?
 
     The old test was a substring match against seven hardcoded spellings of an
@@ -236,13 +279,26 @@ def _discriminates(parts: list[tuple[ast.AST, bool]], consts: dict[str, ast.AST]
     The condition is the conjunction of its parts, each evaluated in its own
     namespace: a `pytestmark` binding's guard is module code, while the mark's
     string condition is evaluated as pytest does (#263).
+
+    `runs_somewhere` (D-201) asks the other half for a single test's gate: is
+    there an environment where the condition is provably false, so the test
+    provably runs there? An unknown part no longer earns the credit by
+    standing in for the false case: `skipif(sys.version_info >= (3, 0) and
+    bool(sys.modules))` names the interpreter only to pass the token filter
+    and skips everywhere, and so does `skipif(sys.platform == "win32" or
+    bool(sys.modules))`. `MAC and sys.version_info >= (3, 13) and not
+    sys._is_gil_enabled()` keeps it: off macOS, `MAC` is false whatever the
+    call returns. A suite-level collection control keeps the old reading,
+    because its guard is the whole justification and an optional-dependency
+    guard (`find_spec("redis") is None`) is unknown everywhere.
     """
 
-    def definitely(env: dict) -> bool:
-        values = [_eval_condition(node, env, consts, pytest_names) for node, pytest_names in parts]
-        return all(value is not MAYBE and bool(value) for value in values)
+    def values(env: dict) -> list[object]:
+        return [_eval_condition(node, env, consts, pytest_names) for node, pytest_names in parts]
 
-    return not all(definitely(env) for env in _ENV_MATRIX)
+    if runs_somewhere:
+        return any(any(value is not MAYBE and not bool(value) for value in values(env)) for env in _ENV_MATRIX)
+    return not all(all(value is not MAYBE and bool(value) for value in values(env)) for env in _ENV_MATRIX)
 
 
 # Condition-bearing decorator markers, exactly as _canonical_marker emits
@@ -332,8 +388,9 @@ def _marker_is_compat_gate(m, raw: dict[str, str], consts: dict[str, ast.AST]) -
         tok in searched for tok in _COMPAT_TOKENS
     ):
         return False
-    # always true, or unverifiable: not a gate, a disable
-    return _discriminates(parts, consts)
+    # always true, or unverifiable: not a gate, a disable. A single test's
+    # gate must also provably run somewhere (D-201).
+    return _discriminates(parts, consts, runs_somewhere=canonical not in _SUITE_GATES)
 
 
 def compat_gate_for(unit: Unit | None, constants: dict[str, str] | None, name: str | None) -> bool:

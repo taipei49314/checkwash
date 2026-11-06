@@ -795,3 +795,124 @@ fixes or records each:
   was called the only tag on a merge; the publication template named the
   event SHA as the build's; and D-196 and the README test were quoted more
   broadly than they say.
+
+## D-201 (2026-11-07): three holes beside D-191's residual close: an equality with `ANY`, a skip condition with a part checkwash cannot read, and `assertCountEqual` (0.12)
+
+**Authority.**
+
+- Claude's design of 2026-11-05 for D-196 item 4 (written on
+  LAPTOP-01AGNPJU, outside this repository; D-199 records it) listed in its
+  section 7 three holes that are not D-191's residual but sit beside it.
+  Its red-team reviewer found them in toy repositories, and Claude ran each
+  again: `assert total() == ANY` beside an unrelated version bump passed;
+  D6 granted `COMPAT_GATE` to a skip condition that is always true once a
+  part it cannot read is mixed in; and `assertEqual` -> `assertCountEqual`
+  gave no finding. The design recommended closing them in 0.12, each priced
+  on R29, with THREATMODEL rows 44 and 57 rewritten under Nelson's
+  approval. D-199 did not take them, and the rows were not put to him.
+- After #589 merged, Claude asked 「0.12.0 發版前，要先補 `== ANY`＋升依賴、
+  恆真 skipif、assertCountEqual 這三個缺口嗎？」 (before the 0.12.0 release,
+  close these three holes first: `== ANY` with a dependency bump, an
+  always-true skipif, assertCountEqual?), with the buttons 「先補三個缺口」
+  (close the three holes first) and 「直接發 0.12.0」 (release 0.12.0 as
+  is). At 2026-11-06T15:33:38Z Nelson chose 「先補三個缺口」.
+
+Claude wrote the question, the buttons and the recommendation. The answer
+chooses to close the holes before 0.12.0; it is not Nelson's review of this
+text or of the code. This entry and the SPEC and THREATMODEL text below are
+agent-read-only, and the pull request asks him to approve them by name
+before it merges. Every detail is Claude's under the 2026-10-27 delegation
+(「Checkwash 一樣給你」: 0.x autonomous, stop before 1.0), including each
+rule's reach below.
+
+**What is decided.**
+
+1. *`ANY` is a tautology.* An `==`, or a `self.assertEqual`, with
+   `unittest.mock.ANY` as one whole operand can never fail, since `ANY`
+   equals every value. The Python frontend reads it as TAUTOLOGY (SPEC §3),
+   so `== 6` -> `== ANY` is `ASSERT_WEAKENED`, which takes neither D9's
+   `DEPENDENCY_DRIFT` nor, in a Python test, repair evidence (D-199). It
+   was read as an expectation changed to another name
+   (`EXPECTATION_DEFINITION_CHANGED`), which D9 held at warn beside any
+   version bump, and the unittest spelling gave no finding at all. `ANY`
+   is read by name, as `approx` is: `ANY`, `mock.ANY`,
+   `unittest.mock.ANY` and pytest-mock's `mocker.ANY`. `!=` with it never
+   holds and keeps its reading. `assertListEqual` and the other typed
+   variants check the operand's type first, so they fail with `ANY` and
+   keep theirs. `ANY` as one entry of a container
+   (`{"id": ANY, "total": 6}`) leaves the other entries checked and keeps
+   the old reading, a mild weakening.
+2. *A single test's skip must provably run somewhere.* D6 grants
+   `COMPAT_GATE` to a single test's skip only when its condition is
+   provably false in at least one environment of the matrix, so the test
+   provably runs there. A part checkwash cannot read may be true:
+   `skipif(sys.version_info >= (3, 0) and bool(sys.modules))` and
+   `skipif(sys.platform == "win32" or bool(sys.modules))` earn nothing,
+   while `skipif(MAC and not sys._is_gil_enabled())` keeps the credit, as
+   it is false off macOS whatever the call returns. Before, the credit was
+   refused only when the condition was true under every assignment of the
+   unknown parts, so an unknown part stood in for the false case. The
+   matrix gains the interpreter, CPython or PyPy, and the evaluator reads
+   `platform.python_implementation()`, `sys.implementation.name`,
+   `'__pypy__' in sys.builtin_module_names` and
+   `hasattr(sys, "pypy_version_info")`: a PyPy skip that names an
+   interpreter or platform token earned the credit as an unknown and keeps
+   it as a condition that is false on CPython. Any other question about
+   `sys.builtin_module_names` stays unknown. A suite-level collection
+   control in a conftest keeps the old reading (D-028, #209 Q1): its guard
+   is its whole justification, and an optional-dependency guard
+   (`find_spec("redis") is None`) is unknown everywhere. The same test
+   decides whether a moved or split test is live (`unit_is_live`), so a
+   destination whose only skip cannot be shown to run counts as dead.
+3. *`assertCountEqual` drops order.* An order-sensitive unittest equality
+   (`assertEqual`, `assertListEqual`, `assertTupleEqual`,
+   `assertSequenceEqual`) rewritten as `assertCountEqual`, or Python 2's
+   `assertItemsEqual`, with the same subject and the same expected value
+   is `SUBJECT_NORMALIZED` (SPEC §4), as `sorted(...)` around the subject
+   is: the comparison stops checking order. Both read as one form and one
+   strength, and there is no wrapper to see, so it gave no finding at all,
+   beside a production change that reordered the result included. In a
+   Python test the rule takes no repair evidence (D-199). The other
+   direction, `assertCountEqual` -> `assertEqual`, starts checking order
+   and gives no finding.
+4. *Documents.* SPEC §3 (TAUTOLOGY), §4 (`SUBJECT_NORMALIZED`) and §5 (D6);
+   THREATMODEL item 6 and rows 14, 44 and 57, which overstated what was
+   closed: row 14 said order laundering was closed, row 44 that
+   unverifiable conditions earn nothing, and row 57 that D9 covers only
+   `EXPECTED_VALUE_CHANGED`; and a new row 182 for the `ANY` rewrite,
+   which the two `mock_any_*_pos` fixtures pin. KNOWN-ISSUES-next's 0.12
+   section and STATE describe the change.
+
+**What it costs.** Measured on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9) against
+main `54113c06`'s engine, whose rows are D-199's last re-run (its `src/`
+tree, `8ef8bb69`, is main's). On the fixed R29 corpus, 3,600 commits, no
+verdict and no finding changes. On D-088's 1,263 skip, xfail and conftest
+commits, the first candidate moved two commits pass -> block and changed
+the findings of two blocked ones, all through D6. Reading
+`'__pypy__' in sys.builtin_module_names` and
+`hasattr(sys, "pypy_version_info")` returned three of them, pytest
+`4445685285`, `af893aab26` and `d37af98db3`, to their base findings. One
+stays: scrapy `583df9f7d0` ("Simplify skipping uvloop tests") moves its
+uvloop skips into an autouse fixture that skips on PyPy, on Windows or on
+one Twisted version. checkwash cannot read the Twisted version, so it
+cannot show that the tests run anywhere, and the 110 `TEST_DISABLED`
+findings of the tests the fixture's setup reaches move from warn to high.
+The `ANY` and `assertCountEqual` changes moved nothing in either sample,
+and no existing fixture or unit-test expectation moves. These are
+in-sample commits that nobody adjudicated: counts of commits, not
+false-positive rates. The final `src/` is re-run on both samples before
+the pull request's receipt, and STATE records the result.
+
+**What is not changed.**
+
+- `gating.py`, its escalation policy and the strength lattice's values. D9
+  keeps its three rules (row 84c); an `ANY` rewrite leaves them because it
+  is now a weakening.
+- A suite-level collection control. `guard_can_be_false` and
+  `guard_always_skips`, which judge a suite control's guard and a guard's
+  change, keep their reading; the interpreter in the matrix only lets them
+  read the PyPy spellings.
+- `ANY` as one entry of a container, `assertCountEqual` -> `assertEqual`,
+  and a skip whose condition names no interpreter or OS, which never
+  earned the credit.

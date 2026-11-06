@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `self.assertEqual(x, mock.ANY)` holds for every x, so rewriting an expected value into it is a weakening (D-201)
+origin: D-201; on main 54113c06 this rewrite gave no finding at all
+=== before: tests/test_calc.py ===
+import unittest
+
+from app import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total(3), 6)
+=== after: tests/test_calc.py ===
+import unittest
+from unittest import mock
+
+from app import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertEqual(total(3), mock.ANY)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

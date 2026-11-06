@@ -22,6 +22,7 @@ transformed and nothing in the diff says why". Since D-199 (0.12) a Python findi
 
 from __future__ import annotations
 
+import ast
 import json
 
 from checkwash.change import EngineError
@@ -34,9 +35,43 @@ from checkwash.findings import (
     make_fingerprint,
 )
 from checkwash.ir.assertion_identity import fingerprint_text
-from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through
+from checkwash.ir.astutil import argument_wraps, expr_wraps, resolve_through, same_expr
 from checkwash.ir.expectation_identity import same_known_js_scalar
-from checkwash.ir.model import IR, judged_as_test
+from checkwash.ir.markers import parse_expr
+from checkwash.ir.model import IR, Assertion, judged_as_test
+
+# unittest's order-sensitive equalities, and the ones that compare contents
+# as a multiset (D-201). `assertItemsEqual` is the Python 2 name.
+_ORDERED_EQUALITY = frozenset({"assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual"})
+_UNORDERED_EQUALITY = frozenset({"assertCountEqual", "assertItemsEqual"})
+
+
+def _unittest_method(text: str) -> str | None:
+    """The method an assertion's own call names, as `self.assertEqual` -> assertEqual."""
+    node = parse_expr(text.strip())
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    return None
+
+
+def _order_dropped(path: str, b: Assertion, a: Assertion) -> tuple[str, str] | None:
+    """An order-sensitive equality rewritten as a multiset one on the same subject (D-201).
+
+    `self.assertEqual(items(), [1, 2, 3])` -> `self.assertCountEqual(items(),
+    [1, 2, 3])` stops checking order, as `sorted(...)` around the subject
+    does, but both read as one form and one strength and there is no wrapper
+    to see, so the rewrite gave no finding at all, beside a production change
+    that reordered the result included. The expected value is the caller's
+    to compare; the subject must be the same.
+    """
+    if not path.endswith(".py") or not (b.positive and a.positive):
+        return None
+    before, after = _unittest_method(b.text), _unittest_method(a.text)
+    if before not in _ORDERED_EQUALITY or after not in _UNORDERED_EQUALITY:
+        return None
+    if not same_expr(b.left, a.left):
+        return None
+    return before, after
 
 
 def detect(ir: IR) -> list[Finding]:
@@ -62,6 +97,33 @@ def detect(ir: IR) -> list[Finding]:
                 if not same_known_js_scalar(file.path, b, a) and (
                     b.right_value != a.right_value or b.right_literal != a.right_literal
                 ):
+                    continue
+                dropped = _order_dropped(file.path, b, a)
+                if dropped is not None:
+                    findings.append(
+                        Finding(
+                            rule="SUBJECT_NORMALIZED",
+                            severity="warn",
+                            message=(
+                                f"{unit.qualname}: the comparison stopped checking order "
+                                f"({dropped[0]} -> {dropped[1]}) while the subject and the expected value "
+                                "stayed the same"
+                            ),
+                            path=file.path,
+                            unit=unit.qualname,
+                            before=Evidence(text=b.text, span=b.span),
+                            after=Evidence(text=a.text, span=a.span),
+                            fingerprint=make_assertion_fingerprint(
+                                "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                before=b.text, after=a.text, kind="order_dropped",
+                                position=assertion_position(unit.before, b),
+                                context=list(dropped),
+                            ),
+                        )
+                    )
+                    legacy.add(make_fingerprint(
+                        "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                    ))
                     continue
                 # One hop of indirection, and argument positions.
                 #

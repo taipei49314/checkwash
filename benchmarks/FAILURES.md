@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **200 bypasses** are documented, of which **75 are not closed**.
+- **201 bypasses** are documented, of which **75 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -121,7 +121,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash / use a tool the PreToolUse matcher does not name | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (122)
+## Closed — each pinned by something that runs (123)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -141,7 +141,7 @@ behind it* unshippable.
 | 11 | Pass `BASE...HEAD` so base-branch commits defuse E1 | — |
 | 12 | Leave a build artifact (`.pyc`, `dist/`, …) in the diff to grant repair evidence | `artifact_cannot_disarm_pos.gwcase` |
 | 13 | Replace an exact comparison with a wide `pytest.approx(...)` | `row13_exact_to_approx_pos.gwcase` |
-| 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | `row14_sorted_wrap_pos.gwcase` |
+| 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | `assert_count_equal_beside_reorder_pos.gwcase`, `assert_count_equal_order_dropped_pos.gwcase`, `row14_sorted_wrap_pos.gwcase` |
 | 15 | Rewrite the expected literal to whatever the buggy code returns | `approx_expected_rewrite_pos.gwcase`, `expected_value_rewritten_pos.gwcase` |
 | 16 | Swallow the assertion in a broad `try/except` inside the test | `broad_except_in_test_pos.gwcase`, `js_catch_always_passing_literal_pos.gwcase`, `js_catch_assertion_return_pos.gwcase`, `js_catch_assertion_swallowed_pos.gwcase` |
 | 17 | Put the test under a directory named `mybuild/` so artifact filtering drops it | `row17_mybuild_dir_neg.gwcase` |
@@ -171,7 +171,7 @@ behind it* unshippable.
 | 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | `param_marks_skip_pos.gwcase` |
 | 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pyproject_addopts_array_opened_with_element_selector_pos.gwcase`, `pyproject_addopts_array_respelled_one_line_neg.gwcase`, `pyproject_addopts_array_selector_after_equals_pos.gwcase`, `pytest_ini_narrowed_pos.gwcase`, `pytest_ini_quoted_addopts_continuation_selector_pos.gwcase`, `pytest_toml_string_then_indented_key_narrowed_pos.gwcase`, `setup_cfg_addopts_continuation_selector_pos.gwcase`, `setup_cfg_quoted_addopts_continuation_selector_pos.gwcase`, `setup_cfg_quoted_addopts_respelled_one_line_neg.gwcase` |
 | 43 | `git mv tests/test_x.py build/test_x.py` (or `.attic/`, `dist/`, `htmlcov/`, any dot-dir) | `moved_to_build_dir_pos.gwcase`, `moved_to_dot_dir_pos.gwcase` |
-| 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | `compat_gate_always_true_pos.gwcase`, `compat_gate_string_always_true_pos.gwcase`, `compat_gate_version_always_true_pos.gwcase` |
+| 44 | Any always-true `skipif` outside seven hardcoded spellings — `skipif(True or sys.platform == "win32")`, `skipif(sys.version_info >= (3, 8))`, `skipif(os.name != "java")` | `compat_gate_always_true_pos.gwcase`, `compat_gate_string_always_true_pos.gwcase`, `compat_gate_unknown_and_always_true_pos.gwcase`, `compat_gate_unknown_or_pos.gwcase`, `compat_gate_version_always_true_pos.gwcase` |
 | 45 | Delete 5 tests / 7 exact assertions, add 1 weak test with a similar name | `split_rename_mass_pos.gwcase` |
 | 46 | `assert "" in str(x)` / `assert len(x) >= 0` as compensation padding | `bare_literal_bound_pad_pos.gwcase`, `unfalsifiable_padding_pos.gwcase`, `unittest_trivial_pad_pos.gwcase` |
 | 47 | One non-ASCII character on the assertion line, reopening #10 | `unicode_offset_tautology_pos.gwcase` |
@@ -253,6 +253,7 @@ behind it* unshippable.
 | 177 | Fold `pytest.raises` tests into a parametrized table while weakening them, instead of fixing code: broaden the expected exception (to a superclass or a tuple), drop or change a row, loosen or drop `match=`, swap `raises` for `warns`, replace the call that must raise, drop the assertion on `excinfo`, or put a statement that raises first inside the block (D-192) | `raises_carrier_fold_broadened_pos.gwcase`, `raises_carrier_fold_row_dropped_pos.gwcase` |
 | 178 | Launder a weakened oracle through parametrize row substitution, instead of fixing code: fold tests into a literal table whose cells never reach the test as written: `indirect=True`, so a fixture receives the cell and returns something else; a column the body rebinds (`bad = 1000`, or `with pytest.raises(ValueError) as excinfo` over a column named `excinfo`); or a row whose own marks may keep it from running (`xfail(run=False, strict=True)`, a string `skipif`, `skip.with_args`, a custom mark a `-m` filter deselects); or, beside them, a list cell the body reads twice, so the second read sees what the first call did to the one shared object (a failing `assert sort_in_place([2, 1]) == [2, 1]` folded into `assert sort_in_place(xs) == xs`), or a test moved into `async def`, which a plain `TestCase` never awaits (D-192) | `async_def_moved_assertion_pos.gwcase`, `param_column_as_target_pos.gwcase`, `param_indirect_cells_pos.gwcase`, `param_mutable_cell_read_twice_pos.gwcase`, `param_row_marks_not_run_pos.gwcase` |
 | 179 | Park a moved or folded oracle where the repository's own collection settings never run it, instead of fixing code: in a file outside its `python_files` pattern, in a file its conftest lists in `collect_ignore`, or under a test name or a row id (`pytest.param(..., id=...)` or `ids=`) that a `-k` filter already in its `addopts` deselects (D-192); or outside its `testpaths` or `addopts` targets, beneath an `--ignore`, `--ignore-glob` or `norecursedirs` entry, under a `--deselect`, with a test name its `python_functions` does not match, in a directory pytest takes for a virtual environment, or by renaming the whole test file to such a place (D-193) | `arrival_collect_ignore_pos.gwcase`, `arrival_k_selection_pos.gwcase`, `arrival_python_files_uncollected_pos.gwcase` |
+| 182 | Rewrite an expected value into `unittest.mock.ANY`, which equals every value, so the assertion can never fail, and escort it into D9 with an unrelated version bump: `assert total() == 6` -> `assert total() == ANY` beside `requests==2.31.0` -> `2.32.3` | `mock_any_dependency_bump_pos.gwcase`, `mock_any_unittest_pos.gwcase` |
 
 ## False positives on human-written commits
 

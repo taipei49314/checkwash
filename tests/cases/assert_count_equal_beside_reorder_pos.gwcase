@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: `assertCountEqual` beside a production change that reversed the order blocks: the rule takes no repair evidence (D-201, D-199)
+origin: D-201; on main 54113c06 the production change and the rewrite gave no finding at all
+=== before: app.py ===
+def ranked(values):
+    return sorted(values, reverse=True)
+=== after: app.py ===
+def ranked(values):
+    return sorted(values)
+=== before: tests/test_rank.py ===
+import unittest
+
+from app import ranked
+
+
+class RankedTest(unittest.TestCase):
+    def test_ranked(self):
+        self.assertEqual(ranked([3, 1, 2]), [3, 2, 1])
+=== after: tests/test_rank.py ===
+import unittest
+
+from app import ranked
+
+
+class RankedTest(unittest.TestCase):
+    def test_ranked(self):
+        self.assertCountEqual(ranked([3, 1, 2]), [3, 2, 1])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}]

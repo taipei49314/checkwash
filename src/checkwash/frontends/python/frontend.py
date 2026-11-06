@@ -414,6 +414,20 @@ def _is_approx_call(node: ast.AST) -> bool:
     return isinstance(node, ast.Call) and _dotted(node.func) in ("pytest.approx", "approx")
 
 
+# `unittest.mock.ANY` equals every value, so an equality with it as a whole
+# operand can never fail, however exact it looks. `assert total() == ANY` was
+# read as an expectation changed to another name, which D9's
+# DEPENDENCY_DRIFT holds at warn beside any version bump in a manifest
+# (D-201). Read by name, as `approx` is: the spellings mock's documentation
+# uses, and pytest-mock's fixture attribute. Only a whole operand: in
+# `{"id": ANY, "name": "x"}` the other entries are still checked.
+_MOCK_ANY = frozenset({"ANY", "mock.ANY", "unittest.mock.ANY", "mocker.ANY"})
+
+
+def _is_mock_any(node: ast.AST | None) -> bool:
+    return node is not None and _dotted(node) in _MOCK_ANY
+
+
 def _operand_approx_call(node: ast.AST) -> ast.Call | None:
     """The approx call an operand is, or holds through container displays."""
     if _is_approx_call(node):
@@ -1697,6 +1711,11 @@ def _classify_compare_op(
             _strip_identity(comparators[0], text)
         ):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        # An equality with `ANY` holds for every value (D-201). `!=` with it
+        # never holds, which is no weakening, so it keeps its reading.
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and (
+                _is_mock_any(left) or _is_mock_any(comparators[0])):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
         if isinstance(subject, ast.Call) and _dotted(subject.func) == "len":
             return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
@@ -1926,6 +1945,12 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             _strip_identity(expect_node, text)
         ):
             form, level = "tautology", S.TAUTOLOGY
+    # `self.assertEqual(x, ANY)` holds for every x, as `x == ANY` does
+    # (D-201). Only assertEqual: the typed variants check an operand's type
+    # first, and assertCountEqual iterates it.
+    if (form == "compare_eq" and positive and method == "assertEqual"
+            and (_is_mock_any(subject_node) or _is_mock_any(expect_node))):
+        form, level = "tautology", S.TAUTOLOGY
     return _Classified(
         form,
         level,
