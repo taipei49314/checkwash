@@ -294,6 +294,8 @@ class _Offsets:
         # conversions (#226), asked lazily as the two above are.
         self.module_bindings: tuple | None = None
         self.conversion_names: dict[str, str] | None = None
+        # The spellings that name unittest.mock.ANY in this file (D-201).
+        self.mock_any_names: frozenset[str] | None = None
 
     def _char_col(self, lineno: int, col: int) -> int:
         """Translate CPython's UTF-8 *byte* column into a character column.
@@ -412,6 +414,284 @@ def _literal_repr(node: ast.AST, text: str, *, fold_string_methods=True, convers
 
 def _is_approx_call(node: ast.AST) -> bool:
     return isinstance(node, ast.Call) and _dotted(node.func) in ("pytest.approx", "approx")
+
+
+# `unittest.mock.ANY` equals every value, so an equality with it as a whole
+# operand passes whatever the other side is, however exact it looks.
+# `assert total() == ANY` was read as an expectation changed to another name,
+# which D9's DEPENDENCY_DRIFT holds at warn beside any version bump in a
+# manifest (D-201). Read through the file's imports, so a project's own
+# `ANY` constant is not mock's and an alias is: `from unittest.mock import
+# ANY as anything`, `from unittest import mock as um` -> `um.ANY`. Only a
+# whole operand: in `{"id": ANY, "name": "x"}` the other entries are still
+# checked.
+
+
+_MOCK_MODULES = frozenset({"unittest.mock", "mock"})
+
+
+def _mock_any_dotted(tree: ast.AST | None) -> frozenset[str]:
+    """The dotted spellings of unittest.mock.ANY a module's imports allow, wherever they are.
+
+    pytest-mock's fixture attribute, `mocker.ANY`, is read by name. Without
+    a parsed module (an oracle helper's own offsets) the plain module
+    spellings are. A module's name is read whatever else the file calls by
+    it, since a local mock called `mock` is common and its `.ANY` compared in
+    an assertion is not.
+    """
+    names = {"mocker.ANY"}
+    if tree is None:
+        return frozenset(names | {"mock.ANY", "unittest.mock.ANY"})
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module == "unittest":
+            names.update((alias.asname or "mock") + ".ANY" for alias in node.names if alias.name == "mock")
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "mock":
+                    names.add((alias.asname or "mock") + ".ANY")
+                elif alias.name == "unittest.mock":
+                    names.add(alias.asname + ".ANY" if alias.asname else "unittest.mock.ANY")
+                elif alias.name == "unittest":
+                    names.add((alias.asname or "unittest") + ".mock.ANY")
+    return frozenset(names)
+
+
+def _scope_names(stmts, dotted: frozenset[str], outer: dict[str, set[str]] | None = None,
+                 names: dict[str, set[str]] | None = None) -> dict[str, set[str]]:
+    """The names one scope binds, each "mock" (bound to mock's ANY) or "other" (D-201).
+
+    A bare `ANY` means whatever the innermost scope binding it binds it to,
+    as Python reads it: `from unittest.mock import ANY` (or `*`), an alias
+    of it, or an assignment whose value is mock's ANY is "mock"; any other
+    binding, an import from elsewhere included, is "other". Nested functions
+    and classes are scopes of their own, and a comprehension's targets are
+    its own. Walked with an explicit stack in source order: a megabyte-deep
+    expression must not recurse.
+    """
+    names = {} if names is None else names
+    outer = outer or {}
+
+    def bind(name: str, kind: str) -> None:
+        names.setdefault(name, set()).add(kind)
+
+    def is_any(node: ast.AST | None) -> bool:
+        if isinstance(node, ast.Name):
+            return (names.get(node.id) or outer.get(node.id)) == {"mock"}
+        return node is not None and _dotted(node) in dotted
+
+    def bind_target(target: ast.AST, kind: str) -> None:
+        targets = [(target, kind)]
+        while targets:
+            node, how = targets.pop()
+            if isinstance(node, ast.Name):
+                bind(node.id, how)
+            elif isinstance(node, (ast.Tuple, ast.List)):
+                targets.extend((elt, "other") for elt in node.elts)
+            elif isinstance(node, ast.Starred):
+                targets.append((node.value, "other"))
+
+    stack = list(reversed(list(stmts)))
+    while stack:
+        node = stack.pop()
+        later: list[ast.AST] = []
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            bind(node.name, "other")
+            later = [*node.decorator_list, *node.args.defaults, *(d for d in node.args.kw_defaults if d is not None)]
+        elif isinstance(node, ast.ClassDef):
+            bind(node.name, "other")
+            later = [*node.decorator_list, *node.bases, *(k.value for k in node.keywords)]
+        elif isinstance(node, ast.Lambda):
+            later = [*node.args.defaults, *(d for d in node.args.kw_defaults if d is not None)]
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            later = [node.generators[0].iter] if node.generators else []
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                bind(alias.asname or alias.name.split(".", 1)[0], "other")
+        elif isinstance(node, ast.ImportFrom):
+            mock = node.level == 0 and node.module in _MOCK_MODULES
+            for alias in node.names:
+                if alias.name == "*":
+                    if mock:
+                        bind("ANY", "mock")
+                    continue
+                bind(alias.asname or alias.name, "mock" if mock and alias.name == "ANY" else "other")
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            kind = "mock" if is_any(node.value) else "other"
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target]):
+                bind_target(target, kind)
+            later = [node.value] if node.value is not None else []
+        elif isinstance(node, (ast.AugAssign, ast.NamedExpr)):
+            bind_target(node.target, "other")
+            later = [node.value]
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            bind_target(node.target, "other")
+            later = [node.iter, *node.body, *node.orelse]
+        elif isinstance(node, ast.withitem):
+            if node.optional_vars is not None:
+                bind_target(node.optional_vars, "other")
+            later = [node.context_expr]
+        else:
+            if isinstance(node, ast.ExceptHandler) and node.name:
+                bind(node.name, "other")
+            elif isinstance(node, (ast.MatchAs, ast.MatchStar)) and node.name:
+                bind(node.name, "other")
+            elif isinstance(node, ast.MatchMapping) and node.rest:
+                bind(node.rest, "other")
+            later = list(ast.iter_child_nodes(node))
+        stack.extend(reversed(later))
+    return names
+
+
+def _any_scopes(tree: ast.AST | None) -> tuple:
+    """The dotted spellings, the module's own bindings, each function's span and
+    bindings, and every name some scope binds to mock's ANY."""
+    dotted = _mock_any_dotted(tree)
+    if tree is None:
+        return dotted, {}, [], frozenset()
+    module = _scope_names(getattr(tree, "body", []), dotted)
+    functions = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not hasattr(node, "end_lineno"):
+            continue
+        names: dict[str, set[str]] = {}
+        args = node.args
+        positional = [*args.posonlyargs, *args.args]
+        defaults = [None] * (len(positional) - len(args.defaults)) + list(args.defaults)
+        for arg, default in [*zip(positional, defaults), *zip(args.kwonlyargs, args.kw_defaults)]:
+            # A default is evaluated where the function is defined; the
+            # module's reading is the one checked.
+            mock = default is not None and (
+                module.get(default.id) == {"mock"} if isinstance(default, ast.Name) else _dotted(default) in dotted)
+            names.setdefault(arg.arg, set()).add("mock" if mock else "other")
+        for arg in (args.vararg, args.kwarg):
+            if arg is not None:
+                names.setdefault(arg.arg, set()).add("other")
+        _scope_names(node.body, dotted, module, names)
+        functions.append(((node.lineno, node.col_offset), (node.end_lineno, node.end_col_offset), names))
+    bound = frozenset(name for scope in (module, *(f[2] for f in functions))
+                      for name, kinds in scope.items() if "mock" in kinds)
+    return dotted, module, functions, bound
+
+
+def _mock_any_scopes(text) -> tuple:
+    """`_any_scopes` for this file, worked out once per file."""
+    if getattr(text, "mock_any_scopes", None) is None:
+        scopes = _any_scopes(getattr(text, "tree", None))
+        try:
+            text.mock_any_scopes = scopes
+        except AttributeError:
+            return scopes
+    return text.mock_any_scopes
+
+
+def _is_mock_any(node: ast.AST | None, text) -> bool:
+    """Is this operand mock's ANY? (D-201)
+
+    A dotted spelling is read through the file's imports. A bare name is
+    read as Python reads it: the innermost function enclosing it that binds
+    the name decides, then the module, so a parameter or loop variable
+    called `ANY` in another function changes nothing here, and `ANY = 6` in
+    the module or in this function makes it a value.
+    """
+    if node is None:
+        return False
+    dotted, module, functions, bound = _mock_any_scopes(text)
+    if not isinstance(node, ast.Name):
+        return _dotted(node) in dotted
+    if node.id not in bound:
+        return False
+    if not hasattr(node, "lineno"):
+        return module.get(node.id) == {"mock"}
+    where = (node.lineno, node.col_offset)
+    enclosing = sorted((f for f in functions if f[0] <= where < f[1]), key=lambda f: f[0], reverse=True)
+    for _start, _end, names in enclosing:
+        if node.id in names:
+            return names[node.id] == {"mock"}
+    return module.get(node.id) == {"mock"}
+
+
+def _only_any(node: ast.AST | None, text, depth: int = 0) -> bool:
+    """A list, tuple or dict every checked entry of which is mock's ANY (D-201).
+
+    `[ANY, ANY, ANY]` or `{"total": ANY}` checks only the shape: a length,
+    or the keys. So do the nested displays (`{"a": {"b": ANY}}`), a
+    repetition (`[ANY] * 3`), a comprehension of ANY (`[ANY for _ in
+    range(3)]`, `{k: ANY for k in keys}`) and `dict.fromkeys(keys, ANY)`. A
+    set display is not one: its entries are hashed, not compared.
+    """
+    if depth > 32:
+        return False
+    deeper = depth + 1
+    if isinstance(node, (ast.List, ast.Tuple)):
+        return bool(node.elts) and all(_any_like(e, text, deeper) for e in node.elts)
+    if isinstance(node, ast.Dict):
+        return bool(node.values) and None not in node.keys and all(_any_like(v, text, deeper) for v in node.values)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+        return _only_any(node.left, text, deeper) or _only_any(node.right, text, deeper)
+    if isinstance(node, ast.ListComp):
+        return _any_like(node.elt, text, deeper)
+    if isinstance(node, ast.DictComp):
+        return _any_like(node.value, text, deeper)
+    if isinstance(node, ast.Call) and _dotted(node.func) == "dict.fromkeys" and len(node.args) == 2:
+        return _any_like(node.args[1], text, deeper)
+    if (isinstance(node, ast.Call) and _dotted(node.func) == "dict" and not node.args and node.keywords
+            and all(k.arg is not None and _any_like(k.value, text, deeper) for k in node.keywords)):
+        return True
+    return False
+
+
+def _shaped_by(display: ast.AST | None, subject: ast.AST | None, text) -> bool:
+    """An all-ANY display whose length or keys come from the subject itself (D-201).
+
+    `[ANY] * len(items())` against `items()`, or `dict.fromkeys(record(),
+    ANY)` against `record()`, has the subject's own shape, so the equality
+    holds whatever the subject is.
+    """
+    if display is None or subject is None:
+        return False
+    same = _norm(text.seg(subject) or "")
+    if isinstance(display, ast.BinOp) and isinstance(display.op, ast.Mult):
+        for one, count in ((display.left, display.right), (display.right, display.left)):
+            if (isinstance(one, (ast.List, ast.Tuple)) and len(one.elts) == 1 and _any_like(one.elts[0], text)
+                    and isinstance(count, ast.Call) and _dotted(count.func) == "len" and len(count.args) == 1
+                    and same and _norm(text.seg(count.args[0]) or "") == same):
+                return True
+    if (isinstance(display, ast.Call) and _dotted(display.func) == "dict.fromkeys" and len(display.args) == 2
+            and _any_like(display.args[1], text) and same and _norm(text.seg(display.args[0]) or "") == same):
+        return True
+    return False
+
+
+def _any_like(node: ast.AST | None, text, depth: int = 0) -> bool:
+    """Mock's ANY, or a display of nothing but it: compares as anything of its shape."""
+    return _is_mock_any(node, text) or _only_any(node, text, depth)
+
+
+def _elementwise_unchecked(left: ast.AST | None, right: ast.AST | None, text) -> bool:
+    """Two displays of one kind and length no position of which is checked (D-201).
+
+    `(total(), 0) == (ANY, 0)` and `(total(), ANY) == (ANY, 6)` hold for
+    every value: each position has ANY on one side, or the same literal on
+    both.
+    """
+    if not (isinstance(left, (ast.List, ast.Tuple)) and type(left) is type(right)
+            and len(left.elts) == len(right.elts) and left.elts):
+        return False
+    for a, b in zip(left.elts, right.elts):
+        if _any_like(a, text) or _any_like(b, text):
+            continue
+        if _is_literal(a) and _is_literal(b) and _norm(text.seg(a) or "") == _norm(text.seg(b) or ""):
+            continue
+        return False
+    return True
+
+
+def _holds_any(node: ast.AST | None, text) -> bool:
+    """A list or tuple display with mock's ANY as an entry: `x in [ANY]` holds for every x.
+
+    Not a set display: ANY cannot be hashed, so `{ANY}` raises.
+    """
+    return isinstance(node, (ast.List, ast.Tuple)) and any(_is_mock_any(e, text) for e in node.elts)
 
 
 def _operand_approx_call(node: ast.AST) -> ast.Call | None:
@@ -801,6 +1081,17 @@ def _unevaluated(node: ast.AST | None, text) -> str | None:
     return source if len(source) <= 4096 else None
 
 
+def _any_shape(node: ast.AST | None) -> str | None:
+    """An all-ANY display's source, as the expectation it states: its length or its keys (D-201)."""
+    if node is None:
+        return None
+    try:
+        source = ast.unparse(node)
+    except (ValueError, RecursionError):
+        return None
+    return source if len(source) <= 4096 else None
+
+
 def _tolerance_classified(call: ast.Call, name: str, text, positive: bool = True) -> _Classified:
     """A tolerance call (#222) as the approximate comparison it states.
 
@@ -979,6 +1270,12 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # value, so a rewrite into it passed and its cleanup back into
         # `approx(100.0)` read as a call replaced by a literal (#462).
         expected = _approx_expected(approx)
+        # `approx(ANY)` compares as ANY does: pytest hands a value it cannot
+        # treat as a number to `==` (D-201).
+        if positive and isinstance(op, ast.Eq) and _is_mock_any(expected, text):
+            return _Classified("tautology", S.TAUTOLOGY)
+        if positive and isinstance(op, ast.Eq) and _only_any(expected, text):
+            return _Classified("type_shape", S.TYPE_SHAPE)
         return _Classified(
             "approx",
             S.APPROX,
@@ -999,6 +1296,12 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         all_literal = _is_literal(left) and all(_is_literal(c) for c in comparators)
         if all_literal:
             return _Classified("tautology", S.TAUTOLOGY)
+        # A chain of `==` each link of which has `ANY` on one side holds for
+        # every value: `total() == ANY == 6` (D-201).
+        chain = [left, *comparators]
+        if len(test.ops) > 1 and all(isinstance(o, ast.Eq) for o in test.ops) and all(
+                _is_mock_any(chain[i], text) or _is_mock_any(chain[i + 1], text) for i in range(len(test.ops))):
+            return _Classified("tautology", S.TAUTOLOGY)
         op = test.ops[0]
         # Chained comparisons (`0 < x < 10`): the last comparator carries the
         # upper expectation, so consider every comparator, not just the first.
@@ -1008,8 +1311,10 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         # bypass); prefer whichever side is the literal.
         subject_node = left
         single = len(test.ops) == 1
-        if (comparators and (_is_literal(left) or single and literal_string_replace(left) is not None)
-                and not _is_literal(comparators[-1])
+        # ANY on the left is the expectation, as a literal is (D-201).
+        if (comparators and (_is_literal(left) or single and _any_like(left, text)
+                             or single and literal_string_replace(left) is not None)
+                and not (_is_literal(comparators[-1]) or single and _any_like(comparators[-1], text))
                 and (not single or literal_string_replace(comparators[-1]) is None)):
             expect_node, subject_node = left, comparators[-1]
         # A chained comparison is a range oracle: the non-literal operand is
@@ -1052,6 +1357,10 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
             c.operand_source = _operand_source(expect_node, text)
         if single and c.form in _EXPECTED_FORMS:
             c.unevaluated_expected = _unevaluated(expect_node, text)
+        elif single and c.form == "type_shape" and _only_any(expect_node, text):
+            # `[ANY, ANY, ANY]` -> `[ANY]` changes the length it checks
+            # (D-201); main read the display as an expectation and saw that.
+            c.unevaluated_expected = _any_shape(expect_node)
         # Which side is the subject and which the expectation was decided
         # above, including the `assert 3 == calc()` flip, so the name sets come
         # from those nodes rather than being re-derived. EXPECTED_VALUE_DERIVED
@@ -1059,6 +1368,14 @@ def _classify_assert_expr(test: ast.AST, text) -> _Classified:
         c.left_names = _referenced_names(subject_node)
         c.right_names = _referenced_names(expect_node)
         return c
+    if (isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not) and isinstance(test.operand, ast.Compare)
+            and len(test.operand.ops) == 1 and isinstance(test.operand.ops[0], ast.NotEq)):
+        # `assert not (x != ANY)` is `assert x == ANY` (D-201).
+        pair = (test.operand.left, test.operand.comparators[0])
+        if any(_is_mock_any(n, text) for n in pair):
+            return _Classified("tautology", S.TAUTOLOGY)
+        if any(_only_any(n, text) for n in pair):
+            return _Classified("type_shape", S.TYPE_SHAPE)
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         # `assert not x` is the negated form of `assert x`. A negated tolerance
         # call (#222) passes when the values are far apart, so its tolerance
@@ -1697,6 +2014,19 @@ def _classify_compare_op(
             _strip_identity(comparators[0], text)
         ):
             return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        # An equality with `ANY` holds for every value (D-201). `!=` with it
+        # never holds, which is no weakening, so it keeps its reading. A
+        # display of nothing but `ANY` checks only its shape.
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and (
+                _is_mock_any(left, text) or _is_mock_any(comparators[0], text)):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and (
+                _elementwise_unchecked(left, comparators[0], text)
+                or _shaped_by(comparators[0], left, text) or _shaped_by(left, comparators[0], text)):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if isinstance(op, ast.Eq) and len(comparators) == 1 and (
+                _only_any(left, text) or _only_any(comparators[0], text)):
+            return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if isinstance(subject, ast.Call) and _dotted(subject.func) == "len":
             return _Classified("type_shape", S.TYPE_SHAPE, left_text, right_lit, right_val)
         if _is_container_literal(left) or any(_is_container_literal(c) for c in comparators):
@@ -1704,6 +2034,13 @@ def _classify_compare_op(
         return _Classified("compare_eq", S.EXACT_VALUE, left_text, right_lit, right_val, positive=pos)
     if isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE)):
         return _Classified("compare_ord", S.BOUND, left_text, right_lit, right_val, positive=pos)
+    if isinstance(op, ast.In) and len(comparators) == 1:
+        # `x in [ANY]` holds for every x, and `ANY in items()` only says
+        # that items() is not empty (D-201).
+        if _holds_any(comparators[0], text):
+            return _Classified("tautology", S.TAUTOLOGY, left_text, right_lit, right_val)
+        if _is_mock_any(left, text):
+            return _Classified("truthy", S.TRUTHY, left_text)
     if isinstance(op, (ast.In, ast.NotIn)):
         return _Classified("membership", S.PATTERN, left_text, right_lit, right_val, positive=pos)
     if isinstance(op, (ast.Is, ast.IsNot)):
@@ -1870,8 +2207,10 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         subject_node = args[0]
         if len(args) > 1:
             expect_node = args[1]
-            # Same literal-side flip as bare assert: `assertEqual(3, calc())`.
-            if _is_literal(args[0]) and not _is_literal(args[1]):
+            # Same literal-side flip as bare assert: `assertEqual(3, calc())`,
+            # and `assertEqual(ANY, calc())` (D-201).
+            if ((_is_literal(args[0]) or _any_like(args[0], text))
+                    and not (_is_literal(args[1]) or _any_like(args[1], text))):
                 expect_node, subject_node = args[0], args[1]
         left_text = text.seg(subject_node) if subject_node is not None else None
         if expect_node is not None:
@@ -1926,6 +2265,33 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
             _strip_identity(expect_node, text)
         ):
             form, level = "tautology", S.TAUTOLOGY
+    # `self.assertEqual(x, ANY)` holds for every x, as `x == ANY` does, and so
+    # does `assertAlmostEqual(x, ANY)`, which returns as soon as the two
+    # compare equal (D-201). Whatever the subject reads as: a `len(x)`
+    # subject has already made the pair TYPE_SHAPE. Not the typed variants,
+    # which check an operand's type first, nor assertCountEqual, which
+    # iterates it, nor the negated methods, which can then never pass.
+    if (positive and method in ("assertEqual", "assertAlmostEqual")
+            and (_is_mock_any(subject_node, text) or _is_mock_any(expect_node, text))):
+        form, level = "tautology", S.TAUTOLOGY
+        epsilon = epsilon_kind = None
+    elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertSequenceEqual",
+                                  "assertDictEqual")
+            and (_elementwise_unchecked(subject_node, expect_node, text) or _shaped_by(expect_node, subject_node, text)
+                 or _shaped_by(subject_node, expect_node, text))):
+        form, level = "tautology", S.TAUTOLOGY
+    elif (positive and method in ("assertEqual", "assertListEqual", "assertTupleEqual", "assertDictEqual",
+                                  "assertSequenceEqual", "assertCountEqual")
+            and (_only_any(subject_node, text) or _only_any(expect_node, text))):
+        # assertCountEqual pairs each entry with one that compares equal, and
+        # ANY compares equal to every entry, so only the length is left.
+        form, level = "type_shape", S.TYPE_SHAPE
+    elif method == "assertIn" and len(args) > 1 and _holds_any(args[1], text):
+        # `assertIn(x, [ANY])` holds for every x; `assertIn(ANY, items())`
+        # says only that items() is not empty (D-201).
+        form, level = "tautology", S.TAUTOLOGY
+    elif method == "assertIn" and len(args) > 1 and _is_mock_any(args[0], text):
+        form, level = "truthy", S.TRUTHY
     return _Classified(
         form,
         level,
@@ -1944,7 +2310,9 @@ def _classify_unittest_call(node: ast.Call, text: str) -> _Classified | None:
         _is_trivial_subject(subject_node)
         and (expect_node is None or _is_trivial_subject(expect_node)),
         *_unittest_bound(method, form, args, subject_node, expect_node, text),
-        unevaluated_expected=_unevaluated(expect_node, text) if form in _EXPECTED_FORMS else None,
+        unevaluated_expected=(_unevaluated(expect_node, text) if form in _EXPECTED_FORMS
+                              else _any_shape(expect_node) if form == "type_shape" and _only_any(expect_node, text)
+                              else None),
     )
 
 

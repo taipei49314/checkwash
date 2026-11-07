@@ -1,0 +1,27 @@
+=== meta ===
+rule: TEST_DISABLED
+title: `skipif(platform.python_implementation() == "PyPy")` provably runs on CPython: compat credit kept (D-201)
+origin: D-201 adds CPython and PyPy to D6's environment matrix, since a single test's gate must now provably run somewhere and this condition was an unknown before
+=== before: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import platform
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(platform.python_implementation() == "PyPy", reason="relies on CPython reference counting")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

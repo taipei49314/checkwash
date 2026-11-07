@@ -1,0 +1,29 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: a name the test binds to ANY is ANY (D-201)
+origin: D-201 round-3 review (code lens): reading bare names through Python's scopes reads `wild = ANY` too; main held it at warn beside a bump
+=== before: requirements.txt ===
+requests==2.31.0
+=== after: requirements.txt ===
+requests==2.32.3
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert total(3) == 6
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    wild = ANY
+    assert total(3) == wild
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

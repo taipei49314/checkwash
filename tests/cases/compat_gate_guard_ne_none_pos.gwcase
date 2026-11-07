@@ -1,0 +1,30 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a skip guard rewritten to `sys.version_info != None` now always fires (D-201)
+origin: D-201 round-3 review (code lens): the release raised on `!= None`, so the always-true guard read as unknown; main blocks it
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if sys.version_info < (3, 12):
+        pytest.skip("r")
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    if sys.version_info != None:
+        pytest.skip("r")
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

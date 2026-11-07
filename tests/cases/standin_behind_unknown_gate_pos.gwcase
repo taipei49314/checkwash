@@ -1,0 +1,40 @@
+=== meta ===
+rule: TEST_PATCHES_SUBJECT
+title: a stand-in installed in a test whose gate has an unknown part is still found (D-201 review)
+origin: D-201 review: the strict reading made the test's liveness false and hid the installation; liveness keeps the old reading
+=== before: tests/test_total.py ===
+import importlib.util
+import sys
+
+import pytest
+
+import app.billing as billing
+
+HAS_NUMPY = importlib.util.find_spec("numpy") is not None
+
+
+@pytest.mark.skipif(sys.platform == "win32" or not HAS_NUMPY, reason="needs numpy")
+def test_total():
+    assert billing.total() == 3
+=== after: tests/test_total.py ===
+import importlib.util
+import sys
+
+import pytest
+
+import app.billing as billing
+
+HAS_NUMPY = importlib.util.find_spec("numpy") is not None
+
+
+@pytest.mark.skipif(sys.platform == "win32" or not HAS_NUMPY, reason="needs numpy")
+def test_total():
+    billing.total = lambda: 3
+    assert billing.total() == 3
+=== head: app/__init__.py ===
+
+=== head: app/billing.py ===
+def total():
+    return 1
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

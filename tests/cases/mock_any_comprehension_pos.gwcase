@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: a comprehension of ANY is a list of nothing but ANY (D-201)
+origin: D-201 round-2 review (code lens): `[ANY for _ in range(3)]` read as a mild weakening
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert items() == [1, 2, 3]
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert items() == [ANY for _ in range(3)]
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

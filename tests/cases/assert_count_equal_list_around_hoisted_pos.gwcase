@@ -1,0 +1,27 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: `list(result)` -> `result` with `result = items()` is the same subject (D-201)
+origin: D-201 round-2 review (code lens): the name was resolved before list() was taken off
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        result = items()
+        self.assertEqual(list(result), [1, 2, 3])
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        result = items()
+        self.assertCountEqual(result, [1, 2, 3])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

@@ -1,0 +1,30 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a test its gates already kept from every Python the matrix holds gains a Windows xfail with its credit (D-201)
+origin: D-201 round-2 review: pytest 3900879a5c (outside both samples) blocked; nothing it adds changes where a Python 2 only test runs
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.version_info[0] >= 3, reason="Python 2 only")
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.version_info[0] >= 3, reason="Python 2 only")
+def test_total():
+    if getattr(sys, "pypy_version_info", ())[:2] == (5, 9) and sys.platform.startswith("win"):
+        pytest.xfail("r")
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

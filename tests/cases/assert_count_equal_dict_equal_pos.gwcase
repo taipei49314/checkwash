@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: assertDictEqual -> assertCountEqual stops checking a dict's values (D-201)
+origin: D-201 round-2 review (code lens): assertDictEqual was not read as an ordered equality; main gives no finding
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertDictEqual(record(), {'a': 1})
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertCountEqual(record(), {'a': 1})
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

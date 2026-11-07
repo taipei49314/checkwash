@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `not (x != ANY)` is `x == ANY` (D-201)
+origin: D-201 round-2 review (text lens): the rewrite gave no finding at all; main too
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert total(3) == 6
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert not (total(3) != ANY)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

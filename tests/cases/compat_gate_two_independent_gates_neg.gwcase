@@ -1,0 +1,29 @@
+=== meta ===
+rule: TEST_DISABLED
+title: a version gate added beside a platform gate leaves environments where the test runs (D-201's boundary)
+origin: D-201 judges every interpreter/OS gate on the unit together
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX only")
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="needs 3.12")
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX only")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "warn", "deescalators": ["COMPAT_GATE"]}]

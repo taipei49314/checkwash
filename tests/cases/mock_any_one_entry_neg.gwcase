@@ -1,0 +1,31 @@
+=== meta ===
+rule: ASSERT_WEAKENED
+title: `ANY` as one entry of a dict leaves the other entries checked: a mild weakening, held at warn, as before D-201
+origin: D-201 reads `ANY` as a tautology only as a whole operand; here the ids became generated values in the same change
+=== before: app.py ===
+def order(total):
+    return {"id": 7, "total": total * 2}
+=== after: app.py ===
+import itertools
+
+_ids = itertools.count(1)
+
+
+def order(total):
+    return {"id": next(_ids), "total": total * 2}
+=== before: tests/test_orders.py ===
+from app import order
+
+
+def test_order():
+    assert order(3) == {"id": 7, "total": 6}
+=== after: tests/test_orders.py ===
+from unittest.mock import ANY
+
+from app import order
+
+
+def test_order():
+    assert order(3) == {"id": ANY, "total": 6}
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "warn", "deescalators": ["MILD_WEAKENING"]}, {"rule": "EXPECTATION_DEFINITION_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

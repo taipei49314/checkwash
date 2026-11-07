@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `== ANY` beside an unrelated version bump is a tautology, not a changed expectation (D-201)
+origin: design 2 for 0.12, section 7, a red-team toy repository on LAPTOP-01AGNPJU, rebuilt on main 54113c06: read as EXPECTATION_DEFINITION_CHANGED, D9 DEPENDENCY_DRIFT held it at warn with no production change, and the check passed
+=== before: requirements.txt ===
+requests==2.31.0
+=== after: requirements.txt ===
+requests==2.32.3
+=== before: tests/test_calc.py ===
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+from unittest.mock import ANY
+
+from app import total
+
+
+def test_total():
+    assert total(3) == ANY
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

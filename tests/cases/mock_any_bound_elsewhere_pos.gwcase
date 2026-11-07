@@ -1,0 +1,35 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: a parameter called ANY in another function does not make this test's ANY a value (D-201)
+origin: D-201 round-3 review (code lens): any binding of the name anywhere in the file turned the reading off, so a dummy function hid the rewrite
+=== before: tests/test_items.py ===
+from unittest.mock import ANY
+import unittest
+
+from app import items, record, total
+
+
+def _describe(ANY=None):
+    return ANY
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual(total(3), 6)
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import unittest
+
+from app import items, record, total
+
+
+def _describe(ANY=None):
+    return ANY
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual(total(3), ANY)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

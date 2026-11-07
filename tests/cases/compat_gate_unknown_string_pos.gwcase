@@ -1,0 +1,28 @@
+=== meta ===
+bypass: 44
+rule: TEST_DISABLED
+title: a string condition with an always-true version check `and` an unknown call earns no compat credit (D-201)
+origin: D-201 review: only the expression spelling was pinned
+=== before: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+def test_total():
+    assert total(3) == 6
+=== after: tests/test_calc.py ===
+import sys
+
+import pytest
+
+from app import total
+
+
+@pytest.mark.skipif("sys.version_info >= (3, 0) and bool(sys.modules)", reason="flaky")
+def test_total():
+    assert total(3) == 6
+=== expect ===
+[{"rule": "TEST_DISABLED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

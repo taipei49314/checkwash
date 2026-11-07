@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `ANY in items()` says only that items() is not empty (D-201)
+origin: D-201 round-2 review (code lens): `3 in items()` -> `ANY in items()` gave no finding; main too
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert 3 in items()
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert ANY in items()
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

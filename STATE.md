@@ -1,6 +1,81 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-06 (0.12 candidate: from v0.12.0 the release tag is to point at the release's Action commit A and name the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, approved and not merged; the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-07 (0.12 candidate: three holes beside D-191's residual close, D-201, not merged: an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-07: three holes beside D-191's residual close (D-201)
+
+#589 merged as `54113c063e0b17ab7db94b4a30036a381cb5a0e5` at
+2026-11-06T15:29:34Z, with parents `af0c5651` and `8fd9d11e` and the tree its
+receipt verified: D-200, the section below. Claude asked
+「要用 merge commit 合併 #589 嗎？」 and wrote the buttons; Nelson answered
+「核准合併 #589」 at 15:29:10Z. Its receipt
+`evidence/pr589-779230bdc9fd-20261106` (`58b44b6f`) was verified by run
+42242971385, which set the four required checks.
+
+D-199's design listed in its section 7 three holes beside D-191's residual
+and recommended closing them in 0.12. After #589 merged, Claude asked
+whether to close them before the 0.12.0 release, and at 2026-11-06T15:33:38Z
+Nelson chose the button 「先補三個缺口」 (close the three holes first), which Claude
+wrote. D-201 quotes the question.
+
+- An equality with `unittest.mock.ANY` as a whole operand (`== ANY`,
+  `assertEqual(x, ANY)`, `assertAlmostEqual(x, ANY)`, a chain of `==` each
+  link of which has it, `not (x != ANY)`, `approx(ANY)`), membership in a
+  display holding it and a padded tuple that checks no position are
+  TAUTOLOGY; a display of nothing but `ANY` (nested, repeated, generated) is
+  TYPE_SHAPE and keeps its source as its expectation; `ANY in x` is TRUTHY.
+  Rewriting an expected value into one is `ASSERT_WEAKENED`, which takes no
+  `DEPENDENCY_DRIFT` and, in Python, no repair evidence. `ANY` is read
+  through the file's imports, a bare name through Python's scopes. Open:
+  `ANY` through a parametrize column, a fixture, another module's constant
+  or a call, a comparison wrapped in another, mock's call objects and
+  `assertTrue(x == ANY)` (THREATMODEL row 182).
+- D6 grants `COMPAT_GATE` to a single test's skip only when its condition is
+  provably false in some environment of the matrix, read exactly for the
+  interpreter, machine and architecture, and the gates a change adds leave
+  one together with the gates the test had (`unittest.skipIf`, `skipUnless`
+  and a strict xfail take part; a test its gates already kept from every
+  environment is not asked). The matrix holds CPython 3.11 to 3.14 and PyPy
+  3.11 and each platform's two machines, with the micro release unknown;
+  `in` asks every entry. A suite-level collection control and liveness
+  (`unit_is_live`) keep the old reading.
+- `assertEqual` -> `assertCountEqual` (and the other order-sensitive
+  unittest equalities, `assertMultiLineEqual` and `assertDictEqual`
+  included) on the same subject, followed through the unit's bindings with
+  copies into a list or tuple taken off, is `SUBJECT_NORMALIZED`; a set
+  operand gives nothing, a dict one says it compares only keys.
+- SPEC §3, §4 and §5, THREATMODEL item 6, rows 14, 44, 55 and 57 and a new
+  row 182, and KNOWN-ISSUES-next's 0.12 section.
+- Review: five Claude sub-agents reviewed `e67f6fd6`; two Claude sub-agents
+  and a Gemini 4 Argon run reviewed `2a05a379`; one Claude sub-agent
+  reviewed `8747e88c`. Each round's fixes are in D-201's review paragraph,
+  and the verdicts on each finding in the pull request. The third round's
+  fixes (`262cbe27`, and `bffc1f55`, which walks the new scope reading
+  iteratively for deep input) were not reviewed again; the 218 toy cases of
+  all three rounds were run on them.
+- Cost: on D-088 2 of 1,263 commits move from pass to block (scrapy
+  583df9f7d0, rich 655b5210cb), on R29 1 of 3,600 (rich 655b5210cb), and
+  outside both samples 6 of 1,273 skip-touching commits (pytest's 2007–2013
+  history); nothing else changes on the two samples (D-201's cost
+  paragraph). No existing fixture or unit-test expectation moves, and
+  `gating.py` does not change.
+
+New: `tests/test_d201_section7_holes.py` (208 tests) and 77 fixtures; the
+documented count is 22854. On main `54113c06`, 54 of the 57 new `_pos`
+fixtures fail: the holes, and `compat_gate_old_pythons_only_pos`, a cost
+D-201 states. Two of them, `mock_any_count_changed_pos` and
+`mock_any_keys_changed_pos`, block on main too, as another rule. The other
+three, `project_any_constant_is_not_mock_pos`,
+`standin_behind_unknown_gate_pos` and `compat_gate_guard_ne_none_pos`, guard
+regressions first found in a review of this branch, which main never had.
+All 20 `_neg` fixtures pass on main.
+
+Status: branch `claude/d201-section7-gaps-20261107` from main `54113c06`,
+not merged. Nelson approved D-201's text with SPEC, THREATMODEL and the D6
+policy (L1 of #591) and the labels of the 77 new fixtures (L2) at
+2026-11-07T03:35:09Z with the button 「核可 L1 和 L2」 (approve L1 and L2), which
+Claude wrote; D-201 quotes the question. Merging waits for his separate
+approval.
 
 ## 2026-11-06: from v0.12.0 the release tag points at the Action commit (D-200)
 

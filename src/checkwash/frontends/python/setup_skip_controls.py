@@ -821,7 +821,13 @@ def _value_names(node):
                 visit(func.value)
             elif not isinstance(func, ast.Name):
                 visit(func)
-            for child in (*node.args, *(keyword.value for keyword in node.keywords)):
+            args = list(node.args)
+            # `hasattr(sys, "pypy_version_info")` names the module itself, which
+            # D6 reads by its spelling, as it reads `sys.platform` (D-201).
+            if (isinstance(func, ast.Name) and func.id == "hasattr" and args
+                    and isinstance(args[0], ast.Name) and args[0].id == "sys"):
+                args = args[1:]
+            for child in (*args, *(keyword.value for keyword in node.keywords)):
                 visit(child)
             return
         if isinstance(node, ast.Attribute):

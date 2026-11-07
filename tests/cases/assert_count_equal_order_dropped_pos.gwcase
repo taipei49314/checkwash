@@ -1,0 +1,25 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: `assertEqual` -> `assertCountEqual` on the same operands stops checking order, as `sorted()` around the subject does (D-201)
+origin: design 2 for 0.12, section 7, a red-team toy repository on LAPTOP-01AGNPJU, rebuilt on main 54113c06: one form, one strength and no wrapper, so no finding at all
+=== before: tests/test_rank.py ===
+import unittest
+
+from app import ranked
+
+
+class RankedTest(unittest.TestCase):
+    def test_ranked(self):
+        self.assertEqual(ranked([3, 1, 2]), [3, 2, 1])
+=== after: tests/test_rank.py ===
+import unittest
+
+from app import ranked
+
+
+class RankedTest(unittest.TestCase):
+    def test_ranked(self):
+        self.assertCountEqual(ranked([3, 1, 2]), [3, 2, 1])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

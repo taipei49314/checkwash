@@ -1,0 +1,26 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `assertAlmostEqual(x, ANY)` returns as soon as the two compare equal, so it always passes (D-201 review)
+origin: D-201 review: unittest checks `first == second` before any tolerance; it gave no finding
+=== before: tests/test_calc.py ===
+import unittest
+
+from app import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertAlmostEqual(total(3), 6.0)
+=== after: tests/test_calc.py ===
+import unittest
+from unittest.mock import ANY
+
+from app import total
+
+
+class TotalTest(unittest.TestCase):
+    def test_total(self):
+        self.assertAlmostEqual(total(3), ANY)
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]

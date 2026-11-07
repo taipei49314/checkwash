@@ -1,0 +1,31 @@
+=== meta ===
+bypass: 14
+rule: SUBJECT_NORMALIZED
+title: the expected list reordered with the rewrite, beside a production reorder, still drops order (D-201)
+origin: D-201 round-2 review (code and text lenses): `[3, 2, 1]` made the operands differ, and only EXPECTED_VALUE_CHANGED warn was left
+=== before: app.py ===
+def items():
+    return [1, 2, 3]
+=== after: app.py ===
+def items():
+    return [3, 2, 1]
+=== before: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertEqual(items(), [1, 2, 3])
+=== after: tests/test_items.py ===
+import unittest
+
+from app import items, record, text, total
+
+
+class ItTest(unittest.TestCase):
+    def test_it(self):
+        self.assertCountEqual(items(), [3, 2, 1])
+=== expect ===
+[{"rule": "SUBJECT_NORMALIZED", "severity": "high", "escalators": ["REPAIR_EVIDENCE_REFUSED"]}, {"rule": "EXPECTED_VALUE_CHANGED", "severity": "warn", "deescalators": ["REPAIR_EVIDENCE"]}]

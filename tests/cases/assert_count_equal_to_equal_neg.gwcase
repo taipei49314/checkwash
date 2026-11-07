@@ -1,0 +1,24 @@
+=== meta ===
+rule: SUBJECT_NORMALIZED
+title: `assertCountEqual` -> `assertEqual` starts checking order: a strengthening, no finding (D-201's boundary)
+origin: D-201 reads only the order-sensitive side becoming the multiset one
+=== before: tests/test_rank.py ===
+import unittest
+
+from app import ranked
+
+
+class RankedTest(unittest.TestCase):
+    def test_ranked(self):
+        self.assertCountEqual(ranked([3, 1, 2]), [3, 2, 1])
+=== after: tests/test_rank.py ===
+import unittest
+
+from app import ranked
+
+
+class RankedTest(unittest.TestCase):
+    def test_ranked(self):
+        self.assertEqual(ranked([3, 1, 2]), [3, 2, 1])
+=== expect ===
+[]

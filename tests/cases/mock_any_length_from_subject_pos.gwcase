@@ -1,0 +1,24 @@
+=== meta ===
+bypass: 182
+rule: ASSERT_WEAKENED
+title: `[ANY] * len(items())` has the subject's own length: the equality cannot fail (D-201)
+origin: D-201 round-3 review (code lens): `len(items()) == 3` -> `items() == [ANY] * len(items())` gave no finding on any engine
+=== before: tests/test_items.py ===
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert len(items()) == 3
+=== after: tests/test_items.py ===
+from unittest.mock import ANY
+import pytest
+
+from app import items, record, total
+
+
+def test_it():
+    assert items() == [ANY] * len(items())
+=== expect ===
+[{"rule": "ASSERT_WEAKENED", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
