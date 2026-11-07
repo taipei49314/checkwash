@@ -144,17 +144,19 @@ git -C checkwash diff 'v0.11.0^2^1' v0.11.0
 ```
 
 Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment and
-propose the commit the tag points to. From v0.12.0 that is the release's
-Action commit, which that release's doctor accepts, and zizmor's
-`ref-version-mismatch` audit (1.14.0 and later) and its pedantic
-`stale-action-refs` should not report the pin (inferred, not run). For a
-v0.11.0 pin they propose the v0.11.0 merge, which doctor rejects, and zizmor
-can report the comment and the untagged commit (inferred from those tools'
-documentation, not run). The Action itself is unaffected: it runs the same
-check at either commit. doctor 0.11.0 does not accept the 0.12.0 pin, so
-upgrade the CLI and its local hooks first, then the Action pin. From v0.12.0 a
-CLI installed through Git from the release tag is the Action commit's, and its
-doctor rejects that release's own pin: install the CLI from PyPI or the pyz.
+propose the commit the tag points to; what this paragraph says about them
+and about zizmor is inferred from those tools' documentation, not run. From
+v0.12.0 that commit is the release's Action commit, which that release's
+doctor accepts, and zizmor's `ref-version-mismatch` audit (1.14.0 and later)
+and its pedantic `stale-action-refs` should not report the pin. For a
+v0.11.0 pin they can propose the v0.11.0 merge, which doctor rejects, and
+zizmor can report the comment and the untagged commit; an update to v0.12.0
+proposes v0.12.0's Action commit, which doctor 0.12.0 accepts and doctor
+0.11.0 rejects. The Action itself is unaffected: it runs the same check at
+either commit. Upgrade the CLI and its local hooks first, then the Action
+pin. From v0.12.0 a CLI installed through Git from the release tag is the
+Action commit's, and its doctor rejects that release's own pin: install the
+CLI from PyPI or the pyz.
 
 The hosted `action-security` qualification invokes the actual candidate composite
 on all three operating systems. Expected BLOCK/ERROR jobs stay failed; a separate

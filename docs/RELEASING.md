@@ -334,14 +334,18 @@ does not tell a click from a typed reply:
   approving the merge: a new session read #592 back unchanged and, at
   13:07:36Z, asked the same question with the same buttons. At 13:12:32Z
   Nelson answered 「核准合併 #592」, and #592 merged as M at 13:13:05Z.
-- **The fixed-corpus review (D-196).** Claude's replies before the merge
-  question and after the merge listed the 19 commits that move from pass to
-  block, with a reading of each, and i198/S1, which the verdict gate reports
-  (below). At 13:18:27Z Claude asked
+- **The fixed-corpus review (D-196).** With each merge question Claude
+  listed the 19 commits that move from pass to block and named i198/S1,
+  which the verdict gate reports (below): at 08:09:23Z grouped by
+  project, and at 13:07:48Z in a table with a reading of each commit
+  (hono's three and typeorm's six share a row each); each commit's full
+  reading is in the 0.12.0 section above. After the merge, at 13:18:27Z,
+  Claude asked
   「R29 的 19 筆 pass→block 和 i198/S1 你看過了，可以打 v0.12.0 tag 嗎？」 (have
   you reviewed R29's 19 pass-to-block moves and i198/S1; may the v0.12.0 tag
-  be made?) with the buttons 「看過，可以打 tag」 and 「先給我看紀錄」, and at
-  13:24:51Z Nelson answered 「看過，可以打 tag」. This is the owner's review of
+  be made?) with the buttons 「看過，可以打 tag」 and 「先給我看紀錄」, in a
+  reply that gave the counts per project and pointed back to that table,
+  and at 13:24:51Z Nelson answered 「看過，可以打 tag」. This is the owner's review of
   the list that the tag waited for; the tag was made after it and after the
   main stage passed, at 14:12:18Z, and pushed at 14:12:44Z.
 - **The PyPI deployment.** Run 42388724734's `pypi` job waited for the `pypi`
@@ -350,9 +354,13 @@ does not tell a click from a typed reply:
   approve anything, and named the run page and the **Approve and deploy**
   button. At 16:02:02Z it asked 「你在 GitHub run 頁面按了 Approve and deploy 嗎？」
   with the buttons 「已在 GitHub 按核准」 and 「今天先不按」. GitHub records
-  Nelson's approval (reviewer taipei49314, state approved), with the
+  an approval by taipei49314 (state approved, no comment), with the
   deployment queued at 16:04:18Z, and at 16:07:21Z Nelson answered
-  「已在 GitHub 按核准」.
+  「已在 GitHub 按核准」. Claude's `gh` uses the same account, so that record
+  alone does not show who approved; Claude made no approval call (its
+  session logs show only reads of the run's approvals and pending
+  deployments), and the approval came between its question and Nelson's
+  answer.
 - **THREATMODEL item 4 and row 2.** After the public-visitor stage passed,
   at 17:05:54Z Claude asked 「THREATMODEL 第 4 項和 row 2 要補上 0.12.0 的 D-176 處置嗎？」
   (whether to add 0.12.0's D-176 disposition to them) with the buttons
@@ -398,8 +406,8 @@ the `pypi` job's handoff, which check the authorization before acting, say
 **The package page check was late.** [Check the public package
 page](#check-the-public-package-page) asks for the candidate wheel's
 metadata and every link in its description to be checked before publishing.
-For 0.12.0 Claude did not run that check before the upload, as it had for
-0.11.0; only each stage's `twine check` ran. After the upload it checked
+Claude ran that check before the 0.11.0 upload, but not before 0.12.0's;
+before it only each stage's `twine check` ran. After the upload it checked
 PyPI's JSON API and read both PyPI pages in a browser: name `checkwash`,
 version 0.12.0, `Requires-Python >=3.11`, license expression Apache-2.0,
 provenance for both files, and a description equal to M's README byte for
@@ -440,6 +448,9 @@ is NOT_RUN. It is supplementary evidence, not a release receipt.
 
 The fixed-corpus records were already in the release pull request (the
 0.12.0 section above); this follow-up adds Nelson's review of them, above.
+The release pull request's receipt is the PR stage's, in the publication
+record. No Claude Code hook lifecycle run was made on the release pull
+request, so there is no lifecycle record to carry.
 
 The decision-log cut and the verdict-baseline rotation that
 [After the release](#after-the-release) and step 9 require follow in a

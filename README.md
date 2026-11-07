@@ -340,7 +340,7 @@ Record which version you use. [Full setup and exemptions](https://github.com/tai
 
 **Development snapshots:** the source in this checkout may be newer than the
 published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
-records the version, commit and download bytes behind the installation commands
+records the version, tag commit and download bytes behind the installation commands
 above. New changes require their own candidate evidence and remain unreleased
 until the publication record verifies them; candidate CI success does not mean
 that the recommended Action pin includes them.
@@ -375,13 +375,15 @@ commit's, and its `doctor` rejects that release's own Action pin ("workflow
 analysis incomplete", exit 1). Install the CLI from PyPI or the pyz.
 
 Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment and
-propose the commit the tag points to. From v0.12.0 that is the release's
-Action commit, which that release's `doctor` accepts, and zizmor's
-`ref-version-mismatch` audit should not report the comment (inferred, not
-run). For a v0.11.0 pin they propose the v0.11.0 merge, which `doctor`
-rejects, and zizmor can report the comment (inferred from those tools'
-documentation, not run). `doctor` 0.11.0 does not accept the 0.12.0 pin, so
-upgrade the CLI and its local hooks first, then the Action pin. The
+propose the commit the tag points to; what this paragraph says about them
+and about zizmor is inferred from those tools' documentation, not run. From
+v0.12.0 that commit is the release's Action commit, which that release's
+`doctor` accepts, and zizmor's `ref-version-mismatch` audit should not
+report the comment. For a v0.11.0 pin they can propose the v0.11.0 merge,
+which `doctor` rejects, and zizmor can report the comment; an update to
+v0.12.0 proposes v0.12.0's Action commit, which `doctor` 0.12.0 accepts and
+`doctor` 0.11.0 rejects. So upgrade the CLI and its local hooks first, then
+the Action pin. The
 recommended v0.12.0 Action includes the engine published as checkwash 0.12.0
 (GitHub Release 2026-11-07, PyPI 2026-11-08, Asia/Taipei). A CLI upgrade does
 not update an existing Action.

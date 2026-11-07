@@ -13,10 +13,11 @@ PR, main, tag, release-event and public-visitor stages each passed on
 LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), all collected and
 verified from `review/collector-d-012-20261107` (`e27eec6b`); other
 platforms remain NOT_RUN. #592 merged as M at 2026-11-07T13:13:05Z on
-Nelson's 「核准合併 #592」. Nelson reviewed the fixed-corpus comparison's 19
-moved commits and the verdict gate's i198/S1 report before the tag and
-personally approved the PyPI deployment; RELEASING quotes each question and
-answer.
+Nelson's 「核准合併 #592」. Before the tag he answered 「看過，可以打 tag」 to
+Claude's question on the fixed-corpus comparison's 19 moved commits and the
+verdict gate's i198/S1 report, and he answered that he had approved the
+PyPI deployment on the run page, where GitHub records the approval; Claude
+made no approval call. RELEASING quotes each question and answer.
 Details: [RELEASING](docs/RELEASING.md#v0120-checked-publication-and-pin-promotion-2026-11-08)
 and the [publication record](docs/releases/v0.12.0-publication-verification.md).
 

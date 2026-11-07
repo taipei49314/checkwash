@@ -6,7 +6,8 @@ release pull request carried this section's rows into
 [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md), the page to read for
 0.12.0. The rows stay here, unchanged, as the dated preparation record.
 
-Nothing here is released. The 0.12 candidate narrows #419's residual
+Nothing here was released when this section was written. The 0.12
+candidate narrows #419's residual
 ([D-199](../DECISIONS.md)): Nelson chose to change it in 0.12
 ([D-196](../DECISIONS-archive-4.md)). The candidate also closes three holes
 beside that residual ([D-201](../DECISIONS.md)) and moves the release tag: from
