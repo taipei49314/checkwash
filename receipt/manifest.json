@@ -1,0 +1,4431 @@
+{
+  "action_sha": "257150319fca15235185fc629d8b9c21c17166ca",
+  "base_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b",
+  "collector_source_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b",
+  "contract_source_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b",
+  "files": [
+    {
+      "bytes": 4188,
+      "path": "action/action.yml",
+      "sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83"
+    },
+    {
+      "bytes": 60,
+      "path": "action/check.bash",
+      "sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93"
+    },
+    {
+      "bytes": 235,
+      "path": "action/check.outputs",
+      "sha256": "0ddf039d3a4996671a29cfe849fa214c89ff3e7c9138825d9f0b80fb244e8ee0"
+    },
+    {
+      "bytes": 1104,
+      "path": "action/command-ledger.json",
+      "sha256": "d84f2b2b05700dae2ca0e6774378d7731bac2f68fb717c351d911b04c13f08aa"
+    },
+    {
+      "bytes": 12518,
+      "path": "action/git-evidence/command-ledger.json",
+      "sha256": "c85ff2ff99a0cbe6344ffb8683d6eb8bca2056ed689ef07b2ffb9fac0c4ed86e"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00000.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00000.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00001.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "action/git-evidence/logs/git-00001.stdout",
+      "sha256": "4466a690a3bace4be6f7acd7a61932d46916631276053084b843fd9b93e1e8ce"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00002.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00003.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "action/git-evidence/logs/git-00003.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00004.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00004.stdout",
+      "sha256": "95cda39fa0e78d276fb77305a38db41ae21d8d5201f6cf0bea8193cd8284d62f"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00005.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "action/git-evidence/logs/git-00005.stdout",
+      "sha256": "a303ddac5c5662fa42cafa10de13bec3c24218978b4e7b3c13a93b78d7a150f2"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00006.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00006.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00007.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "action/git-evidence/logs/git-00007.stdout",
+      "sha256": "aff563aa22311d04ff5a3a7fe06da56e0def748c8e89aa0e256fcfbf92083688"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00008.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00008.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00009.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00009.stdout",
+      "sha256": "f754650cd778d0e0c8d7013bbb04fb8e69045547d87a0e9c616de70931add11f"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00010.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00010.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00011.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "action/git-evidence/logs/git-00011.stdout",
+      "sha256": "4466a690a3bace4be6f7acd7a61932d46916631276053084b843fd9b93e1e8ce"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00012.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00012.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00013.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "action/git-evidence/logs/git-00013.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00014.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "action/git-evidence/logs/git-00014.stdout",
+      "sha256": "95cda39fa0e78d276fb77305a38db41ae21d8d5201f6cf0bea8193cd8284d62f"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00015.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "action/git-evidence/logs/git-00015.stdout",
+      "sha256": "a303ddac5c5662fa42cafa10de13bec3c24218978b4e7b3c13a93b78d7a150f2"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00016.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00016.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "action/git-evidence/logs/git-00017.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "action/git-evidence/logs/git-00017.stdout",
+      "sha256": "aff563aa22311d04ff5a3a7fe06da56e0def748c8e89aa0e256fcfbf92083688"
+    },
+    {
+      "bytes": 1301,
+      "path": "action/install.bash",
+      "sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4"
+    },
+    {
+      "bytes": 271,
+      "path": "action/install.outputs",
+      "sha256": "15c31021b1b1120ae50d01bdb964b8b14f502fbb3d83ad7036c1f290888134e4"
+    },
+    {
+      "bytes": 0,
+      "path": "action/logs/check.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 27400,
+      "path": "action/logs/check.stdout",
+      "sha256": "e6ce802055bf286360f87e1934fe8fe6895843291abcb704cdfabefbc472ee96"
+    },
+    {
+      "bytes": 0,
+      "path": "action/logs/install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3408,
+      "path": "action/logs/install.stdout",
+      "sha256": "60136fd0a71e4f6640c72526240f42223b071c5bfbede1910c6d099c17bcfeca"
+    },
+    {
+      "bytes": 2689,
+      "path": "action/replay.json",
+      "sha256": "0d93dd1d03afbe67a5ff9bdd153ea0b495d9257a9e5c16b1894f3a3097185583"
+    },
+    {
+      "bytes": 935,
+      "path": "action/runtime-receipts/check-receipt.json",
+      "sha256": "2b4a548c4ec4ee1371ab98ae162fe1e6509591c93d35605ba736ff427110a865"
+    },
+    {
+      "bytes": 662,
+      "path": "action/runtime-receipts/identity.json",
+      "sha256": "3a47e4989e9eb2a81e7b16a228838de5dc7aaddaef0abcfcf759ee58341e9744"
+    },
+    {
+      "bytes": 26164,
+      "path": "action/runtime-receipts/install-report.json",
+      "sha256": "51480da0f64cca6dbc974c251ab46127027ab9a897d24bfb5da49f23e7db58c1"
+    },
+    {
+      "bytes": 2039,
+      "path": "action/runtime-receipts/install-stderr.txt",
+      "sha256": "97291e11a947d162f8e27b9b50366062bade4a009d9813b3ba6a239568e7b85d"
+    },
+    {
+      "bytes": 1161,
+      "path": "action/runtime-receipts/install-stdout.txt",
+      "sha256": "a03ff286df223b523047697fbf34fb4ce7b4bc63e9ccd217c67e2b8f3a2094a2"
+    },
+    {
+      "bytes": 27092,
+      "path": "action/runtime-receipts/stderr.txt",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "action/runtime-receipts/stdout.txt",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 199,
+      "path": "action/step-summary.md",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 1036789,
+      "path": "artifacts/checkwash-0.12.0-py3-none-any.whl",
+      "sha256": "1b7d259e88046b92139219bce07939e87b1aa3302dee91e1b87f8df075b6d2bf"
+    },
+    {
+      "bytes": 5474165,
+      "path": "artifacts/checkwash-0.12.0.tar.gz",
+      "sha256": "d53bad586652a9e3573009d82cec12ba338aafcbae445f8ff24a9161d7c8b79c"
+    },
+    {
+      "bytes": 1013508,
+      "path": "artifacts/checkwash.pyz",
+      "sha256": "4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2"
+    },
+    {
+      "bytes": 54776,
+      "path": "candidate-action-coverage.json",
+      "sha256": "c11db1a15b30e79ff788f998d021f3c6e506368a5658c9dc8deaf2539b73519e"
+    },
+    {
+      "bytes": 4188,
+      "path": "candidate-action/action.yml",
+      "sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83"
+    },
+    {
+      "bytes": 60,
+      "path": "candidate-action/check.bash",
+      "sha256": "b54adec426a5a4130b958c9c192cf28f854fcf22e4f350d11264038ac9719f93"
+    },
+    {
+      "bytes": 245,
+      "path": "candidate-action/check.outputs",
+      "sha256": "09c5a2f44a7a94f97dce169f4ddf5072b0161be4feaf8ae903c187fcf4075583"
+    },
+    {
+      "bytes": 1170,
+      "path": "candidate-action/command-ledger.json",
+      "sha256": "bf0af850ca49d0c718c7fd5f5ca525f52791c8f616568a4e040cfa4ee1ef926e"
+    },
+    {
+      "bytes": 12674,
+      "path": "candidate-action/git-evidence/command-ledger.json",
+      "sha256": "cbe0095862f23b2824ec1bc9f9c13a5154f78988f5fcce7b6988ccff39c61777"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00000.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00000.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00001.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "candidate-action/git-evidence/logs/git-00001.stdout",
+      "sha256": "4466a690a3bace4be6f7acd7a61932d46916631276053084b843fd9b93e1e8ce"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00002.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00003.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "candidate-action/git-evidence/logs/git-00003.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00004.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00004.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00005.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "candidate-action/git-evidence/logs/git-00005.stdout",
+      "sha256": "c3bb641736a2acf4e8060e2c3eb912b5bf48239dfbb06f0b82b701ab748471e4"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00006.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00006.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00007.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "candidate-action/git-evidence/logs/git-00007.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00008.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00008.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00009.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00009.stdout",
+      "sha256": "9ef34000cdb38e0a7ee19e3499f5aac5b4c6e85fa880813ede81863dab54aec3"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00010.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00010.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00011.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "candidate-action/git-evidence/logs/git-00011.stdout",
+      "sha256": "4466a690a3bace4be6f7acd7a61932d46916631276053084b843fd9b93e1e8ce"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00012.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00012.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00013.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "candidate-action/git-evidence/logs/git-00013.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00014.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "candidate-action/git-evidence/logs/git-00014.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00015.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "candidate-action/git-evidence/logs/git-00015.stdout",
+      "sha256": "c3bb641736a2acf4e8060e2c3eb912b5bf48239dfbb06f0b82b701ab748471e4"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00016.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00016.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/git-evidence/logs/git-00017.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "candidate-action/git-evidence/logs/git-00017.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 1301,
+      "path": "candidate-action/install.bash",
+      "sha256": "f94bc86f5d7ee76b48dbbfd21d164ab5aef98ec2221fac0b14c3a50fa73c61f4"
+    },
+    {
+      "bytes": 301,
+      "path": "candidate-action/install.outputs",
+      "sha256": "2925144ee64d38044a5a55a1e0a9522c66a3190c6146c73a9dab60f47b735326"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/logs/check.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 27400,
+      "path": "candidate-action/logs/check.stdout",
+      "sha256": "853ea3c6e1ad2472a3e00d1ec9c103815a247d71be71848173cc8b174fcc593c"
+    },
+    {
+      "bytes": 0,
+      "path": "candidate-action/logs/install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3424,
+      "path": "candidate-action/logs/install.stdout",
+      "sha256": "34c025e9a10008e0b6fbbd36cce1a6f61b997465f46955d2ccec6ede9e15af1e"
+    },
+    {
+      "bytes": 2749,
+      "path": "candidate-action/replay.json",
+      "sha256": "9c9924145baa7425af09020e75af6d08cd76a80b6641bc9e906524a46109519c"
+    },
+    {
+      "bytes": 955,
+      "path": "candidate-action/runtime-receipts/check-receipt.json",
+      "sha256": "3226fad72e6eba1b8c99fd1b370d4d71b6f35c52afdaf5915bd24b9bf4e3194e"
+    },
+    {
+      "bytes": 682,
+      "path": "candidate-action/runtime-receipts/identity.json",
+      "sha256": "3cf7725a5835d946782174afe9654abb53856bdf7c9fcc88c3f3603ac4525677"
+    },
+    {
+      "bytes": 27523,
+      "path": "candidate-action/runtime-receipts/install-report.json",
+      "sha256": "76ec5c31011e9433f943c3a200899980cfb60120b5a2a60f2ca38f50426158d2"
+    },
+    {
+      "bytes": 2035,
+      "path": "candidate-action/runtime-receipts/install-stderr.txt",
+      "sha256": "6c6fd6636ca6bc3113290f8ffa8c4aaa61dbcbdc84091f288b2e93fc9ac330d5"
+    },
+    {
+      "bytes": 1181,
+      "path": "candidate-action/runtime-receipts/install-stdout.txt",
+      "sha256": "1d0781ae26325a4e43f0f778abcaacdac25b2bc29a1ad22624f506e4cc8f4ca0"
+    },
+    {
+      "bytes": 27092,
+      "path": "candidate-action/runtime-receipts/stderr.txt",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "candidate-action/runtime-receipts/stdout.txt",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 199,
+      "path": "candidate-action/step-summary.md",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 253,
+      "path": "collection-status.json",
+      "sha256": "70410f2bab27aba7147aa313014728e3535b8e616275e231e0fd704be72a923b"
+    },
+    {
+      "bytes": 54426,
+      "path": "command-ledger.json",
+      "sha256": "d1afc40f7fdd144bd9f4c4d4a48848be7c08df655a268d7e2e2423287c826126"
+    },
+    {
+      "bytes": 192484,
+      "path": "contract-descriptor.json",
+      "sha256": "96dfcc97a37dd524d241018741e8efaa724cf44a70ad91e8471404d66224e809"
+    },
+    {
+      "bytes": 1019,
+      "path": "dependency-lock.json",
+      "sha256": "a6f42266301fa7d4e02720dcf24918a2617f48afe89f417bd530c3f7fe3c7222"
+    },
+    {
+      "bytes": 68798,
+      "path": "git-evidence/command-ledger.json",
+      "sha256": "521aad41997b4acc3928787063f0f184d5f315c825ceb7a677aee909d961f9a1"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00000.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00000.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00001.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00001.stdout",
+      "sha256": "3087ad7bce160bedc7d1508d7ca3bb26646192f5469ffc832b9c6890295836ce"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00002.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00003.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342121,
+      "path": "git-evidence/logs/git-00003.stdout",
+      "sha256": "b163902208a4b48e4544604f3e6e1e5cf18b1901aae420c106b09fb2615f62ac"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00004.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00004.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00005.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00005.stdout",
+      "sha256": "4466a690a3bace4be6f7acd7a61932d46916631276053084b843fd9b93e1e8ce"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00006.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00006.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00007.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00007.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00008.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00008.stdout",
+      "sha256": "95cda39fa0e78d276fb77305a38db41ae21d8d5201f6cf0bea8193cd8284d62f"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00009.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00009.stdout",
+      "sha256": "a303ddac5c5662fa42cafa10de13bec3c24218978b4e7b3c13a93b78d7a150f2"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00010.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00010.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00011.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "git-evidence/logs/git-00011.stdout",
+      "sha256": "aff563aa22311d04ff5a3a7fe06da56e0def748c8e89aa0e256fcfbf92083688"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00012.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00012.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00013.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00013.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00014.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00014.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00015.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00015.stdout",
+      "sha256": "9ef34000cdb38e0a7ee19e3499f5aac5b4c6e85fa880813ede81863dab54aec3"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00016.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00016.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00017.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00017.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00018.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00018.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00019.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 4,
+      "path": "git-evidence/logs/git-00019.stdout",
+      "sha256": "ccda8f9a2cb0295182b9a99e4c8270badcc89525850e1e737a294fb426363ac9"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00020.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00020.stdout",
+      "sha256": "8329e43ce97bdc2dd8141b241969a725c6bc38697409dc12805867d00f6c90ae"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00021.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00021.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00022.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 203,
+      "path": "git-evidence/logs/git-00022.stdout",
+      "sha256": "f00e88802976d39b20a6c8aaeb2067bf89138b1a77b10ad1a8b6364b06ad92fd"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00023.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00023.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00024.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00024.stdout",
+      "sha256": "28cc755c6d3148cddcacbf8674314476654574cd9871c8f7505880135cdf96f4"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00025.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00025.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00026.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00026.stdout",
+      "sha256": "ecede10ff84b259b9740488a562c510eed53a39bca74e740262f65d4731463d8"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00027.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00027.stdout",
+      "sha256": "8329e43ce97bdc2dd8141b241969a725c6bc38697409dc12805867d00f6c90ae"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00028.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00028.stdout",
+      "sha256": "f7cde404fdbab253374aa8aeb4617185af6d9961225e91f1b1d7ca0e233b1d92"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00029.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00029.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00030.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00030.stdout",
+      "sha256": "c3bb641736a2acf4e8060e2c3eb912b5bf48239dfbb06f0b82b701ab748471e4"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00031.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00031.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00032.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00032.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00033.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00033.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00034.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00034.stdout",
+      "sha256": "c3bb641736a2acf4e8060e2c3eb912b5bf48239dfbb06f0b82b701ab748471e4"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00035.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00035.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00036.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00036.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00037.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00037.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00038.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00038.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00039.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 4,
+      "path": "git-evidence/logs/git-00039.stdout",
+      "sha256": "ccda8f9a2cb0295182b9a99e4c8270badcc89525850e1e737a294fb426363ac9"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00040.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00040.stdout",
+      "sha256": "8329e43ce97bdc2dd8141b241969a725c6bc38697409dc12805867d00f6c90ae"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00041.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00041.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00042.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 203,
+      "path": "git-evidence/logs/git-00042.stdout",
+      "sha256": "f00e88802976d39b20a6c8aaeb2067bf89138b1a77b10ad1a8b6364b06ad92fd"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00043.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00043.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00044.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00044.stdout",
+      "sha256": "28cc755c6d3148cddcacbf8674314476654574cd9871c8f7505880135cdf96f4"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00045.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00045.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00046.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00046.stdout",
+      "sha256": "ecede10ff84b259b9740488a562c510eed53a39bca74e740262f65d4731463d8"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00047.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00047.stdout",
+      "sha256": "8329e43ce97bdc2dd8141b241969a725c6bc38697409dc12805867d00f6c90ae"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00048.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00048.stdout",
+      "sha256": "2642dcc829fdaac02ebca0605e88583d4a717b4cbffd13ab202ac63771da0ea5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00049.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00049.stdout",
+      "sha256": "d06fa0a1e1b0ce21c3a92f5f9a3061046b87f6ba6b1dd80bf050c2754a6dd5d2"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00050.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00050.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00051.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "git-evidence/logs/git-00051.stdout",
+      "sha256": "f6a22254ed95b3fb59157df03179d67a04c5a01d3fd3733a1b8558a0e073f3ac"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00052.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00052.stdout",
+      "sha256": "2642dcc829fdaac02ebca0605e88583d4a717b4cbffd13ab202ac63771da0ea5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00053.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00053.stdout",
+      "sha256": "6960f7601aad65cb5511b9fe32bf55966ef3a5395afa01e4f9e82512bc4db2c6"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00054.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00054.stdout",
+      "sha256": "fe6034b137361854b9008343c6de92cd6af063c27b8bff0f07cdbca46a5d17be"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00055.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00055.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00056.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 202281,
+      "path": "git-evidence/logs/git-00056.stdout",
+      "sha256": "e559628b791c85a4834214a4b62bddafed929af4548c74e233770e67d7442482"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00057.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00057.stdout",
+      "sha256": "6960f7601aad65cb5511b9fe32bf55966ef3a5395afa01e4f9e82512bc4db2c6"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00058.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00058.stdout",
+      "sha256": "d7c1b5f8e77932cf1cb84f6248fa768488ae84a13efd990cb877ac1b08a71f38"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00059.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00059.stdout",
+      "sha256": "b1a423c570067626f5427dc15a888972756e775554b8dd6161e083a5d92e88d1"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00060.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00060.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00061.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 213573,
+      "path": "git-evidence/logs/git-00061.stdout",
+      "sha256": "ecb9c75231145f0aa393d480ca6258761008c204ee90a00bf330897337d06dde"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00062.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00062.stdout",
+      "sha256": "d7c1b5f8e77932cf1cb84f6248fa768488ae84a13efd990cb877ac1b08a71f38"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00063.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00063.stdout",
+      "sha256": "2642dcc829fdaac02ebca0605e88583d4a717b4cbffd13ab202ac63771da0ea5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00064.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00064.stdout",
+      "sha256": "d06fa0a1e1b0ce21c3a92f5f9a3061046b87f6ba6b1dd80bf050c2754a6dd5d2"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00065.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00065.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00066.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "git-evidence/logs/git-00066.stdout",
+      "sha256": "f6a22254ed95b3fb59157df03179d67a04c5a01d3fd3733a1b8558a0e073f3ac"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00067.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00067.stdout",
+      "sha256": "6960f7601aad65cb5511b9fe32bf55966ef3a5395afa01e4f9e82512bc4db2c6"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00068.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00068.stdout",
+      "sha256": "fe6034b137361854b9008343c6de92cd6af063c27b8bff0f07cdbca46a5d17be"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00069.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00069.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00070.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 202281,
+      "path": "git-evidence/logs/git-00070.stdout",
+      "sha256": "e559628b791c85a4834214a4b62bddafed929af4548c74e233770e67d7442482"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00071.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00071.stdout",
+      "sha256": "d7c1b5f8e77932cf1cb84f6248fa768488ae84a13efd990cb877ac1b08a71f38"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00072.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00072.stdout",
+      "sha256": "b1a423c570067626f5427dc15a888972756e775554b8dd6161e083a5d92e88d1"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00073.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00073.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00074.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 213573,
+      "path": "git-evidence/logs/git-00074.stdout",
+      "sha256": "ecb9c75231145f0aa393d480ca6258761008c204ee90a00bf330897337d06dde"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00075.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00075.stdout",
+      "sha256": "2642dcc829fdaac02ebca0605e88583d4a717b4cbffd13ab202ac63771da0ea5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00076.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00076.stdout",
+      "sha256": "d06fa0a1e1b0ce21c3a92f5f9a3061046b87f6ba6b1dd80bf050c2754a6dd5d2"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00077.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00077.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00078.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "git-evidence/logs/git-00078.stdout",
+      "sha256": "f6a22254ed95b3fb59157df03179d67a04c5a01d3fd3733a1b8558a0e073f3ac"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00079.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00079.stdout",
+      "sha256": "2642dcc829fdaac02ebca0605e88583d4a717b4cbffd13ab202ac63771da0ea5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00080.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00080.stdout",
+      "sha256": "d06fa0a1e1b0ce21c3a92f5f9a3061046b87f6ba6b1dd80bf050c2754a6dd5d2"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00081.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00081.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00082.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "git-evidence/logs/git-00082.stdout",
+      "sha256": "f6a22254ed95b3fb59157df03179d67a04c5a01d3fd3733a1b8558a0e073f3ac"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00083.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00083.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00084.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00084.stdout",
+      "sha256": "3e6d1f130db34a236610036e2c87c82b8c8e3d5fc7d0e1167b08c4934d686fc5"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00085.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00085.stdout",
+      "sha256": "28cc755c6d3148cddcacbf8674314476654574cd9871c8f7505880135cdf96f4"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00086.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00086.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00087.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00087.stdout",
+      "sha256": "ecede10ff84b259b9740488a562c510eed53a39bca74e740262f65d4731463d8"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00088.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00088.stdout",
+      "sha256": "7f8bd82e97fb63a9fa0f5ab9bb508e01aa76435e9d29240a94be5cadbc76b419"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00089.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00089.stdout",
+      "sha256": "4466a690a3bace4be6f7acd7a61932d46916631276053084b843fd9b93e1e8ce"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00090.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00090.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00091.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342385,
+      "path": "git-evidence/logs/git-00091.stdout",
+      "sha256": "c08c7d0cd51d133d9cf4fd28a715d3a981cd7b13013a57f6e3ef209db1ef623d"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00092.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00092.stdout",
+      "sha256": "44668bc461a8af11a81ec92c279ad87109a3a073d663704ba04d550a91d8b90b"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00093.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00093.stdout",
+      "sha256": "3087ad7bce160bedc7d1508d7ca3bb26646192f5469ffc832b9c6890295836ce"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00094.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00094.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00095.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 342121,
+      "path": "git-evidence/logs/git-00095.stdout",
+      "sha256": "b163902208a4b48e4544604f3e6e1e5cf18b1901aae420c106b09fb2615f62ac"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00096.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 41,
+      "path": "git-evidence/logs/git-00096.stdout",
+      "sha256": "95cda39fa0e78d276fb77305a38db41ae21d8d5201f6cf0bea8193cd8284d62f"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00097.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 32,
+      "path": "git-evidence/logs/git-00097.stdout",
+      "sha256": "a303ddac5c5662fa42cafa10de13bec3c24218978b4e7b3c13a93b78d7a150f2"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00098.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00098.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "git-evidence/logs/git-00099.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 333516,
+      "path": "git-evidence/logs/git-00099.stdout",
+      "sha256": "aff563aa22311d04ff5a3a7fe06da56e0def748c8e89aa0e256fcfbf92083688"
+    },
+    {
+      "bytes": 90182,
+      "path": "inventories/pyz.json",
+      "sha256": "b0c58259fc5256e23a2551beb740d7d985cd7f3d5817253ccdfd96be7001543d"
+    },
+    {
+      "bytes": 50416,
+      "path": "inventories/source.json",
+      "sha256": "84e2608aa26c550a5953a4904b85d47490fe5d37cacf5d8ff299a8a8ce2e66a7"
+    },
+    {
+      "bytes": 771564,
+      "path": "inventories/wheel.json",
+      "sha256": "1e16dc91ceae2e24055a07637739dd4e5df7335418f58f6d091aff2777b1af85"
+    },
+    {
+      "bytes": 4720730,
+      "path": "junit.xml",
+      "sha256": "0f9a5c4e6c21e32efcd73ea5b5d00b9b0ec4a479de483a3148e514e116a9de03"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/action-dogfood.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/action-dogfood.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/advertised-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/advertised-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/advertised-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 31,
+      "path": "logs/advertised-dependencies.stdout",
+      "sha256": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-identity.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 234,
+      "path": "logs/advertised-install.stderr",
+      "sha256": "bed53e8cd8e82474100e3a5816fe954806103a04aae402cbf7e6020e7580667e"
+    },
+    {
+      "bytes": 1263,
+      "path": "logs/advertised-install.stdout",
+      "sha256": "c795766ca932d37d67de6748327d8c88d79f5b1e0f999dcbe0404ff7522ed8c7"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-source.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 837,
+      "path": "logs/advertised-source.stdout",
+      "sha256": "d752ab4c2ee7c9b668e4bf0a22892ad1b281b8785f3d9f35bb1d5f7fb2dd3092"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/advertised-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/advertised-version.stdout",
+      "sha256": "7a662ab242f844b8a1663e9c659bbdbd6e2a83fa41693c4e9ebd1eb8e3da478e"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/candidate-action-dogfood.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/candidate-action-dogfood.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/github-sdist-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/github-sdist-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/github-sdist-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 31,
+      "path": "logs/github-sdist-dependencies.stdout",
+      "sha256": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-identity.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1028,
+      "path": "logs/github-sdist-install.stdout",
+      "sha256": "eeb75657f72588e904d58c45c593f9eedc96387adb9bba2590cd394bea503f93"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-sdist-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/github-sdist-version.stdout",
+      "sha256": "2f12dad69e939bcfbf9058d5fafcd975b1d0d8504000ce6d6c7eae850783ace6"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/github-wheel-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/github-wheel-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/github-wheel-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 31,
+      "path": "logs/github-wheel-dependencies.stdout",
+      "sha256": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-identity.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 171,
+      "path": "logs/github-wheel-install.stdout",
+      "sha256": "61f7e243ae9757ae6954b7a84f3c1db15b7aa3f1828658dd0fda53d85f0dfb33"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/github-wheel-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/github-wheel-version.stdout",
+      "sha256": "2f12dad69e939bcfbf9058d5fafcd975b1d0d8504000ce6d6c7eae850783ace6"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/inventory-pyz.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 97,
+      "path": "logs/inventory-pyz.stdout",
+      "sha256": "296822b7d08f8e951a9a859775d0662eaf6979796b5b19d1340f7bfcdcae75a3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/inventory-source.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 97,
+      "path": "logs/inventory-source.stdout",
+      "sha256": "296822b7d08f8e951a9a859775d0662eaf6979796b5b19d1340f7bfcdcae75a3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/inventory-wheel.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 97,
+      "path": "logs/inventory-wheel.stdout",
+      "sha256": "296822b7d08f8e951a9a859775d0662eaf6979796b5b19d1340f7bfcdcae75a3"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/public-pyz-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/public-pyz-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/public-pyz-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/public-pyz-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/public-pyz-qualification.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 149,
+      "path": "logs/public-pyz-qualification.stdout",
+      "sha256": "d0bee3930f3d4480c6ecf6357f05c7538f00488ec78cc8e04c16d2a551c7079d"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/public-pyz-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/public-pyz-version.stdout",
+      "sha256": "2f12dad69e939bcfbf9058d5fafcd975b1d0d8504000ce6d6c7eae850783ace6"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/pypi-sdist-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/pypi-sdist-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/pypi-sdist-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 31,
+      "path": "logs/pypi-sdist-dependencies.stdout",
+      "sha256": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-identity.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1030,
+      "path": "logs/pypi-sdist-install.stdout",
+      "sha256": "526cd2102bb37441da7eceba39a00a7656ad78220e09460af4f2621526cb7150"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-sdist-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/pypi-sdist-version.stdout",
+      "sha256": "2f12dad69e939bcfbf9058d5fafcd975b1d0d8504000ce6d6c7eae850783ace6"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/pypi-wheel-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/pypi-wheel-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/pypi-wheel-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 31,
+      "path": "logs/pypi-wheel-dependencies.stdout",
+      "sha256": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-identity.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 173,
+      "path": "logs/pypi-wheel-install.stdout",
+      "sha256": "0f002d44a15c00830227327d446da1bbcdae0450494176b1d567e69a7e57527a"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pypi-wheel-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/pypi-wheel-version.stdout",
+      "sha256": "2f12dad69e939bcfbf9058d5fafcd975b1d0d8504000ce6d6c7eae850783ace6"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/pytest.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 25952,
+      "path": "logs/pytest.stdout",
+      "sha256": "6f95ac81bd0301f4b182950d62e4c704c533a7854675e3e78fad76c157453ec2"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/qualify-pyz.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 116,
+      "path": "logs/qualify-pyz.stdout",
+      "sha256": "93aa40794de2f2dd0d652b23ffc362b08cca0b6bd80b750ee26eaf9a82683a25"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/qualify-source.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 119,
+      "path": "logs/qualify-source.stdout",
+      "sha256": "890cab2e64162aa77904c4d4afee0a655ec437d4680917a4e1176d410e996799"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/qualify-wheel.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 118,
+      "path": "logs/qualify-wheel.stdout",
+      "sha256": "7f7f75f1fe50b547af6f07c00ad24d2948b025c1f7fa7a5dc993d044be86f85d"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/runtime-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1108,
+      "path": "logs/runtime-identity.stdout",
+      "sha256": "67f7b097ecd127f4f0d4aec99cb282e00d34423cc01371291325b307d48830a7"
+    },
+    {
+      "bytes": 27092,
+      "path": "logs/tag-check.stderr",
+      "sha256": "4bc6487a707f2d77668ffe6ee261f42eb2e058a0740505e8f6891b1936d4aa12"
+    },
+    {
+      "bytes": 199,
+      "path": "logs/tag-check.stdout",
+      "sha256": "fd51d93f62cce51b4fa93121aa453b4d70872be190cc8e9ec5330e9167572ad3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-demo.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2377,
+      "path": "logs/tag-demo.stdout",
+      "sha256": "f0a28f81afa806a1f104cabc37bef634d295024b5511f24fbf541f862a8405c1"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-dependencies.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 31,
+      "path": "logs/tag-dependencies.stdout",
+      "sha256": "672aec65a45bed50e70229c70934a7eebf0462595c459b83023027645d57cccf"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-identity.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-identity.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 234,
+      "path": "logs/tag-install.stderr",
+      "sha256": "30a2c5e27426801669143761c0bec843ba1af68d970d3fb59187a2e6b27aaa8e"
+    },
+    {
+      "bytes": 1263,
+      "path": "logs/tag-install.stdout",
+      "sha256": "b3e5253c63709911257edbfcb6922d079079e24b753d5da92f8c93d6826ca0d4"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-source.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 837,
+      "path": "logs/tag-source.stdout",
+      "sha256": "2f80a35bb56470449539450492db72bc6a1546f33f3212e619e645d9d07937ae"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/tag-version.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 18,
+      "path": "logs/tag-version.stdout",
+      "sha256": "2f12dad69e939bcfbf9058d5fafcd975b1d0d8504000ce6d6c7eae850783ace6"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/test-editable-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 947,
+      "path": "logs/test-editable-install.stdout",
+      "sha256": "2dba73a4c3e30c109056d8131ebdf3e755b2b84b57a4748b64f9b546ce0f7ff3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/twine-check.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 180,
+      "path": "logs/twine-check.stdout",
+      "sha256": "2f1b2d8dae6f2d57c0afb04ba692250b2623520aeb7e79a57a08a62ccd0d822b"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/verdict-gate.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 375,
+      "path": "logs/verdict-gate.stdout",
+      "sha256": "8bee1e86e43263986f9cc6ac646107ce2f64ce66d4d1c6f49d9e70f33672e6a3"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/wheel-install.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 171,
+      "path": "logs/wheel-install.stdout",
+      "sha256": "61f7e243ae9757ae6954b7a84f3c1db15b7aa3f1828658dd0fda53d85f0dfb33"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/wheel-venv.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "logs/wheel-venv.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 721,
+      "path": "native-subject.json",
+      "sha256": "94639b79c7d2dc15b698d9a42ae5328921dc6814b2b491b0249732a1545a30f7"
+    },
+    {
+      "bytes": 12379,
+      "path": "nested-advertised-source/commands.json",
+      "sha256": "7845c368f907a8a93ea7cd59627a6e62e5d2411a5feb2a2d3a6979671a7cda75"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-advertised-source/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2158,
+      "path": "nested-advertised-source/stdout.bin",
+      "sha256": "96d6a4a3377c7d4badf4222c70de58ee29ccfebb49a44987d72527db9f0f261c"
+    },
+    {
+      "bytes": 185655,
+      "path": "nested-inventory-pyz/commands.json",
+      "sha256": "9a18a81fec45ffdf84d800ffd86d86015f496136be5d7701bef25e4efca77473"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-inventory-pyz/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3420911,
+      "path": "nested-inventory-pyz/stdout.bin",
+      "sha256": "e61be6ca1bd15b3677e55ced833026f2d32c4b79a97ad6392acf94a5b8627410"
+    },
+    {
+      "bytes": 185544,
+      "path": "nested-inventory-source/commands.json",
+      "sha256": "36a4b0e1053decfb03c2fde4832961a5a77e670afd1ee28ace6e37063d3cd6b4"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-inventory-source/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 3420911,
+      "path": "nested-inventory-source/stdout.bin",
+      "sha256": "e61be6ca1bd15b3677e55ced833026f2d32c4b79a97ad6392acf94a5b8627410"
+    },
+    {
+      "bytes": 2891307,
+      "path": "nested-inventory-wheel/commands.json",
+      "sha256": "a66ac0333aa64426737327e8ae33c6c7d528e4e6deec3765776d26cab572678b"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-inventory-wheel/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 20663795,
+      "path": "nested-inventory-wheel/stdout.bin",
+      "sha256": "0fec23281ce99c68d03b8adb511d14f6a00abced1bc47448647a606eb160c6b5"
+    },
+    {
+      "bytes": 16112,
+      "path": "nested-public-pyz-qualification/commands.json",
+      "sha256": "2fcb1a4cad2065817692fca02c9a14cb64a728551f94b1013579c1e7dd87f7c6"
+    },
+    {
+      "bytes": 187,
+      "path": "nested-public-pyz-qualification/stderr.bin",
+      "sha256": "054514bd01c74fcf41c7bb5e3e6bb876529ff6c8427846d9923ec5885bc04456"
+    },
+    {
+      "bytes": 6920,
+      "path": "nested-public-pyz-qualification/stdout.bin",
+      "sha256": "a07951d3ed6fe764aef4b2d6a64562d1619c5a9c58565f39dfc6a22adaa32e15"
+    },
+    {
+      "bytes": 1270188,
+      "path": "nested-qualify-pyz/commands.json",
+      "sha256": "c98bf2d0509cc49901711ba7821a70e80804a43478ffc3b1b212e96be35c42de"
+    },
+    {
+      "bytes": 1018,
+      "path": "nested-qualify-pyz/stderr.bin",
+      "sha256": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+    },
+    {
+      "bytes": 266048,
+      "path": "nested-qualify-pyz/stdout.bin",
+      "sha256": "6e50dc2cdbd02f9b03b594f6aff88f79e199d9d84a7f9538e7b0a4d9309c8868"
+    },
+    {
+      "bytes": 1297434,
+      "path": "nested-qualify-source/commands.json",
+      "sha256": "c6106ffd7344bf783589f75c67d4836c0e64fca88c145cd46e83216546b772f4"
+    },
+    {
+      "bytes": 1018,
+      "path": "nested-qualify-source/stderr.bin",
+      "sha256": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+    },
+    {
+      "bytes": 266048,
+      "path": "nested-qualify-source/stdout.bin",
+      "sha256": "a9544e31019cfea3c38b54c48f55d36c3bae68cd28a0cdec7d7e545e82cf2e45"
+    },
+    {
+      "bytes": 1265623,
+      "path": "nested-qualify-wheel/commands.json",
+      "sha256": "2df7513184ebfca14737e496800682bf1034f35a9e22bc6f6bfe4e7dd55c2fea"
+    },
+    {
+      "bytes": 1018,
+      "path": "nested-qualify-wheel/stderr.bin",
+      "sha256": "e807be6a433d8c9c7edc7bf7e32e2b4d499794208511dc701d27d864f5258212"
+    },
+    {
+      "bytes": 266566,
+      "path": "nested-qualify-wheel/stdout.bin",
+      "sha256": "93493db0f4e6a7a467f02dfc49af4bd246708f364e05d4ea0bb4080ba94569e6"
+    },
+    {
+      "bytes": 12351,
+      "path": "nested-tag-source/commands.json",
+      "sha256": "dce54f74ff7a596ed44b8df1eeab187df8bba80a0a3b9ec8a116b2cff3b7ed92"
+    },
+    {
+      "bytes": 0,
+      "path": "nested-tag-source/stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 2158,
+      "path": "nested-tag-source/stdout.bin",
+      "sha256": "deca4646bba386de15a2391ef87a60718831b74eabe911662b9f7c0be0b6958f"
+    },
+    {
+      "bytes": 4639700,
+      "path": "nested-verdict/commands.json",
+      "sha256": "5cf894d7df68c7f5972037c2e3ced5e130c37bc656b20549f939d52583a10a0a"
+    },
+    {
+      "bytes": 8647,
+      "path": "nested-verdict/stderr.bin",
+      "sha256": "a14403cf1b6ab4464b6b42d907be97b38d1682c2b3e11e4aec96ddab06aa5e6d"
+    },
+    {
+      "bytes": 819170,
+      "path": "nested-verdict/stdout.bin",
+      "sha256": "4a1251b3c4cf1960f31ea2f3677ff6e075c3c41d9ae32db095604317dda27502"
+    },
+    {
+      "bytes": 2799154,
+      "path": "parents/release-event.json",
+      "sha256": "2a94f83e258fce4ea3fbdce0083cd1acac54b5b5619e7cec2ae856117c17b42f"
+    },
+    {
+      "bytes": 126266,
+      "path": "qualifications/pyz.json",
+      "sha256": "6040b5d4491cac8fe4d2b4dced476828d3227bd96e48dc94a0c65cbae4cfd910"
+    },
+    {
+      "bytes": 126207,
+      "path": "qualifications/source.json",
+      "sha256": "4ebf18eab3c551bdf3cfe15c15e32d4076f2dfdc72a07277be022973ce41d0d2"
+    },
+    {
+      "bytes": 126268,
+      "path": "qualifications/wheel.json",
+      "sha256": "110b6b24ad40c7c7653eb35476dfaf11dbb85ea62171f889b1dad9b9386920ed"
+    },
+    {
+      "bytes": 996040,
+      "path": "release/advertised-checkwash.pyz",
+      "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+    },
+    {
+      "bytes": 24995,
+      "path": "release/advertised-expected.json",
+      "sha256": "af098530c97af9eb97632499ac9578a3c74aa8e1aeba24dc9c49a8dc833b858e"
+    },
+    {
+      "bytes": 24713,
+      "path": "release/advertised-identity.json",
+      "sha256": "5dd014d019af0c5f12f664983b61ab15624929091bebf23506a1acf1ddc27bfe"
+    },
+    {
+      "bytes": 26315,
+      "path": "release/advertised-pip.json",
+      "sha256": "73fdfbe39c02d870a1f308916810563d2b9b6ccf8c0e55792760c4dc53427d62"
+    },
+    {
+      "bytes": 916,
+      "path": "release/advertised-source.json",
+      "sha256": "1c9b1a4cda12f46e06675eea6c1c59d9aac0176f0f3185397e3efd6a252e22f2"
+    },
+    {
+      "bytes": 856,
+      "path": "release/advertised-visitor.json",
+      "sha256": "fddcccff1daeae687fc6ca64efc65cc3700784b7fca004df94ad8757477116c3"
+    },
+    {
+      "bytes": 333,
+      "path": "release/collection.json",
+      "sha256": "c4f5dddae7af5d35de9bf0a9fe0b2bc4575464fe742a34a5d184e1fefe5618fd"
+    },
+    {
+      "bytes": 996040,
+      "path": "release/engines/baseline.pyz",
+      "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+    },
+    {
+      "bytes": 588886,
+      "path": "release/engines/canary-new.pyz",
+      "sha256": "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
+    },
+    {
+      "bytes": 546241,
+      "path": "release/engines/canary-old.pyz",
+      "sha256": "423ce220365d0e179cfd9caa7e45724d71b8bd7c67d3cbfc51eca19e8a626ee7"
+    },
+    {
+      "bytes": 7834,
+      "path": "release/event-payload.json",
+      "sha256": "3d6fcb3a571d71217a0f858653eb071037ef4424760ca0dd5b741d4f0564cba5"
+    },
+    {
+      "bytes": 362,
+      "path": "release/expected-artifacts.json",
+      "sha256": "7c4393f1d31b6d16e3ec9726f079f6e31141757be6f1b95ec48ab70b0883a179"
+    },
+    {
+      "bytes": 24995,
+      "path": "release/github-sdist-expected.json",
+      "sha256": "d93f18dbfa61d44706757f202f7484405c45bf737f29dd85752d645d3b847b46"
+    },
+    {
+      "bytes": 24815,
+      "path": "release/github-sdist-identity.json",
+      "sha256": "f69faff67b777b390649a2285c9dbc1994f0089fda345d413aa444d023615315"
+    },
+    {
+      "bytes": 27791,
+      "path": "release/github-sdist-pip.json",
+      "sha256": "00a07d486c611911969d0829b414a00841f0e54a88c74ca96bd095964eb016e2"
+    },
+    {
+      "bytes": 24995,
+      "path": "release/github-wheel-expected.json",
+      "sha256": "d93f18dbfa61d44706757f202f7484405c45bf737f29dd85752d645d3b847b46"
+    },
+    {
+      "bytes": 24825,
+      "path": "release/github-wheel-identity.json",
+      "sha256": "e813397330467eaf8f877bc70fe6c864a96748dbed8eb86f87aa42cecc9ecec4"
+    },
+    {
+      "bytes": 27801,
+      "path": "release/github-wheel-pip.json",
+      "sha256": "843aed2688e1dd428174ffe36dfdb30d5617b491da37c47c11deec1963352a3c"
+    },
+    {
+      "bytes": 12370,
+      "path": "release/network.json",
+      "sha256": "f92fc02a266ab78e1825a1586fd8a61ddde51d925821ac21a9c2be508e1096c1"
+    },
+    {
+      "bytes": 996040,
+      "path": "release/network/advertised-pyz.bin",
+      "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+    },
+    {
+      "bytes": 1013508,
+      "path": "release/network/github-pyz.bin",
+      "sha256": "4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2"
+    },
+    {
+      "bytes": 16170,
+      "path": "release/network/github-release.bin",
+      "sha256": "b3b73604d68732c1641fd7012f5661ebaa71d0691023f94eb618757114c2b5ca"
+    },
+    {
+      "bytes": 5474165,
+      "path": "release/network/github-sdist.bin",
+      "sha256": "d53bad586652a9e3573009d82cec12ba338aafcbae445f8ff24a9161d7c8b79c"
+    },
+    {
+      "bytes": 1036789,
+      "path": "release/network/github-wheel.bin",
+      "sha256": "1b7d259e88046b92139219bce07939e87b1aa3302dee91e1b87f8df075b6d2bf"
+    },
+    {
+      "bytes": 5474165,
+      "path": "release/network/pypi-sdist.bin",
+      "sha256": "d53bad586652a9e3573009d82cec12ba338aafcbae445f8ff24a9161d7c8b79c"
+    },
+    {
+      "bytes": 28571,
+      "path": "release/network/pypi-version.bin",
+      "sha256": "8d62d8050583fc2910ba2e696c5f871fe9be6f1d49a0c323cea42b5caf7c11dc"
+    },
+    {
+      "bytes": 1036789,
+      "path": "release/network/pypi-wheel.bin",
+      "sha256": "1b7d259e88046b92139219bce07939e87b1aa3302dee91e1b87f8df075b6d2bf"
+    },
+    {
+      "bytes": 996040,
+      "path": "release/network/verdict-baseline.bin",
+      "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+    },
+    {
+      "bytes": 588886,
+      "path": "release/network/verdict-canary-new.bin",
+      "sha256": "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c"
+    },
+    {
+      "bytes": 546241,
+      "path": "release/network/verdict-canary-old.bin",
+      "sha256": "423ce220365d0e179cfd9caa7e45724d71b8bd7c67d3cbfc51eca19e8a626ee7"
+    },
+    {
+      "bytes": 162,
+      "path": "release/parents-admission.json",
+      "sha256": "e32c9d481670e586e852e286fe1d8c03eb8e672c0008163438347ac76af24640"
+    },
+    {
+      "bytes": 5045,
+      "path": "release/publication.json",
+      "sha256": "28ba3be62b47116ce8336176c1b3065e114e940448d755c97cbf34d483a66166"
+    },
+    {
+      "bytes": 24995,
+      "path": "release/pypi-sdist-expected.json",
+      "sha256": "d93f18dbfa61d44706757f202f7484405c45bf737f29dd85752d645d3b847b46"
+    },
+    {
+      "bytes": 24817,
+      "path": "release/pypi-sdist-identity.json",
+      "sha256": "b8184f9c16f02e38259b616f1bd3ee98e15797f08eba77938451bfcfcb0fe801"
+    },
+    {
+      "bytes": 27793,
+      "path": "release/pypi-sdist-pip.json",
+      "sha256": "93be5bea29b601b1ae6e0e6718aae54a89fd239bf57b468a5b8337b221bf0214"
+    },
+    {
+      "bytes": 24995,
+      "path": "release/pypi-wheel-expected.json",
+      "sha256": "d93f18dbfa61d44706757f202f7484405c45bf737f29dd85752d645d3b847b46"
+    },
+    {
+      "bytes": 24827,
+      "path": "release/pypi-wheel-identity.json",
+      "sha256": "517946ae7977fe83ba5946b9166afc5759b316beae4d83e4ccf4d3db081272ca"
+    },
+    {
+      "bytes": 27803,
+      "path": "release/pypi-wheel-pip.json",
+      "sha256": "c76af0318901262e9d85abaaa7d4c848bef001c9ae3c93924b6661b372733e99"
+    },
+    {
+      "bytes": 24995,
+      "path": "release/tag-expected.json",
+      "sha256": "625c73618163d4c568c1b58e90229ea62ebd6309373611b53bfc84f1eafe9d03"
+    },
+    {
+      "bytes": 24713,
+      "path": "release/tag-identity.json",
+      "sha256": "5f1c9ed2506de8296df7c1ac6b8f7789c83bc54cff6c75ee089f5e10b1acb690"
+    },
+    {
+      "bytes": 27674,
+      "path": "release/tag-pip.json",
+      "sha256": "7fd9e85eb73bb616085172fffa35be74fe243afc067b4bdf019e7e5b2e0d32f4"
+    },
+    {
+      "bytes": 916,
+      "path": "release/tag-source.json",
+      "sha256": "e09288917a4aa7756b1e627fa759ef78098384fe737a8569542e4ecadaaafba5"
+    },
+    {
+      "bytes": 1139,
+      "path": "release/tag-visitor.json",
+      "sha256": "e296b2ff19d0bd2ecd528df7f736b38cccf7c54fac3b7cca470c607f51f377b3"
+    },
+    {
+      "bytes": 3250904,
+      "path": "release/verdict-gate.json",
+      "sha256": "ada6a119bb9cdd2f4dfa0c521dc8d25a029189a05f963ecdfc79be4477b35103"
+    },
+    {
+      "bytes": 14336,
+      "path": "release/verdict-gate.md",
+      "sha256": "e238e676fddb4d6fa115ffea7e96434d409a5a56d37aa3bd2280932b7065f386"
+    },
+    {
+      "bytes": 38091,
+      "path": "release/verdict-inputs.json",
+      "sha256": "5f63d52f5bc1b5a6c81971d7a7595ff301e726e9b3a5bef8ec14aabf3c852ae7"
+    },
+    {
+      "bytes": 27668,
+      "path": "test-install-report.json",
+      "sha256": "6c9ddc641004f421bccdc67645632270ece3666b138291bc10194c78ca387780"
+    },
+    {
+      "bytes": 27801,
+      "path": "wheel-install-report.json",
+      "sha256": "843aed2688e1dd428174ffe36dfdb30d5617b491da37c47c11deec1963352a3c"
+    }
+  ],
+  "head_sha": "ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+  "host": "LAPTOP-01AGNPJU",
+  "kind": "checkwash.pju-release-receipt.v1",
+  "parents": {
+    "release-event": {
+      "check_run_id": 128452298440,
+      "report": "parents/release-event.json",
+      "sha256": "2a94f83e258fce4ea3fbdce0083cd1acac54b5b5619e7cec2ae856117c17b42f"
+    }
+  },
+  "provenance": "HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL",
+  "raw_exits": [
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import importlib.metadata as m,json,platform,sys; print(json.dumps({'python_version':platform.python_version(),'prefix':sys.prefix,'base':sys.base_prefix,'dependencies':{d.metadata['Name']:d.version for d in m.distributions()}}))"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.18800000002374873,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:09:24.437624+00:00",
+      "name": "runtime-identity",
+      "started_at": "2026-11-07T16:09:24.259464+00:00",
+      "stderr": "logs/runtime-identity.stderr",
+      "stdout": "logs/runtime-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\replay_pju_action.py",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--base-sha",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b",
+        "--head-sha",
+        "ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--python",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "--git",
+        "C:\\Program Files\\Git\\cmd\\git.exe",
+        "--bash",
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "--action-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\p",
+        "--action-sha",
+        "257150319fca15235185fc629d8b9c21c17166ca",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\action",
+        "--scratch",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\action"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 33.90599999995902,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:10:14.011727+00:00",
+      "name": "action-dogfood",
+      "started_at": "2026-11-07T16:09:40.112966+00:00",
+      "stderr": "logs/action-dogfood.stderr",
+      "stdout": "logs/action-dogfood.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\replay_pju_action.py",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--base-sha",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b",
+        "--head-sha",
+        "ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--python",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "--git",
+        "C:\\Program Files\\Git\\cmd\\git.exe",
+        "--bash",
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "--action-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\a",
+        "--action-sha",
+        "ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\candidate-action",
+        "--scratch",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\candidate-action"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 31.0,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:11:00.884551+00:00",
+      "name": "candidate-action-dogfood",
+      "started_at": "2026-11-07T16:10:29.874685+00:00",
+      "stderr": "logs/candidate-action-dogfood.stderr",
+      "stdout": "logs/candidate-action-dogfood.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\wheel-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 7.422000000020489,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:11:18.829975+00:00",
+      "name": "wheel-venv",
+      "started_at": "2026-11-07T16:11:11.402393+00:00",
+      "stderr": "logs/wheel-venv.stderr",
+      "stdout": "logs/wheel-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\wheel-install-report.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0-py3-none-any.whl"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.1089999999967404,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:11:19.944859+00:00",
+      "name": "wheel-install",
+      "started_at": "2026-11-07T16:11:18.831010+00:00",
+      "stderr": "logs/wheel-install.stderr",
+      "stdout": "logs/wheel-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-index",
+        "--no-deps",
+        "--no-build-isolation",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\test-install-report.json",
+        "-e",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 4.420999999972992,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:11:24.374695+00:00",
+      "name": "test-editable-install",
+      "started_at": "2026-11-07T16:11:19.951289+00:00",
+      "stderr": "logs/test-editable-install.stderr",
+      "stdout": "logs/test-editable-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pytest",
+        "-p",
+        "xdist.plugin",
+        "-n",
+        "8",
+        "--dist",
+        "worksteal",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pytest",
+        "--junitxml",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\junit.xml",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+      "duration_seconds": 760.9070000000065,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:24:05.279115+00:00",
+      "name": "pytest",
+      "started_at": "2026-11-07T16:11:24.380644+00:00",
+      "stderr": "logs/pytest.stderr",
+      "stdout": "logs/pytest.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_assertions.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-qualify-source",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--distribution",
+        "source",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\qualifications\\source.json",
+        "--",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 885.734999999986,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:38:51.035266+00:00",
+      "name": "qualify-source",
+      "started_at": "2026-11-07T16:24:05.295094+00:00",
+      "stderr": "logs/qualify-source.stderr",
+      "stdout": "logs/qualify-source.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_assertions.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-qualify-wheel",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--distribution",
+        "wheel",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\qualifications\\wheel.json",
+        "--artifact",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0-py3-none-any.whl",
+        "--",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\wheel-environment\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 885.9220000000205,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:38:51.219022+00:00",
+      "name": "qualify-wheel",
+      "started_at": "2026-11-07T16:24:05.296076+00:00",
+      "stderr": "logs/qualify-wheel.stderr",
+      "stdout": "logs/qualify-wheel.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "release_inventory.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-inventory-source",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--distribution",
+        "source",
+        "--qualification",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\qualifications\\source.json",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\inventories\\source.json"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 10.5,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:39:01.530435+00:00",
+      "name": "inventory-source",
+      "started_at": "2026-11-07T16:38:51.042151+00:00",
+      "stderr": "logs/inventory-source.stderr",
+      "stdout": "logs/inventory-source.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_assertions.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-qualify-pyz",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--distribution",
+        "pyz",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\qualifications\\pyz.json",
+        "--artifact",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz",
+        "--",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 954.5320000000065,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:39:59.833267+00:00",
+      "name": "qualify-pyz",
+      "started_at": "2026-11-07T16:24:05.297079+00:00",
+      "stderr": "logs/qualify-pyz.stderr",
+      "stdout": "logs/qualify-pyz.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "release_inventory.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-inventory-pyz",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--distribution",
+        "pyz",
+        "--qualification",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\qualifications\\pyz.json",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\inventories\\pyz.json",
+        "--artifact",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 10.0,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:40:09.836850+00:00",
+      "name": "inventory-pyz",
+      "started_at": "2026-11-07T16:39:59.838755+00:00",
+      "stderr": "logs/inventory-pyz.stderr",
+      "stdout": "logs/inventory-pyz.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "release_inventory.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-inventory-wheel",
+        "--source-root",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--distribution",
+        "wheel",
+        "--qualification",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\qualifications\\wheel.json",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\inventories\\wheel.json",
+        "--artifact",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0-py3-none-any.whl",
+        "--artifact",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0.tar.gz"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 143.79699999996228,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:41:15.012567+00:00",
+      "name": "inventory-wheel",
+      "started_at": "2026-11-07T16:38:51.226848+00:00",
+      "stderr": "logs/inventory-wheel.stderr",
+      "stdout": "logs/inventory-wheel.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "twine",
+        "check",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0-py3-none-any.whl",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0.tar.gz"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 2.0939999999827705,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:41:20.192731+00:00",
+      "name": "twine-check",
+      "started_at": "2026-11-07T16:41:18.090597+00:00",
+      "stderr": "logs/twine-check.stderr",
+      "stdout": "logs/twine-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "verdict_gate.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-verdict",
+        "gate",
+        "--pins",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c\\tests\\verdict_gate\\baseline.toml",
+        "--cases",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c\\tests\\verdict_gate\\cases",
+        "--labels",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c\\tests\\verdict_gate\\labels.toml",
+        "--accepted",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c\\tests\\gates\\verdict_gate_accepted.toml",
+        "--python",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "--jobs",
+        "6",
+        "--work-dir",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\verdict-work",
+        "--receipt",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\verdict-gate.json",
+        "--summary",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\verdict-gate.md",
+        "--baseline-pyz",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\engines\\baseline.pyz",
+        "--baseline-source",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\m",
+        "--canary-old-pyz",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\engines\\canary-old.pyz",
+        "--canary-old-source",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\o",
+        "--canary-new-pyz",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\engines\\canary-new.pyz",
+        "--canary-new-source",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\n",
+        "--candidate-pyz",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz",
+        "--candidate-source",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--context",
+        "event=workflow_dispatch",
+        "--context",
+        "stage=public-visitor",
+        "--context",
+        "sha=ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--context",
+        "run_id=42389734518",
+        "--context",
+        "run_attempt=1",
+        "--tag-run",
+        "v0.12.0",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 438.0779999999795,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:49:25.687455+00:00",
+      "name": "verdict-gate",
+      "started_at": "2026-11-07T16:42:07.606510+00:00",
+      "stderr": "logs/verdict-gate.stderr",
+      "stdout": "logs/verdict-gate.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "verify_published_source.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-advertised-source",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\m",
+        "--tag",
+        "v0.11.0",
+        "--expected-commit",
+        "34555301de3d5ea4b2c8e4470b797a06d0a1e395",
+        "--source-sha",
+        "34555301de3d5ea4b2c8e4470b797a06d0a1e395",
+        "--expected-tag-object",
+        "2f5ac3fecaddfe5f99ae6e6e129b4d73abb3dfc0",
+        "--remote",
+        "https://github.com/taipei49314/checkwash.git",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\advertised-source.json"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.4060000000172295,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:49:52.695778+00:00",
+      "name": "advertised-source",
+      "started_at": "2026-11-07T16:49:51.284340+00:00",
+      "stderr": "logs/advertised-source.stderr",
+      "stdout": "logs/advertised-source.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 9.5,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:02.214741+00:00",
+      "name": "advertised-venv",
+      "started_at": "2026-11-07T16:49:52.703069+00:00",
+      "stderr": "logs/advertised-venv.stderr",
+      "stdout": "logs/advertised-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-deps",
+        "--no-cache-dir",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\advertised-pip.json",
+        "git+https://github.com/taipei49314/checkwash.git@v0.11.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 17.09399999998277,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:19.313069+00:00",
+      "name": "advertised-install",
+      "started_at": "2026-11-07T16:50:02.216724+00:00",
+      "stderr": "logs/advertised-install.stderr",
+      "stdout": "logs/advertised-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import hashlib,importlib.metadata as m,json,pathlib,re,sys;d=m.distribution('checkwash'); expected=json.loads(pathlib.Path(sys.argv[1]).read_text());actual={p:hashlib.sha256(pathlib.Path(d.locate_file(p)).read_bytes()).hexdigest() for p in expected};assert actual==expected; assert d.version==sys.argv[3];deps={re.sub(r'[-_.]+','-',p.metadata['Name']).lower():p.version for p in m.distributions()};assert set(deps)<= {'pip','setuptools','checkwash'};r={'version':d.version,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':deps,'members':actual,'requires':d.requires};pathlib.Path(sys.argv[2]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\advertised-expected.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\advertised-identity.json",
+        "0.11.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.0929999999934807,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:20.425023+00:00",
+      "name": "advertised-identity",
+      "started_at": "2026-11-07T16:50:19.325749+00:00",
+      "stderr": "logs/advertised-identity.stderr",
+      "stdout": "logs/advertised-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.7339999999967404,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:21.179500+00:00",
+      "name": "advertised-dependencies",
+      "started_at": "2026-11-07T16:50:20.434569+00:00",
+      "stderr": "logs/advertised-dependencies.stderr",
+      "stdout": "logs/advertised-dependencies.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.5779999999795109,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:21.777082+00:00",
+      "name": "advertised-version",
+      "started_at": "2026-11-07T16:50:21.187878+00:00",
+      "stderr": "logs/advertised-version.stderr",
+      "stdout": "logs/advertised-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.6089999999967404,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:22.400565+00:00",
+      "name": "advertised-demo",
+      "started_at": "2026-11-07T16:50:21.783546+00:00",
+      "stderr": "logs/advertised-demo.stderr",
+      "stdout": "logs/advertised-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\advertised-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 2.8589999999967404,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:25.268779+00:00",
+      "name": "advertised-check",
+      "started_at": "2026-11-07T16:50:22.409998+00:00",
+      "stderr": "logs/advertised-check.stderr",
+      "stdout": "logs/advertised-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "verify_published_source.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-tag-source",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\g",
+        "--tag",
+        "v0.12.0",
+        "--expected-commit",
+        "532f74ab070a924b23e2cc70e5d0091a05d8401d",
+        "--source-sha",
+        "532f74ab070a924b23e2cc70e5d0091a05d8401d",
+        "--expected-tag-object",
+        "6f8b8b7a95f8c6070a0c4bfb1e3ea5a9cb534fe2",
+        "--remote",
+        "https://github.com/taipei49314/checkwash.git",
+        "--output",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\tag-source.json"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.375,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:32.640072+00:00",
+      "name": "tag-source",
+      "started_at": "2026-11-07T16:50:31.274650+00:00",
+      "stderr": "logs/tag-source.stderr",
+      "stdout": "logs/tag-source.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 8.453000000037719,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:41.090456+00:00",
+      "name": "tag-venv",
+      "started_at": "2026-11-07T16:50:32.648898+00:00",
+      "stderr": "logs/tag-venv.stderr",
+      "stdout": "logs/tag-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-deps",
+        "--no-cache-dir",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\tag-pip.json",
+        "git+https://github.com/taipei49314/checkwash.git@v0.12.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 16.07799999997951,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:57.177133+00:00",
+      "name": "tag-install",
+      "started_at": "2026-11-07T16:50:41.092412+00:00",
+      "stderr": "logs/tag-install.stderr",
+      "stdout": "logs/tag-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import hashlib,importlib.metadata as m,json,pathlib,re,sys;d=m.distribution('checkwash'); expected=json.loads(pathlib.Path(sys.argv[1]).read_text());actual={p:hashlib.sha256(pathlib.Path(d.locate_file(p)).read_bytes()).hexdigest() for p in expected};assert actual==expected; assert d.version==sys.argv[3];deps={re.sub(r'[-_.]+','-',p.metadata['Name']).lower():p.version for p in m.distributions()};assert set(deps)<= {'pip','setuptools','checkwash'};r={'version':d.version,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':deps,'members':actual,'requires':d.requires};pathlib.Path(sys.argv[2]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\tag-expected.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\tag-identity.json",
+        "0.12.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.2660000000032596,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:58.456936+00:00",
+      "name": "tag-identity",
+      "started_at": "2026-11-07T16:50:57.186543+00:00",
+      "stderr": "logs/tag-identity.stderr",
+      "stdout": "logs/tag-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.0469999999622814,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:50:59.525037+00:00",
+      "name": "tag-dependencies",
+      "started_at": "2026-11-07T16:50:58.466950+00:00",
+      "stderr": "logs/tag-dependencies.stderr",
+      "stdout": "logs/tag-dependencies.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.75,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:00.284888+00:00",
+      "name": "tag-version",
+      "started_at": "2026-11-07T16:50:59.528049+00:00",
+      "stderr": "logs/tag-version.stderr",
+      "stdout": "logs/tag-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.8429999999934807,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:01.134662+00:00",
+      "name": "tag-demo",
+      "started_at": "2026-11-07T16:51:00.291399+00:00",
+      "stderr": "logs/tag-demo.stderr",
+      "stdout": "logs/tag-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\tag-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 6.157000000006519,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:07.291365+00:00",
+      "name": "tag-check",
+      "started_at": "2026-11-07T16:51:01.136616+00:00",
+      "stderr": "logs/tag-check.stderr",
+      "stdout": "logs/tag-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 9.625,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:37.318407+00:00",
+      "name": "github-wheel-venv",
+      "started_at": "2026-11-07T16:51:27.695794+00:00",
+      "stderr": "logs/github-wheel-venv.stderr",
+      "stdout": "logs/github-wheel-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-deps",
+        "--no-cache-dir",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\github-wheel-pip.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0-py3-none-any.whl"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.2189999999827705,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:38.535716+00:00",
+      "name": "github-wheel-install",
+      "started_at": "2026-11-07T16:51:37.320435+00:00",
+      "stderr": "logs/github-wheel-install.stderr",
+      "stdout": "logs/github-wheel-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import hashlib,importlib.metadata as m,json,pathlib,re,sys;d=m.distribution('checkwash'); expected=json.loads(pathlib.Path(sys.argv[1]).read_text());actual={p:hashlib.sha256(pathlib.Path(d.locate_file(p)).read_bytes()).hexdigest() for p in expected};assert actual==expected; assert d.version==sys.argv[3];deps={re.sub(r'[-_.]+','-',p.metadata['Name']).lower():p.version for p in m.distributions()};assert set(deps)<= {'pip','setuptools','checkwash'};r={'version':d.version,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':deps,'members':actual,'requires':d.requires};pathlib.Path(sys.argv[2]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\github-wheel-expected.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\github-wheel-identity.json",
+        "0.12.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.5160000000032596,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:40.060224+00:00",
+      "name": "github-wheel-identity",
+      "started_at": "2026-11-07T16:51:38.545643+00:00",
+      "stderr": "logs/github-wheel-identity.stderr",
+      "stdout": "logs/github-wheel-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.7810000000172295,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:40.848859+00:00",
+      "name": "github-wheel-dependencies",
+      "started_at": "2026-11-07T16:51:40.068820+00:00",
+      "stderr": "logs/github-wheel-dependencies.stderr",
+      "stdout": "logs/github-wheel-dependencies.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.6399999999557622,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:41.510390+00:00",
+      "name": "github-wheel-version",
+      "started_at": "2026-11-07T16:51:40.856083+00:00",
+      "stderr": "logs/github-wheel-version.stderr",
+      "stdout": "logs/github-wheel-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.6880000000237487,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:42.205311+00:00",
+      "name": "github-wheel-demo",
+      "started_at": "2026-11-07T16:51:41.512348+00:00",
+      "stderr": "logs/github-wheel-demo.stderr",
+      "stdout": "logs/github-wheel-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 3.01500000001397,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:45.230225+00:00",
+      "name": "github-wheel-check",
+      "started_at": "2026-11-07T16:51:42.208269+00:00",
+      "stderr": "logs/github-wheel-check.stderr",
+      "stdout": "logs/github-wheel-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 8.329000000027008,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:51:53.581619+00:00",
+      "name": "github-sdist-venv",
+      "started_at": "2026-11-07T16:51:45.257367+00:00",
+      "stderr": "logs/github-sdist-venv.stderr",
+      "stdout": "logs/github-sdist-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-deps",
+        "--no-cache-dir",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\github-sdist-pip.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash-0.12.0.tar.gz"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 10.936999999976251,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:04.512808+00:00",
+      "name": "github-sdist-install",
+      "started_at": "2026-11-07T16:51:53.583570+00:00",
+      "stderr": "logs/github-sdist-install.stderr",
+      "stdout": "logs/github-sdist-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import hashlib,importlib.metadata as m,json,pathlib,re,sys;d=m.distribution('checkwash'); expected=json.loads(pathlib.Path(sys.argv[1]).read_text());actual={p:hashlib.sha256(pathlib.Path(d.locate_file(p)).read_bytes()).hexdigest() for p in expected};assert actual==expected; assert d.version==sys.argv[3];deps={re.sub(r'[-_.]+','-',p.metadata['Name']).lower():p.version for p in m.distributions()};assert set(deps)<= {'pip','setuptools','checkwash'};r={'version':d.version,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':deps,'members':actual,'requires':d.requires};pathlib.Path(sys.argv[2]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\github-sdist-expected.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\github-sdist-identity.json",
+        "0.12.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.1410000000032596,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:05.658401+00:00",
+      "name": "github-sdist-identity",
+      "started_at": "2026-11-07T16:52:04.522738+00:00",
+      "stderr": "logs/github-sdist-identity.stderr",
+      "stdout": "logs/github-sdist-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.7650000000139698,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:06.428159+00:00",
+      "name": "github-sdist-dependencies",
+      "started_at": "2026-11-07T16:52:05.666455+00:00",
+      "stderr": "logs/github-sdist-dependencies.stderr",
+      "stdout": "logs/github-sdist-dependencies.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.625,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:07.052876+00:00",
+      "name": "github-sdist-version",
+      "started_at": "2026-11-07T16:52:06.432103+00:00",
+      "stderr": "logs/github-sdist-version.stderr",
+      "stdout": "logs/github-sdist-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.6720000000204891,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:07.715116+00:00",
+      "name": "github-sdist-demo",
+      "started_at": "2026-11-07T16:52:07.055810+00:00",
+      "stderr": "logs/github-sdist-demo.stderr",
+      "stdout": "logs/github-sdist-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\github-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 2.937999999965541,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:10.657897+00:00",
+      "name": "github-sdist-check",
+      "started_at": "2026-11-07T16:52:07.717187+00:00",
+      "stderr": "logs/github-sdist-check.stderr",
+      "stdout": "logs/github-sdist-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 8.15700000000652,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:18.826563+00:00",
+      "name": "pypi-wheel-venv",
+      "started_at": "2026-11-07T16:52:10.672441+00:00",
+      "stderr": "logs/pypi-wheel-venv.stderr",
+      "stdout": "logs/pypi-wheel-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-deps",
+        "--no-cache-dir",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\pypi-wheel-pip.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\public-pypi\\checkwash-0.12.0-py3-none-any.whl"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.2179999999934807,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:20.048815+00:00",
+      "name": "pypi-wheel-install",
+      "started_at": "2026-11-07T16:52:18.830056+00:00",
+      "stderr": "logs/pypi-wheel-install.stderr",
+      "stdout": "logs/pypi-wheel-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import hashlib,importlib.metadata as m,json,pathlib,re,sys;d=m.distribution('checkwash'); expected=json.loads(pathlib.Path(sys.argv[1]).read_text());actual={p:hashlib.sha256(pathlib.Path(d.locate_file(p)).read_bytes()).hexdigest() for p in expected};assert actual==expected; assert d.version==sys.argv[3];deps={re.sub(r'[-_.]+','-',p.metadata['Name']).lower():p.version for p in m.distributions()};assert set(deps)<= {'pip','setuptools','checkwash'};r={'version':d.version,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':deps,'members':actual,'requires':d.requires};pathlib.Path(sys.argv[2]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\pypi-wheel-expected.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\pypi-wheel-identity.json",
+        "0.12.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.25,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:21.322192+00:00",
+      "name": "pypi-wheel-identity",
+      "started_at": "2026-11-07T16:52:20.058781+00:00",
+      "stderr": "logs/pypi-wheel-identity.stderr",
+      "stdout": "logs/pypi-wheel-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.75,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:22.080166+00:00",
+      "name": "pypi-wheel-dependencies",
+      "started_at": "2026-11-07T16:52:21.333788+00:00",
+      "stderr": "logs/pypi-wheel-dependencies.stderr",
+      "stdout": "logs/pypi-wheel-dependencies.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.5929999999934807,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:22.682331+00:00",
+      "name": "pypi-wheel-version",
+      "started_at": "2026-11-07T16:52:22.081685+00:00",
+      "stderr": "logs/pypi-wheel-version.stderr",
+      "stdout": "logs/pypi-wheel-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.6410000000032596,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:23.325477+00:00",
+      "name": "pypi-wheel-demo",
+      "started_at": "2026-11-07T16:52:22.684811+00:00",
+      "stderr": "logs/pypi-wheel-demo.stderr",
+      "stdout": "logs/pypi-wheel-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-wheel-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 2.9679999999934807,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:26.298430+00:00",
+      "name": "pypi-wheel-check",
+      "started_at": "2026-11-07T16:52:23.328937+00:00",
+      "stderr": "logs/pypi-wheel-check.stderr",
+      "stdout": "logs/pypi-wheel-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "venv",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 8.077999999979511,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:34.394632+00:00",
+      "name": "pypi-sdist-venv",
+      "started_at": "2026-11-07T16:52:26.312316+00:00",
+      "stderr": "logs/pypi-sdist-venv.stderr",
+      "stdout": "logs/pypi-sdist-venv.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "--no-input",
+        "install",
+        "--no-deps",
+        "--no-cache-dir",
+        "--no-compile",
+        "--report",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\pypi-sdist-pip.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\public-pypi\\checkwash-0.12.0.tar.gz"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 10.313000000023749,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:44.705295+00:00",
+      "name": "pypi-sdist-install",
+      "started_at": "2026-11-07T16:52:34.396148+00:00",
+      "stderr": "logs/pypi-sdist-install.stderr",
+      "stdout": "logs/pypi-sdist-install.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-c",
+        "import hashlib,importlib.metadata as m,json,pathlib,re,sys;d=m.distribution('checkwash'); expected=json.loads(pathlib.Path(sys.argv[1]).read_text());actual={p:hashlib.sha256(pathlib.Path(d.locate_file(p)).read_bytes()).hexdigest() for p in expected};assert actual==expected; assert d.version==sys.argv[3];deps={re.sub(r'[-_.]+','-',p.metadata['Name']).lower():p.version for p in m.distributions()};assert set(deps)<= {'pip','setuptools','checkwash'};r={'version':d.version,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':deps,'members':actual,'requires':d.requires};pathlib.Path(sys.argv[2]).write_text(json.dumps(r,sort_keys=True)+'\\n',encoding='utf-8')",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\pypi-sdist-expected.json",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\release\\pypi-sdist-identity.json",
+        "0.12.0"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 1.0929999999934807,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:45.800352+00:00",
+      "name": "pypi-sdist-identity",
+      "started_at": "2026-11-07T16:52:44.714629+00:00",
+      "stderr": "logs/pypi-sdist-identity.stderr",
+      "stdout": "logs/pypi-sdist-identity.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.7029999999795109,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:46.520184+00:00",
+      "name": "pypi-sdist-dependencies",
+      "started_at": "2026-11-07T16:52:45.809314+00:00",
+      "stderr": "logs/pypi-sdist-dependencies.stderr",
+      "stdout": "logs/pypi-sdist-dependencies.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.5940000000409782,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:47.114559+00:00",
+      "name": "pypi-sdist-version",
+      "started_at": "2026-11-07T16:52:46.523118+00:00",
+      "stderr": "logs/pypi-sdist-version.stderr",
+      "stdout": "logs/pypi-sdist-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.6399999999557622,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:47.754997+00:00",
+      "name": "pypi-sdist-demo",
+      "started_at": "2026-11-07T16:52:47.117493+00:00",
+      "stderr": "logs/pypi-sdist-demo.stderr",
+      "stdout": "logs/pypi-sdist-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\s\\pypi-sdist-environment\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "-m",
+        "checkwash",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 2.797000000020489,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:52:50.552332+00:00",
+      "name": "pypi-sdist-check",
+      "started_at": "2026-11-07T16:52:47.757960+00:00",
+      "stderr": "logs/pypi-sdist-check.stderr",
+      "stdout": "logs/pypi-sdist-check.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\t\\tools\\collect_pju_receipts.py",
+        "--internal-helper",
+        "qualify_zipapp.py",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\nested-public-pyz-qualification",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 21.06300000002375,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:53:11.606104+00:00",
+      "name": "public-pyz-qualification",
+      "started_at": "2026-11-07T16:52:50.556400+00:00",
+      "stderr": "logs/public-pyz-qualification.stderr",
+      "stdout": "logs/public-pyz-qualification.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.875,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:53:12.488204+00:00",
+      "name": "public-pyz-version",
+      "started_at": "2026-11-07T16:53:11.609036+00:00",
+      "stderr": "logs/public-pyz-version.stderr",
+      "stdout": "logs/public-pyz-version.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz",
+        "demo"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 0.9059999999590218,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:53:13.388471+00:00",
+      "name": "public-pyz-demo",
+      "started_at": "2026-11-07T16:53:12.490189+00:00",
+      "stderr": "logs/public-pyz-demo.stderr",
+      "stdout": "logs/public-pyz-demo.stdout",
+      "timed_out": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+        "-I",
+        "-B",
+        "-X",
+        "utf8",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\r\\artifacts\\checkwash.pyz",
+        "check",
+        "e27eec6b2e56a05be33ce8b45f398482740d234b..ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+        "--repo",
+        "C:\\Users\\nelson\\dev\\cw592pub1\\c",
+        "--fail-on",
+        "high"
+      ],
+      "cwd": "C:\\Users\\nelson\\dev\\cw592pub1\\s",
+      "duration_seconds": 3.2660000000032596,
+      "exit_code": 0,
+      "finished_at": "2026-11-07T16:53:16.653810+00:00",
+      "name": "public-pyz-check",
+      "started_at": "2026-11-07T16:53:13.391012+00:00",
+      "stderr": "logs/public-pyz-check.stderr",
+      "stdout": "logs/public-pyz-check.stdout",
+      "timed_out": false
+    }
+  ],
+  "records": {
+    "action_replay": "action/replay.json",
+    "candidate_action_coverage": "candidate-action-coverage.json",
+    "contract_descriptor": "contract-descriptor.json",
+    "dogfood": "action/runtime-receipts/check-receipt.json",
+    "inventories": {
+      "pyz": "inventories/pyz.json",
+      "source": "inventories/source.json",
+      "wheel": "inventories/wheel.json"
+    },
+    "junit": "junit.xml",
+    "qualifications": {
+      "pyz": "qualifications/pyz.json",
+      "source": "qualifications/source.json",
+      "wheel": "qualifications/wheel.json"
+    },
+    "release": {
+      "advertised": "release/advertised-visitor.json",
+      "publication": "release/publication.json",
+      "subject": "native-subject.json",
+      "tag_source": "release/tag-source.json",
+      "tag_visitor": "release/tag-visitor.json",
+      "verdict": "release/verdict-gate.json",
+      "verdict_inventory": "release/verdict-inputs.json"
+    }
+  },
+  "repository": "taipei49314/checkwash",
+  "runtime": {
+    "bash_executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+    "bash_sha256": "a80d0cc4ed45f99c6073e8504bcdd9935c553afd9460627cbbb4bec103e7ef60",
+    "dependencies": {
+      "PyYAML": "6.0.3",
+      "Pygments": "2.21.0",
+      "backports.tarfile": "1.2.0",
+      "build": "1.6.1",
+      "certifi": "2026.10.23",
+      "charset-normalizer": "3.5.2",
+      "colorama": "0.4.6",
+      "docutils": "0.23",
+      "editables": "0.6",
+      "execnet": "2.1.2",
+      "hatchling": "1.32.4",
+      "id": "1.6.1",
+      "idna": "3.20",
+      "importlib_metadata": "10.1.0",
+      "iniconfig": "2.3.1",
+      "jaraco.classes": "3.4.0",
+      "jaraco.context": "6.1.2",
+      "jaraco.functools": "4.6.0",
+      "keyring": "25.7.0",
+      "markdown-it-py": "4.2.0",
+      "mdurl": "0.1.2",
+      "more-itertools": "11.2.1",
+      "nh3": "0.3.7",
+      "packaging": "26.3",
+      "pathspec": "1.1.1",
+      "pip": "26.2.2",
+      "pluggy": "1.7.0",
+      "pyproject_hooks": "1.3.3",
+      "pytest": "9.1.1",
+      "pytest-xdist": "3.8.0",
+      "pywin32-ctypes": "0.2.3",
+      "readme_renderer": "46.0",
+      "requests": "2.34.2",
+      "requests-toolbelt": "1.0.0",
+      "rfc3986": "2.0.0",
+      "rich": "15.0.0",
+      "tomlkit": "0.15.2",
+      "trove-classifiers": "2026.9.21.13",
+      "twine": "7.0.0",
+      "urllib3": "2.8.0",
+      "zipp": "4.1.2"
+    },
+    "git_executable": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "git_sha256": "7b7971dd13f0c3a284e538601f2f9770b3a87dfaccb5fb52d68141c67ed22364",
+    "os": "Windows",
+    "other_platforms": "NOT_RUN",
+    "python_executable": "C:\\Users\\nelson\\dev\\cw592pub1\\dev\\Scripts\\python.exe",
+    "python_sha256": "21bb438c0d4a6f1f164b9a646f6ee000340185e5871180aec06db8d3f07c0082",
+    "python_version": "3.11.9"
+  },
+  "schema_version": 1,
+  "source_tree": "516dde6dac193a641c59792ae6a08de777fdfb93",
+  "status": "completed",
+  "subject": {
+    "base_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b",
+    "event": {
+      "created_at": "2026-11-07T16:08:00Z",
+      "name": "workflow_dispatch",
+      "payload_sha256": "3d6fcb3a571d71217a0f858653eb071037ef4424760ca0dd5b741d4f0564cba5",
+      "run_attempt": 1,
+      "run_id": 42389734518,
+      "workflow_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b"
+    },
+    "head_sha": "ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+    "kind": "checkwash.pju-release-subject.v1",
+    "release_id": 437647350,
+    "repository": "taipei49314/checkwash",
+    "schema_version": 1,
+    "source_tree": "516dde6dac193a641c59792ae6a08de777fdfb93",
+    "stage": "public-visitor",
+    "tag": "v0.12.0",
+    "tag_object": "6f8b8b7a95f8c6070a0c4bfb1e3ea5a9cb534fe2"
+  }
+}
