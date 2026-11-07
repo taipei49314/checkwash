@@ -148,7 +148,7 @@ version, review it again and store the new key; the
 
 ### v0.11.0 to v0.12.0
 
-The 0.12 candidate, not yet released. A build from main before the 0.12.0
+These are the changes in 0.12.0. A build from main before the 0.12.0
 release pull request reports `checkwash_version` `0.11.0`.
 
 - **A new escalator label,** `REPAIR_EVIDENCE_REFUSED` (D-199). E1 prints it
@@ -173,6 +173,28 @@ release pull request reports `checkwash_version` `0.11.0`.
   marked off with `marks=skip`, rows deleted beside one, or a table left
   with no row to run (a plain test wrapped in an empty parameter set among
   them), beside a removed symbol: none is a removal (D-199).
+- **More readings change, and more passes become blocks (D-201).** Values
+  inside an IR can differ for the same input: an equality with
+  `unittest.mock.ANY` as a whole operand, and the other spellings that hold
+  for every value, read as the `TAUTOLOGY`, `TYPE_SHAPE` or `TRUTHY`
+  strength where 0.11.0 read them as ordinary comparisons, so rewriting an
+  expected value into one is `ASSERT_WEAKENED`. `COMPAT_GATE` (D6) holds a single
+  test's skip only when its condition is provably false in some environment
+  of the matrix, and `assertEqual` rewritten as `assertCountEqual` on the
+  same subject is a new `SUBJECT_NORMALIZED` finding. Rule ids, finding
+  fields, findings version 2 and IR version 3 do not change. A rewrite that
+  0.11.0 reported under another rule, or not at all, gets a new finding with
+  its own fingerprint, so an exemption recorded for the old finding does not
+  cover it.
+- **The release tag (D-200).** From v0.12.0 the tag points at the release's
+  Action commit A, not at the release merge M from which the PyPI package
+  and the pyz are built. A CLI installed through Git from the tag is A's: it
+  reports the same version, and its `doctor` rejects the release's own
+  Action pin. Install from PyPI or the pyz.
+- **The release as a whole** moves 19 of the fixed corpus's 3,600 commits
+  from pass to block against v0.11.0 (8 Python, 11 JS/TS): D-199's 18 and
+  D-201's one. No commit moves from block to pass
+  ([0.12.0 release guide](releases/v0.12.0-public-launch.md)).
 
 ### v0.10.0 to v0.11.0
 

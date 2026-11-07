@@ -20,8 +20,12 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-The install commands and Action pin below name v0.11.0, the latest release
-whose public files are verified
+This README was written for checkwash 0.12.0. Its install commands and Action
+pin still name v0.11.0, the latest release whose public files had been
+verified when it was written; the
+[README on GitHub](https://github.com/taipei49314/checkwash#readme) moves them
+to 0.12.0 once 0.12.0's are. Once 0.12.0 is on PyPI, you can install it by
+writing `0.12.0` where the commands below say `0.11.0`
 ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
 
 Start in one of three ways, each below: Claude Code hooks, the CLI on a
@@ -143,7 +147,8 @@ gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.j
 
 This adds a ruleset; it does not replace existing ones. `checkwash doctor`
 can inspect the local workflow, but cannot verify live branch protection.
-`doctor` 0.11.0 accepts the pin above and v0.10.0's. `doctor` 0.10.0 accepts
+`doctor` 0.11.0 accepts the pin above and v0.10.0's, and `doctor` 0.12.0 the
+pin above and v0.12.0's own. `doctor` 0.10.0 accepts
 only the Action pin built into it, v0.9.0's, so it reports the pin above as an
 unsupported SHA ("workflow analysis incomplete", exit 1): upgrade the CLI and
 its local hooks before the Action pin.
@@ -174,7 +179,7 @@ ASSERT_WEAKENED   HIGH   tests/test_billing.py :: test_invoice_total
 `EXACT_VALUE(90) -> BOUND(40)` ranks the assertion's strength before and
 after; 90 is not the value the test expected. `why high` names what raised the
 finding: here the diff changes no production file
-(`NO_PROD_CHANGE_IN_DIFF`); from 0.12 a weakened test blocks beside a
+(`NO_PROD_CHANGE_IN_DIFF`); from 0.12.0 a weakened test blocks beside a
 production change too (`REPAIR_EVIDENCE_REFUSED`). `checkwash check --format json` gives the same
 findings as JSON.
 
@@ -216,7 +221,7 @@ test patterns. Known gaps remain.
 An edit that changes nothing, such as `+ 0` in a function a test calls or
 one line in a template or `AUTHORS`, can still hold a weakened Python or
 JS/TS test at warn in 0.11.0, which passes at the default threshold. From
-0.12 (unreleased; [0.12 candidate known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-next.md)) a
+0.12.0 ([0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)) a
 weakened, removed, skipped or loosened Python assertion takes no repair
 evidence at all, and neither does a weakened, loosened or skipped JS/TS one
 (D-199). That blocks honest changes too: a deprecated API removed with an
@@ -227,13 +232,13 @@ and so does a test deletion that a renamed private symbol escorts; in JS/TS
 so do a removed assertion or test, deleted parametrize rows, a test parked
 in dead code and a stand-in or subject change
 ([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
-Read the [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
-and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.10.0.md)
+Read the [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)
+and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
 before relying on a pass.
 
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not
 prove a repair is correct, and an edit that changes nothing can earn it
-(#419). From 0.12 (unreleased), `REPAIR_EVIDENCE_REFUSED` marks a finding
+(#419). From 0.12.0, `REPAIR_EVIDENCE_REFUSED` marks a finding
 that such a change reached and whose rule takes none (D-199). To block the
 rest, set the
 Action's `fail-on: warn`
@@ -366,13 +371,12 @@ the merge. The Action runs only `checkwash check`, which does not import
 `doctor`, so it runs the same check at either commit. A release's `doctor`
 accepts two Action pins: the one recommended before the release and the
 release's own Action commit. Up to v0.10.0 the pin was the commit the tag
-points to, `git rev-parse 'vX.Y.Z^{commit}'`, and from v0.12.0 (unreleased,
-D-200) it will be again: the tag will point at the Action commit.
+points to, `git rev-parse 'vX.Y.Z^{commit}'`, and from v0.12.0 (D-200) it is
+again: the tag points at the Action commit.
 
-From v0.12.0 (unreleased), a CLI installed through Git from a release tag will
-be the Action commit's, and its `doctor` will reject that release's own Action
-pin ("workflow analysis incomplete", exit 1). Install the CLI from PyPI or the
-pyz.
+From v0.12.0, a CLI installed through Git from a release tag is the Action
+commit's, and its `doctor` rejects that release's own Action pin ("workflow
+analysis incomplete", exit 1). Install the CLI from PyPI or the pyz.
 
 For the v0.11.0 pin, pin updaters such as Dependabot and Renovate follow the
 `# v0.11.0` comment, so they will propose the tag's commit, which `doctor`
@@ -432,7 +436,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.11.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-publication-verification.md) · [v0.11.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
+| Installation checks, versions and first use | [v0.11.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-publication-verification.md) · [v0.11.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-public-launch.md) · [0.12.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

@@ -1,6 +1,6 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **is alpha**, including 0.11.0. Its versioned interfaces and
+checkwash **is alpha**, including 0.12.0. Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
@@ -47,7 +47,7 @@ changes with it and `DECISIONS.md` carries the entry explaining why.
 | Finding fingerprints | `src/checkwash/findings.py` | Within one minor release line (x.y.0 to x.y.z), a recorded exemption keeps matching. A minor release can move fingerprints in any namespace; its `DECISIONS.md` entry and release notes name the rules and shapes that move ([fingerprint stability](#fingerprint-stability)). v0.3.0 deliberately retires five path-only namespaces; its [upgrade notes](remediation-upgrade.md#reviewed-exemptions) define the break and re-review process. v0.9.0 retired the before-only keys of nine assertion-level rules the same way (#421) and TEST_DISABLED's legacy keys (#512), renumbered units that share a name (#424), and stopped giving a dead def a `name#N` place (#499) |
 | IR / findings schema version | `checkwash.IR_VERSION`, `checkwash_findings_version` | `--format json` and `--emit-ir` are versioned machine interfaces. A required-key or existing-field contract change bumps the affected number; optional additions follow the rules below. See the pre-rename compatibility note below. `--format sarif` is a separate 2.1.0 projection (T2.1), not this schema |
 | Config schema | `SPEC.md` §1, §6 | Both `.checkwash/config.toml` and `.greenwash/config.toml` are supported, with the precedence below. A malformed config is reported, never silently ignored |
-| Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. This is the standing nine-leg contract. Each release's evidence records its actual coverage; its release guide (for 0.11.0, [Evidence and scope](releases/v0.11.0-public-launch.md#evidence-and-scope)) identifies the missing legs and unexecuted cross-platform comparison |
+| Determinism | `SPEC.md` §8 | Same diff, same verdict — byte-identical across Linux, macOS and Windows on Python 3.11–3.13. This is the standing nine-leg contract. Each release's evidence records its actual coverage; its release guide (for 0.12.0, [Evidence and scope](releases/v0.12.0-public-launch.md#evidence-and-scope)) identifies the missing legs and unexecuted cross-platform comparison |
 | Zero runtime dependencies | `pyproject.toml` | Gated by a test. It is what makes the single-file build possible |
 | Never executes your code | the whole design | checkwash statically reads the diff. It does not import, run, or evaluate code under review |
 
@@ -335,7 +335,7 @@ was turned off after the combined sweep's pre-registered stop (D-171), and
 D-191 closes #419 in 0.11 as a documented residual (THREATMODEL item 4,
 rows 2 and 131;
 [enterprise checklist §7](enterprise.md#7-hardening-against-bought-repair-evidence-419)).
-From 0.12 (unreleased), D-199 refuses every repair evidence, this credit
+From 0.12.0, D-199 refuses every repair evidence, this credit
 and the symbol routes alike, to the weakening, stand-in and subject rules
 in a Python test or conftest (any `.py` file, and an import-shadow stand-in
 wherever it is reported) and to the loosening shapes in a JS/TS test

@@ -9,6 +9,28 @@ has the current install commands and Action pin, and the
 version, commit and download bytes behind them. A new publication record
 starts from the [publication record template](publication-record-template.md).
 
+## v0.12.0
+
+Release candidate, prepared in the release pull request; the publication
+record follows once the public files are verified.
+
+**v0.12.0 refuses repair evidence to weakened, removed and skipped tests,
+reads `unittest.mock.ANY` as the tautology it is, and points the release tag
+at the Action commit the README recommends.** In a Python test or conftest, a
+weakened, removed, skipped or loosened assertion, a broad `except`, a
+stand-in for the code under test and a normalized or changed subject take
+no repair evidence, and in a JS/TS test the loosening shapes take none, so
+each blocks beside any production change unless something other than
+repair evidence holds it, labelled `REPAIR_EVIDENCE_REFUSED` (D-199). An
+expected value rewritten into `ANY` is a weakening, a single test's skip
+earns the compatibility credit only when it provably runs somewhere, and
+`assertEqual` rewritten as `assertCountEqual` drops order (D-201). From
+v0.12.0 the tag points at the release's Action commit, and the README
+installs the CLI only from PyPI and the pyz (D-200).
+[Release evidence and known limits](v0.12.0-public-launch.md).
+
+Known issues: [v0.12.0](../KNOWN-ISSUES-v0.12.0.md).
+
 ## v0.11.0
 
 Published 2026-11-04; its public files are verified in the

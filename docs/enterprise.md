@@ -32,9 +32,9 @@ The README's Action pin and its CLI commands name the same release, the latest
 one whose public files are verified. The pin advances in a follow-up once a
 release's publication is verified; from v0.11.0 it names the release's Action
 commit, which that release's `doctor` accepts (D-194): for v0.11.0
-`v0.11.0^2^1`, and from v0.12.0 (unreleased, D-200) the commit the tag points
-to. Install the CLI from PyPI or the pyz: from v0.12.0 a CLI installed through
-Git from a release tag will reject that release's own Action pin in `doctor`.
+`v0.11.0^2^1`, and from v0.12.0 (D-200) the commit the tag points to.
+Install the CLI from PyPI or the pyz: from v0.12.0 a CLI installed through Git
+from a release tag rejects that release's own Action pin in `doctor`.
 Installing a
 newer CLI does not update an existing Action. Always record both deployed versions. A required check enforces that version's
 configured verdict, not a guarantee that the change is correct.
@@ -148,13 +148,14 @@ rows 172 to 176).
 documented residual, not a fix ([D-191](../DECISIONS-archive-4.md)): what still passes
 and what blocks in 0.11.0 are in [KNOWN-ISSUES-v0.11.0](KNOWN-ISSUES-v0.11.0.md);
 [THREATMODEL](../THREATMODEL.md) item 4 and rows 2, 93, 130, 131 and 172 to
-175 now describe main. From 0.12 (unreleased), D-199 refuses every repair evidence to a weakened,
+175 now describe main. From 0.12.0
+([KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md)), D-199 refuses every repair evidence to a weakened,
 removed, skipped or loosened Python assertion, a broad `except`, a patched
 or normalized subject, a changed input and a derived expectation, and to a
 weakened or loosened JS/TS assertion, a broad catch and a skip added to a
 live JS/TS test; such a finding blocks unless something other than repair
 evidence holds it, labelled `REPAIR_EVIDENCE_REFUSED`. What it leaves open
-is in [KNOWN-ISSUES-next](KNOWN-ISSUES-next.md): a rewritten expected value
+is in [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md): a rewritten expected value
 or a substituted assertion beside a no-op edit, a weakening respelled as
 one of them included; a test deletion that a renamed private symbol
 escorts into D8; and in JS/TS a removed assertion or test, deleted
@@ -187,8 +188,8 @@ from archived rows, not a measurement of 0.11 (see *About the counts*).
 
    `checkwash doctor` proves only a checkwash step with `uses:` and no
    `with:`, so a workflow that sets `fail-on: warn` reports "WARN workflow
-   analysis incomplete" and doctor exits 1. In 0.11.0 that is expected:
-   doctor still proves only a step with no `with:`. A pull request runs the
+   analysis incomplete" and doctor exits 1. In 0.12.0, as in 0.11.0, that is
+   expected: doctor still proves only a step with no `with:`. A pull request runs the
    workflow as it changes it, so one that lowers its own
    `fail-on` is judged at the lowered threshold, and its workflow edit
    shows only as `CI_WORKFLOW_TOUCHED` at warn: keep
