@@ -71,9 +71,11 @@ regressions first found in a review of this branch, which main never had.
 All 20 `_neg` fixtures pass on main.
 
 Status: branch `claude/d201-section7-gaps-20261107` from main `54113c06`,
-not merged. Its pull request asks Nelson to approve D-201's text with SPEC
-and THREATMODEL (L1) and the new fixtures' labels (L2); merging waits for
-his separate approval.
+not merged. Nelson approved D-201's text with SPEC, THREATMODEL and the D6
+policy (L1 of #591) and the labels of the 77 new fixtures (L2) at
+2026-11-07T03:35:09Z with the button 「核可 L1 和 L2」 (approve L1 and L2), which
+Claude wrote; D-201 quotes the question. Merging waits for his separate
+approval.
 
 ## 2026-11-06: from v0.12.0 the release tag points at the Action commit (D-200)
 

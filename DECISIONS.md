@@ -820,11 +820,21 @@ fixes or records each:
 Claude wrote the question, the buttons and the recommendation. The answer
 chooses to close the holes before 0.12.0; it is not Nelson's review of this
 text or of the code. This entry and the SPEC and THREATMODEL text below are
-agent-read-only, and the pull request asks him to approve them by name
-before it merges. D6 is part of SPEC §5's escalation policy, so its change
-below, made in `compat.py`, is in that approval too. Every detail is
-Claude's under the 2026-10-27 delegation (「Checkwash 一樣給你」: 0.x
-autonomous, stop before 1.0), including each rule's reach below.
+agent-read-only, and a human reviews the labels of new fixtures before merge
+(AGENTS.md), so the pull request asked him to approve them by name before it
+merges. D6 is part of SPEC §5's escalation policy, so its change below, made
+in `compat.py`, is in that approval too. At 2026-11-07T03:35:09Z, to
+Claude's question 「#591 的 L1（D-201、SPEC、THREATMODEL）和 L2（77 個新 fixture
+標籤）要核可嗎？」 (approve #591's L1, D-201 with SPEC and THREATMODEL, and L2, the
+labels of the 77 new fixtures?), asked while the pull request's head was
+`c77d4f64`, he chose the button 「核可 L1 和 L2」 (approve L1 and L2), which
+Claude wrote. L1 of #591, this pull request, is this entry, SPEC §3, §4 and
+§5, THREATMODEL item 6 and rows 14, 44, 55, 57 and 182, and the D6 policy;
+L2 is the labels of the 57 `_pos` and 20 `_neg` fixtures it adds. The answer
+approves the listed items, not the merge. Every detail not quoted above is
+Claude's under the 2026-10-27 delegation (「Checkwash 一樣給你」: 0.x autonomous,
+stop before 1.0), including each rule's reach below. None of it is Nelson's
+personal review.
 
 **What is decided.**
 
