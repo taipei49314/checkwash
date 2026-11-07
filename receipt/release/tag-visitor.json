@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "subject": {
+    "base_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b",
+    "event": {
+      "created_at": "2026-11-07T14:13:26Z",
+      "name": "workflow_dispatch",
+      "payload_sha256": "3ef4b5fa5eca97d40fb1de6feeff9b0597ea12591038a0f06ca1d914a3347167",
+      "run_attempt": 1,
+      "run_id": 42380588324,
+      "workflow_sha": "e27eec6b2e56a05be33ce8b45f398482740d234b"
+    },
+    "head_sha": "ffaf4ed86ecc2baeb8cc008487a44d8495da9177",
+    "kind": "checkwash.pju-release-subject.v1",
+    "release_id": null,
+    "repository": "taipei49314/checkwash",
+    "schema_version": 1,
+    "source_tree": "516dde6dac193a641c59792ae6a08de777fdfb93",
+    "stage": "tag",
+    "tag": "v0.12.0",
+    "tag_object": "6f8b8b7a95f8c6070a0c4bfb1e3ea5a9cb534fe2"
+  },
+  "visitor": {
+    "expected_members": "release/tag-expected.json",
+    "identity": "release/tag-identity.json",
+    "install_report": "release/tag-pip.json",
+    "name": "tag",
+    "status": "completed",
+    "target": "git+https://github.com/taipei49314/checkwash.git@v0.12.0"
+  }
+}

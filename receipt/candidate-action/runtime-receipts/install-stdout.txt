@@ -1,0 +1,16 @@
+Using pip 24.0 from C:\Users\nelson\dev\cw592tag1\s\candidate-action\checkwash-action-y65ua35w\environment\Lib\site-packages\pip (python 3.11)
+Processing c:\users\nelson\dev\cw592tag1\a
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: checkwash
+  Building wheel for checkwash (pyproject.toml): started
+  Building wheel for checkwash (pyproject.toml): finished with status 'done'
+  Created wheel for checkwash: filename=checkwash-0.12.0-py3-none-any.whl size=1036788 sha256=b09833193b49f89a868664a10b9a602ba494800118ceda34756eb6e870af2468
+  Stored in directory: C:\Users\nelson\dev\cw592tag1\s\candidate-action\checkwash-action-y65ua35w\pip-ephem-wheel-cache-r_8gtk8v\wheels\5d\dc\4d\dc23ebf960062593345edb83c746d66867e9eb48b843b954bb
+Successfully built checkwash
+Installing collected packages: checkwash
+Successfully installed checkwash-0.12.0
