@@ -221,6 +221,44 @@ checkwash-lab repository: `252046de`
 section records the run identities and hashes. These in-sample counts are not
 a false-positive rate.
 
+## Run 7: actual v0.11.0 against the 0.12.0 candidate
+
+A same-host comparison on 2026-11-07 UTC, on actual LAPTOP-01AGNPJU,
+Windows, CPython 3.11.9, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. The
+previous engine is the published v0.11.0 zipapp (commit
+`34555301de3d5ea4b2c8e4470b797a06d0a1e395`, asset SHA256
+`3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654`); the
+candidate is the `src/` tree `bcad1326db9c0b9c4ac4960d49ee0dc62aaebc65` of
+main `e27eec6b2e56a05be33ce8b45f398482740d234b`, run from source. Members
+are the fixed 3,600 of run 5, this set and the Python standard set, each
+checked against its first parent ([release
+guide](../../docs/releases/v0.12.0-public-launch.md)).
+
+| v0.11.0 -> candidate | Commits |
+|---|---:|
+| pass -> pass | 1,748 |
+| pass -> block | 11 |
+| block -> block | 39 |
+| error -> error | 2 |
+| **total** | **1,800** |
+
+The 11 that move are the JS/TS commits D-199 listed when it measured its
+cost (D-199 refuses repair evidence to a weakened or loosened JS/TS
+assertion and to a skip added to a live test): hono `5463db27`, `c831020f`
+and `f0b094db`, three security-advisory fixes whose tests now assert the
+opposite; typeorm `324c46cd`, `46d5b843`, `b9aa8355`, `c6745f3d`, `df09802e`
+and `ff00a3cd`, behaviour fixes, a new default and a deprecated-method
+removal; undici `2764d996`, a test skipped under a new experimental parser;
+and vue-core `8b44b021`, an end-to-end assertion widened from `<` to `<=`
+beside a dependency update. They go to the owner with the release pull
+request. No other commit's outcome moved, and the Python standard set moved
+8 from pass to block (1,726 pass, 74 block). The two errors are
+apollo-client `8a51ea63` and undici `0f1f8903`, unchanged since run 5.
+Records, in the private checkwash-lab repository: `472d3786` and `c58bc9bf`
+(`notes/r29-comparison-012-claude-20261107/`); the release procedure's
+0.12.0 section records the run identities and hashes. These in-sample counts
+are not a false-positive rate.
+
 ## What these runs do not show
 
 - **A false-positive rate.** The 39 commits that v0.7.0 and v0.8.0 both

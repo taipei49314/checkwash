@@ -1,5 +1,9 @@
 # 0.12 candidate — 2026-11-06
 
+Status, 2026-11-07: the 0.12.0 release pull request carries this section's
+rows into [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md), the page to read
+for 0.12.0. The rows stay here, unchanged, as the dated preparation record.
+
 Nothing here is released. The 0.12 candidate narrows #419's residual
 ([D-199](../DECISIONS.md)): Nelson chose to change it in 0.12
 ([D-196](../DECISIONS-archive-4.md)). The candidate also closes three holes

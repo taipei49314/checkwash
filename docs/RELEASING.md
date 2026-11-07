@@ -174,6 +174,152 @@ rows SHA256 `9b04bd886cec8a63cd5fc1a02339593e58110611040f078330c9b91a8582baf9`).
 This differential is in-sample between two candidate trees; it is not native
 Linux, a false-positive rate or a new adjudication.
 
+## v0.12.0 release under the pre-1.0 delegation (2026-11-07)
+
+0.12.0 is being released under the delegation recorded at the top of this
+file: Nelson's 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」 and 「照著繼續做 完整spec在裡面
+一樣我只卡1.0發佈前 其餘你可以自主推」, which he handed to Claude with 「Checkwash 一樣給你」. Its
+scope was chosen item by item, and D-197 to D-201 quote his words; he
+approved the text of D-199, D-200 and D-201 by name before each merged.
+After #591 merged, Claude asked 「要開始 0.12.0 的發版準備嗎？」 (start preparing the
+0.12.0 release?), with the buttons 「開始準備」 (start preparing) and 「先不要」 (not
+now); at 2026-11-07T04:53:23Z Nelson chose 「開始準備」. Claude wrote the question
+and both labels. This section attributes no further words to him.
+
+Agent interpretation: as for 0.11.0, that delegation is this release's
+one-time authorization for version 0.12.0 and tag `v0.12.0`, for one
+attempt, and the answer above starts its preparation. Claude (Claude Code on
+LAPTOP-01AGNPJU) performs the release pull request and its stage evidence,
+the merge, the tag, the GitHub Release, the release-event and public-visitor
+stages and the step-8 follow-up. Claude asks Nelson before the release
+merge, as for every 0.12 pull request. The 2026-10-28 answer that covered
+the decision-log cut and the verdict-baseline rotation after 0.11.0 (above)
+is not read as covering 0.12.0: Claude asks Nelson before either after this
+release.
+
+The `pypi` deployment waits for Nelson's own approval on the run page, and
+no protection or reviewer setting changes. The fixed-corpus comparison below
+moves 19 commits, so the tag waits for Nelson's review of that list, as the
+standing step requires. The tag is the first made under D-200: it points at
+A, and a failure after the push may cost a v0.12.1 (*What has not run*,
+below). Other platforms are NOT_RUN; accepting them as missing for this
+release is the same delegated decision as for 0.11.0, and the six-leg PJU
+batch is supplementary evidence, not a release receipt. Not covered: 1.0,
+downstream re-pins of checkwash-corpus and smallestlie, and GitHub-hosted
+test legs.
+
+**Fixed-corpus comparison.** Claude ran it on 2026-11-07 UTC as a same-host
+comparison on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows, CPython 3.11.9): the published v0.11.0 zipapp (`checkwash.pyz`,
+commit `34555301de3d5ea4b2c8e4470b797a06d0a1e395`, SHA256
+`3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654`) against
+the candidate `src/` tree `bcad1326db9c0b9c4ac4960d49ee0dc62aaebc65` of main
+`e27eec6b2e56a05be33ce8b45f398482740d234b` (the release pull request changes
+that tree only in the version string and `doctor`'s own pin line, D-196), on
+the fixed 3,600 members (SHA256
+`f6281caad596c5d6f054dd8f0050abb21d63a803fa7bf2fa3f6c694d05559de2`), each
+against its first parent, 240 seconds per call, 12 workers, from 04:58:22Z
+to 05:51:53Z (3,208.4 seconds for the members; the rest of the window
+checked the clones and probed both engines' versions). The run is this step
+as the procedure stands, made under the delegation after the answer above;
+Nelson did not approve it separately. 3,569 members gave identical exit
+codes and identical reports apart from the `run` block, 31 differed, and no
+call timed out. Python: v0.11.0 1,734 pass and 66 block, the candidate 1,726
+pass and 74 block. JS/TS: v0.11.0 1,759 pass, 39 block and 2 engine errors,
+the candidate 1,748 pass, 50 block and the same 2 errors. No commit moves
+from block to pass, or to or from an error. Nineteen move from pass to block
+and go to the owner: the 18 that D-199 listed for its option R on main
+`7cd8549c`, now blocking on findings that v0.11.0 held at warn by repair
+evidence (`REPAIR_EVIDENCE_REFUSED`), and rich `655b5210cb`, which D-201
+listed, blocking on skips that v0.11.0 held at warn by `COMPAT_GATE`. Each,
+with a reading of its change from its diff and findings:
+
+- click `ad39d749` removes `test_faulthandler_enable` while it reverts the
+  `fileno` exposure that test covered (one `TEST_DISABLED`).
+- httpx `1d73150c` removes the private helper `guess_json_utf` and rewrites
+  its tests through `response.json()`, where checkwash reads one rewritten
+  check as a removed assertion (one `ASSERT_REMOVED`); `57daabf6` drops the
+  `rfc3986` dependency and rewrites one test, `test_url_copywith_security`,
+  whose 18 assertions on how an invalid URL is copied become two checks that
+  such a URL is now refused (`pytest.raises(httpx.InvalidURL)`; 18
+  `ASSERT_REMOVED`); `8e36f2bc` removes the deprecated `proxies` argument
+  and four assertions that used it (`ASSERT_REMOVED`); `b82fbe2c` stops
+  importing a private function in its tests, and four exact-value checks
+  become pattern checks (`ASSERT_WEAKENED`).
+- rich `655b5210cb` adds a 3.14 skip to four tests already skipped on 3.11
+  to 3.13, which then run only on Pythons older than the matrix (D-201; four
+  `TEST_DISABLED`); `b93d3b6d` moves `test_is_single_cell_widths` unchanged
+  from `tests/test_segment.py` to `tests/test_cells.py`, now importing it
+  from `rich.cells`, beside a one-character fix to the expression it tests.
+  checkwash does not credit that move, and v0.11.0 held its disappearance at
+  warn only by repair evidence (one `TEST_DISABLED`).
+- starlette `2c614b91` drops `FileResponse`'s deprecated `method` parameter
+  and the test of its warning (one `TEST_DISABLED`).
+- hono `5463db27`, `c831020f` and `f0b094db`, each titled "Merge commit from
+  fork", fix security advisories in the JWT and JWK, IP-restriction and CORS
+  middlewares, and their tests now assert the corrected, opposite behaviour
+  (five `ASSERT_WEAKENED`: inverted or replaced assertions).
+- typeorm `324c46cd` and `c6745f3d` change behaviour (select-false columns
+  are kept on the saved entity; throwing on invalid where values becomes the
+  default), and their tests are rewritten for it; `46d5b843` moves the
+  invalid-where-value check from the query builders to the entity manager,
+  and its tests follow; `b9aa8355` and `df09802e` fix persistence and
+  CockroachDB schema loading beside restructured tests; `ff00a3cd` removes
+  the deprecated `findOneById` methods and respells two deep-equality
+  checks, which checkwash reads as a step from `EXACT_STRUCT` to
+  `EXACT_VALUE`. Together 20 `ASSERT_WEAKENED`: exact checks become pattern
+  or shape checks, or are replaced.
+- undici `2764d996` adds an experimental HTTP parser and skips one test when
+  that parser is selected (a test option, `skip: process.env.UNDICI_USE_MILO
+  === 'true' && ...`; one `TEST_DISABLED`).
+- vue-core `8b44b021` updates its dependencies and widens one end-to-end
+  assertion from `<` to `<=` (one `ASSERT_WEAKENED`).
+
+Twelve more differ only in their reports: five commits that already block
+gain high findings that v0.11.0 held at warn by repair evidence, and in
+seven that pass a finding moves from repair evidence to another compensation
+(`PROD_SYMBOL_REMOVED`, `SAME_UNIT_REWRITE` or `MILD_WEAKENING`) and stays
+at warn. The moves were classified with 0.11's script and the fix the 0.11.0
+review below asked for (an engine error whose exit code changes now goes to
+the owner), which changed no output here: both errors exit 2 with each
+engine. The tag waits until Nelson has reviewed the list: Claude reports it
+to him with the release pull request, and his review is recorded with this
+release's records, in the step-8 follow-up (D-196), since R is written
+first. Records, in the private checkwash-lab repository: `472d3786` and
+`c58bc9bf` (`notes/r29-comparison-012-claude-20261107/`, rows SHA256
+`95756759155a57bebe9651f77ef038336f683f518add96598046ce7dfc7d8dd1`; the
+differing members' two reports in `differences.json`, SHA256
+`e4736c2fecfe4e5c7b67d7662e1c4ae3fcaaf81ff397c2e24bfa5d3707de00af`).
+In-sample, not a false-positive rate or an adjudication.
+
+**The targeted uvloop diagnostic (D-176).** A separate run of the same
+script and engines checked the three uvloop inputs D-187 accepted as known
+false blocks for 0.10 only, each against its original first parent, from
+05:51:53Z to 05:52:01Z: v0.11.0 and the candidate each pass all three with
+identical reports, and a probe that recorded both engines' findings shows
+none (`uvloop/probe.json`), so the three costs D-190 removed stay removed.
+The records are in the same lab directory, under `uvloop/`.
+
+**D-176's remaining-history risk for 0.12.0.** D-199 records that the 0.12.0
+release needs a new D-176 cost disposition, as the 0.11.0 one covers only
+that release's `src/` tree. For this rule 0.12.0 changes nothing: a broad
+`except` finding in a Python test or conftest has no unit, so its only
+repair-evidence route is the opaque fallback, which D-176's refusal removes
+before D-199's refusal is reached; its verdicts and labels are v0.11.0's,
+and without D-176 D-199 would refuse the same route at the same severity. So
+the risk is 0.11.0's: an honest broad `except` beside an opaque production
+change blocks at high unless D-190 proves it a failure relay, and neither
+run above measures how often history holds one that D-190 does not prove a
+relay; the old R4 census stays partial and consumed. D-199's own measured
+cost does not price it: each option it measured started from a base that
+already refused this route. Claude accepts that risk, unmeasured, for 0.12.0
+only, as its delegated decision after independent review, not Nelson's
+personal review, in a separate source-bound record: [the 0.12.0 D176
+disposition](d176-cost-disposition-0.12.0.md). It is not a history PASS, a
+census, an adjudicated rate or a standing waiver. THREATMODEL item 4 and row
+2 still name only the 0.11.0 disposition; they are agent-read-only, so
+Claude asks Nelson whether to name this one, as it did for 0.11.0.
+
 ## v0.11.0 release under the pre-1.0 delegation (2026-11-03)
 
 0.11.0 is being released under the delegation recorded at the top of this file:
@@ -1177,10 +1323,12 @@ below, and a tag up to v0.11.x keeps the rule above. No tool accepts either.
   from the captured subject, and the verdict gate's tag rule reads the
   pushed tag's public metadata.
 
-**0.12.0 bootstrap.** The 0.12.0 chain is verified from a trusted ref cut
-from main after D-200 merges, as `review/collector-d-011-20261103` was for
-0.11.0, and recorded here when it is cut. No release tool changes between
-that ref and the release pull request's A. The release-event capture runs
+**0.12.0 bootstrap.** The 0.12.0 chain is verified from the trusted ref
+`review/collector-d-012-20261107`, `e27eec6b2e56a05be33ce8b45f398482740d234b`,
+cut on 2026-11-07 from main after #591 merged (D-200 merged earlier, in
+#589). It is the trusted collector, and the trusted workflow for every
+dispatched run. No release tool changes between that ref and the release
+pull request's A. The release-event capture runs
 `release.yml` and the release bridge from A, so A must hold that ref's bytes
 of them and of the helpers they load or audit, which `check --stage tag`
 checks before the push. Its announced pin is v0.11.0's A,

@@ -57,8 +57,8 @@ same isolation to the separate quality preview Action. Both shipped in v0.8.0
 (2026-10-15). The README recommends the newest verified release's Action, v0.11.0's
 since 2026-11-04, with no one-release lag (maintainer decision, 2026-10-14). Pin
 the commit the README recommends: for v0.11.0 the release's Action commit
-`v0.11.0^2^1`; from v0.12.0 (unreleased, D-200) the tag will point at the
-release's Action commit, so the pin will be the tag's peeled commit
+`v0.11.0^2^1`; from v0.12.0 (D-200) the tag points at the release's Action
+commit, so the pin is the tag's peeled commit
 ([action/README.md](action/README.md#public-pin-and-upgrade)).
 The v0.8.0 and later Actions need setup-python in the same job, a checkout with both refs, and a
 dedicated job that runs no pull-request code before the check.
@@ -93,8 +93,8 @@ checkwash has **zero runtime dependencies** — pure standard-library Python.
 That is a deliberate security property for a tool that inspects other code: a
 monitor with a large dependency tree is itself an attack surface. Releases are
 built from the release merge commit, which up to v0.11.x is the tagged commit;
-from v0.12.0 (unreleased, D-200) the tag will point at the release's Action
-commit, which differs from the merge in one `doctor` line. Hosted CI is
+from v0.12.0 (D-200) the tag points at the release's Action commit, which
+differs from the merge in one `doctor` line. Hosted CI is
 disabled: the full suite runs on the maintainer's receipt host (Windows) for
 each pull request and each release stage, and other platforms run only in a
 supplementary batch, not as release evidence

@@ -81,7 +81,7 @@ fix generalises.
 > control, which refused it already (THREATMODEL row 72), since v0.10.0
 > only a broad `except` added in a Python test or conftest refuses that
 > credit (D-176). In 0.11, D-191 closes #419 as a documented residual, not
-> a fix (THREATMODEL item 4, row 2). From 0.12 (unreleased), D-199 refuses every repair
+> a fix (THREATMODEL item 4, row 2). From 0.12.0, D-199 refuses every repair
 > evidence to the weakening, stand-in and subject rules in a Python test or
 > conftest (any `.py` file) and to the loosening shapes in a JS/TS test, so a build
 > Makefile's or a native source's edit no longer holds a weakened assertion
@@ -605,7 +605,7 @@ subject).
 > (THREATMODEL rows 2, 93, 130 and 131), and the opt-in hardening and its
 > cost are in
 > [the enterprise checklist](enterprise.md#7-hardening-against-bought-repair-evidence-419).
-> From 0.12 (unreleased), D-199 refuses both routes to the weakening,
+> From 0.12.0, D-199 refuses both routes to the weakening,
 > stand-in and subject rules in a Python test or conftest and to the
 > loosening shapes in a JS/TS test (SPEC §5): the blanket and Route A still
 > hold the expectation family, `ASSERT_SUBSTITUTED` and a JS/TS test's
