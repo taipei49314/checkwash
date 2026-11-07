@@ -1,0 +1,8 @@
+object 532f74ab070a924b23e2cc70e5d0091a05d8401d
+type commit
+tag v0.12.0
+tagger Claude <noreply@anthropic.com> 1794060738 +0800
+
+CheckWash v0.12.0
+
+Release-Merge: ffaf4ed86ecc2baeb8cc008487a44d8495da9177
