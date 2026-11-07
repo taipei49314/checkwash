@@ -1,0 +1,25 @@
+{
+  "download": {
+    "bytes": 996040,
+    "path": "release/advertised-checkwash.pyz",
+    "sha256": "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
+  },
+  "release": {
+    "commit": "34555301de3d5ea4b2c8e4470b797a06d0a1e395",
+    "repository": "https://github.com/taipei49314/checkwash.git",
+    "tag": "v0.11.0",
+    "tag_object": "2f5ac3fecaddfe5f99ae6e6e129b4d73abb3dfc0",
+    "version": "0.11.0"
+  },
+  "schema_version": 1,
+  "source": "release/advertised-source.json",
+  "status": "completed",
+  "visitor": {
+    "expected_members": "release/advertised-expected.json",
+    "identity": "release/advertised-identity.json",
+    "install_report": "release/advertised-pip.json",
+    "name": "advertised",
+    "status": "completed",
+    "target": "git+https://github.com/taipei49314/checkwash.git@v0.11.0"
+  }
+}
