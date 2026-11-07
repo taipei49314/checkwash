@@ -1,8 +1,9 @@
 # Known issues for 0.12.0
 
-Status, 2026-11-07: the 0.12.0 release candidate, prepared in the release
-pull request; not a published release record. The publication record follows
-once the public files are verified.
+Status, 2026-11-08: limits of the published v0.12.0
+([publication record](releases/v0.12.0-publication-verification.md)). The
+rows were written for the release candidate in the release pull request; the
+Publication section was updated after publication.
 
 0.12.0 narrows #419's residual: in a Python test or conftest the weakening,
 stand-in and subject rules take no repair evidence, and in a JS/TS test the
@@ -74,7 +75,9 @@ correctness guarantee.
   merge commit. Its install commands and Action pin still name v0.11.0, the
   release verified before 0.12.0 was published, and its version sentence says
   so; the [GitHub README](https://github.com/taipei49314/checkwash#readme)
-  moves them to 0.12.0 once its public files are verified.
+  has named 0.12.0 since the
+  [publication record](releases/v0.12.0-publication-verification.md)
+  verified its public files.
 - **Install the CLI from PyPI or the pyz.** A CLI installed through Git from
   the v0.12.0 tag is the Action commit A's, and its `doctor` rejects v0.12.0's
   own Action pin; the row *A CLI installed from a release tag* above gives the
@@ -82,3 +85,9 @@ correctness guarantee.
 - **`doctor` across the upgrade.** `doctor` 0.11.0 accepts only v0.10.0's
   and v0.11.0's Action pins, so it rejects the 0.12.0 pin (exit 1): upgrade
   the CLI and its local hooks before the Action pin.
+- **The new release path ran once.** The tag, release-event and
+  public-visitor stages and the verdict gate's tag rule passed against the
+  real v0.12.0 tag and release event, on LAPTOP-01AGNPJU only
+  ([publication record](releases/v0.12.0-publication-verification.md)). The
+  baseline binding under the new rule first runs for real when the verdict
+  baseline rotates to v0.12.0.

@@ -320,6 +320,148 @@ census, an adjudicated rate or a standing waiver. THREATMODEL item 4 and row
 2 still name only the 0.11.0 disposition; they are agent-read-only, so
 Claude asks Nelson whether to name this one, as it did for 0.11.0.
 
+## v0.12.0 checked publication and pin promotion (2026-11-08)
+
+Claude carried out the 0.12.0 publication operations under the delegation
+above. Nelson's own decisions in it were each an answer to a question Claude
+asked with buttons; Claude wrote every question and button label, and the log
+does not tell a click from a typed reply:
+
+- **The release merge.** At 2026-11-07T08:09:11Z Claude asked
+  「要用 merge commit 合併 #592 嗎？」 with the buttons 「核准合併 #592」 and
+  「我先看 PR」. Nelson answered 「先等我 我在外面」 at 09:12:02Z and
+  「到家了 繼續 但換新session」 at 13:00:54Z. Claude did not read 「繼續」 as
+  approving the merge: a new session read #592 back unchanged and, at
+  13:07:36Z, asked the same question with the same buttons. At 13:12:32Z
+  Nelson answered 「核准合併 #592」, and #592 merged as M at 13:13:05Z.
+- **The fixed-corpus review (D-196).** Claude's replies before the merge
+  question and after the merge listed the 19 commits that move from pass to
+  block, with a reading of each, and i198/S1, which the verdict gate reports
+  (below). At 13:18:27Z Claude asked
+  「R29 的 19 筆 pass→block 和 i198/S1 你看過了，可以打 v0.12.0 tag 嗎？」 (have
+  you reviewed R29's 19 pass-to-block moves and i198/S1; may the v0.12.0 tag
+  be made?) with the buttons 「看過，可以打 tag」 and 「先給我看紀錄」, and at
+  13:24:51Z Nelson answered 「看過，可以打 tag」. This is the owner's review of
+  the list that the tag waited for; the tag was made after it and after the
+  main stage passed, at 14:12:18Z, and pushed at 14:12:44Z.
+- **The PyPI deployment.** Run 42388724734's `pypi` job waited for the `pypi`
+  environment review from 16:00:45Z, and Claude did not try to approve it.
+  Claude said beforehand that its buttons only relay an answer and do not
+  approve anything, and named the run page and the **Approve and deploy**
+  button. At 16:02:02Z it asked 「你在 GitHub run 頁面按了 Approve and deploy 嗎？」
+  with the buttons 「已在 GitHub 按核准」 and 「今天先不按」. GitHub records
+  Nelson's approval (reviewer taipei49314, state approved), with the
+  deployment queued at 16:04:18Z, and at 16:07:21Z Nelson answered
+  「已在 GitHub 按核准」.
+- **THREATMODEL item 4 and row 2.** After the public-visitor stage passed,
+  at 17:05:54Z Claude asked 「THREATMODEL 第 4 項和 row 2 要補上 0.12.0 的 D-176 處置嗎？」
+  (whether to add 0.12.0's D-176 disposition to them) with the buttons
+  「可以改」 and 「先不要改」, and at 17:06:38Z Nelson answered 「先不要改」. So
+  this follow-up leaves THREATMODEL unchanged: item 4 and row 2 still state
+  only the 0.11.0 record, and 0.12.0's disposition stays in
+  [its own record](d176-cost-disposition-0.12.0.md) and the 0.12.0 section
+  above. Claude reads the answer as not now, not as never.
+
+M is `ffaf4ed86ecc2baeb8cc008487a44d8495da9177`; its first parent is the
+reviewed base `e27eec6b2e56a05be33ce8b45f398482740d234b`, and its tree equals
+R's, `516dde6dac193a641c59792ae6a08de777fdfb93`. Annotated tag `v0.12.0`
+(object `6f8b8b7a95f8c6070a0c4bfb1e3ea5a9cb534fe2`, tagger Claude, unsigned)
+is the first made under D-200: it peels to A,
+`532f74ab070a924b23e2cc70e5d0091a05d8401d`, and its message's one
+`Release-Merge:` line names M. Before the push,
+`tools/own_action_pin.py check --stage tag` passed on the local tag, with the
+main stage's report and the trusted ref; it was pushed alone and read back.
+GitHub Release 437647350 was published without assets at
+2026-11-07T15:06:03Z. Its real `release: published` event started run
+42384715859 at A, which read M from the tag's message, as D-200 designs, and
+that capture preceded the release-event collection. Run 42388724734's
+`publish-assets` job then attached the three receipt artifacts and read them
+back, and after Nelson's approval its `pypi` job uploaded the wheel and
+sdist through trusted publishing; PyPI 0.12.0 serves the same bytes as the
+Release. Every stage's evidence ran on LAPTOP-01AGNPJU, Windows, CPython
+3.11.9 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Other platforms are
+NOT_RUN; the separately recorded acceptance covers this release only. The
+[publication record](releases/v0.12.0-publication-verification.md) lists
+each stage's native capture, receipt, verification run and check.
+
+Every stage was collected and verified from the reviewed ref
+`review/collector-d-012-20261107` (`e27eec6b`), with no fix to it; each was
+collected once and dispatched once. From the main stage on, Claude ran the
+trusted `validate_parents` on each collection's inputs before starting it,
+and for the release event also `publication_authority`. Unlike 0.11.0, it
+did not run `publication_authority` again on the published release-event
+receipt before dispatch; on 2026-11-07, after publication, it ran it on that
+receipt's readback, which it accepted, and the `publish-assets` report and
+the `pypi` job's handoff, which check the authorization before acting, say
+`publication_authorized: true`.
+
+**The package page check was late.** [Check the public package
+page](#check-the-public-package-page) asks for the candidate wheel's
+metadata and every link in its description to be checked before publishing.
+For 0.12.0 Claude did not run that check before the upload, as it had for
+0.11.0; only each stage's `twine check` ran. After the upload it checked
+PyPI's JSON API and read both PyPI pages in a browser: name `checkwash`,
+version 0.12.0, `Requires-Python >=3.11`, license expression Apache-2.0,
+provenance for both files, and a description equal to M's README byte for
+byte. Of the description's 60 links, the eight in-page anchors resolve on
+PyPI, each of the 38 links to a file in this repository names a file that
+exists at M, with any anchor matching a heading there, and each of the
+other 14 returned HTTP 200. So the published description needs no
+correction, which PyPI would allow only through a new version. The check
+belongs before Nelson is asked to approve the `pypi` deployment.
+
+**The verdict gate's report.** In every stage the 185-case gate, against the
+v0.11.0 baseline, passed with zero failures and reported one case,
+`pass-to-block` on i198/S1: a Vitest test that replaces `toBeNull()` with
+chai's `.to.exist`, beside a production edit. v0.11.0 passes it, the
+production edit paying for the weakening as repair evidence; 0.12.0 blocks
+it, because D-199 refuses that evidence to a JS/TS loosening. Its label,
+`pass` in `tests/verdict_gate/labels.toml`, comes from #198's Acceptance
+section ("S1, S2, S4, S5 keep verdict pass (a warn finding is fine)"),
+written when #198 was registered on 2026-10-02, before D-199 existed; a
+label changes only by maintainer ruling. The gate reports a pass-to-block
+move and does not fail on it, and Nelson reviewed this report before the
+tag (above). When the verdict baseline rotates to v0.12.0, the baseline
+blocks the case, so the pinned `baseline_blocked` set grows by it; whether
+its label also changes to `block` is Nelson's decision, which Claude asks
+with the rotation.
+
+**The supplementary six-leg batch.** After the PR stage and before the
+merge, Claude ran the six-leg batch on R
+(`dfa934519b3639dea689056d3b3ab08a92e45d1c`, PJU, six legs in parallel,
+2026-11-07T07:31:17Z to 08:07:35Z, from the PR stage's native capture
+42347966755): Windows CPython 3.11.9, 3.12.15 and 3.13.17 each passed
+22,829 tests with 25 skipped, and Linux 3.11.17, 3.12.15 and 3.13.16 each
+22,839 with 15 skipped (22,854 tests and 67 subtests in every leg, no
+failure); the six corpus outputs were byte-identical (`corpus-findings.json`,
+9,960,906 bytes, SHA256
+`77a49a331a0064ce91de5fd07dffecc6ce7fa9723a822b27722bbb5823d835a5`). macOS
+is NOT_RUN. It is supplementary evidence, not a release receipt.
+
+The fixed-corpus records were already in the release pull request (the
+0.12.0 section above); this follow-up adds Nelson's review of them, above.
+
+The decision-log cut and the verdict-baseline rotation that
+[After the release](#after-the-release) and step 9 require follow in a
+separate pull request. The 2026-10-28 answer covered them only after 0.11.0
+(the 0.12.0 section above), so Claude asks Nelson before either, together
+with i198/S1's label.
+
+This follow-up promotes `release/advertised.toml` to v0.12.0, with `commit`
+the tag's peeled commit A (D-200), and the README's CLI commands to 0.12.0.
+It moves the README Action pin and its annotation, this repository's
+self-audit workflow, `doctor`'s `_PREVIOUS_ACTION_PIN`, the two receipt-tool
+`ACTION_SHA` values, SECURITY.md's current pin and the two pin literals in
+`tests/test_doctor.py` to A, `532f74ab070a924b23e2cc70e5d0091a05d8401d`. So
+the README Action pin, the advertised commit and the commit the tag points
+to are one commit, `doctor`'s two pin lines both name it, and later PJU
+receipts replay the v0.12.0 Action at A. `action/action.yml` did not change
+in 0.12.0, so `ACTION_YAML_SHA256` stays. action/README's verification of
+the checkwash pin is now the `git ls-remote` line for `v0.12.0^{}`, and
+v0.11.0's clone, `rev-parse` and `diff` lines stay as the verification of
+the v0.11.0 pin. No downstream re-pin is authorized. 1.0 remains NOT_MET and
+needs Nelson's decision.
+
 ## v0.11.0 release under the pre-1.0 delegation (2026-11-03)
 
 0.11.0 is being released under the delegation recorded at the top of this file:

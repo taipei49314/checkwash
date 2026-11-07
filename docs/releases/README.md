@@ -11,8 +11,8 @@ starts from the [publication record template](publication-record-template.md).
 
 ## v0.12.0
 
-Release candidate, prepared in the release pull request; the publication
-record follows once the public files are verified.
+Published 2026-11-08; its public files are verified in the
+[publication record](v0.12.0-publication-verification.md).
 
 **v0.12.0 refuses repair evidence to weakened, removed and skipped tests,
 reads `unittest.mock.ANY` as the tautology it is, and points the release tag
@@ -27,6 +27,7 @@ earns the compatibility credit only when it provably runs somewhere, and
 `assertEqual` rewritten as `assertCountEqual` drops order (D-201). From
 v0.12.0 the tag points at the release's Action commit, and the README
 installs the CLI only from PyPI and the pyz (D-200).
+[Publication evidence](v0.12.0-publication-verification.md) ·
 [Release evidence and known limits](v0.12.0-public-launch.md).
 
 Known issues: [v0.12.0](../KNOWN-ISSUES-v0.12.0.md).

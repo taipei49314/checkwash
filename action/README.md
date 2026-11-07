@@ -113,26 +113,29 @@ from the Action commit only in that line. The Action commit is the recommended
 Action pin once the release's publication is verified. The Action runs only
 `checkwash check`, which does not import doctor, so it runs the same check at
 either commit. A release's doctor accepts that release's Action commit and the
-pin recommended before it. The v0.11.0 tag points at the merge, so its
-recommended pin is the tag's second parent's parent. From v0.12.0 (D-200)
+pin recommended before it. The v0.11.0 tag points at the merge, so v0.11.0's
+Action commit is the tag's second parent's parent. From v0.12.0 (D-200)
 the tag points at the Action commit, so the recommended pin is the tag's
 peeled commit again. Source changes here do not update that public
 pin.
-The recommended v0.11.0 Action contains this installation repair; v0.7.0 and
+The recommended v0.12.0 Action contains this installation repair; v0.7.0 and
 earlier do not. Promoting a security release/pin requires a separate recorded
 publication decision; do not silently re-pin consumers to unreleased source.
 
-Verify the current pins. The checkout and setup-python pins are their tags'
-peeled commits:
+Verify the current pins. The checkout and setup-python pins and the
+recommended checkwash pin, v0.12.0's Action commit, are their tags' peeled
+commits:
 
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.12.0^{}'
 ```
 
-The recommended checkwash pin, v0.11.0's Action commit, is not the commit the
-tag points to, so `git ls-remote` cannot show it. Verify it in a clone; the
-diff shows one changed line, in `src/checkwash/doctor.py`:
+A checkwash pin up to v0.10.0 is its tag's peeled commit too: use that tag in
+the last line. The v0.11.0 pin, v0.11.0's Action commit, is not the commit
+its tag points to, so `git ls-remote` cannot show it. Verify it in a clone;
+the diff shows one changed line, in `src/checkwash/doctor.py`:
 
 ```bash
 git clone --filter=blob:none https://github.com/taipei49314/checkwash.git
@@ -140,22 +143,17 @@ git -C checkwash rev-parse 'v0.11.0^2^1'
 git -C checkwash diff 'v0.11.0^2^1' v0.11.0
 ```
 
-A pin up to v0.10.0, and from v0.12.0, is the tag's peeled commit:
-
-```bash
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.10.0^{}'
-```
-
-For the v0.11.0 pin, pin updaters such as Dependabot and Renovate follow the
-`# v0.11.0` comment, so they will propose the tag's commit, which doctor
-rejects (inferred from those tools' documentation, not run). For the same
-reason zizmor's `ref-version-mismatch` audit (1.14.0 and later) can report the
-comment, and its pedantic `stale-action-refs` the untagged commit (inferred,
-not run). With v0.12.0's pin at the tag's commit, neither should happen
-(inferred, not run). The Action itself is unaffected: it runs the same check
-at either commit. doctor 0.10.0 does not accept the 0.11.0 pin, so upgrade the
-CLI and its local hooks first, then the Action pin. From v0.12.0 a CLI
-installed through Git from the release tag is the Action commit's, and its
+Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment and
+propose the commit the tag points to. From v0.12.0 that is the release's
+Action commit, which that release's doctor accepts, and zizmor's
+`ref-version-mismatch` audit (1.14.0 and later) and its pedantic
+`stale-action-refs` should not report the pin (inferred, not run). For a
+v0.11.0 pin they propose the v0.11.0 merge, which doctor rejects, and zizmor
+can report the comment and the untagged commit (inferred from those tools'
+documentation, not run). The Action itself is unaffected: it runs the same
+check at either commit. doctor 0.11.0 does not accept the 0.12.0 pin, so
+upgrade the CLI and its local hooks first, then the Action pin. From v0.12.0 a
+CLI installed through Git from the release tag is the Action commit's, and its
 doctor rejects that release's own pin: install the CLI from PyPI or the pyz.
 
 The hosted `action-security` qualification invokes the actual candidate composite

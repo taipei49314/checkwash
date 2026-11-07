@@ -1,8 +1,10 @@
 # 0.12 candidate — 2026-11-06
 
-Status, 2026-11-07: the 0.12.0 release pull request carries this section's
-rows into [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md), the page to read
-for 0.12.0. The rows stay here, unchanged, as the dated preparation record.
+Status, 2026-11-08: shipped in v0.12.0
+([publication record](releases/v0.12.0-publication-verification.md)). The
+release pull request carried this section's rows into
+[KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md), the page to read for
+0.12.0. The rows stay here, unchanged, as the dated preparation record.
 
 Nothing here is released. The 0.12 candidate narrows #419's residual
 ([D-199](../DECISIONS.md)): Nelson chose to change it in 0.12
@@ -91,7 +93,7 @@ source.
 The changes below shipped in v0.9.0. The previous unreleased/NOT_RUN
 wording is retained as a dated preparation record. Publication at the time:
 [v0.9.0 verification](releases/v0.9.0-publication-verification.md). The
-current release is v0.11.0 ([publication record](releases/v0.11.0-publication-verification.md)).
+current release is v0.12.0 ([publication record](releases/v0.12.0-publication-verification.md)).
 
 ## 2026-10-23: measured #345 / #469 residual exits
 
