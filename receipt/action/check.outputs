@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\dev\cw591r2\s\action\checkwash-action-qyxtdy_1\check-receipt.json
+base=54113c063e0b17ab7db94b4a30036a381cb5a0e5
+head=f2f2e0e63ee8f0eafd8eea7c9b2ecfdaf3ef65ad
+fail_on=high
