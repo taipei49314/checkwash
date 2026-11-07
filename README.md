@@ -20,12 +20,8 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-This README was written for checkwash 0.12.0. Its install commands and Action
-pin still name v0.11.0, the latest release whose public files had been
-verified when it was written; the
-[README on GitHub](https://github.com/taipei49314/checkwash#readme) moves them
-to 0.12.0 once 0.12.0's are. Once 0.12.0 is on PyPI, you can install it by
-writing `0.12.0` where the commands below say `0.11.0`
+The install commands and Action pin below name v0.12.0, the latest release
+whose public files are verified
 ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
 
 Start in one of three ways, each below: Claude Code hooks, the CLI on a
@@ -37,7 +33,7 @@ You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
 hook installer from the root of your repository:
 
 ```bash
-pipx install checkwash==0.11.0
+pipx install checkwash==0.12.0
 checkwash hook install --agent claude-code --local
 ```
 
@@ -71,7 +67,7 @@ You need **Python 3.11+ and Git**. Download and try the offline examples first.
 Windows PowerShell (including 5.1):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.11.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -80,7 +76,7 @@ PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.11.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -92,7 +88,7 @@ python checkwash.pyz check HEAD~1..HEAD
 ```
 
 This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.11.0/checkwash.pyz).
+You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz).
 For uncommitted changes use `python checkwash.pyz check`. For a branch review,
 use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
 `BASE..HEAD` compares the two named snapshots directly.
@@ -132,7 +128,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@257150319fca15235185fc629d8b9c21c17166ca # v0.11.0
+      - uses: taipei49314/checkwash/action@532f74ab070a924b23e2cc70e5d0091a05d8401d # v0.12.0
 ```
 
 After the workflow runs, open **Settings → Rules → Rulesets** and require
@@ -147,11 +143,10 @@ gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.j
 
 This adds a ruleset; it does not replace existing ones. `checkwash doctor`
 can inspect the local workflow, but cannot verify live branch protection.
-`doctor` 0.11.0 accepts the pin above and v0.10.0's, and `doctor` 0.12.0 the
-pin above and v0.12.0's own. `doctor` 0.10.0 accepts
-only the Action pin built into it, v0.9.0's, so it reports the pin above as an
-unsupported SHA ("workflow analysis incomplete", exit 1): upgrade the CLI and
-its local hooks before the Action pin.
+`doctor` 0.12.0 accepts the pin above and v0.11.0's. `doctor` 0.11.0 accepts
+only v0.11.0's and v0.10.0's, so it reports the pin above as an unsupported
+SHA ("workflow analysis incomplete", exit 1): upgrade the CLI and its local
+hooks before the Action pin.
 
 ## When checkwash blocks
 
@@ -340,12 +335,12 @@ Try it on your own changes before making it required. [Coverage and limitations]
 
 ## CI details: doctor and the pin
 
-The recommended Action and the CLI above are both **v0.11.0**.
+The recommended Action and the CLI above are both **v0.12.0**.
 Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 
 **Development snapshots:** the source in this checkout may be newer than the
 published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
-records the version, commit and download bytes behind the installation commands
+records the version, tag commit and download bytes behind the installation commands
 above. New changes require their own candidate evidence and remain unreleased
 until the publication record verifies them; candidate CI success does not mean
 that the recommended Action pin includes them.
@@ -357,36 +352,41 @@ example a top-level `pip` package) can replace the installer and then the
 checker, and the pull request can tamper with the result it is judged by. Under
 checkwash's threat model that applies to every pull request it judges. v0.8.0
 fixes it ([#372](https://github.com/taipei49314/checkwash/pull/372)); pin the
-v0.11.0 Action above. If you stay on v0.7.0 or earlier, treat a pass as
+v0.12.0 Action above. If you stay on v0.7.0 or earlier, treat a pass as
 advisory, review the pull request before merging and keep `comment-pr` off.
 [Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
 
-**Which commit is the recommended pin?** For v0.11.0, the release's Action
-commit, the tag's second parent's parent: `git rev-parse 'vX.Y.Z^2^1'`. A
-release cannot embed its own commit SHA, so from v0.11.0 (D-194) a release has
-two commits: its Action commit, and the release merge, which differs from it
-in one line, `doctor`'s own Action pin, set to the Action commit. The PyPI
-package and the pyz are built from the merge, and the v0.11.0 tag points at
-the merge. The Action runs only `checkwash check`, which does not import
+**Which commit is the recommended pin?** The release's Action commit, which
+from v0.12.0 (D-200) is the commit the tag points to:
+`git rev-parse 'vX.Y.Z^{commit}'`. A release cannot embed its own commit SHA,
+so from v0.11.0 (D-194) a release has two commits: its Action commit, and the
+release merge, which differs from it in one line, `doctor`'s own Action pin,
+set to the Action commit. The PyPI package and the pyz are built from the
+merge. The Action runs only `checkwash check`, which does not import
 `doctor`, so it runs the same check at either commit. A release's `doctor`
 accepts two Action pins: the one recommended before the release and the
-release's own Action commit. Up to v0.10.0 the pin was the commit the tag
-points to, `git rev-parse 'vX.Y.Z^{commit}'`, and from v0.12.0 (D-200) it is
-again: the tag points at the Action commit.
+release's own Action commit. The v0.11.0 tag points at the merge, so v0.11.0's
+Action commit is the tag's second parent's parent,
+`git rev-parse 'vX.Y.Z^2^1'`. Up to v0.10.0 the pin was the commit the tag
+points to.
 
 From v0.12.0, a CLI installed through Git from a release tag is the Action
 commit's, and its `doctor` rejects that release's own Action pin ("workflow
 analysis incomplete", exit 1). Install the CLI from PyPI or the pyz.
 
-For the v0.11.0 pin, pin updaters such as Dependabot and Renovate follow the
-`# v0.11.0` comment, so they will propose the tag's commit, which `doctor`
-rejects (inferred from those tools' documentation, not run). For the same
-reason zizmor's `ref-version-mismatch` audit can report the comment (inferred,
-not run). With v0.12.0's pin at the tag's commit, neither should happen
-(inferred, not run). `doctor` 0.10.0 does not accept the 0.11.0 pin, so upgrade
-the CLI and its local hooks first, then the Action pin. The recommended v0.11.0
-Action includes the engine published on 2026-11-04 Asia/Taipei. A CLI upgrade
-does not update an existing Action.
+Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment and
+propose the commit the tag points to; what this paragraph says about them
+and about zizmor is inferred from those tools' documentation, not run. From
+v0.12.0 that commit is the release's Action commit, which that release's
+`doctor` accepts, and zizmor's `ref-version-mismatch` audit should not
+report the comment. For a v0.11.0 pin they can propose the v0.11.0 merge,
+which `doctor` rejects, and zizmor can report the comment; an update to
+v0.12.0 proposes v0.12.0's Action commit, which `doctor` 0.12.0 accepts and
+`doctor` 0.11.0 rejects. So upgrade the CLI and its local hooks first, then
+the Action pin. The
+recommended v0.12.0 Action includes the engine published as checkwash 0.12.0
+(GitHub Release 2026-11-07, PyPI 2026-11-08, Asia/Taipei). A CLI upgrade does
+not update an existing Action.
 [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 ## More options and evidence
@@ -398,7 +398,7 @@ does not update an existing Action.
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.11.0
+pipx install checkwash==0.12.0
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 real tampering cases, blocked, offline
@@ -436,7 +436,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.11.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-publication-verification.md) · [v0.11.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.11.0-public-launch.md) · [0.12.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
+| Installation checks, versions and first use | [v0.12.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-publication-verification.md) · [v0.12.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
