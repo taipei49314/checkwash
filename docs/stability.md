@@ -388,23 +388,34 @@ can reflect better discovery; hiding new rows would not make adoption safer.
 ## What must change before 1.0
 
 **Status: NOT MET.** Public availability of a 0.x release is not a 1.0
-readiness decision. The release needs an evidence-backed acceptance review covering:
+readiness decision. [D-203](../DECISIONS.md) records the maintainer's
+decisions of 2026-11-08 on these criteria: 0.x outreach resumes as a trial
+that makes no quantitative quality promise, its results are not 1.0
+acceptance evidence, and the formal round starts once a 1.0 candidate is
+fixed. The release needs an evidence-backed acceptance review covering:
 
 | Area | Evidence needed before a 1.0 decision | Current gap |
 |---|---|---|
-| Known low-cost failures | A dated catalog, an explicit in-scope priority set, case-level closure evidence and owner-accepted residuals | Remaining open work in the September catalog must retain its actual status; a summary cannot mark it closed |
+| Known low-cost failures | A dated catalog, an explicit in-scope priority set, case-level closure evidence and owner-accepted residuals | Remaining open work in the September catalog must retain its actual status; a summary cannot mark it closed. The fifteen P0/P1 issues open on 2026-10-18 are a precondition for 1.0 ([D-203](../DECISIONS.md) lists them); on 2026-11-08 fourteen were closed, and #212 closes once its result, the change of scope and the residual are recorded (D-203); closing it does not mean the cost of the ten newly blocked commits is fixed. Residuals are accepted item by item at the 1.0 candidate; a count of Closed or Partly closed rows does not stand in for that |
 | Adoption | Independently maintained repositories using an actual required check, with a recorded observation period and enough reviewed changes to exercise it | No completed adoption cohort is established by these documents |
-| Refactor cost | Pre-agreed acceptance thresholds, adjudicated false blocks and review/exemption workload, measured on both dedicated refactors and adoption repositories | The retained [2026-09-07 / v0.3.1 runtime snapshot](../benchmarks/refactors/results-latest.json) records 22/60 blocks. The current 0.10 [static ledger](../benchmarks/refactors/expected.json) has 6/60; it is not fresh runtime qualification or an adoption study |
-| Interfaces and operations | Version-specific compatibility notes and release qualification tied to the shipped artifacts | The pre-rename JSON compatibility exception and Action trust lag must be visible to adopters |
+| Refactor cost | Pre-agreed acceptance thresholds, adjudicated false blocks and review/exemption workload, measured on both dedicated refactors and adoption repositories | The retained [2026-09-07 / v0.3.1 runtime snapshot](../benchmarks/refactors/results-latest.json) records 22/60 blocks. The [static ledger](../benchmarks/refactors/expected.json), unchanged since 0.10.0, has 6/60; it is not fresh runtime qualification or an adoption study. The 1.0 refactor-cost goals stay as [D-203](../DECISIONS.md) records them; the protocol that measures them, its sample size and its duration are not frozen, and nothing has been measured against them |
+| Interfaces and operations | Version-specific compatibility notes and release qualification tied to the shipped artifacts | The pre-rename JSON compatibility exception must stay visible to adopters. The Action trust lag ended on 2026-10-14, when the README began recommending the newest verified release's Action ([Upgrading](#upgrading)). Since v0.10.0 the receipts of every release stage have run on one Windows host, LAPTOP-01AGNPJU, with native Linux and macOS NOT_RUN (for 0.12.0, [Evidence and scope](releases/v0.12.0-public-launch.md#evidence-and-scope)); one GitHub-hosted macOS check per release is decided ([D-203](../DECISIONS.md)) and starts with its own workflow change once the policy in [testing on PJU](testing-on-pju.md) allows it |
 
 **Adoption-study proposal, not an adopted release threshold:** at least three
 independently maintained repositories, 30 consecutive calendar days and at
 least 20 reviewed changes per repository. The maintainer must agree the
 cohort, traffic minimum and health thresholds before this can be used as a
-gate. Record false blocks, exemptions and their review cost, engine errors,
+gate. On 2026-11-08 the maintainer accepted 20 reviewed changes per
+repository as an activity floor only ([D-203](../DECISIONS.md)): it is not
+equivalent to the 100 per repository that the estate's T-157 record of
+2026-09-07 lists as approved and does not by itself replace that record,
+and a human pressing merge is not by itself a substantive review. The
+formal 1.0 adoption threshold is set with the rest of the 1.0 study design
+and, where it replaces an earlier decision, says what it replaces. Record
+false blocks, exemptions and their review cost, engine errors,
 required-check disablement and resolution time; an idle repository does not
-demonstrate healthy usage. Where used, smallestlie contributes its actual
-adoption results and limitations, not a readiness endorsement by association.
+demonstrate healthy usage. smallestlie, a repository of the same owner, is
+archived and contributes no adoption evidence.
 
 The next-quarter engineering focus is **refactor false positives**: shared
 helpers, unit identity changes and the documented tradeoffs in the dedicated

@@ -130,3 +130,475 @@ v0.12.0 pyz again and runs the full gate with these pins with zero failures,
 plus the PR's required checks. The proposal run is the basis, not a
 substitute. No public tag change or downstream re-pin is part of this
 rotation.
+
+## D-203 (2026-11-08): toward 1.0: 0.x outreach resumes as a trial; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves and closes with its caveats; #428 closes as fixed; one macOS check per release; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check, not counted for now as a sixth weakening
+
+**Approval.** [TO FILL before merge. `DECISIONS.md` and `THREATMODEL.md`
+are maintainer text (AGENTS.md), and Nelson's 2026-11-08 answer says that
+a concrete pull request's L1 and L2 follow the existing process and that
+the answer does not stand in for a final diff not yet shown. The pull
+request asks him to approve this entry with THREATMODEL row 131 (L1) and
+stability's 1.0 section (L2) by name before it merges; record the question,
+who wrote it and its buttons, his answer and its time here, as D-200's
+Approval paragraph does.]
+
+**Authority.**
+
+- At 2026-11-08T12:57:56Z Nelson asked 「1.0等我的決定是什麼」 (what are the
+  decisions 1.0 is waiting on from me?).
+- At 13:19:00Z Claude answered, in a Claude Code session on
+  LAPTOP-01AGNPJU, with seven decisions, each with options, their
+  consequences and a recommendation. Claude wrote the list, the options and
+  the recommendations; the message offered no buttons.
+- At 13:24:11Z Nelson answered in three lines: 「重啟對外 上1.0」 (restart
+  outreach; go for 1.0), 「都看過 可以照建議」 (I have read them all; follow
+  the recommendations) and 「macos採用你的建議」 (for macOS, adopt your
+  recommendation).
+- On that answer #212's rating ran and #428 closed (items 3 and 4). At
+  15:18:06Z Claude sent a second list: the rulings only he could make, the
+  questions its drafts raised, with options and recommendations Claude
+  wrote, and a correction of its own estimate of when 1.0 could come.
+- At 15:58:03Z Nelson answered item by item in his own words, beginning
+  「我看過補充評估，這輪照以下決定推進，不要記成「其餘全部照原建議」。」
+  (I have read the supplementary assessment; this round goes ahead on the
+  decisions below; do not record it as "everything else as originally
+  recommended"). He ended
+  「具體 PR 的 L1／L2、正式標註批次及 1.0 發布仍依既有流程；這份回覆不替代尚未呈現的最終 diff 或 1.0 發版核可。」
+  (the concrete pull requests' L1 and L2, the formal labelling batches and
+  the 1.0 release still follow the existing process; this reply does not
+  stand in for a final diff not yet shown or for approval of the 1.0
+  release).
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」, with 「一樣我只卡1.0發佈前 其餘你可以自主推」;
+[RELEASING](docs/RELEASING.md)). 「上1.0」 directs the work toward 1.0. It
+is not the explicit one-time authorization for version 1.0.0 that
+AGENTS.md rule 5 requires, and the stop before 1.0 stands. Whose words:
+each Chinese quote in this entry is Nelson's own, at the time given,
+except those marked as Claude's recommendations and the 2026-10-26 row of
+item 8, which is text he pasted. Claude wrote the recommendations, the
+English glosses and everything else in this entry, under the delegation;
+none of it is Nelson's personal review.
+
+**What is decided.**
+
+1. *0.x outreach resumes as a trial with no quantitative quality promise,
+   and the 1.0 quality goals stay.* At 15:58:
+   「先恢復 0.x 對外試用，正式 1.0 的品質目標保留；以下尚待修訂的研究設計，不必全部卡住不帶量化品質承諾的試用招募文。」
+   (first resume 0.x outreach as a trial; the formal 1.0 quality goals
+   stay; the research design below, still to be revised, need not all hold
+   up a recruiting post for the trial that makes no quantitative quality
+   promise). A trial result is not 1.0 acceptance evidence (item 8,
+   question 1), and the outreach itself is not tracked in this repository.
+   On the post he wrote
+   「這輪不為現稿擴大 benchmarks 的數字准入規則。」
+   (this round does not widen benchmarks' admission rule for numbers for
+   the current draft), so `benchmarks/README.md`'s rule for numbers in a
+   launch post stays as it is, and 「README 第一屏這次不改。」 (the README's
+   first screen does not change this time). His other answers on the
+   post's wording and on the threshold the outreach is to pre-register,
+   which is not frozen yet, concern no file here.
+2. *The fifteen frozen P0/P1 issues are a precondition for 1.0, not for
+   outreach.* Claude recommended
+   「不當對外的前提，改當 1.0 的前提。」
+   (not a precondition for outreach; make it one for 1.0), and
+   「都看過 可以照建議」 adopted it. They are the fifteen open P0/P1 issues
+   read on 2026-10-18 that R1 of the 2026-10-19 ruling lists
+   ([#419](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6261642679)):
+   #212, #414, #416, #418, #419, #421, #422, #424, #428, #429, #431, #432,
+   #456, #462 and #496. On 2026-11-08 fourteen are closed, #419 as D-191's
+   documented residual and #428 under item 4, and #212 closes on this
+   entry (item 3). A closed issue is not a fixed cost; item 3's caveats say
+   so for #212.
+3. *#212 is narrowed to a blind rating of the eleven JS/TS commits that
+   0.12.0 moved from pass to block, and closes with three caveats.*
+
+   *The design.* Claude recommended
+   「兩個盲評 agent 只評那 11 筆，分歧由你裁決。建議一個用 Claude 子 agent、一個用 Argon，換一個模型家族」
+   (two blind rater agents rate only those eleven, and he rules where they
+   disagree; one a Claude sub-agent and one Argon, another model family)
+   and said
+   「但這改掉了原本選的設計和範圍，Argon 也超出 11-04 定的使用範圍，要你明說。」
+   (but this changes the design and scope chosen before, and Argon goes
+   beyond the use set on 2026-11-04, so he must say so explicitly). His
+   13:24 answer adopted it, and at 15:58 he wrote
+   「同意將 POLICY 中 #212 的舊設計改為本次具名的兩位盲評、由我裁分歧；同意關閉 EC PR #226，T-602、T-603 以 `CANCELLED` 退場，保留原準備成果、失敗紀錄與歷史授權狀態。」
+   (he agrees to change #212's old design in POLICY to the two blind
+   raters named this time, with him settling disagreements; he agrees to
+   close EC PR #226 and to retire EC T-602 and T-603 as `CANCELLED`,
+   keeping their preparation, their failure records and their historical
+   authorization state), and on Argon
+   「Argon 用途限本次 #212 及之後具名的 cohort 標註；正式標註批次仍到時具名核可，不擴成通用模型批次授權。」
+   (Argon's use is limited to this #212 rating and to cohort labelling
+   named later; a formal labelling batch is still approved by name when it
+   comes, and this is no general authorization for model batches). This
+   replaces the design chosen on 2026-10-19 (R21, R30): two raters over the
+   55 commits that the report-only counterfactual cf-js131 moved, as
+   independent agents on the estate's pool with arbitration
+   ([testing on PJU](docs/testing-on-pju.md)). The estate recorded the
+   change the same day: EC POLICY commit `227236bc` (EC T-646) adds the row
+   `checkwash-212-blind-raters-20261108`, which replaces only the #212
+   sentence of `checkwash-pju-tests`; EC T-602 and T-603 were retired as
+   `CANCELLED`, and EC PR #226 was closed.
+
+   *The eleven* are the JS/TS commits of #212's fixed 1,800 that 0.12.0
+   blocks and v0.11.0 passed
+   ([RELEASING](docs/RELEASING.md#v0120-release-under-the-pre-10-delegation-2026-11-07);
+   THREATMODEL row 131): hono `5463db27`, `c831020f` and `f0b094db`;
+   typeorm `324c46cd`, `46d5b843`, `b9aa8355`, `c6745f3d`, `df09802e` and
+   `ff00a3cd`; undici `2764d996`; and vue-core `8b44b021`. All eleven are
+   among cf-js131's 55 (its frozen case manifest, checkwash-lab
+   `cee6b8b7`); the other 44 are not rated.
+
+   *Fixed before the rating.* Commit `cac11989` of the private
+   checkwash-lab repository (branch `evidence/cw212-rating-20261108`,
+   2026-11-08T13:37:59Z) holds the packet, which Claude assembled from
+   upstream diffs and messages, and the rubric, which Claude wrote. The
+   packet has each commit's diff against its first parent and its verbatim
+   message, read from the GitHub API, with a trimmed copy of undici
+   `2764d996`'s diff to read first, and no checkwash output.
+   The rubric asks whether the commit reduces what its tests verify (Q1)
+   and whether a deliberate change in the same commit, visible in its
+   production diff or its message, explains each reduction (Q2), and it
+   derives the verdict: `PASS_EXPECTED` when nothing is reduced or every
+   reduction is explained, `BLOCK_EXPECTED` when one is not, `UNCLEAR`
+   otherwise; `honest_but_weaker` marks a commit whose every reduction is
+   explained though its tests check less. It names the raters, a Claude
+   Code sub-agent (Claude Opus 5.5) and Gemini 4 Argon (High) through the
+   Antigravity CLI, neither of whom sees the other's labels or any
+   checkwash output; an agreed verdict stands, and a disagreement goes to
+   Nelson. It says that the eleven are not a random sample, so a count over
+   them is not a rate, and that no count changes checkwash by itself: any
+   change it suggests is a separate decision for Nelson. It registers no
+   decision line. R30's line was registered for cf-js131's 55 and is not
+   applied to the eleven, and none is added after the fact. After rater A
+   was dispatched (13:38:40Z) and the runner's secret scan refused Argon's
+   first attempt, `5175d6a6` (13:39:07Z) changed only Argon's
+   `request.md`, which rater A was not given, to record why the run allows
+   two secret-scan hits, base64 WebAssembly modules in undici's vendored
+   parser files; this was before the Argon run (13:39:14Z).
+
+   *After the fact.* The ratings ran on the 13:24 answer. The explicit word
+   that Claude's recommendation asked for, on the changed design and on
+   Argon, came at 15:58, after both ratings had run, so EC POLICY's row is
+   an after-the-fact record of the design, not a pre-registration. While
+   the ratings ran, EC POLICY `checkwash-pju-tests` still named the pool
+   design. Both
+   raters ran on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`;
+   receipt `c90708e4`). Rater A was dispatched at 13:38:40Z, and the Argon
+   run (agy 1.5.3, exit 0, 30 file reads, none denied) ran from 13:39:14Z to
+   13:53:43Z. Both ratings, the run's receipts and the comparison were saved
+   at `c61702b9` (14:00:25Z); the comparison says that its column of
+   checkwash's findings was added only after both ratings were saved. The
+   verdicts agreed on ten, all `PASS_EXPECTED`. On vue-core `8b44b021`
+   rater A gave `UNCLEAR` and rater B `BLOCK_EXPECTED`, and on typeorm
+   `ff00a3cd` they differed only in `honest_but_weaker`. Nelson ruled both
+   at 15:58:
+   「第 11 筆 Vue：判 `UNCLEAR`。 斷言確實放寬，但已有 transitionstart 時序註解及依賴更新。缺少這次升級與測試修改的因果證據，不等於已證實沒有正當理由。保留原盲評；之後補證據時另記補充判讀。」
+   (commit 11, Vue: `UNCLEAR`; the assertion was loosened, but there are a
+   comment on transitionstart timing and a dependency update; lacking
+   causal evidence that links this upgrade and the test change is not
+   proof that there was no good reason; the blind ratings stay, and
+   evidence found later is recorded as a separate supplementary reading)
+   and
+   「第 9 筆 TypeORM：維持 `PASS_EXPECTED`，`honest_but_weaker=true`。 按這份 rubric 的歷史覆蓋口徑，被移除 API 的行為確實不再受測，但同 commit 移除 API，理由正當。這不代表現存 API 的測試品質退步。」
+   (commit 9, TypeORM: `PASS_EXPECTED` stays, with `honest_but_weaker`
+   true; by this rubric's reading of historical coverage, the removed API's
+   behaviour is no longer tested, but the same commit removes the API,
+   which is a good reason; it does not mean the tests of the APIs that
+   remain got weaker). `arbitration.md` at `e1f7119a` records the rulings
+   (its sentence on cf-js131's 55 corrected at `445f6225`) and the result: `PASS_EXPECTED` 10, `BLOCK_EXPECTED` 0, `UNCLEAR` 1;
+   `honest_but_weaker` 7 (hono `c831020f` and `f0b094db`, typeorm
+   `324c46cd`, `46d5b843`, `c6745f3d` and `ff00a3cd`, undici `2764d996`).
+   For hono `5463db27` and typeorm `b9aa8355` and `df09802e` both raters
+   found no reduction at all, while 0.12.0 raised high `ASSERT_WEAKENED`
+   findings on them; whether those findings misread the tests is not ruled
+   here. The result is on
+   [#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6723728427),
+   with its execution receipt in the
+   [next comment](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6724069716).
+
+   *Closing, also after the fact.* At 15:58:
+   「#212 可以在結果、範圍變更及殘餘完成記錄後關閉，但要明寫：」
+   (#212 may close once the result, the change of scope and the residual
+   are recorded, but it must say plainly:)
+   「這是選定的 11 筆，不是一般誤擋率。」
+   (these are 11 selected commits, not a general false-block rate),
+   「其中 10 筆兩位均判應放行，實際卻新增阻擋；即使部分屬產品刻意攔下的誠實變弱，仍是使用者的審查／豁免成本。」
+   (both raters judged 10 of them as commits that should pass, yet they are
+   newly blocked; even where some are honest weakenings the product stops
+   on purpose, each is a review or exemption cost to users) and
+   「關閉 issue 不代表這項成本已修好，也不代表原本 55 筆全部完成評審。」
+   (closing the issue does not mean this cost is fixed, nor that all of the
+   original 55 were reviewed). This entry, STATE, the #212 row of
+   KNOWN-ISSUES-next, THREATMODEL row 131 and the JS/TS replay's selection
+   record carry the result, the change of scope and the residual with
+   those caveats. #212 closes after this pull request merges, and its
+   closing comment repeats them. Recording the residual is not its
+   acceptance for 1.0, which item 6 leaves to the residual register. The
+   rubric also says the result is recorded in that register; the register
+   is Claude's draft outside this repository, not changed by this entry,
+   and #212's result goes into it before the 1.0 candidate.
+4. *#428 closes as fixed.* Its fix shipped in v0.9.0. Claude recommended
+   「算已修：v0.9.0 的合併 sweep 有 4,818 列，沒有任何判決改變。剩下的量測移進 #504（1.0 之後），關掉 #428」
+   (treat it as fixed: v0.9.0's combined sweep has 4,818 rows and no
+   verdict changed; move the remaining measurements to #504, after 1.0,
+   and close #428), and 「都看過 可以照建議」 adopted it. #428 closed as
+   completed at 2026-11-08T13:29:26Z, with this decision in its
+   [closing comment](https://github.com/taipei49314/checkwash/issues/428#issuecomment-6722098644),
+   and [#504](https://github.com/taipei49314/checkwash/issues/504)'s body
+   lists the measurements #428 kept open as not scheduled before 1.0:
+   D-152's targeted selection over the 13 in-sample JS histories (S1) with
+   its engine replay (S2), and the review of E1's Jest, Vitest and Bun
+   empty-table observations. No new scan runs: the estate's prepared scan,
+   EC T-602, is retired (item 3). The residuals stay where they are stated:
+   `describe.each` rows in THREATMODEL rows 108 and 157, the rest in
+   KNOWN-ISSUES.
+5. *One macOS verification per release; its workflow comes in its own
+   pull request.* Claude recommended
+   「改 POLICY，每次發版對 M 跑一次 GitHub 代管的 macOS」
+   (change the policy so that each release runs GitHub-hosted macOS once
+   against M), with a one-time try of the Claude Code hooks on a real Mac
+   that Nelson borrows, and
+   「D-170 的那兩個測試一起決定」
+   (decide D-170's two tests together), and 「macos採用你的建議」 adopted
+   it. At 15:58 he set its scope:
+   「同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次；先把設計及 workflow 補完整：」
+   (one macOS verification per release, and one catch-up run for v0.12.0;
+   complete the design and the workflow first:)
+   「除完整測試和語料比對，須驗實際將發布／已發布的 wheel、pyz，記錄 SHA256。」
+   (besides the full tests and the corpus comparison, verify the wheel and
+   the pyz actually to be published or already published, and record their
+   SHA256),
+   「v0.12.0 優先用原已發布成品。同一個 M 重建，若未證明 bytes 相同，只能稱重建成品驗證。」
+   (for v0.12.0, prefer the artifacts already published; a rebuild from the
+   same M is only a verification of rebuilt artifacts unless its bytes are
+   shown to be the same),
+   「明定產品測試失敗與 `NOT_RUN` 如何影響發版。「不是 branch required status」不表示可以忽略失敗。」
+   (state how a product test failure and `NOT_RUN` affect a release; not
+   being a branch's required status does not mean that a failure can be
+   ignored),
+   「D-170 選 A，保留兩個效能預算的 skip，清楚揭露 Mac 這兩項未驗；Windows／Linux 結果不當成 Mac 效能證明。」
+   (D-170: option A; the two performance budgets stay skipped, with a plain
+   disclosure that these two are not verified on a Mac; Windows and Linux
+   results are not evidence of Mac performance),
+   「POLICY、CLAUDE.md 及相關規則同步實際採用的範圍。」
+   (EC POLICY, CLAUDE.md and the related rules follow the scope actually
+   adopted) and
+   「借 Mac 手測 hook 仍作一次性觀察記錄，不替代正式成品驗證。」
+   (testing the hooks by hand on a borrowed Mac stays a one-time
+   observation and does not replace the formal verification of the
+   artifacts). So the two budget checks of `tests/gates/test_perf.py` stay
+   skipped on macOS at 1.0: D-170 kept them skipped "until they are
+   revisited before 1.0", this is that revisit, and the file does not
+   change. The workflow, what it runs, how its result enters a release's
+   record and how a failure or `NOT_RUN` affects the release come with the
+   pull request that adds it, together with the documents that describe
+   the two skips. Until EC POLICY `checkwash-pju-tests`
+   ([testing on PJU](docs/testing-on-pju.md)), which keeps checkwash's
+   tests on LAPTOP-01AGNPJU with no hosted fallback, allows the run, macOS
+   stays NOT_RUN, as for v0.10.0 to v0.12.0; changing that policy is the
+   estate's step. The hook test on a borrowed Mac is recorded as a one-time
+   observation, not as release evidence. This entry adds no workflow.
+6. *1.0's residuals are accepted item by item at the 1.0 candidate.*
+   Claude recommended
+   「我整理成一頁「1.0 殘餘清單」，你看完核可一次」
+   (Claude compiles a one-page "1.0 residual list", and he approves it once
+   after reading it), and 「都看過 可以照建議」 adopted it. At 15:58 he set
+   when and how:
+   「04 殘餘清單留到候選版時再核可，不能用 Closed／Partly closed 的總數代替逐項風險接受。」
+   (the residual list, Claude's draft numbered 04, waits for approval until
+   the candidate, and a total of Closed or Partly closed rows cannot stand
+   in for accepting each risk item by item). The register is not in this
+   repository, and this entry approves none of it. Each delegated
+   acceptance so far excludes 1.0: each D-176 disposition "does not
+   authorize 1.0".
+7. *1.x keeps the fingerprint rule.* Claude recommended
+   「1.x 照 0.x 的規則 → 偵測器可以照常修，但升 minor 時，使用者的豁免可能失效。」
+   (1.x keeps 0.x's rule: detectors can be fixed as usual, but on a minor
+   upgrade users' exemptions may stop matching) and
+   「分類欄位等真的有嵌入者再做。」
+   (the classification field waits until there really is an embedder), and
+   「都看過 可以照建議」 adopted both. So in 1.x, as now, a minor release
+   may move fingerprints in any namespace, its decision entry and release
+   notes naming the rules and shapes that move, and within one minor line a
+   recorded exemption keeps matching
+   ([stability](docs/stability.md#fingerprint-stability)). The optional
+   classification field, proposed in a text Nelson pasted on 2026-10-26,
+   waits for an embedder who needs it.
+8. *The adoption floor and the study design are research-design
+   decisions, not a frozen protocol.* At 15:58 he answered the nine cohort
+   questions of Claude's second list; Claude wrote the questions, their
+   options and the recommendations. His answers, with Claude's glosses:
+   1. 「第 1 題：同意分兩段。 先做 0.x 試用；固定候選版後另開正式輪，試用結果不冒充正式驗收。」
+      (two stages: a 0.x trial first, then, once a candidate is fixed, a
+      formal round of its own; trial results do not pass for formal
+      acceptance)
+   2. 「第 2 題：同意。 採用者主動加入、同意資料用途，我對該倉沒有寫入權；招募時說清楚資料、模型處理與計時負擔。」
+      (adopters join on their own initiative and agree to the use of their
+      data, and he has no write access to their repositories; recruiting
+      states plainly the data, the model processing and the timing burden)
+   3. 「第 3 題：修改後採用。 被拿去修工具的倉仍保留在採用及健康紀錄，分暴露／未暴露層呈現，不能把出問題的倉剔除後只報順利者。是否能計入 A 的新證據，先解決 SPEC §10／G15；改叫 `new evidence (PR-unit)` 不會自行取得資格。」
+      (adopted with a change: a repository whose reports are used to fix
+      the tool stays in the adoption and health records, shown in exposed
+      and unexposed strata, and the repositories with problems cannot be
+      dropped to report only the smooth ones; whether such a repository
+      counts as new evidence for A waits until SPEC §10 and the draft
+      specification's G15 are resolved, and calling it
+      `new evidence (PR-unit)` does not qualify it by itself)
+   4. 「第 4 題：20 可作活躍度下限。 不把它說成與舊每倉 100 等價，也不只憑較晚交接筆記自動覆蓋舊批准。正式 1.0 採用門檻隨整套方案定稿；若取代舊決定，明記取代範圍。「人類按合併」也不自動等於實質審查。」
+      (20 can serve as an activity floor; it is not to be called equivalent
+      to the old 100 per repository, and a later handover note does not by
+      itself override the old approval; the formal 1.0 adoption threshold
+      is settled with the whole design, and if it replaces an old decision
+      it states what it replaces; a human pressing merge is not by itself a
+      substantive review)
+   5. 「第 5 題：先修改。 使用者關閉或撤回 PR 要另列為放棄，不能直接算誤擋成功解除；最終 100% 跑完不能取代完成時限。事件少可以不設不穩定的 p95 門檻，但仍保留逐筆等待、最大成本與放棄紀錄。」
+      (revise first: a pull request its user closes or withdraws is listed
+      apart as abandoned, not counted as a false block resolved; completing
+      100% in the end does not replace a time limit for completing; with
+      few events an unstable p95 threshold may be left out, but each wait,
+      the largest cost and the abandonments are still recorded)
+   6. 「第 6 題：暫不鎖定 100 筆／180 天。 先從試用確認正常重構流量和記錄負擔，再定正式數量、期限及追蹤結束條件。」
+      (100 pull requests and 180 days are not locked yet; the trial first
+      shows the flow of normal refactors and the recording burden, and then
+      the formal count, the deadline and the end of tracking are set)
+   7. 「第 7 題：同意雙模型初標的設計，但補人類盲抽一致案例。 不能只裁分歧而完全不查共同偏誤。Argon 用途限本次 #212 及之後具名的 cohort 標註；正式標註批次仍到時具名核可，不擴成通用模型批次授權。」
+      (two models label first, and a human also samples, blind, cases where
+      they agree; settling only the disagreements without checking for a
+      shared bias is not enough; Argon's limits as in item 3)
+   8. 「第 8 題：同意 PJU 標準化重跑。 同時保留實際採用中的首次結果、延遲與人工成本，不能用重跑結果替代真實困擾。」
+      (a standardized rerun on PJU, keeping the first results, the delays
+      and the human cost seen in actual adoption; a rerun's result cannot
+      replace the trouble users really met)
+   9. 「第 9 題：與第 6 題一起重整。 2% 可以是觀察樣本的驗收尺，不能宣稱證明母體誤擋率不超過 2%；最低 100 筆先不要獨立定死。」
+      (reworked with question 6: 2% can be the acceptance ruler for the
+      observed sample, but cannot be claimed to prove that the population's
+      false-block rate is at most 2%; a minimum of 100 is not to be fixed
+      on its own yet)
+
+   He also corrected Claude's 15:18 message:
+   「請修正「工時改只揭露就能加快」的說明：A 的 cohort 層若仍要求 100 筆，取消 B 工時門檻也不會解除等待。 8～33 個月只是依假設推算，不是實測預測。本輪不藉此自動取消既有品質目標。」
+   (correct the statement that making the time measure disclosure-only
+   would make things faster: if A's cohort layer still requires 100,
+   cancelling B's time threshold does not end the wait; 8 to 33 months is
+   only an extrapolation from assumptions, not a measured prediction; this
+   round does not use it to cancel the existing quality goals). Claude's
+   message had said that 1.0 waits for at least 100 normal refactor pull
+   requests from the natural cohort on the 1.0 candidate, that with only
+   minimal traffic this would take 8 to 33 months, from a share of normal
+   refactors that was assumed, not measured, and that making the time
+   measure disclosure-only would shorten the wait.
+
+   A and B are the first two measures of the refactor-cost row of a
+   proposal that Nelson pasted on 2026-10-26 at 08:10:02Z, under his words
+   「這邊一樣 先討論」 (same here, discuss first); it was drafted outside that
+   Claude session, which does not record by whom. The row reads
+   「以 1.0 候選版的確切 SHA，依指定版本的計算協定驗證：新證據上的 unnecessary merge-block rate on normal refactors ≤2%；自然採用中的實測人工成本平均 ≤30 秒／合格 PR；完整揭露固定 60 案的歷史回歸結果。樣本不足或關鍵結果缺測不得記為通過。」
+   (verified on the exact SHA of the 1.0 candidate under a pinned version
+   of the measurement protocol: on new evidence, an unnecessary
+   merge-block rate on normal refactors of at most 2%; in natural
+   adoption, measured human handling cost averaging at most 30 seconds per
+   qualifying PR; full disclosure of the fixed 60 cases' historical
+   regression results; insufficient samples or missing key results are not
+   a pass). At 08:12:15Z he answered Claude's four questions on it, ending
+   「可以開完整規格了」 (go ahead with the full specification). Claude's draft
+   protocol of that day names the first measure A and the second B; it is
+   not in this repository and is not frozen. Claude reads this row as the
+   quality goals that item 1 keeps; question 9 sets how its 2% is read.
+
+   The old 100 of question 4 is the estate's record EC T-157 (D1): three
+   repositories, 30 consecutive days each and at least 100 reviewed
+   changes each, with health thresholds (D3), drafted by Codex on
+   2026-09-06 and recorded as approved on 2026-09-07 by a Claude session
+   on LAPTOP-16NUA5I8 on Nelson's 「6條都幫我搞定 授權」 (get all six done
+   for me; authorized). The 20 is the figure of stability's adoption-study
+   proposal. On 2026-10-14 Claude asked whether the adoption study's
+   thresholds pass as proposed, Nelson answered
+   「照建議，先修 #414 和 #415」 (as recommended; fix #414 and #415 first),
+   and Claude's handover notes of 2026-10-15 recorded the 20 as his
+   threshold. Neither figure was ever in this repository as an adopted
+   threshold. Stability's 1.0 section now says that 20 is an activity floor
+   only and points here.
+
+   None of these answers is a frozen protocol: no sample size, duration,
+   stopping rule or threshold is fixed in this repository, and nothing is
+   measured against the goals until a protocol is frozen here. A formal
+   labelling batch is approved by name when it comes (question 7).
+9. *A string-chain test regains its at-limit check, and replay item 392
+   is not counted, for now, as a sixth unexplained weakening.* At 15:58:
+   「同意補回 forced-fallback 路徑在剛好達到 node limit 時仍成功的驗證，保留新版 path／side 及錯誤訊息檢查，不要整段回退。」
+   (put back the check that the forced-fallback path still succeeds when
+   the node count is exactly at the limit, keep the newer path, side and
+   error-message checks, and do not revert the whole block) and
+   「但先不要把它算成第六筆無理由弱化。packet 截掉了重要任務內容，完整紀錄有恢復 #391 測試的脈絡。保留 packet-only 標籤與完整脈絡判讀的區別；補測試不自動等於確認「完全沒有理由」。」
+   (but do not count it yet as a sixth weakening without a reason: the
+   packet cut important task content, and the full record shows the
+   context of restoring #391's tests; keep the packet-only label apart
+   from the full-context reading; putting the test back does not by itself
+   confirm that there was no reason at all).
+
+   Replay item 392 of the 2026-10-28 session replay (D-189's *Why*; D-195
+   names its repository) is an agent edit of 2026-10-14T03:08:38Z to
+   `test_subject_counts_the_complete_reconstructed_tree` in
+   `tests/test_string_chain_syntax.py`. Reading only its packet, both of
+   Claude's labelling passes called it a loosening with no reason in its
+   context. The packet clips the sub-agent's task text, which the parent
+   Claude session's workflow computed. The full transcript shows that task:
+   rebuild the closed draft #391 on #439, taking "#391's five new test
+   files" and restoring "#391's side=/path= keywords and #389-style message
+   expectations where the earlier port had rewritten them for main". The
+   edit replaced the earlier port's form of this test, from a local commit
+   `207b9ad6` (2026-10-14T10:43:22+08:00) that was never pushed, which
+   anchored main's old refusal message and, beyond #391, also checked that
+   the fallback's tree is read at exactly the limit, with #391's own test:
+   the function main has had since `37d59b7c` (merged with #441) is the
+   one at #391's head `e63ba5b5`, line for line. The at-limit check was
+   never in #391 or on main.
+
+   The test now checks again, after the over-limit refusal with its path,
+   side and count, that with the limit set to the node count `_syntax`
+   reads the forced fallback's complete tree, called with the same path
+   and side keywords, and that the first parse failed and the fallback
+   parsed again. Other tests read a tree at exactly the limit only through
+   a native parse:
+   `tests/test_standin_source_limits.py::test_real_trees_at_and_below_the_ruled_limit_are_readable`
+   for this pass and
+   `tests/test_issue469_limit_messages.py::test_trees_up_to_the_shared_limit_are_read`
+   for the subject-replacement pass; on the fallback path the count was
+   pinned only through the refusal's message. No test is added, so the
+   documented test count does not move. The replay's labels are not
+   changed, and this entry does not rule on the edit's reason.
+
+**Not changed.** No `src/`, SPEC, `tests/gates`, fixture, label, workflow
+or `benchmarks/README.md` change. THREATMODEL changes only row 131's
+verdict sentence on JS/TS adjudication and its prose on the eleven. Row
+157 still names D-152's sweep for the new blocks on honest table edits,
+whose measurements are now listed on #504 (item 4); whether that row
+changes is Nelson's to decide. Row 2 still says that none of D-199's
+eleven JS/TS moves is adjudicated; on 2026-11-07 Nelson kept row 2 and
+item 4 as they were (「先不要改」), so it is unchanged here, and whether it
+now changes is his to decide. `docs/testing-on-pju.md` changes only its
+restatement of EC POLICY's sentence on #212's raters, to follow the
+estate's POLICY commit (item 3). RELEASING's stop before 1.0 and its
+fixed-corpus step, and AGENTS.md, are unchanged. No cohort protocol, sample size, duration
+or threshold is frozen, and stability's table carries none of the
+2026-10-26 numbers. The residual register (item 6) is not approved.
+
+**Maintainer text.** This entry and THREATMODEL row 131 (L1). The pull
+request also changes STATE, stability's 1.0 section (L2), two
+KNOWN-ISSUES-next rows, one sentence of `docs/testing-on-pju.md`, one dated
+note in the JS/TS replay's selection record and one test in
+`tests/test_string_chain_syntax.py`; none of them is agent-read-only.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): `tests/test_string_chain_syntax.py`,
+`tests/test_standin_source_limits.py`, `tests/test_docs_links.py`,
+`tests/test_documentation_contracts.py`, `tests/test_state_claims.py` (the
+failures ledger included), `tests/test_threatmodel_pinned.py` and
+`tests/test_packaging.py`'s documented count; in a scratch copy, the
+restored check under the mutation `nodes >= _MAX_SOURCE_NODES` in
+`_syntax`, which by reading fails it while the refusal check beside it
+still passes; checkwash's own check on the pull request's range at
+`--fail-on high`; and the pull request's PJU receipt, whose intake sets the
+four required checks. Other platforms: NOT_RUN.

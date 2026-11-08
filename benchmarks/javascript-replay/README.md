@@ -66,7 +66,15 @@ the release criterion. The owner ruled them, and what #212 delivers, on 2026-10-
   report-only arm-7 variant that #419's combined lab sweep adds, prices it,
   under a line registered before it runs
   ([#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6261643029)).
-  #212 stays open for that.
+  #212 stays open for that. *Superseded on 2026-11-08
+  ([D-203](../../DECISIONS.md)): #212 was narrowed to a blind rating of the
+  11 commits of this set that 0.12.0 moved from pass to block, all among
+  `cf-js131`'s 55. Two blind raters rated them and Nelson ruled where they
+  differed: 10 should pass (7 of them honest changes whose tests now check
+  less), 1 is unclear, none should block. The 10 that 0.12.0 newly blocks
+  are a review or exemption cost to users, which closing #212 does not fix;
+  the 11 are a selected set, not a false-block rate; the other 44 were not
+  rated.*
 
 Both runs checked each commit with `check`, one CLI run per commit and
 engine, not with `checkwash sweep` as the shape above says
