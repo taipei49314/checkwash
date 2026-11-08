@@ -424,15 +424,15 @@ v0.11.0 baseline, passed with zero failures and reported one case,
 chai's `.to.exist`, beside a production edit. v0.11.0 passes it, the
 production edit paying for the weakening as repair evidence; 0.12.0 blocks
 it, because D-199 refuses that evidence to a JS/TS loosening. Its label,
-`pass` in `tests/verdict_gate/labels.toml`, comes from #198's Acceptance
+then `pass` in `tests/verdict_gate/labels.toml`, came from #198's Acceptance
 section ("S1, S2, S4, S5 keep verdict pass (a warn finding is fine)"),
 written when #198 was registered on 2026-10-02, before D-199 existed; a
 label changes only by maintainer ruling. The gate reports a pass-to-block
 move and does not fail on it, and Nelson reviewed this report before the
-tag (above). When the verdict baseline rotates to v0.12.0, the baseline
-blocks the case, so the pinned `baseline_blocked` set grows by it; whether
-its label also changes to `block` is Nelson's decision, which Claude asks
-with the rotation.
+tag (above). When the verdict baseline rotated to v0.12.0 (#594, D-202),
+the baseline blocked the case, so the pinned `baseline_blocked` set grew
+by it, from 160 to 161, and on Nelson's ruling, which Claude asked with the
+rotation, its label changed to `block`.
 
 **The supplementary six-leg batch.** After the PR stage and before the
 merge, Claude ran the six-leg batch on R
@@ -453,10 +453,20 @@ record. No Claude Code hook lifecycle run was made on the release pull
 request, so there is no lifecycle record to carry.
 
 The decision-log cut and the verdict-baseline rotation that
-[After the release](#after-the-release) and step 9 require follow in a
-separate pull request. The 2026-10-28 answer covered them only after 0.11.0
-(the 0.12.0 section above), so Claude asks Nelson before either, together
-with i198/S1's label.
+[After the release](#after-the-release) and step 9 require came in the
+separate pull request #594. The 2026-10-28 answer covered them only after
+0.11.0 (the 0.12.0 section above), so after this follow-up merged Claude
+asked Nelson before either, together with i198/S1's label. Its next-step
+box asked 「step 9 要照建議開始嗎？」 (start step 9 as recommended?) with the
+buttons 「照建議開始」 and 「先不要」, and its message listed four items the
+recommendation includes: the cut, the rotation with a proposal run first
+and a stop on any movement other than i198/S1 joining the blocked set, the
+label change to `block` as his maintainer ruling, and the usual
+verification with a separate merge question. At 2026-11-08T02:44:42Z Nelson
+answered 「照建議開始」 (start as recommended). Claude wrote the question, both
+labels and the message; D-202 quotes the four items. #594 moved D-197 to
+D-201 to `DECISIONS-archive-5.md`, rotated the verdict baseline to v0.12.0
+and relabelled i198/S1 (D-202).
 
 This follow-up promotes `release/advertised.toml` to v0.12.0, with `commit`
 the tag's peeled commit A (D-200), and the README's CLI commands to 0.12.0.

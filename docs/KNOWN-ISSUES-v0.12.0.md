@@ -89,5 +89,8 @@ correctness guarantee.
   public-visitor stages and the verdict gate's tag rule passed against the
   real v0.12.0 tag and release event, on LAPTOP-01AGNPJU only
   ([publication record](releases/v0.12.0-publication-verification.md)). The
-  baseline binding under the new rule first runs for real when the verdict
-  baseline rotates to v0.12.0.
+  baseline binding under the new rule first ran for real in the PJU
+  proposal run of the rotation to v0.12.0 (#594,
+  [D-202](../DECISIONS.md)), which bound the public pyz's members to A's
+  source, on LAPTOP-01AGNPJU only; the rotation pull request's
+  release-stage receipt runs it again.
