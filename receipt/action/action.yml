@@ -1,0 +1,117 @@
+name: checkwash
+description: >-
+  Deterministic, zero-LLM detector for PR diffs that tamper with the test
+  oracle. Blocks on high-severity findings; every finding carries verbatim
+  before/after evidence.
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  fail-on:
+    description: severity that blocks (info|warn|high|critical)
+    required: false
+    default: high
+  base:
+    description: base ref to diff against (defaults to the PR base)
+    required: false
+    default: ""
+  comment-pr:
+    description: >-
+      If true, post one PR review comment per high/critical finding.
+      Requires pull-requests: write. Soft-fails if the token cannot write.
+    required: false
+    default: "false"
+  python-path:
+    description: >-
+      Absolute trusted Python 3.11+ executable, normally setup-python's
+      python-path output. Defaults to setup-python's pythonLocation.
+    required: false
+    default: ""
+
+outputs:
+  exit-code:
+    description: Engine exit 0/1/2, or 2 for an integration error.
+    value: ${{ steps.check.outputs.exit_code }}
+  receipt-path:
+    description: Runner-temporary JSON receipt for identity, fixed refs and exits.
+    value: ${{ steps.check.outputs.receipt_path }}
+  identity-path:
+    description: Verified package identity from installation.
+    value: ${{ steps.install.outputs.identity_path }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        CW_ACTION_PATH: ${{ github.action_path }}
+        CW_REQUESTED_PYTHON: ${{ inputs.python-path }}
+        CW_PYTHON_LOCATION: ${{ env.pythonLocation }}
+      run: |
+        set -euo pipefail
+        selected="$CW_REQUESTED_PYTHON"
+        if [ -z "$selected" ]; then
+          if [ -z "$CW_PYTHON_LOCATION" ]; then
+            echo "Checkwash requires a trusted setup-python interpreter" >&2
+            exit 2
+          fi
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            selected="$CW_PYTHON_LOCATION/python.exe"
+          else
+            selected="$CW_PYTHON_LOCATION/bin/python"
+          fi
+        fi
+        case "$selected" in
+          *$'\r'*|*$'\n'*) echo "Invalid Python path" >&2; exit 2 ;;
+        esac
+        workspace="$GITHUB_WORKSPACE"
+        # Native Windows drive paths work in Git Bash after slash normalization.
+        # Do not call ambient python/cygpath or any subject PATH executable.
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          selected="${selected//\\//}"
+          workspace="${workspace//\\//}"
+          case "$selected" in
+            [A-Za-z]:/*) ;;
+            *) echo "Python path must be an absolute drive path" >&2; exit 2 ;;
+          esac
+          compared="${selected,,}"
+          workspace="${workspace,,}"
+        else
+          case "$selected" in
+            /*) ;;
+            *) echo "Python path must be absolute" >&2; exit 2 ;;
+          esac
+          compared="$selected"
+        fi
+        case "$compared" in
+          "$workspace"|"$workspace"/*)
+            echo "Python cannot come from the subject checkout" >&2; exit 2 ;;
+        esac
+        if [ ! -f "$selected" ]; then
+          echo "Trusted Python executable is unavailable" >&2
+          exit 2
+        fi
+        "$selected" -I -B -X utf8 "$CW_ACTION_PATH/secure.py" install
+    - id: check
+      shell: bash
+      env:
+        CW_ACTION_PATH: ${{ github.action_path }}
+        CW_PYTHON: ${{ steps.install.outputs.python }}
+        CHECKWASH_RUNTIME_DIRECTORY: ${{ steps.install.outputs.directory }}
+        CHECKWASH_BASE: ${{ inputs.base }}
+        CHECKWASH_FAIL_ON: ${{ inputs.fail-on }}
+        CHECKWASH_PR_BASE: ${{ github.event.pull_request.base.sha }}
+      run: '"$CW_PYTHON" -I -B -X utf8 "$CW_ACTION_PATH/secure.py" check'
+    - id: comment
+      if: ${{ inputs.comment-pr == 'true' }}
+      shell: bash
+      env:
+        CW_ACTION_PATH: ${{ github.action_path }}
+        CW_PYTHON: ${{ steps.install.outputs.python }}
+        CHECKWASH_RUNTIME_DIRECTORY: ${{ steps.install.outputs.directory }}
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: '"$CW_PYTHON" -I -B -X utf8 "$CW_ACTION_PATH/secure.py" comment'

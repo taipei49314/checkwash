@@ -1,0 +1,7 @@
+checkwash: analysis incomplete: after tests/contract.test.js:5:3: assert.strictEqual: unresolved assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after tests/foundation.test.js:2:1: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after test/foundation.mjs:4:1: assert.strictEqual: Node assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after tests/foundation.test.js:2:1: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: before tests/foundation.test.js:2:1: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash: analysis incomplete: after tests/foundation.test.js:2:1: expect(...).toBe: expect assertion candidate is not represented in the assertion scan
+checkwash engine error: git rev-parse --verify failed: fatal: Needed a single revision
