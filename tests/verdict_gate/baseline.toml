@@ -114,11 +114,11 @@ schema_version = 1
 # The chai file is the same blob at 3455530 as at 1006997, so [t3.cases]
 # stays, and the [canary] pair and its 71 block -> pass IDs are not rotated.
 [baseline]
-tag = "v0.11.0"
-version = "0.11.0"
-commit = "34555301de3d5ea4b2c8e4470b797a06d0a1e395"
-sha256 = "3cadde1349fd32ee05e8527601f842c19a16455ec30fae719e33556c60ed7654"
-size = 996040
+tag = "v0.12.0"
+version = "0.12.0"
+commit = "532f74ab070a924b23e2cc70e5d0091a05d8401d"
+sha256 = "4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2"
+size = 1013508
 
 [baseline_blocked]
 count = 160
