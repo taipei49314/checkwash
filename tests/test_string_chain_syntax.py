@@ -174,6 +174,13 @@ def test_subject_counts_the_complete_reconstructed_tree(monkeypatch):
     monkeypatch.setattr(subject, "_MAX_SOURCE_NODES", full_count - 1)
     with pytest.raises(EngineError, match=f"nodes={full_count}, limit={full_count - 1}"):
         subject._syntax(source, path="owned.py", side="before")
+    # At exactly the limit, the forced fallback's complete tree is read.
+    _failure, calls = force_first_recursion(monkeypatch)
+    monkeypatch.setattr(subject, "_MAX_SOURCE_NODES", full_count)
+    tree = subject._syntax(source, path="owned.py", side="before")
+    assert calls[0] == source.decode() and len(calls) > 1
+    assert tree is not None
+    assert sum(1 for _node in ast.walk(tree)) == full_count
 
 
 def test_production_caller_recovers_with_its_complete_native_fingerprint(monkeypatch):
