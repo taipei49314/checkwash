@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/dev/cw596r1/r/candidate-action/install.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw596r1\\s\\candidate-action",
+    "duration_seconds": 19.71900000000005,
+    "exit_code": 0,
+    "finished_at": "2026-11-08T12:21:32.677276+00:00",
+    "name": "install",
+    "started_at": "2026-11-08T12:21:12.944103+00:00",
+    "stderr": "logs/install.stderr",
+    "stdout": "logs/install.stdout",
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/dev/cw596r1/r/candidate-action/check.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\dev\\cw596r1\\s\\candidate-action",
+    "duration_seconds": 2.3589999999999236,
+    "exit_code": 0,
+    "finished_at": "2026-11-08T12:21:35.041480+00:00",
+    "name": "check",
+    "started_at": "2026-11-08T12:21:32.685466+00:00",
+    "stderr": "logs/check.stderr",
+    "stdout": "logs/check.stdout",
+    "timed_out": false
+  }
+]
