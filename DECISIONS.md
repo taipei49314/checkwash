@@ -58,6 +58,10 @@ one provenance line, lines 3-1092 byte-identical to `DECISIONS.md` at
 named after a moved entry and pointed at `DECISIONS.md`, and the v0.12.0
 release guide linked its "changes D-197 to D-201" there; all thirteen now
 point at the archive. No document links to an anchor in a moved entry.
+Review found five older links of the same kind that earlier cuts left: the
+v0.11.0 release guide's link for D-189 to D-196, and two "Details" links
+each in KNOWN-ISSUES-next and KNOWN-ISSUES-v0.9.0 for D-163 and D-164. They
+now point at archive 4 and archive 2.
 
 The baseline becomes public v0.12.0, version 0.12.0, commit
 `532f74ab070a924b23e2cc70e5d0091a05d8401d`, the tag's peeled commit and the
@@ -97,8 +101,10 @@ needs acceptance remain unchanged.
 A PJU proposal run of the gate (LAPTOP-01AGNPJU, Windows, CPython 3.11.9,
 `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; the gate from main `25823bbb`)
 used candidate `70ff0489`, the rotation's pins commit with the new label,
-whose `src/` equals main `25823bbb`'s, with its cases and labels and the
-public v0.12.0 pyz as its baseline engine. It ran all 185 cases (159 T1, 26
+whose `src/` equals main `25823bbb`'s, with its cases and labels and, as
+its baseline engine, the public v0.12.0 pyz: the copy the public-visitor
+stage downloaded from the Release, whose size and SHA256 equal the pin. It
+ran all 185 cases (159 T1, 26
 T3) in 3 minutes 24 seconds: 161 block -> block, 24 pass -> pass and zero
 reported. Of the 161, 160 are labelled `block`, i198/S1 among them, and
 i197/Q5a keeps its `pass` label (D-188). Its only failure was the blocked
@@ -113,7 +119,10 @@ IDs are unchanged. The chai input file is the same blob (`4f363109`) at
 v0.5.0 canary is not rotated. The run's receipt (SHA256
 `72e8055a4b1a7f48c1c265268e98f3fdf08691331140b508d7f8d1bd6199b0a8`),
 summary and output are kept on `evidence/v0120-rotation-proposal-20261108`
-(`fc7dadc2`).
+(`fc7dadc2`). That receipt records the host and the four engines; the
+gate's commit, the runtime, the start and end times and the exit code (1,
+from the blocked-pin failure) come from the run's directory on PJU, which
+was not published.
 
 Hosted test workflows remain disabled. Accepting this configuration requires
 the rotation PR's own PJU release-stage receipt, which downloads the public

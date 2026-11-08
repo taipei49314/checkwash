@@ -456,10 +456,11 @@ The decision-log cut and the verdict-baseline rotation that
 [After the release](#after-the-release) and step 9 require came in the
 separate pull request #594. The 2026-10-28 answer covered them only after
 0.11.0 (the 0.12.0 section above), so after this follow-up merged Claude
-asked Nelson before either, together with i198/S1's label. Its next-step
-box asked 「step 9 要照建議開始嗎？」 (start step 9 as recommended?) with the
-buttons 「照建議開始」 and 「先不要」, and its message listed four items the
-recommendation includes: the cut, the rotation with a proposal run first
+asked Nelson before either, together with i198/S1's label. Claude's
+next-step box asked 「step 9 要照建議開始嗎？」 (start step 9 as recommended?)
+with the buttons 「照建議開始」 and 「先不要」, and the message that followed
+listed four items the recommendation includes: the cut, the rotation with a
+proposal run first
 and a stop on any movement other than i198/S1 joining the blocked set, the
 label change to `block` as his maintainer ruling, and the usual
 verification with a separate merge question. At 2026-11-08T02:44:42Z Nelson
