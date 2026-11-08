@@ -71,4 +71,6 @@
 # the PJU rotation run names none stale, so only the baseline changes.
 # 2026-11-04: v0.11.0 rotation (D-197). The file still holds no entry and
 # the PJU rotation run names none stale, so only the baseline changes.
+# 2026-11-08: v0.12.0 rotation (D-202). The file still holds no entry and
+# the PJU rotation run names none stale, so only the baseline changes.
 baseline = "v0.12.0"
