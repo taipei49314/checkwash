@@ -33,7 +33,7 @@ false blocks, and the explicitly unmeasured remaining-history risk
 ([0.10 record](d176-cost-disposition-0.10.0.md)). In 0.11.0 D-190 removed the
 uvloop costs, and Claude accepted the remaining risk for 0.11.0 only
 ([0.11.0 record](d176-cost-disposition-0.11.0.md)), whose scope is that
-release's `src/` tree. [D-199](../DECISIONS.md) records that "The 0.12.0
+release's `src/` tree. [D-199](../DECISIONS-archive-5.md) records that "The 0.12.0
 release needs a new D-176 cost disposition, as the 0.11.0 one covers only
 that release's `src/` tree". This is that disposition.
 

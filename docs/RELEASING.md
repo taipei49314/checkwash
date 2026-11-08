@@ -1261,7 +1261,7 @@ one line at column 0, `_NAME = "<40 lowercase hex>"`, with no trailing
 comment; the release tools read that shape. After publication the README
 recommends A. For v0.11.0 that is `v0.11.0^2^1`, not the commit the tag
 points to ([D-194](../DECISIONS-archive-4.md)); from v0.12.0 the tag points
-at A ([D-200](../DECISIONS.md), below).
+at A ([D-200](../DECISIONS-archive-5.md), below).
 
 - **A, the content commit.** The version bump, release notes and every other
   change of the release PR, with both pin lines equal to the README's Action

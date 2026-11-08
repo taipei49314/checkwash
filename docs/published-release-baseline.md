@@ -33,7 +33,7 @@ version and clean/invalid-control checks still apply. From a v0.12.0 or later
 baseline the pinned commit is the tag's, the release's Action commit, and the
 source members are its `src/checkwash` with `doctor.py`'s own Action pin line
 set to that commit, because the pyz is built from the release merge
-([D-200](../DECISIONS.md)). A higher merged published
+([D-200](../DECISIONS-archive-5.md)). A higher merged published
 Release stays in selection even if its pyz is missing, duplicated or malformed:
 that asset failure blocks the gate instead of making the older baseline pass.
 A stable-name public Release marked prerelease is refused explicitly. A private
