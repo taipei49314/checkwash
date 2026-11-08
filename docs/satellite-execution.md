@@ -55,6 +55,21 @@ If a satellite appears later, it must:
    inherit checkwash's "local, byte-identical, no code runs"
    claims.
 
+## The satellite that exists
+
+[checkwash-prove](https://github.com/taipei49314/checkwash-prove),
+built in November 2026, is such a satellite: a mutation
+tester. It runs a change's old and new tests against
+mutants of the product code and reports each fault the old
+tests caught and the new suite lets through. It keeps the
+four rules above: it is a separate repository and package
+with its own command, `checkwash-prove`; it does not import
+checkwash, and checkwash does not import it; it is not part
+of any required check; and it publishes its own threat
+model. Nothing in checkwash starts it, and the hard
+constraint above is unchanged. It is experimental, and its
+results are leads for a reviewer, not merge verdicts.
+
 ## What this page is not
 
 - Not a mutation product.
