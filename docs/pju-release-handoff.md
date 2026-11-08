@@ -82,7 +82,7 @@ this bridge no longer re-verifies one.
 
 From v0.12.0 the tag points at the release's Action commit A, not at the
 release merge M, which stays the subject's head at every stage and the commit
-the distributions are built from ([D-200](../DECISIONS.md); RELEASING). The
+the distributions are built from ([D-200](../DECISIONS-archive-5.md); RELEASING). The
 tag's message names M on exactly one line, `Release-Merge: <M>`. At `tag` and
 later, the bridge reads M's and R's commit objects from GitHub and requires
 the tag to peel to A = M^2^1, the message to name M and, at `release-event`,
