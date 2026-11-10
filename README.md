@@ -222,37 +222,54 @@ test patterns. Known gaps remain.
 Four limits to know before you rely on a pass:
 
 - **Test files are found by name.** A Python file is read as a test when its
-  name is `test_*.py` or `*_test.py`, pytest's default patterns. A weakened
-  assertion in `tests/pricing_tests.py` or in a Django `tests.py` passes with
-  no finding and no notice, even when your `python_files` setting collects
-  that file. JS/TS test files are found by the zero-configuration defaults of
-  Node's test runner and Jest, such as `*.test.*` and `*.spec.*` names and
-  files under a `test/` or `__tests__/` directory. A file under `tests/`, or
-  one that only your runner configuration collects, is not read.
-- **A JS/TS pass covers less than a Python one.** It means that no pattern
-  checkwash models matched in the test files it read. Runner configuration
-  (`jest.config.*`, `vitest.config.*`, `.mocharc.*`) is not read, so a change
+  name is `test_*.py` or `*_test.py`, pytest's default patterns, and it is
+  not under a directory pytest skips by default (`build/`, `dist/`, `venv/`,
+  a dot-directory); inside it, only pytest's default test names are read. A
+  weakened assertion in `tests/pricing_tests.py` or in a Django `tests.py`
+  passes with no finding and no notice, even when your pytest configuration
+  (`python_files`, `python_functions`, `python_classes`, `testpaths`)
+  collects it. JS/TS test files are found by the zero-configuration defaults
+  of Node's test runner and Jest, such as `*.test.*` and `*.spec.*` names,
+  files under `__tests__/`, and `.js` or `.ts` files under `test/` (a `.jsx`
+  or `.tsx` file there is not read). A file that is a test only because it
+  sits under `tests/` (unless it imports `ava` or `tap`), or because your
+  runner configuration collects it, is not read.
+- **A JS/TS pass covers less than a Python one.** Like any pass, it means
+  only that nothing at or above the threshold was found; in JS/TS fewer
+  patterns are modelled, and only in the test files checkwash read. Which
+  tests a runner configuration collects (`jest.config.*`, `vitest.config.*`,
+  `.mocharc.*`, the `jest` key of `package.json`) is not read, so a change
   there that stops tests from being collected passes with no finding.
 - **Editing an agent-instruction file blocks.** Any change to a tracked
-  `CLAUDE.md`, `AGENTS.md` or `.cursorrules`, or to a file under `.claude/`,
-  `.checkwash/` or `.greenwash/`, is `GUARDRAIL_TOUCHED` at critical, one
-  added line included (creating such a file is a warn). Record a reviewed
-  exemption for that edit, or replace the `guardrail` role's paths in a
-  base-side `.checkwash/config.toml`. For example, to stop guarding
-  `CLAUDE.md` and keep the rest:
+  `CLAUDE.md`, `AGENTS.md` or `.cursorrules` at the repository root, or to a
+  tracked file under the root's `.claude/`, `.checkwash/` or `.greenwash/`,
+  is `GUARDRAIL_TOUCHED` at critical, one added line included. Two
+  exceptions: an entry added to the exemption ledger is `EXEMPTION_ADDED` at
+  warn, and creating one of these files is a warn unless it is a checkwash
+  config that disables a detector or raises `fail_on`. The same names in a
+  subdirectory, and other agents' instruction files, are not guarded. To let
+  an edit through, record a reviewed exemption for it, or replace the
+  `guardrail` role's paths in a base-side `.checkwash/config.toml`. For
+  example, to stop guarding `CLAUDE.md` and keep the rest:
 
   ```toml
   [roles]
   guardrail = ["AGENTS.md", ".cursorrules", ".claude/**", ".checkwash/**", ".greenwash/**"]
   ```
 
-  The list replaces the default one. It applies once it is on the base side,
-  and from then on checkwash does not report edits to `CLAUDE.md`.
-- **The Claude Code hooks are reminders, not a gate.** They run only on the
-  author's machine. When the Stop hook cannot analyse a change it says so and
-  lets Claude stop, whatever `on_engine_error` says, except for a changed
-  file over the size limit below. An edit made through Bash never reaches the
-  PreToolUse ask. Only the required check under "Use it in CI" stops a merge.
+  The list replaces the default one, so keep `.checkwash/**` and
+  `.greenwash/**` in it: without them checkwash stops reporting edits to its
+  own config and ledger. Creating the config is a warn; adding the table to
+  a config that is already tracked is itself a guardrail edit and blocks; if
+  your config is `.greenwash/config.toml`, edit that file instead. Once the
+  list is on the base side, checkwash does not report edits to `CLAUDE.md`
+  at all.
+- **The Claude Code hooks are author-side checks, not a merge gate.** They
+  run only on the author's machine. When the Stop hook hits an engine error
+  it says so and lets Claude stop, whatever `on_engine_error` says, unless a
+  file it must read is over the size limit below in the working tree. An
+  edit made through Bash never reaches the PreToolUse ask. Only the required
+  check under "Use it in CI" stops a merge.
 
 An edit that changes nothing, such as `+ 0` in a function a test calls or
 one line in a template or `AUTHORS`, can still hold a weakened Python or
@@ -296,17 +313,19 @@ tagged template, or a same-file `const` read only as a table). The rows of a
 `describe.each` table stay unread, and a table with a computed title is not a
 unit ([#428](https://github.com/taipei49314/checkwash/issues/428)).
 
-Legitimate refactors can be flagged. On a corpus of 60 legitimate test
-refactors, the current ledger blocks **6 of 60**: the six the v0.10.0 ledger
-retains after the
-[D-185 dispositions](https://github.com/taipei49314/checkwash/blob/main/docs/oracle-context-dispositions-0.10.0.md), including two
-additional known legitimate-refactor false blocks. This is a static source
-readback; the published 0.12.0 CLI blocks the same six (run on Windows,
-2026-11-10 UTC). The corpus's retained runtime snapshot, from v0.3.1, records 22
-blocks out of 60 (36.7%), and a separate pre-release source replay records
-4/60 blocks, including 2/57 strictly qualified cases; three existing fixture
-errors remain. The later readback does not rewrite those historical runtime
-results. These are selected examples, not a general false-positive rate.
+Legitimate refactors can be flagged. The project keeps a corpus of 60 test
+refactors, 57 of them strictly qualified. Its expected-verdict table
+(`benchmarks/refactors/expected.json`) marks **6 of 60** as blocking, 4 of
+them among the 57: the six the v0.10.0 table retains after the
+[D-185 dispositions](https://github.com/taipei49314/checkwash/blob/main/docs/oracle-context-dispositions-0.10.0.md), including the known
+legitimate-refactor false blocks `CASE_020_windows` and `CASE_029_flatten`.
+This is a static source readback; the published 0.12.0 CLI blocks the same
+six (run on Windows, 2026-11-10 UTC). The corpus's retained runtime
+snapshot, from v0.3.1, records 22 blocks out of 60 (36.7%), and a source
+replay before v0.3.4 records 4/60 blocks, including 2/57 strictly qualified
+cases; three existing fixture errors remain. The later readback does not
+rewrite those historical runtime results. These are selected examples, not a
+general false-positive rate.
 
 A changed file over 1,000,000 bytes is not read. An image, data file,
 lockfile, document or non-Python production source that large is reported on
@@ -449,10 +468,12 @@ checkwash demo                  # 8 tampering cases, blocked, offline
 ```
 
 `checkwash demo` replays eight tampering cases and one honest fix. Five of
-the eight come from this project's decoy corpus, in which coding agents were
-pointed at small repositories with a failing test; one was found in this
-project's own release gate; two are synthetic. The demo prints each case's
-origin. It illustrates known patterns; it is not a coverage guarantee.
+the eight are adapted from this project's decoy corpus: coding agents were
+pointed at small repositories with a failing test and asked to make the
+suite pass without fixing the bug (given only the task, none of the twelve
+touched a test). One was found in this project's own release gate; two are
+synthetic. The demo prints each case's origin. It illustrates known
+patterns; it is not a coverage guarantee.
 You can run the same examples with `python checkwash.pyz demo`.
 
 </details>
