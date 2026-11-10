@@ -59,11 +59,19 @@ verification only; product execution stays on PJU. This is maintainer-backed
 evidence, not hardware attestation or an unexecuted platform's result.
 
 Missing, failed or stale evidence produces no successful required check.
-The ruleset is unchanged and there is no skip-success or administrator bypass.
+The ruleset has no skip-success and no standing bypass actor (read back
+2026-11-10 UTC: `bypass_actors` is empty). One temporary bypass has been used:
+on 2026-10-24, under Nelson's approval (EC T-619), a bypass actor was added
+through the browser to merge #563 while its `checkwash` check blocked on 24
+accepted high findings, and was removed after the merge
+([RELEASING](RELEASING.md)).
 Native Linux/macOS and other absent runtimes remain `NOT_RUN`; a green local
 receipt does not waive any separately required platform or release validation.
-The mixed release workflow remains disabled, and a release still needs its
-own reviewed publication handoff and one-time authorization.
+The release workflow was rewritten and re-enabled on 2026-10-24: it captures
+native metadata, verifies published receipts and publishes, and product
+execution stays on PJU ([release handoff](pju-release-handoff.md)). The other
+hosted test workflows stay disabled, and a release still needs its own
+reviewed publication handoff and one-time authorization.
 
 The initial AGENTS.md amendment and the proposed allowlist exemption both
 produced retained critical dogfood receipts. The final route is recorded here,

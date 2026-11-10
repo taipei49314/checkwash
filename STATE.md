@@ -1,6 +1,62 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-08 (the release workflow's PyPI upload uses pypa/gh-action-pypi-publish v1.14.3, the first version advisory GHSA-5xjx-3w67-w9x9 lists as patched; earlier: the T3.5 design note links the first execution satellite, checkwash-prove, a separate repository and package; nothing in checkwash runs code because of it, merged as #595 (`86e5322e`); earlier: v0.12.0 published and verified; the CLI and advertised pins move to v0.12.0 and the Action pin to its Action commit A, the commit the tag points to (D-200); the decision log moves D-197 to D-201 to archive 5, the verdict baseline rotates to v0.12.0 and i198/S1's label becomes block, on Nelson's answer (#594, D-202); THREATMODEL unchanged on Nelson's answer; earlier: the 0.12.0 release pull request: version 0.12.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison and D-176's 0.12 disposition; its stages are to be verified from the trusted ref `review/collector-d-012-20261107` (`e27eec6b`); earlier: three holes beside D-191's residual close, D-201, merged as #591 (`e27eec6b`): an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-11 (the README states four more limits of a pass, leads its refactor paragraph with the current 6/60, links examples/invoice and no longer calls the eight demo cases real; stale statements in five documents are corrected; documentation and one test pin only; earlier: the release workflow's PyPI upload uses pypa/gh-action-pypi-publish v1.14.3, the first version advisory GHSA-5xjx-3w67-w9x9 lists as patched; earlier: the T3.5 design note links the first execution satellite, checkwash-prove, a separate repository and package; nothing in checkwash runs code because of it, merged as #595 (`86e5322e`); earlier: v0.12.0 published and verified; the CLI and advertised pins move to v0.12.0 and the Action pin to its Action commit A, the commit the tag points to (D-200); the decision log moves D-197 to D-201 to archive 5, the verdict baseline rotates to v0.12.0 and i198/S1's label becomes block, on Nelson's answer (#594, D-202); THREATMODEL unchanged on Nelson's answer; earlier: the 0.12.0 release pull request: version 0.12.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison and D-176's 0.12 disposition; its stages are to be verified from the trusted ref `review/collector-d-012-20261107` (`e27eec6b`); earlier: three holes beside D-191's residual close, D-201, merged as #591 (`e27eec6b`): an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-11: the README states four more limits; stale statements corrected
+
+Nelson asked for a fresh review of checkwash (「從新審一次checkwash」,
+2026-11-10T14:16:33Z). Claude reviewed main `8f610be9` and listed
+corrections to the project's public statements. Claude asked 「發文要等門面和
+第一週的坑修完（出一個小版本）之後再發嗎？」 (should the launch post wait until
+the front page and the first-week problems are fixed, in a small release?);
+Nelson answered 「先修再發」 (fix first, then post) at 16:10:48Z. Claude then
+asked 「要我現在開始第一段裡不用你另外核可的文件修正（1-2～1-4）嗎？」 (shall I
+start the documentation corrections that need no separate approval from
+you?); Nelson answered 「開始」 (start) at 19:55:51Z. Claude wrote both
+questions and their buttons. This change is those corrections:
+documentation and one test pin. No engine, fixture, SPEC, THREATMODEL or
+DECISIONS change.
+
+- **README, "Know the limits".** Four statements are new. Test files are
+  found by name, so a Python test file not named `test_*.py` or `*_test.py`,
+  or a JS/TS one outside the runners' zero-configuration layouts, is not
+  read and a weakened assertion in it passes with no notice. JS/TS runner
+  configuration is not read. Any edit to a tracked guardrail file is
+  critical, and the `guardrail` role's paths can be replaced in a base-side
+  config (SPEC §2). The Claude Code hooks are reminders, not a gate. The
+  first three were reproduced with the published 0.12.0 CLI on
+  LAPTOP-01AGNPJU (Windows, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`);
+  Linux and macOS are `NOT_RUN`. The fourth restates the README's Claude
+  Code section and SPEC.
+- **README, refactors.** The paragraph now leads with the current ledger's
+  6 of 60 and keeps the v0.3.1 snapshot's 22/60 and the 4/60 replay as
+  history. The published 0.12.0 CLI, run statically over the 60 cases on the
+  same host, blocks 6 and passes 54 with no error, the six
+  `benchmarks/refactors/expected.json` marks.
+- **README, demo.** "Try it on a repository" links `examples/invoice`. The
+  demo is described as eight tampering cases, no longer eight real ones:
+  five come from the decoy corpus, one from this project's release gate, and
+  two are labelled synthetic in their own case files.
+  `tests/test_packaging.py` pins the new wording. The demo's banner and
+  `demo --help` still say "real tampering cases"; that is product output and
+  waits for a release.
+- **Stale statements.** `action/README.md` said in the present tense that
+  the hosted `action-security` qualification runs on three operating
+  systems; it last ran on 2026-10-22. `docs/testing-on-pju.md` said there is
+  no administrator bypass and that the release workflow remains disabled;
+  one temporary bypass was used on 2026-10-24 (RELEASING), and `release.yml`
+  has been active since that day. `docs/enterprise.md` §5 said the Linux and
+  Windows legs still enforce the performance budgets; a pull request's suite
+  now runs on Windows only, and the budgets time `analyze` in memory, not a
+  hook run. `CONTRIBUTING.md` said v0.1 is Python-only.
+  `benchmarks/refactors/README.md` gave 1.17% as the published
+  false-positive rate; the README records 1.72%.
+
+Not changed here, and waiting on Nelson: the README's CI badge, which shows
+the last result of the `ci` workflow, disabled since 2026-10-23 (he wrote
+「README 第一屏這次不改。」 on 2026-11-08, and the badge is on that screen);
+the THREATMODEL rows the review found wider than their Closed status; and
+the repository settings the review listed.
 
 ## 2026-11-08: the PyPI upload action moves to v1.14.3
 
@@ -25,6 +81,13 @@ values as the GitHub assets. The new pin takes effect at the next release.
 Nelson asked for this change (「1.14.3 再開一個pr」, open another pull request
 for 1.14.3) after Claude listed the advisory as open. Only that step and
 this file change.
+
+#596 merged as `8f610be9b57c2cf228d16cb5898b25d770f746f2` at
+2026-11-08T12:55:39Z, with parents `86e5322e` and `a321a1e0` and the tree
+its receipt verified (`6125bc9c`). Claude asked 「要用 merge commit 合併 #596
+嗎？」 and wrote the buttons; Nelson answered 「核准合併 #596」 at 12:55:10Z. Its
+receipt `evidence/pr596-f949cddb4f80-20261108` (`f8c8fced`) was verified by
+run 42482215741, which set the four required checks.
 
 ## 2026-11-08: the first execution satellite, checkwash-prove
 

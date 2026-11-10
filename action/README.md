@@ -158,7 +158,15 @@ pin. From v0.12.0 a CLI installed through Git from the release tag is the
 Action commit's, and its doctor rejects that release's own pin: install the
 CLI from PyPI or the pyz.
 
-The hosted `action-security` qualification invokes the actual candidate composite
-on all three operating systems. Expected BLOCK/ERROR jobs stay failed; a separate
-qualification job checks every original outcome and receipt. A successful source
-review or a local wrapper test does not substitute for those hosted results.
+The hosted `action-security` qualification invoked the actual candidate composite
+on all three operating systems. Expected BLOCK/ERROR jobs stayed failed; a separate
+qualification job checked every original outcome and receipt. It last ran on
+2026-10-22, and the workflow has been disabled since 2026-10-23 with the other
+hosted test workflows ([testing on PJU](../docs/testing-on-pju.md)).
+`action.yml` has not changed since 2026-10-12, so those runs exercised this
+wrapper, but not with the engines released after them. Since then the
+composite is replayed only on Windows, by the
+[PJU receipt](../docs/pju-receipt-bridge.md), which labels the result a local
+composite replay and not a GitHub runner execution; Linux and macOS are
+`NOT_RUN`. A successful source review or a local wrapper test does not
+substitute for a hosted result.
