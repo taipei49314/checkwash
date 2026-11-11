@@ -50,8 +50,9 @@ so its rule ID and severity fit the frozen model.
 ## Adding a language
 
 The IR (`SPEC.md`) is language-neutral by design. A new frontend that emits
-IR inherits every existing detector. v0.1 is Python-only; the frontend
-protocol is `src/checkwash/frontends/`.
+IR inherits every existing detector. Python was the first frontend and a
+JS/TS one with bounded coverage followed; both are in
+`src/checkwash/frontends/`.
 
 For assertion syntax changes, update the independently reviewed API inventory,
 add weakening/removal and preserving controls, and qualify the actual CLI
@@ -64,6 +65,6 @@ when the detector's existing fixtures still pass.
 ```bash
 pip install -e ".[dev]"
 pytest                      # 22854 tests (collected): fixtures, e2e, perf and coverage gates
-checkwash demo              # sanity: 8 real cheats blocked, offline
+checkwash demo              # sanity: 8 tampering cases blocked, offline
 checkwash bench --local     # in-clone reproduce; omit --local to require sweep clones
 ```

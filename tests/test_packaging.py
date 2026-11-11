@@ -193,10 +193,10 @@ def test_documented_test_count_is_accurate():
         7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve",
     }
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert f"# {n_demo} real tampering cases" in readme, (
+    assert f"# {n_demo} tampering cases" in readme, (
         f"README's demo comment does not say {n_demo} tampering cases"
     )
-    assert f"replays {words.get(n_demo, n_demo)} real tampering cases" in readme, (
+    assert f"replays {words.get(n_demo, n_demo)} tampering cases" in readme, (
         f"README's demo prose does not say {words.get(n_demo, n_demo)} tampering cases"
     )
 

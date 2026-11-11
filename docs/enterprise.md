@@ -115,13 +115,20 @@ if the repository currently uses only one.
 
 ## 5. Perf SLO
 
-`tests/gates/test_perf.py` runs in default `pytest` (the CI job has no
-`-k` / `--ignore`). Budgets: 3000-line test diff **< 1.5 s**; 500 files
-**< 3.5 s**, widened from 1.0 s and 2.5 s by maintainer decision on
-2026-10-20 (D-170). A regression beyond those fails the push. Since v0.5.0
-the two budget checks are skipped on macOS by maintainer decision
-(2026-10-01); the Linux and Windows legs still enforce them. The ROADMAP
-stop-hook target is p95 < 2 s on a medium diff; 1.5 s is the hard gate.
+`tests/gates/test_perf.py` runs in default `pytest`. Budgets: one 2,402-line
+test module with 200 weakened assertions **< 1.5 s**; 500 files **< 3.5 s**,
+widened from 1.0 s and 2.5 s by maintainer decision on 2026-10-20 (D-170). A
+regression beyond those fails the suite. Since v0.5.0 the two budget checks
+are skipped on macOS by maintainer decision (2026-10-01). Hosted CI has been
+disabled since 2026-10-23, so a pull request's suite, and with it these
+budgets, runs on Windows only, in the [PJU receipt](pju-receipt-bridge.md);
+Linux is `NOT_RUN` there, and the supplementary six-leg batch that
+[RELEASING](RELEASING.md) records before a release runs the suite in three
+Linux legs on the same host. The ROADMAP stop-hook target is p95 < 2 s on a
+medium diff; nothing measures it, and 1.5 s is the hard gate. Both budgets
+time the engine's `analyze` on changes held in memory. They do not time the
+Git reads that a `check` or hook run makes, so they are not a bound on a
+Stop hook's wall time in a repository.
 
 ## 6. What this still does not do
 
