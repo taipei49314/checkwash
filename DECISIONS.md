@@ -130,3 +130,165 @@ v0.12.0 pyz again and runs the full gate with these pins with zero failures,
 plus the PR's required checks. The proposal run is the basis, not a
 substitute. No public tag change or downstream re-pin is part of this
 rotation.
+
+## D-204 (2026-11-11): one hosted verification per release, on GitHub-hosted macOS and Linux, in two checkpoints; D-170's macOS budget skip kept at 1.0
+
+**Approval.** [TO FILL before merge. `DECISIONS.md` is maintainer text
+(AGENTS.md), and Nelson's 2026-11-08 answer says that a concrete pull
+request's L1 and L2 follow the existing process. The pull request asks him
+to approve this entry (L1) and the `docs/stability.md` Determinism row
+(L2).]
+
+**What was asked.** On 2026-11-08 Claude listed the decisions checkwash 1.0
+waits for, with options and a recommendation for each; Claude wrote the
+list, the options and the recommendations. Item 4, on macOS, offered as
+option A 「改 POLICY，每次發版對 M 跑一次 GitHub 代管的 macOS」 (change POLICY
+so that each release runs one GitHub-hosted macOS check against M) and
+recommended 「A，再加上發文前借一台真的 Mac，測一次 Claude Code hook（跟今天給你的建議一樣）。D-170 的那兩個測試一起決定。」
+(A, and before the post borrow a real Mac to test the Claude Code hooks
+once; decide D-170's two tests with it). At 13:24:11Z Nelson answered,
+among two other lines, 「macos採用你的建議」 (for macOS, adopt your
+recommendation). At 15:58:03Z he wrote of macOS:
+
+> 同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次；先把設計及 workflow 補完整：
+>
+> * 除完整測試和語料比對，須驗實際將發布／已發布的 wheel、pyz，記錄 SHA256。
+> * v0.12.0 優先用原已發布成品。同一個 M 重建，若未證明 bytes 相同，只能稱重建成品驗證。
+> * 明定產品測試失敗與 `NOT_RUN` 如何影響發版。「不是 branch required status」不表示可以忽略失敗。
+> * D-170 選 A，保留兩個效能預算的 skip，清楚揭露 Mac 這兩項未驗；Windows／Linux 結果不當成 Mac 效能證明。
+> * POLICY、CLAUDE.md 及相關規則同步實際採用的範圍。
+> * 借 Mac 手測 hook 仍作一次性觀察記錄，不替代正式成品驗證。
+
+(Claude's translation: agreed to one macOS verification per release, and to
+one run for v0.12.0; complete the design and the workflow first. Besides the
+full tests and the corpus comparison, verify the wheel and pyz that will be
+or have been published, recording their SHA256. For v0.12.0 prefer the
+files originally published; a rebuild from the same M whose bytes are not
+proven equal may only be called a rebuilt-artifact verification. State how
+a product test failure and `NOT_RUN` affect a release; "not a branch
+required status" does not mean a failure may be ignored. D-170: option A,
+keep the two performance-budget skips and disclose clearly that these two
+are not verified on a Mac; Windows and Linux results are not taken as Mac
+performance evidence. Bring POLICY, CLAUDE.md and the related rules in line
+with the scope actually adopted. The hand test of the hooks on a borrowed
+Mac stays a one-time observation and does not replace the formal
+verification of the published files.)
+
+On 2026-11-10 Nelson asked for a fresh review of the project
+(「從新審一次checkwash」). Its plan, which Claude wrote, asked whether the
+hosted verification should cover macOS only or Linux too, and offered as
+D-甲 「同一個新 workflow，每版一次，跑 macOS 和 Linux 兩條，Linux 那條順便用真的 Action 跑一次 README 的設定。」
+(one new workflow, once per release, running macOS and Linux, the Linux
+side also running the real Action once with the README's setup). On
+2026-11-11 he answered the plan's table of direction questions with six
+lines, one of them 「G3 D」. Claude asked 「G3 的「D」是指 D-甲（每版一次，macOS 和 Linux 都跑）嗎？」
+with the buttons 「是，D-甲」 and 「D-乙，只補 macOS」, and he answered
+「是，D-甲」 (02:51:04Z). To 「要我現在把 macOS 設計稿改寫成含 Linux 的版本嗎？」
+(shall I rewrite the macOS design to include Linux now?) he answered
+「開始改設計」 (start rewriting the design). Claude rewrote the design, had
+one sub-agent review it, and put nine questions with a recommendation for
+each. To 「02c 第 11 節除 POLICY 列以外的八題，都照建議嗎？」 (the eight
+questions of section 11 other than the POLICY row: all as recommended?),
+with the buttons 「都照建議」 and 「我逐題答」, he answered 「都照建議」
+(11:38:11Z). To 「POLICY 列照 02c 第 8.1 節入帳，然後照順序開始做嗎？」 (enter
+the POLICY row as in section 8.1 of 02c, then start in order?), with the
+buttons 「照這樣入帳並開始」 and 「我先看列的文字」, he answered
+「照這樣入帳並開始」 (11:46:59Z). Claude wrote every question and button. The
+nine questions and the recommendations are in the evidence of EC
+T-647, `evidence/requests/baeb05f5-7bb3-4682-8d7b-e5d33c56eb4e/checkwash-hosted-policy-authority.md`.
+
+**Decision.**
+
+1. *One verification, two checkpoints, two systems (question 1).*
+   `.github/workflows/release-hosted.yml`, dispatched only, from main, and
+   holding `contents: read` only, verifies each release once on
+   GitHub-hosted `macos-latest` and `ubuntu-latest` with Python 3.11 to
+   3.13. `source-at-M` runs once M is on main and before the tag: the whole
+   suite, the source assertion-contract qualification and the fixed corpus
+   at M on six legs, and the composite Action at A once on `ubuntu-latest`
+   with Python 3.12 on M's release range. `published-artifacts` runs once
+   `publish-assets` has attached the Release's files and before Nelson is
+   asked to approve the `pypi` deployment: the published wheel, sdist and
+   pyz, checked against the release record, installed, run and qualified on
+   six legs. It rebuilds none of the published files; the Action builds its
+   own engine from A, as it does for any user. EC POLICY
+   `checkwash-release-hosted-verification-20261111` (EC T-647) allows
+   the hosted runs; [RELEASING, "Hosted release verification"](docs/RELEASING.md#hosted-release-verification)
+   has the checks.
+2. *A failure stops the release.* No tag after a failed `source-at-M`.
+   After a failed `published-artifacts`: no request for the PyPI approval,
+   no step-8 pin promotion, the notice below in the Release notes, and the
+   fix in a new version. A timing test that fails on a hosted runner counts
+   as a failure, and Claude reports the measured seconds (question 7). No
+   run is repeated to obtain a pass; only a runner, GitHub or PyPI service
+   failure allows one rerun of the whole run.
+3. *The notice (question 2).* Question 2 proposed the macOS design's
+   notice with a new heading and the rest unchanged, and Nelson agreed.
+   Claude then also changed the second sentence, which said "the hosted
+   macOS verification", to name the system, to match the heading; that
+   change is part of what approving this entry approves. The notice reads:
+
+   > **Hosted verification failed for this release (〔macOS／Linux〕).** Its
+   > published files failed the hosted verification on 〔macOS／Linux〕 (run
+   > 〔id〕, 〔date〕): 〔one line〕. This version was not published to PyPI
+   > and is not the version the README recommends; the fix ships as
+   > v〔next〕. Details: 〔link to the RELEASING paragraph〕.
+
+   Editing a published Release is still asked of Nelson at the time, in one
+   line; the wording is not reviewed again.
+4. *`NOT_RUN` (question 3).* A checkpoint any of whose legs did not run
+   holds the release until Nelson accepts that checkpoint's `NOT_RUN` for
+   that version in his own words, naming the system that did not run. The
+   pre-1.0 delegation does not cover that acceptance.
+5. *The Action (question 8).* It runs from a checkout of A by a local path,
+   because a `uses:` reference cannot carry an input. GitHub's resolution of
+   `taipei49314/checkwash/action@<A>`, the pull-request trigger and the
+   Action blocking a change stay `NOT_RUN`. No extra dispatch that runs the
+   README's pin verbatim, and no blocking case, are added.
+6. *v0.12.0 (question 9).* One `both` run, Linux and the Action included,
+   on M `ffaf4ed86ecc2baeb8cc008487a44d8495da9177` and on the files GitHub
+   Release 437647350 and PyPI 0.12.0 serve, after this merges and before
+   the outreach post, recorded as supplementary evidence after publication.
+   His 2026-11-08 「也同意對 v0.12.0 補跑一次」 named macOS; the wider run is
+   what he took with 「都照建議」.
+7. *D-170, option A, done as A1 (question 4).* The two budget checks of
+   `tests/gates/test_perf.py` stay skipped on macOS at 1.0. This is the
+   revisit D-170 named ("until they are revisited before 1.0"); the file
+   does not change. The release records, KNOWN-ISSUES and
+   `docs/enterprise.md` say that these two budgets are not verified on a
+   Mac and that Windows and Linux timings are not evidence of macOS
+   performance. On Linux they run and gate.
+8. *Determinism coverage (question 5).* `docs/stability.md`'s Determinism
+   row says what this verification adds, and that the one-run nine-leg
+   comparison stays unexecuted.
+9. *The hooks on a borrowed Mac.* Nelson's own try is a one-time
+   observation, recorded as his; it is not release evidence and replaces
+   neither checkpoint.
+
+Claude's design, which the POLICY row names as Claude's: holding two
+checkpoints as one verification, not rebuilding the published files, and
+applying the published-file checks and the consequences of a failure or
+`NOT_RUN` to Linux too. Nelson's 2026-11-08 words name macOS. Question 6
+asked him to confirm these three, and he answered it with
+「照這樣入帳並開始」; 「都照建議」 had answered the other eight questions.
+
+**Not changed.** Each pull request's tests still run on PJU (EC POLICY
+`checkwash-pju-tests`); hosted Windows does not run; `release.yml`; the
+release bridge and its missing-platform list, since the receipts still hold
+no Linux or macOS leg; the required checks; the disabled hosted test
+workflows (`ci.yml`, `checkwash.yml`, `assertion-qualification.yml` and
+`verdict-gate.yml` would run at A on a tag push); `tests/gates/**`; the PJU
+stages. Draft pull request #597 records the 2026-11-08 answers as a whole
+in its own entry; this entry records the hosted verification they led to.
+
+**Risks.** The first run may find failures that exist only on macOS or only
+on Linux: the last hosted run of the suite was `ci.yml` at `618c415d` on
+2026-10-23, and about 2,400 tests have been added since. Linux ran the same
+tree in the PJU six-leg batch, so a Linux surprise there would come from the
+host, not the code. The workflow has not run before this merges.
+`macos-latest` and `ubuntu-latest` move to newer images; each record names
+the image. The Action fetches an unpinned build backend from PyPI. A failure
+after `publish-assets` leaves a GitHub Release without PyPI, which the next
+release's verdict gate takes as its baseline
+([baseline identity](docs/published-release-baseline.md)), and ordinary pull
+requests are refused until a new version is advertised.

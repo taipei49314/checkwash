@@ -97,6 +97,10 @@ built from the release merge commit, which up to v0.11.x is the tagged commit;
 from v0.12.0 (D-200) the tag points at the release's Action commit, which
 differs from the merge in one `doctor` line. Hosted CI is
 disabled: the full suite runs on the maintainer's receipt host (Windows) for
-each pull request and each release stage, and other platforms run only in a
-supplementary batch, not as release evidence
-([docs/RELEASING.md](docs/RELEASING.md)).
+each pull request and each release stage, and Linux also runs in a
+supplementary batch on that host, not as release evidence
+([docs/RELEASING.md](docs/RELEASING.md)). Each release also gets one
+verification on GitHub-hosted macOS and Linux, of the release merge and of
+the published files; it is hosted evidence beside the receipts, not a
+receipt, and a failure in it stops the release
+([hosted release verification](docs/RELEASING.md#hosted-release-verification)).

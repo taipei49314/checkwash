@@ -11,11 +11,14 @@ Nelson instructed on 2026-10-23: “把 PJU 測試收據接上必過檢查，處
 This implements the standing CheckWash/PJU rule recorded in
 [EC T-606 POLICY](https://github.com/taipei49314/estate-consolidation/blob/e9ce2342fc4834f5b5d580461b26f8784b64481a/POLICY.md).
 
-All product execution happens on **LAPTOP-01AGNPJU**. The existing
-`quality-candidate-intake.yml` manual entry also accepts a receipt-verification
-mode. Hosted jobs read data and publish GitHub check runs; they do not execute
-candidate product code, tests, builds or Action helpers. The previous hosted
-test workflows remain disabled. The repository ruleset is unchanged.
+All of a pull request's product execution happens on **LAPTOP-01AGNPJU**. The
+existing `quality-candidate-intake.yml` manual entry also accepts a
+receipt-verification mode. Hosted jobs read data and publish GitHub check
+runs; they do not execute candidate product code, tests, builds or Action
+helpers. The previous hosted test workflows remain disabled. The one hosted
+workflow that runs the product is the release-time
+[hosted release verification](RELEASING.md#hosted-release-verification),
+which is not part of this bridge. The repository ruleset is unchanged.
 
 ## Trust and scope
 

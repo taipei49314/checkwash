@@ -47,6 +47,13 @@ state. Their definitions are retained. The release workflow was among them
 until it was rewritten and re-enabled on 2026-10-24 (below);
 no release is requested by this venue change. Pure metadata collection can
 remain active. Existing results and failures retain their original provenance.
+One test workflow is an exception, under EC POLICY
+`checkwash-release-hosted-verification-20261111`: the
+[hosted release verification](RELEASING.md#hosted-release-verification),
+which each release dispatches once, in two checkpoints, on GitHub-hosted
+macOS and Linux. It records `HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT`;
+it is not a PJU receipt, each pull request's tests still run on PJU, and a
+failure in it still stops the release.
 
 The required-check ruleset stays in force. Its required GitHub Actions
 contexts are `checkwash` and `candidate assertion contract (source)`,
@@ -68,13 +75,17 @@ whose required `checkwash` check had no successful result because
 checkwash's own verdict on it was block, on 24 high findings that Nelson
 accepted; the actor was removed after the merge
 ([RELEASING](RELEASING.md)).
-Native Linux/macOS and other absent runtimes remain `NOT_RUN`; a green local
-receipt does not waive any separately required platform or release validation.
+In a pull request's evidence, native Linux and macOS and other absent
+runtimes remain `NOT_RUN`; at a release, the hosted release verification
+adds GitHub-hosted Linux and macOS runs, and everything outside it stays
+`NOT_RUN`. A green local receipt does not waive any separately required
+platform or release validation.
 The release workflow was rewritten and re-enabled on 2026-10-24: it captures
 native metadata, verifies published receipts and publishes, and product
 execution stays on PJU ([release handoff](pju-release-handoff.md)). The
-hosted workflows that run tests stay disabled, and a release still needs its
-own reviewed publication handoff and one-time authorization.
+hosted workflows that run tests stay disabled, apart from the release-time
+hosted verification above, and a release still needs its own reviewed
+publication handoff and one-time authorization.
 
 The initial AGENTS.md amendment and the proposed allowlist exemption both
 produced retained critical dogfood receipts. The final route is recorded here,
