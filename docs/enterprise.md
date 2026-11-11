@@ -127,7 +127,8 @@ Hosted CI has been disabled since 2026-10-23, so a pull request's suite, and
 with it these budgets, runs on Windows only, in the
 [PJU receipt](pju-receipt-bridge.md); Linux is `NOT_RUN` there, and the
 supplementary six-leg batch that [RELEASING](RELEASING.md) records before a
-release runs the suite in three Linux legs on the same host. Each release's
+release runs the suite in three Linux legs on the same host. From the
+release after v0.12.0, each release's
 [hosted release verification](RELEASING.md#hosted-release-verification)
 also runs the suite on GitHub-hosted Linux, where the two budgets gate, and
 on macOS, where they are skipped; macOS still runs the 10-second

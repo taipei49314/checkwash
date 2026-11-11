@@ -131,7 +131,7 @@ plus the PR's required checks. The proposal run is the basis, not a
 substitute. No public tag change or downstream re-pin is part of this
 rotation.
 
-## D-204 (2026-11-11): one hosted verification per release, on GitHub-hosted macOS and Linux, in two checkpoints; D-170's macOS budget skip kept at 1.0
+## D-204 (2026-11-11): one hosted verification per release, on GitHub-hosted macOS and Linux, in two checkpoints; the macOS skip of the two budget checks kept at 1.0
 
 **Approval.** [TO FILL before merge. `DECISIONS.md` is maintainer text
 (AGENTS.md), and Nelson's 2026-11-08 answer says that a concrete pull
@@ -193,35 +193,58 @@ with the buttons 「都照建議」 and 「我逐題答」, he answered 「都�
 (11:38:11Z). To 「POLICY 列照 02c 第 8.1 節入帳，然後照順序開始做嗎？」 (enter
 the POLICY row as in section 8.1 of 02c, then start in order?), with the
 buttons 「照這樣入帳並開始」 and 「我先看列的文字」, he answered
-「照這樣入帳並開始」 (11:46:59Z). Claude wrote every question and button. The
-nine questions and the recommendations are in the evidence of EC
-T-647, `evidence/requests/baeb05f5-7bb3-4682-8d7b-e5d33c56eb4e/checkwash-hosted-policy-authority.md`.
+「照這樣入帳並開始」 (enter it like this and start; 11:46:59Z). A review
+before the row was entered found two statements in it wrong: the date of
+Claude's options and the sentence on the job's token. Claude asked
+「POLICY 列要照這兩處更正後再入帳嗎？」 with the buttons 「照兩處更正入帳」 and
+「照原文入帳」, and he answered 「照兩處更正入帳」 (enter it with the two
+corrections; 12:23:16Z). The row was entered with both corrections, at EC
+commit `a46c91f68cc5daf0c30ce809afc5f6b5f8519c7f`. Claude wrote every
+question and button. The nine questions and the recommendations are in the
+evidence of EC T-647,
+`evidence/requests/baeb05f5-7bb3-4682-8d7b-e5d33c56eb4e/checkwash-hosted-policy-authority.md`.
 
 **Decision.**
 
 1. *One verification, two checkpoints, two systems (question 1).*
-   `.github/workflows/release-hosted.yml`, dispatched only, from main, and
-   holding `contents: read` only, verifies each release once on
-   GitHub-hosted `macos-latest` and `ubuntu-latest` with Python 3.11 to
-   3.13. `source-at-M` runs once M is on main and before the tag: the whole
-   suite, the source assertion-contract qualification and the fixed corpus
-   at M on six legs, and the composite Action at A once on `ubuntu-latest`
-   with Python 3.12 on M's release range. `published-artifacts` runs once
-   `publish-assets` has attached the Release's files and before Nelson is
-   asked to approve the `pypi` deployment: the published wheel, sdist and
-   pyz, checked against the release record, installed, run and qualified on
-   six legs. It rebuilds none of the published files; the Action builds its
-   own engine from A, as it does for any user. EC POLICY
-   `checkwash-release-hosted-verification-20261111` (EC T-647) allows
-   the hosted runs; [RELEASING, "Hosted release verification"](docs/RELEASING.md#hosted-release-verification)
+   `.github/workflows/release-hosted.yml`, dispatched only, from main, on
+   LAPTOP-01AGNPJU, and holding `contents: read` only, verifies each release
+   once on GitHub-hosted `macos-latest` and `ubuntu-latest` with Python 3.11
+   to 3.13, in two checkpoints dispatched separately. `source-at-M` runs once
+   M is on main and before the tag: the whole suite, the source
+   assertion-contract qualification and the fixed corpus at M on six legs,
+   and the composite Action at A once on `ubuntu-latest` with Python 3.12 on
+   M's release range. `published-artifacts` runs once `publish-assets` has
+   attached the Release's files and before Nelson is asked to approve the
+   `pypi` deployment: the published wheel, sdist and pyz are checked against
+   the release record and downloaded on six legs, the wheel installed and
+   run, the pyz run, both qualified, and all three inventoried against M;
+   the sdist is not installed. One `both` dispatch is only for a version
+   published before the workflow existed. The workflow rebuilds none of the
+   published files; the Action builds its own engine from A, as it does for
+   any user. EC POLICY `checkwash-release-hosted-verification-20261111` (EC
+   T-647) allows the hosted runs;
+   [RELEASING, "Hosted release verification"](docs/RELEASING.md#hosted-release-verification)
    has the checks.
-2. *A failure stops the release.* No tag after a failed `source-at-M`.
-   After a failed `published-artifacts`: no request for the PyPI approval,
-   no step-8 pin promotion, the notice below in the Release notes, and the
-   fix in a new version. A timing test that fails on a hosted runner counts
-   as a failure, and Claude reports the measured seconds (question 7). No
-   run is repeated to obtain a pass; only a runner, GitHub or PyPI service
-   failure allows one rerun of the whole run.
+2. *A failure stops the release, and is reported to Nelson.* No tag after a
+   failed `source-at-M`. After a failed `published-artifacts`: no request
+   for the PyPI approval, no step-8 pin promotion, the notice below in the
+   Release notes, the fix in a new version, and the tag and the Release left
+   as they are (not moved, deleted or marked prerelease; their files not
+   deleted or replaced). A failure includes a timing test that fails on a
+   hosted runner, and Claude reports the measured seconds (question 7); on
+   Linux the two perf-gate budget checks must run and pass, and on macOS
+   they must be skipped for their recorded reason. When the release has a
+   PJU six-leg batch, a Linux leg whose test-case count differs from the
+   batch's for the same tree is a failure too; Claude checks that from the
+   legs' summaries. No run is repeated to obtain a pass. Only a runner,
+   GitHub or PyPI service failure, including a cancellation by GitHub that
+   neither a timeout nor a person caused, allows one rerun of the whole run.
+   A run that refuses its own dispatch before any test (a malformed input, a
+   dispatch from another branch, or one before `publish-assets` attached the
+   files) is recorded and dispatched again. An unavailable hosted runner
+   leaves its legs `NOT_RUN`; no self-hosted, larger or paid runner stands
+   in. Nelson may decide another remedy than these.
 3. *The notice (question 2).* Question 2 proposed the macOS design's
    notice with a new heading and the rest unchanged, and Nelson agreed.
    Claude then also changed the second sentence, which said "the hosted
@@ -236,12 +259,15 @@ T-647, `evidence/requests/baeb05f5-7bb3-4682-8d7b-e5d33c56eb4e/checkwash-hosted-
 
    Editing a published Release is still asked of Nelson at the time, in one
    line; the wording is not reviewed again.
-4. *`NOT_RUN` (question 3).* A checkpoint any of whose legs did not run
-   holds the release until Nelson accepts that checkpoint's `NOT_RUN` for
-   that version in his own words, naming the system that did not run. The
+4. *`NOT_RUN` (question 3).* A checkpoint that was not dispatched, or any
+   of whose legs did not complete after the one allowed rerun, holds the
+   release until Nelson accepts that checkpoint's `NOT_RUN` for that
+   version in his own words, naming the system that did not run. The
    pre-1.0 delegation does not cover that acceptance.
 5. *The Action (question 8).* It runs from a checkout of A by a local path,
-   because a `uses:` reference cannot carry an input. GitHub's resolution of
+   because a `uses:` value must be a literal and cannot take an expression;
+   that checkout sits in the subject's workspace, and the engine judges
+   allowlist expiry as on M's commit date. GitHub's resolution of
    `taipei49314/checkwash/action@<A>`, the pull-request trigger and the
    Action blocking a change stay `NOT_RUN`. No extra dispatch that runs the
    README's pin verbatim, and no blocking case, are added.
@@ -249,15 +275,16 @@ T-647, `evidence/requests/baeb05f5-7bb3-4682-8d7b-e5d33c56eb4e/checkwash-hosted-
    on M `ffaf4ed86ecc2baeb8cc008487a44d8495da9177` and on the files GitHub
    Release 437647350 and PyPI 0.12.0 serve, after this merges and before
    the outreach post, recorded as supplementary evidence after publication.
-   His 2026-11-08 「也同意對 v0.12.0 補跑一次」 named macOS; the wider run is
-   what he took with 「都照建議」.
-7. *D-170, option A, done as A1 (question 4).* The two budget checks of
-   `tests/gates/test_perf.py` stay skipped on macOS at 1.0. This is the
-   revisit D-170 named ("until they are revisited before 1.0"); the file
-   does not change. The release records, KNOWN-ISSUES and
-   `docs/enterprise.md` say that these two budgets are not verified on a
-   Mac and that Windows and Linux timings are not evidence of macOS
-   performance. On Linux they run and gate.
+   His 2026-11-08 「同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次」 named
+   macOS; the wider run is what he took with 「都照建議」.
+7. *The macOS skip of the two budget checks, option A, done as A1
+   (question 4).* The two budget checks of `tests/gates/test_perf.py` have
+   been skipped on macOS since a maintainer decision of 2026-10-01; D-170
+   kept that skip until a revisit before 1.0. This is that revisit: the
+   skip stays at 1.0, and the file does not change. The release records,
+   KNOWN-ISSUES and `docs/enterprise.md` say that these two budgets are not
+   verified on a Mac and that Windows and Linux timings are not evidence of
+   macOS performance. On Linux they run and gate.
 8. *Determinism coverage (question 5).* `docs/stability.md`'s Determinism
    row says what this verification adds, and that the one-run nine-leg
    comparison stays unexecuted.
@@ -276,10 +303,11 @@ asked him to confirm these three, and he answered it with
 `checkwash-pju-tests`); hosted Windows does not run; `release.yml`; the
 release bridge and its missing-platform list, since the receipts still hold
 no Linux or macOS leg; the required checks; the disabled hosted test
-workflows (`ci.yml`, `checkwash.yml`, `assertion-qualification.yml` and
-`verdict-gate.yml` would run at A on a tag push); `tests/gates/**`; the PJU
-stages. Draft pull request #597 records the 2026-11-08 answers as a whole
-in its own entry; this entry records the hosted verification they led to.
+workflows (`ci.yml`, `assertion-qualification.yml` and `verdict-gate.yml`
+would also run at A on a tag push; `checkwash.yml` runs only on pull
+requests); `tests/gates/**`; the PJU stages. Draft pull request #597's
+entry D-203 records the 2026-11-08 answers as a whole; its line that macOS
+stays `NOT_RUN` until the POLICY allows it is out of date once this merges.
 
 **Risks.** The first run may find failures that exist only on macOS or only
 on Linux: the last hosted run of the suite was `ci.yml` at `618c415d` on

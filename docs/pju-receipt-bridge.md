@@ -13,8 +13,8 @@ This implements the standing CheckWash/PJU rule recorded in
 
 All of a pull request's product execution happens on **LAPTOP-01AGNPJU**. The
 existing `quality-candidate-intake.yml` manual entry also accepts a
-receipt-verification mode. Hosted jobs read data and publish GitHub check
-runs; they do not execute candidate product code, tests, builds or Action
+receipt-verification mode. This bridge's hosted jobs read data and publish
+GitHub check runs; they do not execute candidate product code, tests, builds or Action
 helpers. The previous hosted test workflows remain disabled. The one hosted
 workflow that runs the product is the release-time
 [hosted release verification](RELEASING.md#hosted-release-verification),

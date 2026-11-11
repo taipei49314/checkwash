@@ -20,15 +20,17 @@ run-name: "release hosted / v${{ inputs.version }} / ${{ inputs.checkpoint }} / 
 #
 # Hosted evidence recorded beside the PJU release receipts, labelled
 # HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT. It is not a receipt and not
-# a required check, and a failure still stops the release. It builds no file
+# a required check, and a failure still stops the release. No file is built
 # to stand in for a published artifact: the published wheel, sdist and pyz
-# are downloaded, never rebuilt. The Action job is the one place a build
-# happens: the composite builds and installs its own engine from A's source,
-# fetching its build backend from PyPI, as it does for any user. The workflow
-# publishes no check run through the API and no asset, and runs only when
-# dispatched from main: never on a push, a pull request or a tag. The commit
-# under test is the merge_commit input, checked out by its SHA. Shell steps
-# read every input from env, never from an expression.
+# are downloaded, never rebuilt. Builds happen only to install: the source
+# legs install M in editable mode, and the composite Action builds and
+# installs its own engine from A's source, fetching its build backend from
+# PyPI, as it does for any user. The workflow publishes no check run through
+# the API and no asset, and runs only when dispatched from main: never on a
+# push, a pull request or a tag. The commit under test is the merge_commit
+# input, checked out by its SHA. Shell steps read every input from env,
+# never from an expression, and only the step that reads the published
+# Release has the job's read-only token in its shell.
 on:
   workflow_dispatch:
     inputs:
@@ -102,6 +104,7 @@ jobs:
       action_commit: ${{ steps.shape.outputs.action_commit }}
       tree: ${{ steps.shape.outputs.tree }}
       base_commit: ${{ steps.shape.outputs.base_commit }}
+      merge_date: ${{ steps.shape.outputs.merge_date }}
     steps:
       - name: refuse malformed inputs
         run: |
@@ -130,9 +133,6 @@ jobs:
           ref: ${{ inputs.merge_commit }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
       - name: bind the checkout to the release merge M (scheme S, D-194; tag rule, D-200)
         id: shape
         run: |
@@ -153,8 +153,13 @@ jobs:
           test "$TREE" = "$(git rev-parse "$R^{tree}")"
           test "$(git diff --name-only "$A" "$MERGE_COMMIT")" = "src/checkwash/doctor.py"
           grep -qxF "version = \"$VERSION\"" pyproject.toml
+          MERGE_DATE="$(git show -s --format=%cs "$MERGE_COMMIT")"
+          [[ "$MERGE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
           TAG="v$VERSION"
-          if git ls-remote --exit-code --tags "$PUBLIC_REPO" "refs/tags/$TAG" > /dev/null; then
+          # ls-remote --exit-code: 0 found, 2 no such ref; anything else is an error, not an absent tag.
+          tag_rc=0
+          git ls-remote --exit-code --tags "$PUBLIC_REPO" "refs/tags/$TAG" > /dev/null || tag_rc=$?
+          if [[ "$tag_rc" -eq 0 ]]; then
             git fetch --no-tags "$PUBLIC_REPO" "+refs/tags/$TAG:refs/tags/$TAG"
             test "$(git cat-file -t "refs/tags/$TAG")" = tag
             git cat-file tag "refs/tags/$TAG" > "$EV/tag-object.txt"
@@ -164,11 +169,13 @@ jobs:
             test "$(grep -c '^Release-Merge: ' "$EV/tag-object.txt")" -eq 1
             grep -qxF "Release-Merge: $MERGE_COMMIT" "$EV/tag-object.txt"
             tag_state="annotated tag object $(git rev-parse "refs/tags/$TAG") peels to A and names M"
-          else
+          elif [[ "$tag_rc" -eq 2 ]]; then
             if [[ "$CHECKPOINT" != source-at-M ]]; then
               echo "::error::the artifact checkpoint needs the published tag $TAG"; exit 1
             fi
             tag_state="absent at dispatch"
+          else
+            echo "::error::cannot read the public tags (git ls-remote exit $tag_rc)"; exit 1
           fi
           {
             echo "label=HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT"
@@ -179,10 +186,12 @@ jobs:
             echo "release_head=$R"
             echo "action_commit=$A"
             echo "tree=$TREE"
+            echo "merge_date=$MERGE_DATE"
             # The files the composite executes. Their blob IDs show whether they
             # are the ones a hosted action-security qualification last ran.
             for file in action/action.yml action/secure.py action/post_review.py; do
-              echo "blob_at_A_$file=$(git rev-parse "$A:$file")"
+              blob="$(git rev-parse --verify "$A:$file")"
+              echo "blob_at_A_$file=$blob"
             done
             echo "dispatch_ref=$GITHUB_REF"
             echo "workflow_commit=$GITHUB_SHA"
@@ -198,14 +207,40 @@ jobs:
             echo "action_commit=$A"
             echo "tree=$TREE"
             echo "base_commit=$BASE"
+            echo "merge_date=$MERGE_DATE"
           } >> "$GITHUB_OUTPUT"
-      - name: read the published Release, the publication record and PyPI (artifact checkpoint)
-        if: inputs.checkpoint != 'source-at-M'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() && steps.shape.outcome != 'skipped' }}
+        with:
+          name: release-hosted-identity-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: error
+          retention-days: 90
+
+  release:
+    name: hosted published Release record
+    needs: identity
+    if: inputs.checkpoint != 'source-at-M'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERSION: ${{ inputs.version }}
+      RELEASE_ID: ${{ inputs.release_id }}
+      WHEEL_SHA256: ${{ inputs.wheel_sha256 }}
+      SDIST_SHA256: ${{ inputs.sdist_sha256 }}
+      PYZ_SHA256: ${{ inputs.pyz_sha256 }}
+    steps:
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: read the published Release, the publication record and PyPI
+        id: record
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           EV="$RUNNER_TEMP/evidence"
+          mkdir -p "$EV"
           gh api "repos/taipei49314/checkwash/releases/$RELEASE_ID" > "$EV/release.json"
           gh api "repos/taipei49314/checkwash/releases/tags/v$VERSION" > "$EV/release-by-tag.json"
           python -I - "$EV/release.json" "$EV/release-by-tag.json" <<'PY'
@@ -239,20 +274,44 @@ jobs:
               url = f"https://github.com/taipei49314/checkwash/releases/download/v{version}/{name}"
               need(row.get("state") == "uploaded" and row.get("browser_download_url") == url,
                    name + " is not an uploaded asset at its canonical URL")
-              digest = row.get("digest")
-              need(digest is None or digest == "sha256:" + expected[name],
-                   name + ": GitHub's digest differs from the release record")
-              print(f"github {name} asset {row.get('id')} {row.get('size')} bytes digest {digest or 'absent'}")
+              # GitHub's digest is the one value here that the dispatching agent
+              # did not type, so it must be present and equal.
+              need(row.get("digest") == "sha256:" + expected[name],
+                   name + ": GitHub's digest is absent or differs from the release record")
+              print(f"github {name} asset {row.get('id')} {row.get('size')} bytes digest {row['digest']}")
           PY
           record="docs/releases/v$VERSION-publication-verification.md"
-          if git cat-file -e "refs/remotes/public/main:$record" 2> /dev/null; then
-            git show "refs/remotes/public/main:$record" > "$EV/publication-record.md"
-            for value in "$WHEEL_SHA256" "$SDIST_SHA256" "$PYZ_SHA256"; do
-              grep -qF "$value" "$EV/publication-record.md" || { echo "::error::$value is not in $record on main"; exit 1; }
-            done
-            record_state="each SHA256 appears in $record on main"
-          else
+          record_rc=0
+          gh api "repos/taipei49314/checkwash/contents/$record?ref=main" -H "Accept: application/vnd.github.raw" \
+            > "$EV/publication-record.md" 2> "$RUNNER_TEMP/record-error.txt" || record_rc=$?
+          if [[ "$record_rc" -eq 0 ]]; then
+            python -I - "$EV/publication-record.md" <<'PY'
+          import os, sys
+
+          def need(condition, message):
+              if not condition:
+                  print("::error::" + message)
+                  sys.exit(1)
+
+          version = os.environ["VERSION"]
+          expected = {
+              f"checkwash-{version}-py3-none-any.whl": os.environ["WHEEL_SHA256"],
+              f"checkwash-{version}.tar.gz": os.environ["SDIST_SHA256"],
+              "checkwash.pyz": os.environ["PYZ_SHA256"],
+          }
+          with open(sys.argv[1], encoding="utf-8") as stream:
+              lines = stream.read().splitlines()
+          for name, value in expected.items():
+              need(any(f"`{name}`" in line and f"`{value}`" in line for line in lines),
+                   f"no row of the publication record names {name} with {value}")
+          PY
+            record_state="the row of each file in $record on main names its SHA256"
+          elif grep -q "HTTP 404" "$RUNNER_TEMP/record-error.txt"; then
+            rm -f "$EV/publication-record.md"
             record_state="no publication record on main at dispatch"
+          else
+            cat "$RUNNER_TEMP/record-error.txt"
+            echo "::error::cannot read $record (gh api exit $record_rc)"; exit 1
           fi
           code="$(curl -sS --retry 3 -o "$EV/pypi-version.json" -w '%{http_code}' "https://pypi.org/pypi/checkwash/$VERSION/json")"
           case "$code" in
@@ -274,7 +333,7 @@ jobs:
               files = json.load(stream).get("urls") or []
           need(sorted(row.get("filename") for row in files) == sorted(expected),
                "PyPI does not hold exactly the wheel and the sdist")
-          with open(sys.argv[2], "w", encoding="utf-8") as listing:
+          with open(sys.argv[2], "w", encoding="utf-8", newline="\n") as listing:
               for row in files:
                   name, url = row["filename"], row.get("url", "")
                   need(row.get("digests", {}).get("sha256") == expected[name], name + ": PyPI's digest differs")
@@ -299,17 +358,20 @@ jobs:
               ;;
           esac
           {
+            echo "label=HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT"
+            echo "checkpoint=published-artifacts"
             echo "release_id=$RELEASE_ID"
             echo "wheel_sha256=$WHEEL_SHA256"
             echo "sdist_sha256=$SDIST_SHA256"
             echo "pyz_sha256=$PYZ_SHA256"
             echo "publication_record=$record_state"
             echo "pypi=$pypi_state"
-          } | tee -a "$EV/identity.txt"
+            echo "run=$GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT"
+          } | tee "$EV/release-record.txt"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ !cancelled() && steps.shape.outcome != 'skipped' }}
+        if: ${{ !cancelled() && steps.record.outcome != 'skipped' }}
         with:
-          name: release-hosted-identity-attempt-${{ github.run_attempt }}
+          name: release-hosted-release-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/evidence
           if-no-files-found: error
           retention-days: 90
@@ -343,6 +405,10 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$MERGE_COMMIT"
           test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          case "$MATRIX_OS/$RUNNER_OS/$(uname -m)" in
+            macos-latest/macOS/arm64|ubuntu-latest/Linux/x86_64) ;;
+            *) echo "::error::this runner is $RUNNER_OS $(uname -m), not $MATRIX_OS"; exit 1 ;;
+          esac
           mkdir -p "$RUNNER_TEMP/evidence"
           {
             echo "label=HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT"
@@ -359,7 +425,7 @@ jobs:
         id: python
         with:
           python-version: ${{ matrix.python }}
-      - name: install M and the PJU lock's test and build packages, and record them
+      - name: install M with pinned test and build packages, and record them
         id: install
         run: |
           set -euo pipefail
@@ -374,7 +440,7 @@ jobs:
           python -m pip freeze --all > "$RUNNER_TEMP/evidence/pip-freeze.txt"
       - name: the whole suite at M
         run: pytest -n 2 --dist worksteal -rs --junitxml="$RUNNER_TEMP/evidence/junit.xml"
-      - name: summarise the suite, naming every skip and what became of D-170's two budget checks
+      - name: summarise the suite, naming every skip, and check D-170's two budget checks
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           MATRIX_OS: ${{ matrix.os }}
@@ -386,12 +452,14 @@ jobs:
           import xml.etree.ElementTree as ET
 
           BUDGETS = ("test_large_single_diff_within_budget", "test_many_files_within_budget")
+          MACOS_SKIP = "budget checks paused on macOS (maintainer decision 2026-10-01)"
           root = ET.parse(sys.argv[1]).getroot()
           suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
-          totals = {key: sum(int(suite.get(key, 0)) for suite in suites)
-                    for key in ("tests", "failures", "errors", "skipped")}
+          reported = {key: sum(int(suite.get(key, 0)) for suite in suites)
+                      for key in ("tests", "failures", "errors", "skipped")}
+          cases = list(root.iter("testcase"))
           skips, budgets = [], {}
-          for case in root.iter("testcase"):
+          for case in cases:
               name = case.get("classname", "") + "::" + case.get("name", "")
               skipped = case.findall("skipped")
               for row in skipped:
@@ -405,14 +473,30 @@ jobs:
                       budgets[case.get("name")] = "ran and passed"
           for name in BUDGETS:
               budgets.setdefault(name, "absent from the report")
-          summary = {"runner_label": os.environ["MATRIX_OS"], "python": os.environ["MATRIX_PYTHON"],
-                     **totals, "skips": skips, "d170_budget_checks": budgets}
+          # JUnit's "tests" attribute also counts subtests. The PJU receipts and
+          # the six-leg batch count test cases, so the two are kept apart.
+          summary = {"runner_label": os.environ["MATRIX_OS"], "runner_os": os.environ["RUNNER_OS"],
+                     "python": os.environ["MATRIX_PYTHON"], "test_cases": len(cases),
+                     "subtests": reported["tests"] - len(cases), "failures": reported["failures"],
+                     "errors": reported["errors"], "skipped": reported["skipped"],
+                     "skips": skips, "d170_budget_checks": budgets}
           with open(sys.argv[2], "w", encoding="utf-8") as stream:
               json.dump(summary, stream, indent=2, sort_keys=True)
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as stream:
-              stream.write(f"{summary['runner_label']} Python {summary['python']}: {totals['tests']} tests, "
-                           f"{totals['failures']} failures, {totals['errors']} errors, {totals['skipped']} skipped; "
+              stream.write(f"{summary['runner_label']} Python {summary['python']}: {summary['test_cases']} test cases "
+                           f"and {summary['subtests']} subtests, {summary['failures']} failures, "
+                           f"{summary['errors']} errors, {summary['skipped']} skipped; "
                            f"D-170 budget checks: {budgets}\n")
+          # D-170: on Linux the two budget checks run and gate; on macOS they
+          # are skipped for D-170's reason, and nothing else may happen to them.
+          if summary["runner_os"] == "Linux":
+              wrong = {name: state for name, state in budgets.items() if state != "ran and passed"}
+          else:
+              wrong = {name: state for name, state in budgets.items()
+                       if not (state.startswith("skipped: ") and MACOS_SKIP in state)}
+          if wrong:
+              print(f"::error::D-170's budget checks on {summary['runner_os']}: {wrong}")
+              sys.exit(1)
           PY
       - name: the source assertion-contract qualification and its inventory at M
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -511,11 +595,13 @@ jobs:
     # The steps of the README's recommended job (ubuntu-latest, the same
     # checkout options, setup-python 3.12, the Action with its default
     # inputs), with what a dispatched run forces: M is checked out by its
-    # SHA, the base is given because there is no pull request, and the
-    # composite is A's own action/ directory, checked out by SHA and reached
-    # by a local path, because a `uses:` reference cannot carry an input.
-    # GitHub's resolution of `taipei49314/checkwash/action@<A>` and the
-    # pull_request trigger are therefore not exercised here.
+    # SHA; the base is given because there is no pull request; the composite
+    # is A's own action/ directory, checked out by SHA into a subdirectory of
+    # the subject's workspace and reached by a local path, because a `uses:`
+    # reference cannot carry an input; and the engine judges allowlist expiry
+    # as on M's commit date, as the published-file checks do. GitHub's
+    # resolution of `taipei49314/checkwash/action@<A>` and the pull_request
+    # trigger are therefore not exercised here.
     name: hosted Action at A (ubuntu-latest, Python 3.12)
     needs: identity
     if: inputs.checkpoint != 'published-artifacts'
@@ -546,6 +632,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$MERGE_COMMIT"
           test "$(git rev-parse 'HEAD^1')" = "$BASE_COMMIT"
           test "$(git -C action-at-A rev-parse HEAD)" = "$ACTION_COMMIT"
+          clean="$(git -C action-at-A status --porcelain --untracked-files=all)"
+          test -z "$clean"
           mkdir -p "$RUNNER_TEMP/evidence"
           {
             echo "label=HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT"
@@ -562,6 +650,8 @@ jobs:
       - name: the composite Action at A on M's release range
         id: recipe
         uses: ./action-at-A/action
+        env:
+          CHECKWASH_TODAY: ${{ needs.identity.outputs.merge_date }}
         with:
           base: ${{ needs.identity.outputs.base_commit }}
       - name: read the Action's own receipt
@@ -592,8 +682,10 @@ jobs:
           fi
           cmp -s "$RECEIPT_PATH" "$RUNNER_TEMP/evidence/action-check-receipt.json"
           cmp -s "$IDENTITY_PATH" "$RUNNER_TEMP/evidence/action-identity.json"
+          git -C action-at-A status --porcelain --untracked-files=all > "$RUNNER_TEMP/evidence/action-at-A-status-after.txt"
           python -I - "$RUNNER_TEMP/evidence/action-check-receipt.json" <<'PY'
-          import json, os, sys
+          import hashlib, json, os, sys
+          from pathlib import Path
 
           def need(condition, message):
               if not condition:
@@ -611,6 +703,20 @@ jobs:
           need(identity.get("version") == os.environ["VERSION"], "the Action installed another version")
           need(str(identity.get("source_root", "")).replace("\\", "/").endswith("/action-at-A"),
                "the Action's engine did not come from the checkout of A")
+          need(receipt.get("fail_on") == "high", "the Action did not judge at its default fail-on, high")
+          # The engine the Action installed must be A's src/checkwash byte for
+          # byte: recompute the Action's own source digest from the checkout.
+          root = Path(os.environ["GITHUB_WORKSPACE"]) / "action-at-A" / "src" / "checkwash"
+          manifest = {}
+          for directory, names, files in os.walk(root):
+              names[:] = sorted(name for name in names if name != "__pycache__")
+              for name in sorted(files):
+                  if name.endswith((".pyc", ".pyo")):
+                      continue
+                  path = Path(directory) / name
+                  manifest[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+          digest = hashlib.sha256(json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+          need(identity.get("source_digest") == digest, "the Action's engine differs from A's src/checkwash")
           print("Action at A: exit 0 on", receipt["base"], "...", receipt["head"], "engine", identity.get("version"),
                 "source digest", identity.get("source_digest"))
           PY
@@ -624,7 +730,7 @@ jobs:
 
   artifacts:
     name: hosted published artifacts (${{ matrix.os }}, Python ${{ matrix.python }})
-    needs: identity
+    needs: [identity, release]
     if: inputs.checkpoint != 'source-at-M'
     strategy:
       fail-fast: false
@@ -637,6 +743,7 @@ jobs:
       VERSION: ${{ inputs.version }}
       MERGE_COMMIT: ${{ inputs.merge_commit }}
       EXPECTED_TREE: ${{ needs.identity.outputs.tree }}
+      MERGE_DATE: ${{ needs.identity.outputs.merge_date }}
       WHEEL_SHA256: ${{ inputs.wheel_sha256 }}
       SDIST_SHA256: ${{ inputs.sdist_sha256 }}
       PYZ_SHA256: ${{ inputs.pyz_sha256 }}
@@ -656,6 +763,10 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$MERGE_COMMIT"
           test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          case "$MATRIX_OS/$RUNNER_OS/$(uname -m)" in
+            macos-latest/macOS/arm64|ubuntu-latest/Linux/x86_64) ;;
+            *) echo "::error::this runner is $RUNNER_OS $(uname -m), not $MATRIX_OS"; exit 1 ;;
+          esac
           mkdir -p "$RUNNER_TEMP/evidence"
           {
             echo "label=HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT"
@@ -734,9 +845,8 @@ jobs:
           RANGE="$MERGE_COMMIT^1..$MERGE_COMMIT"
           # Judge as on the day M was committed, so an allowlist entry that
           # expires later cannot change the verdict of a later run.
-          today="$(git show -s --format=%cs "$MERGE_COMMIT")"
-          [[ "$today" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "::error::cannot read M's commit date"; exit 1; }
-          export CHECKWASH_TODAY="$today"
+          [[ "$MERGE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "::error::no commit date for M"; exit 1; }
+          export CHECKWASH_TODAY="$MERGE_DATE"
           "$RUNNER_TEMP/wheel-venv/bin/python" -I -B -m checkwash check "$RANGE" --repo "$GITHUB_WORKSPACE" --fail-on high > "$RUNNER_TEMP/evidence/wheel-check-release-range.txt"
           python -I -B "$RUNNER_TEMP/published/checkwash.pyz" check "$RANGE" --repo "$GITHUB_WORKSPACE" --fail-on high > "$RUNNER_TEMP/evidence/pyz-check-release-range.txt"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

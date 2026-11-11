@@ -430,7 +430,8 @@ packet nor shortens that list, and its `NOT_RUN` needs its own acceptance,
 which this one does not give.
 
 Advance reviewed advertised/README/Action pins only after the new public-visitor
-packet and native check succeed. Preserve failed historical receipts and record
+packet and native check succeed and neither checkpoint of the hosted release
+verification failed. Preserve failed historical receipts and record
 actual source, tag, runs, bytes, visitors and limits. Rotate verdict baseline in
 a separate reviewed change. Downstream re-pins and issue closure keep their own
 applicable authorization.
