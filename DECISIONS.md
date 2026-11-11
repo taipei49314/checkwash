@@ -133,11 +133,19 @@ rotation.
 
 ## D-204 (2026-11-11): one hosted verification per release, on GitHub-hosted macOS and Linux, in two checkpoints; the macOS skip of the two budget checks kept at 1.0
 
-**Approval.** [TO FILL before merge. `DECISIONS.md` is maintainer text
-(AGENTS.md), and Nelson's 2026-11-08 answer says that a concrete pull
-request's L1 and L2 follow the existing process. The pull request asks him
-to approve this entry (L1) and the `docs/stability.md` Determinism row
-(L2).]
+**Approval.** Claude wrote this entry in the pull request that implements
+it, #599. `DECISIONS.md` is maintainer text (AGENTS.md), and Nelson's
+2026-11-08 answer says that a concrete pull request's L1 and L2 follow the
+existing process, so the pull request asked him to approve this entry (L1)
+with the Determinism row of `docs/stability.md` (L2). Claude sent him both
+texts as they stood at `30b83d075d7ebaf0257d9833e409bf9e2d6c6ffe`, and at
+2026-11-11T13:58:22Z, to Claude's question
+「D-204（L1）和 stability 的 Determinism 列（L2）照 PR 的文字核可嗎？」 (approve
+D-204 (L1) and stability's Determinism row (L2) as the pull request words
+them?), he chose 「核可 L1 和 L2」 (approve L1 and L2). Claude wrote the
+question and both buttons; the other was 「我先看文字」 (let me read the text
+first). The answer approves the two texts, not the merge. This paragraph is
+the only change made to the entry after it.
 
 **What was asked.** On 2026-11-08 Claude listed the decisions checkwash 1.0
 waits for, with options and a recommendation for each; Claude wrote the

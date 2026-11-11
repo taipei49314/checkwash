@@ -25,9 +25,11 @@ Nelson chose macOS and Linux on 2026-11-11 (「是，D-甲」, to Claude's
 question and options), answered eight of the design's nine questions with
 「都照建議」 (all as recommended), approved the POLICY row with
 「照這樣入帳並開始」 (enter it like this and start) and, after a review found
-two factual errors in the row, its correction with 「照兩處更正入帳」; [D-204](DECISIONS.md) has the record and is
-waiting for his approval (L1), as is the Determinism row of
-`docs/stability.md` (L2). The workflow has not run yet. Its first run, for
+two factual errors in the row, its correction with 「照兩處更正入帳」.
+[D-204](DECISIONS.md) has the record. He approved D-204 (L1) and the
+Determinism row of `docs/stability.md` (L2) with 「核可 L1 和 L2」 at
+13:58:22Z; that answer is not a merge approval. The workflow has not run
+yet. Its first run, for
 v0.12.0, follows this merge and comes before the outreach post. Its results
 are labelled `HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT`: hosted
 evidence, not a receipt. `action/README.md` still says Linux and macOS are
