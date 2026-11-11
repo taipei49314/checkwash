@@ -536,17 +536,46 @@ output is kept. macOS is `NOT_RUN` for the fix until the next release's
 `source-at-M` run.
 
 Nelson's answer covers the fix and these records. 0.12.0's tag, Release,
-Release notes, files and PyPI release are unchanged, and the README's pins
-stay at v0.12.0, since its published files and its Action passed. The
-hosted section's Release-notes notice is for a failure of the published
-files, which this is not. Whether to add a note to the Release page is
-Nelson's decision, which Claude asks with this pull request: the Release
-notes link the known issues as they stand at the tag, without the bullet
-this follow-up adds. Any other remedy is his decision too.
+files and PyPI release are unchanged, and the README's pins stay at
+v0.12.0, since its published files and its Action passed. The hosted
+section's Release-notes notice is for a failure of the published files,
+which this is not; any other remedy is Nelson's decision.
 `action/README.md` now cites this run for the composite on a
 hosted Linux runner, and [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md)
 tells users who run checkwash's own tests on macOS from 0.12.0's source
 what to expect.
+
+**A note on the Release page.** The Release notes link the known issues as
+they stand at the tag, which do not show this result. After #600 merged,
+Claude asked 「v0.12.0 的 Release 頁要照草稿加註嗎？」 (add the drafted note
+to the v0.12.0 Release page?) with the buttons 「照這段加註」 (add this
+note) and 「不加註」 (no note). At 16:38:39Z Nelson answered
+「Release 頁的加註 先烈給我」, which Claude read as asking to see the note
+first (先列給我, list it for me first). Claude listed the final text, where
+it would go and what it would leave unchanged, and asked
+「v0.12.0 的 Release 頁照這段加註嗎？」 (add this note to the v0.12.0 Release
+page?) with the same buttons. At 16:40:28Z he answered 「照這段加註」.
+Claude wrote both questions, the buttons and the text. It re-read the
+Release, found it unchanged since the text was listed, and replaced only
+its body: the old notes, unchanged, followed by the text as their last
+paragraph. GitHub records the update at 16:40:55Z. Read back, the body
+equals the approved text byte for byte, and the Release's name, tag, draft
+and prerelease state, files and latest status are unchanged. The paragraph
+reads:
+
+> **Hosted verification after publication (2026-11-11).** This Release's
+> files were checked again on GitHub-hosted macOS (Apple silicon) and Linux
+> with Python 3.11 to 3.13: the published wheel and pyz ran and passed, the
+> sdist passed its file checks, and the Action passed on Linux. On macOS, 13
+> tests of the maintainer's release tooling fail when checkwash's own test
+> suite runs from this release's source, because the default temporary
+> directory there sits under the `/var` symlink, which that tooling refuses;
+> the CLI, the Action and the hooks do not use that code, and main has fixed
+> the tests for the next release. The two performance-budget checks are
+> still not verified on a Mac. This run is supplementary evidence, not a
+> release receipt.
+> [Details](https://github.com/taipei49314/checkwash/blob/c4dee609e11332b30f6a6ddb72c1d3c3e9e69583/docs/releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)
+> · [known issues](https://github.com/taipei49314/checkwash/blob/c4dee609e11332b30f6a6ddb72c1d3c3e9e69583/docs/KNOWN-ISSUES-v0.12.0.md#publication)
 
 ## v0.11.0 release under the pre-1.0 delegation (2026-11-03)
 
