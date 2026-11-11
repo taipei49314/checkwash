@@ -165,9 +165,18 @@ qualification job checked every original outcome and receipt. It last ran on
 the other hosted workflows that run tests
 ([testing on PJU](../docs/testing-on-pju.md)).
 `action.yml` has not changed since 2026-10-12, so those runs exercised this
-wrapper, but not with the engines released after them. Since then the
-composite is replayed only on Windows, on the maintainer's receipt host
-(PJU), by the [PJU receipt](../docs/pju-receipt-bridge.md), which labels the
-result a local composite replay and not a GitHub runner execution; Linux and
-macOS are `NOT_RUN`. A successful source review or a local wrapper test does not
+wrapper, but not with the engines released after them. Since then each pull
+request's [PJU receipt](../docs/pju-receipt-bridge.md) replays the composite
+on Windows only, on the maintainer's receipt host (PJU), and labels the
+result a local composite replay, not a GitHub runner execution. Each
+release's [hosted verification](../docs/RELEASING.md#hosted-release-verification)
+also runs the composite at the release's Action commit once on a
+GitHub-hosted `ubuntu-latest` runner with Python 3.12, on the release's own
+range with the default inputs, from a checkout of that commit used by a
+local path. Its first run, for v0.12.0 after publication on 2026-11-11,
+exited 0 ([record](../docs/releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)).
+That range passes, so the run does not show the Action blocking a change.
+macOS, Windows, other Python versions and inputs, GitHub's resolution of
+`taipei49314/checkwash/action@<sha>` and a `pull_request` trigger remain
+`NOT_RUN`. A successful source review or a local wrapper test does not
 substitute for a hosted result.

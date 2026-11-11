@@ -1,4 +1,5 @@
 """Owned collector controls; no product suite, public requests or publication."""
+import contextlib
 import copy
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -21,6 +22,20 @@ SPEC.loader.exec_module(COLLECT)
 
 def encoded(value):
     return json.dumps(value, sort_keys=True).encode()
+
+
+@contextlib.contextmanager
+def real_temporary_directory():
+    """Yield a new temporary directory by its real path, as pytest's tmp_path is.
+
+    The collector reads its inputs through the PJU Action replayer's path
+    check, which refuses a path with a symlinked ancestor, and the default
+    temporary directory can have one: on macOS it is under /var, a symlink to
+    /private/var. The check stays; the tests pass the real path, as a caller
+    on such a system must.
+    """
+    with tempfile.TemporaryDirectory() as folder:
+        yield os.path.realpath(folder)
 
 
 def subject(stage="main"):
@@ -95,14 +110,14 @@ class ReleaseCollectorTests(unittest.TestCase):
                 COLLECT.validate_subject(packet)
 
     def test_admitted_digest_duplicate_keys_and_unsafe_parent_path_are_rejected(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder))
             fixture.args.subject_sha256 = "0" * 64
             with self.assertRaisesRegex(ValueError, "digest/size"):
                 fixture.collection()
         with self.assertRaisesRegex(ValueError, "duplicate"):
             COLLECT.strict_json(b'{"stage":"main","stage":"tag"}')
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder))
             fixture.parents["pr"]["report"] = "../other.json"
             fixture.args.parents.write_bytes(encoded(fixture.parents))
@@ -112,7 +127,7 @@ class ReleaseCollectorTests(unittest.TestCase):
 
     def test_parent_report_bytes_and_event_payload_are_not_self_admitted(self):
         for changed in ("event.json", "parents/pr.json"):
-            with tempfile.TemporaryDirectory() as folder:
+            with real_temporary_directory() as folder:
                 fixture = Fixture(Path(folder))
                 (fixture.root / changed).write_bytes(b'{"changed":true}')
                 with self.subTest(changed=changed), self.assertRaisesRegex(ValueError, "digest/size"):
@@ -121,7 +136,7 @@ class ReleaseCollectorTests(unittest.TestCase):
     def test_tag_report_with_raw_published_baseline_is_admitted_as_a_parent(self):
         # A real v0.10.0 tag report was 4,408,656 bytes; the old 2 MiB JSON
         # limit refused it before the release-event collection started.
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder), "release-event")
             raw = encoded({"publication_evidence": "x" * (COLLECT.MAX_JSON + 1)})
             (fixture.root / "parents/tag.json").write_bytes(raw)
@@ -134,7 +149,7 @@ class ReleaseCollectorTests(unittest.TestCase):
                 fixture.collection()
 
     def test_external_authority_records_are_copied_as_data_not_self_authorized(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder), "release-event")
             raw = b'{"status":"proposed-not-authorized"}'
             fixture.args.release_authorization = fixture.root / "authority.json"
@@ -152,7 +167,7 @@ class ReleaseCollectorTests(unittest.TestCase):
                 fixture.collection()
 
     def test_stage_backend_never_receives_a_fake_pr(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder), "tag")
             collection = fixture.collection()
             with patch.object(fixture.backend, "collect", return_value=7) as backend:
@@ -166,7 +181,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             self.assertTrue(callable(kwargs["stage_preflight"]))
 
     def test_wrong_first_parent_is_rejected_before_stage_product_commands(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             collection = Fixture(Path(folder)).collection()
             helpers = {path: {"sha256": "owned"} for path in
                        ("tools/verdict_gate.py", "tools/published_release_identity.py", "tools/verify_published_source.py", "tools/qualify_zipapp.py")}
@@ -176,7 +191,7 @@ class ReleaseCollectorTests(unittest.TestCase):
                 collection.preflight(ctx)
 
     def test_real_pr_keeps_native_number_and_does_not_require_base_as_first_parent(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder), "pr")
             collection = fixture.collection()
             helpers = {path: {"sha256": "owned"} for path in
@@ -196,7 +211,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             self.assertFalse(hasattr(backend.call_args.args[0], "pr"))
 
     def test_visitor_installed_commit_cannot_be_replaced_by_matching_version(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             collection = Fixture(Path(folder), "tag").collection()
             output, scratch = Path(folder) / "out", Path(folder) / "scratch"
             output.mkdir(); scratch.mkdir()
@@ -214,7 +229,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             self.assertEqual(calls, ["tag-venv", "tag-install", "tag-identity"])
 
     def test_public_visitor_requires_external_artifact_set_and_uses_download_provider(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder), "public-visitor")
             collection = fixture.collection()
             with patch.object(fixture.backend, "collect", return_value=0) as backend:
@@ -225,7 +240,7 @@ class ReleaseCollectorTests(unittest.TestCase):
                 fixture.collection()
 
     def test_artifact_set_is_exact_and_does_not_accept_boolean_size(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder))
             self.assertEqual(COLLECT.validate_artifact_set(fixture.expected, "0.9.1"), fixture.expected)
             extra = copy.deepcopy(fixture.expected)
@@ -250,7 +265,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             def __exit__(self, *args): return False
             def geturl(self): return "https://pypi.org/x"
             def read(self, maximum): return b"abc"[:maximum]
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             network = COLLECT.Network(Path(folder))
             opener = SimpleNamespace(open=lambda *a, **k: Response())
             with patch.object(COLLECT.urllib.request, "build_opener", return_value=opener):
@@ -263,7 +278,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             self.assertEqual(row["sha256"], COLLECT.digest(b"abc"))
 
     def test_public_bytes_come_from_both_services_not_another_local_build(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder), "public-visitor")
             collection = fixture.collection()
             output = fixture.root / "out"
@@ -306,7 +321,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             self.assertEqual(collection.public_paths["github-wheel"].read_bytes(), collection.public_paths["pypi-wheel"].read_bytes())
 
     def test_mismatched_download_is_saved_but_not_accepted(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             collection = Fixture(Path(folder)).collection()
             collection.network = SimpleNamespace(fetch=lambda *a, **k: b"changed")
             destination = Path(folder) / "wrong.pyz"
@@ -316,7 +331,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"changed")
 
     def test_failed_final_source_check_does_not_leave_collection_completed(self):
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             fixture = Fixture(Path(folder))
             collection = fixture.collection()
             output = fixture.root / "out"
@@ -335,7 +350,7 @@ class ReleaseCollectorTests(unittest.TestCase):
             backend.subprocess.run([sys.executable, "-c", "owned"], capture_output=True)
             return 0
         result = subprocess.CompletedProcess([sys.executable, "-c", "owned"], 0, b"\xff\r\n", b"\x00")
-        with tempfile.TemporaryDirectory() as folder, patch.object(sys, "argv", ["owned"]), \
+        with real_temporary_directory() as folder, patch.object(sys, "argv", ["owned"]), \
                 patch.object(backend.runpy, "run_path", return_value={"main": fake_main}), \
                 patch.object(backend.subprocess, "run", return_value=result):
             logs = Path(folder) / "nested-verdict"
@@ -347,7 +362,7 @@ class ReleaseCollectorTests(unittest.TestCase):
 
     def test_clean_subprocess_environment_drops_caller_credentials(self):
         action = COLLECT.load_backend().load_replayer()
-        with tempfile.TemporaryDirectory() as folder:
+        with real_temporary_directory() as folder:
             root = Path(folder)
             system, program = root / "system", root / "program"
             for directory in (system / "System32", program / "Git/cmd", program / "Git/bin", program / "Git/usr/bin"):
