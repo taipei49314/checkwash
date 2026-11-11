@@ -484,6 +484,70 @@ v0.11.0's clone, `rev-parse` and `diff` lines stay as the verification of
 the v0.11.0 pin. No downstream re-pin is authorized. 1.0 remains NOT_MET and
 needs Nelson's decision.
 
+## v0.12.0 hosted verification after publication (2026-11-11)
+
+v0.12.0 was published before the [hosted release
+verification](#hosted-release-verification) existed. #599 added it and
+merged at 2026-11-11T14:31:19Z on Nelson's 「核准合併 #599」, and at 14:31:56Z
+Claude dispatched it once for v0.12.0 with `both`, as D-204 provides for
+this release: run 43039360146. Its result is supplementary evidence after
+publication, not part of 0.12.0's release evidence. The [publication
+record](releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)
+holds its records, and `evidence/v0120-hosted-run43039360146-20261111`
+(`307d7c62`) keeps its artifacts, its log archive and GitHub's records of
+its jobs beyond their retention.
+
+**It failed on macOS.** The whole suite at M failed on the three macOS
+legs, in the same 14 entries of `tests/test_collect_pju_release.py`, which
+tests the PJU release collector: the tests' temporary directories sit
+under `/var`, a symlink on macOS, and the collector's path check refuses a
+symlinked ancestor. Everything else passed on both systems: the Linux
+suite with the six-leg batch's counts, the source, wheel and pyz
+qualifications and the inventories, six byte-identical corpus outputs equal
+to the batch's, the Action at A with exit 0, and the published wheel, sdist
+and pyz on all six legs. The failure is in tests of tooling that runs only
+on a Windows receipt host, not in a published file or the Action, and those
+tests had never run on a hosted Mac: the file was added the day after the
+hosted test workflows stopped.
+
+As this guide requires, the run was not repeated, and Claude reported the
+failure to Nelson. Its message proposed resolving the tests' temporary
+directories to their real path without changing the collector's check,
+recording the result here, in the publication record and in the known
+issues, updating `action/README.md`, and copying the artifacts to an
+`evidence/` branch, and it asked
+「要我開一個 PR 修這 14 個測試，並把這次結果寫進 0.12.0 的紀錄嗎？」 (shall I open
+a pull request that fixes these 14 tests and writes this result into
+0.12.0's records?) with the buttons 「開 PR 修正並記錄」 and 「先等等」. At
+14:53:56Z Nelson answered 「開 PR 修正並記錄」 (open the pull request, fix and
+record). Claude wrote the question and both buttons.
+
+This follow-up is that pull request. The collector's tests now take each
+temporary directory by its real path, as pytest's `tmp_path` does, and the
+check is unchanged. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), `python3 -I -B
+tests/test_collect_pju_release.py` under WSL Ubuntu 24.04 with Python
+3.12.3 and a `TMPDIR` reached through a symlink exited 1 on main
+`eb4fdab6`, with the same 14 entries failing on the symlink's path instead
+of `/var` (3 failures and 11 errors in unittest's count), and exited 0 with
+this change. On Windows with CPython 3.11.9 the changed file passes under
+pytest and as a script. The pull request lists each run and where its raw
+output is kept. macOS is `NOT_RUN` for the fix until the next release's
+`source-at-M` run.
+
+Nelson's answer covers the fix and these records. 0.12.0's tag, Release,
+Release notes, files and PyPI release are unchanged, and the README's pins
+stay at v0.12.0, since its published files and its Action passed. The
+hosted section's Release-notes notice is for a failure of the published
+files, which this is not. Whether to add a note to the Release page is
+Nelson's decision, which Claude asks with this pull request: the Release
+notes link the known issues as they stand at the tag, without the bullet
+this follow-up adds. Any other remedy is his decision too.
+`action/README.md` now cites this run for the composite on a
+hosted Linux runner, and [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md)
+tells users who run checkwash's own tests on macOS from 0.12.0's source
+what to expect.
+
 ## v0.11.0 release under the pre-1.0 delegation (2026-11-03)
 
 0.11.0 is being released under the delegation recorded at the top of this file:
@@ -1684,7 +1748,8 @@ v0.12.0 was published before the workflow existed. One dispatch with
 `ffaf4ed86ecc2baeb8cc008487a44d8495da9177` and on the files GitHub Release
 437647350 and PyPI 0.12.0 serve. Its result is supplementary evidence after
 publication, not part of 0.12.0's release evidence, and is recorded with
-that release in a dated paragraph. Its Action item runs the commit the
+that release in a dated paragraph ([it ran on
+2026-11-11](#v0120-hosted-verification-after-publication-2026-11-11)). Its Action item runs the commit the
 README's Action pin names, so a failure there is a failure of the setup the
 README recommends; Claude reports it to Nelson, who decides about the pin.
 
