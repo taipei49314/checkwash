@@ -535,11 +535,12 @@ pytest and as a script. The pull request lists each run and where its raw
 output is kept. macOS is `NOT_RUN` for the fix until the next release's
 `source-at-M` run.
 
-Nelson's answer covers the fix and these records. 0.12.0's tag, Release,
-files and PyPI release are unchanged, and the README's pins stay at
+Nelson's answer covers the fix and these records. They change none of
+0.12.0's tag, Release, files or PyPI release, and the README's pins stay at
 v0.12.0, since its published files and its Action passed. The hosted
 section's Release-notes notice is for a failure of the published files,
-which this is not; any other remedy is Nelson's decision.
+which this is not; anything more is Nelson's decision, and the note below
+is what he chose.
 `action/README.md` now cites this run for the composite on a
 hosted Linux runner, and [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md)
 tells users who run checkwash's own tests on macOS from 0.12.0's source
@@ -555,13 +556,22 @@ first (先列給我, list it for me first). Claude listed the final text, where
 it would go and what it would leave unchanged, and asked
 「v0.12.0 的 Release 頁照這段加註嗎？」 (add this note to the v0.12.0 Release
 page?) with the same buttons. At 16:40:28Z he answered 「照這段加註」.
-Claude wrote both questions, the buttons and the text. It re-read the
-Release, found it unchanged since the text was listed, and replaced only
-its body: the old notes, unchanged, followed by the text as their last
-paragraph. GitHub records the update at 16:40:55Z. Read back, the body
-equals the approved text byte for byte, and the Release's name, tag, draft
-and prerelease state, files and latest status are unchanged. The paragraph
-reads:
+Claude wrote both questions, the buttons and the text. The listed text
+rewords the draft the first question referred to, which Claude had sent
+with #600's merge question; it also pins its links to `c4dee609` and adds
+the sentence on the two performance-budget checks, the sentence calling
+the run supplementary evidence, and the `/var` cause with a link to the
+known issues.
+
+Claude then re-read the Release, found it unchanged since the text was
+listed, and replaced only its body: the old notes, unchanged, followed by
+the text as their last paragraph. GitHub records the update at 16:40:55Z.
+Read back, the body equals byte for byte the prepared body, the old notes
+with a blank line and the approved paragraph (10,467 bytes, SHA256
+`e2ad3078aec132c9c7353c6a14c1694098d8439124045dae4e81f2ab8f52932e`), and
+the Release's name, tag, draft and prerelease state, files and latest
+status are unchanged. The Release's JSON before and after the edit is kept
+on LAPTOP-01AGNPJU. The paragraph reads:
 
 > **Hosted verification after publication (2026-11-11).** This Release's
 > files were checked again on GitHub-hosted macOS (Apple silicon) and Linux

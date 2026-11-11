@@ -8,14 +8,18 @@ The heading's date is Asia/Taipei; the times below are UTC, on 2026-11-11.
 
 The v0.12.0 Release notes link the known issues as they stand at the tag,
 which do not show the hosted verification after publication (next
-section). Nelson asked to see the text first, then answered 「照這段加註」
-(add this note) at 16:40:28Z, to Claude's question and buttons. At
-16:40:55Z Claude added the text as the last paragraph of the Release notes
-and changed nothing else on the Release; read back, the body equals the
-approved text byte for byte.
+section). Asked about a note, Nelson replied 「Release 頁的加註 先烈給我」,
+which Claude read as asking to see the text first; after Claude listed it,
+he answered 「照這段加註」 (add this note) at 16:40:28Z. At 16:40:55Z Claude
+added the text as the last paragraph of the Release notes and changed
+nothing else on the Release; read back, the body equals byte for byte the
+prepared body, the old notes with a blank line and the approved paragraph.
+Claude then asked whether to record this in a small pull request, and he
+answered 「開小 PR 記錄」 (open a small PR to record it) at 16:41:56Z. Claude
+wrote the questions, the buttons and the text;
 [RELEASING](docs/RELEASING.md#v0120-hosted-verification-after-publication-2026-11-11)
-has the questions, his answers and the text. This change records the note,
-and #600's merge below. Documentation only.
+has them, his answers and the text. This change records the note and,
+below, #600's merge. Documentation only.
 
 ## 2026-11-11: v0.12.0's hosted verification after publication failed on macOS
 
@@ -55,10 +59,10 @@ This change is that pull request:
   their 90-day retention.
 
 No engine, DECISIONS, THREATMODEL, SPEC or `tests/gates/**` change, and the
-test count is unchanged. 0.12.0's tag, Release, files and PyPI release and
-the README's pins are unchanged; its Release notes gained one paragraph
-after this merged (section above), and any other remedy is Nelson's
-decision. Draft #597 still has to take in main.
+test count is unchanged. This change touches none of 0.12.0's tag,
+Release, files or PyPI release, or the README's pins; after it merged, the
+Release notes gained one paragraph (section above), and anything more is
+Nelson's decision. Draft #597 still has to take in main.
 
 #600 merged as `c4dee609e11332b30f6a6ddb72c1d3c3e9e69583` at
 2026-11-11T16:33:20Z, with parents `eb4fdab6` and `0eb09fe1` and the tree
