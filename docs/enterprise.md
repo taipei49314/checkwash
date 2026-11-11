@@ -119,12 +119,22 @@ if the repository currently uses only one.
 test module with 200 weakened assertions **< 1.5 s**; 500 files **< 3.5 s**,
 widened from 1.0 s and 2.5 s by maintainer decision on 2026-10-20 (D-170). A
 regression beyond those fails the suite. Since v0.5.0 the two budget checks
-are skipped on macOS by maintainer decision (2026-10-01). Hosted CI has been
-disabled since 2026-10-23, so a pull request's suite, and with it these
-budgets, runs on Windows only, in the [PJU receipt](pju-receipt-bridge.md);
-Linux is `NOT_RUN` there, and the supplementary six-leg batch that
-[RELEASING](RELEASING.md) records before a release runs the suite in three
-Linux legs on the same host. The ROADMAP stop-hook target is p95 < 2 s on a
+are skipped on macOS by maintainer decision (2026-10-01), and on 2026-11-08
+the maintainer kept that skip for 1.0 ([D-204](../DECISIONS.md)). **These
+two budgets have not been verified on a Mac.** The Windows and Linux runs
+enforce them, but their timings are not evidence of macOS performance.
+Hosted CI has been disabled since 2026-10-23, so a pull request's suite, and
+with it these budgets, runs on Windows only, in the
+[PJU receipt](pju-receipt-bridge.md); Linux is `NOT_RUN` there, and the
+supplementary six-leg batch that [RELEASING](RELEASING.md) records before a
+release runs the suite in three Linux legs on the same host. From the
+release after v0.12.0, each release's
+[hosted release verification](RELEASING.md#hosted-release-verification)
+also runs the suite on GitHub-hosted Linux, where the two budgets gate, and
+on macOS, where they are skipped; macOS still runs the 10-second
+pathological-file bound in the same file and the time budgets of
+`tests/test_perf_git.py` (12 s) and `tests/test_perf_js.py` (8 s). The
+ROADMAP stop-hook target is p95 < 2 s on a
 medium diff; nothing measures it, and 1.5 s is the hard gate. Both budgets
 time the engine's `analyze` on changes held in memory. They do not time the
 Git reads that a `check` or hook run makes, so they are not a bound on a
