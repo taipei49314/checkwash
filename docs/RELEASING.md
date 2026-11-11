@@ -506,15 +506,16 @@ suite with the six-leg batch's counts, the source, wheel and pyz
 qualifications and the inventories, six byte-identical corpus outputs equal
 to the batch's, the Action at A with exit 0, and the published wheel, sdist
 and pyz on all six legs. The failure is in tests of tooling that runs only
-on the receipt host, not in a published file or the Action, and those tests
-had never run on macOS: the file was added the day after the hosted test
-workflows stopped.
+on a Windows receipt host, not in a published file or the Action, and those
+tests had never run on a hosted Mac: the file was added the day after the
+hosted test workflows stopped.
 
 As this guide requires, the run was not repeated, and Claude reported the
 failure to Nelson. Its message proposed resolving the tests' temporary
 directories to their real path without changing the collector's check,
 recording the result here, in the publication record and in the known
-issues, and copying the artifacts to an `evidence/` branch, and it asked
+issues, updating `action/README.md`, and copying the artifacts to an
+`evidence/` branch, and it asked
 「要我開一個 PR 修這 14 個測試，並把這次結果寫進 0.12.0 的紀錄嗎？」 (shall I open
 a pull request that fixes these 14 tests and writes this result into
 0.12.0's records?) with the buttons 「開 PR 修正並記錄」 and 「先等等」. At
@@ -523,18 +524,26 @@ record). Claude wrote the question and both buttons.
 
 This follow-up is that pull request. The collector's tests now take each
 temporary directory by its real path, as pytest's `tmp_path` does, and the
-check is unchanged. On LAPTOP-01AGNPJU's WSL Ubuntu 24.04 with Python
-3.12.3 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), a `TMPDIR` reached
-through a symlink reproduced the same 14 failures before the change and
-none after it, and the file passes on Windows. macOS is `NOT_RUN` for the
-fix until the next release's `source-at-M` run.
+check is unchanged. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), `python3 -I -B
+tests/test_collect_pju_release.py` under WSL Ubuntu 24.04 with Python
+3.12.3 and a `TMPDIR` reached through a symlink exited 1 on main
+`eb4fdab6`, with the same 14 entries failing on the symlink's path instead
+of `/var` (3 failures and 11 errors in unittest's count), and exited 0 with
+this change. On Windows with CPython 3.11.9 the changed file passes under
+pytest and as a script. The pull request lists each run and where its raw
+output is kept. macOS is `NOT_RUN` for the fix until the next release's
+`source-at-M` run.
 
 Nelson's answer covers the fix and these records. 0.12.0's tag, Release,
 Release notes, files and PyPI release are unchanged, and the README's pins
 stay at v0.12.0, since its published files and its Action passed. The
 hosted section's Release-notes notice is for a failure of the published
-files, which this is not; any other remedy, such as a note on the Release,
-is his decision. `action/README.md` now cites this run for the composite on a
+files, which this is not. Whether to add a note to the Release page is
+Nelson's decision, which Claude asks with this pull request: the Release
+notes link the known issues as they stand at the tag, without the bullet
+this follow-up adds. Any other remedy is his decision too.
+`action/README.md` now cites this run for the composite on a
 hosted Linux runner, and [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md)
 tells users who run checkwash's own tests on macOS from 0.12.0's source
 what to expect.

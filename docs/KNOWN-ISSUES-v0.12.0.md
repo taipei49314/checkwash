@@ -103,8 +103,9 @@ correctness guarantee.
   v0.12.0, on GitHub-hosted macOS (Apple silicon) and Linux with Python 3.11
   to 3.13
   ([record](releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)).
-  The published wheel, sdist and pyz passed on both systems, and the Action
-  passed on Linux. On macOS the whole test suite at the release merge failed
+  The published files passed on both systems (the wheel and the pyz were
+  run; the sdist was checked, not installed), and the Action passed on
+  Linux. On macOS the whole test suite at the release merge failed
   in 14 entries of `tests/test_collect_pju_release.py`, which tests the
   maintainer's release collector: the tests' temporary directories sit
   under `/var`, a symlink on macOS, and the collector refuses a path with a
@@ -112,6 +113,7 @@ correctness guarantee.
   collector. If you run checkwash's own tests on macOS from the 0.12.0 sdist
   or tag, expect those 14 failures; setting `TMPDIR` to its real path, for
   example `TMPDIR="$(cd "$TMPDIR" && pwd -P)"`, avoids them (shown on Linux
-  with a symlinked `TMPDIR`; not run on macOS). The next release's tests
-  take the real path themselves. The two perf-gate budget checks stay
-  unverified on a Mac.
+  with a symlinked `TMPDIR`; not run on macOS). From the next release, the
+  tests take the real path themselves. The two perf-gate budget checks
+  stay unverified on a Mac, and the Windows and Linux timings are not
+  evidence of macOS performance.
