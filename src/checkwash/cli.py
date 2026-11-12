@@ -959,7 +959,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--local",
         action="store_true",
         help="write machine-local .claude/settings.local.json (the default since 0.11; kept for "
-             "compatibility); this installer does not configure Git ignore",
+             "compatibility); when Git neither tracks nor ignores that file, the installer adds "
+             "it to the repository's .git/info/exclude",
     )
     hook_scope.add_argument(
         "--shared",
