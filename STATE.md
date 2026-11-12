@@ -104,7 +104,30 @@ Done on 2026-11-08, outside this pull request:
 Not done: closing #212, after this pull request merges; the hook test on a
 borrowed Mac; the residual register; the cohort protocol.
 
-Status: [TO FILL: branch, head, receipt and review, as in the D-200 section; after the merge, Nelson's L1 and L2 approval, as in the D-201 section.]
+Status: not merged. The branch is `claude/road-to-1.0-20261109`, from main
+`8f610be9`; main `f93e24ce` (#598 to #601) was merged in as `61fc0708`.
+
+- **Review.** One read-only Claude review sub-agent reviewed the first draft
+  against Nelson's verbatim replies, the checkwash-lab records, EC and
+  GitHub. It found no blocking error, and `c9609878` and `a70b8711` carry
+  its 15 text fixes. `7a7cb136`, after the merge, updates stability's row
+  on hosted verification and was not reviewed.
+- **Checks.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+  Windows CPython 3.11.9), on 2026-11-12, at `7a7cb136`:
+  - The full suite (`pytest`, xdist `-n 8`): 22,842 passed and 25 skipped,
+    plus 67 subtests, with no failure, counted from pytest's progress
+    output.
+  - checkwash's own check of the range from main `f93e24ce` at
+    `--fail-on high`: pass, no finding.
+- **Approval.** At 2026-11-12T14:08:05Z Claude asked
+  「#597 的 L1／L2 核可，收據過了就用 merge commit 合併嗎？」, and Nelson
+  answered 「核可並合併」. Claude wrote the question and both buttons. The
+  answer approves D-203 with THREATMODEL row 131 (L1) and stability's 1.0
+  section (L2). It also approves the merge, once the receipt and the four
+  required checks pass.
+
+The pull request's description records its PJU receipt. Not run: other
+platforms.
 
 ## 2026-11-12: the v0.12.0 Release notes carry the hosted result
 

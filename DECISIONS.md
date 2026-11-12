@@ -133,14 +133,26 @@ rotation.
 
 ## D-203 (2026-11-08): toward 1.0: 0.x outreach resumes as a trial; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves and closes with its caveats; #428 closes as fixed; one macOS check per release; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check, not counted for now as a sixth weakening
 
-**Approval.** [TO FILL before merge. `DECISIONS.md` and `THREATMODEL.md`
-are maintainer text (AGENTS.md), and Nelson's 2026-11-08 answer says that
-a concrete pull request's L1 and L2 follow the existing process and that
-the answer does not stand in for a final diff not yet shown. The pull
-request asks him to approve this entry with THREATMODEL row 131 (L1) and
-stability's 1.0 section (L2) by name before it merges; record the question,
-who wrote it and its buttons, his answer and its time here, as D-200's
-Approval paragraph does.]
+**Approval.** Claude wrote this entry in the pull request that records it,
+#597. `DECISIONS.md` and `THREATMODEL.md` are maintainer text (AGENTS.md).
+Nelson's 2026-11-08 answer says that a concrete pull request's L1 and L2
+follow the existing process, and that the answer does not stand in for a
+final diff not yet shown. So the pull request asked him to approve, by name
+and before it merges, this entry with THREATMODEL row 131 (L1) and the
+"What must change before 1.0" section of `docs/stability.md` (L2).
+
+Claude described both texts in the conversation and linked the pull
+request, whose head was then `7a7cb136ec6ca8b7207cd779b84fec16e8222970`,
+after main was taken in. At 2026-11-12T14:08:05Z Claude asked
+「#597 的 L1／L2 核可，收據過了就用 merge commit 合併嗎？」 (approve #597's L1
+and L2, and merge with a merge commit once the receipt passes?), and he
+chose 「核可並合併」 (approve and merge). Claude wrote the question and both
+buttons; the other was 「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the two texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
 
 **Authority.**
 
