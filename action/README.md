@@ -158,7 +158,26 @@ pin. From v0.12.0 a CLI installed through Git from the release tag is the
 Action commit's, and its doctor rejects that release's own pin: install the
 CLI from PyPI or the pyz.
 
-The hosted `action-security` qualification invokes the actual candidate composite
-on all three operating systems. Expected BLOCK/ERROR jobs stay failed; a separate
-qualification job checks every original outcome and receipt. A successful source
-review or a local wrapper test does not substitute for those hosted results.
+The hosted `action-security` qualification invoked the actual candidate composite
+on all three operating systems. Expected BLOCK/ERROR jobs stayed failed; a separate
+qualification job checked every original outcome and receipt. It last ran on
+2026-10-22 (UTC), and the workflow has been disabled since 2026-10-23 with
+the other hosted workflows that run tests
+([testing on PJU](../docs/testing-on-pju.md)).
+`action.yml` has not changed since 2026-10-12, so those runs exercised this
+wrapper, but not with the engines released after them. Since then each pull
+request's [PJU receipt](../docs/pju-receipt-bridge.md) replays the composite
+on Windows only, on the maintainer's receipt host (PJU), and labels the
+result a local composite replay, not a GitHub runner execution. Each
+release's [hosted verification](../docs/RELEASING.md#hosted-release-verification)
+also runs the composite at the release's Action commit once on a
+GitHub-hosted `ubuntu-latest` runner with Python 3.12, on the release's own
+range with the default inputs except `base`, which a dispatched run gives,
+and with `CHECKWASH_TODAY` set to the release merge's commit date, from a
+checkout of that commit used by a local path. Its first run, for v0.12.0 after publication on 2026-11-11,
+exited 0 ([record](../docs/releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)).
+That range passes, so the run does not show the Action blocking a change.
+macOS, Windows, other Python versions and inputs, GitHub's resolution of
+`taipei49314/checkwash/action@<sha>` and a `pull_request` trigger remain
+`NOT_RUN`. A successful source review or a local wrapper test does not
+substitute for a hosted result.

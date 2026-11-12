@@ -423,10 +423,15 @@ real version/source-specific acceptance of those missing items while preserving
 the standing nine-leg contract. Supplementary Linux evidence is not silently
 certified by this packet. A different acceptance table or full-matrix route
 requires an explicitly reviewed extension, not invented coverage or a contract
-rewrite inside this patch.
+rewrite inside this patch. The release's
+[hosted release verification](RELEASING.md#hosted-release-verification), on
+GitHub-hosted macOS and Linux, is separate evidence: it neither feeds this
+packet nor shortens that list, and its `NOT_RUN` needs its own acceptance,
+which this one does not give.
 
 Advance reviewed advertised/README/Action pins only after the new public-visitor
-packet and native check succeed. Preserve failed historical receipts and record
+packet and native check succeed and neither checkpoint of the hosted release
+verification failed. Preserve failed historical receipts and record
 actual source, tag, runs, bytes, visitors and limits. Rotate verdict baseline in
 a separate reviewed change. Downstream re-pins and issue closure keep their own
 applicable authorization.

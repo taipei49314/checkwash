@@ -484,6 +484,109 @@ v0.11.0's clone, `rev-parse` and `diff` lines stay as the verification of
 the v0.11.0 pin. No downstream re-pin is authorized. 1.0 remains NOT_MET and
 needs Nelson's decision.
 
+## v0.12.0 hosted verification after publication (2026-11-11)
+
+v0.12.0 was published before the [hosted release
+verification](#hosted-release-verification) existed. #599 added it and
+merged at 2026-11-11T14:31:19Z on Nelson's 「核准合併 #599」, and at 14:31:56Z
+Claude dispatched it once for v0.12.0 with `both`, as D-204 provides for
+this release: run 43039360146. Its result is supplementary evidence after
+publication, not part of 0.12.0's release evidence. The [publication
+record](releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)
+holds its records, and `evidence/v0120-hosted-run43039360146-20261111`
+(`307d7c62`) keeps its artifacts, its log archive and GitHub's records of
+its jobs beyond their retention.
+
+**It failed on macOS.** The whole suite at M failed on the three macOS
+legs, in the same 14 entries of `tests/test_collect_pju_release.py`, which
+tests the PJU release collector: the tests' temporary directories sit
+under `/var`, a symlink on macOS, and the collector's path check refuses a
+symlinked ancestor. Everything else passed on both systems: the Linux
+suite with the six-leg batch's counts, the source, wheel and pyz
+qualifications and the inventories, six byte-identical corpus outputs equal
+to the batch's, the Action at A with exit 0, and the published wheel, sdist
+and pyz on all six legs. The failure is in tests of tooling that runs only
+on a Windows receipt host, not in a published file or the Action, and those
+tests had never run on a hosted Mac: the file was added the day after the
+hosted test workflows stopped.
+
+As this guide requires, the run was not repeated, and Claude reported the
+failure to Nelson. Its message proposed resolving the tests' temporary
+directories to their real path without changing the collector's check,
+recording the result here, in the publication record and in the known
+issues, updating `action/README.md`, and copying the artifacts to an
+`evidence/` branch, and it asked
+「要我開一個 PR 修這 14 個測試，並把這次結果寫進 0.12.0 的紀錄嗎？」 (shall I open
+a pull request that fixes these 14 tests and writes this result into
+0.12.0's records?) with the buttons 「開 PR 修正並記錄」 and 「先等等」. At
+14:53:56Z Nelson answered 「開 PR 修正並記錄」 (open the pull request, fix and
+record). Claude wrote the question and both buttons.
+
+This follow-up is that pull request. The collector's tests now take each
+temporary directory by its real path, as pytest's `tmp_path` does, and the
+check is unchanged. On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), `python3 -I -B
+tests/test_collect_pju_release.py` under WSL Ubuntu 24.04 with Python
+3.12.3 and a `TMPDIR` reached through a symlink exited 1 on main
+`eb4fdab6`, with the same 14 entries failing on the symlink's path instead
+of `/var` (3 failures and 11 errors in unittest's count), and exited 0 with
+this change. On Windows with CPython 3.11.9 the changed file passes under
+pytest and as a script. The pull request lists each run and where its raw
+output is kept. macOS is `NOT_RUN` for the fix until the next release's
+`source-at-M` run.
+
+Nelson's answer covers the fix and these records. They change none of
+0.12.0's tag, Release, files or PyPI release, and the README's pins stay at
+v0.12.0, since its published files and its Action passed. The hosted
+section's Release-notes notice is for a failure of the published files,
+which this is not; anything more is Nelson's decision, and the note below
+is what he chose.
+`action/README.md` now cites this run for the composite on a
+hosted Linux runner, and [KNOWN-ISSUES-v0.12.0](KNOWN-ISSUES-v0.12.0.md)
+tells users who run checkwash's own tests on macOS from 0.12.0's source
+what to expect.
+
+**A note on the Release page.** The Release notes link the known issues as
+they stand at the tag, which do not show this result. After #600 merged,
+Claude asked 「v0.12.0 的 Release 頁要照草稿加註嗎？」 (add the drafted note
+to the v0.12.0 Release page?) with the buttons 「照這段加註」 (add this
+note) and 「不加註」 (no note). At 16:38:39Z Nelson answered
+「Release 頁的加註 先烈給我」, which Claude read as asking to see the note
+first (先列給我, list it for me first). Claude listed the final text, where
+it would go and what it would leave unchanged, and asked
+「v0.12.0 的 Release 頁照這段加註嗎？」 (add this note to the v0.12.0 Release
+page?) with the same buttons. At 16:40:28Z he answered 「照這段加註」.
+Claude wrote both questions, the buttons and the text. The listed text
+rewords the draft the first question referred to, which Claude had sent
+with #600's merge question; it also pins its links to `c4dee609` and adds
+the sentence on the two performance-budget checks, the sentence calling
+the run supplementary evidence, and the `/var` cause with a link to the
+known issues.
+
+Claude then re-read the Release, found it unchanged since the text was
+listed, and replaced only its body: the old notes, unchanged, followed by
+the text as their last paragraph. GitHub records the update at 16:40:55Z.
+Read back, the body equals byte for byte the prepared body, the old notes
+with a blank line and the approved paragraph (10,467 bytes, SHA256
+`e2ad3078aec132c9c7353c6a14c1694098d8439124045dae4e81f2ab8f52932e`), and
+the Release's name, tag, draft and prerelease state, files and latest
+status are unchanged. The Release's JSON before and after the edit is kept
+on LAPTOP-01AGNPJU. The paragraph reads:
+
+> **Hosted verification after publication (2026-11-11).** This Release's
+> files were checked again on GitHub-hosted macOS (Apple silicon) and Linux
+> with Python 3.11 to 3.13: the published wheel and pyz ran and passed, the
+> sdist passed its file checks, and the Action passed on Linux. On macOS, 13
+> tests of the maintainer's release tooling fail when checkwash's own test
+> suite runs from this release's source, because the default temporary
+> directory there sits under the `/var` symlink, which that tooling refuses;
+> the CLI, the Action and the hooks do not use that code, and main has fixed
+> the tests for the next release. The two performance-budget checks are
+> still not verified on a Mac. This run is supplementary evidence, not a
+> release receipt.
+> [Details](https://github.com/taipei49314/checkwash/blob/c4dee609e11332b30f6a6ddb72c1d3c3e9e69583/docs/releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)
+> · [known issues](https://github.com/taipei49314/checkwash/blob/c4dee609e11332b30f6a6ddb72c1d3c3e9e69583/docs/KNOWN-ISSUES-v0.12.0.md#publication)
+
 ## v0.11.0 release under the pre-1.0 delegation (2026-11-03)
 
 0.11.0 is being released under the delegation recorded at the top of this file:
@@ -1022,7 +1125,11 @@ This supersedes earlier venue wording only; source/tag identity, exact-head
 evidence, distribution inventory, required checks, one-time publication
 authorization and the human PyPI deployment approval remain required.
 
-Remote workflows containing product tests remain disabled. The existing
+Remote workflows containing product tests remain disabled, with one
+exception: the [hosted release verification](#hosted-release-verification),
+which each release runs once, as two dispatched checkpoints, on
+GitHub-hosted macOS and Linux, under EC POLICY
+`checkwash-release-hosted-verification-20261111`. The existing
 [PJU receipt bridge](pju-receipt-bridge.md) retains its four required PR checks.
 The [PJU release handoff](pju-release-handoff.md) implements separate PR, main,
 tag, release-event and public-visitor subjects, local execution receipts, deep
@@ -1090,9 +1197,14 @@ existing different asset bytes stop it. `pypi` depends on successful asset
 publication and rechecks actual GitHub bytes after Nelson personally approves
 the protected deployment. It also requires `PYPI_ENABLED`. The manual
 publisher binds the captured real release event; it cannot invent one.
-Hosted jobs inspect data and publish reviewed bytes; they execute no candidate
-product, installer, test or Action code. Diagnostic evidence is not a
-distribution upload or proof of external delivery.
+The release workflow's hosted jobs inspect data and publish reviewed bytes;
+they execute no candidate product, installer, test or Action code.
+Diagnostic evidence is not a distribution upload or proof of external
+delivery. The one hosted workflow that executes candidate code,
+`release-hosted.yml` ([below](#hosted-release-verification)), runs only when
+dispatched, holds `contents: read` only, rebuilds none of the published
+files and publishes no asset or check run of its own, only workflow
+artifacts.
 
 ## Main first, then the tag
 
@@ -1135,7 +1247,10 @@ under the standing route above. A source edit alone is not a passing receipt.
    capture, fresh PJU CI/qualification, visitor and `verdict gate` receipts,
    and successful main stage check before creating a public tag. Missing,
    failed or cancelled required evidence stops publication; neither a local
-   tag nor an expected red replaces it.
+   tag nor an expected red replaces it. As soon as M is on main, dispatch the
+   hosted release verification's `source-at-M` checkpoint
+   ([below](#hosted-release-verification)); it runs beside the main stage's
+   collection.
 4. At that commit, `[baseline]` in `tests/verdict_gate/baseline.toml` still pins
    the previous published release required by the tag gate: the highest other
    published stable GitHub Release whose native tag is merged into the commit,
@@ -1146,10 +1261,13 @@ under the standing route above. A source edit alone is not a passing receipt.
    independently in the publisher. Missing or bad assets on a higher published
    Release block the old baseline; they never remove that Release from selection.
    Do not rotate the baseline to obtain a green release verdict.
-5. Only under the explicit publication grant, and once the fixed-corpus
+5. Only under the explicit publication grant, once the fixed-corpus
    comparison (below) has run and the owner has reviewed every commit it
-   lists, or the grant waives it, make the final annotated tag and push only
-   that tag. From v0.12.0 (D-200) the tag points at the release's Action
+   lists, or the grant waives it, and once the hosted release
+   verification's `source-at-M` checkpoint has passed at M, or Nelson has
+   accepted its `NOT_RUN` for this version in his own words
+   ([below](#hosted-release-verification)), make the final annotated tag and
+   push only that tag. From v0.12.0 (D-200) the tag points at the release's Action
    commit A = `M^2^1`, not at the qualified merge commit M, and its message
    names M on exactly one line, `Release-Merge: <M>`, with no `Source:` or
    `Tree:` line that a reader could take for the tag's commit.
@@ -1200,6 +1318,12 @@ under the standing route above. A source edit alone is not a passing receipt.
    protected environment's required reviewer. Nelson approves the deployment
    on that run's GitHub page under **Review deployments**, after checking its
    authorized tag, release-event evidence and successful asset publication.
+   Once `publish-assets` has attached the files, and before Nelson is asked
+   to approve, dispatch the hosted release verification's
+   `published-artifacts` checkpoint on them and give him its result with
+   the question. Do not ask while that checkpoint has failed, or has not run
+   and Nelson has not accepted that for this version
+   ([below](#hosted-release-verification)).
    The job rechecks the actual assets before exporting the wheel/sdist for
    PyPI. An agent session cannot approve the deployment. A rejected or expired
    approval leaves the Release without a PyPI version; the maintainer decides
@@ -1207,10 +1331,12 @@ under the standing route above. A source edit alone is not a passing receipt.
 8. Download the actual GitHub/PyPI assets, compare identities and bytes, and
    execute the actual public visitor installation through the sanctioned path.
    Record source, native tag, distribution digests, complete run identities
-   (including the release run whose `pypi` deployment was approved), result
-   and limitations in the publication record. Advance the advertised manifest,
-   the matching README CLI pins and the README Action pin to this release in a
-   reviewed follow-up only once these checks pass. Failed historical receipts
+   (including the release run whose `pypi` deployment was approved and both
+   runs of the hosted release verification), result and limitations in the
+   publication record. Advance the advertised manifest, the matching README
+   CLI pins and the README Action pin to this release in a reviewed
+   follow-up only once these checks pass and neither hosted checkpoint
+   failed. Failed historical receipts
    remain failed. From v0.11.0 the follow-up moves these to the release's
    Action commit A, which the publication record names: the
    README Action pin and its `# vX.Y.Z` annotation,
@@ -1568,6 +1694,226 @@ once the candidate commit is fixed, before step 5.
 
 A JS/TS round's pull request states that this step checks its JS/TS
 false-positive cost at the next release, instead of citing #212.
+
+## Hosted release verification
+
+Each release gets one verification on GitHub-hosted macOS and Linux runners,
+under EC POLICY `checkwash-release-hosted-verification-20261111` and
+[D-204](../DECISIONS.md). It has two checkpoints, each dispatched on its
+own: `source-at-M` in step 3 and `published-artifacts` in step 7. The
+`both` choice, which runs the two in one dispatch, is only for a version
+published before the workflow existed (v0.12.0).
+
+On 2026-11-08 Nelson adopted Claude's recommendation of a hosted macOS
+check for each release (「macos採用你的建議」) and wrote
+「同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次；先把設計及 workflow 補完整」
+(agreed: one macOS verification per release, and one run for v0.12.0;
+complete the design and the workflow first), with the requirements D-204
+quotes. On 2026-11-11, after a fresh review of the project, he chose the
+option Claude had written as D-甲, one verification on macOS and Linux with
+the Action run once the way the README sets it up (「是，D-甲」), answered
+eight of the design's nine questions with 「都照建議」 (all as recommended)
+and approved the POLICY row with 「照這樣入帳並開始」 (enter it like this
+and start). A review before the row was entered found two factual errors
+in it, and he approved their correction with 「照兩處更正入帳」 (enter it
+with the two corrections). Claude wrote the options, the questions and this
+design.
+
+The workflow is `.github/workflows/release-hosted.yml`. The agent releasing
+the version dispatches it from main with `gh workflow run` on
+LAPTOP-01AGNPJU. It runs only when dispatched, holds `contents: read` only,
+and rebuilds none of the published files. Its source and published-file
+legs run on `macos-latest` (Apple silicon) and `ubuntu-latest`, each with
+Python 3.11, 3.12 and 3.13, and each leg checks that its runner is the
+system its label names.
+
+1. **`source-at-M`**, as soon as M is on main and before the tag (step 3).
+   It checks out M by its SHA and checks scheme S's shape: M has two
+   parents, the second R, which has one parent A; M's tree is R's; only
+   `src/checkwash/doctor.py` differs between A and M; M is on main and holds
+   the version; a tag already pushed peels to A and names M. Then on each of
+   the six legs it runs the whole suite with no selection, the source
+   assertion-contract qualification and its inventory, and emits the fixed
+   corpus. The six corpus outputs must be byte-identical and, when the
+   release has a six-leg batch, equal that batch's SHA256, which the
+   dispatch carries. With the batch's Windows legs, every pair of operating
+   system and Python then has an output with the same hash; that is still
+   not the one-run nine-leg comparison.
+
+   In the same checkpoint, on `ubuntu-latest` with Python 3.12, the runner
+   executes the composite Action at A on M's release range, from M's first
+   parent to M, with the Action's default inputs and the base given. It must
+   pass with exit 0, and its receipt must name that range, the version and
+   the default `fail-on`, with an engine whose source digest equals that of
+   A's `src/checkwash`. The Action builds and installs its engine from A's
+   source and fetches its build backend from PyPI, as it does for any user.
+   Five things differ from the README's job:
+   - The composite is A's own `action/` directory, checked out by SHA and
+     used by a local path, because a `uses:` value must be a literal and
+     cannot take an expression. GitHub's resolution of
+     `taipei49314/checkwash/action@<A>` is not exercised.
+   - That checkout sits in a subdirectory of the subject's workspace, the
+     checkout of M.
+   - The run is dispatched, not triggered by a pull request, so the base is
+     given.
+   - The engine judges allowlist expiry as on M's commit date
+     (`CHECKWASH_TODAY`), as the published-file checks do, so a later run
+     for the same release cannot change the verdict.
+   - The range is expected to pass, so the run does not show the Action
+     blocking a change.
+2. **`published-artifacts`**, once `publish-assets` has attached the
+   Release's files and before Nelson is asked to approve the `pypi`
+   deployment (step 7). The dispatch carries the Release ID and the three
+   files' SHA256 values from the release record: the `publish-assets`
+   readback (`release-assets.json`), which equals the release-event
+   receipt's artifact table. The run reads the Release by its ID and
+   requires exactly the wheel, the sdist and the pyz, uploaded at their
+   canonical URLs, with GitHub's digests present and equal to those values.
+   When the publication record or PyPI already has the version, their
+   values must agree too, and the record's row for each file must name its
+   SHA256. Then on each of the six legs it downloads the three files from
+   their canonical URLs and checks their SHA256 again, installs the wheel
+   with `--no-deps --no-index` into a fresh venv, runs the installed CLI and
+   the pyz (`--version`, `demo`, and `check` of M's release range, judged as
+   on the day M was committed), and runs the wheel and pyz
+   assertion-contract qualification, the zipapp qualification and the
+   wheel, sdist and pyz inventories against M. The sdist is checked and
+   inventoried, not installed.
+
+The two checkpoints together are the release's one hosted verification.
+
+v0.12.0 was published before the workflow existed. One dispatch with
+`both` runs the two checkpoints, Linux and the Action included, on M
+`ffaf4ed86ecc2baeb8cc008487a44d8495da9177` and on the files GitHub Release
+437647350 and PyPI 0.12.0 serve. Its result is supplementary evidence after
+publication, not part of 0.12.0's release evidence, and is recorded with
+that release in a dated paragraph ([it ran on
+2026-11-11](#v0120-hosted-verification-after-publication-2026-11-11)). Its Action item runs the commit the
+README's Action pin names, so a failure there is a failure of the setup the
+README recommends; Claude reports it to Nelson, who decides about the pin.
+
+**Records.** The run ID and attempt; for each leg the runner label, image
+and version, the operating system version and architecture, and the
+Python; M, R, A and the tag object; each leg's test cases, subtests and
+skips with their reasons; the conclusion of each step; each qualification
+and inventory result; the corpus SHA256s; the Action's receipt; and each
+file's size and SHA256 go in the release's publication record, labelled
+`HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT`. The run's artifacts
+expire after 90 days; copy them to an `evidence/` branch before then.
+GitHub attaches each job's own check run to main's tip at dispatch, which
+during a release is M. Before asking Nelson about the tag, Claude reads
+each leg's summary. When the release has a six-leg batch, a Linux leg's
+test cases (the summary's `test_cases`; JUnit's own `tests` attribute also
+counts subtests) must equal the batch's test count for the same tree, or
+the checkpoint has failed; a macOS count that differs is listed with the
+difference. Every skip is listed with its reason, and the ones not already
+known are marked.
+
+**What it is not.** It is hosted evidence beside the PJU receipts: not a
+receipt and not a branch required status. It replaces no PJU stage,
+required check or approval of Nelson's, and not the release-event
+missing-platform acceptance, which still lists Linux and macOS because the
+receipts hold neither. A wheel or pyz rebuilt from M is not the published
+file unless its bytes are shown equal, and a check of rebuilt files is
+called a rebuilt-artifact verification; separate pyz builds of one tree
+differed in their bytes in every release from v0.10.0 to v0.12.0
+([pyz reproducibility](#pyz-reproducibility)).
+
+**A failure stops the release.** Not being a required status does not make
+a failure ignorable. A failed job of either checkpoint on either system (a
+test, a qualification, an inventory, the corpus comparison, the Action, a
+file check or an identity refusal) is a hosted-verification failure of the
+release, and the agent reports it to Nelson. A timing test that fails on a
+hosted runner counts too; Claude reports the measured seconds. On Linux the
+two perf-gate budget checks must run and pass, and on macOS they must be
+skipped for their recorded reason; the leg's summary step fails otherwise.
+
+- At `source-at-M`: no tag. The fix follows *A fix after the release merge*
+  (scheme S, above), and the new M gets its own `source-at-M` run.
+- At `published-artifacts`: the agent does not ask Nelson to approve the
+  `pypi` deployment, and asks him to reject it, which an agent session
+  cannot do. Step 8 does not move the advertised manifest, the README or
+  the Action pin. The fix ships as a new version, through this whole
+  procedure. The tag and the Release stay: they are not moved, deleted or
+  marked prerelease, and their files are not deleted or replaced, since a
+  stable-name prerelease or a missing pyz on a higher published Release
+  blocks the next release's verdict gate
+  ([baseline identity](published-release-baseline.md)), which takes the
+  failed version as its baseline. Until a new version is advertised,
+  main's version differs from the advertised one, so the ordinary receipt
+  bridge refuses other pull requests; the fix release's pull request goes
+  through the release bridge, and its content can carry the failure's
+  records.
+- The Release notes get the notice below, whose wording
+  [D-204](../DECISIONS.md) records. Editing a published Release is still
+  asked of Nelson at the time, in one line; the wording is not reviewed
+  again.
+
+  > **Hosted verification failed for this release (〔macOS／Linux〕).** Its
+  > published files failed the hosted verification on 〔macOS／Linux〕 (run
+  > 〔id〕, 〔date〕): 〔one line〕. This version was not published to PyPI
+  > and is not the version the README recommends; the fix ships as
+  > v〔next〕. Details: 〔link to the RELEASING paragraph〕.
+
+These consequences are the ones D-204 records; Nelson may decide another
+remedy.
+
+No run is repeated to obtain a pass. A run that fails for the runner,
+GitHub or PyPI rather than the product, such as a lost runner, an outage,
+or a cancellation by GitHub that neither a timeout nor a person caused, may
+be rerun once as a whole, every job on both systems, and the record keeps
+the first attempt. A timeout or crash inside a test or qualification step
+counts as a failure unless its log shows such a cause. A new release of the
+Action's unpinned build backend that breaks the Action's install is a
+failure, not an outage: users' Actions break the same way. A run that its
+own dispatch made refuse before any test, through a malformed input, a
+dispatch from a branch other than main, or a dispatch before
+`publish-assets` attached the files, is recorded with that reason and
+dispatched again; a refusal because M, the tag, the Release or a file
+differs from the record is a failure. A hosted runner that is unavailable
+leaves its legs `NOT_RUN`; no self-hosted, larger or paid runner stands in,
+and a result from another host is a separate line of evidence, not this
+verification.
+
+**`NOT_RUN`.** A checkpoint that was not dispatched, or any of whose legs
+did not complete after that one rerun, is `NOT_RUN` for the release, with
+its reason and the legs that did and did not complete. The legs that ran
+are recorded as they ran; the checkpoint does not count as passed. The
+release does not go past it (the tag for `source-at-M`, the request for the
+PyPI approval for `published-artifacts`) unless Nelson accepts that
+checkpoint's `NOT_RUN` for that version in his own words, naming the
+system that did not run. The record names the version, M, the checkpoint,
+the system, the reason, his words and where he gave them, as the
+missing-platform acceptance does. The pre-1.0 delegation does not cover
+this acceptance, and the agent does not give it for him. The Release notes
+and the release guide say which checkpoint did not run, on which system;
+editing a published Release is asked of Nelson at the time.
+
+**Always `NOT_RUN` here.** Hosted Windows; Intel macOS and other macOS
+versions; arm64 Linux and distributions other than `ubuntu-latest`; Python
+versions outside 3.11 to 3.13; a one-run nine-leg byte comparison;
+installing the sdist; installing from PyPI on these systems (the checkpoint
+installs the wheel it downloads from the Release, which is the file PyPI
+serves once Nelson approves it); GitHub's resolution of
+`taipei49314/checkwash/action@<A>` and a pull-request trigger; the Action
+blocking a change on a hosted runner; the Action on another Python, with
+`comment-pr`, a non-default `fail-on` or a `python-path`; the Action on a
+macOS runner; the Claude Code hooks in a real Claude Code session; and the
+two perf-gate budget checks on macOS. Those two have been skipped on macOS
+since 2026-10-01; D-170 kept the skip until a revisit before 1.0, and
+[D-204](../DECISIONS.md) keeps it at 1.0. checkwash has not verified those
+two budgets on a Mac, and Windows and Linux timings are not evidence of
+macOS performance. On Linux they run and gate.
+
+**Not changed.** Each pull request's tests still run on PJU. `ci.yml`,
+`checkwash.yml`, `assertion-qualification.yml`, `verdict-gate.yml` and the
+other hosted test workflows stay disabled; `ci.yml`,
+`assertion-qualification.yml` and `verdict-gate.yml` would also run at A on
+a tag push. The release bridge and its missing-platform list, the required
+checks, `release.yml` and `tests/gates/**` do not change. A test of the
+hooks that Nelson makes himself on a borrowed Mac is a one-time
+observation, recorded as his; it is not release evidence and replaces
+neither checkpoint.
 
 ## 2026-10-14: the PyPI deployment reviewer replaces the tag ruleset
 
@@ -2182,9 +2528,16 @@ is authorized, and no ended-session local workload grant is reused.
   expected source/native identity: `tools/verify_published_source.py`, in the
   advertised visitor, tag-event job and release prerequisite. Its failure
   paths run in ordinary `test_published_source.py` owned fixtures.
-- Candidate source/wheel/pyz behavior remains qualified by
-  `assertion-qualification.yml`; delivered archives are bound by
-  `release_inventory.py` before any distribution upload.
+- Candidate source/wheel/pyz behavior is qualified in each pull request's
+  PJU receipt (`assertion-qualification.yml`, which did it on hosted
+  runners, has been disabled since 2026-10-23); delivered archives are bound
+  by `release_inventory.py` before any distribution upload.
+- The hosted release verification runs only when dispatched, holds
+  `contents: read`, rebuilds none of the published files, runs the whole
+  suite at M with no selection on macOS and Linux, runs the composite Action
+  at A once on Linux, and qualifies the files the Release published:
+  `tests/test_release_hosted_workflow.py` checks the workflow's shape. Its
+  dispatched runs, not that test, are the macOS and Linux evidence.
 - STATE's authoritative `version` row is the development package version;
   its separately labelled last-public-release fields follow the manifest.
 
@@ -2296,7 +2649,18 @@ GitHub release asset as the artifact and verify it by running
 `tests/test_zipapp.py`, in every receipt's full suite, is the gate that the
 recipe still works; the Release asset is what people download.
 
-Workflow `uses:` are hash-pinned (T2.6). `contents: write` exists only
+Builds at different times also differ in the zip entries' timestamps: in
+each release from v0.10.0 to v0.12.0 the stages' pyz files held the same
+members with identical contents and different bytes (for example, the
+[0.12.0 record](releases/v0.12.0-publication-verification.md)).
+So a pyz rebuilt from M is not the published file unless its bytes are shown
+equal, and checking one is a rebuilt-artifact verification. The [hosted
+release verification](#hosted-release-verification) checks the downloaded
+Release asset itself.
+
+Workflow `uses:` of other repositories' actions are hash-pinned (T2.6); the
+hosted release verification's one local `uses:` runs the checkout of A
+that it binds by SHA. `contents: write` exists only
 on the `publish-assets` job, only to attach assets to an already-published
 release. PyPI uses OIDC (`id-token: write`) and no stored token.
 

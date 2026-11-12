@@ -1,3 +1,19 @@
+# Next release candidate — 2026-11-11
+
+Nothing here is released yet. From the next release, each release gets one
+hosted verification on macOS and Linux
+([RELEASING](RELEASING.md#hosted-release-verification),
+[D-204](../DECISIONS.md)). These rows are what it covers and what it does
+not.
+
+| Scope | Known limit and what it means for you |
+| --- | --- |
+| macOS and Linux coverage | Each release runs its whole test suite at the release merge M, and checks the wheel, sdist and pyz it actually publishes, on GitHub-hosted `macos-latest` (Apple silicon) and `ubuntu-latest` with Python 3.11, 3.12 and 3.13, beside the release receipts, which still run on one Windows host. Each pull request's tests still run only on that host. Hosted Windows, Intel Macs, other macOS versions, arm64 Linux, other Linux distributions and other Python versions are not run; the sdist is not installed; installing from PyPI is not tried on these systems; and a one-run comparison of all nine platform and Python legs is still not made. A failure on either system stops the release; a release whose hosted verification did not run in full says so in its notes. |
+| The Action on a hosted runner | Each release runs the composite Action once on `ubuntu-latest` with Python 3.12, the README's setup, from a checkout of the release's Action commit, on a range expected to pass. GitHub's resolution of `taipei49314/checkwash/action@<SHA>`, the `pull_request` trigger, the Action blocking a change, other Python versions, other inputs and a macOS runner are not run. |
+| macOS performance | The two budget checks in `tests/gates/test_perf.py` (a 2,402-line test module with 200 weakened assertions under 1.5 s, 500 changed files under 3.5 s) have been skipped on macOS since 2026-10-01; D-170 kept that skip until a revisit before 1.0, and the maintainer kept it for 1.0 ([D-204](../DECISIONS.md)). They have not been verified on a Mac, and the Windows and Linux timings are not evidence of how fast checkwash is on a Mac. macOS still runs the 10-second pathological-file bound and the Git and JS/TS time budgets; Linux runs all of them. |
+| The Claude Code hooks on a real Mac | The hosted verification runs the hook handlers only inside the test suite, never under a real Claude Code session. A one-time manual try on a borrowed Mac, if made, is recorded as an observation by the maintainer, who makes it himself, not as release evidence. |
+| checkwash's own tests on macOS | The hosted verification's first run, on v0.12.0 after publication, failed on macOS in 14 entries (13 tests) of the maintainer's release-collector tests: their temporary directories sat under `/var`, a symlink on macOS, which the collector's path check refuses ([RELEASING](RELEASING.md#v0120-hosted-verification-after-publication-2026-11-11)). Those tests now take each temporary directory by its real path; the path check is unchanged. The fix was shown only on Linux, with a temporary directory reached through a symlink; it first runs on macOS in the next release's hosted verification. |
+
 # 0.12 candidate — 2026-11-06
 
 Status, 2026-11-08: shipped in v0.12.0

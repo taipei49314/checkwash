@@ -37,7 +37,8 @@ python benchmarks/refactors/verify.py --output /new/path/refactor-receipt.json
 
 ## Why this corpus had to exist
 
-The published false-positive rate — 21/1800 = 1.17% — is measured on six
+The published false-positive rate — 21/1800 = 1.17% when this corpus was
+assembled, 31/1800 = 1.72% in the README since — is measured on six
 libraries whose commits rarely restructure test helpers. That number is honest
 about what it measured and useless as a guide to what happens when someone
 *does* restructure them, and no amount of re-running the sweep would have said

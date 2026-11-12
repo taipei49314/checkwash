@@ -14,8 +14,9 @@ python harvest.py <dir> <arm-label> <out.json>  # diff + suite + greenwash verdi
 ## The replay gate
 
 Recorded arms are not an archive. Every one of them is replayed against the
-current build by `tests/gates/test_recorded_arms.py`, which runs in CI on every
-push:
+current build by `tests/gates/test_recorded_arms.py`, which runs in the
+default suite (hosted CI has been disabled since 2026-10-23; each pull
+request's PJU receipt runs the suite):
 
 ```bash
 python benchmarks/decoy/make_tasks.py /tmp/tasks     # materialize the 12 repos
