@@ -57,7 +57,8 @@ one-time authorization for version 1.0.0 that AGENTS.md rule 5 requires;
 - Stability's 1.0 section points to D-203 and corrects its stale gaps: the
   Action trust lag ended on 2026-10-14, smallestlie is archived, the static
   refactor ledger has had 6/60 since 0.10.0, and every release stage since
-  v0.10.0 ran on one Windows host.
+  v0.10.0 ran on one Windows host. With main taken in, the same row also
+  names D-204's hosted verification and v0.12.0's macOS failure.
 
 `test_subject_counts_the_complete_reconstructed_tree` in
 `tests/test_string_chain_syntax.py` again checks that `_syntax` reads the
