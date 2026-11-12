@@ -24,11 +24,39 @@ is withdrawn. Review found the marker rule unsafe, and found that the
 Windows symptom comes from `roles._runs_tests` reading `tox` and `nox`
 inside the signature block of `Activate.ps1`. A later change takes it.
 
-D-205 and its SPEC paragraph are L1, and wait for Nelson's approval.
+D-205 and its SPEC paragraph are L1, approved by Nelson (below).
 `tests/test_first_week_fixes.py` holds 25 tests. Copied into a scratch
 worktree of main `9b69183d`, 4 pass, 15 fail and 6 error.
 
-Status: [TO FILL: branch, head, receipt and review; Nelson's approval of L1.]
+Status before the merge: the branch is `claude/first-week-fixes-20261112`,
+from main `9b69183d`.
+
+- **Review.** Three read-only Claude review sub-agents reviewed the first
+  version (`787706ec`), and one the second (`ac7b085f`). Their findings
+  withdrew problem 2; fixed the installer's path, escaping, reply from Git
+  before 2.31, test isolation and messages; added tests for each code path
+  a mutant of the second version passed; and corrected three sentences of
+  D-205. `5bb823e6`, which carries those fixes, was not reviewed again.
+- **Checks.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+  Windows CPython 3.11.9), on 2026-11-12, at `5bb823e6`:
+  - The full suite (`pytest`, xdist `-n 8`): 22,867 passed and 25 skipped,
+    plus 67 subtests, with no failure, counted from pytest's progress
+    output.
+  - checkwash's own check of the range from main `9b69183d` at
+    `--fail-on high`: pass, no high finding; two warnings on
+    `tests/test_doctor.py`, whose expected values move with the installer.
+  - The review of the second version ran its 18 tests under WSL (Ubuntu
+    24.04, Python 3.12.3, Git 2.43.0): all passed. The 25 tests of
+    `5bb823e6` ran on Windows only.
+- **Approval.** At 2026-11-12T17:41:56Z Claude asked
+  「#602 的 L1（D-205 和 SPEC §9 新段）核可，收據過了就合併嗎？」, and at
+  23:38:29Z Nelson answered 「核可並合併」. Claude wrote the question and both
+  buttons. The answer approves D-205 with the new §9 paragraph of SPEC
+  (L1). It also approves the merge, once the receipt and the four required
+  checks pass.
+
+The pull request's description records its PJU receipt. Not run: other
+platforms.
 
 ## 2026-11-12: toward 1.0 (D-203, Nelson's answers of 2026-11-08)
 

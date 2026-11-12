@@ -815,11 +815,24 @@ requests are refused until a new version is advertised.
 
 ## D-205 (2026-11-12): a working-tree run sets aside the untracked zipapp checkwash runs from; a local hook install keeps its settings file out of Git
 
-**Approval.** [TO FILL before merge. `DECISIONS.md` and `SPEC.md` are
-maintainer text (AGENTS.md). The pull request asks Nelson to approve, by
-name and before it merges, this entry with the new §9 paragraph of
-`SPEC.md` (L1). Record here the question, who wrote it and its buttons,
-his answer and its time, as D-203's Approval paragraph does.]
+**Approval.** Claude wrote this entry in the pull request that records it,
+#602. `DECISIONS.md` and `SPEC.md` are maintainer text (AGENTS.md). So the
+pull request asked Nelson to approve, by name and before it merges, this
+entry with the new §9 paragraph of `SPEC.md` (L1).
+
+Claude described the change in the conversation, named the two texts and
+linked the pull request, whose head was then
+`5bb823e64bec0b335c68b58291c9a5bd0504004d`. At 2026-11-12T17:41:56Z Claude
+asked 「#602 的 L1（D-205 和 SPEC §9 新段）核可，收據過了就合併嗎？」
+(approve #602's L1, D-205 and the new SPEC §9 paragraph, and merge once
+the receipt passes?), and at 23:38:29Z he chose 「核可並合併」 (approve and
+merge). Claude wrote the question and both buttons; the other was
+「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the two texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
 
 **What was asked.**
 - **The launch waits for the fixes.** At 2026-11-10T15:49:22Z Claude asked
