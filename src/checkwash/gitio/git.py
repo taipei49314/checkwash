@@ -338,26 +338,86 @@ def _change(path: str, status: str, before, after, *, old_path: str | None = Non
     )
 
 
-def list_worktree_changes(repo: str, *, base: str | None = None) -> list[FileChange]:
-    """HEAD vs working tree (staged + unstaged + untracked)."""
+def list_worktree_changes(repo: str, *, base: str | None = None, notes: list[str] | None = None,
+                          absent_at: tuple[str, ...] = ()) -> list[FileChange]:
+    """HEAD vs working tree (staged + unstaged + untracked).
+
+    The untracked zipapp checkwash runs from is left out
+    (`_set_aside_running_zipapp`). It must be absent at `base` and at each
+    commit in `absent_at`, such as the session base of a Stop run. When
+    `notes` is a list, a line naming it is appended.
+    """
     base = resolve_commit(repo, "HEAD" if base is None else base)
-    entries = _worktree_status(repo, base)
+    entries = _set_aside_running_zipapp(repo, (base, *absent_at), _worktree_status(repo, base), notes)
     return _worktree_changes(repo, base, [(path, "D" in xy) for xy, path in entries])
 
 
-def list_session_changes(repo: str, since: str) -> list[FileChange]:
+def _running_archive() -> str | None:
+    """The real path of the zipapp this checkwash is imported from, or None."""
+    import checkwash
+
+    loader = getattr(getattr(checkwash, "__spec__", None), "loader", None)
+    archive = getattr(loader, "archive", None)
+    return os.path.realpath(archive) if isinstance(archive, str) and archive else None
+
+
+def _set_aside_running_zipapp(repo: str, commits: tuple[str, ...], entries: list[tuple[str, str]],
+                              notes: list[str] | None) -> list[tuple[str, str]]:
+    """`entries` without the untracked record of the zipapp checkwash runs from.
+
+    Downloaded into the repository root, as the README's first path
+    suggests, the 0.12.0 zipapp is over the source byte limit, and a
+    working-tree run reported it as unread and the analysis as incomplete
+    (re-review ND-09, D-205). Only the archive the running process was
+    imported from qualifies, by real path, and only as an untracked status
+    record whose path no commit in `commits` holds. A tracked or vendored
+    copy, another file of that name, and range mode are read as before. If
+    Git cannot say whether a commit holds the path, the file is read.
+    """
+    archive = _running_archive()
+    if archive is None:
+        return entries
+    name, target = os.path.normcase(os.path.basename(archive)), os.path.normcase(archive)
+    kept: list[tuple[str, str]] = []
+    skipped: list[str] = []
+    for xy, path in entries:
+        if (xy == "??" and os.path.normcase(path.rsplit("/", 1)[-1]) == name
+                and os.path.normcase(os.path.realpath(os.path.join(repo, path))) == target
+                and not _held_at_any(repo, commits, path)):
+            skipped.append(path)
+            continue
+        kept.append((xy, path))
+    if notes is not None:
+        notes.extend(f"skipped {path}: the untracked zipapp this checkwash runs from" for path in skipped)
+    return kept
+
+
+def _held_at_any(repo: str, commits: tuple[str, ...], path: str) -> bool:
+    """Whether any of `commits` holds an entry at `path`; True when Git cannot say."""
+    for commit in commits:
+        try:
+            if _run(repo, ["--literal-pathspecs", "ls-tree", "-z", "--name-only", commit, "--", path]):
+                return True
+        except GitError:
+            return True
+    return False
+
+
+def list_session_changes(repo: str, since: str, *, notes: list[str] | None = None) -> list[FileChange]:
     """A commit vs the working tree, for the Claude Code Stop hook (#418).
 
     `since` is the commit the session started from. The paths are those the
     commits since then changed (`git diff --name-only since HEAD`) and those
     `git status` lists against HEAD. Each change's before side is `since`'s
     blob; its after side is the working tree, or absent where status says
-    deleted or a committed path is gone from HEAD.
+    deleted or a committed path is gone from HEAD. The untracked zipapp
+    checkwash runs from is left out as in `list_worktree_changes`, when
+    neither `since` nor HEAD holds its path.
     """
     since = resolve_commit(repo, since)
     head = resolve_commit(repo, "HEAD")
     committed = _committed_paths(repo, since, head)
-    entries = _worktree_status(repo, head)
+    entries = _set_aside_running_zipapp(repo, (since, head), _worktree_status(repo, head), notes)
     listed = {path for _, path in entries}
     items = [(path, "D" in xy) for xy, path in entries]
     for path in committed:

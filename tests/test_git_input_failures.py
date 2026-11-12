@@ -414,9 +414,9 @@ def test_worktree_cli_uses_one_committed_baseline_after_head_moves(repo, monkeyp
     original_changes, original_config, original_file = cli.list_worktree_changes, cli.read_base_config_file, cli.read_base_file
     versions, config_bytes = [], []
 
-    def move_after_changes(repo_arg, *, base=None):
+    def move_after_changes(repo_arg, *, base=None, **options):
         assert base == first
-        changes = original_changes(repo_arg, base=base)
+        changes = original_changes(repo_arg, base=base, **options)
         git(repo, "update-ref", "HEAD", second)
         return changes
 

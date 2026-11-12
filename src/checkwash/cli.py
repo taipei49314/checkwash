@@ -516,7 +516,14 @@ def _cmd_check(args: argparse.Namespace) -> int:
             return grep_head_paths(repo, _rev, needles)
     else:
         base = resolve_commit(repo, "HEAD") if window is None else window.head
-        changes = list_worktree_changes(repo, base=base)
+        set_aside: list[str] = []
+        # The untracked zipapp checkwash runs from is left out of the working
+        # tree's changes when neither HEAD nor the session base holds its
+        # path (D-205); each format names it on stderr.
+        session_base = (window.base,) if window is not None and window.base is not None else ()
+        changes = list_worktree_changes(repo, base=base, notes=set_aside, absent_at=session_base)
+        for note in set_aside:
+            write_text(f"checkwash: {note}\n", sys.stderr)
         base_label = rev_parse(repo, base)
         head_label = "worktree"
         # In a recorded session, policy comes from where it started: what the
