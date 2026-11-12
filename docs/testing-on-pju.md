@@ -102,7 +102,13 @@ retains its independently applicable authorizations and owner assignments. No
 host-wide runtime, security, service, runner or label change is authorized
 here. Historical results are not retroactively accepted. Protected product
 rulings, fixture expectations, issue acceptance and release/PyPI approvals
-retain their existing gates. The separately selected #212 pool independent
-reviewers and arbitration channel, API key setup and paid calls retain their
-own admission and approval boundaries. Conflicting venue-only restrictions
-yield to T-610; independence, source, budget and attempt conditions remain.
+retain their existing gates. Since EC POLICY
+`checkwash-212-blind-raters-20261108`, an after-the-fact record of the
+rating already run ([D-203](../DECISIONS.md)), #212's rating
+uses the two raters named for it, a Claude Code sub-agent and Gemini 4
+Argon, with Nelson settling disagreements, in place of the separately
+selected pool reviewers and arbitration channel
+([EC POLICY `checkwash-212-blind-raters-20261108`](https://github.com/taipei49314/estate-consolidation/blob/227236bcd705ea229f49022788bc57d41ed714e2/POLICY.md)).
+API key setup and paid calls retain their own admission and approval
+boundaries. Conflicting venue-only restrictions yield to T-610;
+independence, source, budget and attempt conditions remain.
