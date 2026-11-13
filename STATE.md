@@ -44,9 +44,12 @@ receipt while keeping all product execution on LAPTOP-01AGNPJU
 D-209 (`DECISIONS.md`, L1) was approved by Nelson at 2026-11-13T14:49:57Z on
 #606 (`06fe2f1e`): in reply to Antigravity's `14:48:20Z` question
 「#606 的 L1（DECISIONS.md D-209）核可，並確認 GitHub ruleset 22032046 已改為單一 checkwash（GitHub Actions 15368），收據過了就合併嗎？」
-he answered `(Recommended) 核可 D-209、已改好 ruleset 22032046，收據過了就合併 #606`
-(and approved launching the 5-author + 1-verifier + 1-monitor Phase 2 swarm
-immediately after #606 merges). An independent read-only review sub-agent audited `1a4d7163`, and all
+he answered `(Recommended) 核可 D-209、已改好 ruleset 22032046，收據過了就合併 #606`;
+after run `43450393694` exposed GitHub's `workflow_dispatch` `CheckSuite`
+rollup exclusion on same-SHA dispatch, he approved the `f2bfe8e0` same-tree
+bootstrap clause (`review/collector-d209-20261113`) and running Phase 2 in a
+fresh `/teamwork` session at 2026-11-13T15:33:34Z
+(「先合併收尾 然後給我prompt 我直接開session開工」). An independent read-only review sub-agent audited `1a4d7163`, and all
 findings (legacy `main()` RC-02/RC-09 parity, `collect_compact` `--git` and
 sanitized-env binding, canonical ASCII JSON wire check, release-head refusal
 tests, 23,065 floor and `~6–9 KB` prose) are resolved.

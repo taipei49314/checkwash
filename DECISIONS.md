@@ -1769,6 +1769,17 @@ questions and all four options):
    `(Recommended) 好，#606 合併後直接照這個規模啟動 Phase 2 swarm` (the other
    option was `先完成 #606 合併就好，啟動 swarm 前再停下來問我`).
 
+After intake run `43450393694` showed that a same-SHA `workflow_dispatch` on
+`8d28b559` attaches `checkwash` to a `workflow_dispatch` `CheckSuite` ignored by
+ruleset `statusCheckRollup`, Antigravity pushed `f2bfe8e0` allowing pre-merge
+bootstrap dispatch from a separate same-tree ref (`review/collector-d209-20261113`),
+asked whether Nelson approved that one-clause L1 addition in D-209, and (on
+Nelson's 2026-11-13T15:32:46Z question 「要不要換個session開teamwork拆?」)
+recommended finishing `#606` in this session and opening a fresh `/teamwork`
+session for Phase 2; at 2026-11-13T15:33:34Z Nelson answered
+「先合併收尾 然後給我prompt 我直接開session開工」 (merge and wrap up `#606`
+first, then give him the prompt so he can open a new session and start work).
+
 **What was asked.** After #605 merged (`b326f201`), at 2026-11-13T13:35:09Z
 Nelson wrote 「我覺得現在驗證成本太高了 / 而且有God Function」 (verification
 cost is too high right now, and there are God functions), followed by
