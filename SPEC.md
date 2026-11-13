@@ -485,11 +485,18 @@ the projection. Repeated bound row references are rejected so
 substitution cannot turn aliases into separate literal objects. The bounds
 are 65,536 source bytes, 4,096 AST nodes and 64 concrete cases per side.
 Expected expressions remain separate so expectation edits still
-reach ordinary detectors. Generated `test_concrete_*` identities denote
-concrete cases rather than source function names; evidence spans still refer
-to the source. The bounded projection does not alter alignment thresholds,
-strength values, severities or the existing fallback restructure policy.
-Unsupported shapes retain their ordinary findings and do not gain this proof.
+reach ordinary detectors. Projected concrete, exception and local-auxiliary
+IR units (`test_concrete_*`, `test_exception_*`, `test_local_auxiliary_*`)
+retain synthetic `Unit.qualname` identities so alignment pairs concrete cases,
+while `Unit.source_unit` records the enclosing Python test's qualified name,
+which detectors and gating report as `Finding.unit` (and in `Finding.message`
+and `Finding.fingerprint`); evidence spans refer to the source. Same-carrier
+`captured-result` modules whose local capture, subject call/operator and
+non-specialized RHS remain paired without carrier transition skip projection
+so source `before`/`after` assertion text is preserved verbatim (D-210). The
+bounded projection does not alter alignment thresholds, strength values,
+severities or the existing fallback restructure policy. Unsupported shapes
+retain their ordinary findings and do not gain this proof.
 
 The unreleased T-326 candidate also handles bounded plain-class helpers,
 matched wrappers and closed predicates. A string-helper block retains its
