@@ -693,6 +693,83 @@ def apply_gates(
     # the detectors import the frontends, which import this module.
     from checkwash.detectors.test_disabled import finding_marker
 
+    ctx = _build_gate_context(ir, allow_entries, today)
+    for f in findings:
+        if f.fingerprint in ctx.active_allows:
+            f.allowlisted = True
+            f.deescalators.append("ALLOWLISTED")
+            continue
+        # A test file or a conftest: the one predicate behind both the broad
+        # except below and the opaque refusal further down, so the two cannot
+        # drift apart. #419 Q1 (b) refuses the credit in "Python test and
+        # conftest files", which is this set (narrowed to Python below): the
+        # set that makes BROAD_EXCEPT_ADDED an oracle rule.
+        test_or_conftest = f.path in ctx.judged_tests or ctx.roles.get(f.path) == "conftest"
+        # A broad except swallowing an assertion inside a test file IS oracle
+        # tampering, whatever it would mean in production code (decoy run,
+        # cache_invalidate).
+        is_oracle = f.rule in ORACLE_RULES or (
+            f.rule == "BROAD_EXCEPT_ADDED" and test_or_conftest
+        )
+        if not is_oracle:
+            _apply_non_oracle_gates(f, ir)
+            continue
+
+        unit = ctx.units.get((f.path, f.unit or ""))
+        if _try_relocation_or_inert_credit(f, unit, ctx, contract):
+            continue
+
+        mild_weakening = _is_mild_weakening(f)
+        # The disabling marker a TEST_DISABLED finding reports, or None (#208).
+        marker = finding_marker(f, unit)
+        compensation = _triage_compensation(f, unit, marker, ir, ctx)
+        ev = _evaluate_oracle_evidence(f, unit, test_or_conftest, ir, ctx)
+        suite_control = _is_unguarded_suite_control(f, unit, marker, ctx)
+        _apply_oracle_outcome(
+            f, unit, ev, suite_control, compensation, mild_weakening, ir, ctx, contract
+        )
+
+    return _verdict_from_findings(findings, config)
+
+
+_GateContext = collections.namedtuple(
+    "_GateContext",
+    (
+        "moved",
+        "duplicates",
+        "units",
+        "active_allows",
+        "roles",
+        "judged_tests",
+        "python_files",
+        "shadow_paths",
+        "file_constants",
+        "proven_assertions",
+        "proven_units",
+        "restructured",
+        "split_renamed",
+        "prod_changed",
+    ),
+)
+
+_OracleEvidence = collections.namedtuple(
+    "_OracleEvidence",
+    (
+        "has_evidence",
+        "refuses_opaque",
+        "refused_repair",
+        "package_only",
+        "dep_drift",
+    ),
+)
+
+
+def _build_gate_context(
+    ir: IR,
+    allow_entries: list[AllowEntry],
+    today: datetime.date,
+) -> _GateContext:
+    """Precompute diff-wide lookups and mutable relocation/arrival credit pools."""
     # A multiset of credits: each ASSERTION_MOVED de-escalation spends one, so
     # two deletions cannot both be excused by a single re-appearance.
     # Context-bound arrival credits below span whole-unit and text routes.
@@ -713,7 +790,8 @@ def apply_gates(
     shadow_paths = {entry[0] for entry in ir.globals.runtime_subject_shadows}
     file_constants = {f.path: f.constants for f in ir.files}
     proven_assertions, proven_units = arrival_credits(
-        ir, lambda file, side: unit_is_live(side, file_constants.get(file.path)))
+        ir, lambda file, side: unit_is_live(side, file_constants.get(file.path))
+    )
     restructured = _file_restructured(ir, file_constants)
     split_renamed = _split_or_renamed(ir, file_constants)
     # Did the diff change a production-role file that can change runtime
@@ -727,502 +805,604 @@ def apply_gates(
     # list, so they do not count here. Generated artifacts and changes set
     # aside unread never reach `prod_files_changed` (#415).
     prod_changed = any(not _is_inert(path) for path in ir.globals.prod_files_changed)
+    return _GateContext(
+        moved=moved,
+        duplicates=duplicates,
+        units=units,
+        active_allows=active_allows,
+        roles=roles,
+        judged_tests=judged_tests,
+        python_files=python_files,
+        shadow_paths=shadow_paths,
+        file_constants=file_constants,
+        proven_assertions=proven_assertions,
+        proven_units=proven_units,
+        restructured=restructured,
+        split_renamed=split_renamed,
+        prod_changed=prod_changed,
+    )
 
-    for f in findings:
-        if f.fingerprint in active_allows:
-            f.allowlisted = True
-            f.deescalators.append("ALLOWLISTED")
-            continue
-        # A test file or a conftest: the one predicate behind both the broad
-        # except below and the opaque refusal further down, so the two cannot
-        # drift apart. #419 Q1 (b) refuses the credit in "Python test and
-        # conftest files", which is this set (narrowed to Python below): the
-        # set that makes BROAD_EXCEPT_ADDED an oracle rule.
-        test_or_conftest = f.path in judged_tests or roles.get(f.path) == "conftest"
-        # A broad except swallowing an assertion inside a test file IS oracle
-        # tampering, whatever it would mean in production code (decoy run,
-        # cache_invalidate).
-        is_oracle = f.rule in ORACLE_RULES or (
-            f.rule == "BROAD_EXCEPT_ADDED" and test_or_conftest
-        )
-        if not is_oracle:
-            # Non-oracle escalations from the SPEC §5 table.
-            if f.rule == "GUARDRAIL_TOUCHED":
-                # E4, but only for a constraint that existed. Creating one has
-                # relaxed nothing, and rating creation critical meant that
-                # running `checkwash hook install --agent claude-code` and
-                # committing the result — the two steps the README gives, in
-                # the order it gives them — produced a blocking verdict on the
-                # tool's own artefact (field integration 2026-08-07). Still
-                # reported, at warn: a new `.cursorrules` is worth seeing.
-                #
-                # The exception is checkwash's own config (issue #79): with no
-                # file the defaults were in force, so a created config.toml
-                # that disables a detector or raises fail_on has relaxed a
-                # constraint that existed. Read from the base side, that file
-                # governs the *next* diff, and its creation was the only place
-                # to catch the two-commit plant — at warn it never blocked.
-                created = f.path in ir.globals.guardrail_files_created
-                loosening = f.path in ir.globals.guardrail_configs_created_loosening
-                shadow_kind = ir.globals.policy_shadows.get(f.path, {}).get("kind")
-                shadow_guarded = shadow_kind in {"config_relaxation", "config_uncomparable", "allow_rewrite"}
-                if created and not loosening and not shadow_guarded:
-                    f.escalators.append("GUARDRAIL_CREATED")
-                else:
-                    f.severity = "critical"
-                    f.escalators.append("META")
-            elif f.rule == "HIDDEN_UNICODE":
-                f.severity = "high"
-                f.escalators.append("HIDDEN_CONTROL_CHARS")
-            elif f.rule == "CI_WORKFLOW_TOUCHED" and any(
-                path == f.path for path, _ in ir.globals.ci_weakening_lines
-            ):
-                # A file the reader took at base and declines at head has no
-                # weakened command to name: its runners are out of reach, which
-                # is its own escalator (#196 191.3).
-                reasons = [line for path, line in ir.globals.ci_weakening_lines if path == f.path]
-                f.severity = "high"
-                if not all(became_unanalysable(line) for line in reasons):
-                    f.escalators.append("CI_TEST_COMMAND_WEAKENED")
-                if any(became_unanalysable(line) for line in reasons):
-                    f.escalators.append("CI_BECAME_UNANALYSABLE")
-            # A test file that parsed before this diff and does not parse now
-            # has been taken out of checkwash's reach. A file that never
-            # parsed (new, or newer syntax than the analyser) stays at warn:
-            # loud, but not a block for choosing an older interpreter.
-            elif f.rule == "TEST_FILE_UNPARSEABLE" and any(
-                path == f.path and was_parseable
-                for path, was_parseable in ir.globals.unparseable_tests
-            ):
-                f.severity = "high"
-                f.escalators.append("TEST_BECAME_UNANALYSABLE")
-            elif f.rule == "SCOPE_DRIFT" and any(
-                path == f.path and role in ("prod", "ci", "guardrail")
-                for path, role in ir.globals.scope_drift
-            ):
-                f.severity = "high"
-                f.escalators.append("OUT_OF_SCOPE_PROD_TOUCH")
-            continue
 
-        unit = units.get((f.path, f.unit or ""))
-
-        # A `pytestmark` in conftest.py disables nothing: pytest does not
-        # collect conftest.py as a test module, so it never reads the mark.
-        # The finding tells the reader so, at info, and nothing escalates it
-        # (#209 Q3).
-        if f.rule == "TEST_DISABLED" and f.shape == SHAPE_INERT_MARK:
-            f.severity = "info"
-            continue
-
-        # D2 spends context-bound arrival credits once across every route.
-        # A normalized-text match alone is not a relocated oracle.
-        if f.rule == "ASSERT_REMOVED" and f.before is not None:
-            key = normalize_text(f.before.text)
-            proofs = [] if unit is None or unit.before is None else assertion_keys(unit.before,
-                {a.id for a in unit.before.assertions if a.span == f.before.span})
-            if moved[key] > 0 and proofs and spend(proven_assertions, proofs):
-                moved[key] -= 1
-                f.severity = "info"
-                f.deescalators.append("ASSERTION_MOVED")
-                if contract.oracle_freeze:
-                    f.severity = "high"
-                    f.escalators.append("ORACLE_FREEZE")
-                continue
-        if f.rule == "TEST_DISABLED" and unit is not None and unit.after is None and unit.before is not None:
-            # The whole unit's normalized body reappearing as a live added
-            # unit is the strongest form of "moved" — and the only one an
-            # assertion-less smoke test can produce (click a391797d00,
-            # test_echo_no_streams: nothing in the multiset to match).
-            h = unit.before.oracle_context if (valid_proof(unit.before.oracle_context)
-                and valid_proof_map(unit.before.oracle_assertion_contexts)) else ""
-            keys = assertion_keys(unit.before)
-            needed_keys = collections.Counter(keys)
-            if h and proven_units[h] > 0 and all(proven_assertions[k] >= n for k, n in needed_keys.items()):
-                proven_units[h] -= 1
-                proven_assertions.subtract(needed_keys)
-                f.severity = "info"
-                f.deescalators.append("ASSERTION_MOVED")
-                continue
-            # An identical live copy survives at head, outside the diff:
-            # dedup, not a kill. Not spent — one survivor covers any number
-            # of identical deletions, because it keeps running either way.
-            if h and h in duplicates:
-                f.severity = "info"
-                f.deescalators.append("DUPLICATE_REMAINS")
-                continue
-            # What a disappeared unit needs moved is its own assertions: those
-            # it reached through a helper method add no requirement (306 Sub-Q11).
-            texts = [normalize_text(a.text) for a in unit.before.assertions if a.via is None]
-            needed = collections.Counter(texts)
-            if (texts and assertions_proven(unit.before) and all(moved[t] >= n for t, n in needed.items())
-                    and spend(proven_assertions, keys)):
-                moved.subtract(needed)
-                f.severity = "info"
-                f.deescalators.append("ASSERTION_MOVED")
-                if contract.oracle_freeze:
-                    f.severity = "high"
-                    f.escalators.append("ORACLE_FREEZE")
-                continue
-
-        # Materiality (ASSERT_WEAKENED only): a 10-point slide inside the
-        # exact family (e.g. assertListEqual -> assertEqual on a variable) is
-        # style drift, not oracle removal — the FP sweep blocked several such
-        # human commits. Material = fell by >= 30, or left the exact family
-        # (below EXACT_VALUE: landing on APPROX means a tolerance now exists
-        # where an exact comparison used to be — the decoy run's most popular
-        # cheat, never mild per THREATMODEL 13). Mild means "still exact":
-        # 100 -> 90 within the exact family (D-047 aligned the SPEC text).
-        # ...and the compared SUBJECT must be untouched. Wrapping both sides
-        # in sorted() to make an ordered comparison order-insensitive is a
-        # 100->90 slide too, but it is a rewrite of what is compared, not a
-        # matcher style change (decoy run, sort_stability).
-        mild_weakening = (
-            f.rule == "ASSERT_WEAKENED"
-            and (f.strength_drop or 0) < 30
-            and f.strength_after is not None
-            and f.strength_after >= 90
-            and not f.subject_changed
-        )
-
-        # The disabling marker a TEST_DISABLED finding reports, or None (#208).
-        marker = finding_marker(f, unit)
-
-        # Compensation evidence from the triage clusters: all of these hold
-        # the finding at warn (visible, allowlistable) instead of blocking.
-        compensation = None
-        # ASSERT_SUBSTITUTED joins ASSERT_REMOVED here on the same argument: a
-        # unit that *deleted* an assertion and *wrote a new strong one* is
-        # being rewritten wholesale, which is the documented triage cluster
-        # (private-API asserts rewritten against the public API). Crediting the
-        # removal at warn and blocking the substitution at high described one
-        # edit two ways — httpx c7cd6aa5bdcf, "test obfuscate_sensitive_headers
-        # via public api", was the measured case.
+def _apply_non_oracle_gates(f: Finding, ir: IR) -> None:
+    """Apply non-oracle escalations from the SPEC §5 table in place."""
+    if f.rule == "GUARDRAIL_TOUCHED":
+        # E4, but only for a constraint that existed. Creating one has
+        # relaxed nothing, and rating creation critical meant that
+        # running `checkwash hook install --agent claude-code` and
+        # committing the result — the two steps the README gives, in
+        # the order it gives them — produced a blocking verdict on the
+        # tool's own artefact (field integration 2026-08-07). Still
+        # reported, at warn: a new `.cursorrules` is worth seeing.
         #
-        # It does not weaken what this rule was built for: `_same_unit_rewrite`
-        # requires `assertions_removed` to be non-empty, and a pure substitution
-        # removes nothing — the 2026-08-08 incident diff has
-        # `assertions_removed: []` and stays high. Residual, stated: deleting an
-        # assertion *and* substituting another *and* adding a plausible strong
-        # one buys warn for all of it, which is the trade ASSERT_REMOVED has
-        # carried since this compensation existed.
-        if f.rule in ("ASSERT_REMOVED", "ASSERT_SUBSTITUTED") and _same_unit_rewrite(unit):
-            compensation = "SAME_UNIT_REWRITE"
-        elif (
-            f.rule == "TEST_DISABLED"
-            and unit is not None
-            and unit.after is None
-            and restructured.get(f.path)
-            and _proven_restructure(unit, proven_assertions)
-        ):
-            compensation = "RESTRUCTURED"
-        elif (
-            f.rule == "TEST_DISABLED"
-            and unit is not None
-            and unit.after is None
-            and split_renamed.get((f.path, f.unit or ""))
-            and _proven_restructure(unit, proven_assertions)
-        ):
-            compensation = "SPLIT_OR_RENAMED"
-        elif f.rule == "TEST_DISABLED" and compat_gate_for(unit, file_constants.get(f.path), marker):
-            # D6 judges the marker the finding reports, not the unit it sits
-            # on: an honest gate beside a new disable lent it its credit, on a
-            # conftest's `<suite>` and on a test alike (#208).
-            compensation = "COMPAT_GATE"
-        elif (
-            f.rule == "TEST_DISABLED"
-            and _prod_removal_shape(f, unit)
-            and _prod_symbol_removed(f.path, ir)
-        ):
-            compensation = "PROD_SYMBOL_REMOVED"
-
-        # D-171 keeps the broad OPAQUE_REFUSED_RULES set empty. Only the
-        # narrow file-scoped BROAD_EXCEPT_ADDED condition below is enabled.
-        # The following historical broad design remains disabled for all
-        # other rules; it is retained to explain the earlier experiment.
-        # D-199 replaced it with a wider refusal of every repair evidence,
-        # after `has_evidence` below; read what follows as #464's design, not
-        # as what this code does now.
-        #
-        # A weakening-class finding in a Python test or conftest does not
-        # take the opaque-change credit (#419, ruling Q1 (b), 2026-10-14).
-        # Python test code reaches its subject through Python, and a Python
-        # production change that explains the edit is read as symbol
-        # evidence, which still applies to every finding that has a unit: a
-        # direct call of a changed symbol and the one-hop callers route, and
-        # the T1.9 same-file helper hop except for TEST_DISABLED, as does the
-        # producer of a fixture the finding's assertion reads (#471).
-        # BROAD_EXCEPT_ADDED is file-scoped and never had a unit. What this refuses
-        # is the opaque-change route: one byte in a template, a C or Rust
-        # file, a data file, a shell script that runs no tests, or a JS
-        # module was the whole price of holding a weakened, removed or skipped
-        # Python oracle at warn, and a broad except added around an assertion
-        # had no other route.
-        #
-        # Kept, deliberately: a JS/TS test keeps the credit until the #212
-        # corpus prices the change, because its production code is never
-        # parsed and the credit is the only evidence it can earn. The rules
-        # outside OPAQUE_REFUSED_RULES keep it in every language, and
-        # PACKAGE_REPAIR and DEPENDENCY_DRIFT, the two credits that ask
-        # `has_evidence`, never apply to these five rules. Every compensation
-        # and MILD_WEAKENING is computed as before; a refused finding now
-        # reaches them instead of stopping at REPAIR_EVIDENCE.
-        #
-        # For a conftest's `<suite>` control that means: an unguarded one
-        # refused every repair evidence already (below). A guarded one (its
-        # guard can be false) with only an opaque edit beside it is now held,
-        # if at all, by its own D6 COMPAT_GATE: a `<suite>` unit calls
-        # nothing, so it never had symbol evidence (D-066). A guarded
-        # COLLECTION control (`collect_ignore`, the two collection hooks or an
-        # `add_marker` skip: compat._SUITE_GATES) earns it on its guard alone,
-        # so it is held by an `if` guard that can be false, and by the import
-        # gate: a `try` body of plain imports (`import X` or
-        # `from X import ...`) under `except ImportError` or
-        # `except ModuleNotFoundError`, which the frontend records as
-        # `find_spec("X") is None` (frontend `_handler_guard`,
-        # `_IMPORT_ERRORS`). Any other `except` guard is recorded as the
-        # exception text, which is no condition D6 can read: a bare `except`,
-        # another exception class, a tuple of classes (even
-        # `(ImportError, ModuleNotFoundError)`), a relative `from . import`,
-        # or a `try` body that is not plain imports. A control under such a
-        # guard still is not a suite control (its guard can be false), earns
-        # no COMPAT_GATE, and now blocks beside an opaque edit.
-        # That is the literal effect of Q1 (b), recorded by the 2026-10-16
-        # ruling, and it amends the "only an unguarded control refuses repair
-        # evidence" reading of D-088 / 209.Q4 for opaque evidence.
-        #
-        # A `conftest.runtime.*` control (an execution or report hook, an
-        # exit-status control, a swapped `item.runtest`, a skipping fixture)
-        # does not move. The frontend records no guard on it
-        # (`_conftest_unit`; #84 and 432.Q5 hash a guard into the name
-        # instead), so it is always read as unguarded: a suite control, which
-        # refused every repair evidence before #419 and still does.
-        #
-        # Stated plainly, as the ruling asks: this catches an agent that
-        # weakens a Python test beside an edit it was making anyway. One that
-        # has read this rule moves to a rule that keeps the credit, or to a
-        # kept no-op edit in a called function (Route A, THREATMODEL 93 as
-        # widened by #419 Q3).
-        refuses_opaque = (
-            (
-                f.rule in OPAQUE_REFUSED_RULES
-                or (
-                    f.rule == "BROAD_EXCEPT_ADDED"
-                    and f.unit is None
-                    and unit is None
-                )
-            )
-            and f.path in python_files
-            and test_or_conftest
-        )
-        # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
-        # question: is there a production change that explains this edit?
-        has_evidence = (
-            _file_repair_evidence(f.path, ir, opaque=not refuses_opaque)
-            if unit is None
-            else _repair_evidence(
-                unit, ir, f.path,
-                via_helper=f.rule != "TEST_DISABLED",
-                opaque=not refuses_opaque,
-                via=_finding_via(f, unit),
-                # Every oracle rule that takes symbol evidence reads a
-                # fixture's producer except TEST_DISABLED, as for the T1.9
-                # hop (#471, ruling Q4 (a)).
-                assertion=_finding_assertion(f, unit) if f.rule != "TEST_DISABLED" else None,
-            )
-        )
-        # D-199 (0.12, D-196 item 4; THREATMODEL 2, 93, 130, 131). Static
-        # repair evidence cannot tell an honest production change from a kept
-        # no-op one, so for these rules it no longer explains the test edit
-        # at all (REPAIR_REFUSED_PYTHON, REPAIR_REFUSED_JS). The evidence is
-        # still computed, so that E1 can say a production change reached the
-        # finding and was refused. Every compensation, MILD_WEAKENING and the
-        # info routes (ASSERTION_MOVED, DUPLICATE_REMAINS) are unchanged, and a
-        # refused finding reaches them. PACKAGE_REPAIR and DEPENDENCY_DRIFT
-        # never applied to these rules.
-        #
-        # What it costs, on the fixed R29 corpus (3,600 commits): 7 Python and
-        # 11 JS/TS commits move pass -> block; on D-088's 1,263 skip, xfail
-        # and conftest commits, 53. The moved commits remove deprecated APIs
-        # and their tests, drop old Python versions, or rewrite tests beside a
-        # behaviour change; a few are detector misreadings that repair evidence
-        # used to absorb (httpx 0296c2bb, requests 2a6f290b). A reviewed
-        # exemption, merged to the base first, or a maintainer merging past
-        # the required check releases each one.
-        #
-        # What stays open, stated plainly (THREATMODEL item 4, rows 56, 93,
-        # 130, 131), each beside a no-op edit unless said otherwise:
-        # - an expected value or its definition rewritten, or an assertion
-        #   substituted for one of equal strength, including a weakening
-        #   respelled as an exact comparison (`(x > 0) == True` reads as an
-        #   expected value changed from 4 to True) and an expectation computed
-        #   from the subject through a module alias (`calc.compute(2)`);
-        # - a renamed private symbol escorting a test deletion into D8;
-        # - D8 counting a row marked off as deleted where the rows cannot be
-        #   paired (a column added, the table moved into a constant);
-        # - in JS/TS: a deleted test or assertion (a plain test paired with a
-        #   table whose rows cannot be counted reads as one, as tests folded
-        #   into an imported table do), a test parked where no code runs
-        #   (`if (false) { test(...) }` reads as a deletion), and the
-        #   stand-in and subject rules (`vi.mock`, a `test.each` input cell).
-        # Only executing the old tests against the new code would close the
-        # no-op routes, and checkwash never executes your code.
-        python = f.path in python_files or (
-            f.rule == "TEST_PATCHES_SUBJECT" and f.unit is None and f.path in shadow_paths)
-        refused_repair = has_evidence and _refuses_repair_evidence(f, unit, python)
-        if refused_repair:
-            has_evidence = False
-        package_only = (
-            not has_evidence
-            and f.rule in ("EXPECTED_VALUE_CHANGED", "EXPECTATION_DEFINITION_CHANGED")
-            and _package_evidence(f.path, ir)
-        )
-        # An expectation literal tracking a dependency change: httpx 0.28
-        # switched to compact JSON separators and every exact literal in the
-        # corpus followed it (starlette 5ccbc62175, 100f05a66b).
-        #
-        # ASSERT_SUBSTITUTED joins it on corpus evidence: flask's two "bump
-        # werkzeug 2.3.7" commits (5bb30270d2, 9f9550247a) rewrote
-        # `assert rv.data == b"127.0.0.1"` into
-        # `assert flask.g.remote_addr == "127.0.0.1"` because the dependency's
-        # API moved under them. A version bump that changes behaviour changes
-        # *how you reach* the value as often as it changes the value, so
-        # crediting only the literal left the shape dependency bumps actually
-        # produce blocking at high. The oracle is intact in both.
-        #
-        # Still scoped, exactly like PACKAGE_REPAIR: a manifest bump buys
-        # nothing for a weakened or a deleted oracle, and both rules here
-        # require unweakened strength. Residual: a substitution smuggled into
-        # a genuine dependency bump gets the same credit — THREATMODEL 84c.
-        dep_drift = (
-            not has_evidence
-            and not package_only
-            and f.rule in (
-                "EXPECTED_VALUE_CHANGED",
-                "ASSERT_SUBSTITUTED",
-                "EXPECTATION_DEFINITION_CHANGED",
-            )
-            and ir.globals.dependency_manifest_changed
-        )
-        # A production change never makes it correct to stop *collecting*
-        # tests. Repair evidence answers "did production change, so this
-        # expectation legitimately changed?" — a question a suite-level
-        # collection control does not raise. On the 2026-08-07 probe arm an
-        # agent dropped the failing tests out of collection and the honest
-        # `scripts/lint.sh` edit its own task demanded paid for it, because
-        # an unreadable prod file grants this credit diff-globally
-        # (THREATMODEL row 68). A compatibility gate does explain it, and
-        # still does: that branch is untouched below.
-        #
-        # Only when the control is **unguarded**. The first cut of this rule
-        # asked nothing about the guard and blocked a PR that added a backend,
-        # added its own tests, and gated them on `find_spec("redis")` — net
-        # tests disabled: zero, production changed in three files, verdict
-        # high (adversarial audit 2026-08-07, same day it shipped). A guard is
-        # the difference between "these tests cannot run here" and "these
-        # tests do not run any more".
-        #
-        # "Unguarded" is the finding's own control with no guard that can be
-        # false: a guard that always holds is no guard (#209 Q4), and a gate
-        # elsewhere in the conftest guards nothing here (#208). A finding
-        # with no marker of its own reports a guard that now always fires,
-        # or a path added to an unguarded control (row 81): either way its
-        # control acts everywhere.
-        after_markers = unit.after.markers if unit is not None and unit.after is not None else []
-        own = [m for m in after_markers if marker is not None and m.name == marker]
-        unguarded_control = (
-            any(not guard_can_be_false(m.guard, file_constants.get(f.path)) for m in own)
-            if own
-            else f.shape == SHAPE_GUARD_WEAKENED
-        )
-        suite_control = (
-            f.rule == "TEST_DISABLED"
-            and roles.get(f.path) == "conftest"
-            and (f.unit or "") == "<suite>"
-            and unguarded_control
-        )
-        if has_evidence and not suite_control:
-            f.deescalators.append("REPAIR_EVIDENCE")
-        elif package_only:
-            f.deescalators.append("PACKAGE_REPAIR")
-        elif dep_drift:
-            f.deescalators.append("DEPENDENCY_DRIFT")
-        elif compensation is not None:
-            if compensation in {"RESTRUCTURED", "SPLIT_OR_RENAMED"}:
-                spend(proven_assertions, assertion_keys(unit.before))
-            f.deescalators.append(compensation)
-        elif mild_weakening:
-            f.deescalators.append("MILD_WEAKENING")
+        # The exception is checkwash's own config (issue #79): with no
+        # file the defaults were in force, so a created config.toml
+        # that disables a detector or raises fail_on has relaxed a
+        # constraint that existed. Read from the base side, that file
+        # governs the *next* diff, and its creation was the only place
+        # to catch the two-commit plant — at warn it never blocked.
+        created = f.path in ir.globals.guardrail_files_created
+        loosening = f.path in ir.globals.guardrail_configs_created_loosening
+        shadow_kind = ir.globals.policy_shadows.get(f.path, {}).get("kind")
+        shadow_guarded = shadow_kind in {"config_relaxation", "config_uncomparable", "allow_rewrite"}
+        if created and not loosening and not shadow_guarded:
+            f.escalators.append("GUARDRAIL_CREATED")
         else:
-            f.severity = "high"
-            # Say the true reason. Refusing repair evidence and then printing
-            # "no production change in this diff" over a diff full of them is
-            # a false statement in a blocking message, which is the class of
-            # defect this project exists to catch (audit 2026-08-07).
-            #
-            # For a suite control the reason is a fact about the diff, not
-            # about this finding's evidence. A `<suite>` unit calls nothing,
-            # so a readable production edit elsewhere in the diff gives it no
-            # symbol-matched evidence, and asking `has_evidence` printed the
-            # false sentence over exactly that diff (#205). Any production
-            # file changed: the control is unexplained. None: the old wording
-            # is true.
-            #
-            # A refused opaque change is the same class of claim (#419 Q5 (b)):
-            # the diff did change production, in a file checkwash reads but
-            # cannot reason about, and that change is not accepted as this
-            # finding's evidence. Still E1, so severity, verdict and
-            # fingerprint are what they would be under the old wording; only
-            # the sentence changes, as D-066's did. Not "unread": #448 uses
-            # that word for a side that is never read at all, and such a side
-            # never sets `prod_opaque_change`. A suite control keeps its own
-            # label, which it always reaches first here: an opaque change is
-            # a production file in `prod_files_changed`. D-171's broad set
-            # remains empty. This label is reachable only for the separately
-            # admitted Python unit-less BROAD_EXCEPT_ADDED condition, when
-            # an opaque production change exists and the finding reaches E1.
-            #
-            # Every other finding here is the same class of claim (#473,
-            # ruling Q2 and Q3, 2026-10-18). If the diff changed a
-            # production-role file that is not inert (`prod_changed`, above),
-            # production did change, and no evidence this finding may take
-            # reached that change: no symbol it calls, no caller of one, no
-            # helper hop, and no package or opaque credit where the rule
-            # takes one. Nor did the producer of a fixture the finding's
-            # assertion reads, the route #522 added for #471
-            # (`_fixture_producer_evidence`). The usual cause is a reach
-            # checkwash does not follow, such as an unchanged module between
-            # the test and the change. `NO_PROD_CHANGE_IN_DIFF` is kept for a
-            # diff that changes no production-role file, or only inert ones.
-            # Still E1: severity is set above and the label is outside the
-            # fingerprint, so only the sentence changes. Both labels before
-            # this one keep their conditions and come first: a suite control
-            # keeps D-066's test, inert files included, and a refused opaque
-            # change keeps its own label.
-            #
-            # D-199 adds `REPAIR_EVIDENCE_REFUSED`, after those two and before
-            # `PROD_CHANGE_NOT_EVIDENCE`: a production change did reach this
-            # finding as repair evidence, and its rule takes none. Saying "no
-            # evidence reached the change" there would be false, and would
-            # suggest that a change which reaches the test would be accepted.
-            # A refused finding whose evidence never existed keeps the label
-            # it had. Still E1, outside the fingerprint.
-            if suite_control and (has_evidence or refused_repair or ir.globals.prod_files_changed):
-                reason = "COLLECTION_CONTROL_UNEXPLAINED"
-            elif refuses_opaque and ir.globals.prod_opaque_change:
-                reason = "OPAQUE_PROD_CHANGE_NOT_EVIDENCE"
-            elif refused_repair:
-                reason = "REPAIR_EVIDENCE_REFUSED"
-            elif prod_changed:
-                reason = "PROD_CHANGE_NOT_EVIDENCE"
-            else:
-                reason = "NO_PROD_CHANGE_IN_DIFF"
-            f.escalators.append(reason)
+            f.severity = "critical"
+            f.escalators.append("META")
+    elif f.rule == "HIDDEN_UNICODE":
+        f.severity = "high"
+        f.escalators.append("HIDDEN_CONTROL_CHARS")
+    elif f.rule == "CI_WORKFLOW_TOUCHED" and any(
+        path == f.path for path, _ in ir.globals.ci_weakening_lines
+    ):
+        # A file the reader took at base and declines at head has no
+        # weakened command to name: its runners are out of reach, which
+        # is its own escalator (#196 191.3).
+        reasons = [line for path, line in ir.globals.ci_weakening_lines if path == f.path]
+        f.severity = "high"
+        if not all(became_unanalysable(line) for line in reasons):
+            f.escalators.append("CI_TEST_COMMAND_WEAKENED")
+        if any(became_unanalysable(line) for line in reasons):
+            f.escalators.append("CI_BECAME_UNANALYSABLE")
+    # A test file that parsed before this diff and does not parse now
+    # has been taken out of checkwash's reach. A file that never
+    # parsed (new, or newer syntax than the analyser) stays at warn:
+    # loud, but not a block for choosing an older interpreter.
+    elif f.rule == "TEST_FILE_UNPARSEABLE" and any(
+        path == f.path and was_parseable
+        for path, was_parseable in ir.globals.unparseable_tests
+    ):
+        f.severity = "high"
+        f.escalators.append("TEST_BECAME_UNANALYSABLE")
+    elif f.rule == "SCOPE_DRIFT" and any(
+        path == f.path and role in ("prod", "ci", "guardrail")
+        for path, role in ir.globals.scope_drift
+    ):
+        f.severity = "high"
+        f.escalators.append("OUT_OF_SCOPE_PROD_TOUCH")
 
-        # E2 ORACLE_FREEZE
-        if contract.oracle_freeze:
-            f.severity = "high"
-            f.escalators.append("ORACLE_FREEZE")
 
+def _try_relocation_or_inert_credit(
+    f: Finding,
+    unit: Unit | None,
+    ctx: _GateContext,
+    contract: Contract,
+) -> bool:
+    """Apply inert-mark or D2 relocation/duplicate credits; True if resolved."""
+    # A `pytestmark` in conftest.py disables nothing: pytest does not
+    # collect conftest.py as a test module, so it never reads the mark.
+    # The finding tells the reader so, at info, and nothing escalates it
+    # (#209 Q3).
+    if f.rule == "TEST_DISABLED" and f.shape == SHAPE_INERT_MARK:
+        f.severity = "info"
+        return True
+
+    # D2 spends context-bound arrival credits once across every route.
+    # A normalized-text match alone is not a relocated oracle.
+    if f.rule == "ASSERT_REMOVED" and f.before is not None:
+        key = normalize_text(f.before.text)
+        proofs = (
+            []
+            if unit is None or unit.before is None
+            else assertion_keys(
+                unit.before,
+                {a.id for a in unit.before.assertions if a.span == f.before.span},
+            )
+        )
+        if ctx.moved[key] > 0 and proofs and spend(ctx.proven_assertions, proofs):
+            ctx.moved[key] -= 1
+            f.severity = "info"
+            f.deescalators.append("ASSERTION_MOVED")
+            if contract.oracle_freeze:
+                f.severity = "high"
+                f.escalators.append("ORACLE_FREEZE")
+            return True
+
+    if f.rule == "TEST_DISABLED" and unit is not None and unit.after is None and unit.before is not None:
+        # The whole unit's normalized body reappearing as a live added
+        # unit is the strongest form of "moved" — and the only one an
+        # assertion-less smoke test can produce (click a391797d00,
+        # test_echo_no_streams: nothing in the multiset to match).
+        h = (
+            unit.before.oracle_context
+            if (
+                valid_proof(unit.before.oracle_context)
+                and valid_proof_map(unit.before.oracle_assertion_contexts)
+            )
+            else ""
+        )
+        keys = assertion_keys(unit.before)
+        needed_keys = collections.Counter(keys)
+        if h and ctx.proven_units[h] > 0 and all(ctx.proven_assertions[k] >= n for k, n in needed_keys.items()):
+            ctx.proven_units[h] -= 1
+            ctx.proven_assertions.subtract(needed_keys)
+            f.severity = "info"
+            f.deescalators.append("ASSERTION_MOVED")
+            return True
+        # An identical live copy survives at head, outside the diff:
+        # dedup, not a kill. Not spent — one survivor covers any number
+        # of identical deletions, because it keeps running either way.
+        if h and h in ctx.duplicates:
+            f.severity = "info"
+            f.deescalators.append("DUPLICATE_REMAINS")
+            return True
+        # What a disappeared unit needs moved is its own assertions: those
+        # it reached through a helper method add no requirement (306 Sub-Q11).
+        texts = [normalize_text(a.text) for a in unit.before.assertions if a.via is None]
+        needed = collections.Counter(texts)
+        if (
+            texts
+            and assertions_proven(unit.before)
+            and all(ctx.moved[t] >= n for t, n in needed.items())
+            and spend(ctx.proven_assertions, keys)
+        ):
+            ctx.moved.subtract(needed)
+            f.severity = "info"
+            f.deescalators.append("ASSERTION_MOVED")
+            if contract.oracle_freeze:
+                f.severity = "high"
+                f.escalators.append("ORACLE_FREEZE")
+            return True
+
+    return False
+
+
+def _is_mild_weakening(f: Finding) -> bool:
+    """Check whether an ASSERT_WEAKENED finding is non-material exact-family style drift."""
+    # Materiality (ASSERT_WEAKENED only): a 10-point slide inside the
+    # exact family (e.g. assertListEqual -> assertEqual on a variable) is
+    # style drift, not oracle removal — the FP sweep blocked several such
+    # human commits. Material = fell by >= 30, or left the exact family
+    # (below EXACT_VALUE: landing on APPROX means a tolerance now exists
+    # where an exact comparison used to be — the decoy run's most popular
+    # cheat, never mild per THREATMODEL 13). Mild means "still exact":
+    # 100 -> 90 within the exact family (D-047 aligned the SPEC text).
+    # ...and the compared SUBJECT must be untouched. Wrapping both sides
+    # in sorted() to make an ordered comparison order-insensitive is a
+    # 100->90 slide too, but it is a rewrite of what is compared, not a
+    # matcher style change (decoy run, sort_stability).
+    return (
+        f.rule == "ASSERT_WEAKENED"
+        and (f.strength_drop or 0) < 30
+        and f.strength_after is not None
+        and f.strength_after >= 90
+        and not f.subject_changed
+    )
+
+
+def _triage_compensation(
+    f: Finding,
+    unit: Unit | None,
+    marker: str | None,
+    ir: IR,
+    ctx: _GateContext,
+) -> str | None:
+    """Select triage-cluster compensation that holds an oracle finding at warn, or None."""
+    # ASSERT_SUBSTITUTED joins ASSERT_REMOVED here on the same argument: a
+    # unit that *deleted* an assertion and *wrote a new strong one* is
+    # being rewritten wholesale, which is the documented triage cluster
+    # (private-API asserts rewritten against the public API). Crediting the
+    # removal at warn and blocking the substitution at high described one
+    # edit two ways — httpx c7cd6aa5bdcf, "test obfuscate_sensitive_headers
+    # via public api", was the measured case.
+    #
+    # It does not weaken what this rule was built for: `_same_unit_rewrite`
+    # requires `assertions_removed` to be non-empty, and a pure substitution
+    # removes nothing — the 2026-08-08 incident diff has
+    # `assertions_removed: []` and stays high. Residual, stated: deleting an
+    # assertion *and* substituting another *and* adding a plausible strong
+    # one buys warn for all of it, which is the trade ASSERT_REMOVED has
+    # carried since this compensation existed.
+    if f.rule in ("ASSERT_REMOVED", "ASSERT_SUBSTITUTED") and _same_unit_rewrite(unit):
+        return "SAME_UNIT_REWRITE"
+    if (
+        f.rule == "TEST_DISABLED"
+        and unit is not None
+        and unit.after is None
+        and ctx.restructured.get(f.path)
+        and _proven_restructure(unit, ctx.proven_assertions)
+    ):
+        return "RESTRUCTURED"
+    if (
+        f.rule == "TEST_DISABLED"
+        and unit is not None
+        and unit.after is None
+        and ctx.split_renamed.get((f.path, f.unit or ""))
+        and _proven_restructure(unit, ctx.proven_assertions)
+    ):
+        return "SPLIT_OR_RENAMED"
+    if f.rule == "TEST_DISABLED" and compat_gate_for(unit, ctx.file_constants.get(f.path), marker):
+        # D6 judges the marker the finding reports, not the unit it sits
+        # on: an honest gate beside a new disable lent it its credit, on a
+        # conftest's `<suite>` and on a test alike (#208).
+        return "COMPAT_GATE"
+    if (
+        f.rule == "TEST_DISABLED"
+        and _prod_removal_shape(f, unit)
+        and _prod_symbol_removed(f.path, ir)
+    ):
+        return "PROD_SYMBOL_REMOVED"
+    return None
+
+
+def _refuses_opaque_credit(
+    f: Finding,
+    unit: Unit | None,
+    test_or_conftest: bool,
+    ctx: _GateContext,
+) -> bool:
+    """Whether a Python test/conftest finding refuses the opaque-change fallback."""
+    # D-171 keeps the broad OPAQUE_REFUSED_RULES set empty. Only the
+    # narrow file-scoped BROAD_EXCEPT_ADDED condition below is enabled.
+    # The following historical broad design remains disabled for all
+    # other rules; it is retained to explain the earlier experiment.
+    # D-199 replaced it with a wider refusal of every repair evidence,
+    # after `has_evidence` below; read what follows as #464's design, not
+    # as what this code does now.
+    #
+    # A weakening-class finding in a Python test or conftest does not
+    # take the opaque-change credit (#419, ruling Q1 (b), 2026-10-14).
+    # Python test code reaches its subject through Python, and a Python
+    # production change that explains the edit is read as symbol
+    # evidence, which still applies to every finding that has a unit: a
+    # direct call of a changed symbol and the one-hop callers route, and
+    # the T1.9 same-file helper hop except for TEST_DISABLED, as does the
+    # producer of a fixture the finding's assertion reads (#471).
+    # BROAD_EXCEPT_ADDED is file-scoped and never had a unit. What this refuses
+    # is the opaque-change route: one byte in a template, a C or Rust
+    # file, a data file, a shell script that runs no tests, or a JS
+    # module was the whole price of holding a weakened, removed or skipped
+    # Python oracle at warn, and a broad except added around an assertion
+    # had no other route.
+    #
+    # Kept, deliberately: a JS/TS test keeps the credit until the #212
+    # corpus prices the change, because its production code is never
+    # parsed and the credit is the only evidence it can earn. The rules
+    # outside OPAQUE_REFUSED_RULES keep it in every language, and
+    # PACKAGE_REPAIR and DEPENDENCY_DRIFT, the two credits that ask
+    # `has_evidence`, never apply to these five rules. Every compensation
+    # and MILD_WEAKENING is computed as before; a refused finding now
+    # reaches them instead of stopping at REPAIR_EVIDENCE.
+    #
+    # For a conftest's `<suite>` control that means: an unguarded one
+    # refused every repair evidence already (below). A guarded one (its
+    # guard can be false) with only an opaque edit beside it is now held,
+    # if at all, by its own D6 COMPAT_GATE: a `<suite>` unit calls
+    # nothing, so it never had symbol evidence (D-066). A guarded
+    # COLLECTION control (`collect_ignore`, the two collection hooks or an
+    # `add_marker` skip: compat._SUITE_GATES) earns it on its guard alone,
+    # so it is held by an `if` guard that can be false, and by the import
+    # gate: a `try` body of plain imports (`import X` or
+    # `from X import ...`) under `except ImportError` or
+    # `except ModuleNotFoundError`, which the frontend records as
+    # `find_spec("X") is None` (frontend `_handler_guard`,
+    # `_IMPORT_ERRORS`). Any other `except` guard is recorded as the
+    # exception text, which is no condition D6 can read: a bare `except`,
+    # another exception class, a tuple of classes (even
+    # `(ImportError, ModuleNotFoundError)`), a relative `from . import`,
+    # or a `try` body that is not plain imports. A control under such a
+    # guard still is not a suite control (its guard can be false), earns
+    # no COMPAT_GATE, and now blocks beside an opaque edit.
+    # That is the literal effect of Q1 (b), recorded by the 2026-10-16
+    # ruling, and it amends the "only an unguarded control refuses repair
+    # evidence" reading of D-088 / 209.Q4 for opaque evidence.
+    #
+    # A `conftest.runtime.*` control (an execution or report hook, an
+    # exit-status control, a swapped `item.runtest`, a skipping fixture)
+    # does not move. The frontend records no guard on it
+    # (`_conftest_unit`; #84 and 432.Q5 hash a guard into the name
+    # instead), so it is always read as unguarded: a suite control, which
+    # refused every repair evidence before #419 and still does.
+    #
+    # Stated plainly, as the ruling asks: this catches an agent that
+    # weakens a Python test beside an edit it was making anyway. One that
+    # has read this rule moves to a rule that keeps the credit, or to a
+    # kept no-op edit in a called function (Route A, THREATMODEL 93 as
+    # widened by #419 Q3).
+    return (
+        (
+            f.rule in OPAQUE_REFUSED_RULES
+            or (
+                f.rule == "BROAD_EXCEPT_ADDED"
+                and f.unit is None
+                and unit is None
+            )
+        )
+        and f.path in ctx.python_files
+        and test_or_conftest
+    )
+
+
+def _evaluate_oracle_evidence(
+    f: Finding,
+    unit: Unit | None,
+    test_or_conftest: bool,
+    ir: IR,
+    ctx: _GateContext,
+) -> _OracleEvidence:
+    """Evaluate D1 repair evidence, D-199 refusal, package repair, and dependency drift."""
+    refuses_opaque = _refuses_opaque_credit(f, unit, test_or_conftest, ctx)
+    # D1 REPAIR_EVIDENCE / E1 NO_PROD_CHANGE_IN_DIFF are two sides of one
+    # question: is there a production change that explains this edit?
+    has_evidence = (
+        _file_repair_evidence(f.path, ir, opaque=not refuses_opaque)
+        if unit is None
+        else _repair_evidence(
+            unit, ir, f.path,
+            via_helper=f.rule != "TEST_DISABLED",
+            opaque=not refuses_opaque,
+            via=_finding_via(f, unit),
+            # Every oracle rule that takes symbol evidence reads a
+            # fixture's producer except TEST_DISABLED, as for the T1.9
+            # hop (#471, ruling Q4 (a)).
+            assertion=_finding_assertion(f, unit) if f.rule != "TEST_DISABLED" else None,
+        )
+    )
+    # D-199 (0.12, D-196 item 4; THREATMODEL 2, 93, 130, 131). Static
+    # repair evidence cannot tell an honest production change from a kept
+    # no-op one, so for these rules it no longer explains the test edit
+    # at all (REPAIR_REFUSED_PYTHON, REPAIR_REFUSED_JS). The evidence is
+    # still computed, so that E1 can say a production change reached the
+    # finding and was refused. Every compensation, MILD_WEAKENING and the
+    # info routes (ASSERTION_MOVED, DUPLICATE_REMAINS) are unchanged, and a
+    # refused finding reaches them. PACKAGE_REPAIR and DEPENDENCY_DRIFT
+    # never applied to these rules.
+    #
+    # What it costs, on the fixed R29 corpus (3,600 commits): 7 Python and
+    # 11 JS/TS commits move pass -> block; on D-088's 1,263 skip, xfail
+    # and conftest commits, 53. The moved commits remove deprecated APIs
+    # and their tests, drop old Python versions, or rewrite tests beside a
+    # behaviour change; a few are detector misreadings that repair evidence
+    # used to absorb (httpx 0296c2bb, requests 2a6f290b). A reviewed
+    # exemption, merged to the base first, or a maintainer merging past
+    # the required check releases each one.
+    #
+    # What stays open, stated plainly (THREATMODEL item 4, rows 56, 93,
+    # 130, 131), each beside a no-op edit unless said otherwise:
+    # - an expected value or its definition rewritten, or an assertion
+    #   substituted for one of equal strength, including a weakening
+    #   respelled as an exact comparison (`(x > 0) == True` reads as an
+    #   expected value changed from 4 to True) and an expectation computed
+    #   from the subject through a module alias (`calc.compute(2)`);
+    # - a renamed private symbol escorting a test deletion into D8;
+    # - D8 counting a row marked off as deleted where the rows cannot be
+    #   paired (a column added, the table moved into a constant);
+    # - in JS/TS: a deleted test or assertion (a plain test paired with a
+    #   table whose rows cannot be counted reads as one, as tests folded
+    #   into an imported table do), a test parked where no code runs
+    #   (`if (false) { test(...) }` reads as a deletion), and the
+    #   stand-in and subject rules (`vi.mock`, a `test.each` input cell).
+    # Only executing the old tests against the new code would close the
+    # no-op routes, and checkwash never executes your code.
+    python = f.path in ctx.python_files or (
+        f.rule == "TEST_PATCHES_SUBJECT" and f.unit is None and f.path in ctx.shadow_paths
+    )
+    refused_repair = has_evidence and _refuses_repair_evidence(f, unit, python)
+    if refused_repair:
+        has_evidence = False
+    package_only, dep_drift = _secondary_oracle_evidence(f, has_evidence, ir)
+    return _OracleEvidence(
+        has_evidence=has_evidence,
+        refuses_opaque=refuses_opaque,
+        refused_repair=refused_repair,
+        package_only=package_only,
+        dep_drift=dep_drift,
+    )
+
+
+def _secondary_oracle_evidence(
+    f: Finding,
+    has_evidence: bool,
+    ir: IR,
+) -> tuple[bool, bool]:
+    """Evaluate PACKAGE_REPAIR and DEPENDENCY_DRIFT fallbacks when D1 is absent."""
+    package_only = (
+        not has_evidence
+        and f.rule in ("EXPECTED_VALUE_CHANGED", "EXPECTATION_DEFINITION_CHANGED")
+        and _package_evidence(f.path, ir)
+    )
+    # An expectation literal tracking a dependency change: httpx 0.28
+    # switched to compact JSON separators and every exact literal in the
+    # corpus followed it (starlette 5ccbc62175, 100f05a66b).
+    #
+    # ASSERT_SUBSTITUTED joins it on corpus evidence: flask's two "bump
+    # werkzeug 2.3.7" commits (5bb30270d2, 9f9550247a) rewrote
+    # `assert rv.data == b"127.0.0.1"` into
+    # `assert flask.g.remote_addr == "127.0.0.1"` because the dependency's
+    # API moved under them. A version bump that changes behaviour changes
+    # *how you reach* the value as often as it changes the value, so
+    # crediting only the literal left the shape dependency bumps actually
+    # produce blocking at high. The oracle is intact in both.
+    #
+    # Still scoped, exactly like PACKAGE_REPAIR: a manifest bump buys
+    # nothing for a weakened or a deleted oracle, and both rules here
+    # require unweakened strength. Residual: a substitution smuggled into
+    # a genuine dependency bump gets the same credit — THREATMODEL 84c.
+    dep_drift = (
+        not has_evidence
+        and not package_only
+        and f.rule in (
+            "EXPECTED_VALUE_CHANGED",
+            "ASSERT_SUBSTITUTED",
+            "EXPECTATION_DEFINITION_CHANGED",
+        )
+        and ir.globals.dependency_manifest_changed
+    )
+    return package_only, dep_drift
+
+
+def _is_unguarded_suite_control(
+    f: Finding,
+    unit: Unit | None,
+    marker: str | None,
+    ctx: _GateContext,
+) -> bool:
+    """Whether a TEST_DISABLED finding is an unguarded conftest `<suite>` control."""
+    # A production change never makes it correct to stop *collecting*
+    # tests. Repair evidence answers "did production change, so this
+    # expectation legitimately changed?" — a question a suite-level
+    # collection control does not raise. On the 2026-08-07 probe arm an
+    # agent dropped the failing tests out of collection and the honest
+    # `scripts/lint.sh` edit its own task demanded paid for it, because
+    # an unreadable prod file grants this credit diff-globally
+    # (THREATMODEL row 68). A compatibility gate does explain it, and
+    # still does: that branch is untouched below.
+    #
+    # Only when the control is **unguarded**. The first cut of this rule
+    # asked nothing about the guard and blocked a PR that added a backend,
+    # added its own tests, and gated them on `find_spec("redis")` — net
+    # tests disabled: zero, production changed in three files, verdict
+    # high (adversarial audit 2026-08-07, same day it shipped). A guard is
+    # the difference between "these tests cannot run here" and "these
+    # tests do not run any more".
+    #
+    # "Unguarded" is the finding's own control with no guard that can be
+    # false: a guard that always holds is no guard (#209 Q4), and a gate
+    # elsewhere in the conftest guards nothing here (#208). A finding
+    # with no marker of its own reports a guard that now always fires,
+    # or a path added to an unguarded control (row 81): either way its
+    # control acts everywhere.
+    after_markers = unit.after.markers if unit is not None and unit.after is not None else []
+    own = [m for m in after_markers if marker is not None and m.name == marker]
+    unguarded_control = (
+        any(not guard_can_be_false(m.guard, ctx.file_constants.get(f.path)) for m in own)
+        if own
+        else f.shape == SHAPE_GUARD_WEAKENED
+    )
+    return (
+        f.rule == "TEST_DISABLED"
+        and ctx.roles.get(f.path) == "conftest"
+        and (f.unit or "") == "<suite>"
+        and unguarded_control
+    )
+
+
+def _e1_escalation_reason(
+    suite_control: bool,
+    ev: _OracleEvidence,
+    ir: IR,
+    ctx: _GateContext,
+) -> str:
+    """Select the true E1 escalator label when no evidence or compensation holds."""
+    # Say the true reason. Refusing repair evidence and then printing
+    # "no production change in this diff" over a diff full of them is
+    # a false statement in a blocking message, which is the class of
+    # defect this project exists to catch (audit 2026-08-07).
+    #
+    # For a suite control the reason is a fact about the diff, not
+    # about this finding's evidence. A `<suite>` unit calls nothing,
+    # so a readable production edit elsewhere in the diff gives it no
+    # symbol-matched evidence, and asking `has_evidence` printed the
+    # false sentence over exactly that diff (#205). Any production
+    # file changed: the control is unexplained. None: the old wording
+    # is true.
+    #
+    # A refused opaque change is the same class of claim (#419 Q5 (b)):
+    # the diff did change production, in a file checkwash reads but
+    # cannot reason about, and that change is not accepted as this
+    # finding's evidence. Still E1, so severity, verdict and
+    # fingerprint are what they would be under the old wording; only
+    # the sentence changes, as D-066's did. Not "unread": #448 uses
+    # that word for a side that is never read at all, and such a side
+    # never sets `prod_opaque_change`. A suite control keeps its own
+    # label, which it always reaches first here: an opaque change is
+    # a production file in `prod_files_changed`. D-171's broad set
+    # remains empty. This label is reachable only for the separately
+    # admitted Python unit-less BROAD_EXCEPT_ADDED condition, when
+    # an opaque production change exists and the finding reaches E1.
+    #
+    # Every other finding here is the same class of claim (#473,
+    # ruling Q2 and Q3, 2026-10-18). If the diff changed a
+    # production-role file that is not inert (`prod_changed`, above),
+    # production did change, and no evidence this finding may take
+    # reached that change: no symbol it calls, no caller of one, no
+    # helper hop, and no package or opaque credit where the rule
+    # takes one. Nor did the producer of a fixture the finding's
+    # assertion reads, the route #522 added for #471
+    # (`_fixture_producer_evidence`). The usual cause is a reach
+    # checkwash does not follow, such as an unchanged module between
+    # the test and the change. `NO_PROD_CHANGE_IN_DIFF` is kept for a
+    # diff that changes no production-role file, or only inert ones.
+    # Still E1: severity is set above and the label is outside the
+    # fingerprint, so only the sentence changes. Both labels before
+    # this one keep their conditions and come first: a suite control
+    # keeps D-066's test, inert files included, and a refused opaque
+    # change keeps its own label.
+    #
+    # D-199 adds `REPAIR_EVIDENCE_REFUSED`, after those two and before
+    # `PROD_CHANGE_NOT_EVIDENCE`: a production change did reach this
+    # finding as repair evidence, and its rule takes none. Saying "no
+    # evidence reached the change" there would be false, and would
+    # suggest that a change which reaches the test would be accepted.
+    # A refused finding whose evidence never existed keeps the label
+    # it had. Still E1, outside the fingerprint.
+    if suite_control and (ev.has_evidence or ev.refused_repair or ir.globals.prod_files_changed):
+        return "COLLECTION_CONTROL_UNEXPLAINED"
+    if ev.refuses_opaque and ir.globals.prod_opaque_change:
+        return "OPAQUE_PROD_CHANGE_NOT_EVIDENCE"
+    if ev.refused_repair:
+        return "REPAIR_EVIDENCE_REFUSED"
+    if ctx.prod_changed:
+        return "PROD_CHANGE_NOT_EVIDENCE"
+    return "NO_PROD_CHANGE_IN_DIFF"
+
+
+def _apply_oracle_outcome(
+    f: Finding,
+    unit: Unit | None,
+    ev: _OracleEvidence,
+    suite_control: bool,
+    compensation: str | None,
+    mild_weakening: bool,
+    ir: IR,
+    ctx: _GateContext,
+    contract: Contract,
+) -> None:
+    """Apply de-escalator or E1 escalation in place, followed by E2 ORACLE_FREEZE."""
+    if ev.has_evidence and not suite_control:
+        f.deescalators.append("REPAIR_EVIDENCE")
+    elif ev.package_only:
+        f.deescalators.append("PACKAGE_REPAIR")
+    elif ev.dep_drift:
+        f.deescalators.append("DEPENDENCY_DRIFT")
+    elif compensation is not None:
+        if compensation in {"RESTRUCTURED", "SPLIT_OR_RENAMED"}:
+            spend(ctx.proven_assertions, assertion_keys(unit.before))
+        f.deescalators.append(compensation)
+    elif mild_weakening:
+        f.deescalators.append("MILD_WEAKENING")
+    else:
+        f.severity = "high"
+        f.escalators.append(_e1_escalation_reason(suite_control, ev, ir, ctx))
+
+    # E2 ORACLE_FREEZE
+    if contract.oracle_freeze:
+        f.severity = "high"
+        f.escalators.append("ORACLE_FREEZE")
+
+
+def _verdict_from_findings(findings: list[Finding], config: Config) -> str:
+    """Compute final pass/block verdict against configured fail_on threshold."""
     threshold = SEVERITY_ORDER[config.fail_on]
     blocking = [
         f for f in findings if not f.allowlisted and SEVERITY_ORDER[f.severity] >= threshold
