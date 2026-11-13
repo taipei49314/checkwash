@@ -93,7 +93,15 @@ reclassified `ci` when it is *shaped* like a runner script — a `.sh`, `.bash`,
 `.zsh`, `.ps1`, `.bat`, `.cmd` or `.mk` suffix, a `Makefile`/`makefile`/
 `GNUmakefile` basename, or a shell shebang (`sh`, `bash`, `zsh`, `dash`,
 `ksh`, `ash`, including via `env`) — **and** either side of the diff actually
-invokes a test runner. Python files are never reclassified this way;
+invokes a test runner. In a PowerShell file (`.ps1`, `.psm1` or `.psd1`),
+the signature block that ends the file, from a line `# SIG # Begin
+signature block` to a last line `# SIG # End signature block`, is not read
+for a runner when every line between those two is `#`, a space and base64:
+as PowerShell reads the file none of it runs, and its letters can spell
+`tox` or `nox`, as in the signed `Activate.ps1` of a Windows virtual
+environment (D-207). The rest of such a file is read as before, and so is
+every other file and a block with any other line (THREATMODEL row 185).
+Python files are never reclassified this way;
 `noxfile.py` is covered by path instead. Nor are JS/TS test paths, the test
 runners' zero-configuration layouts the engine treats as tests
 (`frontends/javascript/paths.py`, THREATMODEL row 107): such a file names its

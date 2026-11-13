@@ -1198,3 +1198,229 @@ passes on main `6c2b7669` without a note, and still does:
   checks.
 
 Other platforms: NOT_RUN.
+
+## D-207 (2026-11-13): the signature block that ends a PowerShell file is not read for a test runner
+
+**Approval.** [TO FILL before merge. `DECISIONS.md`, `SPEC.md` and
+`THREATMODEL.md` are maintainer text (AGENTS.md). The pull request asks
+Nelson to approve, by name and before it merges, this entry with the new
+sentences of `SPEC.md` §2 and THREATMODEL row 185 (L1). Record here the
+question, who wrote it and its buttons, his answer and its time, as D-206's
+Approval paragraph does.]
+
+**What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
+of 2026-11-12T15:05:30Z and the scope Claude chose for 0.13. D-205 withdrew
+group A's problem 2, the re-review's ND-02, and left its two causes to a
+later pull request. This entry takes the cause on Windows; the cause on
+Linux and macOS waits (below).
+
+**What was found.**
+- **ND-02.** The 2026-11-10 re-review had one Claude sub-agent review
+  newcomers and documentation on LAPTOP-01AGNPJU
+  (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). With a virtual environment
+  that Git did not ignore and that was not named `.venv` or `venv`, whose
+  files checkwash sets aside as artifacts, a check without a range and the
+  Stop hook blocked at high on the `Activate.ps1` that `python -m venv`
+  writes: `CI_WORKFLOW_TOUCHED`, "test command weakened", for its
+  `-ErrorAction SilentlyContinue`. The same files committed blocked a range
+  check too. Its report adds 61 warnings on the source of a package
+  installed in the environment.
+- **The cause**, found by #602's review (D-205). A `.ps1` file is shaped
+  like a runner script, and it reads as one when either side of the diff
+  invokes a test runner (`SPEC.md` §2). `roles._runs_tests` looks for runner
+  tokens anywhere in the file, comments included. Windows builds of Python
+  sign `Activate.ps1`. The signature ends the file, as base64 in lines
+  between `# SIG # Begin signature block` and `# SIG # End signature block`,
+  and in Python 3.11.9's copy two of those lines hold the letters `tox` and
+  `nox`. The copy Ubuntu 24.04's Python 3.12.3 writes has no signature and
+  neither word.
+- **The same search serves other readers**, and each read such a
+  signature as a runner: the opaque-exemption denial
+  (`roles._mentions_test_runner`, THREATMODEL row 87), the one hop from a
+  script to the runner script it calls (row 89), the CI weakening scan, the
+  collection inventory and the runner invocations `shadow` reads. Measured
+  on main, beside a signed script whose signature spells a token:
+  - a script that swallowed a call to the signed script blocked as a
+    weakened runner;
+  - a signed runner script whose command was removed, under a new
+    signature that spelled a token, passed as still running a suite;
+  - the collection inventory, which sets itself aside for a runner it
+    cannot parse, set itself aside: a first `pytest.ini` whose `testpaths`
+    left `tests/test_total.py` out of collection passed at warn, where
+    beside an unsigned script it blocks at high;
+  - an edited signed script got no opaque exemption: beside it, an expected
+    value rewritten from 5 to 6 blocked (`EXPECTED_VALUE_CHANGED`, high),
+    where beside an edited unsigned script, or an edited JSON file, it is a
+    warning (THREATMODEL item 4).
+
+**Decision.** In a PowerShell file (`.ps1`, `.psm1` or `.psd1`), the runner
+search leaves out the signature block that ends the file, from a line
+`# SIG # Begin signature block` to a last line `# SIG # End signature
+block`, when every line between those two is `#`, a space and base64
+(ASCII letters, digits, `+` and `/`, then at most two `=`). The markers and
+the base64 are matched as PowerShell writes them, before the search
+lowercases the text. Each reader above passes the file's path, and reads
+each side of a rename under its own. The rest of the file is read as
+before, comments included, and so is every other file; so is a block with
+any other line, a block without either marker on a line of its own, a
+block followed by anything but spaces, tabs and line ends, and any block
+before the last (`SPEC.md` §2). So each reader now reads a signed script
+as it reads the same script unsigned, in both directions measured above:
+the swallowed call, the collection inventory and the opaque exemption as
+an unsigned script gets them, and the removed command read as removed.
+
+**Why PowerShell runs none of it.** As PowerShell reads the file, a line
+that starts with `#` is a comment unless a block comment or a string holds
+it: a here-string, or a quoted string, which can span lines. Base64 holds
+neither `#` nor `>`, so no line of the block can end a block comment opened
+above it (`#>`). A string opened above it would need its closing quote on a
+later line, and only spaces, tabs and line ends follow the block, so the
+file does not parse and nothing in it runs. The two marker lines are
+comments too. A line that is not base64, such as `#> pytest` or
+`# MIIv #> pytest`, makes the whole block read, as does `#&pytest` and
+every non-PowerShell file, since cmd has no `#` comment and make can take
+`#` as its recipe prefix.
+
+**Residual (THREATMODEL row 185).** A program other than PowerShell can
+read those lines otherwise. make, given `.RECIPEPREFIX := \#` (unescaped,
+`#` starts a comment there) and a `SIG` program on the `PATH` for the
+marker lines, runs each line of the block as a recipe, so `# pytest` there
+is the suite. GNU Make 4.4.1 ran that shape on Windows, with harmless
+commands for the suite. Every reader then treats such a PowerShell-named
+makefile as holding no runner:
+- replacing that line passes, and so does a caller that swallows the make
+  run, where main blocks each at high (rows 69 and 89);
+- where the configuration makes the file `ci` (`.github/workflows/`), the
+  replaced line draws only a warning;
+- an edit to it is an opaque production change (row 87, item 4).
+
+A check without a range and the Stop hook give the same; the PreToolUse
+hook gives `{}` on that edit with main as with this version, as it does for
+the same edit to a `.mk` file. Each line of the block is one word: it can
+name any program whose path is base64, and passes it no argument of its
+own, though make lines above the block (`SHELL`, exported variables) can
+shape what runs. A script that reads its own block and runs it is row
+137's class: a command built from text the search does not match.
+
+**Not changed.**
+- The runner tokens, the positional runners (#216), the runner shapes, and
+  the swallow and narrowing tokens. The positional-runner reader still
+  reads the whole file; a base64 line holds no command separator, so it
+  puts no word in command position.
+- The workflow-deletion rule (`CI_WORKFLOW_TOUCHED` in `SPEC.md` §4) reads
+  only YAML pipelines, which are never PowerShell files, so "a runner name
+  anywhere in it" still holds there.
+- ND-02's cause on Linux and macOS. There `python -m venv` links the
+  environment's Python instead of copying it (Python 3.12's
+  `venv/__init__.py`). Measured on Linux: `bin/python` links to `python3`,
+  which links to `/usr/bin/python3`, outside the repository. A check without
+  a range refuses the link ("strict snapshot path leaves the repository")
+  and exits 2, whether the environment is named `env` or `.venv`, and the
+  Stop hook says the change was not analysed. A range that commits the
+  environment exits 2 ("strict snapshot batch cannot inspect nonregular
+  source"). The PreToolUse hook, which reads the one edit it is asked about,
+  analyses that edit as before. Reading a link in the working tree, or
+  setting one aside, needs a design of its own, since a link can point a
+  test path at a file the diff does not hold. A later pull request takes
+  it.
+- The warnings an environment's package sources draw, and the warning its
+  `activate.bat` draws when the environment's path spells a runner name:
+  the file holds that path, and it is read whole (measured, the path
+  `C:\Users\knox\src\pytest-plugin\env`). Warn level, not blocking. From
+  Python 3.13, `python -m venv` writes a `.gitignore` into each new
+  environment, by Python's documentation; there is no Python 3.13 on
+  LAPTOP-01AGNPJU, and that was not run.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_signature_block_runner.py`, 41 tests. Its fourteen
+  command-line tests, run with the command line from main `82b88866`'s
+  tree: nine fail there. Main blocks, at high, an untracked and a
+  committed signed `Activate.ps1`; a script that swallows a call to a
+  signed script; an expected value rewritten beside an edited signed
+  script; and the residual's replaced line, in a PowerShell-named file and
+  in a `ci` path, and the caller that swallows its run. It passes a runner
+  removed under a signature that spells one, and a first pytest config that
+  leaves a test out beside a signed script. The other five assert what main
+  already does.
+  Its other 27 tests call the runner search directly: on main 26 of them
+  fail with a `TypeError`, as main's search takes no path, and one because
+  main reads the signature as a runner.
+- GNU Make 4.4.1 (WinLibs) on Windows, on the residual's shape with
+  harmless commands for the suite: a block line `# false` fails make (exit
+  2), and `# true` in its place passes. With `.RECIPEPREFIX := #`,
+  unescaped, the prefix is empty and make runs no line of the block.
+- Forty one-line mutants of the change, each run against that file in its
+  own copy: 33 fail it. Two of the other seven are equivalent: dropping
+  the check that the text ends with the end marker, which the last-line
+  check repeats, and the workflow-deletion rule reading a deleted workflow
+  whole, since a workflow is never a PowerShell file. The other five are
+  readers whose path no test reaches: the CI base surface reading a
+  renamed file's old side under its new name (`ci.py:115`), and four that
+  read a signed script whole, as main does: the collection-option scan
+  (`ci.py:255`), the collection inventory's `_calls` and `opaque_reached`,
+  and `shadow._runner_invocations`.
+- Windows, CPython 3.11.9. The whole environment `python -m venv
+  --without-pip` wrote, signed `Activate.ps1` included, in a fixture
+  repository:
+  - untracked as `env`: main exits 1 at high (`CI_WORKFLOW_TOUCHED`) in a
+    check without a range, and its Stop hook blocks; this version exits 0,
+    and its Stop hook does not block;
+  - untracked as `.venv` or `venv`: both exit 0;
+  - committed in a range: main exits 1 at high, this version 0;
+  - the PreToolUse hook, asked about an honest edit beside it: `{}` from
+    both.
+
+  Ubuntu's unsigned copy, untracked in its place: both exit 0.
+- Linux, WSL2 Ubuntu 24.04 on the same machine, CPython 3.12.3, the source
+  of main and of this version. An environment `python -m venv
+  --without-pip` wrote:
+  - untracked as `env` or `.venv`: a check without a range exits 2 with
+    both, and the Stop hook says the change was not analysed;
+  - the PreToolUse hook, asked about an honest edit: `{}` from both;
+  - committed in a range: exit 2 with both.
+- The 70 PowerShell files with a signature block under
+  `C:\Windows\System32\WindowsPowerShell\v1.0` and
+  `C:\Program Files\WindowsPowerShell\Modules` on that machine: each block
+  holds only base64 lines of that shape and is left out.
+- The full suite, the fixture cases, `tests/gates`, and checkwash's own
+  check of the pull request's range.
+- Review. Three Claude review sub-agents reviewed the first version
+  (`01775322`, `7a872262`): one for bypasses, one for code and tests, one
+  for documents and claims. That version left out every complete block of
+  comment lines, in every file the search read and anywhere in it. This
+  version answers them:
+  - for bypasses: lines that run although they start with `#`: in a bash
+    here-document (`$(...)`), under cmd (`#&pytest`), under make (a `#`
+    recipe prefix, `define`, `$(shell ...)`), and in PowerShell a line
+    such as `#> pytest` that closes a block comment opened above, or a
+    block held in a here-string that the script then runs. Now only a
+    PowerShell file's last block of base64 lines is left out, and the
+    residual is row 185;
+  - for code and tests: a pattern whose search took time quadratic in
+    the markers, now one pass from the end; the claim that no comment
+    runs; mutants that survived;
+  - for documents and claims: the claim that a block left out cannot hide
+    a runner; the readers the search serves; links on Linux and macOS,
+    `.venv` on Linux and a committed environment; which hook says the
+    change was not analysed; ND-02 in a range; the basis for what the
+    unsigned copy does; the docstring's "one warn-level finding"; and
+    the runtime and exit codes.
+
+  One Claude review sub-agent then reviewed this version as `093f86c7`
+  and `468233a0`. With the Windows PowerShell 5.1 parser it found no way
+  to run a hidden runner while PowerShell runs the file. It found that the
+  residual's make example did not run as written (`.RECIPEPREFIX := #`
+  leaves the prefix empty); that the residual reaches more than a replaced
+  line (a caller that swallows the run, a `ci` path, the opaque
+  exemption); that the opaque exemption a signed script now gets went
+  unrecorded; that a mutant called equivalent was not (the hop reading a
+  renamed script's old side under its new name); and claims stated more
+  broadly than measured. This version answers each: the example as make
+  runs it; the residual above and in row 185, with tests for its other
+  shapes; the opaque exemption under What was found; a test for that hop;
+  and the claims. It was not reviewed again.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+macOS and other platforms: NOT_RUN.
