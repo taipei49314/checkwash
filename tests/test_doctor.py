@@ -653,13 +653,27 @@ def test_install_local_then_doctor_accepts_bom_and_does_not_claim_gitignore(tmp_
     from checkwash.hooks import install_claude
 
     root = _repo(tmp_path, {"README.md": "baseline"})
-    install_claude(str(root), True)
+    # The installer's own Git calls read no global or system configuration,
+    # so a developer's excludes cannot decide what it writes.
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as home, pytest.MonkeyPatch.context() as plain:
+        config = os.path.join(home, "gitconfig")
+        with open(config, "wb"):
+            pass
+        plain.setenv("GIT_CONFIG_GLOBAL", config)
+        plain.setenv("GIT_CONFIG_NOSYSTEM", "1")
+        plain.setenv("XDG_CONFIG_HOME", os.path.join(home, "xdg"))
+        install_claude(str(root), True)
     path = root / ".claude/settings.local.json"
     path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
     assert _levels(collect(root), "configured locally") == ["problem"]
+    # The name predates D-205: the installer now keeps the file out of git
+    # status through the repository's info/exclude.
     status = _git(root, "status", "--porcelain", "--untracked-files=all").stdout
-    assert "?? .claude/settings.local.json" in status
+    assert status == "A  README.md\n"
+    assert "/.claude/settings.local.json" in (root / ".git" / "info" / "exclude").read_text(encoding="utf-8").splitlines()
     with pytest.raises(SystemExit) as exc:
         build_parser().parse_args(["hook", "install", "--help"])
     assert exc.value.code == 0
-    assert "does not configure Git ignore" in " ".join(capsys.readouterr().out.split())
+    assert "adds it to the repository's .git/info/exclude" in " ".join(capsys.readouterr().out.split())

@@ -340,6 +340,109 @@ def _has_hook(handlers: list[dict], managed, prefix: list[str]) -> bool:
     return False
 
 
+_LOCAL_SETTINGS = ".claude/settings.local.json"
+
+
+def _git_probe(repo: str, *args: str) -> subprocess.CompletedProcess | None:
+    try:
+        return subprocess.run(["git", "-C", repo, *args], capture_output=True, check=False, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def _exclude_path(repo: str) -> Path | None:
+    """The repository's `info/exclude`, as an absolute path Git names.
+
+    `--path-format=absolute` (Git 2.31) keeps a junction or symlink in
+    `--repo` from turning a relative answer into another folder. An older
+    Git prints that unknown option back as its first line and still answers
+    the rest, so its relative answer is asked for again and joined to the
+    real path of `repo`.
+    """
+    for args in (("--path-format=absolute", "--git-path", "info/exclude"), ("--git-path", "info/exclude")):
+        answer = _git_probe(repo, "rev-parse", *args)
+        if answer is None or answer.returncode != 0:
+            continue
+        try:
+            text = answer.stdout.decode("utf-8")
+        except UnicodeError:
+            return None
+        if text.split("\n", 1)[0] == "--path-format=absolute":
+            continue
+        if not text.endswith("\n") or "\n" in text[:-1] or "\r" in text or not text[:-1]:
+            return None
+        target = text[:-1]
+        return Path(target) if os.path.isabs(target) else Path(os.path.realpath(repo)) / target
+    return None
+
+
+def _pattern_text(prefix: str) -> str:
+    """`prefix` (Git's `--show-prefix`) as literal text of an ignore pattern."""
+    return "".join("\\" + ch if ch in "\\*?[]" else ch for ch in prefix)
+
+
+def ignore_local_settings(repo: str) -> str:
+    """Keep the machine-local settings file out of Git, as Claude Code means it.
+
+    The file holds this machine's interpreter path, and Claude Code saves
+    permission grants into it. Untracked and not ignored, a working-tree
+    check warns on it at each run; committed, each later grant is a
+    guardrail edit at critical. When Git neither tracks nor ignores it, a
+    rule for it goes into the `info/exclude` file Git names for the
+    repository, which is never committed. A tracked file is left alone and
+    named. Outside Git, or when Git cannot answer, nothing is written and
+    nothing is said.
+    """
+    inside = _git_probe(repo, "rev-parse", "--is-inside-work-tree")
+    if inside is None or inside.returncode != 0 or inside.stdout.strip() != b"true":
+        return ""
+    prefix = _git_probe(repo, "rev-parse", "--show-prefix")
+    if prefix is None or prefix.returncode != 0:
+        return ""
+    try:
+        relative = prefix.stdout.decode("utf-8")
+    except UnicodeError:
+        return ""
+    relative = relative[:-1] if relative.endswith("\n") else relative
+    if "\n" in relative or "\r" in relative:
+        return f"note: not adding an ignore rule for {_LOCAL_SETTINGS}: its folder's name holds a line break.\n"
+    from_root = relative + _LOCAL_SETTINGS
+    tracked = _git_probe(repo, "--literal-pathspecs", "ls-files", "--error-unmatch", "--", _LOCAL_SETTINGS)
+    if tracked is None:
+        return ""
+    if tracked.returncode == 0:
+        return (f"note: Git tracks {from_root}, so checkwash reads each later change to it, such as a "
+                "permission Claude Code saves there, as a guardrail edit at critical; "
+                f"`git rm --cached -- \"{from_root}\"` at the repository root, and an ignore rule, keep it "
+                "on this machine.\n")
+    ignored = _git_probe(repo, "check-ignore", "-q", "--", _LOCAL_SETTINGS)
+    if ignored is None or ignored.returncode != 1:
+        return ""
+    path = _exclude_path(repo)
+    if path is None:
+        return ""
+    pattern = "/" + _pattern_text(relative) + _LOCAL_SETTINGS
+    try:
+        existing = path.read_bytes() if path.exists() else b""
+        added = pattern not in existing.decode("utf-8", "replace").splitlines()
+        if added:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "ab") as handle:
+                if existing and not existing.endswith(b"\n"):
+                    handle.write(b"\n")
+                handle.write(("# checkwash hook install --local: machine-local Claude Code settings\n"
+                              f"{pattern}\n").encode("utf-8"))
+    except OSError as exc:
+        return f"note: could not add {pattern} to {path} ({exc}); add an ignore rule for {from_root} yourself.\n"
+    after = _git_probe(repo, "check-ignore", "-q", "--", _LOCAL_SETTINGS)
+    if after is not None and after.returncode == 0:
+        return (f"Added {pattern} to {path}, which Git never commits, so this machine-local file "
+                "stays out of the repository.\n")
+    where = (f"added {pattern} to {path}, but {from_root} is still not ignored" if added else
+             f"{from_root} is not ignored although {path} holds {pattern}")
+    return f"note: {where}: another ignore rule, such as a `!` line in a .gitignore, includes it again.\n"
+
+
 def install_claude(repo: str, local: bool) -> str:
     path = Path(repo) / ".claude" / ("settings.local.json" if local else "settings.json")
     if any(p.is_symlink() or p.exists() and (
@@ -402,6 +505,7 @@ def install_claude(repo: str, local: bool) -> str:
         f"{scope}; version probe passed.\n"
         "Requires Claude Code command/args exec-form support (tested with 2.1.260). "
         "Writing configuration does not verify a Claude Stop event.\n"
+        + (ignore_local_settings(repo) if local else "")
     )
 
 

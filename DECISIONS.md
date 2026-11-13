@@ -812,3 +812,175 @@ after `publish-assets` leaves a GitHub Release without PyPI, which the next
 release's verdict gate takes as its baseline
 ([baseline identity](docs/published-release-baseline.md)), and ordinary pull
 requests are refused until a new version is advertised.
+
+## D-205 (2026-11-12): a working-tree run sets aside the untracked zipapp checkwash runs from; a local hook install keeps its settings file out of Git
+
+**Approval.** Claude wrote this entry in the pull request that records it,
+#602. `DECISIONS.md` and `SPEC.md` are maintainer text (AGENTS.md). So the
+pull request asked Nelson to approve, by name and before it merges, this
+entry with the new §9 paragraph of `SPEC.md` (L1).
+
+Claude described the change in the conversation, named the two texts and
+linked the pull request, whose head was then
+`5bb823e64bec0b335c68b58291c9a5bd0504004d`. At 2026-11-12T17:41:56Z Claude
+asked 「#602 的 L1（D-205 和 SPEC §9 新段）核可，收據過了就合併嗎？」
+(approve #602's L1, D-205 and the new SPEC §9 paragraph, and merge once
+the receipt passes?), and at 23:38:29Z he chose 「核可並合併」 (approve and
+merge). Claude wrote the question and both buttons; the other was
+「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the two texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
+
+**What was asked.**
+- **The launch waits for the fixes.** At 2026-11-10T15:49:22Z Claude asked
+  「發文要等門面和第一週的坑修完（出一個小版本）之後再發嗎？」 (should the
+  launch post wait until the front page and the first-week problems are
+  fixed, in a small release?). At 16:10:48Z Nelson answered 「先修再發」
+  (fix first, then post). Claude wrote the question and both buttons; the
+  other was 「現在就發」 (post now).
+- **Claude leads in what he does not know.** At 2026-11-12T12:34:02Z he
+  wrote, of projects that interest him in fields he does not know well,
+  「所以會需要你帶 你的建議」 (so I need you to lead, with your
+  recommendations) and 「遇到不懂的地方我還是需要你做完我在看 去學」 (where
+  I do not understand, I still need you to finish the work, then I look at
+  it and learn). Claude restated this as deciding such technical details
+  itself and showing him the finished work, the direction staying his.
+- **The re-sort.** At 12:37:30Z Claude asked 「要我現在照新做法，把各專案等你
+  決定的事重整一遍嗎？」 (shall I now re-sort, the new way, what each project
+  is waiting on you for?), and at 12:38:55Z he chose 「好，現在重整」 (yes,
+  re-sort now). Claude wrote that question and both buttons; the other was
+  「先不用」 (not now).
+- **0.13.** After #597 merged, he wrote 「繼續做 0.13」 (go on with 0.13) at
+  15:05:30Z, in his own words.
+
+Claude chose 0.13's scope from the 2026-11-10 re-review: the five
+first-week problems (group A), a report line for test-looking files that
+are not analysed (group B), and G2 (b). Claude wrote the re-review, its
+options and this scope. This entry covers group A's problems 3 and 5.
+Problem 2 was in the first version of the pull request and is withdrawn
+(below).
+
+**What was found.** The 2026-11-10 re-review of main `8f610be9` had one
+Claude sub-agent review newcomers and documentation on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Two of its findings are fixed
+here:
+
+- **ND-09, the zipapp in the repository root.** The README's first path
+  has a newcomer run the downloaded `checkwash.pyz` from the root of a
+  repository, which works when the file is there. For 0.12.0 the file is
+  1,013,508 bytes, over the 1,000,000-byte source limit, so `python
+  checkwash.pyz check` on a clean tree reported it as not read and the
+  analysis as incomplete.
+- **ND-05, the machine-local settings file.** A local hook install (the
+  default, or `--local`) writes `.claude/settings.local.json`. That file
+  holds this machine's interpreter path, and Claude Code documents saving
+  permission grants into it. The install left the file for Git to list, so
+  every check without a range warned on it (`GUARDRAIL_TOUCHED`). Once it
+  was committed, a grant written into it blocked at critical. In the
+  re-review, that grant was written by hand.
+
+**Decision.**
+
+1. **The running zipapp.** A check without a range, the Stop hook's verdict
+   diff and the session-commits analysis leave out the zipapp that the
+   running checkwash is imported from, matched by name and real path. It is left
+   out only when Git lists it as untracked and no file sits at its path in
+   the compared commit or, in the Stop hook, in the session base. The
+   verdict diff's listing names it once on stderr (`SPEC.md` §9). If Git
+   cannot say whether a commit holds the path, the file is read.
+2. **The local hook install.** When Git neither tracks nor ignores
+   `.claude/settings.local.json`, a local install adds a rule for it to the
+   `info/exclude` file Git names for the repository, and says so.
+   - **Which file.** The path comes from `git rev-parse --path-format=absolute
+     --git-path info/exclude`. Git before 2.31 prints that option back as
+     its first line; the plain relative answer is then asked for and joined
+     to the real path of the install folder.
+   - **The rule.** It is anchored at the install folder, whose name is
+     escaped as literal pattern text. A folder name with a line break gets
+     no rule, and a note.
+   - **A tracked file** is left alone and named, with how to untrack it
+     from the repository root.
+   - **A rule that does not take.** When another rule, such as a `!` line
+     in a `.gitignore`, includes the file again, the note says so, and a
+     second install adds no second rule.
+   - **Outside Git** nothing is written.
+
+   `info/exclude` is never committed, so this changes only the user's own
+   clone.
+
+**Why the zipapp rule cannot hide a change.** Only the archive the running
+process was imported from qualifies, and only as an untracked record whose
+path neither the compared commit nor the session base holds. These are
+read as before:
+- a tracked, staged or vendored copy;
+- a copy whose path the compared commit or, in the Stop hook, the session
+  base holds;
+- another file of that name;
+- everything in range mode.
+
+The file set aside is the program doing the check, so an agent able to
+replace it already controls the check.
+
+**Problem 2, withdrawn.** The first version of this pull request also set
+aside an untracked virtual environment: any directory with an untracked
+`pyvenv.cfg` or `conda-meta/history` of its own and nothing tracked under
+it. Three Claude review sub-agents found that rule unsafe, and found that
+it misread the symptom's cause.
+
+- **Unsafe.** Each of these let a working-tree or Stop run pass a change
+  that main blocks:
+  - a case-only rename of a tracked `tests/` on a case-insensitive disk;
+  - a marker in `.checkwash/`, `.github/` or `.claude/`;
+  - on Linux, a symlinked marker that pytest does not count, such as a
+    dangling link.
+- **On Windows.** Python's signed `Activate.ps1` reads as a test runner
+  only because its base64 signature block holds the letters `tox` and
+  `nox`, which `roles._runs_tests` matches as plain substrings. The
+  unsigned copy on Linux and macOS draws no finding.
+- **On Linux.** The re-review's symptom is an engine error instead: the
+  environment's `bin/python` link leaves the repository.
+
+A later pull request takes those causes.
+
+**Residual.**
+- **Hook edits out of view.** A local install now makes the settings file
+  ignored where it was not, so a change an agent makes to the hooks there
+  shows in no diff. That was already so wherever Git ignored the file
+  (THREATMODEL item 2). Before this change, an untracked file showed only
+  as created, with a warning on every run whatever its content. Item 2's
+  words "often git-ignored" go to Nelson with the other protected text the
+  re-review listed.
+- **A vendored zipapp.** A tracked copy over the source byte limit still
+  makes the report say the analysis is incomplete.
+- **A zipapp untracked during a session.** A copy that a session untracked
+  and that sits on disk under a name differing only in case, or one whose
+  session base moved to before it was vendored, is set aside. It is the
+  running program either way.
+
+**Not changed.**
+- Detectors, severities, the gating table, fixtures, `tests/gates`, range
+  mode, the PreToolUse hook and the JSON schema.
+- The README's first screen and install text. The first screen waits for
+  Nelson (2026-11-08), and the release pull request takes the install
+  text. Only the README's test count moves.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- **`tests/test_first_week_fixes.py`, 25 tests.** Copied into a scratch
+  worktree of main `9b69183d`: 4 pass, 15 fail and 6 error. Four of the
+  21 that fail or error assert what main already does: a tracked, a staged
+  and another copy of the zipapp, and Git unable to answer. They fail there
+  only because main has no `_running_archive` to patch.
+- The full suite.
+- checkwash's own check of the pull request's range.
+- Three Claude review sub-agents reviewed the first version, and one the
+  second. This version answers their findings.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+Other platforms: NOT_RUN. The review of the second version ran its 18
+tests under WSL (Ubuntu 24.04, Python 3.12.3, Git 2.43.0), and all passed;
+this version's 25 ran on Windows only.

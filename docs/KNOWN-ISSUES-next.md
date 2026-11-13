@@ -3,7 +3,8 @@
 Nothing here is released yet. From the next release, each release gets one
 hosted verification on macOS and Linux
 ([RELEASING](RELEASING.md#hosted-release-verification),
-[D-204](../DECISIONS.md)). These rows are what it covers and what it does
+[D-204](../DECISIONS.md)), and two first-week behaviours change
+([D-205](../DECISIONS.md)). These rows are what they cover and what they do
 not.
 
 | Scope | Known limit and what it means for you |
@@ -13,6 +14,8 @@ not.
 | macOS performance | The two budget checks in `tests/gates/test_perf.py` (a 2,402-line test module with 200 weakened assertions under 1.5 s, 500 changed files under 3.5 s) have been skipped on macOS since 2026-10-01; D-170 kept that skip until a revisit before 1.0, and the maintainer kept it for 1.0 ([D-204](../DECISIONS.md)). They have not been verified on a Mac, and the Windows and Linux timings are not evidence of how fast checkwash is on a Mac. macOS still runs the 10-second pathological-file bound and the Git and JS/TS time budgets; Linux runs all of them. |
 | The Claude Code hooks on a real Mac | The hosted verification runs the hook handlers only inside the test suite, never under a real Claude Code session. A one-time manual try on a borrowed Mac, if made, is recorded as an observation by the maintainer, who makes it himself, not as release evidence. |
 | checkwash's own tests on macOS | The hosted verification's first run, on v0.12.0 after publication, failed on macOS in 14 entries (13 tests) of the maintainer's release-collector tests: their temporary directories sat under `/var`, a symlink on macOS, which the collector's path check refuses ([RELEASING](RELEASING.md#v0120-hosted-verification-after-publication-2026-11-11)). Those tests now take each temporary directory by its real path; the path check is unchanged. The fix was shown only on Linux, with a temporary directory reached through a symlink; it first runs on macOS in the next release's hosted verification. |
+| The zipapp in the repository root ([D-205](../DECISIONS.md)) | A check without a range and the Stop hook leave out the untracked zipapp checkwash runs from, with one stderr line, `checkwash: skipped <path>: the untracked zipapp this checkwash runs from`, when neither the compared commit nor, in the Stop hook, the session base holds a file at its path. A tracked or vendored copy, another copy of that name and range mode are read as before, so such a copy over the source byte limit still makes the report say the analysis is incomplete. |
+| Hook settings kept out of Git ([D-205](../DECISIONS.md)) | A local hook install (the default, or `--local`) adds a rule for `.claude/settings.local.json` to the `info/exclude` file Git names for the repository, when Git neither tracks nor ignores the file, and says so. The rule is anchored at the install folder. A tracked file is left alone and named, with how to untrack it. A change to an ignored file is in no diff checkwash reads, so the agent can change or remove the handlers out of view (THREATMODEL item 2). |
 
 # 0.12 candidate — 2026-11-06
 
