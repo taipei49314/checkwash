@@ -47,9 +47,33 @@ does. Its other 27 tests call the runner search directly: on main 26 fail
 with a `TypeError`, as main's search takes no path, and one because main
 reads the signature as a runner.
 
-Status before the merge: the branch is `claude/signature-block-runner-20261113`,
-from main `82b88866`. [TO FILL with the approval: the review, the checks and Nelson's
-approval of the L1 text.]
+Status before the merge: the branch was `claude/signature-block-runner-20261113`,
+from main `82b88866`.
+
+- **Review.** Three read-only Claude review sub-agents reviewed the first
+  version (`01775322`, `7a872262`), for bypasses, for code and tests, and
+  for documents and claims; one reviewed the second (`093f86c7`,
+  `468233a0`). Their findings are in D-207. `d7ffc93f`, which answers them,
+  was not reviewed again.
+- **Checks.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+  Windows CPython 3.11.9), on 2026-11-13, at `d7ffc93f`:
+  - The full suite (`pytest`, xdist `-n 8`), which holds the fixture cases
+    and `tests/gates`: 22,947 passed and 25 skipped, plus 67 subtests, with
+    no failure, counted from pytest's progress output.
+  - checkwash's own check of the range from main `82b88866` at
+    `--fail-on high`: pass, no finding.
+  - Forty one-line mutants of the change, each in its own copy: 33 fail
+    the new test file; D-207 names the seven that do not.
+  - The environments of D-207, with main's source and this branch's, on
+    Windows and on Linux (WSL2 Ubuntu 24.04, CPython 3.12.3), and the 70
+    signed PowerShell files of Windows PowerShell's own folders. GNU Make
+    4.4.1 ran the residual's shape on Windows.
+- **Approval.** At 2026-11-13T06:22:22Z Claude asked
+  「#604 的 L1（D-207、SPEC §2 兩句、THREATMODEL 185）核可，收據過了就合併嗎？」,
+  and at 06:31:24Z Nelson answered 「核可並合併」. Claude wrote the question
+  and both buttons. The answer approves D-207 with the two SPEC §2
+  sentences and THREATMODEL row 185 (L1). It also approves the merge, once
+  the receipt and the four required checks pass.
 
 The pull request's description records its PJU receipt. Not run: macOS and
 other platforms.
