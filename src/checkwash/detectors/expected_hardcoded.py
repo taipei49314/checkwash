@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import ast
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, make_fingerprint, unit_finding_name
 from checkwash.ir.model import IR, Unit, judged_as_test
 
 
@@ -68,6 +68,7 @@ def detect(ir: IR) -> list[Finding]:
         if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
+            finding_unit = unit_finding_name(unit)
             for assertion in _changed_after_assertions(unit):
                 if assertion.right_value is None or assertion.right_value not in new_literals:
                     continue
@@ -76,15 +77,15 @@ def detect(ir: IR) -> list[Finding]:
                         rule="EXPECTED_VALUE_HARDCODED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: expected value {assertion.right_value} equals a "
+                            f"{finding_unit}: expected value {assertion.right_value} equals a "
                             "constant newly introduced in prod in this same diff"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=None,
                         after=Evidence(text=assertion.text, span=assertion.span),
                         fingerprint=make_fingerprint(
-                            "EXPECTED_VALUE_HARDCODED", file.path, unit.qualname, assertion.text
+                            "EXPECTED_VALUE_HARDCODED", file.path, finding_unit, assertion.text
                         ),
                     )
                 )

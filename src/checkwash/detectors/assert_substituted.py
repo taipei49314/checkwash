@@ -38,7 +38,13 @@ replacing an assertion is routine when production changed under it (SPEC §5 E1)
 
 from __future__ import annotations
 
-from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    make_assertion_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
+)
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import expr_wraps, same_expr
 from checkwash.ir.expectation_identity import same_known_js_scalar
@@ -54,6 +60,7 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
@@ -149,18 +156,18 @@ def detect(ir: IR) -> list[Finding]:
                         rule="ASSERT_SUBSTITUTED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: an assertion was replaced by an unrelated one of "
+                            f"{finding_unit}: an assertion was replaced by an unrelated one of "
                             f"the same strength ({b.left} -> {a.left}); the original assertion is "
                             f"gone and the strength lattice cannot see it"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "ASSERT_SUBSTITUTED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                            "ASSERT_SUBSTITUTED", file.path, finding_unit, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="substituted",
-                            position=assertion_position(unit.before, b),
+                            position=unit_assertion_position(file, unit, unit.before, b),
                         ),
                     )
                 )

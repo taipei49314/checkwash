@@ -18,7 +18,13 @@ import math
 import operator
 import re
 
-from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    make_assertion_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
+)
 from checkwash.frontends.javascript.literals import comparable_operand, operand_names
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.expected_values import literal_value, same_value
@@ -152,6 +158,7 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
@@ -251,15 +258,15 @@ def detect(ir: IR) -> list[Finding]:
                     Finding(
                         rule="EXPECTED_VALUE_CHANGED",
                         severity="warn",
-                        message=f"{unit.qualname}: {message}",
+                        message=f"{finding_unit}: {message}",
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "EXPECTED_VALUE_CHANGED", file.path, unit.qualname, b.text,
+                            "EXPECTED_VALUE_CHANGED", file.path, finding_unit, b.text,
                             before=b.text, after=a.text, kind="expected_changed",
-                            position=assertion_position(unit.before, b),
+                            position=unit_assertion_position(file, unit, unit.before, b),
                         ),
                     )
                 )
@@ -303,6 +310,7 @@ def detect_derived(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
@@ -332,19 +340,19 @@ def detect_derived(ir: IR) -> list[Finding]:
                         rule="EXPECTED_VALUE_DERIVED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: expected value {b.right_value} replaced by an "
+                            f"{finding_unit}: expected value {b.right_value} replaced by an "
                             f"expression computed from the subject's own input "
                             f"({', '.join(shared)}) — the test no longer states what the "
                             f"answer should be"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "EXPECTED_VALUE_DERIVED", file.path, unit.qualname, b.text,
+                            "EXPECTED_VALUE_DERIVED", file.path, finding_unit, b.text,
                             before=b.text, after=a.text, kind="expected_derived",
-                            position=assertion_position(unit.before, b), context={"shared": list(shared)},
+                            position=unit_assertion_position(file, unit, unit.before, b), context={"shared": list(shared)},
                         ),
                     )
                 )

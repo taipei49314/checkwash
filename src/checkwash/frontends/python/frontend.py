@@ -198,6 +198,7 @@ class ParsedUnit:
     span: tuple[int, int]
     side: UnitSide
     shingles: frozenset[tuple[str, ...]] = frozenset()
+    source_unit: str = ""
 
 
 @dataclass
