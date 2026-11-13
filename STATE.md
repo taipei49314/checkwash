@@ -32,14 +32,40 @@ exemption released. [D-206](DECISIONS.md):
   misses a weakened helper without a note, on main as well.
 
 D-206, its SPEC paragraph with two SPEC sentences on hook output, and
-THREATMODEL rows 183 and 184 are L1, and wait for Nelson's approval.
+THREATMODEL rows 183 and 184 are L1, approved by Nelson (below).
 `tests/test_importer_search_skip.py` holds 39 tests. Its thirteen
 command-line tests, run with the command line from main `6c2b7669`'s tree
 (`4474b334`): twelve fail, as the run exits 2 or a hook reports the change
 not analysed; the thirteenth asserts what main already does, exit 2. Its
 other 26 tests call code main does not have.
 
-Status: [TO FILL: branch, head, receipt and review; Nelson's approval of L1.]
+Status before the merge: the branch is `claude/importer-search-skip-20261113`,
+from main `6c2b7669`.
+
+- **Review.** Three read-only Claude review sub-agents reviewed the first
+  version (`6ba50a02`), for bypasses, for code and tests, and for documents
+  and claims; one reviewed the second (`383a0906`). Their findings are in
+  D-206. `bc5d25e0`, which answers them, was not reviewed again.
+- **Checks.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+  Windows CPython 3.11.9), on 2026-11-13, at `bc5d25e0`:
+  - The full suite (`pytest`, xdist `-n 8`): 22,906 passed and 25 skipped,
+    plus 67 subtests, with no failure, counted from pytest's progress
+    output.
+  - checkwash's own check of the range from main `6c2b7669` at
+    `--fail-on high`: pass, no finding.
+  - Twenty one-line mutants of the change, each in its own copy, all fail
+    the new test file.
+  - The older gaps of THREATMODEL row 184, and the two oversized-file
+    exits, each reproduced on main `6c2b7669`.
+- **Approval.** At 2026-11-13T02:48:06Z Claude asked
+  「#603 的 L1（D-206、SPEC §9、THREATMODEL 183／184）核可，收據過了就合併嗎？」,
+  and at 02:50:44Z Nelson answered 「核可並合併」. Claude wrote the question
+  and both buttons. The answer approves D-206 with the SPEC §9 text and
+  THREATMODEL rows 183 and 184 (L1). It also approves the merge, once the
+  receipt and the four required checks pass.
+
+The pull request's description records its PJU receipt. Not run: other
+platforms.
 
 ## 2026-11-12: 0.13, first-week fixes (D-205)
 

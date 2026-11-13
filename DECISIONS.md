@@ -987,13 +987,26 @@ this version's 25 ran on Windows only.
 
 ## D-206 (2026-11-13): past its own bounds a changed test helper's importers are set aside, with a note; each helper's name is searched on its own, without the paths the diff changes
 
-**Approval.** [TO FILL before merge. `DECISIONS.md`, `SPEC.md` and
-`THREATMODEL.md` are maintainer text (AGENTS.md). The pull request asks
-Nelson to approve, by name and before it merges, this entry with the new §9
-paragraph of `SPEC.md` and its two edited §9 sentences on hook output,
-and THREATMODEL rows 183 and 184 (L1). Record here the question, who wrote
-it and its buttons, his answer and its time, as D-205's Approval paragraph
-does.]
+**Approval.** Claude wrote this entry in the pull request that records it,
+#603. `DECISIONS.md`, `SPEC.md` and `THREATMODEL.md` are maintainer text
+(AGENTS.md). So the pull request asked Nelson to approve, by name and
+before it merges, this entry with the new §9 paragraph of `SPEC.md` and its
+two edited §9 sentences on hook output, and THREATMODEL rows 183 and 184
+(L1).
+
+Claude described the change in the conversation, named the texts and
+linked the pull request, whose head was then
+`bc5d25e0d2a294d8f9cb6ab81b791e4605428f37`. At 2026-11-13T02:48:06Z Claude
+asked 「#603 的 L1（D-206、SPEC §9、THREATMODEL 183／184）核可，收據過了就合併嗎？」
+(approve #603's L1, D-206, SPEC §9 and THREATMODEL rows 183 and 184, and
+merge once the receipt passes?), and at 02:50:44Z he chose 「核可並合併」
+(approve and merge). Claude wrote the question and both buttons; the other
+was 「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
 
 **What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
 of 2026-11-12T15:05:30Z, and his words on Claude leading in fields he does
