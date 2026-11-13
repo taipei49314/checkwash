@@ -50,6 +50,41 @@ class UnreadSide:
         return f"not read, over the source byte limit: {self.described()}; it earns no repair evidence"
 
 
+@dataclass(frozen=True)
+class LinkSide:
+    """A virtual environment's own link that a working-tree run carries unfollowed (D-208).
+
+    Git lists the path as untracked, no compared commit holds the environment
+    directory, and on disk the path is a symbolic link directly in the
+    environment's `bin` or `Scripts` directory (not ending in `.py` in any
+    case), or its `lib64` link to `lib` beside a directory `lib`. The
+    environment is a directory other than the repository root that holds
+    `pyvenv.cfg` as a regular file. The diff holds the path with no bytes on
+    either side, since nothing follows a link: a path a detector must read, or
+    an environment pytest's collection can reach, refuses with `refusal()`,
+    and any other is set aside with `note()`.
+    """
+
+    path: str
+    environment: str
+
+    def described(self) -> str:
+        """`path` in the virtual environment `environment`, each as is unless it
+        would not print on one line (#346)."""
+        path = self.path if self.path.isprintable() else repr(self.path)
+        environment = self.environment if self.environment.isprintable() else repr(self.environment)
+        return f"{path} in the virtual environment {environment}"
+
+    def note(self) -> str:
+        """The stderr note for a link set aside."""
+        return f"skipped the link {self.described()}, which checkwash does not follow"
+
+    def refusal(self, reason: str = "a detector must read this path") -> EngineError:
+        """The engine error for a link the engine cannot set aside."""
+        return EngineError(f"strict snapshot cannot read the link {self.described()}: checkwash does "
+                           f"not follow a link, and {reason}")
+
+
 @dataclass
 class FileChange:
     path: str  # forward-slash normalized
@@ -60,6 +95,8 @@ class FileChange:
     synthetic: str | None = None  # marks halves of an expanded rename
     # Sides carried unread (#415); `before`/`after` is None for each of them.
     unread: tuple[UnreadSide, ...] = ()
+    # A virtual environment's own link (D-208): both sides are None.
+    links: tuple[LinkSide, ...] = ()
 
 
 class EngineError(Exception):

@@ -549,9 +549,12 @@ failures retain their engine-error behavior. Inert repository test startup
 and a complete bounded inventory (fewer than 64 nonempty Python sources)
 reject conftest/package effects and unproved sibling test modules. Worktree
 inventory includes untracked/hidden source trees, so it can withhold precision
-when the committed range has a smaller complete snapshot. A directory symlink
-in it is an opaque directory, as a submodule is (#414). This is not a
-guarantee about arbitrary installed plugins or dynamic import hooks.
+when the committed range has a smaller complete snapshot. A directory symlink in it is an opaque directory, as a submodule is (#414),
+except a virtual environment's `lib64` link to `lib` beside a directory `lib`,
+which the walks pass over as its files are listed under `lib`; a virtual
+environment's own non-directory links in `bin` or `Scripts` are left out of it
+(§9, D-208). This is not a guarantee about arbitrary installed plugins or
+dynamic import hooks.
 
 The context also probes pytest.ini, .pytest.ini, pyproject.toml, tox.ini,
 setup.cfg, pytest.toml and .pytest.toml at source ancestors. Empty pytest
@@ -1253,7 +1256,7 @@ Matching is **path-segment anchored**, never substring. Bare substrings made
 `build/` match `mybuild/` and `dist/` match `redist/`, which silently deleted
 real source trees from the analysis and made a directory rename a bypass.
 
-A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `--format json` prints then, and what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration. One bounded read answers the runner-shape question of §2 for an unread side: its first 200 bytes, the only bytes the shell-shebang test reads, kept from the working-tree read or streamed from Git and checked against the blob's object id. A side whose bytes start with a shell shebang makes its path runner-shaped, as §2 reads a shebang, whatever its suffix, and the refusal names that side; as in §2, a Python module or a JS/TS test path is never runner-shaped, and refuses by its own rule. A file with no extension no longer refuses for the shebang it may hold, except when a side's bytes were not read, as for a Git side over 64,000,000 bytes, which is not streamed; another rule above can still make it a path a detector must read. Those bytes answer nothing else: they reach no parser, no runner-content check and no repair evidence, and no output carries them. The run also refuses in the same way when the analysis reads the path as context; the runtime-provider pass does not read a dropped path for a shebang its bytes have ruled out. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note. The managed PreToolUse hook (§9, D-189) neither refuses nor drops: when either side of its one change, the working-tree copy or the proposed bytes, is over the limit, it asks, naming path, side, size and limit, since padding a test past the limit and editing the padding away would otherwise pass unseen; the Stop hook blocks on a head or worktree side for the same reason (#456).
+A changed side over the 1,000,000-byte source limit is unread. The run exits 2, naming path, side, size and limit, when a detector must read the path; §9 says what `--format json` prints then, and what `check --format hook-json` reports instead. Such paths are test, conftest, CI, guardrail, snapshot, JS test and setup, runner-shaped, test-command, out-of-scope and root `scripts/` files, any Python module and any pytest configuration. One bounded read answers the runner-shape question of §2 for an unread side: its first 200 bytes, the only bytes the shell-shebang test reads, kept from the working-tree read or streamed from Git and checked against the blob's object id. A side whose bytes start with a shell shebang makes its path runner-shaped, as §2 reads a shebang, whatever its suffix, and the refusal names that side; as in §2, a Python module or a JS/TS test path is never runner-shaped, and refuses by its own rule. A file with no extension no longer refuses for the shebang it may hold, except when a side's bytes were not read, as for a Git side over 64,000,000 bytes, which is not streamed; another rule above can still make it a path a detector must read. Those bytes answer nothing else: they reach no parser, no runner-content check and no repair evidence, and no output carries them. The run also refuses in the same way when the analysis reads the path as context; the runtime-provider pass does not read a dropped path for a shebang its bytes have ruled out. Otherwise the change is dropped: no findings, no repair evidence. An oversized root `poetry.lock` or `uv.lock` at the base is skipped with a stderr note. The managed PreToolUse hook (§9, D-189) neither refuses nor drops: when either side of its one change, the working-tree copy or the proposed bytes, is over the limit, it asks, naming path, side, size and limit, since padding a test past the limit and editing the padding away would otherwise pass unseen; the Stop hook blocks on a head or worktree side for the same reason (#456). In a working-tree run, a virtual environment's own untracked link is judged by the same question, whether a detector must read its path (test, conftest and test-support paths included), together with whether pytest's collection can reach the environment, with no bytes on either side and without the shebang question; its refusal is an engine error, not a size refusal, so `--format json` prints nothing and the Stop hook does not block (§9, D-208).
 
 ## 4c. The task contract is base-side too
 
@@ -2077,6 +2080,43 @@ every format, including `json`, `sarif` and `hook-json`:
 `checkwash: skipped <path>: the untracked zipapp this checkwash runs from`.
 It is not in the diff, so no finding or `unread` entry names it. A tracked
 copy, another file of that name and range mode are read as before.
+
+**A virtual environment's own links (D-208, 0.13).** checkwash follows no
+symbolic link. A virtual environment's own link is one directly in
+`<D>/bin` or `<D>/Scripts` whose name does not end in `.py` in any case, or
+`<D>/lib64` linking to `lib` beside a directory `<D>/lib`, where `<D>` is a
+directory other than the repository root that holds `pyvenv.cfg` as a
+regular file: on Linux and macOS, `python -m venv` links the environment's
+interpreter there (`bin/𝜋thon` included in Python 3.14), and on 64-bit Linux
+`lib64` to `lib`. Each test is an `lstat`, or a `readlink` on `lib64`.
+`check` without a range, the Stop hook's verdict diff and the
+session-commits analysis carry such a link, when Git lists it as untracked
+(`??`) and no compared commit holds `<D>` (`HEAD` and, in the Stop hook, the
+session base; if Git cannot say, the link is read and refused), as a change
+with no bytes on either side. When a detector must read its path — by §4b's
+rule for a side over the source byte limit (generated-output paths keep
+§4b's scope and role exemption) together with non-artifact test, conftest
+and test-support paths — or when pytest's collection can enter `<D>`
+(`testpaths`, `addopts`, shell/Makefile/workflow runner commands or
+`--collect-in-virtualenv`), the
+run stops with an engine error (exit 2; `check --format hook-json` reports
+it as any engine error, with no `decision`, after #456's size block):
+`strict snapshot cannot read the link <path> in the virtual environment <D>:
+checkwash does not follow a link, and <reason>`, where `<reason>` is `a
+detector must read this path` or `pytest's collection can reach this
+environment`. Any other such link is set aside before any pass, earns no
+repair evidence, and the verdict diff's listing names it on stderr, in every
+format: `checkwash: skipped the link <path> in the virtual environment <D>,
+which checkwash does not follow`. It is not in the diff, so no finding or
+`unread` entry names it. The working tree's inventory leaves out such a link
+in `<D>/bin` or `<D>/Scripts` that does not link to a directory, untracked,
+ignored or tracked alike; a link to a directory stays an opaque directory
+(#414), except `<D>/lib64` linking to `lib` beside a directory `<D>/lib`,
+which the walks pass over since its files are those of `lib`. Every other
+link is read, and refused, as before: elsewhere, in a directory a compared
+commit holds, tracked and changed, staged, beside a `pyvenv.cfg` that is not
+a regular file, at the repository root, or a link a range adds, changes or
+reads in a pass.
 
 **Helper importers left unread (D-206, 0.13).** A changed test or conftest
 file sends the expected-value pass looking for the unchanged tests that

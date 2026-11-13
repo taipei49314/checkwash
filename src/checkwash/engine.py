@@ -30,7 +30,13 @@ from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
 from checkwash.policy_shadow import config_transition, shadow_baseline
 from checkwash.oracle_credit import mark_contexts
-from checkwash.collection_inventory import _runner as _collection_runner, collection_inventory_changes, collection_sources, opaque_reached
+from checkwash.collection_inventory import (
+    _runner as _collection_runner,
+    collection_inventory_changes,
+    collection_sources,
+    environment_reached,
+    opaque_reached,
+)
 from checkwash.conftest_context import ConftestContext
 from checkwash.contract import Contract
 from checkwash.deps import MANIFESTS
@@ -339,6 +345,75 @@ def _set_aside_unread(changes: list[FileChange], config: Config, scope_allow: li
         if any(_detector_must_read(path, config, change, scope_allow, listed_setup) for path in paths(change)):
             raise _refused_side(change, paths(change)).refusal()
     return readable, unread
+
+
+def _set_aside_links(changes: list[FileChange], config: Config, scope_allow: list[str],
+                     root_reader=None, root_path_lister=None,
+                     root_batch_reader=None) -> tuple[list[FileChange], list[FileChange]]:
+    """(the other changes, a virtual environment's own links set aside) (D-208).
+
+    A working-tree run carries an untracked link in a virtual environment's
+    `bin` or `Scripts` directory, or its `lib64`, with no bytes on either
+    side, since nothing follows a link (`gitio.git._environment_links`). If
+    a detector must read its path, by the rule a side over the source byte
+    limit meets (#415) together with test, conftest and test-support paths, or
+    if pytest's collection can enter the environment (`testpaths`, `addopts`,
+    runner targets or `--collect-in-virtualenv`), the run refuses, naming it.
+    Otherwise it is set aside before any pass: no detector reads it and it
+    earns no repair evidence. The rule's question of a shell shebang on a side
+    whose prefix was not read (#455) asks nothing of such a link: a link holds
+    no bytes checkwash reads, and an untracked link reaches no commit, so no
+    required check runs it.
+
+    The setup files the base package.json lists are asked after the first
+    pass, as in `_set_aside_unread`.
+    """
+    readable = [change for change in changes if not change.links]
+    linked = [change for change in changes if change.links]
+    if not linked:
+        return readable, linked
+
+    def _link_must_read(change: FileChange, listed_setup=None) -> bool:
+        path = change.path.replace("\\", "/")
+        if path.lower().endswith(".py") or _detector_must_read(path, config, change, scope_allow, listed_setup):
+            return True
+        if is_artifact(path):
+            return False
+        return config.role_of(path) in ("test", "conftest") or is_test_support_path(path)
+
+    def refuse_must_read(listed_setup=None) -> None:
+        for change in linked:
+            if _link_must_read(change, listed_setup):
+                raise change.links[0].refusal()
+
+    refuse_must_read()
+    listed: list[frozenset[str]] = []
+
+    def listed_setup() -> frozenset[str]:
+        if not listed:
+            listed.append(listed_setup_files(_base_manifest(readable, root_reader)()))
+        return listed[0]
+
+    refuse_must_read(listed_setup)
+    head_sources: dict[str, bytes] = {}
+    if root_path_lister is not None and (root_batch_reader is not None or root_reader is not None):
+        files, _opaque = split_inventory(root_path_lister())
+        wanted = collection_sources(path for path in files if isinstance(path, str))
+        fetched = root_batch_reader(wanted) if root_batch_reader is not None else {
+            path: root_reader(path) for path in wanted
+        }
+        head_sources = {path: data for path, data in fetched.items() if isinstance(data, bytes)}
+    elif root_reader is not None:
+        head_sources = {
+            path: data for path in sorted(_PYTEST_CONFIGS)
+            if path in collection_sources((path,)) and isinstance(data := root_reader(path), bytes)
+        }
+    environments = sorted({link.environment for change in linked for link in change.links})
+    reached = environment_reached(environments, head_sources, readable)
+    if reached is not None:
+        first = next(link for change in linked for link in change.links if link.environment == reached)
+        raise first.refusal("pytest's collection can reach this environment")
+    return readable, linked
 
 
 def _refused_side(change: FileChange, paths: list[str]) -> UnreadSide:
@@ -732,6 +807,9 @@ def build_ir(
     root_reader = _guard_unread_reads(root_reader, unread_changes)
     head_reader = _guard_unread_reads(head_reader, unread_changes)
     root_batch_reader = _guard_unread_reads(root_batch_reader, unread_changes, batch=True)
+    # After unread sides so #456's Stop-hook size block still wins over a refused link (D-208).
+    changes, _linked = _set_aside_links(changes, config, scope_allow or [], root_reader,
+                                        root_path_lister, root_batch_reader)
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
         changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]

@@ -413,7 +413,8 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
         changes = list_session_changes(args.repo, window.base)
         before = GitSnapshot(args.repo, window.base, side="base")
         leg_readers = {**readers, "pytest_configs": PairedPytestConfigs(
-            before, WorktreePytestConfigs(readers["root_snapshot"], before, changes))}
+            before, WorktreePytestConfigs(readers["root_snapshot"], before,
+                                          [change for change in changes if not change.links]))}
         leg = _analyse(args, changes, window.base,
                        base_label=rev_parse(args.repo, window.base), head_label="worktree",
                        quiet=True, **leg_readers)
@@ -538,7 +539,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
         worktree_snapshot = WorkingTreeSnapshot(repo)
         before = GitSnapshot(repo, base, side="base")
-        pytest_configs = PairedPytestConfigs(before, WorktreePytestConfigs(worktree_snapshot, before, changes))
+        # A virtual environment's own link has no bytes on either side, and
+        # the engine refuses or sets it aside before the config evidence (D-208).
+        pytest_configs = PairedPytestConfigs(before, WorktreePytestConfigs(
+            worktree_snapshot, before, [change for change in changes if not change.links]))
         head_reader = worktree_snapshot.read
         head_searcher = worktree_snapshot.search
         root_snapshot = worktree_snapshot
@@ -564,6 +568,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         return run
     ir, findings, verdict, config = run.ir, run.findings, run.verdict, run.config
     diagnostics, report_context = run.diagnostics, run.report_context
+    # A virtual environment's own links the engine set aside (D-208): it
+    # refuses one a detector must read, so every one left was set aside.
+    for change in changes:
+        for link in change.links:
+            write_text(f"checkwash: {link.note()}\n", sys.stderr)
 
     # Sides over the source byte limit that no detector must read (#415).
     # Json, sarif and term name them too, sorted; hook-json and --emit-ir
@@ -812,7 +821,7 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
     try:
         before = WorkingTreeSnapshot(repo).read(rel, unread_oversized=True)
     except EngineError:
-        return {}  # a directory, a link, a path leaving the repository: the call fails or the Stop sees it
+        return {}  # a directory, a link, a path leaving the repository: the call fails, or Stop sees an untracked one not set aside
     if isinstance(before, UnreadSide):
         return ask(oversized_reason(before))
     after = proposed_bytes(tool, tool_input, before)

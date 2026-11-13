@@ -13,8 +13,8 @@ import subprocess
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-from checkwash.change import EngineError, FileChange, SourceOverLimit, UnreadSide
-from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
+from checkwash.change import EngineError, FileChange, LinkSide, SourceOverLimit, UnreadSide
+from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot, environment_of_link
 
 
 class GitError(Exception):
@@ -345,11 +345,43 @@ def list_worktree_changes(repo: str, *, base: str | None = None, notes: list[str
     The untracked zipapp checkwash runs from is left out
     (`_set_aside_running_zipapp`). It must be absent at `base` and at each
     commit in `absent_at`, such as the session base of a Stop run. When
-    `notes` is a list, a line naming it is appended.
+    `notes` is a list, a line naming it is appended. A virtual
+    environment's own untracked links come last, each a change with no
+    bytes for the engine to set aside or refuse (`_environment_links`).
     """
     base = resolve_commit(repo, "HEAD" if base is None else base)
     entries = _set_aside_running_zipapp(repo, (base, *absent_at), _worktree_status(repo, base), notes)
-    return _worktree_changes(repo, base, [(path, "D" in xy) for xy, path in entries])
+    entries, links = _environment_links(repo, (base, *absent_at), entries)
+    return [*_worktree_changes(repo, base, [(path, "D" in xy) for xy, path in entries]), *links]
+
+
+def _environment_links(repo: str, commits: tuple[str, ...],
+                       entries: list[tuple[str, str]]) -> tuple[list[tuple[str, str]], list[FileChange]]:
+    """`entries` less a virtual environment's own untracked links, and those links as changes (D-208).
+
+    On Linux and macOS `python -m venv` links the environment's interpreter
+    to one outside the repository, and the working-tree reader refuses every
+    link, so an environment Git did not ignore stopped the run (re-review
+    ND-02). Only an untracked record (`??`) in an environment `<D>` that no
+    commit in `commits` holds qualifies, so planting `pyvenv.cfg` inside a
+    tracked directory cannot qualify its links; if Git cannot say, the path
+    is read. A tracked link, and every link in range mode, is read, and
+    refused, as before. Each link becomes a change with no bytes on either
+    side; the engine sets it aside, or refuses it when a detector must read
+    its path or pytest's collection can reach `<D>`.
+    """
+    kept: list[tuple[str, str]] = []
+    links: list[FileChange] = []
+    held: dict[str, bool] = {}
+    for xy, path in entries:
+        environment = environment_of_link(repo, path) if xy == "??" else None
+        if environment is not None and environment not in held:
+            held[environment] = _held_at_any(repo, commits, environment)
+        if environment is None or held[environment]:
+            kept.append((xy, path))
+        else:
+            links.append(FileChange(path, "added", None, None, links=(LinkSide(path, environment),)))
+    return kept, links
 
 
 def _running_archive() -> str | None:
@@ -412,13 +444,16 @@ def list_session_changes(repo: str, since: str, *, notes: list[str] | None = Non
     blob; its after side is the working tree, or absent where status says
     deleted or a committed path is gone from HEAD. The untracked zipapp
     checkwash runs from is left out as in `list_worktree_changes`, when
-    neither `since` nor HEAD holds its path.
+    neither `since` nor HEAD holds its path, and so are a virtual
+    environment's own untracked links, which come last as changes with no
+    bytes (D-208).
     """
     since = resolve_commit(repo, since)
     head = resolve_commit(repo, "HEAD")
     committed = _committed_paths(repo, since, head)
     entries = _set_aside_running_zipapp(repo, (since, head), _worktree_status(repo, head), notes)
-    listed = {path for _, path in entries}
+    entries, links = _environment_links(repo, (since, head), entries)
+    listed = {path for _, path in entries} | {change.path for change in links}
     items = [(path, "D" in xy) for xy, path in entries]
     for path in committed:
         if path not in listed:
@@ -426,7 +461,7 @@ def list_session_changes(repo: str, since: str, *, notes: list[str] | None = Non
             # Only presence is asked, so no prefix is streamed (#455).
             items.append((path, _read_blob(repo, head, path, side="head", unread_oversized=True,
                                            stream_prefix=False) is None))
-    return _worktree_changes(repo, since, sorted(items))
+    return [*_worktree_changes(repo, since, sorted(items)), *links]
 
 
 def session_merge_base(repo: str, a: str, b: str) -> str | None:
