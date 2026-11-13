@@ -13,12 +13,18 @@ This implements the standing CheckWash/PJU rule recorded in
 
 All of a pull request's product execution happens on **LAPTOP-01AGNPJU**. The
 existing `quality-candidate-intake.yml` manual entry also accepts a
-receipt-verification mode. This bridge's hosted jobs read data and publish
-GitHub check runs; they do not execute candidate product code, tests, builds or Action
-helpers. The previous hosted test workflows remain disabled. The one hosted
-workflow that runs the product is the release-time
+receipt-verification mode (`mode=receipt`, taking `compact_receipt` for
+ordinary PRs since D-209 or `receipt_commit` for legacy/full packet
+verification). This bridge's hosted jobs read data and publish GitHub check
+runs; they do not execute candidate product code, tests, builds or Action
+helpers. The previous hosted test workflows remain disabled, and
+`quality-candidate-intake.yml` is excluded from its own `pull_request.paths`
+trigger so untrusted PR workflow edits do not run jobs on `pull_request`. The
+one hosted workflow that runs the product is the release-time
 [hosted release verification](RELEASING.md#hosted-release-verification),
-which is not part of this bridge. The repository ruleset is unchanged.
+which is not part of this bridge. Repository ruleset `22032046` and
+`action/required-ruleset.json` bind required context `checkwash` to GitHub
+Actions (`integration_id: 15368`).
 
 ## Trust and scope
 
@@ -62,19 +68,44 @@ content. These refusals hold
 only for receipts verified at a trusted ref that contains them, so from
 D-194's merge on, ordinary receipts are dispatched only from main.
 
-Only the publisher job receives `checks: write`. It creates these completed
-checks for the tested head with GitHub Actions' identity:
+Only the publisher job receives `checks: write`. In legacy `receipt` mode (and
+in the release bridge's `pr` stage) it creates four completed checks for the
+tested head with GitHub Actions' identity (`checkwash` plus the three
+`candidate assertion contract (...)` contexts).
 
-- `checkwash` — the published pinned Action, actual high-severity threshold,
-  actual PR base/head and successful install/check exits.
-- `candidate assertion contract (source)`.
-- `candidate assertion contract (wheel)` — includes the corresponding sdist.
-- `candidate assertion contract (pyz)`.
+Since D-209 (2026-11-13), ordinary non-release PRs use **`mode=receipt` with
+`compact_receipt`** (`collect_pju_receipts.py --compact` ->
+`pju_receipt_bridge.py verify-compact` / `publish-compact`):
 
-The three contract contexts keep their existing GitHub Actions App binding.
+- **Execution on PJU (`~6–8 min`, zero `evidence/*` branches):** runs the full
+  suite with 16 xdist workers (`COMPACT_PYTEST_WORKERS = "16"`), which already
+  executes the owned assertion contracts in-process; replays the pinned Action
+  and, when `action/`/`src/`/`pyproject.toml` differs from the pinned Action,
+  replays the candidate Action concurrently; builds `.whl`, `.tar.gz` and
+  `checkwash.pyz`, checks exact Git member byte-identity in-process via
+  `tools/release_inventory.py`, installs the wheel into a fresh venv, and runs
+  `demo` on both the installed wheel and `checkwash.pyz`. Raw logs stay in the
+  local PJU receipt directory; only a ~3–4 KB canonical single-line JSON digest
+  receipt and its SHA256 are passed to `workflow_dispatch` (adding zero bytes
+  and zero `evidence/*` branches to the product repository; historical
+  `evidence/*` branches remain untouched).
+- **Independent hosted verification (`verify-compact` / `publish-compact`):**
+  refuses release heads (`validate_ordinary_head`), checks live open PR
+  head/base/tree, recomputes `src_tree`, `source_package_sha256`, contract
+  digests, Action YAML/run-block/engine digests and candidate closure digests
+  directly from checked-out Git blobs, enforces exact equality between JUnit's
+  testcase count and the documented suite count across `README.md`,
+  `CONTRIBUTING.md` and `docs/launch.md` (`>= 23,000`), self-seals
+  `workflow_dispatch` to `refs/heads/main` once `verify-pju-compact` is on
+  `main`, and publishes the required `checkwash` check run (`integration_id:
+  15368`, `external_id = pju-compact:<sha256>:checkwash`). Release PRs still
+  use `tools/collect_pju_release.py` and `tools/pju_release_bridge.py` with
+  full `3x283` distribution CLI qualification and artifact inventories.
+
 The publisher's job name is not a required check name; skipped workflow jobs
 cannot masquerade as successful product checks. Merge uses the exact verified
-head only after the required checks are read back with their expected source.
+head only after the required check is read back with its expected GitHub
+Actions App source (`15368`).
 
 The Action result is labelled **PJU local composite replay**, not a GitHub
 runner execution. Python/OS versions absent from the local receipt are
