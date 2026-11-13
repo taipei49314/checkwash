@@ -401,6 +401,8 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
     nothing is matched away. A block leaves the note to a later Stop, so the
     second leg never delays a block.
     """
+    from checkwash.pretool import incomplete_reason
+
     if window.missing is not None:
         return ("checkwash: commits made during this session were not analysed, because "
                 f"{window.missing}. The working tree was checked against HEAD.")
@@ -419,11 +421,15 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
         return unread + f"Engine error: {type(exc).__name__}: {exc}"
     if isinstance(leg, int):
         return unread + "Their policy could not be read."
+    # Helpers whose importers the commits' analysis left unread (D-206):
+    # where this leg's engine error used to say "not analysed".
+    gaps = leg.report_context.importer_gaps
+    notes = [incomplete_reason(gaps, "checkwash: commits made during this session: ")] if gaps else []
     found = _visible(leg)
-    if not found:
-        return None
-    return (f"checkwash: commits made during this session hold {len(found)} finding(s) at or above "
-            f"fail_on that this Stop does not block; the required check will judge them: {_listed(found)}.")
+    if found:
+        notes.append(f"checkwash: commits made during this session hold {len(found)} finding(s) at or above "
+                     f"fail_on that this Stop does not block; the required check will judge them: {_listed(found)}.")
+    return "\n".join(notes) or None
 
 
 def _listed(found: list, limit: int = 5) -> str:
@@ -567,6 +573,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         write_text(f"checkwash: {side.note()}\n", sys.stderr)
     for gap in report_context.coverage_gaps:
         write_text(f"checkwash: {gap.message()}\n", sys.stderr)
+    # Changed test helpers whose unchanged importers the expected-value pass
+    # did not read (D-206). Sarif and term name them too, and hook-json's
+    # systemMessage on a pass; json stdout and --emit-ir keep their bytes.
+    for gap in report_context.importer_gaps:
+        write_text(f"checkwash: {gap}\n", sys.stderr)
     if args.coverage_report:
         if args.coverage_report == "-":
             write_text("error: --coverage-report requires a file path, not stdout\n", sys.stderr)
@@ -586,6 +597,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         # exit 0 either way (non-zero would read as a hook failure).
         import json as _json
 
+        from checkwash.pretool import incomplete_reason
+
         payload: dict[str, str] = {}
         if verdict == "block":
             visible = _visible(run)
@@ -603,11 +616,16 @@ def _cmd_check(args: argparse.Namespace) -> int:
                 payload = {"decision": "block", "reason": _block_reason(visible)}
         else:
             clear_stop(repo, hook_input)
+            # A pass that left a changed helper's importers unread says so,
+            # as the engine error it replaces did (D-206).
+            notes = [incomplete_reason(report_context.importer_gaps)] if report_context.importer_gaps else []
             if window is not None:
                 # The session note is for a pass only (#418 ruling 2 and 4).
                 note = _session_note(args, window, readers)
                 if note is not None:
-                    payload["systemMessage"] = note
+                    notes.append(note)
+            if notes:
+                payload["systemMessage"] = "\n".join(notes)
         _write_machine((_json.dumps(payload) if payload else "{}") + "\n")
         return 0
     else:
@@ -761,8 +779,9 @@ def _pre_tool_unanalysed(state: dict, detail: str) -> dict:
 def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
     """What `hook pre-tool-use` prints for one tool call (D-189)."""
     from checkwash.pretool import (
-        TOOLS, WEAKENING_RULES, ProposedTree, ask, is_judged_test, oversized, oversized_reason,
-        parses, proposed_bytes, proposed_change, repository_path, weakening_reason, writes_python,
+        TOOLS, WEAKENING_RULES, ProposedTree, ask, incomplete_reason, is_judged_test, oversized,
+        oversized_reason, parses, proposed_bytes, proposed_change, repository_path, weakening_reason,
+        writes_python,
     )
 
     data = hook_input.data if hook_input is not None else None
@@ -825,7 +844,16 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
     threshold = SEVERITY_ORDER["high"]
     found = sorted((f for f in run.findings if f.rule in WEAKENING_RULES and not f.allowlisted
                     and SEVERITY_ORDER[f.severity] >= threshold), key=lambda f: f.sort_key())
-    return ask(weakening_reason(found)) if found else {}
+    if found:
+        return ask(weakening_reason(found))
+    # Importers the expected-value pass left unread (D-206): the user is told,
+    # and under the base policy's `on_engine_error = "block"` the hook asks, as
+    # it does for an edit it could not analyse.
+    gaps = run.report_context.importer_gaps
+    if not gaps:
+        return {}
+    reason = incomplete_reason(gaps)
+    return ask(reason) if run.config.on_engine_error == "block" else {"systemMessage": reason}
 
 
 

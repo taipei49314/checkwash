@@ -73,14 +73,16 @@ def render(
     suppressed = [f for f in findings if f.allowlisted]
     blocking = verdict == "block"
     coverage_gaps = context.coverage_gaps if context is not None else []
+    importer_gaps = context.importer_gaps if context is not None else []
     unread_sides = sorted_unread(unread)
 
     if not visible and not suppressed:
         head = "checkwash: no known tampering pattern detected"
         # A pass that did not read a changed file must not look like one
         # that read every file (#454): an unread side switches the head as a
-        # coverage gap does. With findings the head is unchanged.
-        if coverage_gaps or unread_sides:
+        # coverage gap does, and so do importers left unread (D-206). With
+        # findings the head is unchanged.
+        if coverage_gaps or importer_gaps or unread_sides:
             head = "checkwash: analysis incomplete; no known tampering pattern detected"
             lines.append(_c("33", sym["warn"] + " " + head, color))
         else:
@@ -135,6 +137,8 @@ def render(
         lines.append(_c("33", "! " + message, color))
     for gap in coverage_gaps:
         lines.append(_c("33", "! " + gap.message(), color))
+    for gap in importer_gaps:
+        lines.append(_c("33", "! " + gap, color))
     for side in unread_sides:
         lines.append(_c("33", "! " + side.note(), color))
     if ir.skipped_files:

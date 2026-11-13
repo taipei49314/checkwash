@@ -85,6 +85,8 @@ def findings_to_sarif(
                     "region": {"startLine": gap.line},
                 }}]
             notifications.append(notification)
+        # Importers left unread name no line of the head (D-206).
+        notifications.extend({"level": "warning", "message": {"text": gap}} for gap in context.importer_gaps)
     # Unread sides follow the coverage gaps in the same invocation (#454).
     notifications.extend(_unread_notification(side) for side in sorted_unread(unread))
     if notifications:

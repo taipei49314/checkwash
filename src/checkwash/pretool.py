@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from checkwash.change import SHEBANG_PREFIX_BYTES, EngineError, FileChange, UnreadSide
+from checkwash.change import SHEBANG_PREFIX_BYTES, FileChange, SearchHitLimit, UnreadSide
 from checkwash.gitio.snapshot import _SKIP, MAX_SEARCH_HITS, MAX_SOURCE_BYTES, WorkingTreeSnapshot
 from checkwash.roles import collectable
 
@@ -206,17 +206,19 @@ class ProposedTree(WorkingTreeSnapshot):
             modes[self.path] = b"100644"
         return modes
 
-    def search(self, needles):
-        hits = super().search(needles)  # an existing `path` is read through read()
+    def search(self, needles, exclude=frozenset()):
+        # An existing `path` is read through read(); `exclude` as in the parent.
+        hits = super().search(needles, exclude=exclude)
         if not self.created or not needles or not self.path.endswith(".py"):
             return hits
-        if "" not in needles and any(d in _SKIP or d.startswith(".") for d in self.path.split("/")[:-1]):
+        if "" not in needles and (self.path in exclude
+                                  or any(d in _SKIP or d.startswith(".") for d in self.path.split("/")[:-1])):
             return hits
         data = self.proposed
         if data and ("" in needles or any(n.encode("utf-8") in data for n in needles)):
             hits.append(self.path)
             if len(hits) >= MAX_SEARCH_HITS:
-                raise EngineError("strict snapshot importer search exceeds the hit limit")
+                raise SearchHitLimit("strict snapshot importer search exceeds the hit limit")
         return hits
 
 
@@ -307,6 +309,19 @@ def weakening_reason(found: list) -> str:
 def oversized_reason(side: UnreadSide) -> str:
     return _shown(f"checkwash: this edit was not analysed: {side.described()} is over the source byte "
                   "limit, so a weakened test in it would not be seen. ") + _footer()
+
+
+def incomplete_reason(gaps: list[str], lead: str = "checkwash: ") -> str:
+    """A hook's note that helper importers were left unread (D-206).
+
+    The PreToolUse hook gives it when it does not ask for a weakening (or
+    asks with it, under `on_engine_error = "block"`), and the Stop hook on a
+    pass, for its own check and for the session's commits. Each gap leads
+    with its reason, so a cut at 1,200 characters, marked `…`, takes helper
+    names first.
+    """
+    text = _shown(lead + "; ".join(gaps))
+    return text if len(text) <= _REASON_MAX_CHARS else text[:_REASON_MAX_CHARS - 1] + "…"
 
 
 def unanalysed_reason(rel: str, detail: str) -> str:
