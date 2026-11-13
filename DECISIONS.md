@@ -1440,12 +1440,25 @@ macOS and other platforms: NOT_RUN.
 
 ## D-208 (2026-11-13): a virtual environment's own links: a working-tree run sets aside an untracked one, and the working tree's listing and walks leave out non-directory ones in bin or Scripts and pass over lib64
 
-**Approval.** [TO FILL before merge. `DECISIONS.md`, `SPEC.md` and
-`THREATMODEL.md` are maintainer text (AGENTS.md). The pull request asks
-Nelson to approve, by name and before it merges, this entry with the new
-§9 paragraph and the §2b and §4b clauses of `SPEC.md`, and THREATMODEL rows
-128, 180 and 186 (L1). Record here the question, who wrote it and its
-buttons, his answer and its time, as D-207's Approval paragraph does.]
+**Approval.** Claude drafted this entry and Antigravity finished it in the
+pull request that records it, #605. `DECISIONS.md`, `SPEC.md` and
+`THREATMODEL.md` are maintainer text (AGENTS.md). So the pull request asked
+Nelson to approve, by name and before it merges, this entry with the new §9
+paragraph and the §2b and §4b clauses of `SPEC.md`, and THREATMODEL rows 128,
+180 and 186 (L1).
+
+Antigravity opened the pull request, whose head was then
+`bc729cf12b143e2208f21cf1a0b7b171239d5ac5`. At 2026-11-13T11:56:55Z Antigravity
+asked 「#605 的 L1（D-208、SPEC §9／§2b／§4b、THREATMODEL 128／180／186）核可，收據過了就合併嗎？」
+(approve #605's L1, D-208, the SPEC §9, §2b and §4b text and THREATMODEL rows
+128, 180 and 186, and merge once the receipt passes?), and at 12:30:39Z he
+chose 「核可並合併」 (approve and merge; offered with `(Recommended)`).
+Antigravity wrote the question and both options; the other was 「我先看 PR」
+(let me look at the pull request first).
+
+The answer approves the texts as they stand at that commit. It also approves
+the merge, once the pull request's PJU receipt and the four required checks
+pass. This paragraph is the only change made to the entry after it.
 
 **What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
 of 2026-11-12T15:05:30Z and the scope Claude chose for 0.13. D-207 took the

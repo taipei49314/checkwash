@@ -50,22 +50,22 @@ tree: 19 fail, and the other 3 assert refusals main already makes; across
 all 93 tests against main's `src` (with the four new symbols stubbed), 80
 fail and 13 assert refusals and opaque-directory rules main already keeps.
 
-Status before the merge: the branch is `claude/venv-links-20261113`, from
+Status before the merge: the branch was `claude/venv-links-20261113`, from
 main `0f054eef`.
 
 - **Review.** Three read-only Claude review sub-agents reviewed the first
   version (`78696e87`), for bypasses, for code and tests, and for documents
   and claims; one read-only review sub-agent reviewed the second (`091c85f5`,
-  `40d7271b`). Their findings are in D-208. `6fe1961e`, which answers the code
-  and test findings, was not reviewed again.
+  `40d7271b`). Their findings are in D-208. `bc729cf1` (`6fe1961e` for the
+  code and tests), which answers them, was not reviewed again.
 - **Checks.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
-  Windows CPython 3.11.9), on 2026-11-13:
+  Windows CPython 3.11.9), on 2026-11-13, at `bc729cf1`:
   - The full suite (`pytest`, xdist `-n 8`), which holds the fixture cases
     and `tests/gates`, at `40d7271b`: 22,974 passed and 81 skipped, plus 67
-    subtests, with no failure; at `6fe1961e`, `tests/test_environment_links.py`
-    passes all 93 tests in the 3.11.17, 3.12.15 and 3.13.16 Linux images (37
-    passed and 56 skipped on Windows), and `test_packaging.py` and the
-    documentation pins pass.
+    subtests, with no failure; at `6fe1961e` and `bc729cf1`,
+    `tests/test_environment_links.py` passes all 93 tests in the 3.11.17,
+    3.12.15 and 3.13.16 Linux images (37 passed and 56 skipped on Windows),
+    and `test_packaging.py` and the documentation pins pass.
   - checkwash's own check of the range from main `0f054eef` at
     `--fail-on high`: pass, no finding.
   - Forty-three one-line mutants of the change in the 3.12.15 Linux image,
@@ -74,7 +74,13 @@ main `0f054eef`.
   - The 340-row probe and four planted-`tests/` shapes of D-208 in WSL2
     Ubuntu 24.04 (CPython 3.12.3, Git 2.43.0), with main's source and this
     branch's, and the 24,021-path walk timings in WSL and on Windows.
-- **Approval.** [TO FILL before merge.]
+- **Approval.** At 2026-11-13T11:56:55Z Antigravity asked
+  「#605 的 L1（D-208、SPEC §9／§2b／§4b、THREATMODEL 128／180／186）核可，收據過了就合併嗎？」,
+  and at 12:30:39Z Nelson answered 「核可並合併」. Antigravity wrote the
+  question and both options. The answer approves D-208 with the SPEC §9
+  paragraph and §2b and §4b clauses, and THREATMODEL rows 128, 180 and 186
+  (L1). It also approves the merge, once the receipt and the four required
+  checks pass.
 
 The pull request's description records its PJU receipt. Not run: macOS,
 Windows `--symlinks` (without the symbolic-link privilege on this account),
