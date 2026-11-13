@@ -58,16 +58,25 @@ GitHub-hosted macOS and Linux. It records `HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJ
 it is not a PJU receipt, each pull request's tests still run on PJU, and a
 failure in it still stops the release.
 
-The required-check ruleset stays in force. Its required GitHub Actions
-contexts are `checkwash` and `candidate assertion contract (source)`,
-`candidate assertion contract (wheel)`, `candidate assertion contract (pyz)`.
-The [PJU receipt bridge](pju-receipt-bridge.md) collects full local test,
-pinned/candidate composite Action and source/wheel/pyz qualification evidence.
-The existing manual quality-intake workflow has a receipt mode that verifies
-an immutable, maintainer-admitted evidence commit and manifest digest against
-the current PR head/base before publishing those contexts. It performs data
-verification only; product execution stays on PJU. This is maintainer-backed
-evidence, not hardware attestation or an unexecuted platform's result.
+The required-check ruleset (`22032046`) stays in force. From D-209
+(2026-11-13), its required context is `checkwash` bound to GitHub Actions
+(`integration_id: 15368`, matching `action/required-ruleset.json`), replacing
+the earlier four-context ordinary-PR ruleset that also required three separate
+`candidate assertion contract (...)` contexts on every PR. For ordinary PRs,
+the [PJU receipt bridge](pju-receipt-bridge.md) compact-receipt path
+(`mode=receipt` with `compact_receipt`) runs the full local test suite
+(`pytest -n 16`, including the in-process assertion contracts),
+pinned/candidate composite Action replay, and wheel/sdist/pyz byte-identity
+plus isolated wheel/pyz CLI checks on PJU, then verifies a maintainer-admitted
+compact JSON digest via `workflow_dispatch` without creating `evidence/*`
+branches in the product repository (historical `evidence/*` branches are
+retained untouched). Release pull requests and
+release stages continue to use the full [release handoff](pju-release-handoff.md)
+(`tools/collect_pju_release.py` and `tools/pju_release_bridge.py`), including
+full `3x283` source/wheel/pyz CLI qualification and artifact inventories. Both
+modes perform hosted data verification only; product execution stays on PJU.
+This is maintainer-backed evidence, not hardware attestation or an unexecuted
+platform's result.
 
 Missing, failed or stale evidence produces no successful required check.
 The bridge publishes no success for a skipped job, and the ruleset has no

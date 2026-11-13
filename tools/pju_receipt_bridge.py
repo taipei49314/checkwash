@@ -42,6 +42,16 @@ REQUIRED_EXITS = {"pytest", "action-dogfood", "build-wheel", "build-pyz",
 # It spreads the full suite and does not select tests; a receipt with another
 # count is refused, so the count stays bound to the admitted collector.
 PYTEST_WORKERS = "8"
+COMPACT_CONTEXTS = ("checkwash",)
+COMPACT_PYTEST_WORKERS = "16"
+COMPACT_REQUIRED_EXITS = {
+    "runtime-identity", "action-dogfood", "build-wheel", "build-pyz",
+    "wheel-venv", "wheel-install", "wheel-import-check", "wheel-demo", "pyz-demo",
+    "test-editable-install", "pytest",
+}
+MAX_COMPACT_RECEIPT = 64 * 1024
+MIN_DOCUMENTED_TESTS = 23065
+WORKFLOW_PATH = ".github/workflows/quality-candidate-intake.yml"
 MAX_FILE = 256 * 1024 * 1024
 MAX_TOTAL = 1024 * 1024 * 1024
 
@@ -755,6 +765,264 @@ def admit_environment(expected_workflow_sha, env):
             "unexpected workflow identity")
 
 
+def admit_compact_environment(expected_workflow_sha, *, head_sha, base_sha, collector_sha, trusted_root, env, source_root=None):
+    admit_environment(expected_workflow_sha, env)
+    require(not env.get("PJU_RECEIPT_COMMIT", ""), "compact receipt mode refuses receipt_commit")
+    head, base, collector = sha(head_sha, 40), sha(base_sha, 40), sha(collector_sha, 40)
+    workflow_ref = env.get("GITHUB_WORKFLOW_REF", "")
+    main_ref = REPOSITORY + "/" + WORKFLOW_PATH + "@refs/heads/main"
+    base_workflow = git(trusted_root, "show", base + ":" + WORKFLOW_PATH)
+    if b"\n  verify-pju-compact:\n" in base_workflow:
+        require(workflow_ref == main_ref and collector == expected_workflow_sha,
+                "compact-receipt mode must be dispatched from refs/heads/main once merged")
+    else:
+        cand_root = trusted_root if source_root is None else source_root
+        same_tree = (expected_workflow_sha == head
+                     or git(trusted_root, "rev-parse", expected_workflow_sha + "^{tree}")
+                     == git(cand_root, "rev-parse", head + "^{tree}"))
+        require((workflow_ref == main_ref and collector == expected_workflow_sha)
+                or (workflow_ref.startswith(REPOSITORY + "/" + WORKFLOW_PATH + "@refs/heads/")
+                    and expected_workflow_sha == collector and same_tree),
+                "compact-receipt bootstrap requires exact candidate tree workflow/collector identity")
+
+
+def documented_test_count(source_root, head):
+    """Read the documented collected test count from Git blobs without executing code."""
+    counts = set()
+    for doc, marker in (("README.md", "pre-release"), ("docs/launch.md", "Apache-2.0")):
+        text = git(source_root, "show", head + ":" + doc).decode("utf-8")
+        lines = [line for line in text.splitlines() if "detectors," in line and marker in line]
+        require(bool(lines), "missing documented status line in " + doc)
+        for line in lines:
+            match = re.search(r"(\d+) detectors, (\d+) tests\b", line)
+            require(match is not None, "malformed status line in " + doc)
+            counts.add(int(match.group(2)))
+    for doc in ("README.md", "CONTRIBUTING.md", "docs/launch.md"):
+        text = git(source_root, "show", head + ":" + doc).decode("utf-8")
+        claimed = [int(value) for value in re.findall(r"(\d+) tests\b", text)]
+        require(bool(claimed), "missing documented test count in " + doc)
+        counts.update(claimed)
+    require(len(counts) == 1, "documented test counts disagree across repository prose")
+    expected = next(iter(counts))
+    require(expected >= MIN_DOCUMENTED_TESTS, "documented test count below admitted floor")
+    return expected
+
+
+def _validate_compact_action_summary(summary, *, expected_action_sha, base, head, action_repo_root, route):
+    exact_keys(summary, "action_sha action_tree action_yaml_sha256 install_run_sha256 check_run_sha256 source_digest "
+                        "runtime_files version base_sha head_sha fail_on comment_pr exit_code analysis_exit_code "
+                        "host provenance check_receipt_sha256 replay_sha256", "compact Action summary")
+    require(summary["action_sha"] == expected_action_sha and summary["base_sha"] == base and summary["head_sha"] == head
+            and summary["fail_on"] == "high" and summary["comment_pr"] is False
+            and type(summary["exit_code"]) is int and summary["exit_code"] == 0
+            and type(summary["analysis_exit_code"]) is int and summary["analysis_exit_code"] == 0
+            and summary["host"] == route["host"] and summary["provenance"] == route["action_provenance"],
+            "compact Action replay identity/status mismatch")
+    sha(summary["check_receipt_sha256"])
+    sha(summary["replay_sha256"])
+    require(summary["action_tree"] == git(action_repo_root, "rev-parse", expected_action_sha + "^{tree}").decode().strip(),
+            "compact Action tree mismatch")
+    action_yaml = git(action_repo_root, "show", expected_action_sha + ":action/action.yml")
+    require(summary["action_yaml_sha256"] == digest(action_yaml), "compact Action definition mismatch")
+    runs = action_run_blocks(action_yaml)
+    require(summary["install_run_sha256"] == digest(runs["install"])
+            and summary["check_run_sha256"] == digest(runs["check"]), "compact Action run block digest mismatch")
+    action_package = tree_files(action_repo_root, expected_action_sha, "src/checkwash")
+    require(summary["source_digest"] == canonical({p: digest(raw) for p, raw in action_package.items()})
+            and type(summary["runtime_files"]) is int and summary["runtime_files"] == len(action_package),
+            "compact Action engine identity mismatch")
+    project = tomllib.loads(git(action_repo_root, "show", expected_action_sha + ":pyproject.toml").decode("utf-8"))["project"]
+    require(summary["version"] == project["version"], "compact Action engine version mismatch")
+
+
+def validate_compact(raw_receipt, expected_sha256, *, repository, pr, base, head, source_tree, collector, source_root, trusted_root):
+    require(type(raw_receipt) is bytes and 0 < len(raw_receipt) <= MAX_COMPACT_RECEIPT, "oversized/empty compact receipt")
+    require(b"\r" not in raw_receipt and b"\n" not in raw_receipt, "compact receipt must be single-line JSON")
+    require(digest(raw_receipt) == sha(expected_sha256), "external compact receipt digest mismatch")
+    receipt = strict_json(raw_receipt)
+    require(raw_receipt == json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii"),
+            "compact receipt must be canonical ASCII JSON")
+    exact_keys(receipt, "schema_version kind status repository pr_number base_sha head_sha source_tree src_tree "
+                        "host provenance collector_source_sha action_sha version runtime contracts action_dogfood "
+                        "candidate_action distributions junit pytest_argv raw_exits", "compact receipt")
+    require(type(receipt["schema_version"]) is int and receipt["schema_version"] == 1
+            and receipt["kind"] == "checkwash.pju-compact-receipt.v1"
+            and receipt["status"] == "completed" and receipt["action_sha"] == ACTION_SHA, "compact receipt schema/status")
+    require(repository == REPOSITORY and receipt["repository"] == repository
+            and type(receipt["pr_number"]) is int and receipt["pr_number"] == integer(pr, "PR", 1),
+            "compact receipt repository/PR mismatch")
+    require(receipt["head_sha"] == sha(head, 40) and receipt["base_sha"] == sha(base, 40)
+            and receipt["source_tree"] == sha(source_tree, 40)
+            and receipt["collector_source_sha"] == sha(collector, 40), "compact receipt source/collector mismatch")
+    route = receipt_route(receipt)
+    require(git(source_root, "rev-parse", "HEAD").decode().strip() == head, "candidate checkout SHA mismatch")
+    require(git(source_root, "rev-parse", head + "^{tree}").decode().strip() == source_tree, "candidate tree mismatch")
+    require(receipt["src_tree"] == git(source_root, "rev-parse", head + ":src").decode().strip(), "src tree mismatch")
+    project = tomllib.loads(git(source_root, "show", head + ":pyproject.toml").decode("utf-8"))["project"]
+    require(receipt["version"] == "checkwash " + project["version"], "version mismatch")
+
+    inventories, cases = [], []
+    for path in (*UTILITIES, *CONTRACTS):
+        raw = git(source_root, "show", head + ":" + path)
+        require(raw == git(trusted_root, "show", collector + ":" + path),
+                "candidate differs from audited contract/tool: " + path)
+        if path in CONTRACTS:
+            data = strict_json(raw)
+            require(type(data.get("schema_version")) is int and data["schema_version"] == 1
+                    and type(data.get("mutations")) is list and data["mutations"], "empty/malformed contract inventory")
+            cases.extend(data["mutations"])
+            inventories.append(dict(path=path, sha256=digest(raw), mutations=len(data["mutations"])))
+    require(all(type(case) is dict and type(case.get("id")) is str and case["id"] for case in cases)
+            and len({case["id"] for case in cases}) == len(cases), "duplicate/missing case IDs")
+    source_files = tree_files(source_root, head, "src")
+    package = {name: digest(raw) for name, raw in source_files.items() if name.startswith("checkwash/")
+               and "__pycache__" not in PurePosixPath(name).parts and not name.endswith(".pyc")}
+    require(bool(package), "empty Git package tree")
+    expected_pkg_sha = canonical(package)
+    contracts = receipt["contracts"]
+    exact_keys(contracts, "source_package_sha256 builder_sha256 suite_sha256 inventories", "compact contracts")
+    require(contracts["source_package_sha256"] == expected_pkg_sha
+            and contracts["suite_sha256"] == canonical(cases)
+            and same(contracts["inventories"], inventories)
+            and contracts["builder_sha256"] == digest(git(trusted_root, "show", collector + ":tools/release_inventory.py")),
+            "compact contract/package digest mismatch")
+
+    runtime = receipt["runtime"]
+    exact_keys(runtime, "os python_version python_executable python_sha256 git_executable git_sha256 bash_executable "
+                        "bash_sha256 dependency_lock_sha256 dependencies_sha256 pytest_version xdist_workers other_platforms",
+               "compact runtime")
+    require(runtime["os"] == "Windows" and runtime["python_version"] == "3.11.9"
+            and runtime["pytest_version"] == "9.1.1" and runtime["xdist_workers"] == COMPACT_PYTEST_WORKERS
+            and runtime["other_platforms"] == "NOT_RUN", "compact runtime scope mismatch")
+    require(all(type(runtime[k]) is str and runtime[k] for k in ("python_executable", "git_executable", "bash_executable")),
+            "compact runtime executable missing")
+    for key in ("python_sha256", "git_sha256", "bash_sha256", "dependency_lock_sha256", "dependencies_sha256"):
+        sha(runtime[key])
+
+    _validate_compact_action_summary(receipt["action_dogfood"], expected_action_sha=ACTION_SHA,
+                                     base=base, head=head, action_repo_root=trusted_root, route=route)
+
+    def closure_map(root, commit):
+        result = {prefix + "/" + name: digest(raw) for prefix in ("action", "src")
+                  for name, raw in tree_files(root, commit, prefix).items()}
+        result["pyproject.toml"] = digest(git(root, "show", commit + ":pyproject.toml"))
+        return result
+
+    cand_closure = closure_map(source_root, head)
+    pin_closure = closure_map(trusted_root, ACTION_SHA)
+    cand_action = receipt["candidate_action"]
+    exact_keys(cand_action, "candidate_closure_sha256 pinned_closure_sha256 mode replay", "compact candidate Action")
+    require(cand_action["candidate_closure_sha256"] == canonical(cand_closure)
+            and cand_action["pinned_closure_sha256"] == canonical(pin_closure), "compact Action closure digest mismatch")
+    if cand_action["mode"] == "byte-identical-reuse":
+        require(cand_closure == pin_closure and cand_action["replay"] is None,
+                "unequal Action closure cannot reuse pinned replay")
+    else:
+        require(cand_action["mode"] == "separate-replay" and cand_closure != pin_closure
+                and type(cand_action["replay"]) is dict, "invalid candidate Action replay mode")
+        _validate_compact_action_summary(cand_action["replay"], expected_action_sha=head,
+                                         base=base, head=head, action_repo_root=source_root, route=route)
+
+    distributions = receipt["distributions"]
+    exact_keys(distributions, "wheel sdist pyz", "compact distributions")
+    dist_prefix = project["name"].replace("-", "_") + "-" + project["version"]
+    expected_names = {"wheel": dist_prefix + "-py3-none-any.whl", "sdist": dist_prefix + ".tar.gz", "pyz": "checkwash.pyz"}
+    for kind, expected_name in expected_names.items():
+        item = distributions[kind]
+        exact_keys(item, "name sha256 bytes members_sha256 package_sha256", "compact distribution")
+        require(item["name"] == expected_name, "compact distribution filename mismatch: " + kind)
+        require(integer(item["bytes"], kind + " bytes", 1) <= MAX_FILE, "invalid distribution size: " + kind)
+        sha(item["sha256"])
+        sha(item["members_sha256"])
+        require(item["package_sha256"] == expected_pkg_sha, "delivered package digest differs from Git source: " + kind)
+
+    exits = receipt["raw_exits"]
+    require(type(exits) is list and bool(exits), "compact raw exits missing")
+    names = set()
+    by_name = {}
+    for row in exits:
+        exact_keys(row, "name duration_seconds exit_code timed_out stdout_sha256 stderr_sha256", "compact raw exit")
+        require(type(row["name"]) is str and row["name"] and row["name"] not in names, "duplicate/missing compact exit")
+        names.add(row["name"])
+        by_name[row["name"]] = row
+        require(type(row["exit_code"]) is int and row["exit_code"] == 0 and row["timed_out"] is False,
+                "nonzero/timed-out compact command exit: " + row["name"])
+        require(type(row["duration_seconds"]) in (int, float) and math.isfinite(row["duration_seconds"])
+                and row["duration_seconds"] >= 0, "invalid compact command duration")
+        sha(row["stdout_sha256"])
+        sha(row["stderr_sha256"])
+    expected_exits = COMPACT_REQUIRED_EXITS | ({"candidate-action-dogfood"} if cand_action["mode"] == "separate-replay" else set())
+    require(names == expected_exits, "compact required command set mismatch")
+
+    argv = receipt["pytest_argv"]
+    require(type(argv) is list and len(argv) == 20 and all(type(arg) is str and arg for arg in argv)
+            and argv[0] == runtime["python_executable"]
+            and argv[1:16] == ["-I", "-B", "-X", "utf8", "-m", "pytest", "-p", "xdist.plugin", "-n", COMPACT_PYTEST_WORKERS,
+                               "--dist", "worksteal", "-p", "no:cacheprovider", "--basetemp"]
+            and argv[17] == "--junitxml" and argv[19] == "tests"
+            and argv[18].replace("\\", "/").endswith("/junit.xml"), "compact pytest command scope differs")
+
+    junit = receipt["junit"]
+    exact_keys(junit, "sha256 bytes tests passed skipped failures errors passed_subtests pytest_stdout_sha256", "compact junit")
+    sha(junit["sha256"])
+    integer(junit["bytes"], "junit bytes", 1)
+    require(sha(junit["pytest_stdout_sha256"]) == by_name["pytest"]["stdout_sha256"],
+            "compact JUnit pytest stdout linkage mismatch")
+    require(type(junit["failures"]) is int and junit["failures"] == 0
+            and type(junit["errors"]) is int and junit["errors"] == 0, "compact JUnit failures/errors")
+    tests = integer(junit["tests"], "junit tests", MIN_DOCUMENTED_TESTS)
+    passed = integer(junit["passed"], "junit passed", 1)
+    skipped = integer(junit["skipped"], "junit skipped", 0)
+    subtests = integer(junit["passed_subtests"], "junit subtests", 0)
+    require(passed + skipped == tests, "compact JUnit outcome total mismatch")
+    expected_tests = documented_test_count(source_root, head)
+    require(tests == expected_tests, f"compact JUnit test count {tests} differs from documented suite count {expected_tests}")
+
+    return dict(status="verified", mode="compact-receipt", repository=repository, pr_number=pr, head_sha=head, base_sha=base,
+                source_tree=source_tree, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
+                checks=list(COMPACT_CONTEXTS), candidate_action_mode=cand_action["mode"],
+                junit=dict(tests=tests, passed=passed, skipped=skipped, passed_subtests=subtests),
+                trust="owner-admitted compact receipt digest; not hardware attestation", other_platforms="NOT_RUN")
+
+
+def publish_compact(api, report, manifest_sha256, run_url):
+    repository, pr, head, base = (report[k] for k in ("repository", "pr_number", "head_sha", "base_sha"))
+    require(report["status"] == "verified" and report["checks"] == list(COMPACT_CONTEXTS), "unverified compact check publication")
+    route = receipt_route(report)
+    ids = []
+    summary = (f"Real local execution: {route['host']}; {route['provenance']}.\n\n"
+               f"PR #{pr}; head `{head}`; base `{base}`.\n\n"
+               f"Compact receipt SHA256 `{manifest_sha256}` (no evidence branch).\n\n"
+               f"Full pytest suite (`-n {COMPACT_PYTEST_WORKERS}`): {report['junit']}; "
+               f"wheel/sdist/pyz byte-matched to Git source and CLI-checked; "
+               f"Action replay ({report['candidate_action_mode']}) passed. "
+               "Owner-admitted compact digest evidence, not hardware attestation. Other platforms: NOT_RUN.")
+    try:
+        require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed")
+        for name in COMPACT_CONTEXTS:
+            check = api.request("POST", f"/repos/{repository}/check-runs", dict(name=name, head_sha=head,
+                status="in_progress", external_id="pju-compact:" + manifest_sha256 + ":" + name, details_url=run_url,
+                output=dict(title="Compact local evidence verified; publication in progress", summary=summary)))
+            ids.append(integer(check["id"], "check ID", 1))
+        for check_id in ids:
+            require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed")
+            patched = api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="success",
+                output=dict(title="Exact-source compact local evidence passed", summary=summary)))
+            if isinstance(patched, dict) and isinstance(patched.get("app"), dict):
+                require(patched["app"].get("id") == 15368, "unexpected check App ID")
+        require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed after publication")
+    except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
+        for check_id in ids:
+            try:
+                api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="failure",
+                    output=dict(title="PJU compact bridge publication aborted",
+                                summary="Compact receipt publication did not finish; no admission is granted.")))
+            except (OSError, ValueError, urllib.error.URLError):
+                pass
+        raise
+    return ids
+
+
 def publish(api, report, manifest_sha256, receipt_commit, run_url):
     repository, pr, head, base = (report[k] for k in ("repository", "pr_number", "head_sha", "base_sha"))
     require(report["status"] == "verified" and report["checks"] == list(CONTEXTS), "unverified check publication")
@@ -776,7 +1044,7 @@ def publish(api, report, manifest_sha256, receipt_commit, run_url):
             api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="success",
                 output=dict(title="Exact-source local evidence passed", summary=summary)))
         require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed after publication")
-    except Exception:
+    except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
         for check_id in ids:
             try:
                 api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="failure",
@@ -789,33 +1057,66 @@ def publish(api, report, manifest_sha256, receipt_commit, run_url):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("verify", "publish"))
-    for flag in ("receipt-root", "source-root", "trusted-root", "manifest-sha256", "collector-source-sha",
-                 "receipt-commit", "trusted-workflow-sha", "head", "base", "output"):
+    parser.add_argument("mode", choices=("verify", "publish", "verify-compact", "publish-compact"))
+    for flag in ("source-root", "trusted-root", "manifest-sha256", "collector-source-sha",
+                 "trusted-workflow-sha", "head", "base", "output"):
         parser.add_argument("--" + flag, required=True)
+    for flag in ("receipt-root", "receipt-commit", "compact-receipt-file"):
+        parser.add_argument("--" + flag)
     parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--pr", type=int, required=True)
     args = parser.parse_args(argv)
     output = Path(args.output)
     report = {"status": "failed", "error": "validation did not complete"}
     try:
-        admit_environment(args.trusted_workflow_sha, os.environ)
+        compact = args.mode in ("verify-compact", "publish-compact")
+        if compact:
+            require(args.receipt_root is None and args.receipt_commit is None,
+                    "compact mode takes no receipt checkout or receipt commit")
+            admit_compact_environment(args.trusted_workflow_sha, head_sha=args.head, base_sha=args.base,
+                                      collector_sha=args.collector_source_sha, trusted_root=args.trusted_root,
+                                      env=os.environ, source_root=args.source_root)
+        else:
+            require(bool(args.receipt_root) and bool(args.receipt_commit) and args.compact_receipt_file is None,
+                    "receipt mode requires --receipt-root and --receipt-commit")
+            admit_environment(args.trusted_workflow_sha, os.environ)
+            require(os.environ.get("GITHUB_WORKFLOW_REF") == REPOSITORY + "/" + WORKFLOW_PATH + "@refs/heads/main"
+                    and sha(args.collector_source_sha, 40) == args.trusted_workflow_sha,
+                    "receipt mode must be dispatched from refs/heads/main")
         require(git(args.trusted_root, "rev-parse", "HEAD").decode().strip() == args.trusted_workflow_sha, "trusted checkout differs")
-        require(git(Path(args.receipt_root).parent, "rev-parse", "HEAD").decode().strip() == sha(args.receipt_commit, 40), "receipt commit differs")
+        if not compact:
+            require(git(Path(args.receipt_root).parent, "rev-parse", "HEAD").decode().strip() == sha(args.receipt_commit, 40), "receipt commit differs")
         validate_ordinary_head(args.source_root, sha(args.head, 40))
         api = GitHub(os.environ.get("GH_TOKEN"))
         source_tree = live_pr(api, args.repository, args.pr, sha(args.head, 40), sha(args.base, 40))
-        packet = Packet(args.receipt_root, args.manifest_sha256)
-        report = validate_packet(packet, repository=args.repository, pr=args.pr, base=args.base, head=args.head,
-            source_tree=source_tree, collector=args.collector_source_sha, source_root=args.source_root, trusted_root=args.trusted_root)
-        require(live_pr(api, args.repository, args.pr, args.head, args.base) == source_tree, "PR changed during validation")
-        report.update(manifest_sha256=args.manifest_sha256, receipt_commit=args.receipt_commit,
-                      workflow_sha=args.trusted_workflow_sha)
-        if args.mode == "publish":
-            run_id = os.environ.get("GITHUB_RUN_ID", "")
-            require(re.fullmatch(r"[0-9]+", run_id), "invalid run ID")
-            report["check_run_ids"] = publish(api, report, args.manifest_sha256, args.receipt_commit,
-                                             f"https://github.com/{REPOSITORY}/actions/runs/{run_id}")
+        if compact:
+            raw_compact = (Path(args.compact_receipt_file).read_bytes() if args.compact_receipt_file
+                           else os.environ.get("PJU_COMPACT_RECEIPT", "").encode("utf-8"))
+            report = validate_compact(raw_compact, args.manifest_sha256, repository=args.repository, pr=args.pr,
+                base=args.base, head=args.head, source_tree=source_tree, collector=args.collector_source_sha,
+                source_root=args.source_root, trusted_root=args.trusted_root)
+            require(live_pr(api, args.repository, args.pr, args.head, args.base) == source_tree, "PR changed during validation")
+            report.update(manifest_sha256=args.manifest_sha256, workflow_sha=args.trusted_workflow_sha)
+            if args.mode == "publish-compact":
+                run_id = os.environ.get("GITHUB_RUN_ID", "")
+                require(re.fullmatch(r"[0-9]+", run_id), "invalid run ID")
+                report["check_run_ids"] = publish_compact(api, report, args.manifest_sha256,
+                                                          f"https://github.com/{REPOSITORY}/actions/runs/{run_id}")
+        else:
+            packet = Packet(args.receipt_root, args.manifest_sha256)
+            report = validate_packet(packet, repository=args.repository, pr=args.pr, base=args.base, head=args.head,
+                source_tree=source_tree, collector=args.collector_source_sha, source_root=args.source_root, trusted_root=args.trusted_root)
+            expected_tests = documented_test_count(args.source_root, args.head)
+            require(report["junit"]["tests"] == expected_tests,
+                    f"JUnit test count {report['junit']['tests']} differs from documented suite count {expected_tests}")
+            require(live_pr(api, args.repository, args.pr, args.head, args.base) == source_tree, "PR changed during validation")
+            report.update(manifest_sha256=args.manifest_sha256, receipt_commit=args.receipt_commit,
+                          workflow_sha=args.trusted_workflow_sha)
+            if args.mode == "publish":
+                run_id = os.environ.get("GITHUB_RUN_ID", "")
+                require(re.fullmatch(r"[0-9]+", run_id), "invalid run ID")
+                report["check_run_ids"] = publish(api, report, args.manifest_sha256, args.receipt_commit,
+                                                 f"https://github.com/{REPOSITORY}/actions/runs/{run_id}")
         output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return 0
     except (OSError, ValueError, KeyError, TypeError, ET.ParseError, subprocess.SubprocessError,

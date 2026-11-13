@@ -22,7 +22,7 @@ import importlib.util
 import json
 import locale
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
 import re
 import runpy
@@ -40,6 +40,8 @@ REPOSITORY = "taipei49314/checkwash"
 # Full-suite xdist workers on the 24-core receipt host; both bridges require
 # exactly this count (receipt speed-up, D-198).
 PYTEST_WORKERS = "8"
+# Compact PR digest receipts use 16 xdist workers on the 24-core receipt host (D-209).
+COMPACT_PYTEST_WORKERS = "16"
 # traced_worker rewrites a helper's nested commands.json every this many rows
 # and when the helper ends, not after every row.
 NESTED_FLUSH_ROWS = 500
@@ -47,6 +49,13 @@ NESTED_FLUSH_ROWS = 500
 
 def load_replayer():
     spec = importlib.util.spec_from_file_location("_trusted_pju_action", ROOT / "tools/replay_pju_action.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_trusted_module(alias, filename):
+    spec = importlib.util.spec_from_file_location(alias, ROOT / "tools" / filename)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -412,6 +421,387 @@ def collect(args, *, release_context=None, stage_preflight=None, stage_steps=Non
     return 0 if manifest["status"] == "completed" else 1
 
 
+def _summarize_action_replay(action_dir, *, expected_action_sha, base_sha, head_sha, python_version, route, action):
+    replay_raw = (action_dir / "replay.json").read_bytes()
+    replay = json.loads(replay_raw)
+    require = action.require
+    require(replay["status"] == "completed" and replay["errors"] == []
+            and replay["action_sha"] == expected_action_sha
+            and replay["base_sha"] == base_sha and replay["head_sha"] == head_sha
+            and replay["fail_on"] == "high" and replay["comment_pr"] is False
+            and replay["host"] == route["host"] and replay["provenance"] == route["action_provenance"],
+            "Action replay did not complete cleanly")
+    steps = replay["steps"]
+    require([s.get("id") for s in steps] == ["install", "check"]
+            and all(s.get("exit_code") == 0 for s in steps)
+            and str(replay["resolved_outputs"].get("exit-code")) == "0", "Action replay steps failed")
+    check_raw = (action_dir / replay["files"]["check_receipt"]).read_bytes()
+    check_receipt = json.loads(check_raw)
+    identity = json.loads((action_dir / replay["files"]["identity"]).read_bytes())
+    install = json.loads((action_dir / replay["files"]["install_report"]).read_bytes())
+    require(check_receipt["exit_code"] == 0 and check_receipt["analysis_exit_code"] == 0
+            and check_receipt["error"] is None and check_receipt["base"] == base_sha
+            and check_receipt["head"] == head_sha and check_receipt["fail_on"] == "high",
+            "Action check receipt failed")
+    require(check_receipt["identity"] == identity
+            and all(identity.get(k) is True for k in ("isolated", "utf8", "bytecode_writes_disabled"))
+            and identity.get("python_version") == python_version, "Action identity receipt mismatch")
+    require(install.get("version") == "1" and len(install.get("install", [])) == 1
+            and install["install"][0].get("metadata", {}).get("name") == "checkwash"
+            and install["install"][0]["metadata"].get("version") == identity["version"],
+            "Action pip install report mismatch")
+    return dict(
+        action_sha=expected_action_sha,
+        action_tree=replay["action_tree"],
+        action_yaml_sha256=replay["action_yaml_sha256"],
+        install_run_sha256=steps[0]["run_sha256"],
+        check_run_sha256=steps[1]["run_sha256"],
+        source_digest=identity["source_digest"],
+        runtime_files=identity["runtime_files"],
+        version=identity["version"],
+        base_sha=base_sha,
+        head_sha=head_sha,
+        fail_on="high",
+        comment_pr=False,
+        exit_code=0,
+        analysis_exit_code=0,
+        host=route["host"],
+        provenance=route["action_provenance"],
+        check_receipt_sha256=action.digest(check_raw),
+        replay_sha256=action.digest(replay_raw),
+    )
+
+
+def collect_compact(args):
+    """Collect a compact PJU digest receipt without 3x283 CLI duplication or 53 MiB Git trees."""
+    action = load_replayer()
+    bridge = load_trusted_module("_trusted_pju_bridge", "pju_receipt_bridge.py")
+    inventory_mod = load_trusted_module("_trusted_release_inventory", "release_inventory.py")
+    qualify_mod = load_trusted_module("_trusted_qualify_assertions", "qualify_assertions.py")
+    require = action.require
+    route = action.execution_route()
+    require(sys.version_info[:2] == (3, 11) and sys.flags.isolated and sys.dont_write_bytecode and sys.flags.utf8_mode,
+            "collector requires Python 3.11 with -I -B -X utf8")
+    require(args.repository == REPOSITORY, "unexpected repository")
+    require(type(args.pr) is int and args.pr > 0, "unexpected PR")
+    for value in (args.base_sha, args.head_sha, args.source_tree, args.collector_source_sha):
+        require(re.fullmatch(r"[0-9a-f]{40}", value), "full SHA required")
+    source = action.absolute_path(args.source_root, directory=True)
+    trusted = action.absolute_path(ROOT, directory=True)
+    pinned = action.absolute_path(args.action_root, directory=True)
+    python, git, bash = (action.absolute_path(path) for path in (args.python, args.git, args.bash))
+    require(python == Path(sys.executable).absolute(), "collector must run using the admitted Python")
+    output = action.absolute_path(args.output, exists=False)
+    scratch = action.absolute_path(args.scratch, exists=False)
+    for path in (trusted, pinned, python, git, bash, output, scratch):
+        action.outside(path, source)
+    for checkout in (trusted, source, pinned):
+        action.outside(output, checkout)
+        action.outside(scratch, checkout)
+    action.outside(scratch, output)
+    action.outside(output, scratch)
+    lock_path = action.absolute_path(args.dependency_lock)
+    lock_raw = lock_path.read_bytes()
+    require(action.digest(lock_raw) == args.dependency_lock_sha256, "dependency lock SHA256 mismatch")
+    expected_dependencies = json.loads(lock_raw)
+    require(type(expected_dependencies) is dict and expected_dependencies, "dependency mapping required")
+    normalized_lock = normalized_packages(expected_dependencies)
+    output.mkdir(parents=True, exist_ok=False)
+    scratch.mkdir(parents=True, exist_ok=False)
+    env = action.clean_environment(python, git, bash, scratch)
+    env["ENGINE_SOURCE"] = args.head_sha
+    template = scratch / "git-template"
+    template.mkdir()
+    env["GIT_TEMPLATE_DIR"] = str(template)
+    reader = action.GitReader(git, env, output / "git-evidence")
+    reader.output.mkdir()
+
+    def _clean_git(repo_root, *git_args):
+        res = subprocess.run(
+            [str(git), "-c", "core.hooksPath=" + os.devnull, "-c", "core.fsmonitor=false",
+             "-c", "core.untrackedCache=false", "-C", str(repo_root), *git_args],
+            cwd=scratch, env=env, capture_output=True, timeout=120,
+        )
+        require(res.returncode == 0, "Git read failed: " + " ".join(git_args))
+        return res.stdout
+
+    orig_inv_git = inventory_mod.git
+    orig_bridge_git = bridge.git
+    inventory_mod.git = lambda *git_args: _clean_git(source, *git_args)
+    bridge.git = _clean_git
+    ledger = []
+    ledger_lock = threading.Lock()
+    errors = []
+    compact = dict(
+        schema_version=1,
+        kind="checkwash.pju-compact-receipt.v1",
+        status="failed",
+        repository=args.repository,
+        pr_number=args.pr,
+        base_sha=args.base_sha,
+        head_sha=args.head_sha,
+        source_tree=args.source_tree,
+        src_tree="",
+        host=route["host"],
+        provenance=route["provenance"],
+        collector_source_sha=args.collector_source_sha,
+        action_sha=action.ACTION_SHA,
+        version="",
+        runtime={},
+        contracts={},
+        action_dogfood={},
+        candidate_action={},
+        distributions={},
+        junit={},
+        pytest_argv=[],
+        raw_exits=[],
+    )
+
+    def run(name, argv, *, cwd=scratch, timeout=1800):
+        row = action.run_record(name, argv, cwd=cwd, env=env, output=output, timeout=timeout, ledger=ledger,
+                                lock=ledger_lock)
+        require(row["exit_code"] == 0 and not row["timed_out"], "command failed: " + name)
+        return (output / row["stdout"]).read_bytes()
+
+    py = [str(python), "-I", "-B", "-X", "utf8"]
+    try:
+        trusted_before = action.snapshot(reader, trusted, args.collector_source_sha)
+        source_before = action.snapshot(reader, source, args.head_sha)
+        pinned_before = action.snapshot(reader, pinned, action.ACTION_SHA)
+        for checkout in (trusted, source, pinned):
+            require(not reader.read(checkout, "ls-files", "--others", "--ignored", "--exclude-standard"),
+                    "initial checkout contains ignored files; provide a fresh frozen checkout")
+        require(reader.text(source, "rev-parse", "HEAD^{tree}") == args.source_tree, "candidate tree mismatch")
+        require(reader.text(source, "rev-parse", args.base_sha + "^{commit}") == args.base_sha, "base missing/mismatch")
+        for name in (*UTILITIES, *CONTRACTS):
+            require(source_before[name] == trusted_before[name], "candidate differs from audited helper/contract: " + name)
+
+        runtime_raw = run("runtime-identity", [*py, "-c",
+            "import importlib.metadata as m,json,platform,sys; "
+            "print(json.dumps({'python_version':platform.python_version(),'prefix':sys.prefix,'base':sys.base_prefix,"
+            "'dependencies':{d.metadata['Name']:d.version for d in m.distributions()}}))"])
+        info = json.loads(runtime_raw)
+        require(info["prefix"] != info["base"] and Path(info["prefix"]).absolute() == python.parent.parent,
+                "fresh external task-local venv required")
+        require(info["python_version"].startswith("3.11."), "only Windows Python 3.11 is covered")
+        normalized_installed = normalized_packages(info["dependencies"])
+        require(normalized_installed == normalized_lock,
+                "installed dependencies differ from admitted lock (use a fresh environment)")
+        pytest_version = normalized_installed.get("pytest", "")
+        compact["runtime"] = dict(
+            os="Windows",
+            python_version=info["python_version"],
+            python_executable=str(python),
+            python_sha256=action.digest(python.read_bytes()),
+            git_executable=str(git),
+            git_sha256=action.digest(git.read_bytes()),
+            bash_executable=str(bash),
+            bash_sha256=action.digest(bash.read_bytes()),
+            dependency_lock_sha256=args.dependency_lock_sha256,
+            dependencies_sha256=action.canonical(normalized_installed),
+            pytest_version=pytest_version,
+            xdist_workers=COMPACT_PYTEST_WORKERS,
+            other_platforms="NOT_RUN",
+        )
+
+        cases, inventories = [], []
+        for name in CONTRACTS:
+            raw = (trusted / name).read_bytes()
+            data = json.loads(raw)
+            require(data["schema_version"] == 1 and data["mutations"], "empty/unsupported contract")
+            rows = data["mutations"]
+            cases.extend(rows)
+            inventories.append(dict(path=name, sha256=action.digest(raw), mutations=len(rows)))
+        require(len({case["id"] for case in cases}) == len(cases), "duplicate case IDs")
+        members = {name.removeprefix("src/"): row for name, row in source_before.items() if name.startswith("src/")}
+        package = {name: row["sha256"] for name, row in members.items()
+                   if name.startswith("checkwash/") and "__pycache__" not in Path(name).parts and not name.endswith(".pyc")}
+        source_package_sha256 = action.canonical(package)
+        project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+        compact["src_tree"] = reader.text(source, "rev-parse", args.head_sha + ":src")
+        compact["version"] = "checkwash " + project["version"]
+        compact["contracts"] = dict(
+            source_package_sha256=source_package_sha256,
+            builder_sha256=trusted_before["tools/release_inventory.py"]["sha256"],
+            suite_sha256=action.canonical(cases),
+            inventories=inventories,
+        )
+
+        candidate_closure, pinned_closure = closure(source_before), closure(pinned_before)
+        same_closure = candidate_closure == pinned_closure
+        candidate_action = None
+        candidate_action_before = None
+        if not same_closure:
+            require(args.candidate_action_root is not None, "different Action closure requires --candidate-action-root")
+            candidate_action = action.absolute_path(args.candidate_action_root, directory=True)
+            for path in (output, scratch):
+                action.outside(path, candidate_action)
+            action.outside(candidate_action, source)
+            candidate_action_before = action.snapshot(reader, candidate_action, args.head_sha)
+            require(candidate_action_before == source_before, "candidate Action checkout differs")
+            require(not reader.read(candidate_action, "ls-files", "--others", "--ignored", "--exclude-standard"),
+                    "candidate Action checkout contains ignored files")
+
+        replay_argv = [*py, str(trusted / "tools/replay_pju_action.py"), "--source-root", str(source),
+                       "--base-sha", args.base_sha, "--head-sha", args.head_sha,
+                       "--python", str(python), "--git", str(git), "--bash", str(bash)]
+        if same_closure:
+            run("action-dogfood", [*replay_argv, "--action-root", str(pinned), "--action-sha", action.ACTION_SHA,
+                                   "--output", str(output / "action"), "--scratch", str(scratch / "action")], timeout=3600)
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                futs = [
+                    pool.submit(
+                        run, "action-dogfood",
+                        [*replay_argv, "--action-root", str(pinned), "--action-sha", action.ACTION_SHA,
+                         "--output", str(output / "action"), "--scratch", str(scratch / "action")],
+                        timeout=3600,
+                    ),
+                    pool.submit(
+                        run, "candidate-action-dogfood",
+                        [*replay_argv, "--action-root", str(candidate_action), "--action-sha", args.head_sha,
+                         "--output", str(output / "candidate-action"), "--scratch", str(scratch / "candidate-action")],
+                        timeout=3600,
+                    ),
+                ]
+            replay_failures = [str(fut.exception()) for fut in futs if fut.exception() is not None]
+            require(not replay_failures, "; ".join(replay_failures))
+            require(action.snapshot(reader, candidate_action, args.head_sha) == candidate_action_before,
+                    "candidate Action checkout changed")
+
+        compact["action_dogfood"] = _summarize_action_replay(
+            output / "action", expected_action_sha=action.ACTION_SHA, base_sha=args.base_sha, head_sha=args.head_sha,
+            python_version=info["python_version"], route=route, action=action)
+        compact["candidate_action"] = dict(
+            candidate_closure_sha256=action.canonical(candidate_closure),
+            pinned_closure_sha256=action.canonical(pinned_closure),
+            mode="byte-identical-reuse" if same_closure else "separate-replay",
+            replay=None if same_closure else _summarize_action_replay(
+                output / "candidate-action", expected_action_sha=args.head_sha, base_sha=args.base_sha, head_sha=args.head_sha,
+                python_version=info["python_version"], route=route, action=action),
+        )
+
+        artifacts = scratch / "artifacts"
+        artifacts.mkdir()
+        run("build-wheel", [*py, "-m", "build", "--no-isolation", "--wheel", "--sdist", "--outdir", str(artifacts), str(source)])
+        wheels, sdists = list(artifacts.glob("*.whl")), list(artifacts.glob("*.tar.gz"))
+        require(len(wheels) == len(sdists) == 1, "expected exactly one wheel and sdist")
+        wheel, sdist = wheels[0], sdists[0]
+        pyz = artifacts / "checkwash.pyz"
+        run("build-pyz", [*py, "-m", "zipapp", str(source / "src"), "-m", "checkwash.zipapp_entry:run", "-o", str(pyz), "-c"])
+        require(pyz.is_file(), "zipapp missing")
+
+        inventory_mod.ROOT = source
+        entries, _proof = inventory_mod.source_inventory(args.head_sha)
+        distributions = {}
+        for kind, artifact in (("wheel", wheel), ("sdist", sdist), ("pyz", pyz)):
+            raw_art = artifact.read_bytes()
+            art_members = inventory_mod.archive_inventory(artifact, entries)
+            if kind == "sdist":
+                sdist_root = next(iter({PurePosixPath(p).parts[0] for p in art_members}))
+                pkg_prefix = sdist_root + "/src/"
+            else:
+                pkg_prefix = ""
+            pkg_hashes = {
+                p[len(pkg_prefix):]: row["sha256"]
+                for p, row in art_members.items()
+                if p.startswith(pkg_prefix + "checkwash/") and "__pycache__" not in PurePosixPath(p).parts and not p.endswith(".pyc")
+            }
+            pkg_digest = action.canonical(pkg_hashes)
+            require(pkg_digest == source_package_sha256, "artifact package digest mismatch: " + kind)
+            distributions[kind] = dict(
+                name=artifact.name,
+                sha256=action.digest(raw_art),
+                bytes=len(raw_art),
+                members_sha256=action.canonical(art_members),
+                package_sha256=pkg_digest,
+            )
+        compact["distributions"] = distributions
+
+        wheel_env = scratch / "wheel-environment"
+        run("wheel-venv", [*py, "-m", "venv", str(wheel_env)])
+        wheel_python = wheel_env / "Scripts/python.exe"
+        run("wheel-install", [str(wheel_python), "-I", "-B", "-X", "utf8", "-m", "pip", "--isolated",
+                              "--disable-pip-version-check", "--no-input", "install", "--no-index", "--no-deps",
+                              "--no-compile", "--report", str(output / "wheel-install-report.json"), str(wheel)])
+        wheel_probe_raw = run("wheel-import-check", [str(wheel_python), "-I", "-B", "-X", "utf8", "-c",
+            "import json,sys,checkwash; print(json.dumps({'package':checkwash.__file__,'prefix':sys.prefix,'base':sys.base_prefix}))"])
+        wheel_probe = json.loads(wheel_probe_raw)
+        wheel_pkg_dir = Path(wheel_probe["package"]).resolve().parent
+        wheel_prefix = Path(wheel_probe["prefix"]).resolve()
+        require(wheel_probe["prefix"] != wheel_probe["base"] and wheel_pkg_dir.is_relative_to(wheel_prefix),
+                "wheel must load inside its fresh venv")
+        require(qualify_mod.package_files(wheel_pkg_dir) == package, "installed wheel package differs from source")
+        wheel_demo_out = run("wheel-demo", [str(wheel_python), "-I", "-B", "-X", "utf8", "-m", "checkwash", "demo"])
+        require(b"tampering cases blocked" in wheel_demo_out, "wheel demo did not execute packaged cases")
+        pyz_demo_out = run("pyz-demo", [*py, str(pyz), "demo"])
+        require(b"tampering cases blocked" in pyz_demo_out, "pyz demo did not execute packaged cases")
+
+        run("test-editable-install", [*py, "-m", "pip", "--isolated", "--disable-pip-version-check", "--no-input",
+                                     "install", "--no-index", "--no-deps", "--no-build-isolation", "--no-compile",
+                                     "--report", str(output / "test-install-report.json"), "-e", str(source)])
+        pytest_argv = [*py, "-m", "pytest", "-p", "xdist.plugin", "-n", COMPACT_PYTEST_WORKERS, "--dist", "worksteal",
+                       "-p", "no:cacheprovider", "--basetemp", str(scratch / "pytest"),
+                       "--junitxml", str(output / "junit.xml"), "tests"]
+        compact["pytest_argv"] = pytest_argv
+        pytest_stdout = run("pytest", pytest_argv, cwd=source, timeout=14400)
+        junit_raw = (output / "junit.xml").read_bytes()
+        junit_parsed = bridge.validate_junit(junit_raw, pytest_stdout=pytest_stdout, pytest_version=pytest_version)
+        expected_tests = bridge.documented_test_count(source, args.head_sha)
+        require(junit_parsed["tests"] == expected_tests,
+                f"JUnit test count {junit_parsed['tests']} differs from documented suite count {expected_tests}")
+        compact["junit"] = dict(
+            sha256=action.digest(junit_raw),
+            bytes=len(junit_raw),
+            tests=junit_parsed["tests"],
+            passed=junit_parsed["tests"] - junit_parsed["skipped"],
+            skipped=junit_parsed["skipped"],
+            failures=0,
+            errors=0,
+            passed_subtests=junit_parsed.get("passed_subtests", 0),
+            pytest_stdout_sha256=action.digest(pytest_stdout),
+        )
+
+        require(action.snapshot(reader, source, args.head_sha) == source_before, "candidate source changed during collection")
+        require(action.snapshot(reader, trusted, args.collector_source_sha) == trusted_before, "collector source changed")
+        require(action.snapshot(reader, pinned, action.ACTION_SHA) == pinned_before, "pinned Action source changed")
+        for name, path in (("python", python), ("git", git), ("bash", bash)):
+            require(action.digest(path.read_bytes()) == compact["runtime"][name + "_sha256"], "runtime executable changed")
+        compact["status"] = "completed"
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+        errors.append(type(exc).__name__ + ": " + str(exc))
+    finally:
+        inventory_mod.git = orig_inv_git
+        bridge.git = orig_bridge_git
+        compact["raw_exits"] = [
+            dict(
+                name=row["name"],
+                duration_seconds=row["duration_seconds"],
+                exit_code=row["exit_code"],
+                timed_out=row["timed_out"],
+                stdout_sha256=action.digest((output / row["stdout"]).read_bytes()),
+                stderr_sha256=action.digest((output / row["stderr"]).read_bytes()),
+            )
+            for row in ledger
+        ]
+        action.save_json(output / "collection-status.json", dict(
+            status=compact["status"], errors=errors, provenance=compact["provenance"], other_platforms="NOT_RUN",
+            mode="compact-receipt",
+        ))
+        action.save_json(output / "compact-receipt-pretty.json", compact)
+        compact_raw = json.dumps(compact, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        compact_path = output / "compact-receipt.json"
+        compact_path.write_bytes(compact_raw)
+    print(json.dumps(dict(
+        status=compact["status"],
+        errors=errors,
+        compact_receipt=str(output / "compact-receipt.json"),
+        manifest_sha256=action.digest(compact_raw),
+        bytes=len(compact_raw),
+    )))
+    return 0 if compact["status"] == "completed" else 1
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["--internal-helper"]:
@@ -429,7 +819,10 @@ def main(argv=None):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--pr", type=int, required=True)
-    return collect(parser.parse_args(argv))
+    parser.add_argument("--compact", action="store_true",
+                        help="collect a single-line compact digest receipt without evidence-branch archive files")
+    parsed = parser.parse_args(argv)
+    return collect_compact(parsed) if parsed.compact else collect(parsed)
 
 
 if __name__ == "__main__":

@@ -1750,3 +1750,174 @@ repository root, and a link a range adds, changes or reads in a pass.
 
 macOS and Windows `--symlinks` (without the symbolic-link privilege on this
 account), and other platforms: NOT_RUN.
+
+## D-209 (2026-11-13): compact PJU digest receipts for ordinary pull requests, ruleset App binding, and self-sealing intake dispatch
+
+**Approval.** Antigravity drafted this entry in #606 (`06fe2f1e`). At
+2026-11-13T14:48:20Z Antigravity asked two questions (Antigravity wrote both
+questions and all four options):
+
+1. 「#606 的 L1（DECISIONS.md D-209）核可，並確認 GitHub ruleset 22032046 已改為單一 checkwash（GitHub Actions 15368），收據過了就合併嗎？」 — at
+   2026-11-13T14:49:57Z Nelson answered
+   `(Recommended) 核可 D-209、已改好 ruleset 22032046，收據過了就合併 #606`
+   (the other option was `核可 D-209，但先停在合併前等我再看一眼`). The answer
+   approves D-209 (`DECISIONS.md`, L1) and merging #606 once live ruleset
+   `22032046` reflects `{"context": "checkwash", "integration_id": 15368}` and
+   the pull request's compact PJU receipt and required `checkwash` check pass.
+2. 「Phase 2 God-function 拆解 swarm 規模預告（5 author + 1 verifier + 1 monitor，預估約 2～3M tokens，合成 1～2 個 PR）確認開跑嗎？」 — at
+   2026-11-13T14:49:57Z Nelson answered
+   `(Recommended) 好，#606 合併後直接照這個規模啟動 Phase 2 swarm` (the other
+   option was `先完成 #606 合併就好，啟動 swarm 前再停下來問我`).
+
+After intake run `43450393694` showed that a same-SHA `workflow_dispatch` on
+`8d28b559` attaches `checkwash` to a `workflow_dispatch` `CheckSuite` ignored by
+ruleset `statusCheckRollup`, Antigravity pushed `f2bfe8e0` allowing pre-merge
+bootstrap dispatch from a separate same-tree ref (`review/collector-d209-20261113`),
+asked whether Nelson approved that one-clause L1 addition in D-209, and (on
+Nelson's 2026-11-13T15:32:46Z question 「要不要換個session開teamwork拆?」)
+recommended finishing `#606` in this session and opening a fresh `/teamwork`
+session for Phase 2; at 2026-11-13T15:33:34Z Nelson answered
+「先合併收尾 然後給我prompt 我直接開session開工」 (merge and wrap up `#606`
+first, then give him the prompt so he can open a new session and start work).
+
+**What was asked.** After #605 merged (`b326f201`), at 2026-11-13T13:35:09Z
+Nelson wrote 「我覺得現在驗證成本太高了 / 而且有God Function」 (verification
+cost is too high right now, and there are God functions), followed by
+「這個是個大工程喔」 (`13:39:32Z`), 「0.13會很急嗎」 (`13:42:20Z`), and
+「先整頓驗證成本跟 God Function」 (`13:43:37Z`: put verification cost and the
+God functions in order first). At 2026-11-13T13:46:13Z Antigravity asked two
+questions (Antigravity wrote both questions and all six options):
+
+1. 「一般 PR 的驗證減重要採哪一種方案？」 — at 13:46:28Z Nelson chose
+   `(Recommended) PJU 輕量雜湊制：維持 PJU 執行，廢掉 53MiB evidence 分支與重複 3×283，改 ruleset 綁 app 15368（約 6～8 分鐘／PR）`
+   (the other two options were restoring one GitHub-hosted Ubuntu 3.12 PR CI
+   leg with an EC POLICY update, or keeping the four-context `evidence/*`
+   branch format with 24-core parallelism).
+2. 「驗證減重完成後，God Function 重構的範圍與執行方式？」 — at 13:46:28Z
+   Nelson chose
+   `(Recommended) 開精簡 swarm（4～5 worker）平行拆核心 5 大檔（engine、shadow、python/frontend、gating 流程、table_oracles），合成 1～2 個 PR`
+   (recorded here as the next task after D-209 merges; the other options were
+   two swarm waves across all 16 functions over 200 lines, or single-threaded
+   decomposition of only the 4 functions over 500 lines).
+
+**What was found.** Measured on #605's PJU receipt (`C:\Users\nelson\dev\cw605r1`,
+`12:35:59Z` to `13:07:05Z`, 31m06s wall time on 24-core LAPTOP-01AGNPJU):
+
+- `qualify-source` (834.4 s), `qualify-wheel` (838.3 s) and `qualify-pyz`
+  (904.5 s = 15m05s wall time) ran 283 JS/TS assertion-contract cases across
+  three distributions as 849 × 5 sequential Windows `git`/`python` child
+  processes, even though `tests/test_assertion_contract.py` and
+  `tests/test_js_foundation.py` already run all 283 cases in-process during
+  `pytest` and `tools/release_inventory.py` checks byte-for-byte SHA256
+  equality of every `checkwash/*.py` archive member against `src/checkwash`.
+- `pytest -n 8` took 674.1 s (11m14s) using 8 of 24 logical cores.
+- `action-dogfood` (51.1 s) and `candidate-action-dogfood` (47.4 s) ran
+  sequentially (98.5 s combined).
+- Each ordinary PR committed 254 files (~53.30 MiB, mostly built `.whl`,
+  `.tar.gz`, `.pyz`, JUnit XML and binary command streams) to a new
+  `evidence/pr<N>-...` branch in the product repository (50 `evidence/*`
+  branches, ~2.9 GB accumulated).
+- The 2026-11-10 supply-chain re-review also identified three open bridge/CI
+  gaps: **RC-02 Understated 2** (`admit_environment` accepted any branch ref
+  matching `quality-candidate-intake.yml@*` even after bootstrap), **RC-03**
+  (live ruleset `22032046` left `integration_id: null` on `checkwash`, and
+  `quality-candidate-intake.yml` included itself in `pull_request.paths`), and
+  **RC-09** (`validate_junit` accepted any non-empty JUnit file without
+  checking the documented suite count).
+
+**Decision.**
+
+1. **Compact PJU digest receipts for ordinary PRs
+   (`checkwash.pju-compact-receipt.v1`).** `tools/collect_pju_receipts.py
+   --compact` keeps all product execution on LAPTOP-01AGNPJU
+   (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9, isolated
+   task-local venv and frozen Git checkouts):
+   - runs `action-dogfood` (at `ACTION_SHA`) and, when the candidate's
+     `action/`/`src/`/`pyproject.toml` closure differs, runs
+     `candidate-action-dogfood` concurrently;
+   - builds `.whl`, `.tar.gz` and `checkwash.pyz` into scratch, verifies exact
+     archive metadata, entrypoints and `checkwash/*` member byte-identity
+     against `src/checkwash` via `tools/release_inventory.py`, installs the
+     wheel into a fresh venv, verifies the loaded wheel's files, and runs
+     `checkwash demo` on both the installed wheel and `checkwash.pyz`;
+   - runs the full `pytest` suite with **16 xdist workers**
+     (`COMPACT_PYTEST_WORKERS = "16"`), validates JUnit and subtest stdout,
+     checks exact equality with the documented suite count, keeps raw logs on
+     PJU, and writes a single-line canonical ASCII JSON digest receipt (~6–9
+     KB) with zero new `evidence/*` branches in Git. Historical `evidence/*`
+     branches are left untouched.
+2. **Hosted verification, test-count floor and App-bound check publication.**
+   Under `.github/workflows/quality-candidate-intake.yml` (`mode=receipt` with
+   non-empty `compact_receipt`, keeping the existing four `mode` options intact
+   and staying at 10 `workflow_dispatch` inputs), `verify-pju-compact` and
+   `publish-pju-compact` call `tools/pju_receipt_bridge.py verify-compact` and
+   `publish-compact`:
+   - refuse release heads (`validate_ordinary_head`) before any GitHub API
+     read, verify live open PR head/base/tree, reject `receipt_commit` when
+     `compact_receipt` is supplied, and require canonical sorted-key ASCII JSON
+     wire framing;
+   - recompute `src_tree`, `source_package_sha256`, `builder_sha256`, contract
+     suite digests, Action YAML/run-block/engine digests and candidate closure
+     digests directly from checked-out `trusted` and `candidate-data` Git
+     blobs;
+   - enforce **RC-09** across both `verify-compact`/`publish-compact` and
+     legacy `verify`/`publish`: `documented_test_count(source_root, head)` reads
+     `README.md`, `CONTRIBUTING.md` and `docs/launch.md` from `head`'s Git
+     blobs, requires all documented counts to agree and meet the 23,065 floor,
+     and requires JUnit's testcase count to equal that exact number;
+   - enforce **RC-02 Understated 2**: `admit_compact_environment` allows a
+     branch `GITHUB_WORKFLOW_REF` only while `base` on `main` does not yet
+     contain `verify-pju-compact` and only when `trusted_workflow_sha ==
+     collector_source_sha` with the exact Git tree of `head` (dispatched from a
+     separate same-tree commit ref `review/collector-d209-20261113` so GitHub
+     creates a standalone `CheckSuite` on `head` rather than attaching the
+     check to a `workflow_dispatch` suite that ruleset `statusCheckRollup`
+     ignores); once D-209 merges to `main`, `base` contains
+     `verify-pju-compact` and any non-`refs/heads/main` dispatch is refused
+     automatically (and legacy `verify`/`publish` in `main()` requires
+     `refs/heads/main` immediately);
+   - enforce **RC-03**: remove `.github/workflows/quality-candidate-intake.yml`
+     from `pull_request.paths`, restrict the `intake` job on
+     `workflow_dispatch` to `inputs.mode == 'intake'`, bind `checkwash` to
+     `integration_id: 15368` (GitHub Actions) in `action/required-ruleset.json`
+     and repository ruleset `22032046` (removing the three ordinary-PR
+     `candidate assertion contract (...)` entries there), and publish
+     `COMPACT_CONTEXTS = ("checkwash",)` (`external_id =
+     pju-compact:<sha256>:checkwash`).
+
+**Not changed.**
+- Release verification (`tools/collect_pju_release.py`,
+  `tools/pju_release_bridge.py`, `.github/workflows/release.yml` and
+  `.github/workflows/release-hosted.yml`): release PRs and release stages keep
+  full `3x283` source/wheel/pyz CLI qualification, binary artifact inventories
+  and hosted macOS/Linux verification.
+- Legacy `mode=receipt` low-level helpers (`PYTEST_WORKERS = "8"`, `CONTEXTS`
+  with four checks, `admit_environment`, `validate_packet`) and all existing
+  bridge/release unit tests.
+- Historical `evidence/*` branches on `taipei49314/checkwash`.
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9):
+- `tests/test_pju_compact_receipt.py` (33 tests: workflow graph and 10-input
+  ceiling, RC-03 path exclusion, ruleset `integration_id: 15368`, both Action
+  closure modes, canonical ASCII JSON wire framing and SHA256 digest binding,
+  17 tamper-rejection mutations, documented test-count drift/floor rejection on
+  both compact and legacy `main()` paths, self-sealing bootstrap admission
+  before and after merge plus legacy `refs/heads/main` enforcement, check
+  publication/App-ID verification and failure rollback, CLI release-head refusal
+  before GitHub reads, `collect_compact` `--git`/sanitized-env binding, and
+  Action replay summarization) plus all existing bridge, release, packaging,
+  zipapp, documentation and workflow tests.
+- `checkwash check` on the pull request's range at `--fail-on high`: pass (0
+  high/critical; expected warn `CI_WORKFLOW_TOUCHED` on
+  `quality-candidate-intake.yml`).
+- Independent read-only review sub-agent audit on `1a4d7163` found 1 high
+  (enforce `refs/heads/main` and `documented_test_count` on legacy `verify`/
+  `publish` in `main()`), 1 medium (bind `inventory_mod.git` and `bridge.git`
+  in `collect_compact` to `--git` and sanitized `env`), 2 low (canonical ASCII
+  JSON wire check, explicit release-head refusal + `collect_compact` unit tests,
+  and 23,065 floor), and 3 nits (`~6–9 KB` size prose, dual Action replay error
+  collection, and check-run `app.id == 15368` assertion); all fixed before PR
+  receipt collection. Followed by the pull request's own compact PJU receipt
+  (`pytest -n 16`) and green `checkwash` check run (`app 15368`).
+- macOS, Linux outside local checks, and other platforms: NOT_RUN.
