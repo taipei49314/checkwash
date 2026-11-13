@@ -1437,3 +1437,303 @@ shape what runs. A script that reads its own block and runs it is row
   checks.
 
 macOS and other platforms: NOT_RUN.
+
+## D-208 (2026-11-13): a virtual environment's own links: a working-tree run sets aside an untracked one, and the working tree's listing and walks leave out non-directory ones in bin or Scripts and pass over lib64
+
+**Approval.** [TO FILL before merge. `DECISIONS.md`, `SPEC.md` and
+`THREATMODEL.md` are maintainer text (AGENTS.md). The pull request asks
+Nelson to approve, by name and before it merges, this entry with the new
+§9 paragraph and the §2b and §4b clauses of `SPEC.md`, and THREATMODEL rows
+128, 180 and 186 (L1). Record here the question, who wrote it and its
+buttons, his answer and its time, as D-207's Approval paragraph does.]
+
+**What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
+of 2026-11-12T15:05:30Z and the scope Claude chose for 0.13. D-207 took the
+re-review's ND-02 on Windows and left its cause on Linux and macOS to a
+later pull request. At 2026-11-13T07:35:10Z Nelson wrote 「從第 1d 節接著做」
+(go on from section 1d): section 1d of Claude's handover file names this
+cause as 0.13's next piece. Claude chose the design below and ran its first
+three reviews (`78696e87`); after that session paused, Nelson instructed
+Antigravity 「你來接手」 (take over) on 2026-11-13 to finish answering the
+reviews and open the pull request.
+
+**What was found.** Measured on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), WSL2 Ubuntu 24.04, CPython
+3.12.3, Git 2.43.0, main `0f054eef`. Beside an environment
+`python -m venv` wrote, eight changes were checked: none, an honest
+production change, a weakened assertion, an expected value moved with
+production, a weakened test helper, a weakened root helper, a first
+`pytest.ini` that leaves tests out, and a new provider of a module a test
+imports. Without an environment they pass, pass, block, pass, block, block,
+block and pass, in a check without a range, the Stop hook and a range.
+
+- **Untracked**, named `env` (with pip and without) or `.venv` (without
+  pip): a check without a range exits 2, and the Stop hook says the change
+  was not analysed, for every change, the weakened ones included. The
+  change-list read refuses the environment's first link: `"strict snapshot
+  path leaves the repository: path='env/bin/python'…"`. A range that adds
+  the environment exits 2 too (`"strict snapshot batch cannot inspect
+  nonregular source env/bin/python (a symlink)"`). In the PreToolUse hook,
+  asked about a Write to the test, it asks about the weakening and passes
+  the honest edit, as without one; asked about a Write to `tests/helpers.py`
+  or the root `conftest.py` beside `env`, main says the edit was not
+  analysed (`"strict snapshot inventory cannot follow directory symlink
+  env/lib64: the importer search needs its sources"`), so under the default
+  policy the weakening goes ahead unasked (`.venv` is skipped as a hidden
+  directory by `search`, so it asked on main too).
+- **Ignored** by a `.gitignore`, named `env`, with pip: the first four
+  changes get their verdicts, but the other four exit 2 in a check without a
+  range, and the Stop hook says they were not analysed: the importer search
+  and the collection checks walk the working tree, ignored files included,
+  and refuse the environment's `lib64` link to `lib` as an opaque directory
+  (#414). The PreToolUse hook also says a Write to `tests/helpers.py` or the
+  root `conftest.py` was not analysed. So the known issue's "ignoring the
+  environment in Git avoids all of these" did not hold on Linux. A range is
+  unaffected.
+- **The links.** CPython 3.12.3's environment holds `bin/python -> python3`,
+  `bin/python3 -> /usr/bin/python3`, `bin/python3.12 -> python3` and
+  `lib64 -> lib`. In the `python:3.13-slim` and `python:3.14-slim` Docker
+  images on the same machine (CPython 3.13.18 and 3.14.10; D-207 noted no
+  host Python 3.13), `bin/python` links to `/usr/local/bin/python`,
+  `bin/python3` and `bin/python3.X` to `python`, Python 3.14 adds
+  `bin/𝜋thon -> python`, and both write into the environment a `.gitignore`
+  that holds `*`. A list of names would have missed `𝜋thon`.
+- **A committed link survives `python -m venv` without `--clear`.** In WSL
+  (CPython 3.12.3) and in the 3.13.18 and 3.14.10 images, over a
+  `pyvenv.cfg` and an interpreter link to `/bin/true` already in place,
+  `python -m venv --without-pip env` run again without `--clear` exited 0
+  and kept the link (`symlink_or_copy`), and `env/bin/python -m pytest` then
+  exited 0 having run nothing; `--clear` replaced it. So a committed
+  interpreter link in an environment a CI job runs `venv` over again without
+  `--clear` could stand in for the suite's interpreter.
+
+**Decision.**
+
+1. **A virtual environment's own link** is a symbolic link directly in
+   `<D>/bin` or `<D>/Scripts` whose name does not end in `.py` in any case,
+   or `<D>/lib64` whose link text is `lib` beside a directory `<D>/lib`,
+   where `<D>` is a directory other than the repository root that holds
+   `pyvenv.cfg` as a regular file: the file PEP 405 names, whose presence
+   pytest checks with `is_file()` to skip the directory while recursing (it
+   still enters a directory given as an initial collection path). `bin` is
+   where `python -m venv` links the interpreter on Linux and macOS,
+   `Scripts` where it does with `--symlinks` on Windows. Each test is an
+   `lstat`, or a `readlink` on `lib64`, so nothing is followed, and a
+   `pyvenv.cfg` that is a link or directory does not count.
+2. **The change list.** A check without a range, the Stop hook's verdict
+   diff and its session-commits analysis carry such a link with no bytes on
+   either side when Git lists it as untracked (`??`) and no compared commit
+   holds `<D>`: `HEAD` and, in the Stop hook, the session base. If Git
+   cannot say, the link is read, and refused, as before. After unread sides
+   over the source byte limit are set aside and guarded (so #456's Stop-hook
+   size block still wins over a refused link), the engine judges the link's
+   path by the rule a side over the limit meets (`SPEC.md` §4b, #415;
+   generated-output paths such as `.venv/**` keep §4b's scope and role
+   exemption), together with non-artifact test, conftest and test-support
+   roles, and checks whether pytest's collection can enter `<D>`
+   (`testpaths`, `addopts`, shell/Makefile/workflow runner commands or
+   `--collect-in-virtualenv`). If
+   a detector must read the path or collection can enter `<D>`, the run
+   refuses it as an engine error (exit 2; `check --format hook-json` reports
+   it as any engine error, with no `decision`), naming the link and reason.
+   Otherwise it is set aside before any pass: no detector reads it, it earns
+   no repair evidence, and the verdict diff names it on stderr in every
+   format (the session-commits analysis prints no stderr note). #455's
+   question of a shell shebang on a side whose prefix was not read asks
+   nothing of it: a link holds no bytes checkwash reads, and an untracked
+   link reaches no commit, so no required check runs it (row 186).
+3. **The working tree's listing and walks.** The working-tree inventory
+   leaves out such a link in `<D>/bin` or `<D>/Scripts` that does not link
+   to a directory, untracked, ignored or tracked alike. A link to a
+   directory stays an opaque directory (#414), except `<D>/lib64` whose text
+   is `lib` beside a directory `<D>/lib`, which the walks (the inventory and
+   the importer search) pass over since its files are listed under `lib`.
+   The PreToolUse hook reads the same listing and walks
+   (`pretool.ProposedTree`): on main, a Write to a test helper or a root
+   helper beside an environment named `env` whose `lib64` links to `lib`,
+   ignored or untracked, was not analysed, so under the default policy a
+   weakening went ahead unasked; now the hook asks.
+
+Every other link is read, and refused, as before: a link elsewhere, one in a
+directory a compared commit holds, a tracked link the diff changes, a staged
+link, one beside a `pyvenv.cfg` that is not a regular file, one at the
+repository root, and a link a range adds, changes or reads in a pass.
+
+**Why it cannot hide a change.**
+- Nothing follows a link. A pass that asks for one's bytes still refuses,
+  so no pass reads bytes it did not mean to.
+- Only links. An environment's regular files are listed and read as
+  before. The first version of D-205 set aside every file under a directory
+  holding an untracked marker of its own and nothing tracked, and three
+  review sub-agents found it let a run pass changes main blocks; this rule
+  never sets aside a regular file.
+- In the diff, only untracked links in an environment directory `<D>` that
+  no compared commit holds. A range that adds or changes a link refuses it,
+  so the required check passes no pull request that commits one, for the
+  reason the last measurement above gives; links the range's base already
+  holds are listed, and a pass that reads one refuses, as before.
+- A path a detector must read (test, conftest and test-support paths
+  included) or an environment pytest's collection can enter refuses, and an
+  environment planted inside a directory a compared commit already holds
+  does not qualify.
+
+**Residual (THREATMODEL row 186).**
+- **On this machine.** An untracked environment link can point at another
+  program: with `env/bin/python3 -> /bin/true`, a local
+  `env/bin/python -m pytest` exits 0 having run nothing, and no diff shows
+  it. Planting `pyvenv.cfg` inside an existing tracked directory (`tests/`,
+  `suite/`), under non-artifact `tests`/`test`/`__tests__`/`__mocks__`, or in
+  an environment named in `testpaths`, `addopts` or a shell, Makefile, tox or
+  workflow runner file refuses; in an untracked custom directory outside those
+  roles and unmentioned by the repository's configuration and those runners, a
+  manual `pytest <dir>` or Python runner code (`noxfile.py`) enters `<D>` as an
+  initial path and follows a link in `<D>/bin` (as do a differently cased
+  spelling of `<D>` or `bin` on a case-insensitive file system, as in row 179,
+  and pytest before 8.3, which detected environments by activation scripts
+  rather than `pyvenv.cfg`; inferred, not run). On main such an untracked link stopped
+  the run (an ignored one already passed when no walk met it), so a check
+  without a range exited 2 and the Stop hook said the change was not
+  analysed; they now judge the rest of the change, naming the skipped link
+  on stderr only. The required check, in range mode, passes no pull request
+  that commits a link.
+- **Left out of the listing.** The working tree's inventory leaves out
+  non-directory links directly in `<D>/bin` or `<D>/Scripts` whatever their
+  name, `.py` (in any case) aside, tracked, ignored and untracked alike,
+  while directory links there stay opaque (#414) and only `<D>/lib64`
+  linking to `lib` beside directory `<D>/lib` is passed over. The passes
+  that batch-read the inventory's runner-shaped paths and paths with no dot
+  (the collection inventory and the runtime-provider pass) no longer meet a
+  non-directory link there, and so no longer refuse it; its bytes were never
+  read on main either.
+
+**Not changed.**
+- Range mode, and Git's tree listing: a committed environment's links,
+  unchanged in a range, are listed, and a pass that reads one refuses, as
+  before.
+- The `unread` key, the findings and every other output: the note is on
+  stderr only.
+- A conda environment: pytest also skips a directory that holds
+  `conda-meta/history` while recursing, which is no marker here.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_environment_links.py`, 93 tests. On Windows (CPython 3.11.9)
+  37 pass and 56 skip: 54 with `WinError 1314` because the account lacks the
+  symbolic-link privilege, and 2 with `skipif(os.name == "nt")` because
+  Windows `python -m venv` without `--symlinks` writes no link. In the
+  six-leg Linux images (Docker, no network; CPython 3.11.17, 3.12.15 and
+  3.13.16) all 93 pass, the two that run `python -m venv` included. Its 22
+  command-line tests, run in the 3.12.15 image with the command line from
+  main `0f054eef`'s tree: 19 fail there (main exits 2 on an untracked
+  environment and on an ignored `env` walked by a helper, root-helper,
+  collection or provider pass, and gives "not analysed" in the Stop and
+  PreToolUse hooks), and the other 3 assert refusals main already makes (an
+  environment planted inside `tests/`, a must-read link in the Stop hook,
+  and a range that adds an environment). Across all 93 tests against main's
+  `src` (with the four new symbols stubbed so the module imports), 80 fail
+  and 13 assert refusals and opaque-directory rules main already keeps.
+- The probe above, run in WSL2 Ubuntu 24.04 (CPython 3.12.3, Git 2.43.0,
+  340 rows) with this version against main `0f054eef`:
+  - untracked `env` (without pip) and `.venv` (without pip): all eight
+    changes get the same verdicts in a check without a range and the Stop
+    hook as without an environment (pass, pass, block, pass, block, block,
+    block and pass, in 0.52 to 0.61 s, with four stderr notes), where main
+    exited 2 and said "not analysed";
+  - untracked `env` with pip: the same eight verdicts, plus 434 warn-level
+    findings (`104 BROAD_EXCEPT_ADDED`, `330 SUPPRESSION_ADDED`) from pip's
+    untracked package sources in 11.7 to 14.1 s (honest production change:
+    13.1 s in `check`, 12.2 s in the Stop hook), where main exited 2 in
+    0.5 s;
+  - ignored `env` with pip: the same eight verdicts and zero extra warnings
+    in 0.46 to 0.77 s, where main exited 2 and said "not analysed" on the
+    last four;
+  - PreToolUse `Write` on the test, `tests/helpers.py` and the root
+    `conftest.py` (honest and weakened): `{}` on every honest edit and
+    `permissionDecision: "ask"` on every weakening across all five setups,
+    where main gave "not analysed" on `tests/helpers.py` and `conftest.py`
+    beside `env` (untracked, with pip, and ignored);
+  - range mode adding the environment: exits 2 on both versions.
+- The bypass review's four planted-`tests/` shapes in WSL (`tests/bin/plugins`,
+  `tests/bin/test_patch.txt`, `tests/lib64 -> outside`, and beside a weakened
+  assertion): exit 2 in `check` and "not analysed" in the Stop hook, identical
+  to main.
+- Forty-three one-line mutants of the change, each run without `-x` against
+  `tests/test_environment_links.py` in its own copy in the 3.12.15 Linux
+  image: 38 fail it. Three of the other five are equivalent: leaving link
+  changes in `WorktreePytestConfigs` in `_cmd_check` and `_session_note` (2),
+  since `_set_aside_links` refuses every config-named link and no other link
+  path is a config candidate, and leaving `links` out of `listed` in
+  `list_session_changes`, since `links` holds only untracked paths in
+  environments neither `since` nor `head` holds, which `diff-tree` never
+  lists. The other two reach paths no test constructs: dropping the
+  `""`/`.`/`..` segment guard in `environment_of_link`, which `git status`
+  and `os.walk` never emit, and omitting `head` from `(since, head)` in
+  `list_session_changes`, which matters only when a session commit adds `<D>`
+  after `since` (omitting `HEAD` in `list_worktree_changes` fails 4 tests).
+- Walk timings on a 24,021-path tree (400 `bin` directories, median of 5
+  interleaved runs): WSL 0.498 s (main) vs 0.538 s (`list_paths`) and
+  0.075 s vs 0.079 s (`search`); Windows 1.418 s vs 1.514 s (`list_paths`)
+  and 1.168 s vs 1.200 s (`search`).
+- The full suite, the fixture cases, `tests/gates`, and checkwash's own
+  check of the pull request's range.
+- Review. Three read-only Claude review sub-agents reviewed the first
+  version (`78696e87`): one for bypasses, one for code and tests, one for
+  documents and claims. This version answers them:
+  - for bypasses: an untracked `pyvenv.cfg` planted in a directory pytest is
+    given to collect (`tests/` under `testpaths = ["tests"]` or `pytest
+    tests`, or `--collect-in-virtualenv`), where pytest still enters the
+    directory and follows links in `bin`, `Scripts` or `lib64`. Now a
+    compared commit holding `<D>`, a non-artifact `test`, `conftest` or
+    `test_support` role on the link's path, a case-folded `.py` link name,
+    an `env/lib64` not linking to `lib` beside directory `lib`, or
+    collection reaching `<D>` refuses, and row 180 and row 186 record what
+    was measured and what stays local; plus the generated-output scope
+    qualification and directory links staying opaque in `list_paths`;
+  - for code and tests: the PreToolUse improvement on helper and root-helper
+    edits; running `_set_aside_links` after `_set_aside_unread` so #456's
+    Stop-hook size block wins over a refused link; explicit `S_ISLNK` in
+    `environment_lib64`; `d == "lib64"` before `is_symlink()` in `search`
+    and once-per-directory `in_scripts` in `list_paths`; tests for Jest
+    `setupFiles` second pass and first-pass ordering, case-sensitive `bin`
+    and `Scripts`, dangling `lib64`, `LinkSide` printability, end-to-end
+    `REPAIR_EVIDENCE` absence, Stop-hook session-commits analysis, `_held_at_any`
+    `GitError` fallback, and specific `match=` patterns;
+  - for documents and claims: PreToolUse in "What was found", Decision 3 and
+    "Not changed"; must-read link refusals as engine errors in `hook-json`
+    (row 128, §4b, §9); range mode refusing added or changed links and
+    base-held links only when a pass reads one; only non-directory links in
+    `bin` or `Scripts` leaving the listing; `HEAD` and the session base
+    (no nonexistent base flag); the #455 rationale; the listing residual
+    covering tracked links and batch-read passes; Stop hook exit 0 "not
+    analysed" on ignored `env`; KNOWN-ISSUES macOS qualification, untracked
+    pip warning count and timing, and untracked link wording; §4b in the
+    Approval list; the D-205 paraphrase; `docs/subject-integrity.md`; and
+    the nits (`venv` without `--clear`, Windows skip split, Python 3.14
+    `𝜋thon`, `is_file()`, `readlink`).
+
+  One read-only review sub-agent then reviewed this version as `091c85f5`
+  and `40d7271b`. It found no blocker and confirmed the first version's
+  findings resolved. It found that `environment_reached` read `-o` overrides
+  through `_spelled_options` (which never yields `-o`), took positional runner
+  arguments only from `shadow._runner_invocations` (missing quoted YAML `run:`
+  steps, `pytest . <env>`, compound or line-continued shell steps, workflow
+  `working-directory`, `PYTEST_ADDOPTS`, and `-c`/`--pyargs`/`--rootdir`), fell
+  back to `resolved_collection_settings` (missing `[tool.pytest]` and INI `:`)
+  when `addopts` held an unknown short flag, and missed leading-`]` bracket
+  globs and `{toxinidir}`/`$PWD` in `_target_enters_environment`; that
+  `environment_of_link` checked `parts[-1] == "lib64"` before `parts[-2] in
+  _ENVIRONMENT_SCRIPTS`, rejecting `<D>/bin/lib64`; and that Python runner code
+  (`noxfile.py`) and case-insensitive file systems were unstated in row 186,
+  `"non-artifact"` was omitted in one sentence of row 186 and Residual, the
+  four planted-`tests/` shapes sat under the 340-row bullet, and the commit
+  message counted `test_zipapp.py`'s five tests twice (`1,015` instead of
+  `1,011 passed, 10 skipped`). This version answers each: `arrival_collection._load`
+  and `_consume_pytest_words` in `environment_reached`, with workflow
+  `working-directory` and `PYTEST_ADDOPTS`, ten parameterized reachability
+  tests, `bin/lib64` ordered under `_ENVIRONMENT_SCRIPTS` and tested, and the
+  wording and counts corrected. It was not reviewed again.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+macOS and Windows `--symlinks` (without the symbolic-link privilege on this
+account), and other platforms: NOT_RUN.
