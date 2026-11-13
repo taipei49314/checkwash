@@ -715,7 +715,7 @@ def apply_gates(
             _apply_non_oracle_gates(f, ir)
             continue
 
-        unit = ctx.units.get((f.path, f.unit or ""))
+        unit = _resolve_finding_unit(f, ctx, finding_marker)
         if _try_relocation_or_inert_credit(f, unit, ctx, contract):
             continue
 
@@ -738,6 +738,7 @@ _GateContext = collections.namedtuple(
         "moved",
         "duplicates",
         "units",
+        "projected_units",
         "active_allows",
         "roles",
         "judged_tests",
@@ -776,6 +777,7 @@ def _build_gate_context(
     moved = collections.Counter(ir.globals.moved_assertion_texts)
     duplicates = set(ir.globals.duplicate_unit_hashes)
     units = _unit_index(ir)
+    projected_units = _projected_unit_index(ir)
     active_allows = active_fingerprints(allow_entries, today)
     roles = {f.path: f.role for f in ir.files}
     judged_tests = {f.path for f in ir.files if judged_as_test(f)}
@@ -809,6 +811,7 @@ def _build_gate_context(
         moved=moved,
         duplicates=duplicates,
         units=units,
+        projected_units=projected_units,
         active_allows=active_allows,
         roles=roles,
         judged_tests=judged_tests,
@@ -821,6 +824,151 @@ def _build_gate_context(
         split_renamed=split_renamed,
         prod_changed=prod_changed,
     )
+
+
+def _projected_unit_index(ir: IR) -> dict[tuple[str, str], tuple[FileIR, list[Unit]]]:
+    """Index synthetic concrete units by `(path, source_unit)` for exact gating lookup."""
+    from checkwash.findings import unit_finding_name
+
+    index: dict[tuple[str, str], tuple[FileIR, list[Unit]]] = {}
+    for file in ir.files:
+        for unit in file.units:
+            source = getattr(unit, "source_unit", "")
+            if isinstance(source, str) and source:
+                entry = index.get((file.path, unit_finding_name(unit)))
+                if entry is None:
+                    index[(file.path, unit_finding_name(unit))] = (file, [unit])
+                else:
+                    entry[1].append(unit)
+    return index
+
+
+def _unit_matches_finding(
+    f: Finding,
+    u: Unit,
+    finding_marker,
+    file: FileIR | None = None,
+) -> bool:
+    """Whether `u` is the concrete IR unit that emitted `f`."""
+    from checkwash.findings import Evidence
+
+    if f.rule == "TEST_DISABLED":
+        if f.shape == SHAPE_UNIT_REMOVED:
+            if u.after is not None or u.before is None:
+                return False
+            shown = "\n".join(a.text for a in u.before.assertions if a.via is None) or (f.unit or "")
+            return f.before == Evidence(text=shown, span=u.before.span)
+        if f.shape == SHAPE_PARAM_CASES_REMOVED:
+            return (
+                u.before is not None
+                and u.after is not None
+                and u.delta is not None
+                and u.delta.param_cases_removed > 0
+                and f.after is not None
+                and f.after.span == u.after.span
+            )
+        if f.shape == SHAPE_GUARD_WEAKENED:
+            return (
+                u.before is not None
+                and u.after is not None
+                and f.before is not None
+                and f.after is not None
+                and f.before.span == u.before.span
+                and f.after.span == u.after.span
+            )
+        return finding_marker(f, u) is not None and (
+            f.after is None or u.after is None or f.after.span == u.after.span
+        )
+
+    if f.rule == "TOLERANCE_LOOSENED":
+        if (
+            u.before is None
+            or u.after is None
+            or u.delta is None
+            or not u.delta.tolerance_changes
+            or (f.before is not None and f.before.span != u.before.span)
+            or (f.after is not None and f.after.span != u.after.span)
+        ):
+            return False
+        if file is not None:
+            from checkwash.detectors.tolerance_loosened import _unit_findings
+
+            emitted = _unit_findings(file, u)
+            if f.fingerprint:
+                return any(cand.fingerprint == f.fingerprint for cand in emitted)
+            return any((cand.before, cand.after) == (f.before, f.after) for cand in emitted)
+        return True
+
+    if f.before is not None and f.after is not None:
+        if u.before is None or u.after is None or u.delta is None:
+            return False
+        b_by_id = {b.id: b for b in u.before.assertions}
+        a_by_id = {a.id: a for a in u.after.assertions}
+        for pair in u.delta.assertion_pairs:
+            b, a = b_by_id.get(pair.before_id), a_by_id.get(pair.after_id)
+            if (
+                b is not None
+                and a is not None
+                and (b.span, b.text) == (f.before.span, f.before.text)
+                and (a.span, a.text) == (f.after.span, f.after.text)
+            ):
+                return True
+        return False
+
+    if f.before is not None and f.after is None:
+        if u.before is None or u.delta is None:
+            return False
+        removed = set(u.delta.assertions_removed)
+        return any(
+            a.id in removed and (a.span, a.text) == (f.before.span, f.before.text)
+            for a in u.before.assertions
+        )
+
+    if f.before is None and f.after is not None:
+        if f.rule == "EXPECTED_VALUE_HARDCODED":
+            if u.before is None or u.after is None or u.delta is None:
+                return False
+            b_by_id = {b.id: b for b in u.before.assertions}
+            a_by_id = {a.id: a for a in u.after.assertions}
+            return any(
+                (b := b_by_id.get(pair.before_id)) is not None
+                and (a := a_by_id.get(pair.after_id)) is not None
+                and b.text != a.text
+                and (a.span, a.text) == (f.after.span, f.after.text)
+                for pair in u.delta.assertion_pairs
+            )
+        if f.rule == "TEST_PATCHES_SUBJECT":
+            if f.after.span == (0, 0):
+                if u.before is None or u.after is None:
+                    return False
+                was = {t for t, _ in u.before.patches}
+                return any(t == f.after.text and t not in was for t, _ in u.after.patches)
+            return (
+                u.after is not None
+                and u.after.span[0] <= f.after.span[0]
+                and f.after.span[1] <= u.after.span[1]
+            )
+
+    return False
+
+
+def _resolve_finding_unit(f: Finding, ctx: _GateContext, finding_marker) -> Unit | None:
+    """Resolve `f` to its exact IR `Unit`, disambiguating projected sibling cases."""
+    key = (f.path, f.unit or "")
+    entry = ctx.projected_units.get(key)
+    if entry is None:
+        return ctx.units.get(key)
+    file, candidates = entry
+    direct = ctx.units.get(key)
+    if len(candidates) == 1 and direct is None:
+        return candidates[0]
+    pool = list(candidates)
+    if direct is not None and direct not in pool:
+        pool.append(direct)
+    for u in pool:
+        if _unit_matches_finding(f, u, finding_marker, file=file):
+            return u
+    return direct or candidates[-1]
 
 
 def _apply_non_oracle_gates(f: Finding, ir: IR) -> None:
@@ -1027,7 +1175,7 @@ def _triage_compensation(
         f.rule == "TEST_DISABLED"
         and unit is not None
         and unit.after is None
-        and ctx.split_renamed.get((f.path, f.unit or ""))
+        and ctx.split_renamed.get((f.path, unit.qualname))
         and _proven_restructure(unit, ctx.proven_assertions)
     ):
         return "SPLIT_OR_RENAMED"

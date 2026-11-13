@@ -490,6 +490,7 @@ def _plain_classes(tree):
                 continue
             member = copy.deepcopy(original)
             member.name = methods[node.name][original.name]
+            member._source_qualname = f"{node.name}.{original.name}"
             member.args.args = member.args.args[1:]
             member = Calls(methods[node.name]).visit(member)
             if any(isinstance(item, ast.Name) and (item.id == "self" or item.id in classes)
@@ -877,7 +878,32 @@ def _pytest_unshadowed(path, read):
     return _module_unshadowed(path, read, "pytest")
 
 
-def _project(parsed, text, cases):
+def source_unit_map(parsed):
+    """Map original `ParsedUnit` spans (and unique start offsets) to source Python test qualnames."""
+    by_span, by_start, start_counts = {}, {}, Counter()
+    for unit in getattr(parsed, "units", ()):
+        name = getattr(unit, "source_unit", "") or unit.qualname
+        by_span[unit.span] = name
+        start_counts[unit.span[0]] += 1
+        by_start[unit.span[0]] = name
+    unique_starts = {start: name for start, name in by_start.items() if start_counts[start] == 1}
+    return by_span, unique_starts
+
+
+def resolve_source_unit(source_units, span, function) -> str:
+    """Resolve the enclosing Python test's qualified name for a projected AST function."""
+    if source_units is not None:
+        by_span, unique_starts = source_units
+        if span in by_span:
+            return by_span[span]
+        if span[0] in unique_starts:
+            return unique_starts[span[0]]
+    return getattr(function, "_source_qualname", function.name)
+
+
+def _project(parsed, text, cases, source_units=None):
+    if source_units is None:
+        source_units = source_unit_map(parsed)
     keys = Counter()
     definitions = []
     for case in cases:
@@ -892,6 +918,7 @@ def _project(parsed, text, cases):
     units = []
     for unit, case in zip(concrete.units, cases):
         span = offsets.span(case.source_function)
+        source_unit = resolve_source_unit(source_units, span, case.source_function)
         sources = ([item for item in case.body if isinstance(item, ast.Assert)]
                    if case.body is not None else [case.source_assertion])
         assertions = [replace(assertion, span=offsets.span(source))
@@ -906,7 +933,12 @@ def _project(parsed, text, cases):
             # that fact so replacing it by numeric approximation cannot hide
             # behind an apparent strength increase.
             assertions = [replace(assertion, right_literal="None", right_value="None") for assertion in assertions]
-        units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=assertions)))
+        units.append(replace(
+            unit,
+            span=span,
+            side=replace(unit.side, span=span, assertions=assertions),
+            source_unit=source_unit,
+        ))
     return replace(parsed, units=units)
 
 
@@ -1048,10 +1080,66 @@ def _context_snapshots(path, before, after, changes, read, search):
     return result
 
 
-def _ordinary_rows_cover(module, parsed):
+_CAPTURED_SPECIAL_AUTHORITIES = (
+    "_requires_boolean_result",
+    "_requires_approx_authority",
+    "_requires_operator_authority",
+    "_requires_derived_authority",
+    "_requires_repr_authority",
+    "_requires_tuple_arity",
+    "_requires_unique_expected",
+    "_requires_input_unique_count",
+    "_requires_closed_helper",
+    "_requires_shared_collection_inputs",
+    "_partial_dictionary_fields",
+)
+
+
+def _same_captured_results(old, new) -> bool:
+    """True when every same-named `captured-result` test keeps its local binding, call/operator, and plain RHS."""
+    captured_names = {name for name, form in old[6] if form == "captured-result"}
+    if not captured_names:
+        return True
+    old_cases = [case for case in old[2] if case.source_function.name in captured_names]
+    new_cases = [case for case in new[2] if case.source_function.name in captured_names]
+    if len(old_cases) != len(captured_names) or len(new_cases) != len(captured_names):
+        return False
+    old_by_name = {case.source_function.name: case for case in old_cases}
+    new_by_name = {case.source_function.name: case for case in new_cases}
+    for name in captured_names:
+        before_case, after_case = old_by_name.get(name), new_by_name.get(name)
+        if before_case is None or after_case is None:
+            return False
+        if _subject_key(before_case) != _subject_key(after_case):
+            return False
+        if any(getattr(item.assertion, attr, None) not in (None, False)
+               for item in (before_case, after_case) for attr in _CAPTURED_SPECIAL_AUTHORITIES):
+            return False
+        before_body, after_body = before_case.source_function.body, after_case.source_function.body
+        if (len(before_body) != 2 or len(after_body) != 2
+                or not isinstance(before_body[0], ast.Assign) or not isinstance(after_body[0], ast.Assign)
+                or len(before_body[0].targets) != 1 or len(after_body[0].targets) != 1
+                or not isinstance(before_body[0].targets[0], ast.Name)
+                or not isinstance(after_body[0].targets[0], ast.Name)
+                or before_body[0].targets[0].id != after_body[0].targets[0].id
+                or not isinstance(before_body[1], ast.Assert)
+                or not isinstance(after_body[1], ast.Assert)
+                or not isinstance(before_body[1].test, ast.Compare)
+                or not isinstance(after_body[1].test, ast.Compare)
+                or not isinstance(before_body[1].test.left, ast.Name)
+                or not isinstance(after_body[1].test.left, ast.Name)):
+            return False
+    return True
+
+
+def _ordinary_rows_cover(module, parsed, *, allow_captured: bool = False):
     units = {unit.qualname: unit.side for unit in parsed.units}
-    return all(form == "native" or (form == "parametrize" and name in units and units[name].param_rows)
-               for name, form in module[6])
+    return all(
+        form == "native"
+        or (form == "parametrize" and name in units and units[name].param_rows)
+        or (allow_captured and form == "captured-result" and name in units)
+        for name, form in module[6]
+    )
 
 
 def _closed_proof_imports(module, calls):

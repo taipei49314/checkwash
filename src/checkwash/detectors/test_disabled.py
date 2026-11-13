@@ -27,6 +27,7 @@ from checkwash.findings import (
     Finding,
     identity_text,
     make_assertion_fingerprint,
+    unit_finding_name,
 )
 from checkwash.frontends.python.conftest_controls import (
     COLLECTION,
@@ -69,7 +70,10 @@ _UNFOCUSED = (
 )
 
 
-def _key(path: str, qualname: str, legacy_text: str, shape: str, *, before=None, after=None, context=None) -> str:
+def _key(
+    path: str, qualname: str, legacy_text: str, shape: str,
+    *, before=None, after=None, position=(None, None), context=None,
+) -> str:
     """A finding's content-bound key (#512 Q2): `TEST_DISABLED/path/unit/v2:<64hex>`.
 
     `legacy_text` is what the legacy key hashed, so the identity holds that
@@ -77,10 +81,13 @@ def _key(path: str, qualname: str, legacy_text: str, shape: str, *, before=None,
     event kind is the finding's shape. `before` and `after` are texts in
     `identity_text`'s form, and `context` is what the shape binds beyond
     them. No span, line, message, severity, file digest or revision label
-    enters it, and there is no position: each shape binds its own texts.
+    enters it, and ordinary units record no position (`(None, None)`);
+    projected sibling concrete units sharing one `source_unit` and identical
+    disappeared assertions disambiguate via `position` (D-210).
     """
     return make_assertion_fingerprint(
-        "TEST_DISABLED", path, qualname, legacy_text, before=before, after=after, kind=shape, context=context,
+        "TEST_DISABLED", path, qualname, legacy_text,
+        before=before, after=after, kind=shape, position=position, context=context,
     )
 
 
@@ -120,7 +127,7 @@ def _unit_markers_key(path: str, unit, name: str, shape: str) -> str:
         return _encoded_order([[m.name, *_content(m)] for m in markers])
 
     return _key(
-        path, unit.qualname, name, shape,
+        path, unit_finding_name(unit), name, shape,
         context={"unit_markers": {"before": side_markers(unit.before), "after": side_markers(unit.after)}},
     )
 
@@ -160,10 +167,11 @@ def _marker_added_keys(path: str, unit, shapes: dict[str, str]) -> list[str]:
     findings_of = Counter(names)
     taken: Counter = Counter()
     keys = []
+    finding_unit = unit_finding_name(unit)
     for name in names:
         own = added[name]
         if len(own) == findings_of[name]:
-            keys.append(_marker_added_key(path, unit.qualname, name, own[taken[name]], shapes[name]))
+            keys.append(_marker_added_key(path, finding_unit, name, own[taken[name]], shapes[name]))
             taken[name] += 1
         else:
             keys.append(_unit_markers_key(path, unit, name, shapes[name]))
@@ -263,7 +271,23 @@ def detect(ir: IR) -> list[Finding]:
     for file in ir.files:
         if not judged_as_test(file) and file.role != "conftest":
             continue
+        projected_removed_groups: dict[tuple, list] = {}
+        for candidate in file.units:
+            if (candidate.before is not None and candidate.after is None
+                    and isinstance(getattr(candidate, "source_unit", ""), str)
+                    and candidate.source_unit):
+                c_name = unit_finding_name(candidate)
+                c_own = [a for a in candidate.before.assertions if a.via is None]
+                c_id = "\n".join(fingerprint_text(file.path, a) for a in c_own) or c_name
+                c_key = (c_name, c_id, tuple(identity_text(a.text) for a in c_own))
+                projected_removed_groups.setdefault(c_key, []).append(candidate)
+        projected_removed_positions = {
+            id(candidate): (rank, len(group))
+            for group in projected_removed_groups.values() if len(group) > 1
+            for rank, candidate in enumerate(group)
+        }
         for unit in file.units:
+            finding_unit = unit_finding_name(unit)
             if unit.before is not None and unit.after is None:
                 # whole unit disappeared. Its legacy pre-image is what its
                 # identity has always been: the assertions reached through a
@@ -271,19 +295,20 @@ def detect(ir: IR) -> list[Finding]:
                 # binds the complete texts of those same own assertions, a
                 # JS/TS assertion with its expected value (#512).
                 own = [a for a in unit.before.assertions if a.via is None]
-                text = "\n".join(a.text for a in own) or unit.qualname
-                identity = "\n".join(fingerprint_text(file.path, a) for a in own) or unit.qualname
+                text = "\n".join(a.text for a in own) or finding_unit
+                identity = "\n".join(fingerprint_text(file.path, a) for a in own) or finding_unit
                 findings.append(
                     Finding(
                         rule="TEST_DISABLED",
                         severity="warn",
-                        message=f"{unit.qualname}: test unit disappeared",
+                        message=f"{finding_unit}: test unit disappeared",
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=text, span=unit.before.span),
                         after=None,
                         fingerprint=_key(
-                            file.path, unit.qualname, identity, SHAPE_UNIT_REMOVED,
+                            file.path, finding_unit, identity, SHAPE_UNIT_REMOVED,
+                            position=projected_removed_positions.get(id(unit), (None, None)),
                             context={"assertions": [identity_text(a.text) for a in own]},
                         ),
                         shape=SHAPE_UNIT_REMOVED,
@@ -306,9 +331,9 @@ def detect(ir: IR) -> list[Finding]:
                         Finding(
                             rule="TEST_DISABLED",
                             severity="warn",
-                            message=f"{unit.qualname}: {what} ({name})",
+                            message=f"{finding_unit}: {what} ({name})",
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             before=None,
                             after=Evidence(text=m.text, span=m.span) if m else None,
                             fingerprint=key,
@@ -346,11 +371,11 @@ def detect(ir: IR) -> list[Finding]:
                         ),
                         None,
                     )
-                    message = f"{unit.qualname}: skip guard removed{where} (was {was!r}){which}"
+                    message = f"{finding_unit}: skip guard removed{where} (was {was!r}){which}"
                 else:
                     m = next((x for x in unit.after.markers if x.name == name), None)
                     message = (
-                        f"{unit.qualname}: skip guard{where} now always fires "
+                        f"{finding_unit}: skip guard{where} now always fires "
                         f"({(m.guard if m else name)!r}){which}"
                     )
                 # A conftest's `pytestmark` disables nothing whatever its
@@ -375,11 +400,11 @@ def detect(ir: IR) -> list[Finding]:
                         severity="warn",
                         message=message,
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=None,
                         after=Evidence(text=m.text, span=m.span) if m else None,
                         fingerprint=_key(
-                            file.path, unit.qualname, f"guard:{name}", shape,
+                            file.path, finding_unit, f"guard:{name}", shape,
                             before=guard_before, after=guard_after,
                             context={"conditions": {
                                 "before": _conditions(name, unit.before),
@@ -409,13 +434,13 @@ def detect(ir: IR) -> list[Finding]:
                     # can stay put (F-063: one row marked, one appended).
                     # Say what happened rather than "deleted (2 -> 2)".
                     message = (
-                        f"{unit.qualname}: {n} of {before_n} parametrized case(s) no longer "
+                        f"{finding_unit}: {n} of {before_n} parametrized case(s) no longer "
                         f"run ({disabled} disabled, {n - disabled} deleted; live count "
                         f"{before_n} -> {live_after})"
                     )
                 else:
                     message = (
-                        f"{unit.qualname}: {n} parametrized case(s) deleted "
+                        f"{finding_unit}: {n} parametrized case(s) deleted "
                         f"({before_n} -> {live_after})"
                     )
                 # Which rows went and how, and the live counts the message
@@ -428,11 +453,11 @@ def detect(ir: IR) -> list[Finding]:
                         severity="warn",
                         message=message,
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=None,
                         after=Evidence(text=f"parametrize cases: {shown_after}", span=unit.after.span),
                         fingerprint=_key(
-                            file.path, unit.qualname, "parametrize", SHAPE_PARAM_CASES_REMOVED,
+                            file.path, finding_unit, "parametrize", SHAPE_PARAM_CASES_REMOVED,
                             context={
                                 "deleted": deleted_rows,
                                 "disabled": disabled_rows,

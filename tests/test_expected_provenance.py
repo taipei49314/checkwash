@@ -50,12 +50,8 @@ def test_same_file_helper_actual_literal_change_blocks(call, owner):
     hits = [f for f in result[1] if f.rule == owner]
     assert hits and result[2] == "block"
     assert all(f.severity == "high" for f in hits)
-    # The exact positional carrier is already specialized by the table
-    # projector. Keyword actuals retain their ordinary named-unit provenance.
-    if owner == "EXPECTED_VALUE_CHANGED":
-        assert all(f.unit.startswith("test_concrete_") for f in hits)
-    else:
-        assert all(f.unit == "test_double" for f in hits)
+    assert all(not f.unit.startswith("test_concrete_") for f in hits)
+    assert all(f.unit == "test_double" for f in hits)
 
 
 @pytest.mark.parametrize("module,import_line", [

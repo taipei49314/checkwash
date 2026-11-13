@@ -45,7 +45,14 @@ import json
 
 from collections import Counter
 
-from checkwash.findings import Evidence, Finding, assertion_position, canonical, make_assertion_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    canonical,
+    make_assertion_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
+)
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.expectation_identity import same_known_js_scalar
 from checkwash.ir.markers import parse_text
@@ -305,6 +312,7 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             table_reported = False
@@ -333,12 +341,12 @@ def detect(ir: IR) -> list[Finding]:
                     for old_row, new_row, expected_cols, input_cols in rewrites:
                         # Canonical, so a literal set in a cell encodes the same in every
                         # process (#421); other rows encode as they always have.
-                        identity = canonical((unit.qualname, old_row, new_row))
+                        identity = canonical((finding_unit, old_row, new_row))
                         fingerprint = make_assertion_fingerprint(
-                            "SUBJECT_INPUT_CHANGED", file.path, unit.qualname,
+                            "SUBJECT_INPUT_CHANGED", file.path, finding_unit,
                             json.dumps(identity, ensure_ascii=True, separators=(",", ":")),
                             before=b.text, after=a.text, kind="table_row",
-                            position=assertion_position(unit.before, b),
+                            position=unit_assertion_position(file, unit, unit.before, b),
                         )
                         old_inputs = [old_row[c] for c in input_cols]
                         new_inputs = [new_row[c] for c in input_cols]
@@ -347,9 +355,9 @@ def detect(ir: IR) -> list[Finding]:
                             rule="SUBJECT_INPUT_CHANGED",
                             severity="warn",
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             message=(
-                                f"{unit.qualname}: a literal parameter row changes the subject's "
+                                f"{finding_unit}: a literal parameter row changes the subject's "
                                 f"input ({old_inputs!r} -> {new_inputs!r}) while the expected "
                                 f"value {expected!r} stayed the same"
                             ),
@@ -375,17 +383,17 @@ def detect(ir: IR) -> list[Finding]:
                         rule="SUBJECT_INPUT_CHANGED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: the subject's input changed ({rendered}) "
+                            f"{finding_unit}: the subject's input changed ({rendered}) "
                             f"while the expected value stayed the same"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "SUBJECT_INPUT_CHANGED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                            "SUBJECT_INPUT_CHANGED", file.path, finding_unit, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="input_changed",
-                            position=assertion_position(unit.before, b),
+                            position=unit_assertion_position(file, unit, unit.before, b),
                             context=[[label, old, new] for label, old, new in changes],
                         ),
                     )
