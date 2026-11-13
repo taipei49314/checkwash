@@ -477,16 +477,37 @@ def test_admit_compact_environment_self_seals_bootstrap_after_merge(compact_fixt
         GITHUB_WORKFLOW_SHA=d209_head,
         GITHUB_WORKFLOW_REF=bridge.REPOSITORY + "/.github/workflows/quality-candidate-intake.yml@refs/heads/claude/d209",
     )
-    # Bootstrap succeeds when base does NOT yet have verify-pju-compact AND workflow == head == collector.
+    # Bootstrap succeeds when workflow == head == collector, OR when workflow == collector on a separate commit with identical tree.
     bridge.admit_compact_environment(
         d209_head, head_sha=d209_head, base_sha=base_before, collector_sha=d209_head,
         trusted_root=repo, env=env_bootstrap,
     )
-    # Bootstrap refuses mismatched collector or non-head workflow commit.
-    with pytest.raises(ValueError, match="bootstrap requires exact candidate head"):
+    d209_tree = git(repo, "rev-parse", d209_head + "^{tree}").decode("ascii").strip()
+    separate_bootstrap = git(
+        repo, "commit-tree", d209_tree, "-p", base_before, "-m", "trusted bootstrap ref",
+    ).decode("ascii").strip()
+    assert separate_bootstrap != d209_head
+    env_sep = dict(
+        env_bootstrap,
+        GITHUB_SHA=separate_bootstrap,
+        GITHUB_WORKFLOW_SHA=separate_bootstrap,
+        GITHUB_WORKFLOW_REF=bridge.REPOSITORY + "/.github/workflows/quality-candidate-intake.yml@refs/heads/review/collector-d209",
+    )
+    bridge.admit_compact_environment(
+        separate_bootstrap, head_sha=d209_head, base_sha=base_before, collector_sha=separate_bootstrap,
+        trusted_root=repo, env=env_sep, source_root=repo,
+    )
+    # Bootstrap refuses mismatched collector or different-tree workflow commit.
+    with pytest.raises(ValueError, match="bootstrap requires exact candidate tree"):
         bridge.admit_compact_environment(
             d209_head, head_sha=d209_head, base_sha=base_before, collector_sha=base_before,
             trusted_root=repo, env=env_bootstrap,
+        )
+    env_diff_tree = dict(env_sep, GITHUB_SHA=base_before, GITHUB_WORKFLOW_SHA=base_before)
+    with pytest.raises(ValueError, match="bootstrap requires exact candidate tree"):
+        bridge.admit_compact_environment(
+            base_before, head_sha=d209_head, base_sha=base_before, collector_sha=base_before,
+            trusted_root=repo, env=env_diff_tree, source_root=repo,
         )
 
     # Once D-209 is on main (base_sha == d209_head), branch workflow_ref is permanently refused!

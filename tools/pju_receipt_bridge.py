@@ -765,7 +765,7 @@ def admit_environment(expected_workflow_sha, env):
             "unexpected workflow identity")
 
 
-def admit_compact_environment(expected_workflow_sha, *, head_sha, base_sha, collector_sha, trusted_root, env):
+def admit_compact_environment(expected_workflow_sha, *, head_sha, base_sha, collector_sha, trusted_root, env, source_root=None):
     admit_environment(expected_workflow_sha, env)
     require(not env.get("PJU_RECEIPT_COMMIT", ""), "compact receipt mode refuses receipt_commit")
     head, base, collector = sha(head_sha, 40), sha(base_sha, 40), sha(collector_sha, 40)
@@ -776,10 +776,14 @@ def admit_compact_environment(expected_workflow_sha, *, head_sha, base_sha, coll
         require(workflow_ref == main_ref and collector == expected_workflow_sha,
                 "compact-receipt mode must be dispatched from refs/heads/main once merged")
     else:
+        cand_root = trusted_root if source_root is None else source_root
+        same_tree = (expected_workflow_sha == head
+                     or git(trusted_root, "rev-parse", expected_workflow_sha + "^{tree}")
+                     == git(cand_root, "rev-parse", head + "^{tree}"))
         require((workflow_ref == main_ref and collector == expected_workflow_sha)
                 or (workflow_ref.startswith(REPOSITORY + "/" + WORKFLOW_PATH + "@refs/heads/")
-                    and expected_workflow_sha == head == collector),
-                "compact-receipt bootstrap requires exact candidate head workflow/collector identity")
+                    and expected_workflow_sha == collector and same_tree),
+                "compact-receipt bootstrap requires exact candidate tree workflow/collector identity")
 
 
 def documented_test_count(source_root, head):
@@ -1070,7 +1074,8 @@ def main(argv=None):
             require(args.receipt_root is None and args.receipt_commit is None,
                     "compact mode takes no receipt checkout or receipt commit")
             admit_compact_environment(args.trusted_workflow_sha, head_sha=args.head, base_sha=args.base,
-                                      collector_sha=args.collector_source_sha, trusted_root=args.trusted_root, env=os.environ)
+                                      collector_sha=args.collector_source_sha, trusted_root=args.trusted_root,
+                                      env=os.environ, source_root=args.source_root)
         else:
             require(bool(args.receipt_root) and bool(args.receipt_commit) and args.compact_receipt_file is None,
                     "receipt mode requires --receipt-root and --receipt-commit")

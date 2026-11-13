@@ -1832,7 +1832,7 @@ questions (Antigravity wrote both questions and all six options):
    - runs the full `pytest` suite with **16 xdist workers**
      (`COMPACT_PYTEST_WORKERS = "16"`), validates JUnit and subtest stdout,
      checks exact equality with the documented suite count, keeps raw logs on
-     PJU, and writes a single-line canonical ASCII JSON digest receipt (~6–7
+     PJU, and writes a single-line canonical ASCII JSON digest receipt (~6–9
      KB) with zero new `evidence/*` branches in Git. Historical `evidence/*`
      branches are left untouched.
 2. **Hosted verification, test-count floor and App-bound check publication.**
@@ -1856,8 +1856,12 @@ questions (Antigravity wrote both questions and all six options):
      and requires JUnit's testcase count to equal that exact number;
    - enforce **RC-02 Understated 2**: `admit_compact_environment` allows a
      branch `GITHUB_WORKFLOW_REF` only while `base` on `main` does not yet
-     contain `verify-pju-compact` and only when `trusted_workflow_sha == head
-     == collector_source_sha`; once D-209 merges to `main`, `base` contains
+     contain `verify-pju-compact` and only when `trusted_workflow_sha ==
+     collector_source_sha` with the exact Git tree of `head` (dispatched from a
+     separate same-tree commit ref `review/collector-d209-20261113` so GitHub
+     creates a standalone `CheckSuite` on `head` rather than attaching the
+     check to a `workflow_dispatch` suite that ruleset `statusCheckRollup`
+     ignores); once D-209 merges to `main`, `base` contains
      `verify-pju-compact` and any non-`refs/heads/main` dispatch is refused
      automatically (and legacy `verify`/`publish` in `main()` requires
      `refs/heads/main` immediately);
@@ -1901,7 +1905,7 @@ Windows CPython 3.11.9):
   `publish` in `main()`), 1 medium (bind `inventory_mod.git` and `bridge.git`
   in `collect_compact` to `--git` and sanitized `env`), 2 low (canonical ASCII
   JSON wire check, explicit release-head refusal + `collect_compact` unit tests,
-  and 23,065 floor), and 3 nits (`~6–7 KB` size prose, dual Action replay error
+  and 23,065 floor), and 3 nits (`~6–9 KB` size prose, dual Action replay error
   collection, and check-run `app.id == 15368` assertion); all fixed before PR
   receipt collection. Followed by the pull request's own compact PJU receipt
   (`pytest -n 16`) and green `checkwash` check run (`app 15368`).
