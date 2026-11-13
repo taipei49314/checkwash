@@ -675,10 +675,82 @@ class GitSnapshot:
         return paths
 
 
+# Where a virtual environment keeps links of its own (D-208): its scripts
+# directory, where `python -m venv` links the environment's interpreter on
+# Linux and macOS (`bin`) and, given `--symlinks`, on Windows (`Scripts`),
+# and the `lib64` link to `lib` that it makes on 64-bit Linux.
+_ENVIRONMENT_SCRIPTS = frozenset({"bin", "Scripts"})
+
+
+def _regular_file(path):
+    try:
+        return stat.S_ISREG(os.lstat(path).st_mode)
+    except (OSError, ValueError):
+        return False
+
+
+def environment_of_link(root, path):
+    """The virtual environment of which `path` is an own link, or None (D-208).
+
+    `path`, relative to the repository root `root` and spelled with `/`, must
+    be a symbolic link directly in `<D>/bin` or `<D>/Scripts` whose name does
+    not end in `.py` in any case, or `<D>/lib64` linking to `lib` beside a
+    directory `<D>/lib` (`environment_lib64`). `<D>` is a directory other than
+    the repository root that holds `pyvenv.cfg` as a regular file: the file
+    PEP 405 names, which `python -m venv`, virtualenv and uv write, and by
+    which pytest skips the directory when recursing. Each test is an lstat, or
+    a readlink on `lib64`, so no link is followed and a `pyvenv.cfg` that is a
+    link does not count. The answer is `<D>`, spelled as `path` spells it.
+    """
+    parts = path.split("/")
+    if any(part in ("", ".", "..") for part in parts) or parts[-1].lower().endswith(".py"):
+        return None
+    if len(parts) >= 3 and parts[-2] in _ENVIRONMENT_SCRIPTS:
+        environment = parts[:-2]
+        try:
+            if not stat.S_ISLNK(os.lstat(os.path.join(root, *parts)).st_mode):
+                return None
+            if not stat.S_ISREG(os.lstat(os.path.join(root, *environment, "pyvenv.cfg")).st_mode):
+                return None
+        except (OSError, ValueError):
+            return None
+        return "/".join(environment)
+    if len(parts) >= 2 and parts[-1] == "lib64":
+        environment = parts[:-1]
+        return "/".join(environment) if environment_lib64(os.path.join(root, *environment), "lib64") else None
+    return None
+
+
+def environment_lib64(directory, name):
+    """Is `directory/name` a virtual environment's `lib64` link to its `lib` (D-208)?
+
+    `python -m venv` links `lib64` to `lib` on 64-bit Linux. A link named
+    `lib64` whose text is exactly `lib`, beside a directory `lib`, in a
+    directory that holds `pyvenv.cfg` as a regular file, holds no file a
+    walk does not list under `lib`. Each test is an lstat or a readlink, so
+    nothing is followed. The caller rules out the repository root.
+    """
+    if name != "lib64":
+        return False
+    try:
+        return (stat.S_ISLNK(os.lstat(os.path.join(directory, name)).st_mode)
+                and os.readlink(os.path.join(directory, name)) == "lib"
+                and stat.S_ISDIR(os.lstat(os.path.join(directory, "lib")).st_mode)
+                and stat.S_ISREG(os.lstat(os.path.join(directory, "pyvenv.cfg")).st_mode))
+    except (OSError, ValueError):
+        return False
+
+
 class WorkingTreeSnapshot:
     def __init__(self, repo, side="worktree"):
         self.root = Path(repo).resolve()
         self.side = side  # named in a size refusal (#415)
+
+    def _passed_over(self, directory, name):
+        """A directory link the walks pass over: a virtual environment's `lib64`
+        link to its `lib`, below the repository root, whose files the walk
+        lists under `lib` (D-208). Every other directory link stays opaque (#414)."""
+        return Path(directory) != self.root and environment_lib64(directory, name)
 
     def list_paths(self):
         """Inventory all repository files except Git's own metadata.
@@ -688,7 +760,11 @@ class WorkingTreeSnapshot:
         listed as its path with a trailing slash, an opaque directory as a
         submodule is (`split_inventory`), and is never followed. A pass that
         needs a fact from inside it, an import that could resolve there or a
-        collection that could reach it, fails closed naming it (#414).
+        collection that could reach it, fails closed naming it (#414). A
+        virtual environment's own non-directory links in `bin` or `Scripts`
+        are not listed at all (D-208): no pass reads them, and a read of one
+        refuses; its `lib64` link to its `lib` is passed over, as its files
+        are listed under `lib`, while any other directory link stays opaque.
         """
         paths = []
 
@@ -701,15 +777,27 @@ class WorkingTreeSnapshot:
                 if not Path(directory, name).is_symlink():
                     kept.append(name)
                     continue
+                if self._passed_over(directory, name):
+                    continue
                 link = Path(directory, name).relative_to(self.root).as_posix()
                 paths.append(SymlinkedDirectory(link + "/"))
                 if len(paths) > MAX_INVENTORY_PATHS:
                     raise _over_limit(link)
             dirs[:] = kept
+            # Test pyvenv.cfg once per scripts directory so ordinary files pay no lstat.
+            in_scripts = (
+                Path(directory) != self.root
+                and os.path.basename(directory) in _ENVIRONMENT_SCRIPTS
+                and Path(directory).parent != self.root
+                and _regular_file(os.path.join(os.path.dirname(directory), "pyvenv.cfg"))
+            )
             for filename in sorted(files):
                 if filename == ".git":
                     continue
-                paths.append(Path(directory, filename).relative_to(self.root).as_posix())
+                path = Path(directory, filename).relative_to(self.root).as_posix()
+                if in_scripts and environment_of_link(self.root, path) is not None:
+                    continue
+                paths.append(path)
                 if len(paths) > MAX_INVENTORY_PATHS:
                     raise _over_limit(paths[-1])
         return sorted(paths)
@@ -843,10 +931,12 @@ class WorkingTreeSnapshot:
         for directory, dirs, files in os.walk(self.root, onerror=fail):
             # An empty needle requests the entire nonempty Python inventory.
             # Importer searches may skip generated/hidden trees, but an
-            # optional startup-context proof cannot silently omit them.
+            # optional startup-context proof cannot silently omit them. Both
+            # pass over a virtual environment's `lib64` link to its `lib`,
+            # whose files they find under `lib` (D-208).
             dirs[:] = sorted(d for d in dirs if d != ".git" and (
                 "" in needles or (d not in _SKIP and not d.startswith("."))
-            ))
+            ) and not (d == "lib64" and self._passed_over(directory, d)))
             for name in dirs:
                 if Path(directory, name).is_symlink():
                     link = SymlinkedDirectory(Path(directory, name).relative_to(self.root).as_posix())

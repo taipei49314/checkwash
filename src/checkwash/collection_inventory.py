@@ -368,8 +368,9 @@ def opaque_reached(opaque, head, changes):
 
 
 # A wildcard pytest or the shell expands: `*`, `?` or a bracket set such as
-# `[ab]`. tox's `[]` (its old spelling of `{posargs}`) is a literal name.
-_WILDCARD = re.compile(r"[*?]|\[[^\]]+\]")
+# `[ab]`, `[]a]` or `[!]]`. tox's `[]` (its old spelling of `{posargs}`) is
+# a literal name.
+_WILDCARD = re.compile(r"[*?]|\[(?:!\]|\]|[^\]])[^\]]*\]")
 
 
 def _reaches(root, directory, skipped):
@@ -395,6 +396,215 @@ def _reaches(root, directory, skipped):
         return False
     below = directory[len(root) + 1:] if root else directory
     return not any(_matches(part, skipped) for part in below.split("/"))
+
+
+def _glob_enters_environment(pattern, directory):
+    """Can a glob pattern for an initial path yield `directory` or a path inside it?"""
+    from checkwash.arrival_collection import _glob_close, _glob_step
+
+    parts = [part for part in pattern.split("/") if part and part != "."]
+    if not parts:
+        return False
+    states = _glob_close({0}, parts)
+    for name in directory.split("/"):
+        states = _glob_step(states, name, parts, strict=True)
+        if not states:
+            return False
+    return bool(states)
+
+
+def _target_enters_environment(target, directory):
+    """Does an initial collection path or testpath enter a virtual environment `directory`?
+
+    pytest checks `pyvenv.cfg` only when recursing into a subdirectory, never
+    on an initial path (`isinitpath`) or a directory above one (arrival_collection).
+    """
+    raw = target.replace("\\", "/").split("::", 1)[0]
+    raw = raw.replace("{toxinidir}", ".").replace("${PWD}", ".").replace("$PWD", ".")
+    if not raw:
+        return False
+    norm = posixpath.normpath(raw)
+    if norm in (".", "") or norm == ".." or norm.startswith(("../", "/")):
+        return False
+    if _WILDCARD.search(norm):
+        return _glob_enters_environment(norm, directory)
+    return norm == directory or norm.startswith(directory + "/")
+
+
+def _consume_pytest_words(words, cwd=""):
+    """(in_virtualenv, targets, o_testpaths, o_norecursedirs), or None when an option makes collection opaque."""
+    from checkwash.arrival_collection import _Unknown, _addopts, _arguments
+
+    if any(w.startswith("@") or w in ("-c", "--config-file", "--pyargs", "--rootdir")
+           or w.startswith(("--config-file=", "--rootdir=")) for w in words):
+        return None
+    try:
+        options, positional = _addopts(words)
+    except _Unknown:
+        options, pos_words = [], []
+        idx = 0
+        while idx < len(words):
+            w = words[idx]
+            idx += 1
+            if w == "--":
+                pos_words.extend(words[idx:])
+                break
+            if w in ("-o", "--override-ini"):
+                options.append((w, words[idx] if idx < len(words) else ""))
+                idx += 1
+            elif w.startswith("-o") and len(w) > 2:
+                options.append(("-o", w[2:]))
+            elif w.startswith("--override-ini="):
+                options.append(("--override-ini", w.split("=", 1)[1]))
+            elif w == "--collect-in-virtualenv":
+                options.append((w, ""))
+            elif not w.startswith("-"):
+                pos_words.append(w)
+    else:
+        pos_words = [word for word, _ in positional]
+
+    if any(opt in ("-c", "--config-file", "--pyargs", "--rootdir") for opt, _ in options):
+        return None
+    in_venv = any(opt == "--collect-in-virtualenv" for opt, _ in options)
+    o_testpaths, o_norecursedirs = [], []
+    for opt, val in options:
+        if opt in ("-o", "--override-ini"):
+            key, sep, content = val.partition("=")
+            if not sep:
+                return None
+            k = key.strip()
+            try:
+                if k == "testpaths":
+                    o_testpaths.append(_arguments("ini", content))
+                elif k == "norecursedirs":
+                    o_norecursedirs.append(_arguments("ini", content))
+            except _Unknown:
+                return None
+    if cwd:
+        targets = [posixpath.join(cwd, w) for w in pos_words] if pos_words else [cwd]
+    else:
+        targets = pos_words
+    return in_venv, targets, o_testpaths, o_norecursedirs
+
+
+def environment_reached(environments, head, changes):
+    """The first virtual environment in `environments` a pytest run could enter, on either side (D-208).
+
+    pytest skips a directory holding `pyvenv.cfg` when recursing into it, so a
+    virtual environment is entered only when a run passes `--collect-in-virtualenv`
+    or names the environment, a path inside it or a glob reaching it as an
+    initial path (`testpaths`, `addopts` targets or a runner file's arguments).
+    """
+    ordered = tuple(environments)
+    if not ordered:
+        return None
+    from checkwash.arrival_collection import _CONFIG_ORDER, _DEFAULTS as _ARRIVAL_DEFAULTS, _Unknown, _arguments, _load
+    from checkwash.shadow import _runner_invocations
+
+    for side in ("before", "after"):
+        contents = dict(head)
+        for change in changes:
+            path = change.path.replace("\\", "/")
+            if side == "before":
+                contents.pop(path, None)
+                path = (change.old_path or path).replace("\\", "/")
+            data = change.before if side == "before" else change.after
+            if path not in _CONFIGS and not _runner(path):
+                continue
+            if data is None:
+                contents.pop(path, None)
+            else:
+                contents[path] = data
+
+        found_cfg = {}
+        try:
+            for index, name in enumerate(_CONFIG_ORDER):
+                if contents.get(name) is None:
+                    continue
+                loaded = _load(name, contents[name])
+                if loaded is not None:
+                    for later in _CONFIG_ORDER[index + 1:]:
+                        if contents.get(later) is not None:
+                            _load(later, contents[later])
+                    found_cfg = loaded
+                    break
+            settings = {key: _arguments(*found_cfg[key]) if key in found_cfg else default
+                        for key, default in _ARRIVAL_DEFAULTS.items()}
+        except _Unknown:
+            return ordered[0]
+
+        parsed = _consume_pytest_words(settings["addopts"])
+        if parsed is None:
+            return ordered[0]
+        in_virtualenv, addopts_targets, o_tp, o_nr = parsed
+        testpaths = o_tp[-1] if o_tp else settings["testpaths"]
+        norecursedirs_sets = [o_nr[-1] if o_nr else settings["norecursedirs"]]
+
+        runner_targets = []
+        extra_testpaths = []
+        for path in sorted(contents):
+            if not _runner(path) or not _runs_tests(contents[path], path):
+                continue
+            if b"PYTEST_ADDOPTS" in contents[path]:
+                return ordered[0]
+            found = _runner_invocations(path, contents[path])
+            if any(item.config_path for item in found):
+                return ordered[0]
+            for item in found:
+                if item.targets:
+                    runner_targets.extend(
+                        posixpath.join(item.cwd, target) if item.cwd else target
+                        for target in item.targets
+                    )
+                elif item.cwd:
+                    runner_targets.append(item.cwd)
+            text = contents[path].decode("utf-8-sig", errors="replace")
+            step_runs = [("", text)]
+            if is_github_workflow(path):
+                tree = _read_yaml(contents[path])
+                jobs = tree.get("jobs") if isinstance(tree, dict) else None
+                if isinstance(jobs, dict):
+                    step_runs = []
+                    wf_def = tree.get("defaults")
+                    wf_run = wf_def.get("run") if isinstance(wf_def, dict) else None
+                    wf_cwd = wf_run.get("working-directory", "") if isinstance(wf_run, dict) else ""
+                    for job in jobs.values():
+                        if not isinstance(job, dict) or not isinstance(job.get("steps"), list):
+                            continue
+                        job_def = job.get("defaults")
+                        job_run = job_def.get("run") if isinstance(job_def, dict) else None
+                        job_cwd = job_run.get("working-directory", wf_cwd) if isinstance(job_run, dict) else wf_cwd
+                        for step in job["steps"]:
+                            if isinstance(step, dict) and isinstance(step.get("run"), str):
+                                cwd = step.get("working-directory", job_cwd)
+                                step_runs.append((cwd if isinstance(cwd, str) else "", step["run"]))
+            for step_cwd, step_text in step_runs:
+                for _cmd, words in _commands(step_text):
+                    args = _pytest_arguments(words) if words is not None else None
+                    if args is None:
+                        continue
+                    step_parsed = _consume_pytest_words(args, cwd=step_cwd)
+                    if step_parsed is None:
+                        return ordered[0]
+                    s_venv, s_targets, s_tp, s_nr = step_parsed
+                    in_virtualenv = in_virtualenv or s_venv
+                    runner_targets.extend(s_targets)
+                    for tp in s_tp:
+                        extra_testpaths.extend(tp)
+                    norecursedirs_sets.extend(s_nr)
+
+        initial = (*testpaths, *extra_testpaths, *addopts_targets, *runner_targets)
+        for directory in ordered:
+            if any(_target_enters_environment(target, directory) for target in initial):
+                return directory
+        if in_virtualenv:
+            roots = tuple(posixpath.normpath(r.replace("\\", "/")) for r in testpaths) or (".",)
+            for skipped in norecursedirs_sets:
+                for directory in ordered:
+                    if any(_reaches(target, directory, skipped)
+                           for target in (*roots, *extra_testpaths, *addopts_targets, *runner_targets)):
+                        return directory
+    return None
 
 
 def _invocations(files):
