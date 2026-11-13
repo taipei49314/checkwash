@@ -636,7 +636,7 @@ def _pytest_cli(args: Sequence[str]) -> tuple[tuple[str, ...], str | None, str |
 
 
 def _runner_invocations(path: str, data: bytes | None) -> tuple[_RunnerInvocation, ...]:
-    if not data or not _runs_tests(data):
+    if not data or not _runs_tests(data, path):
         return ()
     persistent: tuple[str, ...] = ()
     invoked: list[_RunnerInvocation] = []

@@ -90,7 +90,7 @@ def _calls(path, data):
     `PYTEST_ADDOPTS`, `--override-ini` or ` -o `. A workflow is read step by
     step, so a step's name or a cache key is not a command.
     """
-    if not _runs_tests(data):
+    if not _runs_tests(data, path):
         return []
     text = data.decode("utf-8-sig", errors="replace")
     if path == "tox.ini":
@@ -345,7 +345,7 @@ def opaque_reached(opaque, head, changes):
         targets = []
         runs = targetless = False
         for path in sorted(contents):
-            if not _runner(path) or not _runs_tests(contents[path]):
+            if not _runner(path) or not _runs_tests(contents[path], path):
                 continue
             runs = True
             found = _runner_invocations(path, contents[path])
@@ -409,7 +409,7 @@ def _invocations(files):
     invocations = []
     for path in sorted(files):
         data = files[path]
-        if _runs_tests(data):
+        if _runs_tests(data, path):
             found = _runner_invocations(path, data)
             if (not found or any(item.config_path or item.cwd for item in found)
                     or collection_options(data.decode("utf-8-sig", errors="replace"))

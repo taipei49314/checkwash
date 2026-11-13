@@ -112,7 +112,7 @@ def _ci_base_surface(changes: list[FileChange], config: Config, one_hop: set[str
             continue
         role = config.role_of(path)
         if role == "prod" and (
-            _is_runner_script(path, change.before, change.after) or path in (one_hop or ())
+            _is_runner_script(path, change.before, change.after, change.old_path) or path in (one_hop or ())
             or _test_commands_changed(path, change.before, change.after)
         ):
             role = "ci"
@@ -207,6 +207,7 @@ def _scan_ci_weakening(
     before: bytes | None,
     after: bytes | None,
     ci_base: str = "",
+    old_path: str | None = None,
 ) -> None:
     # A package manifest is test-runner configuration only in its test
     # command (issue #174): `prepare: husky || true` beside it swallows
@@ -251,7 +252,7 @@ def _scan_ci_weakening(
     # already owns this file. New collection syntax fills its blind spots.
     # Fingerprints remain bound to the complete changed file contents.
     if (not any(p == path for p, _ in g.ci_weakening_lines) and after
-            and (_runs_tests(before) or _runs_tests(after)
+            and (_runs_tests(before, old_path or path) or _runs_tests(after, path)
                  or path.endswith(("pytest.ini", "tox.ini", "setup.cfg", "pyproject.toml")))):
         for reason in pytest_collection_changes(ci_base or (before or b"").decode("utf-8-sig", errors="replace"), after.decode("utf-8-sig", errors="replace")):
             g.ci_weakening_lines.append((path, reason))
@@ -289,7 +290,7 @@ def _scan_ci_weakening(
         g.ci_weakening_lines.append(
             (path, "errorlevel is no longer checked: a failing command no longer fails the script")
         )
-    if _runs_test_command(before) and not _runs_test_command(after):
+    if _runs_test_command(before, old_path or path) and not _runs_test_command(after, path):
         # Deleting the invocation is the same gate removal as weakening it,
         # and quieter: the pipeline still calls a script that still exits 0.
         # Swapping one runner for another (pytest -> nox, or to `node

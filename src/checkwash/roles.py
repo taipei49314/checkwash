@@ -186,6 +186,43 @@ _TEST_RUNNER_TOKENS = (
 _DOTTED_RUNNER = re.compile(
     "|".join(rf"(?<![\w.]){re.escape(token)}(?!\w)" for token in _TEST_RUNNER_TOKENS if "." in token))
 
+# A PowerShell Authenticode signature, which ends a signed script: lines of
+# `#`, a space and base64 between these two markers, as Windows builds of
+# Python sign their venv `Activate.ps1`. Its letters spell a runner token by
+# chance (`tox`, `nox`). In a PowerShell file such a closing block is left out
+# of the search for a runner (D-207): as PowerShell reads the file, each of
+# its lines is a comment, and base64 holds neither `#` nor `>`, so no line can
+# end a block comment (`#>`) opened above it. Only spaces, tabs and line ends
+# follow the block, so a string opened above it (a here-string, or a quoted
+# string, which can span lines) never closes, and the file does not parse.
+# Other programs read `#` otherwise (cmd has no `#` comment, and make with a
+# `#` recipe prefix runs the line), so every other file is read whole; a
+# PowerShell file run that way, or one that runs its own block, is
+# THREATMODEL row 185. Matched as written, before `_runs_tests` lowercases the
+# text: the markers as PowerShell writes them, and ASCII base64.
+_POWERSHELL_SUFFIXES = (".ps1", ".psm1", ".psd1")
+_SIGNATURE_BEGIN = "# SIG # Begin signature block"
+_SIGNATURE_END = "# SIG # End signature block"
+_SIGNATURE_LINE = re.compile(r"# [A-Za-z0-9+/]+={0,2}")
+
+
+def _without_signature(text: str) -> str:
+    """`text` less the signature block that ends it, when every line between
+    its markers is `#`, a space and base64 and only spaces, tabs and line
+    ends follow it; otherwise `text` as it is. One pass from the end, so
+    linear in the text."""
+    body = text.rstrip(" \t\r\n")
+    if not body.endswith(_SIGNATURE_END):
+        return text
+    # Without a begin marker on a line of its own, `start` is 0 and the first
+    # line below must be the marker.
+    start = body.rfind("\n" + _SIGNATURE_BEGIN) + 1
+    lines = [line.rstrip("\r") for line in body[start:].split("\n")]
+    if (lines[0] != _SIGNATURE_BEGIN or lines[-1] != _SIGNATURE_END
+            or not all(_SIGNATURE_LINE.fullmatch(line) for line in lines[1:-1])):
+        return text
+    return body[:start]
+
 # Two families, and the difference between them is the whole of E6's
 # precision. A *swallow* discards an exit code: introducing one anywhere is a
 # weakened command, because a second one is not made harmless by the first.
@@ -252,7 +289,7 @@ def _added_lines(before: bytes | None, after: bytes | None) -> list[str]:
             lines.append(line)
     return lines
 
-def _runs_test_command(data: bytes | None) -> bool:
+def _runs_test_command(data: bytes | None, path: str | None = None) -> bool:
     """Does this command content run a test suite? (#216)
 
     The content of a runner-shaped script, one manifest script value, or a
@@ -262,9 +299,10 @@ def _runs_test_command(data: bytes | None) -> bool:
     test`, `poe test`, `pdm test`) count only in command position
     (`runner_command.invokes_positional_runner`), never as words over
     arbitrary content. The opaque-exemption denial (`_mentions_test_runner`)
-    keeps reading `_runs_tests` alone, as the ruling has it.
+    keeps reading `_runs_tests` alone, as the ruling has it. `path`, when
+    given, lets `_runs_tests` leave a PowerShell file's signature out.
     """
-    if _runs_tests(data):
+    if _runs_tests(data, path):
         return True
     if not data:
         return False
@@ -274,17 +312,25 @@ def _runs_test_command(data: bytes | None) -> bool:
     return invokes_positional_runner(data.decode("utf-8", errors="replace"))
 
 
-def _runs_tests(data: bytes | None) -> bool:
+def _runs_tests(data: bytes | None, path: str | None = None) -> bool:
     """Did this CI file actually run a test suite?
 
     Deliberately generous: any recognised runner anywhere in the file counts,
-    because the cost of guessing wrong in this direction is one warn-level
-    finding, while guessing wrong the other way blocks an honest commit. A
-    dotted name (`py.test`) counts only as a whole name (#325).
+    comments included. A runner read where none runs puts the file under the
+    CI weakening rules, which can block an honest change (ND-02 did, at high:
+    D-207); a runner missed lets a weakened suite pass. A dotted name
+    (`py.test`) counts only as a whole name (#325). When `path` names a
+    PowerShell file, the signature block that ends it is not read if every
+    line between its markers is `#`, a space and base64: its letters can spell
+    a token, and as PowerShell reads the file none of it runs (D-207). Without
+    a path, or for any other file, the text is read whole.
     """
     if not data:
         return False
-    text = data.decode("utf-8", errors="replace").lower()
+    text = data.decode("utf-8", errors="replace")
+    if path is not None and path.lower().endswith(_POWERSHELL_SUFFIXES):
+        text = _without_signature(text)
+    text = text.lower()
     return any(token in text for token in _TEST_RUNNER_TOKENS if "." not in token) or (
         _DOTTED_RUNNER.search(text) is not None)
 
@@ -371,7 +417,8 @@ def _mentions_test_runner(change) -> bool:
     the rule still takes some (D-199 refuses it for the weakening rules, and
     `runner_build_makefile_pos` pins that the evidence reached the finding).
     """
-    return _runs_tests(change.before) or _runs_tests(change.after)
+    return (_runs_tests(change.before, change.old_path or change.path)
+            or _runs_tests(change.after, change.path))
 
 
 # Package manifests that name the project's test command in their own parsed
@@ -599,11 +646,12 @@ def _one_hop_runners(
             continue
         if not _runner_shape(path, change.before, change.after):
             continue
-        if _runs_test_command(change.before) or _runs_test_command(change.after):
+        if (_runs_test_command(change.before, change.old_path or change.path)
+                or _runs_test_command(change.after, path)):
             continue  # already a runner script on its own content
         for side in (change.after, change.before):
             for ref in _referenced_scripts(side):
-                if _runs_test_command(content(ref)):
+                if _runs_test_command(content(ref), ref):
                     promoted.add(path)
                     break
             if path in promoted:
@@ -611,7 +659,8 @@ def _one_hop_runners(
     return promoted
 
 
-def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> bool:
+def _is_runner_script(path: str, before: bytes | None, after: bytes | None,
+                      old_path: str | None = None) -> bool:
     """Is this multi-purpose file the project's test command?
 
     Classified by *content*, not by name. A Makefile that runs pytest is
@@ -626,6 +675,8 @@ def _is_runner_script(path: str, before: bytes | None, after: bytes | None) -> b
     token there is.
     """
     # `before` too: a script that stops running the suite in this very diff
-    # is the interesting case, not an excluded one.
-    return _runner_shape(path, before, after) and (_runs_test_command(before) or _runs_test_command(after))
+    # is the interesting case, not an excluded one. A renamed file's old side
+    # is read under its old name, which decides whether its signature is read.
+    return _runner_shape(path, before, after) and (
+        _runs_test_command(before, old_path or path) or _runs_test_command(after, path))
 

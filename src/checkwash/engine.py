@@ -1273,7 +1273,7 @@ def build_ir(
             continue  # generated output is not evidence of anything
         role = config.role_of(path)
         if role == "prod" and (
-            _is_runner_script(path, change.before, change.after) or path in one_hop
+            _is_runner_script(path, change.before, change.after, change.old_path) or path in one_hop
             or _test_commands_changed(path, change.before, change.after)
         ):
             # The test command lives wherever the project keeps it. As prod
@@ -1694,7 +1694,7 @@ def build_ir(
         elif role == "ci":
             g.ci_files_changed.append(path)
             if change.status == "deleted" and _is_ci_workflow(path) and (
-                    _runs_tests(change.before) or holds_runner_site(path, change.before)):
+                    _runs_tests(change.before, path) or holds_runner_site(path, change.before)):
                 # Deleting or relocating a workflow removes the gate outright,
                 # which is at least as strong a signal as weakening a command
                 # inside it — but only if that workflow ran the tests. Firing
@@ -1703,7 +1703,7 @@ def build_ir(
                 # pinact.yml). A removed non-test workflow still surfaces as
                 # CI_WORKFLOW_TOUCHED at warn: visible, not blocking.
                 g.ci_weakening_lines.append((path, "workflow file removed"))
-            _scan_ci_weakening(g, path, change.before, change.after, ci_base)
+            _scan_ci_weakening(g, path, change.before, change.after, ci_base, change.old_path)
         elif role == "snapshot":
             g.snapshot_files_changed.append(path)
             # Standalone stored-oracle rewrites need both content digests too.
