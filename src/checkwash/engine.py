@@ -735,7 +735,16 @@ def build_ir(
     importer_changes, importer_reads, reviewed_root_modules = _root_importer_changes(
         changes, config, root_reader, root_searcher, root_path_lister)
     changes = [*changes, *importer_changes]
-    changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher, reviewed_root_modules)]
+    # The expected-value pass is additive and bounded: past its bounds it
+    # reads none of a helper's importers and says so (D-206), but only in a
+    # run that reports what it says. A run without a report context (sweep,
+    # bench, demo) keeps the engine error. The root-helper channel above,
+    # which reviews removed assertions, keeps its engine errors too.
+    set_aside: list[str] | None = [] if report_context is not None else None
+    changes = [*changes, *expected_importer_changes(changes, config, root_reader, root_searcher,
+                                                    reviewed_root_modules, skipped=set_aside)]
+    if report_context is not None:
+        report_context.importer_gaps.extend(set_aside)
     g = DiffGlobals()
     g.scope_allow = sorted(scope_allow or [])
     # Someone else's code = declared, minus the project's own name, minus the

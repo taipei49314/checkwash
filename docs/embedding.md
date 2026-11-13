@@ -40,7 +40,12 @@ run (the [v0.9.0 notes](#v080-to-v090) list the exceptions).
   v0.8.0, a side over the source size limit that no detector read; since
   v0.9.0 most of those are also listed under `unread`
   ([v0.9.0 notes](#v080-to-v090)). Assertion-coverage gaps
-  are there too, and in `--coverage-report FILE` and SARIF. An expired exemption is
+  are there too, and in `--coverage-report FILE` and SARIF. From 0.13, so is
+  a changed test helper whose unchanged importers the expected-value pass
+  did not read
+  (`checkwash: analysis incomplete: <reason>, so unchanged tests that import <helpers> …`),
+  which SARIF also carries; the JSON document does not
+  ([D-206](../DECISIONS.md)). An expired exemption is
   dropped without a message; `checkwash doctor` counts it.
 - Configuration and exemptions are read from the base side of the range, so a
   pull request cannot exempt itself.

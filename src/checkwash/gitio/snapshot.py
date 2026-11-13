@@ -12,7 +12,7 @@ from pathlib import Path
 import subprocess
 import threading
 
-from checkwash.change import SHEBANG_PREFIX_BYTES, EngineError, UnreadSide
+from checkwash.change import SHEBANG_PREFIX_BYTES, EngineError, SearchHitLimit, UnreadSide
 from checkwash.opaque import SymlinkedDirectory, opaque_error, opaque_owner
 
 MAX_SOURCE_BYTES = 1_000_000
@@ -69,7 +69,7 @@ def search_source_mapping(snapshot, needles):
     if "" in needles:
         paths = [path for path, data in sorted(snapshot.items()) if path.endswith(".py") and data]
         if len(paths) >= MAX_SEARCH_HITS:
-            raise EngineError("strict snapshot importer search exceeds the hit limit")
+            raise SearchHitLimit("strict snapshot importer search exceeds the hit limit")
         return paths
     return [path for path, data in sorted(snapshot.items())
             if any(needle.encode("utf-8") in data for needle in needles)]
@@ -621,7 +621,13 @@ class GitSnapshot:
                     return TreeAlias(name, kind, whole)
         return None
 
-    def search(self, needles):
+    def search(self, needles, exclude=frozenset()):
+        """Python paths holding a needle; the empty needle lists them all.
+
+        `exclude` leaves its paths out of an ordinary search: they are neither
+        returned nor counted toward the hit limit (D-206). The inventory, the
+        empty needle, is never narrowed.
+        """
         if not needles:
             return []
         if "" in needles:
@@ -640,7 +646,7 @@ class GitSnapshot:
                 if size:
                     paths.append(path)
                     if len(paths) >= MAX_SEARCH_HITS:
-                        raise EngineError("strict snapshot importer search exceeds the hit limit")
+                        raise SearchHitLimit("strict snapshot importer search exceeds the hit limit")
             return paths
         args = ["grep", "-l", "-F", "-z"]
         for needle in needles:
@@ -663,8 +669,9 @@ class GitSnapshot:
             paths.append(path)
         if len(paths) != len(set(paths)):
             raise EngineError("strict snapshot search returned duplicate paths")
+        paths = [path for path in paths if path not in exclude]
         if len(paths) >= MAX_SEARCH_HITS:
-            raise EngineError("strict snapshot importer search exceeds the hit limit")
+            raise SearchHitLimit("strict snapshot importer search exceeds the hit limit")
         return paths
 
 
@@ -818,7 +825,13 @@ class WorkingTreeSnapshot:
             return UnreadSide(path, self.side, size, MAX_SOURCE_BYTES, prefix=data[:SHEBANG_PREFIX_BYTES])
         return data
 
-    def search(self, needles):
+    def search(self, needles, exclude=frozenset()):
+        """Python paths holding a needle; the empty needle lists them all.
+
+        `exclude` leaves its paths out of an ordinary search: they are neither
+        read, returned nor counted toward the hit limit (D-206). The
+        inventory, the empty needle, is never narrowed.
+        """
         if not needles:
             return []
         wanted = [n.encode("utf-8") for n in needles]
@@ -845,11 +858,13 @@ class WorkingTreeSnapshot:
                 path = Path(directory, filename).relative_to(self.root).as_posix()
                 if "" in needles and Path(directory, filename).is_symlink():
                     raise _nonregular("strict snapshot inventory cannot inspect a nonregular Python source", path, b"120000")
+                if "" not in needles and path in exclude:
+                    continue
                 data = self.read(path)
                 if data is None:
                     raise EngineError("strict snapshot source disappeared during importer search")
                 if data and any(n in data for n in wanted):
                     paths.append(path)
                     if len(paths) >= MAX_SEARCH_HITS:
-                        raise EngineError("strict snapshot importer search exceeds the hit limit")
+                        raise SearchHitLimit("strict snapshot importer search exceeds the hit limit")
         return paths

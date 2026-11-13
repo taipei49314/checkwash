@@ -72,3 +72,13 @@ class SourceOverLimit(EngineError):
     def __init__(self, unread: UnreadSide):
         super().__init__(unread.message())
         self.unread = unread
+
+
+class SearchHitLimit(EngineError):
+    """A snapshot search reached its hit limit, so its answer may be truncated.
+
+    It stays an engine error for every caller that does not handle it. Only
+    the expected-value importer pass sets such a search aside: in a run that
+    reports it, searched by one helper name with the paths the diff changes
+    left out, unless the diff renamed a helper to that name (D-206).
+    """

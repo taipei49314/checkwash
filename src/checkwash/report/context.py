@@ -18,6 +18,9 @@ from checkwash.frontends.python.frontend import normalize_source
 class ReportContext:
     collect_locations: bool = True
     coverage_gaps: list[CoverageGap] = field(default_factory=list)
+    # Changed test helpers whose unchanged importers the expected-value pass
+    # did not read, one message per run (D-206).
+    importer_gaps: list[str] = field(default_factory=list)
     coverage_files: list[tuple[str, str]] = field(default_factory=list)
     _sources: dict[tuple[str, int], str] = field(default_factory=dict)
     _origins: dict[tuple[str, int, tuple[int, int], str], set[str]] = field(

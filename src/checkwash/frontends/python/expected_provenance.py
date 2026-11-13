@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import ast
 import copy
+import inspect
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-from checkwash.change import FileChange
+from checkwash.change import FileChange, SearchHitLimit
 from checkwash.frontends.python.frontend import _Offsets, _canonical_repr, normalize_source
 from checkwash.frontends.python.literal_conversions import conversion_names, folded_conversion, module_bindings
 from checkwash.frontends.python.expected_constants import folded_expected
@@ -32,6 +33,9 @@ from checkwash.ir.expected_values import value_key
 from checkwash.ir.model import judged_as_test
 
 MAX_READS = 48
+# The importers the run reads for every changed helper name together (D-206):
+# each name has MAX_READS of its own, and all of them at most this many.
+MAX_TOTAL_READS = 4 * MAX_READS
 MAX_AUTHORITY_READS = 64
 MAX_DEPTH = 8
 MAX_EVENTS = 128
@@ -540,12 +544,29 @@ class _Project:
         return result
 
 
-def importer_changes(changes, config, reader, searcher, reviewed_root_modules=()):
-    """Discover unchanged tests importing a changed test-side helper, bounded."""
+def importer_changes(changes, config, reader, searcher, reviewed_root_modules=(), skipped=None):
+    """Discover unchanged tests importing a changed test-side helper, bounded.
+
+    With `skipped`, a list the run reports, each changed helper's module name
+    is searched on its own, with every path the diff changes left out, and
+    has its own bounds (D-206). A name that more than MAX_READS unchanged
+    tests mention sets aside the helpers of that name: none of their
+    importers is read, and `skipped` says so. A name that reaches the
+    search's hit limit does the same, unless the diff renamed one of its
+    helpers to that name: a name the diff chose could be one every file
+    holds, so then the hit limit stops the run. The names whose tests fit
+    are read from the smallest, while the run's MAX_TOTAL_READS allow; more
+    than 16 names set every helper aside.
+
+    Without `skipped`, or with a searcher that cannot leave paths out, one
+    search covers every name and its hit limit stops the run, as before D-206.
+    """
     if reader is None or searcher is None:
         return []
     raw = {c.path.replace("\\", "/"): (c.before, c.after) for c in changes}
-    needles = set()
+    renamed = {c.path.replace("\\", "/") for c in changes if c.old_path
+               and PurePosixPath(c.old_path.replace("\\", "/")).stem != PurePosixPath(c.path.replace("\\", "/")).stem}
+    names = {}
     for path, (before, after) in raw.items():
         if (before is None or before == after or not path.endswith(".py")
                 or config.role_of(path) not in ("test", "conftest")
@@ -557,25 +578,105 @@ def importer_changes(changes, config, reader, searcher, reviewed_root_modules=()
         except (SyntaxError, ValueError, RecursionError, MemoryError, _Unsupported):
             continue
         if any(not name.startswith("test") for name in module.functions):
-            needles.add(PurePosixPath(path).stem)
-    if not needles or len(needles) > 16:
+            names.setdefault(PurePosixPath(path).stem, set()).add(path)
+    if not names:
         return []
-    candidates = sorted({p.replace("\\", "/") for p in searcher(sorted(needles))})
+    helpers = set().union(*names.values())
+    if len(names) > 16:
+        return _set_aside(skipped, helpers, "the change touches helpers with more than 16 module names")
+    # Git's own spelling of each path the diff changes, which the searches
+    # compare as they are, a path that holds "\" included.
+    changed = frozenset(p for c in changes for p in (c.path, c.old_path) if p)
+    search = _search_outside(searcher, changed)
+    if skipped is None or search is searcher:
+        return _one_search(config, reader, raw, searcher, names, helpers, skipped)
+    tests_of = {}
+    for name in sorted(names):
+        try:
+            hits = search([name])
+        except SearchHitLimit:
+            if any(path in renamed for path in names[name]):
+                raise
+            _set_aside(skipped, names[name], f"64 or more unchanged Python files mention {_shown_name(name)}")
+            continue
+        tests = [path for path in sorted({p.replace("\\", "/") for p in hits} - set(raw)) if _test_source(config, path)]
+        if len(tests) > MAX_READS:
+            _set_aside(skipped, names[name], f"more than {MAX_READS} unchanged tests mention {_shown_name(name)}")
+            continue
+        tests_of[name] = tests
+    # Smallest first: a name with many importers cannot crowd out one with few.
+    found, total = {}, 0
+    for name in sorted(tests_of, key=lambda name: (len(tests_of[name]), name)):
+        if total + len(tests_of[name]) > MAX_TOTAL_READS:
+            _set_aside(skipped, names[name], f"the run's {MAX_TOTAL_READS} importer reads are spent")
+            continue
+        total += len(tests_of[name])
+        for path in tests_of[name]:
+            if path not in found:
+                found[path] = reader(path)
+    return [FileChange(path=path, status="modified", before=source, after=source, synthetic="expected_provenance_importer")
+            for path, source in sorted(found.items()) if source is not None and len(source) <= MAX_SOURCE_BYTES]
+
+
+def _one_search(config, reader, raw, searcher, names, helpers, skipped):
+    """Every name in one search, whose hit limit stops the run (before D-206)."""
+    candidates = sorted({p.replace("\\", "/") for p in searcher(sorted(names))})
     if len(candidates) >= 64:
-        return []
+        return _set_aside(skipped, helpers, f"64 or more Python files mention {_shown_names(names)}")
     found = []
     reads = 0
     for path in candidates:
-        if (path in raw or not path.endswith(".py") or config.role_of(path) != "test"
-                or path.startswith("/") or ":" in path or any(p in ("", ".", "..") for p in path.split("/"))):
+        if path in raw or not _test_source(config, path):
             continue
         if reads >= MAX_READS:
-            return []
+            return _set_aside(skipped, helpers, f"more than {MAX_READS} tests mention {_shown_names(names)}")
         reads += 1
         source = reader(path)
         if source is not None and len(source) <= MAX_SOURCE_BYTES:
             found.append(FileChange(path=path, status="modified", before=source, after=source, synthetic="expected_provenance_importer"))
     return found
+
+
+def _test_source(config, path):
+    return (path.endswith(".py") and config.role_of(path) == "test"
+            and not path.startswith("/") and ":" not in path
+            and not any(p in ("", ".", "..") for p in path.split("/")))
+
+
+def _search_outside(searcher, changed):
+    """The search with the diff's paths left out, or `searcher` itself when it
+    takes no `exclude`, as a test's stand-in may not."""
+    try:
+        takes_exclude = "exclude" in inspect.signature(searcher).parameters
+    except (TypeError, ValueError):
+        takes_exclude = False
+    return (lambda needles: searcher(needles, exclude=changed)) if takes_exclude else searcher
+
+
+def _set_aside(skipped, helpers, reason):
+    if skipped is not None:
+        listed = _listed([_shown(path) for path in sorted(helpers)])
+        skipped.append(f"analysis incomplete: {reason}, so unchanged tests that import {listed} "
+                       "were not read for their expected values")
+    return []
+
+
+def _shown(text):
+    """The text as is, unless it would not print on one line (#346)."""
+    return text if text.isprintable() else repr(text)
+
+
+def _shown_name(name):
+    return f"`{name}`" if name.isprintable() else repr(name)
+
+
+def _shown_names(names):
+    return _listed([_shown_name(name) for name in sorted(names)])
+
+
+def _listed(items, shown=4):
+    head = ", ".join(items[:shown])
+    return head if len(items) <= shown else f"{head} and {len(items) - shown} more"
 
 
 def _eligible(file, sources):

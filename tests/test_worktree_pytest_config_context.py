@@ -291,6 +291,7 @@ def test_session_note_builds_a_fresh_pair_from_session_base_not_primary_head(tmp
     from checkwash import cli
     from checkwash.config import Config
     from checkwash.gitio.pytest_configs import PairedPytestConfigs, WorktreePytestConfigs
+    from checkwash.report.context import ReportContext
 
     initialize(tmp_path)
     config = tmp_path / "pytest.ini"
@@ -322,7 +323,8 @@ def test_session_note_builds_a_fresh_pair_from_session_base_not_primary_head(tmp
         assert paired.sources("before", ["pytest.ini"])["pytest.ini"] == original
         assert paired.sources("after", ["pytest.ini"])["pytest.ini"] == second
         seen.append(paired)
-        return SimpleNamespace(config=Config(), findings=[])
+        # The leg's report holds the helpers it set aside (D-206).
+        return SimpleNamespace(config=Config(), findings=[], report_context=ReportContext())
 
     monkeypatch.setattr(cli, "_analyse", capture)
     note = cli._session_note(SimpleNamespace(repo=str(tmp_path)),
