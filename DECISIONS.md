@@ -1825,7 +1825,7 @@ questions (Antigravity wrote both questions and all six options):
    - runs the full `pytest` suite with **16 xdist workers**
      (`COMPACT_PYTEST_WORKERS = "16"`), validates JUnit and subtest stdout,
      checks exact equality with the documented suite count, keeps raw logs on
-     PJU, and writes a single-line canonical ASCII JSON digest receipt (~3–4
+     PJU, and writes a single-line canonical ASCII JSON digest receipt (~6–7
      KB) with zero new `evidence/*` branches in Git. Historical `evidence/*`
      branches are left untouched.
 2. **Hosted verification, test-count floor and App-bound check publication.**
@@ -1835,22 +1835,25 @@ questions (Antigravity wrote both questions and all six options):
    `publish-pju-compact` call `tools/pju_receipt_bridge.py verify-compact` and
    `publish-compact`:
    - refuse release heads (`validate_ordinary_head`) before any GitHub API
-     read, verify live open PR head/base/tree, and reject `receipt_commit`
-     when `compact_receipt` is supplied;
+     read, verify live open PR head/base/tree, reject `receipt_commit` when
+     `compact_receipt` is supplied, and require canonical sorted-key ASCII JSON
+     wire framing;
    - recompute `src_tree`, `source_package_sha256`, `builder_sha256`, contract
      suite digests, Action YAML/run-block/engine digests and candidate closure
      digests directly from checked-out `trusted` and `candidate-data` Git
      blobs;
-   - enforce **RC-09**: `documented_test_count(source_root, head)` reads
+   - enforce **RC-09** across both `verify-compact`/`publish-compact` and
+     legacy `verify`/`publish`: `documented_test_count(source_root, head)` reads
      `README.md`, `CONTRIBUTING.md` and `docs/launch.md` from `head`'s Git
-     blobs, requires all documented counts to agree and meet the 23,000 floor,
+     blobs, requires all documented counts to agree and meet the 23,065 floor,
      and requires JUnit's testcase count to equal that exact number;
    - enforce **RC-02 Understated 2**: `admit_compact_environment` allows a
      branch `GITHUB_WORKFLOW_REF` only while `base` on `main` does not yet
      contain `verify-pju-compact` and only when `trusted_workflow_sha == head
      == collector_source_sha`; once D-209 merges to `main`, `base` contains
      `verify-pju-compact` and any non-`refs/heads/main` dispatch is refused
-     automatically;
+     automatically (and legacy `verify`/`publish` in `main()` requires
+     `refs/heads/main` immediately);
    - enforce **RC-03**: remove `.github/workflows/quality-candidate-intake.yml`
      from `pull_request.paths`, restrict the `intake` job on
      `workflow_dispatch` to `inputs.mode == 'intake'`, bind `checkwash` to
@@ -1866,23 +1869,33 @@ questions (Antigravity wrote both questions and all six options):
   `.github/workflows/release-hosted.yml`): release PRs and release stages keep
   full `3x283` source/wheel/pyz CLI qualification, binary artifact inventories
   and hosted macOS/Linux verification.
-- Legacy `mode=receipt` (`PYTEST_WORKERS = "8"`, `CONTEXTS` with four checks)
-  and all existing bridge/release unit tests.
+- Legacy `mode=receipt` low-level helpers (`PYTEST_WORKERS = "8"`, `CONTEXTS`
+  with four checks, `admit_environment`, `validate_packet`) and all existing
+  bridge/release unit tests.
 - Historical `evidence/*` branches on `taipei49314/checkwash`.
 
 **Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
 Windows CPython 3.11.9):
-- `tests/test_pju_compact_receipt.py` (29 tests: workflow graph and 10-input
+- `tests/test_pju_compact_receipt.py` (33 tests: workflow graph and 10-input
   ceiling, RC-03 path exclusion, ruleset `integration_id: 15368`, both Action
-  closure modes, wire framing and SHA256 digest binding, 17 tamper-rejection
-  mutations, documented test-count drift/floor rejection, self-sealing
-  bootstrap admission before and after merge, check publication and failure
-  rollback, CLI round-trip, and Action replay summarization) plus all existing
-  bridge, release, packaging, zipapp, documentation and workflow tests.
+  closure modes, canonical ASCII JSON wire framing and SHA256 digest binding,
+  17 tamper-rejection mutations, documented test-count drift/floor rejection on
+  both compact and legacy `main()` paths, self-sealing bootstrap admission
+  before and after merge plus legacy `refs/heads/main` enforcement, check
+  publication/App-ID verification and failure rollback, CLI release-head refusal
+  before GitHub reads, `collect_compact` `--git`/sanitized-env binding, and
+  Action replay summarization) plus all existing bridge, release, packaging,
+  zipapp, documentation and workflow tests.
 - `checkwash check` on the pull request's range at `--fail-on high`: pass (0
   high/critical; expected warn `CI_WORKFLOW_TOUCHED` on
   `quality-candidate-intake.yml`).
-- Independent read-only review sub-agent audit before merge, followed by the
-  pull request's own compact PJU receipt (`pytest -n 16`) and green `checkwash`
-  check run (`app 15368`).
+- Independent read-only review sub-agent audit on `1a4d7163` found 1 high
+  (enforce `refs/heads/main` and `documented_test_count` on legacy `verify`/
+  `publish` in `main()`), 1 medium (bind `inventory_mod.git` and `bridge.git`
+  in `collect_compact` to `--git` and sanitized `env`), 2 low (canonical ASCII
+  JSON wire check, explicit release-head refusal + `collect_compact` unit tests,
+  and 23,065 floor), and 3 nits (`~6–7 KB` size prose, dual Action replay error
+  collection, and check-run `app.id == 15368` assertion); all fixed before PR
+  receipt collection. Followed by the pull request's own compact PJU receipt
+  (`pytest -n 16`) and green `checkwash` check run (`app 15368`).
 - macOS, Linux outside local checks, and other platforms: NOT_RUN.

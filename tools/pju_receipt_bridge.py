@@ -50,7 +50,7 @@ COMPACT_REQUIRED_EXITS = {
     "test-editable-install", "pytest",
 }
 MAX_COMPACT_RECEIPT = 64 * 1024
-MIN_DOCUMENTED_TESTS = 23000
+MIN_DOCUMENTED_TESTS = 23065
 WORKFLOW_PATH = ".github/workflows/quality-candidate-intake.yml"
 MAX_FILE = 256 * 1024 * 1024
 MAX_TOTAL = 1024 * 1024 * 1024
@@ -836,6 +836,8 @@ def validate_compact(raw_receipt, expected_sha256, *, repository, pr, base, head
     require(b"\r" not in raw_receipt and b"\n" not in raw_receipt, "compact receipt must be single-line JSON")
     require(digest(raw_receipt) == sha(expected_sha256), "external compact receipt digest mismatch")
     receipt = strict_json(raw_receipt)
+    require(raw_receipt == json.dumps(receipt, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii"),
+            "compact receipt must be canonical ASCII JSON")
     exact_keys(receipt, "schema_version kind status repository pr_number base_sha head_sha source_tree src_tree "
                         "host provenance collector_source_sha action_sha version runtime contracts action_dogfood "
                         "candidate_action distributions junit pytest_argv raw_exits", "compact receipt")
@@ -1000,8 +1002,10 @@ def publish_compact(api, report, manifest_sha256, run_url):
             ids.append(integer(check["id"], "check ID", 1))
         for check_id in ids:
             require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed")
-            api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="success",
+            patched = api.request("PATCH", f"/repos/{repository}/check-runs/{check_id}", dict(status="completed", conclusion="success",
                 output=dict(title="Exact-source compact local evidence passed", summary=summary)))
+            if isinstance(patched, dict) and isinstance(patched.get("app"), dict):
+                require(patched["app"].get("id") == 15368, "unexpected check App ID")
         require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed after publication")
     except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError):
         for check_id in ids:
@@ -1071,6 +1075,9 @@ def main(argv=None):
             require(bool(args.receipt_root) and bool(args.receipt_commit) and args.compact_receipt_file is None,
                     "receipt mode requires --receipt-root and --receipt-commit")
             admit_environment(args.trusted_workflow_sha, os.environ)
+            require(os.environ.get("GITHUB_WORKFLOW_REF") == REPOSITORY + "/" + WORKFLOW_PATH + "@refs/heads/main"
+                    and sha(args.collector_source_sha, 40) == args.trusted_workflow_sha,
+                    "receipt mode must be dispatched from refs/heads/main")
         require(git(args.trusted_root, "rev-parse", "HEAD").decode().strip() == args.trusted_workflow_sha, "trusted checkout differs")
         if not compact:
             require(git(Path(args.receipt_root).parent, "rev-parse", "HEAD").decode().strip() == sha(args.receipt_commit, 40), "receipt commit differs")
@@ -1094,6 +1101,9 @@ def main(argv=None):
             packet = Packet(args.receipt_root, args.manifest_sha256)
             report = validate_packet(packet, repository=args.repository, pr=args.pr, base=args.base, head=args.head,
                 source_tree=source_tree, collector=args.collector_source_sha, source_root=args.source_root, trusted_root=args.trusted_root)
+            expected_tests = documented_test_count(args.source_root, args.head)
+            require(report["junit"]["tests"] == expected_tests,
+                    f"JUnit test count {report['junit']['tests']} differs from documented suite count {expected_tests}")
             require(live_pr(api, args.repository, args.pr, args.head, args.base) == source_tree, "PR changed during validation")
             report.update(manifest_sha256=args.manifest_sha256, receipt_commit=args.receipt_commit,
                           workflow_sha=args.trusted_workflow_sha)

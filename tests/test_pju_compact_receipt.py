@@ -390,7 +390,9 @@ def test_valid_compact_receipt_passes_both_closure_modes(compact_fixture, tmp_pa
     (b"x" * (bridge.MAX_COMPACT_RECEIPT + 1), "oversized/empty compact receipt"),
     (b'{"a":1}\n', "single-line JSON"),
     (b'{"a":1}\r', "single-line JSON"),
-], ids=["empty", "oversized", "lf", "cr"])
+    (b'{ "a": 1 }', "canonical ASCII JSON"),
+    (b'{"z":1,"a":2}', "canonical ASCII JSON"),
+], ids=["empty", "oversized", "lf", "cr", "spaced", "unsorted"])
 def test_compact_wire_framing_and_digest_enforced(compact_fixture, bad_raw, pattern):
     with pytest.raises(ValueError, match=pattern):
         bridge.validate_compact(
@@ -517,8 +519,9 @@ def test_publish_compact_publishes_single_checkwash_context_and_rolls_back(compa
     calls = []
 
     class FakeAPI:
-        def __init__(self, fail_patch: bool = False):
+        def __init__(self, fail_patch: bool = False, app_id: int = 15368):
             self.fail_patch = fail_patch
+            self.app_id = app_id
 
         def request(self, method: str, path: str, body: dict | None = None):
             calls.append((method, path, body))
@@ -535,7 +538,7 @@ def test_publish_compact_publishes_single_checkwash_context_and_rolls_back(compa
             if method == "PATCH":
                 if self.fail_patch and body and body.get("conclusion") == "success":
                     raise urllib.error.URLError("simulated network drop")
-                return dict(id=701)
+                return dict(id=701, app=dict(id=self.app_id))
             raise AssertionError(path)
 
     ids = bridge.publish_compact(FakeAPI(), report, manifest_sha, "https://github.com/taipei49314/checkwash/actions/runs/99")
@@ -551,6 +554,11 @@ def test_publish_compact_publishes_single_checkwash_context_and_rolls_back(compa
         bridge.publish_compact(FakeAPI(fail_patch=True), report, manifest_sha, "https://github.com/taipei49314/checkwash/actions/runs/99")
     rollbacks = [c for c in calls if c[0] == "PATCH" and c[2].get("conclusion") == "failure"]
     assert len(rollbacks) == 1
+
+    calls.clear()
+    with pytest.raises(ValueError, match="unexpected check App ID"):
+        bridge.publish_compact(FakeAPI(app_id=99999), report, manifest_sha, "https://github.com/taipei49314/checkwash/actions/runs/99")
+    assert len([c for c in calls if c[0] == "PATCH" and c[2].get("conclusion") == "failure"]) == 1
 
 
 def test_main_compact_cli_env_roundtrip_and_release_head_refusal(compact_fixture, tmp_path, monkeypatch):
@@ -620,6 +628,239 @@ def test_main_compact_cli_env_roundtrip_and_release_head_refusal(compact_fixture
     ])
     assert rc_bad == 1
     assert "takes no receipt checkout" in json.loads(out.read_text(encoding="utf-8"))["error"]
+
+    # Refuses release heads (version bump or doctor own-pin change) before touching GitHub.
+    rel_repo = _clone_repo(repo, tmp_path / "rel_repo")
+    (rel_repo / "pyproject.toml").write_bytes(b'[project]\nname = "checkwash"\nversion = "0.13.0"\n')
+    git(rel_repo, "add", "pyproject.toml")
+    git(rel_repo, "commit", "-m", "release version bump")
+    ver_head = git(rel_repo, "rev-parse", "HEAD").decode("ascii").strip()
+
+    pin_repo = _clone_repo(repo, tmp_path / "pin_repo")
+    (pin_repo / "src/checkwash/doctor.py").write_bytes(
+        f'_PREVIOUS_ACTION_PIN = "{"5" * 40}"\n_OWN_ACTION_PIN = "{"6" * 40}"\n'.encode("utf-8")
+    )
+    git(pin_repo, "add", "src/checkwash/doctor.py")
+    git(pin_repo, "commit", "-m", "own pin set")
+    pin_head = git(pin_repo, "rev-parse", "HEAD").decode("ascii").strip()
+
+    class UnreachableGitHub:
+        def __init__(self, _token):
+            raise AssertionError("GitHub must not be instantiated on release-head refusal")
+
+    monkeypatch.delenv("GH_TOKEN", raising=False)
+    monkeypatch.setattr(bridge, "GitHub", UnreachableGitHub)
+    for cand_repo, cand_head, expected_err in (
+        (rel_repo, ver_head, "only through the release bridge's pr stage"),
+        (pin_repo, pin_head, "only a release PR's last commit sets doctor's own Action pin"),
+    ):
+        rc_rel = bridge.main([
+            "verify-compact",
+            "--trusted-root", str(repo),
+            "--source-root", str(cand_repo),
+            "--pr", "606",
+            "--head", cand_head,
+            "--base", compact_fixture["base_sha"],
+            "--manifest-sha256", digest_hex,
+            "--collector-source-sha", compact_fixture["base_sha"],
+            "--trusted-workflow-sha", compact_fixture["base_sha"],
+            "--output", str(out),
+        ])
+        assert rc_rel == 1
+        assert expected_err in json.loads(out.read_text(encoding="utf-8"))["error"]
+
+
+def test_legacy_receipt_main_enforces_main_ref_and_documented_test_count(compact_fixture, tmp_path, monkeypatch):
+    repo = compact_fixture["repo"]
+    base_sha = compact_fixture["base_sha"]
+    out = tmp_path / "legacy-out.json"
+    receipt_repo = _clone_repo(repo, tmp_path / "receipt_repo")
+    receipt_dir = receipt_repo / "receipt"
+    receipt_dir.mkdir()
+    (receipt_dir / "manifest.json").write_text("{}", encoding="utf-8")
+    git(receipt_repo, "add", "receipt/manifest.json")
+    git(receipt_repo, "commit", "-m", "synthetic receipt commit")
+    receipt_commit = git(receipt_repo, "rev-parse", "HEAD").decode("ascii").strip()
+
+    base_env = dict(
+        GITHUB_EVENT_NAME="workflow_dispatch",
+        GITHUB_REPOSITORY=bridge.REPOSITORY,
+        GITHUB_REPOSITORY_OWNER="taipei49314",
+        GITHUB_ACTOR="taipei49314",
+        GITHUB_TRIGGERING_ACTOR="taipei49314",
+        GITHUB_SHA=base_sha,
+        GITHUB_WORKFLOW_SHA=base_sha,
+        GH_TOKEN="synthetic-token",
+    )
+    for k, v in base_env.items():
+        monkeypatch.setenv(k, v)
+
+    # 1. Branch workflow ref is rejected in legacy receipt mode (closes RC-02 on legacy path too).
+    monkeypatch.setenv("GITHUB_WORKFLOW_REF", bridge.REPOSITORY + "/.github/workflows/quality-candidate-intake.yml@refs/heads/feature")
+    rc = bridge.main([
+        "verify",
+        "--receipt-root", str(receipt_dir),
+        "--receipt-commit", receipt_commit,
+        "--trusted-root", str(repo),
+        "--source-root", str(repo),
+        "--pr", "606",
+        "--head", base_sha,
+        "--base", base_sha,
+        "--manifest-sha256", "0" * 64,
+        "--collector-source-sha", base_sha,
+        "--trusted-workflow-sha", base_sha,
+        "--output", str(out),
+    ])
+    assert rc == 1
+    assert "receipt mode must be dispatched from refs/heads/main" in json.loads(out.read_text(encoding="utf-8"))["error"]
+
+    # 2. On refs/heads/main, legacy receipt mode enforces documented_test_count equality (closes RC-09 on legacy path too).
+    monkeypatch.setenv("GITHUB_WORKFLOW_REF", bridge.REPOSITORY + "/.github/workflows/quality-candidate-intake.yml@refs/heads/main")
+    monkeypatch.setattr(bridge, "GitHub", lambda _tok: type("S", (), {
+        "request": lambda self, m, p, b=None: (
+            dict(state="open", merged=False,
+                 head=dict(sha=base_sha, repo=dict(full_name=bridge.REPOSITORY)),
+                 base=dict(sha=base_sha, ref="main", repo=dict(full_name=bridge.REPOSITORY)))
+            if "/pulls/" in p else dict(tree=dict(sha=compact_fixture["tree_sha"]))
+        )
+    })())
+    monkeypatch.setattr(bridge, "Packet", lambda root, sha_hex: object())
+    monkeypatch.setattr(bridge, "validate_packet", lambda *a, **kw: dict(status="verified", junit=dict(tests=2)))
+    rc_count = bridge.main([
+        "verify",
+        "--receipt-root", str(receipt_dir),
+        "--receipt-commit", receipt_commit,
+        "--trusted-root", str(repo),
+        "--source-root", str(repo),
+        "--pr", "606",
+        "--head", base_sha,
+        "--base", base_sha,
+        "--manifest-sha256", "0" * 64,
+        "--collector-source-sha", base_sha,
+        "--trusted-workflow-sha", base_sha,
+        "--output", str(out),
+    ])
+    assert rc_count == 1
+    assert "JUnit test count 2 differs from documented suite count 23100" in json.loads(out.read_text(encoding="utf-8"))["error"]
+
+
+def test_collect_compact_binds_admitted_git_and_restores_helpers(compact_fixture, tmp_path, monkeypatch):
+    import argparse
+    import shutil
+    import sys
+    import types
+
+    git_exe = shutil.which("git")
+    assert git_exe is not None
+    inv_mod = collector_mod.load_trusted_module("_test_inv", "release_inventory.py")
+    br_mod = collector_mod.load_trusted_module("_test_br", "pju_receipt_bridge.py")
+    qual_mod = collector_mod.load_trusted_module("_test_qual", "qualify_assertions.py")
+    action_mod = collector_mod.load_replayer()
+    orig_inv_git = inv_mod.git
+    orig_br_git = br_mod.git
+
+    source_repo = _clone_repo(compact_fixture["repo"], tmp_path / "cand_src")
+    trusted_repo = _clone_repo(compact_fixture["repo"], tmp_path / "trusted_src")
+    pinned_repo = _clone_repo(compact_fixture["repo"], tmp_path / "pinned_src")
+    py_exe = Path(sys.executable).absolute()
+    monkeypatch.setattr(collector_mod, "ROOT", trusted_repo)
+    monkeypatch.setattr(
+        collector_mod,
+        "sys",
+        types.SimpleNamespace(
+            version_info=(3, 11, 9),
+            executable=str(py_exe),
+            dont_write_bytecode=True,
+            flags=types.SimpleNamespace(isolated=1, dont_write_bytecode=1, utf8_mode=1),
+        ),
+    )
+
+    fake_bash = tmp_path / "bash.exe"
+    fake_bash.write_bytes(b"bash-bin")
+    lock_file = tmp_path / "lock.json"
+    lock_raw = json.dumps({"pytest": "9.1.1"}).encode("utf-8")
+    lock_file.write_bytes(lock_raw)
+
+    def fake_loader(name: str, filename: str):
+        if filename == "release_inventory.py":
+            return inv_mod
+        if filename == "pju_receipt_bridge.py":
+            return br_mod
+        if filename == "qualify_assertions.py":
+            return qual_mod
+        raise AssertionError(filename)
+
+    seen_git_calls: list[tuple[str, ...]] = []
+    orig_subproc_run = subprocess.run
+
+    def wrapped_run(argv, *a, **kw):
+        if isinstance(argv, list) and argv and Path(argv[0]).resolve() == Path(git_exe).resolve():
+            seen_git_calls.append(tuple(argv))
+        return orig_subproc_run(argv, *a, **kw)
+
+    monkeypatch.setattr(subprocess, "run", wrapped_run)
+    # Remove ambient PATH so bare "git" lookup would fail if _clean_git were not bound.
+    monkeypatch.setenv("PATH", "")
+    monkeypatch.setattr(action_mod, "ACTION_SHA", compact_fixture["base_sha"])
+
+    orig_run_record = action_mod.run_record
+
+    def fake_run_record(name, argv, *, cwd, env, output, timeout, ledger, lock=None):
+        if name.startswith("git-"):
+            return orig_run_record(name, argv, cwd=cwd, env=env, output=output, timeout=timeout, ledger=ledger, lock=lock)
+        stdout_rel = f"commands/{name}.out"
+        stderr_rel = f"commands/{name}.err"
+        (output / "commands").mkdir(exist_ok=True)
+        if name == "runtime-identity":
+            # Verify bridge.documented_test_count and inventory_mod.git work while PATH="" inside collect_compact!
+            assert br_mod.documented_test_count(source_repo, compact_fixture["base_sha"]) == 23100
+            assert inv_mod.git("rev-parse", "HEAD").decode("ascii").strip() == compact_fixture["base_sha"]
+            payload = json.dumps({
+                "python_version": "3.11.9",
+                "prefix": str(py_exe.parent.parent),
+                "base": str(tmp_path / "base_py"),
+                "dependencies": {"pytest": "9.1.1"},
+            }).encode("utf-8")
+            (output / stdout_rel).write_bytes(payload)
+            (output / stderr_rel).write_bytes(b"")
+            row = dict(name=name, duration_seconds=0.01, exit_code=0, timed_out=False, stdout=stdout_rel, stderr=stderr_rel)
+        else:
+            (output / stdout_rel).write_bytes(b"")
+            (output / stderr_rel).write_bytes(b"simulated stop")
+            row = dict(name=name, duration_seconds=0.01, exit_code=1, timed_out=False, stdout=stdout_rel, stderr=stderr_rel)
+        ledger.append(row)
+        return row
+
+    monkeypatch.setattr(action_mod, "run_record", fake_run_record)
+    monkeypatch.setattr(collector_mod, "load_replayer", lambda: action_mod)
+    monkeypatch.setattr(collector_mod, "load_trusted_module", fake_loader)
+
+    args = argparse.Namespace(
+        repository=bridge.REPOSITORY,
+        pr=606,
+        base_sha=compact_fixture["base_sha"],
+        head_sha=compact_fixture["head_sha"],
+        source_tree=compact_fixture["tree_sha"],
+        collector_source_sha=compact_fixture["base_sha"],
+        dependency_lock_sha256=sha256_hex(lock_raw),
+        source_root=str(source_repo),
+        action_root=str(pinned_repo),
+        candidate_action_root=None,
+        dependency_lock=str(lock_file),
+        output=str(tmp_path / "out"),
+        scratch=str(tmp_path / "scratch"),
+        python=str(py_exe),
+        git=git_exe,
+        bash=str(fake_bash),
+    )
+    rc = collector_mod.collect_compact(args)
+    assert rc == 1
+    status = json.loads((tmp_path / "out/collection-status.json").read_text(encoding="utf-8"))
+    assert status["mode"] == "compact-receipt"
+    assert any("action-dogfood" in err for err in status["errors"])
+    assert seen_git_calls
+    assert inv_mod.git is orig_inv_git
+    assert br_mod.git is orig_br_git
 
 
 def test_summarize_action_replay_and_dual_input_refusal(compact_fixture, tmp_path):

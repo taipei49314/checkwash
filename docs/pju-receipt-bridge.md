@@ -85,7 +85,7 @@ Since D-209 (2026-11-13), ordinary non-release PRs use **`mode=receipt` with
   `checkwash.pyz`, checks exact Git member byte-identity in-process via
   `tools/release_inventory.py`, installs the wheel into a fresh venv, and runs
   `demo` on both the installed wheel and `checkwash.pyz`. Raw logs stay in the
-  local PJU receipt directory; only a ~3–4 KB canonical single-line JSON digest
+  local PJU receipt directory; only a ~6–7 KB canonical single-line JSON digest
   receipt and its SHA256 are passed to `workflow_dispatch` (adding zero bytes
   and zero `evidence/*` branches to the product repository; historical
   `evidence/*` branches remain untouched).
@@ -95,9 +95,10 @@ Since D-209 (2026-11-13), ordinary non-release PRs use **`mode=receipt` with
   digests, Action YAML/run-block/engine digests and candidate closure digests
   directly from checked-out Git blobs, enforces exact equality between JUnit's
   testcase count and the documented suite count across `README.md`,
-  `CONTRIBUTING.md` and `docs/launch.md` (`>= 23,000`), self-seals
-  `workflow_dispatch` to `refs/heads/main` once `verify-pju-compact` is on
-  `main`, and publishes the required `checkwash` check run (`integration_id:
+  `CONTRIBUTING.md` and `docs/launch.md` (`>= 23,065`, also enforced in legacy
+  `verify`/`publish`), self-seals `workflow_dispatch` to `refs/heads/main` once
+  `verify-pju-compact` is on `main` (and requires `refs/heads/main` in legacy
+  `verify`/`publish`), and publishes the required `checkwash` check run (`integration_id:
   15368`, `external_id = pju-compact:<sha256>:checkwash`). Release PRs still
   use `tools/collect_pju_release.py` and `tools/pju_release_bridge.py` with
   full `3x283` distribution CLI qualification and artifact inventories.

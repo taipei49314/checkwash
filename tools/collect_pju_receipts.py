@@ -515,6 +515,20 @@ def collect_compact(args):
     env["GIT_TEMPLATE_DIR"] = str(template)
     reader = action.GitReader(git, env, output / "git-evidence")
     reader.output.mkdir()
+
+    def _clean_git(repo_root, *git_args):
+        res = subprocess.run(
+            [str(git), "-c", "core.hooksPath=" + os.devnull, "-c", "core.fsmonitor=false",
+             "-c", "core.untrackedCache=false", "-C", str(repo_root), *git_args],
+            cwd=scratch, env=env, capture_output=True, timeout=120,
+        )
+        require(res.returncode == 0, "Git read failed: " + " ".join(git_args))
+        return res.stdout
+
+    orig_inv_git = inventory_mod.git
+    orig_bridge_git = bridge.git
+    inventory_mod.git = lambda *git_args: _clean_git(source, *git_args)
+    bridge.git = _clean_git
     ledger = []
     ledger_lock = threading.Lock()
     errors = []
@@ -636,20 +650,22 @@ def collect_compact(args):
                                    "--output", str(output / "action"), "--scratch", str(scratch / "action")], timeout=3600)
         else:
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-                pinned_fut = pool.submit(
-                    run, "action-dogfood",
-                    [*replay_argv, "--action-root", str(pinned), "--action-sha", action.ACTION_SHA,
-                     "--output", str(output / "action"), "--scratch", str(scratch / "action")],
-                    timeout=3600,
-                )
-                cand_fut = pool.submit(
-                    run, "candidate-action-dogfood",
-                    [*replay_argv, "--action-root", str(candidate_action), "--action-sha", args.head_sha,
-                     "--output", str(output / "candidate-action"), "--scratch", str(scratch / "candidate-action")],
-                    timeout=3600,
-                )
-                pinned_fut.result()
-                cand_fut.result()
+                futs = [
+                    pool.submit(
+                        run, "action-dogfood",
+                        [*replay_argv, "--action-root", str(pinned), "--action-sha", action.ACTION_SHA,
+                         "--output", str(output / "action"), "--scratch", str(scratch / "action")],
+                        timeout=3600,
+                    ),
+                    pool.submit(
+                        run, "candidate-action-dogfood",
+                        [*replay_argv, "--action-root", str(candidate_action), "--action-sha", args.head_sha,
+                         "--output", str(output / "candidate-action"), "--scratch", str(scratch / "candidate-action")],
+                        timeout=3600,
+                    ),
+                ]
+            replay_failures = [str(fut.exception()) for fut in futs if fut.exception() is not None]
+            require(not replay_failures, "; ".join(replay_failures))
             require(action.snapshot(reader, candidate_action, args.head_sha) == candidate_action_before,
                     "candidate Action checkout changed")
 
@@ -755,6 +771,8 @@ def collect_compact(args):
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
         errors.append(type(exc).__name__ + ": " + str(exc))
     finally:
+        inventory_mod.git = orig_inv_git
+        bridge.git = orig_bridge_git
         compact["raw_exits"] = [
             dict(
                 name=row["name"],
