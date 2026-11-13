@@ -1,6 +1,82 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-13 (0.13, a changed test helper's importers past the search limit (D-206): the expected-value pass searches each changed helper's module name on its own, without the diff's own paths; past that name's bounds, or the run's 192 importer reads, it reads none of its importers and says "analysis incomplete", where the hit limit used to stop every run; a helper renamed to another name, `sweep` and the root-helper search still exit 2 at the limit; THREATMODEL row 184 records older gaps of the pass; earlier: 0.13, first-week fixes (D-205): a check without a range and the Stop hook set aside the untracked zipapp checkwash runs from, and a local hook install keeps `.claude/settings.local.json` out of Git, merged as #602 (`6c2b7669`); earlier: toward 1.0 (D-203): 0.x outreach resumes as a trial with no quantitative quality promise; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves, a selected set and not a rate: 10 should pass and 1 is unclear, and it closes with its caveats; #428 closes as fixed; one macOS verification per release, since widened to macOS and Linux by D-204; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check; 1.0 is still NOT_MET, merged as #597 (`9b69183d`); earlier: the v0.12.0 Release notes end with a paragraph on its hosted verification after publication, added on Nelson's answer, merged as #601 (`f93e24ce`); earlier: v0.12.0's hosted verification after publication, run 43039360146, failed on macOS in 14 entries (13 tests) of the PJU release collector's tests, which now take each temporary directory by its real path; the published files, the corpus and the Action passed; the result is recorded with 0.12.0 and the run's artifacts are kept on an evidence branch, merged as #600 (`c4dee609`); earlier: from the release after v0.12.0 each release gets one hosted verification on GitHub-hosted macOS and Linux, in two checkpoints, and the macOS skip of the two budget checks stays at 1.0 (D-204), merged as #599 (`eb4fdab6`); earlier: the README states four more limits of a pass, leads its refactor paragraph with the current 6/60, links examples/invoice and no longer calls the eight demo cases real; stale statements in six documents are corrected; documentation and one test pin only, merged as #598 (`fb71bc75`); earlier: the release workflow's PyPI upload uses pypa/gh-action-pypi-publish v1.14.3, the first version advisory GHSA-5xjx-3w67-w9x9 lists as patched, merged as #596 (`8f610be9`); earlier: the T3.5 design note links the first execution satellite, checkwash-prove, a separate repository and package; nothing in checkwash runs code because of it, merged as #595 (`86e5322e`); earlier: v0.12.0 published and verified; the CLI and advertised pins move to v0.12.0 and the Action pin to its Action commit A, the commit the tag points to (D-200); the decision log moves D-197 to D-201 to archive 5, the verdict baseline rotates to v0.12.0 and i198/S1's label becomes block, on Nelson's answer (#594, D-202); THREATMODEL unchanged on Nelson's answer; earlier: the 0.12.0 release pull request: version 0.12.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison and D-176's 0.12 disposition; its stages are to be verified from the trusted ref `review/collector-d-012-20261107` (`e27eec6b`); earlier: three holes beside D-191's residual close, D-201, merged as #591 (`e27eec6b`): an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-13 (0.13, the signature block that ends a PowerShell file is not read for a test runner (D-207), so a Windows virtual environment's signed `Activate.ps1` no longer blocks, untracked or committed; THREATMODEL row 185 records the residual, a PowerShell-named file another program runs; ND-02 on Linux and, by Python's source, macOS, where the environment's Python is a link, waits; earlier: 0.13, a changed test helper's importers past the search limit (D-206): the expected-value pass searches each changed helper's module name on its own, without the diff's own paths; past that name's bounds, or the run's 192 importer reads, it reads none of its importers and says "analysis incomplete", where the hit limit used to stop every run; a helper renamed to another name, `sweep` and the root-helper search still exit 2 at the limit; THREATMODEL row 184 records older gaps of the pass, merged as #603 (`82b88866`); earlier: 0.13, first-week fixes (D-205): a check without a range and the Stop hook set aside the untracked zipapp checkwash runs from, and a local hook install keeps `.claude/settings.local.json` out of Git, merged as #602 (`6c2b7669`); earlier: toward 1.0 (D-203): 0.x outreach resumes as a trial with no quantitative quality promise; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves, a selected set and not a rate: 10 should pass and 1 is unclear, and it closes with its caveats; #428 closes as fixed; one macOS verification per release, since widened to macOS and Linux by D-204; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check; 1.0 is still NOT_MET, merged as #597 (`9b69183d`); earlier: the v0.12.0 Release notes end with a paragraph on its hosted verification after publication, added on Nelson's answer, merged as #601 (`f93e24ce`); earlier: v0.12.0's hosted verification after publication, run 43039360146, failed on macOS in 14 entries (13 tests) of the PJU release collector's tests, which now take each temporary directory by its real path; the published files, the corpus and the Action passed; the result is recorded with 0.12.0 and the run's artifacts are kept on an evidence branch, merged as #600 (`c4dee609`); earlier: from the release after v0.12.0 each release gets one hosted verification on GitHub-hosted macOS and Linux, in two checkpoints, and the macOS skip of the two budget checks stays at 1.0 (D-204), merged as #599 (`eb4fdab6`); earlier: the README states four more limits of a pass, leads its refactor paragraph with the current 6/60, links examples/invoice and no longer calls the eight demo cases real; stale statements in six documents are corrected; documentation and one test pin only, merged as #598 (`fb71bc75`); earlier: the release workflow's PyPI upload uses pypa/gh-action-pypi-publish v1.14.3, the first version advisory GHSA-5xjx-3w67-w9x9 lists as patched, merged as #596 (`8f610be9`); earlier: the T3.5 design note links the first execution satellite, checkwash-prove, a separate repository and package; nothing in checkwash runs code because of it, merged as #595 (`86e5322e`); earlier: v0.12.0 published and verified; the CLI and advertised pins move to v0.12.0 and the Action pin to its Action commit A, the commit the tag points to (D-200); the decision log moves D-197 to D-201 to archive 5, the verdict baseline rotates to v0.12.0 and i198/S1's label becomes block, on Nelson's answer (#594, D-202); THREATMODEL unchanged on Nelson's answer; earlier: the 0.12.0 release pull request: version 0.12.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison and D-176's 0.12 disposition; its stages are to be verified from the trusted ref `review/collector-d-012-20261107` (`e27eec6b`); earlier: three holes beside D-191's residual close, D-201, merged as #591 (`e27eec6b`): an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-13: 0.13, the signature block that ends a PowerShell file is not read for a test runner (D-207)
+
+The re-review's ND-02, on Windows: a virtual environment that Git did not
+ignore, unless named `.venv` or `venv`, blocked at high on the
+`Activate.ps1` that `python -m venv` writes, untracked in a check without a
+range and the Stop hook, and committed in a range. Windows builds of Python
+sign it, and the base64 of its signature (in Python 3.11.9's copy) spelled
+`tox` and `nox`, two runner tokens, so the script read as a test runner
+whose command was weakened. [D-207](DECISIONS.md):
+
+- **The closing block only.** In a PowerShell file the runner search leaves
+  out the signature block that ends it, when every line between its markers
+  is `#`, a space and base64 (SPEC §2); as PowerShell reads the file, none
+  of it runs. Each reader of that search passes the file's path, and a
+  rename's old side its old path: the role of a runner script, the one hop
+  to a runner script (THREATMODEL row 89), the opaque-exemption denial
+  (row 87), the CI weakening scan, the collection inventory and `shadow`.
+- **A signed script now reads as the same script unsigned.** Beside a
+  signed script whose signature spells a runner name, main blocked a
+  swallowed call to it and a rewritten expected value (no opaque
+  exemption), and passed a runner removed under such a signature and a
+  first pytest config that leaves a test out (the collection inventory set
+  itself aside). This version does each as it does beside an unsigned
+  script: the first two pass with a warning or none, the last two block.
+- **Read as before:** the rest of the file, comments included; a block
+  with any other line, such as `#> pytest`, without either marker, or
+  followed by anything but spaces, tabs and line ends; and every other
+  file, since cmd and make need not read `#` as a comment.
+- **The residual**, THREATMODEL row 185: a PowerShell-named file that make
+  runs with `\#` as its recipe prefix, or that runs its own block, can hold
+  its suite there unread, and every reader treats it as holding no runner.
+- **Waits:** ND-02 on Linux, and on macOS by Python's source (not run
+  there). `python -m venv` links the environment's Python outside the
+  repository, and on Linux a check without a range exits 2, the
+  environment named `env` or `.venv` alike; a range that commits the
+  environment exits 2.
+
+D-207, its SPEC §2 sentences and THREATMODEL row 185 are L1, and wait for
+Nelson's approval. `tests/test_signature_block_runner.py` holds 41 tests.
+Its fourteen command-line tests, run with the command line from main
+`82b88866`'s tree: nine fail, and the other five assert what main already
+does. Its other 27 tests call the runner search directly: on main 26 fail
+with a `TypeError`, as main's search takes no path, and one because main
+reads the signature as a runner.
+
+Status before the merge: the branch was `claude/signature-block-runner-20261113`,
+from main `82b88866`.
+
+- **Review.** Three read-only Claude review sub-agents reviewed the first
+  version (`01775322`, `7a872262`), for bypasses, for code and tests, and
+  for documents and claims; one reviewed the second (`093f86c7`,
+  `468233a0`). Their findings are in D-207. `d7ffc93f`, which answers them,
+  was not reviewed again.
+- **Checks.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+  Windows CPython 3.11.9), on 2026-11-13, at `d7ffc93f`:
+  - The full suite (`pytest`, xdist `-n 8`), which holds the fixture cases
+    and `tests/gates`: 22,947 passed and 25 skipped, plus 67 subtests, with
+    no failure, counted from pytest's progress output.
+  - checkwash's own check of the range from main `82b88866` at
+    `--fail-on high`: pass, no finding.
+  - Forty one-line mutants of the change, each in its own copy: 33 fail
+    the new test file; D-207 names the seven that do not.
+  - The environments of D-207, with main's source and this branch's, on
+    Windows and on Linux (WSL2 Ubuntu 24.04, CPython 3.12.3), and the 70
+    signed PowerShell files of Windows PowerShell's own folders. GNU Make
+    4.4.1 ran the residual's shape on Windows.
+- **Approval.** At 2026-11-13T06:22:22Z Claude asked
+  「#604 的 L1（D-207、SPEC §2 兩句、THREATMODEL 185）核可，收據過了就合併嗎？」,
+  and at 06:31:24Z Nelson answered 「核可並合併」. Claude wrote the question
+  and both buttons. The answer approves D-207 with the two SPEC §2
+  sentences and THREATMODEL row 185 (L1). It also approves the merge, once
+  the receipt and the four required checks pass.
+
+The pull request's description records its PJU receipt. Not run: macOS and
+other platforms.
 
 ## 2026-11-13: 0.13, a changed test helper's importers past the search limit (D-206)
 
@@ -39,7 +115,7 @@ command-line tests, run with the command line from main `6c2b7669`'s tree
 not analysed; the thirteenth asserts what main already does, exit 2. Its
 other 26 tests call code main does not have.
 
-Status before the merge: the branch is `claude/importer-search-skip-20261113`,
+Status before the merge: the branch was `claude/importer-search-skip-20261113`,
 from main `6c2b7669`.
 
 - **Review.** Three read-only Claude review sub-agents reviewed the first
@@ -66,6 +142,13 @@ from main `6c2b7669`.
 
 The pull request's description records its PJU receipt. Not run: other
 platforms.
+
+#603 merged as `82b88866f3caa54732adef219012dd94eed81eed` at
+2026-11-13T03:29:14Z, with parents `6c2b7669` and `4c4c5be2` and the tree
+its receipt verified (`4a5f3546`). Nelson's 「核可並合併」 at 02:50:44Z,
+above, approved the merge. Its receipt
+`evidence/pr603-84057df62bdb-20261113` (`a095f011`) was verified by run
+43359066162, which set the four required checks.
 
 ## 2026-11-12: 0.13, first-week fixes (D-205)
 
