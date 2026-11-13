@@ -39,9 +39,12 @@ receipt while keeping all product execution on LAPTOP-01AGNPJU
   15368`) in `action/required-ruleset.json` and repository ruleset `22032046`
   (closing RC-03).
 
-D-209 (`DECISIONS.md`) is L1, and ruleset `22032046` requires a browser update
-by Nelson (`PUT` on `/rulesets/22032046` returns HTTP 403 to the fine-grained
-token). An independent read-only review sub-agent audited `1a4d7163`, and all
+D-209 (`DECISIONS.md`, L1) was approved by Nelson at 2026-11-13T14:49:57Z on
+#606 (`06fe2f1e`): in reply to Antigravity's `14:48:20Z` question
+「#606 的 L1（DECISIONS.md D-209）核可，並確認 GitHub ruleset 22032046 已改為單一 checkwash（GitHub Actions 15368），收據過了就合併嗎？」
+he answered `(Recommended) 核可 D-209、已改好 ruleset 22032046，收據過了就合併 #606`
+(and approved launching the 5-author + 1-verifier + 1-monitor Phase 2 swarm
+immediately after #606 merges). An independent read-only review sub-agent audited `1a4d7163`, and all
 findings (legacy `main()` RC-02/RC-09 parity, `collect_compact` `--git` and
 sanitized-env binding, canonical ASCII JSON wire check, release-head refusal
 tests, 23,065 floor and `~6–7 KB` prose) are resolved.

@@ -1753,14 +1753,21 @@ account), and other platforms: NOT_RUN.
 
 ## D-209 (2026-11-13): compact PJU digest receipts for ordinary pull requests, ruleset App binding, and self-sealing intake dispatch
 
-**Approval.** Antigravity drafted this entry in the pull request that records
-it. `DECISIONS.md` is maintainer text (`AGENTS.md`), so this entry (L1) waits
-for Nelson's approval by name before merge, alongside the repository ruleset
-`22032046` browser update (because the fine-grained token returns HTTP 403 on
-`PUT /repos/taipei49314/checkwash/rulesets/22032046`).
+**Approval.** Antigravity drafted this entry in #606 (`06fe2f1e`). At
+2026-11-13T14:48:20Z Antigravity asked two questions (Antigravity wrote both
+questions and all four options):
 
-[TO FILL after Nelson's L1 and ruleset answer: PR number, draft head SHA, exact
-question and options, who wrote them, and exact answer timestamp.]
+1. 「#606 的 L1（DECISIONS.md D-209）核可，並確認 GitHub ruleset 22032046 已改為單一 checkwash（GitHub Actions 15368），收據過了就合併嗎？」 — at
+   2026-11-13T14:49:57Z Nelson answered
+   `(Recommended) 核可 D-209、已改好 ruleset 22032046，收據過了就合併 #606`
+   (the other option was `核可 D-209，但先停在合併前等我再看一眼`). The answer
+   approves D-209 (`DECISIONS.md`, L1) and merging #606 once live ruleset
+   `22032046` reflects `{"context": "checkwash", "integration_id": 15368}` and
+   the pull request's compact PJU receipt and required `checkwash` check pass.
+2. 「Phase 2 God-function 拆解 swarm 規模預告（5 author + 1 verifier + 1 monitor，預估約 2～3M tokens，合成 1～2 個 PR）確認開跑嗎？」 — at
+   2026-11-13T14:49:57Z Nelson answered
+   `(Recommended) 好，#606 合併後直接照這個規模啟動 Phase 2 swarm` (the other
+   option was `先完成 #606 合併就好，啟動 swarm 前再停下來問我`).
 
 **What was asked.** After #605 merged (`b326f201`), at 2026-11-13T13:35:09Z
 Nelson wrote 「我覺得現在驗證成本太高了 / 而且有God Function」 (verification
