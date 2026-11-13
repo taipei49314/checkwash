@@ -11,14 +11,14 @@ it is known not to.
 
 ## The short version
 
-- **201 bypasses** are documented, of which **77 are not closed**.
+- **203 bypasses** are documented, of which **79 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
 - Opaque-change repair credit can keep oracle findings below the blocking
   threshold. THREATMODEL #4 defines its scope and remaining limitations.
 
-## Open — no defence at all (43)
+## Open — no defence at all (44)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -65,6 +65,7 @@ it is known not to.
 | 176 | Swallow an assertion the test reaches through a call, instead of fixing code: wrap the call, not the assertion, in a broad handler whose guarded block holds no oracle of its own, as in `try: check()` / `except Exception: pass` where `check` asserts, or call an `assert`-named helper or a fixture's checker through an alias such as `chk = assert_total` (D-191) | — |
 | 180 | Disable a test directory in place, instead of fixing code: commit a `pyvenv.cfg`, or a `conda-meta/history`, in it, which pytest takes for a virtual environment and never enters (D-193) | — |
 | 181 | In working-tree mode (the Stop hook and the PreToolUse ask), keep an ignored, uncommitted copy of a deleted test, instead of fixing code: the D10 survivor search finds the copy in the working tree and lowers the deletion to `DUPLICATE_REMAINS`, although the required check, which checks out committed files only, never has it (D-193) | — |
+| 184 | Hide a weakened test helper's expected value from the expected-value pass in a way older than D-206, instead of fixing code: spend the pass's 48 source reads first, with an edited test file that gains 25 one-line tests each calling a different module; give the helper's old version a top-level statement the pass does not read (an `if`, `try`, `with`, `for` or a call); move the helper into a package's `__init__.py`, which is searched as `__init__`, or rename it by case only, so its importers' module name is never searched; or add a file whose path holds `\` and reads, with `/`, as an unchanged importer's path, which then is not read (`expected = 4` -> `expected = 5` in `tests/helpers.py` beside any of these) | — |
 
 ## Narrowed, still open (6)
 
@@ -98,7 +99,7 @@ it is known not to.
 | 171 | Dress a swallow in a test's callback or thread as a failure relay, instead of fixing code: `except Exception as e: fut.set_exception(e)` where the future is never awaited, gets a result first, or is completed through a closure cell or a frame; where the consumer gives up under a broad or a narrower handler, under `suppress` (an aliased type included) or a context manager the file defines, or through `gather(return_exceptions=True)`, or sits in a decorated coroutine; where the future, the loop or asyncio is a same-file stand-in (a class, a stored or keyword-built protocol, a computed `setattr`, an alias of `self`, a helper's parameter, `vars()` in a class body, asyncio under another name or through `__dict__` or `importlib`, a patched method of `asyncio.Future`, a dynamic builtin read through an alias or `builtins`, an alias of `self` reached through a call, directly or through a name bound to `self`, a `getattr` with a starred argument); where the handler rebinds the exception first, the relay runs in a loop, or the function that binds and consumes the future is handed to a thread or the loop, has its own call swallowed, deferred in a generator expression, or made only from its own body, or is never called; put the relay where the reading cannot see what the `try` guards: in a pytest fixture, in a test helper module pytest does not collect, or around an assertion the test runs itself, directly or through a same-file helper, or through a fixture's checker or another file's helper called by an `assert`-named name; make a relay the before side did not read proven in the same change, so that it pays for a new swallow of the same first line; or break a relay the rule reads, for example by removing its await (D-190) | `failure_relay_aliased_asyncio_stand_in_pos.gwcase`, `failure_relay_await_suppressed_pos.gwcase`, `failure_relay_await_swallowed_pos.gwcase`, `failure_relay_b_call_swallowed_pos.gwcase`, `failure_relay_closure_completes_future_pos.gwcase`, `failure_relay_consumer_under_suppress_alias_pos.gwcase`, `failure_relay_decorated_coroutine_pos.gwcase`, `failure_relay_exception_rebound_pos.gwcase`, `failure_relay_fixture_checker_call_pos.gwcase`, `failure_relay_future_in_thread_body_pos.gwcase`, `failure_relay_future_method_patched_pos.gwcase`, `failure_relay_gather_return_exceptions_pos.gwcase`, `failure_relay_helper_module_pos.gwcase`, `failure_relay_in_fixture_pos.gwcase`, `failure_relay_loop_set_by_helper_pos.gwcase`, `failure_relay_made_proven_pays_for_swallow_pos.gwcase`, `failure_relay_never_awaited_pos.gwcase`, `failure_relay_repeated_in_loop_pos.gwcase`, `failure_relay_result_set_first_pos.gwcase`, `failure_relay_shadowed_asyncio_pos.gwcase`, `failure_relay_stand_in_future_pos.gwcase`, `failure_relay_stand_in_loop_pos.gwcase`, `failure_relay_unit_helper_call_pos.gwcase`, `failure_relay_wait_for_timeout_caught_pos.gwcase` |
 | 182 | Rewrite an expected value into `unittest.mock.ANY`, which equals every value, so the assertion passes whatever the subject is, and escort it into D9 with an unrelated version bump: `assert total() == 6` -> `assert total() == ANY` beside `requests==2.31.0` -> `2.32.3` | `mock_any_alias_pos.gwcase`, `mock_any_all_entries_pos.gwcase`, `mock_any_almost_equal_pos.gwcase`, `mock_any_approx_pos.gwcase`, `mock_any_bound_elsewhere_pos.gwcase`, `mock_any_chain_pos.gwcase`, `mock_any_comprehension_pos.gwcase`, `mock_any_count_changed_pos.gwcase`, `mock_any_count_equal_display_pos.gwcase`, `mock_any_dependency_bump_pos.gwcase`, `mock_any_dict_call_pos.gwcase`, `mock_any_in_display_pos.gwcase`, `mock_any_keys_changed_pos.gwcase`, `mock_any_length_from_subject_pos.gwcase`, `mock_any_local_binding_pos.gwcase`, `mock_any_membership_pos.gwcase`, `mock_any_module_alias_pos.gwcase`, `mock_any_nested_pos.gwcase`, `mock_any_not_ne_pos.gwcase`, `mock_any_padding_pos.gwcase`, `mock_any_repeat_bump_pos.gwcase`, `mock_any_unittest_len_pos.gwcase`, `mock_any_unittest_pos.gwcase` |
 
-## Open by design — the cost of a deliberate trade (12)
+## Open by design — the cost of a deliberate trade (13)
 
 | # | shape | pinned by |
 |---|---|---|
@@ -114,6 +115,7 @@ it is known not to.
 | 128 | Make the Claude Code Stop hook non-blocking by provoking an engine error on purpose, for example an untracked, non-ignored directory symlink or a directory symlink a pytest collection can reach | — |
 | 166 | Get past the ask itself: the user approves it, a `-p` run denies the call and the agent makes the same change through Bash, or the session runs in a permission mode where the ask may not prompt (D-189) | — |
 | 167 | Stop again without acting on the Stop hook's block: the managed Stop hook releases a stop that arrives with `stop_hook_active` true on the blocking set it last blocked on in the session, whichever stop hook caused the continuation (D-189) | — |
+| 183 | Rewrite an expected value inside a test helper module, instead of fixing code, where the expected-value pass does not read the helper's unchanged importers: 64 or more unchanged Python files mention the helper's module name, more than 48 unchanged tests do, or the change touches helpers with more than 16 module names (`expected = 4` -> `expected = 5` in `tests/helpers.py`, whose `check()` an unchanged `test_double` calls) | — |
 
 ## Out of scope — the limits of the whole approach (3)
 

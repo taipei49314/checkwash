@@ -984,3 +984,204 @@ A later pull request takes those causes.
 Other platforms: NOT_RUN. The review of the second version ran its 18
 tests under WSL (Ubuntu 24.04, Python 3.12.3, Git 2.43.0), and all passed;
 this version's 25 ran on Windows only.
+
+## D-206 (2026-11-13): past its own bounds a changed test helper's importers are set aside, with a note; each helper's name is searched on its own, without the paths the diff changes
+
+**Approval.** [TO FILL before merge. `DECISIONS.md`, `SPEC.md` and
+`THREATMODEL.md` are maintainer text (AGENTS.md). The pull request asks
+Nelson to approve, by name and before it merges, this entry with the new §9
+paragraph of `SPEC.md` and its two edited §9 sentences on hook output,
+and THREATMODEL rows 183 and 184 (L1). Record here the question, who wrote
+it and its buttons, his answer and its time, as D-205's Approval paragraph
+does.]
+
+**What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
+of 2026-11-12T15:05:30Z, and his words on Claude leading in fields he does
+not know. Claude chose 0.13's scope from the 2026-11-10 re-review. This
+entry covers group A's problem 1, the re-review's FB-02, which it put first
+of the three things most worth fixing because nothing releases it.
+
+**What was found.** The 2026-11-10 re-review of main `8f610be9` had one
+Claude sub-agent measure false blocks and adoption cost on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Its finding FB-02, rated high:
+
+- **The symptom.** A change to a test helper module with a common name,
+  such as four lines added to `tests/utils.py`, made every check exit 2
+  once 64 Python files mentioned that name. So did a docstring change, and
+  `tests/base.py`. The control with 63 files passed. In checkwash's own
+  history, `96ef295d`, which adds 33 lines to `tests/conftest.py`, exits 2
+  the same way. No exemption releases an exit 2, and the hooks reported the
+  change as not analysed.
+- **The cause.** When a test or conftest file that defines a function not
+  named `test…` changes, the expected-value pass
+  (`expected_provenance.importer_changes`) searches the analysed snapshot
+  for the file's module name, to find the unchanged tests that import it.
+  The snapshot search raises at 64 hits, so in a real run the pass's own
+  `return []` for 64 candidates could not be reached, and every engine
+  error exits 2.
+
+**Decision.**
+
+1. **The hit limit** raises `SearchHitLimit`, an engine error, so every
+   caller that does not handle it still stops the run. The message, and
+   `sweep`'s `exception_type`, now name that type: `checkwash engine
+   error: SearchHitLimit: strict snapshot importer search exceeds the hit
+   limit`.
+2. **A search can leave paths out.** The Git and working-tree snapshot
+   searches, and the PreToolUse hook's proposed tree, take `exclude`. An
+   ordinary search neither returns nor counts those paths, compared as Git
+   spells them, and the working-tree search does not read them. The
+   inventory, which lists every nonempty Python source, is never narrowed.
+3. **Each name on its own.** In a run that reports what it says, the
+   expected-value pass searches each changed helper's module name on its
+   own, with every path the diff changes left out: each changed path, both
+   paths of a rename, and the unchanged files that other passes added to
+   the diff. A file mentions a name when it holds it as plain text, so
+   `database` mentions `base`. Each name has its own bounds, and past them
+   the helpers of that name are set aside: none of their importers is read,
+   and one note names them and the bound.
+   - **The search reaches its limit:** 64 or more unchanged Python files
+     mention the name. When the diff renamed one of that name's helpers to
+     it, the name is the diff's choice and could be one every file holds,
+     so the hit limit stops the run instead. A helper the diff deletes, or
+     moves under the same name, keeps the name its importers use.
+   - **More than 48 unchanged tests mention the name.**
+   - **The run's budget is spent.** The names whose tests fit are read
+     from the one with the fewest, and the run reads at most 192 importers
+     (4 × 48) for all of them together.
+   - **More than 16 names** in one change set every helper aside.
+
+   The read budget and the name bound read nothing before this change too,
+   without a note, and every name shared one read budget of 48.
+4. **The run that cannot report it keeps the old way.** Without a report
+   context (`sweep`, `bench`), or with a searcher that cannot leave paths
+   out, one search covers every name and its hit limit stops the run, as
+   before.
+5. **The note** (`SPEC.md` §9) is `analysis incomplete: <reason>, so
+   unchanged tests that import <helpers> were not read for their expected
+   values`. A path or name that would not print is shown by its `repr`.
+   - It is written on stderr in every format, as a SARIF tool execution
+     notification and as a `!` line of the term report, whose head then
+     reads "analysis incomplete" when there is no finding.
+   - When the Stop hook passes it is the `systemMessage`, for its check of
+     the working tree and, after `commits made during this session:`, for
+     the session's commits.
+   - When the PreToolUse hook does not ask about a weakening, it gives the
+     note as its `systemMessage`; under the base policy's `on_engine_error
+     = "block"` it asks with it instead, as it asks for an edit it could not
+     analyse. A hook note longer than 1,200 characters ends in `…`.
+   - JSON stdout and `--emit-ir` keep their bytes.
+6. **The root-helper search**, which reviews the assertions a changed root
+   helper removes, is unchanged: at its limit the run still stops
+   ([root assertion helpers](docs/root-assertion-helpers.md)).
+
+**Why the diff cannot use the limit.** Before this change a diff could fill
+the search with files of its own, but that stopped the run. Now:
+- The search leaves the diff's paths out as Git spells them, a path that
+  holds `\` included, so only files the diff does not change count toward
+  a name's limit. Two of the new tests pad a weakened helper's search with
+  70 added files, one with names that hold `\`: the importer is read, and
+  the change blocks.
+- Each name has its own search and budget, so touching a commonly named
+  helper sets aside that helper, not the one beside it.
+- A helper the diff renames to another name keeps the engine error at the
+  limit, so a rename to a name every file holds stops the run, as before.
+- The run's budget reads the smallest names first. Pushing one helper past
+  it takes other changed helpers that each have at least as many
+  importers, enough to fill 192 reads; more than 16 names set every helper
+  aside anyway.
+
+The range check, the required gate, searches only committed files and
+leaves out the range's whole change. The hooks count more, since their
+diff is narrower than the change:
+- **The PreToolUse hook.** Its diff is the one edit it is asked about, so
+  files the session wrote before that edit count.
+- **The Stop hook.** Its check compares HEAD with the working tree, so
+  files the session committed count there.
+- **Working-tree mode**, both hooks included. The search walks the disk,
+  so files Git ignores count, and so does a changed file renamed by case
+  only on a disk that ignores case.
+
+Before this change such files stopped the run, and both hooks then reported
+the change not analysed: the Stop hook let it through, and the PreToolUse
+hook asked only under `on_engine_error = "block"` (THREATMODEL row 128).
+
+**Residual (THREATMODEL row 183).** Past its own bounds a weakened helper's
+importers are not read. `expected = 4` -> `expected = 5` in
+`tests/helpers.py`, which an unchanged test calls, passes with the note
+when 64 or more unchanged Python files mention `helpers`, or when more than
+48 unchanged tests do. In the range check those two bounds are the
+repository's; in the hooks, the cases above add to them. The 16-name bound
+is the change's own choice, as it was before this entry, and is easy to
+reach: any test or conftest file with a top-level function whose name does
+not start with `test` counts as a helper.
+
+Before this entry the hit limit stopped every check, and the other two
+bounds passed without a note. The hooks change with it: before, they
+called such a change not analysed; now they give a verdict on the rest of
+the change, with the note when the Stop hook passes or the PreToolUse hook
+does not ask about a weakening.
+
+**Cost.** Each name has its own search, which in a working tree walks every
+Python file, and the run may read up to 192 importers where one budget read
+48. On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- an honest edit to 16 helper modules among 4,000 files: 18.5 s in a
+  working tree (main 4.6 s) and 3.3 s in range mode (main 2.7 s);
+- 16 helpers each imported by 48 unchanged tests, in range mode: 20.1 s,
+  reading 192 importers and setting 12 names aside; main stopped at the hit
+  limit in 2.0 s.
+
+**Older than this change, found by its review** (THREATMODEL row 184). Each
+passes on main `6c2b7669` without a note, and still does:
+- **The pass's own read budget.** Reading the tests it analyses, the
+  expected-value pass shares 48 source reads across the whole run; past
+  them it drops the rest without a note. A weakened helper beside an
+  edited test file that gains 25 one-line tests, each calling a different
+  module, passes; with 10 such tests it blocks.
+- **What the pass reads.** A helper whose old version has a top-level
+  statement the pass does not read (an `if`, `try`, `with`, `for` or a
+  call) is never searched.
+- **Moves the search misses.** A helper moved into a package's
+  `__init__.py`, which is searched as `__init__`, or renamed by case only,
+  is searched by a name its importers do not use.
+- **Also:** an unchanged test over the source byte limit that mentions a
+  helper's name stops the run, and so does any Python file over that
+  limit in a working-tree search; and a diff path that holds `\` can hide
+  an unchanged importer whose path reads the same with `/`.
+
+**Not changed.**
+- Detectors, severities, the gating table, fixtures, `tests/gates`, the
+  JSON schema and the coverage report, whose scope is JavaScript assertion
+  candidates.
+- The root-helper search.
+- The needle, which stays the bare module name, and the limits 64, 48 and
+  16.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_importer_search_skip.py`, 39 tests. Its thirteen command-line
+  tests, run with the command line from main `6c2b7669`'s tree: twelve
+  fail, as the run exits 2 or a hook reports the change not analysed; the
+  thirteenth asserts what main already does, exit 2, for a helper renamed to
+  a common name. The file's other 26 tests call code main does not have.
+- Twenty one-line mutants of the change, each run against that file in its
+  own copy: all twenty fail it.
+- The full suite, and checkwash's own check of the pull request's range.
+- Review. Three Claude review sub-agents reviewed the first version
+  (`6ba50a02`): one for bypasses, one for code and tests, one for
+  documents and claims. One reviewed the second (`383a0906`). This version
+  answers them:
+  - for the first: one search and one budget for every name; a backslash
+    in a path; the Stop hook's session commits; `sweep`; the SPEC and
+    stability statements on hook output; eight mutants that survived;
+  - for the second: the backslash fallback, which brought the shared
+    budget back; honest deletions and same-name moves, which kept exiting
+    2; the PreToolUse hook under `on_engine_error = "block"`; three mutants
+    that survived; the cost, now bounded by the run's budget; and the older
+    gaps above, now recorded.
+
+  This version was not reviewed again.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+Other platforms: NOT_RUN.

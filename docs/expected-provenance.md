@@ -13,6 +13,22 @@ keyword and literal-default arguments. Helper-local definitions are retained
 alongside substituted formals. Literal-return table helpers may supply a
 loop iterator. An available complete snapshot search can discover unchanged
 tests importing a changed helper, so a helper-only edit remains reviewable.
+Each helper's module name is searched on its own, leaving out every path
+the diff changes as Git spells it, so the diff's own files cannot fill the
+search. Each name has its own bounds, 64 search hits and 48 unchanged
+importer tests, and the run reads at most 192 importers in all, from the
+name with the fewest tests. Past them none of that name's importers is
+read, and the run names its helpers in an "analysis incomplete" note: on
+stderr, in SARIF and in the term report, and in the hooks' `systemMessage`
+when the Stop hook passes or the PreToolUse hook does not ask about a
+weakening (D-206). More than 16 changed helper names set every helper
+aside. For a helper the diff renames to another name, the hit limit stops
+the run. A run that cannot report the note (`sweep`, `bench`) keeps one
+search for every name, whose hit limit stops the run, as the root-helper
+search does. Some helpers are never searched, without a note: one whose old
+version has a top-level statement the pass does not read, one in a
+package's `__init__.py` (searched as `__init__`), and one renamed by case
+only (THREATMODEL row 184).
 
 Events are paired by test unit, concrete subject/input and comparison operator.
 Expected values are compared as a multiset **within each input key**, never
