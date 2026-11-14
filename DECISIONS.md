@@ -1924,12 +1924,17 @@ Windows CPython 3.11.9):
 
 ## D-210 (2026-11-14): findings on projected Python units report the source test's qualified name, and non-transitioning captured-result tests keep their source assertion text
 
-**Approval.** Antigravity drafted this entry (`SPEC.md` and `DECISIONS.md`, L1)
-in response to Nelson's 2026-11-13 Phase 3 handoff (`A4: finding 用真的測試名
-(ND-04 / repro-07)`), which instructed opening a draft pull request and pausing
-for maintainer L1 approval whenever `SPEC.md`, `DECISIONS.md` or
-`THREATMODEL.md` is touched. *[Pending Nelson's L1 ruling before compact
-receipt collection and merge.]*
+**Approval.** Drafted in #608 (`bf5f8177`) in response to Nelson's 2026-11-13
+Phase 3 handoff (`A4: finding 用真的測試名 (ND-04 / repro-07)`). At
+2026-11-13T20:19:53Z Antigravity asked 「#608（A4：投影 Python 單位回報真實測試名與同載體
+captured-result 不重寫斷言文字）的 L1（SPEC.md §5 與 DECISIONS.md D-210）如何處理？」
+(Antigravity wrote the question and all three options:
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+`核可 #608 的 L1，但輕量收據與 checkwash 必過檢查綠燈後先停在合併前等我看一眼`, and
+`先不核可，我想調整 SPEC.md 或 D-210 條文`). At 2026-11-14T02:55:05Z Nelson chose
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+approving `SPEC.md` §5 and `D-210` (`DECISIONS.md`, L1) and authorizing merging
+#608 once its compact PJU receipt and required `checkwash` check pass.
 
 **What was found (ND-04 / `repro-07`, `repro-06/a2b`).** The 2026-11-10
 newcomer/documentation re-review (`repro-07` `v0`–`v6` and `repro-06` `a2` vs
