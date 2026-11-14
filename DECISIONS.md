@@ -1924,12 +1924,23 @@ Windows CPython 3.11.9):
 
 ## D-210 (2026-11-14): findings on projected Python units report the source test's qualified name, and non-transitioning captured-result tests keep their source assertion text
 
-**Approval.** Antigravity drafted this entry (`SPEC.md` and `DECISIONS.md`, L1)
-in response to Nelson's 2026-11-13 Phase 3 handoff (`A4: finding 用真的測試名
-(ND-04 / repro-07)`), which instructed opening a draft pull request and pausing
-for maintainer L1 approval whenever `SPEC.md`, `DECISIONS.md` or
-`THREATMODEL.md` is touched. *[Pending Nelson's L1 ruling before compact
-receipt collection and merge.]*
+**Approval.** Drafted in #608 (`bf5f8177`, rebased onto #609 `5e0fb5aa` as
+`2cce7168` with `SPEC.md` byte-identical) in response to Nelson's 2026-11-13
+Phase 3 handoff (`A4: finding 用真的測試名 (ND-04 / repro-07)`). At
+2026-11-13T20:19:53Z Antigravity asked 「#608（A4：投影 Python 單位回報真實測試名與同載體
+captured-result 不重寫斷言文字）的 L1（SPEC.md §5 與 DECISIONS.md D-210）如何處理？」
+(Antigravity wrote the question and all three options:
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+`核可 #608 的 L1，但輕量收據與 checkwash 必過檢查綠燈後先停在合併前等我看一眼`, and
+`先不核可，我想調整 SPEC.md 或 D-210 條文`). At 2026-11-14T02:55:05Z Nelson chose
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+approving `SPEC.md` §5 and `D-210` (`DECISIONS.md`, L1) and authorizing merging
+#608 once its compact PJU receipt and required `checkwash` check pass. At
+2026-11-14T04:07:01Z (session `98b9acf6`) Antigravity asked 「#608（7fe61445）連跑兩次輕量收據（cw608r1、cw608r2），23,112 題中其餘 23,111 題與雙向 Action 重播、wheel/sdist/pyz 驗證全數通過，唯獨 test_perf_git::test_range_check_through_git_stays_within_budget 在 16-worker 日間負載下分別跑出 12.46s 與 17.27s（上限 12.0s；單獨實測 main 與 #608 均為 3.1–3.3s，無 A4 退化）。cProfile 定位出主因是 cli._analyse 讀 config/allow/MANIFESTS 時未共用 GitSnapshot，每次 check 重複建 9 個 GitSnapshot 多生 ~27 個 git.exe 子行程（占總耗時 45%）。請問希望如何處理？」;
+at 2026-11-14T04:10:13Z Nelson chose `(Recommended) 先開一個獨立非 L1 小 PR 讓 cli._analyse 共用單一 GitSnapshot 批次讀取 base 設定與 manifest（每次 check 少生 ~25 個 git 子行程），合併後 rebase #608（維持已核可的 SPEC.md §5 與 D-210 實質內容，僅更新 commit 引用）跑收據並接續推進 B6`,
+authorizing rebasing #608 onto #609 (`5e0fb5aa`) with `SPEC.md` §5 and D-210's
+substantive text preserved (`bf5f8177` -> `2cce7168`) and merging once its
+compact PJU receipt passes.
 
 **What was found (ND-04 / `repro-07`, `repro-06/a2b`).** The 2026-11-10
 newcomer/documentation re-review (`repro-07` `v0`–`v6` and `repro-06` `a2` vs
@@ -2058,10 +2069,10 @@ Windows CPython 3.11.9):
   sibling projected unit `REPAIR_EVIDENCE` isolation, duplicate projected row
   and removed-unit v2 fingerprint distinctness, and CLI `term`/`json` schema /
   `sarif`/`hook-json`/`--emit-ir` `source_unit` round-trip; 10 fail against
-  `main` `3231a03f`, 4 are preserving controls, and all 14 pass on this branch)
+  `main` `5e0fb5aa`, 4 are preserving controls, and all 14 pass on this branch)
   plus `tests/test_expected_provenance.py` (`test_double` instead of
   `test_concrete_*`).
-- Full `pytest -n 16` suite (`23,112` collected tests), `checkwash check`
+- Full `pytest -n 16` suite (`23,122` collected tests), `checkwash check`
   dogfood on the branch range (`--fail-on high`: `verdict=pass`, 0
   critical/high findings), and `gating.py` `L1–L682` SHA-256 invariance check
   (`cfa19f5589cf650136e243f9b7404bd1bf5da85a95b4f6d72001b6931f868f5d`).
