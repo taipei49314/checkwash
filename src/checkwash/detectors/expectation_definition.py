@@ -69,7 +69,13 @@ from __future__ import annotations
 import ast
 from collections import Counter
 
-from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    make_assertion_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
+)
 from checkwash.ir.markers import parse_text
 from checkwash.ir.model import IR, ParamTable, judged_as_test, normalize_text, param_tables
 from checkwash.detectors.expected_provenance import detect as detect_provenance
@@ -410,6 +416,7 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
@@ -496,18 +503,18 @@ def detect(ir: IR) -> list[Finding]:
                         rule="EXPECTATION_DEFINITION_CHANGED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: the assertion is unchanged but its expectation "
+                            f"{finding_unit}: the assertion is unchanged but its expectation "
                             f"is not — {', '.join(moved)} is defined differently now, so the "
                             f"test compares against a different value than it did"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "EXPECTATION_DEFINITION_CHANGED", file.path, unit.qualname, b.text,
+                            "EXPECTATION_DEFINITION_CHANGED", file.path, finding_unit, b.text,
                             before=b.text, after=a.text, kind="definition_changed",
-                            position=assertion_position(unit.before, b),
+                            position=unit_assertion_position(file, unit, unit.before, b),
                             context={name: _definitions(file, unit, b, a, name) for name in moved},
                         ),
                     )

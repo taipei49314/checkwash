@@ -35,12 +35,18 @@ def parse_compatible_carrier_pair(before, after, before_parsed, after_parsed, rt
             return None
     if not (old[3] or new[3] or native_renames):
         return None
-    if (old[3] and new[3] and old[6] == new[6]
-            and rt._ordinary_rows_cover(old, before_parsed) and rt._ordinary_rows_cover(new, after_parsed)):
-        # An edit within the same row carrier/unit retains #135 and the
-        # row-identity channel. Projection proves a carrier transition;
-        # it must not relabel ordinary parametrize expectation findings.
-        return None
+    if old[3] and new[3] and old[6] == new[6]:
+        allow_captured = (
+            not old[8] and not new[8] and not old[11] and not new[11] and not old[12] and not new[12]
+            and rt._same_captured_results(old, new)
+        )
+        if (rt._ordinary_rows_cover(old, before_parsed, allow_captured=allow_captured)
+                and rt._ordinary_rows_cover(new, after_parsed, allow_captured=allow_captured)):
+            # An edit within the same row carrier/unit retains #135, the
+            # row-identity channel, and non-transitioning captured-result source
+            # assertions (D-210). Projection proves a carrier transition; it must
+            # not relabel ordinary same-carrier expectation findings.
+            return None
     return old, new, native_renames
 
 
@@ -171,10 +177,20 @@ def render_projected_pair(before_parsed, after_parsed, old, new, rt):
         for case in module[2]:
             if getattr(case.assertion, "_requires_boolean_result", False):
                 case.assertion.test.ops = [ast.Eq()]
+    old_units = rt.source_unit_map(before_parsed)
+    new_units = rt.source_unit_map(after_parsed)
     before_projected = rt.retain_local_auxiliary_units(
-        rt.retain_raises_units(rt._project(before_parsed, old[0], old[2]), old[0], old[11]), old[0], old[12]
+        rt.retain_raises_units(
+            rt._project(before_parsed, old[0], old[2], source_units=old_units),
+            old[0], old[11], source_units=old_units,
+        ),
+        old[0], old[12], source_units=old_units,
     )
     after_projected = rt.retain_local_auxiliary_units(
-        rt.retain_raises_units(rt._project(after_parsed, new[0], new[2]), new[0], new[11]), new[0], new[12]
+        rt.retain_raises_units(
+            rt._project(after_parsed, new[0], new[2], source_units=new_units),
+            new[0], new[11], source_units=new_units,
+        ),
+        new[0], new[12], source_units=new_units,
     )
     return before_projected, after_projected

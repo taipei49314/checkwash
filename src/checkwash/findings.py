@@ -271,6 +271,20 @@ def _identity_template(text: str, i: int, out: list[str]) -> int:
 # An entry holds its side, so neither the side's id nor its assertions' ids
 # can be reused while it is cached.
 _POSITIONS: dict[int, tuple] = {}
+_UNIT_POSITIONS: dict[tuple[int, bool, str], tuple] = {}
+
+
+def unit_finding_name(unit) -> str:
+    """The source test unit identity a Finding reports (D-210).
+
+    Projected Python concrete/exception/auxiliary IR units retain their
+    synthetic `Unit.qualname` so `diffalign` pairs concrete cases, while
+    recording the enclosing Python test's qualified name on `Unit.source_unit`.
+    """
+    source = getattr(unit, "source_unit", "")
+    if isinstance(source, str) and source:
+        return source
+    return unit.qualname
 
 
 def _positions(side) -> dict[int, tuple[int, int]]:
@@ -305,6 +319,44 @@ def assertion_position(side, assertion) -> tuple[int | None, int | None]:
         return None, None
 
 
+def unit_assertion_position(file, unit, side, assertion) -> tuple[int | None, int | None]:
+    """(ordinal, count) across all assertions sharing `unit`'s reported test name on `side` (D-210).
+
+    For ordinary units (`not unit.source_unit`) this delegates to
+    `assertion_position(side, assertion)` unchanged. When multiple projected
+    concrete units in `file` share one enclosing Python test (`source_unit`),
+    grouping across those sibling units keeps duplicate concrete rows distinct
+    under `(ordinal, count)` (#421 Q3).
+    """
+    try:
+        if side is None or assertion is None or identity_text(assertion.text) is None:
+            return None, None
+        source = getattr(unit, "source_unit", "")
+        if not (isinstance(source, str) and source) or file is None:
+            return assertion_position(side, assertion)
+        finding_name = unit_finding_name(unit)
+        is_before = side is getattr(unit, "before", None)
+        cache_key = (id(file), is_before, finding_name)
+        entry = _UNIT_POSITIONS.get(cache_key)
+        units = file.units
+        if entry is not None and entry[0] is file and entry[1] == len(units):
+            return entry[2].get(id(assertion), (None, None))
+        groups: dict[str | None, list] = {}
+        for candidate in units:
+            candidate_side = candidate.before if is_before else candidate.after
+            if candidate_side is None or unit_finding_name(candidate) != finding_name:
+                continue
+            for item in candidate_side.assertions:
+                groups.setdefault(identity_text(item.text), []).append(item)
+        positions = {id(item): (rank, len(group)) for group in groups.values() for rank, item in enumerate(group)}
+        if len(_UNIT_POSITIONS) >= 64:
+            _UNIT_POSITIONS.clear()
+        _UNIT_POSITIONS[cache_key] = (file, len(units), positions)
+        return positions.get(id(assertion), (None, None))
+    except (AttributeError, TypeError, RecursionError):
+        return None, None
+
+
 def assertion_identity(
     rule: str,
     path: str,
@@ -326,7 +378,8 @@ def assertion_identity(
     severities, file digests and revision labels stay out. TEST_DISABLED
     builds its keys with it too (#512): its texts are a marker's or a
     guard's, its kind is the finding's shape, and it records no position
-    (`detectors/test_disabled.py`).
+    except for duplicate disappeared projected units sharing a `source_unit`
+    (`detectors/test_disabled.py`, D-210).
     """
     ordinal, count = position
     return {

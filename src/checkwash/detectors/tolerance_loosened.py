@@ -19,7 +19,13 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
-from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    make_assertion_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
+)
 from checkwash.ir.diffalign import tolerance_change
 from checkwash.ir.model import IR, judged_as_test
 
@@ -174,53 +180,60 @@ def _sources(unit) -> list[tuple]:
     return out
 
 
+def _unit_findings(file, unit) -> list[Finding]:
+    if unit.delta is None or unit.before is None or unit.after is None:
+        return []
+    out: list[Finding] = []
+    finding_unit = unit_finding_name(unit)
+    sources = _sources(unit)
+    for (kind, before_eps, after_eps), (b_pair, a_pair) in zip(unit.delta.tolerance_changes, sources):
+        mixed = _mixed(kind, before_eps, after_eps)
+        if mixed is not None:
+            loosened, b_show, a_show = mixed
+            if not loosened:
+                continue
+        elif not _loosened(kind, before_eps, after_eps):
+            continue
+        else:
+            # Epsilons are recorded keyed ("rel=1e-6", "rel=1e-9|abs=1")
+            # or bare ("0.5" for a positional tolerance): show the key
+            # only when the value does not carry it, so the report reads
+            # "rel=1e-6 -> rel=1e-2", not "rel=rel=1e-6" (user-perspective
+            # review 2026-08-19; the doubling predates the keyed format
+            # and reached the demo's output).
+            b_show = before_eps if "=" in before_eps else f"{kind}={before_eps}"
+            a_show = after_eps if "=" in after_eps else f"{kind}={after_eps}"
+        out.append(
+            Finding(
+                rule="TOLERANCE_LOOSENED",
+                severity="warn",
+                message=(
+                    f"{finding_unit}: tolerance loosened "
+                    f"({b_show} -> {a_show})"
+                ),
+                path=file.path,
+                unit=finding_unit,
+                before=Evidence(text=b_show, span=unit.before.span),
+                after=Evidence(text=a_show, span=unit.after.span),
+                fingerprint=make_assertion_fingerprint(
+                    "TOLERANCE_LOOSENED", file.path, finding_unit,
+                    f"{kind}:{_recorded(before_eps)}",
+                    before=b_pair.text if b_pair is not None else None,
+                    after=a_pair.text if a_pair is not None else None,
+                    kind="loosened",
+                    position=unit_assertion_position(file, unit, unit.before, b_pair),
+                    context={"kind": kind, "before": before_eps, "after": after_eps},
+                ),
+            )
+        )
+    return out
+
+
 def detect(ir: IR) -> list[Finding]:
     findings: list[Finding] = []
     for file in ir.files:
         if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
-            if unit.delta is None or unit.before is None or unit.after is None:
-                continue
-            sources = _sources(unit)
-            for (kind, before_eps, after_eps), (b_pair, a_pair) in zip(unit.delta.tolerance_changes, sources):
-                mixed = _mixed(kind, before_eps, after_eps)
-                if mixed is not None:
-                    loosened, b_show, a_show = mixed
-                    if not loosened:
-                        continue
-                elif not _loosened(kind, before_eps, after_eps):
-                    continue
-                else:
-                    # Epsilons are recorded keyed ("rel=1e-6", "rel=1e-9|abs=1")
-                    # or bare ("0.5" for a positional tolerance): show the key
-                    # only when the value does not carry it, so the report reads
-                    # "rel=1e-6 -> rel=1e-2", not "rel=rel=1e-6" (user-perspective
-                    # review 2026-08-19; the doubling predates the keyed format
-                    # and reached the demo's output).
-                    b_show = before_eps if "=" in before_eps else f"{kind}={before_eps}"
-                    a_show = after_eps if "=" in after_eps else f"{kind}={after_eps}"
-                findings.append(
-                    Finding(
-                        rule="TOLERANCE_LOOSENED",
-                        severity="warn",
-                        message=(
-                            f"{unit.qualname}: tolerance loosened "
-                            f"({b_show} -> {a_show})"
-                        ),
-                        path=file.path,
-                        unit=unit.qualname,
-                        before=Evidence(text=b_show, span=unit.before.span),
-                        after=Evidence(text=a_show, span=unit.after.span),
-                        fingerprint=make_assertion_fingerprint(
-                            "TOLERANCE_LOOSENED", file.path, unit.qualname,
-                            f"{kind}:{_recorded(before_eps)}",
-                            before=b_pair.text if b_pair is not None else None,
-                            after=a_pair.text if a_pair is not None else None,
-                            kind="loosened",
-                            position=assertion_position(unit.before, b_pair),
-                            context={"kind": kind, "before": before_eps, "after": after_eps},
-                        ),
-                    )
-                )
+            findings.extend(_unit_findings(file, unit))
     return findings

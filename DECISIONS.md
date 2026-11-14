@@ -1921,3 +1921,163 @@ Windows CPython 3.11.9):
   receipt collection. Followed by the pull request's own compact PJU receipt
   (`pytest -n 16`) and green `checkwash` check run (`app 15368`).
 - macOS, Linux outside local checks, and other platforms: NOT_RUN.
+
+## D-210 (2026-11-14): findings on projected Python units report the source test's qualified name, and non-transitioning captured-result tests keep their source assertion text
+
+**Approval.** Drafted in #608 (`bf5f8177`) in response to Nelson's 2026-11-13
+Phase 3 handoff (`A4: finding 用真的測試名 (ND-04 / repro-07)`). At
+2026-11-13T20:19:53Z Antigravity asked 「#608（A4：投影 Python 單位回報真實測試名與同載體
+captured-result 不重寫斷言文字）的 L1（SPEC.md §5 與 DECISIONS.md D-210）如何處理？」
+(Antigravity wrote the question and all three options:
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+`核可 #608 的 L1，但輕量收據與 checkwash 必過檢查綠燈後先停在合併前等我看一眼`, and
+`先不核可，我想調整 SPEC.md 或 D-210 條文`). At 2026-11-14T02:55:05Z Nelson chose
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+approving `SPEC.md` §5 and `D-210` (`DECISIONS.md`, L1) and authorizing merging
+#608 once its compact PJU receipt and required `checkwash` check pass.
+
+**What was found (ND-04 / `repro-07`, `repro-06/a2b`).** The 2026-11-10
+newcomer/documentation re-review (`repro-07` `v0`–`v6` and `repro-06` `a2` vs
+`a2b`) showed two newcomer-facing regressions produced by Python oracle
+projection (`frontends/python/table_oracles.py`,
+`normalized_result_tables.py`, `raises_oracles.py`,
+`local_auxiliary_oracles.py`):
+
+1. **Synthetic unit names leaked into user-facing findings and fingerprints.**
+   On the README's own quickstart example (`def test_invoice_total(): total =
+   invoice_total([(2, 25.0), (1, 50.0)]); assert total == 105.3` rewritten to
+   `assert total == 105.0` without touching `billing.py`), `table_oracles`
+   classified `test_invoice_total` as a `"captured-result"` carrier, set
+   `has_table = True` on both sides even though neither side held a table or
+   carrier transition, and replaced `ParsedFile.units` with a synthetic unit
+   `test_concrete_0db8e46ba092fc0cd762a5b6_1`. Every unit-scoped detector and
+   gating rule then read `unit.qualname`, so CLI `term`, `json`, `sarif` and
+   Stop-hook `hook-json` reported `tests/test_billing.py ::
+   test_concrete_0db8e46ba092fc0cd762a5b6_1` instead of `test_invoice_total`,
+   and the v2 fingerprint bound that synthetic name. Across `repro-07`'s seven
+   shapes of the same test edit (`v0` local capture, `v1` two single-assert
+   tests where one has a local capture, `v2` two assertions in one test, `v3`
+   direct assertion, `v4` `unittest.TestCase`, `v5` `@pytest.mark.parametrize`,
+   `v6` renamed function with local capture), `v0`, `v1` and `v6` printed
+   `test_concrete_*` while `v2`–`v5` printed the real test name. All genuine
+   projected consolidations (`table_oracles._project`,
+   `normalized_result_tables._project`, `raises_oracles.retain_raises_units`
+   `test_exception_*`, and `local_auxiliary_oracles.retain_local_auxiliary_units`
+   `test_local_auxiliary_*`) leaked synthetic `test_*_<digest>_<n>` names the
+   same way whenever an expectation, assertion, tolerance, input or unit changed
+   inside a projected carrier.
+2. **Asymmetric `before`/`after` text and fingerprint between co-changed and
+   test-only edits (`repro-06` `a2` vs `a2b`).** When `billing.py` also changed
+   (`a2`), `_compatible_cochanges` withheld projection, so the finding reported
+   `unit = "test_invoice_total"` and `before = "assert total == 105.3"` /
+   `after = "assert total == 105.0"`. When only `tests/test_billing.py` changed
+   (`a2b`), projection substituted the local variable into the AST and
+   unparsed `before = "assert invoice_total([(2, 25.0), (1, 50.0)]) == 105.3"`,
+   giving the exact same test line a different `unit`, different `before`/`after`
+   evidence text, and a different v2 fingerprint depending on whether an
+   unrelated line of `billing.py` was touched in the same diff.
+
+**Decision.**
+1. **`Unit.source_unit` preserves the enclosing Python test's qualified name
+   while `Unit.qualname` stays concrete for alignment.** `ParsedUnit` and `Unit`
+   gain an optional trailing field `source_unit: str = ""` (`IR_VERSION` stays
+   `3`; `FINDINGS_VERSION` stays `2`, and `UnitSide`'s native field set is
+   unchanged). When `table_oracles._project`,
+   `normalized_result_tables._project`, `raises_oracles.retain_raises_units` or
+   `local_auxiliary_oracles.retain_local_auxiliary_units` synthesizes projected
+   units, `source_unit_map` / `resolve_source_unit` records the original
+   `ParsedUnit.qualname` (preserving class qualification such as
+   `TestDiscounts.test_rates` and same-name `#N` numbering) onto `ParsedUnit`
+   and `diffalign.align_file` copies it onto `Unit` (`a.source_unit` on paired
+   and added units, `b.source_unit` on removed units). `findings.unit_finding_name(unit)`
+   returns `unit.source_unit` when non-empty and `unit.qualname` otherwise; all
+   eleven unit-scoped detector modules (`expected_changed`, `expected_hardcoded`,
+   `expectation_definition`, `assert_weakened`, `assert_removed`,
+   `assert_substituted`, `tolerance_loosened`, `subject_normalized`,
+   `subject_input_changed`, `test_disabled`, `test_patches`) emit `Finding.unit`,
+   unit-naming messages and v2 fingerprints using `unit_finding_name(unit)`.
+2. **Exact per-concrete-unit gating and duplicate-row fingerprint distinctness.**
+   When multiple projected concrete units share one `source_unit` (for example a
+   consolidated loop or table where row 1 calls a changed symbol and row 2 calls
+   an unchanged symbol), `_resolve_finding_unit` in `gating.py` resolves each
+   `Finding` back to the specific concrete `Unit` whose evidence/delta emitted
+   it, so row 2 cannot inherit row 1's `REPAIR_EVIDENCE` (`gating.py` `L1–L682`
+   severity table and escalation policy are byte-identical). For v2 fingerprints
+   within a shared `source_unit`, `findings.unit_assertion_position` computes
+   `(ordinal, count)` across sibling units sharing `unit_finding_name(unit)`,
+   and `test_disabled` numbers duplicate disappeared concrete units sharing one
+   `(source_unit, identity, assertion_texts)` tuple so exempting one duplicate
+   row never exempts its sibling.
+3. **Non-transitioning same-carrier `captured-result` modules skip projection.**
+   In `table_oracles_projection.parse_compatible_carrier_pair`, when both sides
+   have the same carrier sequence (`old[6] == new[6]`), no closed-purity
+   block/unittest/tuple carrier, plain-class, raises-oracle or local-auxiliary
+   projection is active, and every `captured-result` unit keeps the same
+   function name, single local assignment target, left-hand variable comparison
+   orientation, subject call/operator key, and plain non-specialized assertion
+   authority (`_same_captured_results`), `_ordinary_rows_cover(...,
+   allow_captured=True)` declines projection so the general Python frontend
+   judges the edit directly. Special authorities (`is None` -> `pytest.approx`
+   operator transitions, boolean comparisons, derived literals including empty
+   `frozenset()` authorities, literal-left operand flips, tuple arity, closed
+   helpers, partial dictionary blocks) and local-variable renames (`total` ->
+   `result`) still project so concrete-oracle proofs and rename alignment remain
+   intact, and their findings now report `source_unit`.
+
+**Fingerprint movement (`docs/stability.md`).** Scheduled for minor release
+`v0.13.0` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3` unchanged):
+- Any unit-scoped finding previously emitted from a projected Python unit
+  (`test_concrete_*`, `test_exception_*`, `test_local_auxiliary_*`) moves its
+  `unit` segment (and unit-bound v2 pre-image, plus multi-unit `(ordinal,
+  count)` when sibling projected units share identical assertion text) from the
+  synthetic `test_*_<digest>_<n>` name to the enclosing Python test's qualified
+  name across `EXPECTED_VALUE_CHANGED`, `EXPECTED_VALUE_DERIVED`,
+  `EXPECTED_VALUE_HARDCODED`, `EXPECTATION_DEFINITION_CHANGED`,
+  `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `ASSERT_SUBSTITUTED`,
+  `TOLERANCE_LOOSENED`, `SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED`,
+  `TEST_DISABLED` (`unit_removed`, `marker_added`, `guard_weakened`,
+  `param_cases_removed`) and `TEST_PATCHES_SUBJECT`.
+- On a test-only edit to a non-transitioning `captured-result` Python test
+  (such as `repro-07` `v0`/`v1` and `repro-06/a2b`), `Finding.unit` moves from
+  `test_concrete_*` to the Python test's qualified name and `before`/`after`
+  keep the source assertion text (`assert total == 105.3` -> `assert total ==
+  105.0`), matching the co-changed diff (`repro-06/a2`). No existing `.gwcase`
+  fixture expectation moves.
+
+**Residual.** When a `captured-result` test renames its local capture variable
+or changes its subject call in the same test-only diff as an expectation edit
+(or transitions across carriers, such as `repro-07` `v6` or folding plain tests
+into a `for` loop), projection still runs so concrete cases align; `Finding.unit`
+now names the real HEAD Python test, while `before`/`after` show the projected
+inlined call (`assert invoice_total(...) == ...`) with source spans pointing to
+the original `assert` lines.
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9):
+- `tests/test_real_test_names.py` (14 collected tests: all seven `repro-07`
+  module shapes `v0`–`v6`, `repro-06` `a2` vs `a2b` identity/evidence/fingerprint
+  parity, `is None` -> `pytest.approx` authority retention and local-variable
+  rename guards, top-level loop / plain-class `TestDiscounts.test_rates` /
+  duplicate `test_dup#2` / `normalized_result_tables` consolidations, synthetic
+  `test_exception_*` and `test_local_auxiliary_*` detector + gating units,
+  sibling projected unit `REPAIR_EVIDENCE` isolation, duplicate projected row
+  and removed-unit v2 fingerprint distinctness, and CLI `term`/`json` schema /
+  `sarif`/`hook-json`/`--emit-ir` `source_unit` round-trip; 10 fail against
+  `main` `3231a03f`, 4 are preserving controls, and all 14 pass on this branch)
+  plus `tests/test_expected_provenance.py` (`test_double` instead of
+  `test_concrete_*`).
+- Full `pytest -n 16` suite (`23,112` collected tests), `checkwash check`
+  dogfood on the branch range (`--fail-on high`: `verdict=pass`, 0
+  critical/high findings), and `gating.py` `L1–L682` SHA-256 invariance check
+  (`cfa19f5589cf650136e243f9b7404bd1bf5da85a95b4f6d72001b6931f868f5d`).
+- Independent adversarial read-only review sub-agent audit on the initial A4
+  diff found 1 blocker (`_CAPTURED_SPECIAL_AUTHORITIES` initially included
+  `"_requires_primitive_string"` and needed an explicit `ast.Name` left-operand
+  guard for literal-left operand flips), 1 medium (`_requires_derived_authority
+  = frozenset()` falsiness in `_same_captured_results`), 1 low
+  (`TOLERANCE_LOOSENED` sibling-unit escalator-reason disambiguation in
+  `_unit_matches_finding`), and 3 nits (`findings.assertion_identity`
+  docstring, D-210 guard prose, and lazy `allow_captured` evaluation); all
+  resolved with regression sub-checks in `tests/test_real_test_names.py` before
+  opening the draft PR.
+- macOS, Linux, and other platforms: NOT_RUN.

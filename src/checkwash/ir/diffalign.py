@@ -637,11 +637,20 @@ def align_file(
                 before=b.side,
                 after=a.side,
                 delta=_pair_assertions(b, a, python=path.endswith(".py")),
+                source_unit=a.source_unit,
             )
         )
     for b in b_unpaired:
         units.append(
-            Unit(kind="test_function", qualname=b.qualname, match=None, before=b.side, after=None, delta=None)
+            Unit(
+                kind="test_function",
+                qualname=b.qualname,
+                match=None,
+                before=b.side,
+                after=None,
+                delta=None,
+                source_unit=b.source_unit,
+            )
         )
     for a in a_unpaired:
         # A conftest that did not exist at base brings every control it
@@ -673,6 +682,7 @@ def align_file(
                     if added_controls
                     else None
                 ),
+                source_unit=a.source_unit,
             )
         )
 
