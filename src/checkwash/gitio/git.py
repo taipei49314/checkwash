@@ -13,8 +13,10 @@ import subprocess
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
+import checkwash.gitio.snapshot as _snapshot_mod
 from checkwash.change import EngineError, FileChange, LinkSide, SourceOverLimit, UnreadSide
 from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot, environment_of_link
+from checkwash.opaque import opaque_owner
 
 
 class GitError(Exception):
@@ -181,6 +183,16 @@ def read_base_file(repo: str, base: str, path: str, *, side: str = "base") -> by
     return _read_blob(repo, base, path, side=side)
 
 
+def read_base_file_from_snapshot(snapshot: GitSnapshot, path: str) -> bytes | None:
+    """`read_base_file` against an existing `GitSnapshot`, reusing its inventory."""
+    try:
+        if snapshot.definitely_lacks(path):
+            return None
+        return snapshot.read(path)
+    except EngineError as exc:
+        raise _git_error(exc) from exc
+
+
 def base_alias(repo: str, base: str, path: str) -> TreeAlias | None:
     """The entry of `base`'s tree that `path`, which the tree lacks, can
     stand for on disk, or None: `GitSnapshot.alias` (#500)."""
@@ -190,9 +202,77 @@ def base_alias(repo: str, base: str, path: str) -> TreeAlias | None:
         raise _git_error(exc) from exc
 
 
+def base_alias_from_snapshot(snapshot: GitSnapshot, path: str) -> TreeAlias | None:
+    """`base_alias` against an existing `GitSnapshot`, reusing its inventory."""
+    try:
+        return snapshot.alias(path)
+    except EngineError as exc:
+        raise _git_error(exc) from exc
+
+
+def read_base_manifests_from_snapshot(
+    snapshot: GitSnapshot,
+    manifests: tuple[str, ...],
+    skippable_oversized: tuple[str, ...],
+) -> tuple[list[tuple[str, bytes | UnreadSide]], GitError | None]:
+    """Batch-read present regular base manifests in one `cat-file --batch` call.
+
+    Returns `(items, terminal_error)` in `manifests` order, where each item is
+    `(manifest, bytes)` for a regular in-budget manifest or `(manifest, UnreadSide)`
+    for an oversized manifest in `skippable_oversized`, stopping at the first
+    unskippable error (`terminal_error`).
+    """
+    try:
+        snapshot.list_paths()
+    except EngineError as exc:
+        raise _git_error(exc) from exc
+    max_bytes = _snapshot_mod.MAX_SOURCE_BYTES
+    plan: list[tuple[str, str | UnreadSide]] = []
+    to_read: list[str] = []
+    stop_manifest: str | None = None
+    stop_error: GitError | None = None
+    for manifest in manifests:
+        if snapshot.definitely_lacks(manifest):
+            continue
+        if manifest in snapshot._opaque and opaque_owner(manifest, snapshot._opaque) is None:
+            continue
+        entry = snapshot._tree_entries.get(manifest)
+        if entry is None or opaque_owner(manifest, snapshot._opaque) is not None or entry[0] not in {b"100644", b"100755"}:
+            stop_manifest = manifest
+            break
+        _mode, _oid, size = entry
+        if size > max_bytes:
+            unread = UnreadSide(manifest, snapshot._side(), size, max_bytes)
+            if manifest in skippable_oversized:
+                plan.append((manifest, unread))
+                continue
+            stop_error = GitSourceOverLimit(unread)
+            break
+        plan.append((manifest, "read"))
+        to_read.append(manifest)
+    blobs: dict[str, bytes | None] = {}
+    if to_read:
+        first_read_idx = next((idx for idx, (_m, act) in enumerate(plan) if act == "read"), len(plan))
+        try:
+            blobs = snapshot.read_many(to_read)
+        except EngineError as exc:
+            return [(m, act) for m, act in plan[:first_read_idx] if isinstance(act, UnreadSide)], _git_error(exc)
+    items: list[tuple[str, bytes | UnreadSide]] = [
+        (manifest, blobs[manifest] if action == "read" else action)
+        for manifest, action in plan
+    ]
+    if stop_manifest is not None:
+        try:
+            snapshot.read(stop_manifest)
+        except EngineError as exc:
+            stop_error = _git_error(exc)
+    return items, stop_error
+
+
 def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False,
                sides: dict[str, str] | None = None,
-               unread_oversized=False) -> dict[tuple[str, str], bytes | UnreadSide | None]:
+               unread_oversized=False,
+               snapshots: dict[str, GitSnapshot] | None = None) -> dict[tuple[str, str], bytes | UnreadSide | None]:
     """Read exact inventoried OIDs in bounded batches, preserving failures.
 
     GitSnapshot separates tree absence (and explicit opaque gitlink entries)
@@ -208,7 +288,7 @@ def read_blobs(repo: str, specs: list[tuple[str, str]], *, required=False,
     result = {}
     try:
         for revision, paths in grouped.items():
-            snapshot = GitSnapshot(repo, revision, side=(sides or {}).get(revision))
+            snapshot = (snapshots or {}).get(revision) or GitSnapshot(repo, revision, side=(sides or {}).get(revision))
             blobs = snapshot.read_many(paths, unread_oversized=unread_oversized)
             if required and any(data is None and path not in snapshot._opaque for path, data in blobs.items()):
                 raise GitError("required diff side is absent from its tree")
@@ -285,8 +365,21 @@ def _parse_name_status(tokens: list[str]) -> list[tuple[str, str, str | None]]:
     return entries
 
 
-def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
-    base, head = resolve_commit(repo, base), resolve_commit(repo, head)
+def list_range_changes(
+    repo: str,
+    base: str,
+    head: str,
+    *,
+    snapshots: dict[str, GitSnapshot] | None = None,
+) -> list[FileChange]:
+    if not (
+        snapshots is not None
+        and base in snapshots
+        and head in snapshots
+        and snapshots[base]._resolved == base
+        and snapshots[head]._resolved == head
+    ):
+        base, head = resolve_commit(repo, base), resolve_commit(repo, head)
     out = _run(repo, ["diff", "--name-status", "-z", "--find-renames", base, head])
     entries = _parse_name_status([t for t in out.decode("utf-8", "strict").split("\0")])
 
@@ -306,7 +399,7 @@ def list_range_changes(repo: str, base: str, head: str) -> list[FileChange]:
     # A side over the source byte limit is carried unread; the engine decides,
     # by the base-side roles, whether a detector must read it after all (#415).
     blobs = read_blobs(repo, specs, required=True, sides={base: "base", head: "head"},
-                       unread_oversized=True)
+                       unread_oversized=True, snapshots=snapshots)
 
     changes: list[FileChange] = []
     for code, path, old in entries:
