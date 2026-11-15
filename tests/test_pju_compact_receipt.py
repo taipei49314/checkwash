@@ -767,12 +767,14 @@ def test_legacy_receipt_main_enforces_main_ref_and_documented_test_count(compact
 
 def test_collect_compact_binds_admitted_git_and_restores_helpers(compact_fixture, tmp_path, monkeypatch):
     import argparse
+    import os
     import shutil
-    import sys
     import types
 
+    tmp_path = Path(os.path.realpath(tmp_path))
     git_exe = shutil.which("git")
     assert git_exe is not None
+    git_exe = os.path.realpath(git_exe)
     inv_mod = collector_mod.load_trusted_module("_test_inv", "release_inventory.py")
     br_mod = collector_mod.load_trusted_module("_test_br", "pju_receipt_bridge.py")
     qual_mod = collector_mod.load_trusted_module("_test_qual", "qualify_assertions.py")
@@ -783,7 +785,19 @@ def test_collect_compact_binds_admitted_git_and_restores_helpers(compact_fixture
     source_repo = _clone_repo(compact_fixture["repo"], tmp_path / "cand_src")
     trusted_repo = _clone_repo(compact_fixture["repo"], tmp_path / "trusted_src")
     pinned_repo = _clone_repo(compact_fixture["repo"], tmp_path / "pinned_src")
-    py_exe = Path(sys.executable).absolute()
+    py_exe = tmp_path / "venv/Scripts/python.exe"
+    py_exe.parent.mkdir(parents=True)
+    py_exe.write_bytes(b"python-bin")
+    system, program = tmp_path / "system", tmp_path / "program"
+    for directory in (system / "System32", program / "Git/usr/bin"):
+        directory.mkdir(parents=True)
+    monkeypatch.setenv("SystemRoot", str(system))
+    monkeypatch.setenv("ProgramFiles", str(program))
+    monkeypatch.setattr(
+        action_mod,
+        "execution_route",
+        lambda: dict(host=bridge.HOST, provenance=bridge.PROVENANCE, action_provenance="PJU_LOCAL_COMPOSITE_REPLAY"),
+    )
     monkeypatch.setattr(collector_mod, "ROOT", trusted_repo)
     monkeypatch.setattr(
         collector_mod,
