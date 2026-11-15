@@ -135,6 +135,15 @@ REPAIR_REFUSED_JS: frozenset[str] = frozenset({
     "BROAD_EXCEPT_ADDED",
 })
 
+# D-211 (0.13, G2(b)): repository-root guardrail paths whose in-place pure
+# line additions (every base line preserved in order and Markdown fence /
+# raw-HTML / comment context) hold GUARDRAIL_TOUCHED at warn with
+# GUARDRAIL_ADDITIVE instead of escalating under E4 META. Every deletion,
+# modification, reordering, comment/fence wrapping or rename, and every edit
+# to AGENTS.md, .cursorrules, .claude/**, .checkwash/** or .greenwash/**,
+# escalates to critical.
+GUARDRAIL_ADDITIVE_PATHS: frozenset[str] = frozenset({"CLAUDE.md"})
+
 # Report order: most severe rule classes first within a path.
 RULE_ORDER = [
     "EXEMPTION_ADDED",
@@ -990,10 +999,21 @@ def _apply_non_oracle_gates(f: Finding, ir: IR) -> None:
         # to catch the two-commit plant — at warn it never blocked.
         created = f.path in ir.globals.guardrail_files_created
         loosening = f.path in ir.globals.guardrail_configs_created_loosening
+        additive = (
+            f.path in GUARDRAIL_ADDITIVE_PATHS
+            and f.path in ir.globals.guardrail_files_additive
+        )
         shadow_kind = ir.globals.policy_shadows.get(f.path, {}).get("kind")
         shadow_guarded = shadow_kind in {"config_relaxation", "config_uncomparable", "allow_rewrite"}
         if created and not loosening and not shadow_guarded:
             f.escalators.append("GUARDRAIL_CREATED")
+        elif (
+            additive
+            and not created
+            and not loosening
+            and f.path not in ir.globals.policy_shadows
+        ):
+            f.escalators.append("GUARDRAIL_ADDITIVE")
         else:
             f.severity = "critical"
             f.escalators.append("META")

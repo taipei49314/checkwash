@@ -20,7 +20,12 @@ import pathlib
 import re
 
 from checkwash.detectors import REGISTRY
-from checkwash.gating import ORACLE_RULES, REPAIR_REFUSED_JS, REPAIR_REFUSED_PYTHON
+from checkwash.gating import (
+    GUARDRAIL_ADDITIVE_PATHS,
+    ORACLE_RULES,
+    REPAIR_REFUSED_JS,
+    REPAIR_REFUSED_PYTHON,
+)
 
 SPEC = pathlib.Path(__file__).resolve().parents[1] / "SPEC.md"
 
@@ -116,3 +121,17 @@ def test_repair_refusal_sets_name_oracle_rules():
     oracle = ORACLE_RULES | {"BROAD_EXCEPT_ADDED"}
     assert REPAIR_REFUSED_PYTHON <= oracle and REPAIR_REFUSED_JS <= oracle
     assert REPAIR_REFUSED_JS <= REPAIR_REFUSED_PYTHON
+
+
+# D-211 (0.13, G2(b)): only repository-root CLAUDE.md holds pure line additions
+# at warn (GUARDRAIL_ADDITIVE); widening this set relaxes E4 META on other
+# guardrail files and must be an explicit L1 policy change.
+FROZEN_GUARDRAIL_ADDITIVE_PATHS = {"CLAUDE.md"}
+
+
+def test_guardrail_additive_paths_are_frozen_here():
+    assert set(GUARDRAIL_ADDITIVE_PATHS) == FROZEN_GUARDRAIL_ADDITIVE_PATHS, (
+        "GUARDRAIL_ADDITIVE_PATHS changed. Widening which guardrail files stay "
+        "at warn on pure line additions is an L1 policy change: update this pin "
+        "in the same commit with SPEC §4/§5 and DECISIONS.md."
+    )

@@ -240,15 +240,22 @@ Four limits to know before you rely on a pass:
   tests a runner configuration collects (`jest.config.*`, `vitest.config.*`,
   `.mocharc.*`, the `jest` key of `package.json`) is not read, so a change
   there that stops tests from being collected passes with no finding.
-- **Editing an agent-instruction file blocks.** Any change to a tracked
-  `CLAUDE.md`, `AGENTS.md` or `.cursorrules` at the repository root, or to a
-  tracked file under the root's `.claude/`, `.checkwash/` or `.greenwash/`,
-  is `GUARDRAIL_TOUCHED` at critical, one added line included. Two
-  exceptions: an entry added to the exemption ledger is `EXEMPTION_ADDED` at
-  warn, and creating one of these files is a warn unless it is a checkwash
-  config that disables a detector or raises `fail_on`. The same names in a
-  subdirectory, and other agents' instruction files, are not guarded. To let
-  an edit through, record a reviewed exemption for it, or replace the
+- **Editing an agent-instruction file blocks, except pure line additions to `CLAUDE.md`.**
+  Deleting, editing or reordering an existing line in a tracked `CLAUDE.md`
+  at the repository root (or wrapping or re-contextualizing an existing line
+  in an HTML comment, raw HTML block/element/attribute, code fence, multi-line
+  inline code span, link reference definition, frontmatter block, blockquote,
+  Setext heading or table), and any change to a tracked `AGENTS.md` or
+  `.cursorrules` at the root or to a tracked file under the root's `.claude/`,
+  `.checkwash/` or `.greenwash/`, is `GUARDRAIL_TOUCHED` at critical. Three
+  exceptions stay at warn: adding new lines to the root `CLAUDE.md` while
+  keeping every existing line in order and in its Markdown/HTML context
+  (`GUARDRAIL_ADDITIVE`; an added prose override or `@path` import stays warn),
+  an entry appended to the exemption ledger (`EXEMPTION_ADDED`), and creating
+  one of these files (`GUARDRAIL_CREATED`) unless it is a checkwash config
+  that disables a detector or raises `fail_on`. The same names in a
+  subdirectory, and other agents' instruction files, are not guarded. To let a
+  blocking edit through, record a reviewed exemption for it, or replace the
   `guardrail` role's paths in a base-side `.checkwash/config.toml`. For
   example, to stop guarding `CLAUDE.md` and keep the rest:
 
@@ -519,5 +526,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 23149 tests (collection denominator).
+Alpha pre-release. 22 detectors, 23271 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

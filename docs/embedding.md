@@ -90,7 +90,7 @@ exemptions remain BASE-side; fixture HEAD context never grants authority.
 | `summary` | counts of all findings by severity | read it as the number of blocking findings |
 | `severity` | the four values `info`, `warn`, `high`, `critical` | expect a detector to block on its own: detectors report `warn` and gating moves it |
 | `rule` | a frozen id: never renamed or reused | assume the list is complete; new ids appear without a version change |
-| `escalators`, `deescalators`, `shape` | the labels gating attached, and a TEST_DISABLED event's kind | treat the label sets as closed, or read every escalator as a raise: GUARDRAIL_CREATED stays at `warn` |
+| `escalators`, `deescalators`, `shape` | the labels gating attached, and a TEST_DISABLED event's kind | treat the label sets as closed, or read every escalator as a raise: GUARDRAIL_CREATED and GUARDRAIL_ADDITIVE stay at `warn` |
 | `message` | showing to people | parse it; the wording changes in any release |
 | `unit` | the test: a Python qualified name, with `#N` when several same-named definitions remain, `<suite>`, or a JavaScript test title; null for a file | split it on `.`, `::` or `/`; a JavaScript title can contain any of them |
 | `fingerprint` | the finding's identity, compared for equality | parse it; see below |

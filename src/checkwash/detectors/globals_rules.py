@@ -16,6 +16,7 @@ from checkwash.findings import (
     make_change_fingerprint,
     make_fingerprint,
 )
+from checkwash.gating import GUARDRAIL_ADDITIVE_PATHS
 from checkwash.ir.model import IR
 
 
@@ -196,6 +197,14 @@ def _guardrail_message(ir: IR, path: str) -> str:
             f"guardrail file created ({path}) with a detector disabled or fail_on raised"
             " — a config that did not exist was the defaults, and this relaxes them"
         )
+    if (
+        path in GUARDRAIL_ADDITIVE_PATHS
+        and path in ir.globals.guardrail_files_additive
+        and path not in ir.globals.guardrail_files_created
+    ):
+        return (
+            f"guardrail file extended ({path}) — added lines only; existing constraints preserved"
+        )
     verb = "created" if path in ir.globals.guardrail_files_created else "changed"
     return f"guardrail file {verb} ({path}) — agent constraints are part of the oracle"
 
@@ -217,6 +226,17 @@ def detect_guardrail(ir: IR) -> list[Finding]:
                 {
                     "created": path in ir.globals.guardrail_files_created,
                     "created_loosening": path in ir.globals.guardrail_configs_created_loosening,
+                    **(
+                        {"additive": True}
+                        if (
+                            path in GUARDRAIL_ADDITIVE_PATHS
+                            and path in ir.globals.guardrail_files_additive
+                            and path not in ir.globals.guardrail_files_created
+                            and path not in ir.globals.guardrail_configs_created_loosening
+                            and path not in ir.globals.policy_shadows
+                        )
+                        else {}
+                    ),
                     **({"policy_shadow": ir.globals.policy_shadows[path]} if path in ir.globals.policy_shadows else {}),
                 },
             ),

@@ -2087,3 +2087,163 @@ Windows CPython 3.11.9):
   resolved with regression sub-checks in `tests/test_real_test_names.py` before
   opening the draft PR.
 - macOS, Linux, and other platforms: NOT_RUN.
+
+## D-211 (2026-11-15): pure line additions to repository-root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`); deleting, editing, reordering or commenting/fencing existing lines escalates to `critical`
+
+**Approval.** Drafted in a draft pull request in response to Nelson's
+2026-11-11T02:44:43Z `G2 b` direction answer (choosing option `(b)` — lower pure
+additions to `CLAUDE.md` to `warn` and keep deletions/modifications at
+`critical`, with `SPEC.md` and the `gating.py` policy table reviewed as L1) and
+his 2026-11-15 Phase 3 handoff (`G2(b)` L1 draft PR: pure line additions to
+`CLAUDE.md` stay `warn`; deleting, modifying or reordering existing lines
+escalates to `critical`, covering `SPEC.md` §4/§5, `DECISIONS.md` D-211 and
+`src/checkwash/gating.py`, then stop for L1 approval). (Pending Nelson's L1
+approval on the concrete diff before merge.)
+
+**What was found (`ND-01` / `repro-13`).** In the 2026-11-10 newcomer and
+documentation re-review (`repro-13/run.sh`), appending a single housekeeping
+bullet (`- Use pytest -q to run the tests; the suite takes about a minute.`) to
+a tracked repository-root `CLAUDE.md` whose existing testing rule (`- Never
+modify test files to make a failing test pass.`) was untouched fired
+`GUARDRAIL_TOUCHED` at `critical` (`META`), blocking `checkwash check`, the
+Claude Code Stop hook (`decision = "block"`), and range-mode CI until a
+per-edit exemption was merged to the base branch first or `CLAUDE.md` was
+removed from `[roles] guardrail` altogether. For Claude Code adopters — the
+README's primary audience — routine project memory additions (`CLAUDE.md`)
+blocked every Stop and pull request even when no existing instruction line was
+altered.
+
+**Decision.**
+1. **Path scope (`gating.GUARDRAIL_ADDITIVE_PATHS`).** Only an existing
+   repository-root `CLAUDE.md` whose resolved role is `guardrail`, modified in
+   place (`change.status == "modified"`, non-empty `before` and `after`, no
+   policy-shadow transition, and `change.old_path is None` or normalized
+   `change.old_path == "CLAUDE.md"`), is eligible for `GUARDRAIL_ADDITIVE`.
+   `GUARDRAIL_ADDITIVE_PATHS = frozenset({"CLAUDE.md"})` is declared in
+   `src/checkwash/gating.py`'s auditable policy header and pinned in
+   `tests/test_oracle_rules_pinned.py`. Renaming another file onto `CLAUDE.md`
+   (`git mv AGENTS.md CLAUDE.md`), deleting `CLAUDE.md`, and any edit to
+   `AGENTS.md`, `.cursorrules`, `.claude/**` (including `.claude/CLAUDE.md` and
+   `.claude/settings.json`), `.checkwash/**` or `.greenwash/**` remain `critical`
+   (`META`).
+2. **Pure-line-addition predicate (`guardrail_additive.is_pure_line_addition`).**
+   `engine_ir_files._record_non_prod_role_change` records `"CLAUDE.md"` in
+   `DiffGlobals.guardrail_files_additive` (`IR_VERSION = 3` and
+   `FINDINGS_VERSION = 2` unchanged; optional field defaulting to `[]`) if and
+   only if:
+   - Neither side contains a NUL byte (`\x00`), and both sides decode strictly
+     as UTF-8 (strip at most one leading file-start UTF-8 BOM `\ufeff`).
+   - After normalizing `\r\n` -> `\n`, neither side contains a lone `\r`, and
+     `after` introduces no additional `HIDDEN_UNICODE` / Unicode `Cf` format
+     characters (including `U+E0000..U+E007F` Tags, `U+061C` and `U+2060`) or
+     non-LF Unicode line/paragraph separators (`\x0b`, `\x0c`, `\x1c`, `\x1d`,
+     `\x1e`, `\x85`, `\u2028`, `\u2029`).
+   - Splitting strictly on `\n` (dropping one trailing empty element when the
+     side ends with `\n`), `before` has at least one line, `len(after_lines) >
+     len(before_lines)` (zero-added-line rewrites such as stripping a trailing
+     newline, CRLF-only edits or BOM-only edits do not qualify), and any leading
+     YAML (`--- ... ---`/`...`) or TOML (`+++ ... +++`) frontmatter is unchanged
+     line-for-line (adding or editing lines such as `paths:` inside frontmatter
+     does not qualify).
+   - Every `(line_text, markdown_context)` entry of `before` survives as an
+     ordered subsequence of `after` in linear time (`O(N)`), where
+     `markdown_context` tracks CommonMark fenced code blocks (`0..3` leading
+     columns before `>= 3` backticks with no backtick in the info string or
+     `>= 3` tildes, top-level, blockquoted or list-prefixed / list-continued with
+     4-column tab stops, distinguishing opening delimiter, code interior and
+     matching closing delimiter without per-line string multiplication),
+     Phase-1 CommonMark §4.6 rules 1–5 HTML blocks (interrupting open paragraphs
+     without inline backtick pairing), paragraph-scoped multi-line inline
+     backtick code spans (§6.1) with §2.4 `\` escapes, HTML comments
+     (`<!-- ... -->`), raw HTML blocks / declarations / PIs / CDATA (`<pre>`,
+     `<script>` with HTML5 §13.2.5.4–30 escaped/double-escaped state tracking,
+     `<style>`, `<textarea>`, `<iframe>`, `<noembed>`, `<noframes>`, `<noscript>`,
+     `<title>`, `<xmp>`, `<listing>`, `<plaintext>`, `<!...>`, `<?...?>`,
+     `<![CDATA[...]]>`), open HTML elements (via a trie-interned amortized `O(1)`
+     stack, ignoring bogus `/>` on non-void HTML tags, restricting implied closes
+     to HTML5 §13.2.6.3 tags, and tracking paired custom elements) and multi-line
+     quoted/unquoted tag attributes, CommonMark §4.7 link reference definitions
+     (`[label]: ...`), frontmatter lines, and interleaved blockquote/list
+     containers, Setext heading underlines (`===`/`---`), 1+-column GFM tables
+     and indented code blocks. Deleting,
+     editing (including whitespace changes or appending to an unterminated final
+     line), reordering any existing line, editing frontmatter, or wrapping /
+     re-contextualizing an existing line inside any of those constructs fails the
+     subsequence check and escalates to `critical` (`META`).
+3. **Detector, gating and fingerprint contract (`globals_rules.py`,
+   `gating.py`, `SPEC.md` §4/§5).** When `path` is in both
+   `GUARDRAIL_ADDITIVE_PATHS` and `ir.globals.guardrail_files_additive` (and not
+   `created`, `loosening` or in `policy_shadows`), `detect_guardrail` formats
+   `guardrail file extended (CLAUDE.md) — added lines only; existing constraints
+   preserved` and binds `"additive": True` into `GUARDRAIL_TOUCHED`'s v2
+   `make_change_fingerprint` context, and `gating._apply_non_oracle_gates` keeps
+   `severity = "warn"` and attaches `escalators = ["GUARDRAIL_ADDITIVE"]`. At
+   the default `fail_on = "high"`, `checkwash check`, range-mode CI and the
+   Claude Code Stop hook (`hook-json`) pass while keeping the `WARN` visible;
+   `--fail-on warn` blocks as for any `warn` finding.
+
+**Fingerprint movement (`docs/stability.md`).** Scheduled for minor release
+`v0.13.0` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3` unchanged):
+- Pure-line-addition modifications to repository-root `CLAUDE.md` move from
+  their former `critical` `GUARDRAIL_TOUCHED` v2 key (which carried no
+  `"additive"` context key) to an additive `warn` v2 key carrying
+  `"additive": True`. Because `warn` findings do not block at the default
+  `fail_on = "high"`, this affects only repositories gating at `--fail-on warn`.
+- Every non-additive `GUARDRAIL_TOUCHED` finding (line deletions, edits,
+  reorderings or comment/fence/HTML/Markdown wraps in `CLAUDE.md`, renames,
+  deletions, and all edits to `AGENTS.md`, `.cursorrules`, `.claude/**`,
+  `.checkwash/**` and `.greenwash/**`) keeps its byte-identical v2 fingerprint,
+  and no existing `.gwcase` fixture expectation moves.
+
+**Residual.** CheckWash does not interpret natural-language instructions or
+follow Claude Code `@path` file references. A newly added line in `CLAUDE.md`
+that contradicts or overrides an earlier line in prose ("ignore the testing rule
+above") or adds an `@path` import while leaving every earlier line intact in
+order and Markdown/HTML context stays at `warn` (`GUARDRAIL_ADDITIVE`) rather
+than `critical`; repositories that want every `CLAUDE.md` edit to block can run
+with `--fail-on warn` (or `fail_on = "warn"` in `.checkwash/config.toml`).
+Conversely, fixing a typo or rewording an existing line in `CLAUDE.md` still
+escalates to `critical` (`META`).
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9):
+- `tests/test_claude_md_additive.py` (121 collected tests: `repro-13` appended,
+  prepended and mid-file insertions including fenced code blocks with blank
+  lines, list-indented fences, `<env>` placeholders, autolinks, void/foreign
+  self-closing tags, implied `<li>` closes, closed `<script>`/`<title>`/
+  `<noscript>`, pipe-less `:---` prose, body additions
+  below unchanged YAML frontmatter, closed HTML comments and inline `` `<!--` ``
+  code spans, CRLF/BOM/unterminated-base-line additions, line
+  deletions/edits/reorders/zero-line rewrites, 86 HTML-comment/code-fence/
+  container-fence/list-continuation-fence/post-`>`-tab-fence/Phase-1-HTML-block/
+  CommonMark-HTML5-desync/multi-line-backtick/backslash-escape/`<script>`-3-
+  state/raw-HTML/non-void-`/>`/HTML5-rawtext/`<pre>`-`<noscript>`-`<template>`/
+  implied-end-tag/open-element/§6.6-close-attr/HTML5-attr-quote/bogus-`</\n`/
+  link-ref/frontmatter-`paths:`/interleaved-blockquote-list/Setext/1+-col-GFM-
+  table/indented-code wrapping and re-contextualization attacks, 12 NUL/
+  invalid-UTF-8/lone-CR/bidi-Cf-Tag/Unicode-separator smuggling cases, `O(N)`
+  pathological backtick+HTML, 400 KB open-fence, `<`*999K, `<pre></pre>`*90K,
+  `- `*499K, `<script><!--`*999K and `<a x="`*160K timing bounds, 8 non-root
+  guardrail paths, renames/deletions/forged-IR rejection, custom `guardrail`
+  roles, and end-to-end Git `check` worktree/range + `SessionStart`/`Stop`
+  `hook-json` + `json` schema + `sarif` + `--emit-ir` + `--fail-on warn` +
+  `checkwash allow` CLI round-trip; 5 positive test functions fail on `main`
+  `aa678cb3` and 116 preserving negative controls pass on `main`, with 121/121
+  passing on this branch) plus `tests/test_oracle_rules_pinned.py`
+  (`GUARDRAIL_ADDITIVE_PATHS` pin).
+- Full `pytest -n 16` suite (`23,271` collected tests), `checkwash check`
+  dogfood on the branch range (`--fail-on high`: `verdict=pass`, 0
+  critical/high findings), and 1 independent adversarial read-only review
+  sub-agent across multiple rounds (all blocking, medium and low findings
+  resolved with regression tests — `O(N)` fence-close, autolink, single-pass
+  interleaved container and lazy `text.lower()` bounds, Phase-1 §4.6 rules 1–5
+  HTML block interruption, paragraph-scoped multi-line inline backtick spans and
+  §2.4 `\` escapes, list-stack and post-`>` tab-stop container fences, non-void
+  `/>` rejection, HTML5 `<script>` 3-state machine, `<iframe|noembed|noframes|
+  noscript|title|xmp|listing|plaintext>`, `_IMPLIED_END_HTML_TAGS` and paired
+  custom elements, unclosed inline/container HTML poisoning, exact frontmatter
+  preservation, adjacent blockquote/Setext/1+-col-GFM-table/indented-code
+  re-contextualization, `globals_rules`/`gating` guard symmetry,
+  `docs/embedding.md`, Unicode `Cf` rejection and `@path` residual disclosure —
+  re-verified clean before opening the draft PR).
+- macOS, Linux, and other platforms: NOT_RUN.
