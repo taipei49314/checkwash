@@ -530,6 +530,8 @@ def arrival_credits(ir, live):
     assertions, units = Counter(), Counter()
     for file in ir.files:
         for unit in file.units:
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                continue
             if unit.after is None or not live(file, unit.after):
                 continue
             if unit.before is None:

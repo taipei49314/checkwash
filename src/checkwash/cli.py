@@ -738,6 +738,9 @@ def _cmd_check(args: argparse.Namespace) -> int:
         with open(args.coverage_report, "w", encoding="utf-8", newline="\n") as report:
             report.write(coverage_to_json(ir, report_context))
 
+    if report_context.importer_gaps and config.on_engine_error == "block" and not _hook_json(args):
+        return 2
+
     if args.emit_ir:
         _write_machine(ir_to_json(ir))
         return 0

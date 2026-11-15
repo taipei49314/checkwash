@@ -299,11 +299,14 @@ class RelocationContextResolver:
             needed = {
                 unit.qualname
                 for unit in file.units
-                if unit.before is None
-                or unit.after is None
-                or (
-                    unit.delta is not None
-                    and (unit.delta.assertions_removed or unit.delta.assertions_added)
+                if getattr(unit, "kind", "test_function") != "helper_function"
+                and (
+                    unit.before is None
+                    or unit.after is None
+                    or (
+                        unit.delta is not None
+                        and (unit.delta.assertions_removed or unit.delta.assertions_added)
+                    )
                 )
             }
             if not needed:
@@ -314,7 +317,8 @@ class RelocationContextResolver:
                 sides = [
                     (unit.qualname, getattr(unit, field))
                     for unit in file.units
-                    if getattr(unit, field) is not None
+                    if getattr(unit, "kind", "test_function") != "helper_function"
+                    and getattr(unit, field) is not None
                 ]
                 startup = (
                     self.startup(file.path, side_index, data)
@@ -352,7 +356,8 @@ def record_move_credits(
     removed_units: Counter[str] = Counter()
     added_units: Counter[str] = Counter()
     payable = any(
-        unit.before is not None
+        getattr(unit, "kind", "test_function") != "helper_function"
+        and unit.before is not None
         and (
             unit.after is None
             or (unit.delta is not None and unit.delta.assertions_removed)
@@ -367,6 +372,8 @@ def record_move_credits(
         )
         python_test = payable and file.language == "python" and judged_as_test(file)
         for unit in file.units:
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                continue
             live_after = (
                 unit.after is not None
                 and js_collected
@@ -437,6 +444,8 @@ def record_duplicate_survivors(
         if not judged_as_test(file) and file.role != "conftest":
             continue
         for unit in file.units:
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                continue
             if unit.before is not None and unit.after is None and unit.before.body_hash:
                 h = unit.before.oracle_context
                 if not h:

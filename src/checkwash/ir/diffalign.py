@@ -579,18 +579,20 @@ def align_file(
     alignment = "full"
 
     # Names are not unique (for example Jest tests in separate describe
-    # blocks). Preserve every occurrence, matching unchanged bodies first
-    # within a same-name group before pairing remaining occurrences in order.
-    a_by_name: dict[str, list[ParsedUnit]] = {}
-    b_by_name: dict[str, list[ParsedUnit]] = {}
+    # blocks), and a set-aside test module can carry both `test_function` and
+    # `helper_function` units (D-212). Preserve every occurrence per kind,
+    # matching unchanged bodies first within a same-name group before pairing
+    # remaining occurrences in order.
+    a_by_name: dict[tuple[str, str], list[ParsedUnit]] = {}
+    b_by_name: dict[tuple[str, str], list[ParsedUnit]] = {}
     for a in a_units:
-        a_by_name.setdefault(a.qualname, []).append(a)
+        a_by_name.setdefault((getattr(a, "kind", "test_function"), a.qualname), []).append(a)
     for b in b_units:
-        b_by_name.setdefault(b.qualname, []).append(b)
+        b_by_name.setdefault((getattr(b, "kind", "test_function"), b.qualname), []).append(b)
     paired_b: list[tuple[ParsedUnit, ParsedUnit, str]] = []
     b_unpaired: list[ParsedUnit] = []
-    for name, before_group in b_by_name.items():
-        after_group = a_by_name.get(name, [])
+    for key, before_group in b_by_name.items():
+        after_group = a_by_name.get(key, [])
         unmatched = []
         for b in before_group:
             exact = next((i for i, a in enumerate(after_group)
@@ -612,7 +614,10 @@ def align_file(
         else:
             candidates = []
             for b in b_unpaired:
+                b_kind = getattr(b, "kind", "test_function")
                 for a in a_unpaired:
+                    if getattr(a, "kind", "test_function") != b_kind:
+                        continue
                     score = _jaccard(b.shingles, a.shingles)
                     if score >= JACCARD_THRESHOLD:
                         candidates.append((-score, b.span[0], a.span[0], b, a))
@@ -631,7 +636,7 @@ def align_file(
     for b, a, how in paired_b:
         units.append(
             Unit(
-                kind="test_function",
+                kind=getattr(a, "kind", "test_function"),
                 qualname=a.qualname,
                 match=how,
                 before=b.side,
@@ -643,7 +648,7 @@ def align_file(
     for b in b_unpaired:
         units.append(
             Unit(
-                kind="test_function",
+                kind=getattr(b, "kind", "test_function"),
                 qualname=b.qualname,
                 match=None,
                 before=b.side,
@@ -672,7 +677,7 @@ def align_file(
         )
         units.append(
             Unit(
-                kind="test_function",
+                kind=getattr(a, "kind", "test_function"),
                 qualname=a.qualname,
                 match=None,
                 before=None,

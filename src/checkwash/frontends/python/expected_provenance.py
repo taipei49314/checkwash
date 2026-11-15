@@ -544,17 +544,26 @@ class _Project:
         return result
 
 
-def importer_changes(changes, config, reader, searcher, reviewed_root_modules=(), skipped=None):
+def importer_changes(
+    changes,
+    config,
+    reader,
+    searcher,
+    reviewed_root_modules=(),
+    skipped=None,
+    set_aside_paths=None,
+):
     """Discover unchanged tests importing a changed test-side helper, bounded.
 
     With `skipped`, a list the run reports, each changed helper's module name
     is searched on its own, with every path the diff changes left out, and
     has its own bounds (D-206). A name that more than MAX_READS unchanged
     tests mention sets aside the helpers of that name: none of their
-    importers is read, and `skipped` says so. A name that reaches the
-    search's hit limit does the same, unless the diff renamed one of its
-    helpers to that name: a name the diff chose could be one every file
-    holds, so then the hit limit stops the run. The names whose tests fit
+    importers is read, `skipped` says so, and `set_aside_paths` records them
+    so the engine checks each helper's own functions directly (D-212). A name
+    that reaches the search's hit limit does the same, unless the diff renamed
+    one of its helpers to that name: a name the diff chose could be one every
+    file holds, so then the hit limit stops the run. The names whose tests fit
     are read from the smallest, while the run's MAX_TOTAL_READS allow; more
     than 16 names set every helper aside.
 
@@ -583,13 +592,20 @@ def importer_changes(changes, config, reader, searcher, reviewed_root_modules=()
         return []
     helpers = set().union(*names.values())
     if len(names) > 16:
-        return _set_aside(skipped, helpers, "the change touches helpers with more than 16 module names")
+        return _set_aside(
+            skipped,
+            helpers,
+            "the change touches helpers with more than 16 module names",
+            set_aside_paths,
+        )
     # Git's own spelling of each path the diff changes, which the searches
     # compare as they are, a path that holds "\" included.
     changed = frozenset(p for c in changes for p in (c.path, c.old_path) if p)
     search = _search_outside(searcher, changed)
     if skipped is None or search is searcher:
-        return _one_search(config, reader, raw, searcher, names, helpers, skipped)
+        return _one_search(
+            config, reader, raw, searcher, names, helpers, skipped, set_aside_paths,
+        )
     tests_of = {}
     for name in sorted(names):
         try:
@@ -597,18 +613,33 @@ def importer_changes(changes, config, reader, searcher, reviewed_root_modules=()
         except SearchHitLimit:
             if any(path in renamed for path in names[name]):
                 raise
-            _set_aside(skipped, names[name], f"64 or more unchanged Python files mention {_shown_name(name)}")
+            _set_aside(
+                skipped,
+                names[name],
+                f"64 or more unchanged Python files mention {_shown_name(name)}",
+                set_aside_paths,
+            )
             continue
         tests = [path for path in sorted({p.replace("\\", "/") for p in hits} - set(raw)) if _test_source(config, path)]
         if len(tests) > MAX_READS:
-            _set_aside(skipped, names[name], f"more than {MAX_READS} unchanged tests mention {_shown_name(name)}")
+            _set_aside(
+                skipped,
+                names[name],
+                f"more than {MAX_READS} unchanged tests mention {_shown_name(name)}",
+                set_aside_paths,
+            )
             continue
         tests_of[name] = tests
     # Smallest first: a name with many importers cannot crowd out one with few.
     found, total = {}, 0
     for name in sorted(tests_of, key=lambda name: (len(tests_of[name]), name)):
         if total + len(tests_of[name]) > MAX_TOTAL_READS:
-            _set_aside(skipped, names[name], f"the run's {MAX_TOTAL_READS} importer reads are spent")
+            _set_aside(
+                skipped,
+                names[name],
+                f"the run's {MAX_TOTAL_READS} importer reads are spent",
+                set_aside_paths,
+            )
             continue
         total += len(tests_of[name])
         for path in tests_of[name]:
@@ -618,18 +649,28 @@ def importer_changes(changes, config, reader, searcher, reviewed_root_modules=()
             for path, source in sorted(found.items()) if source is not None and len(source) <= MAX_SOURCE_BYTES]
 
 
-def _one_search(config, reader, raw, searcher, names, helpers, skipped):
+def _one_search(config, reader, raw, searcher, names, helpers, skipped, set_aside_paths=None):
     """Every name in one search, whose hit limit stops the run (before D-206)."""
     candidates = sorted({p.replace("\\", "/") for p in searcher(sorted(names))})
     if len(candidates) >= 64:
-        return _set_aside(skipped, helpers, f"64 or more Python files mention {_shown_names(names)}")
+        return _set_aside(
+            skipped,
+            helpers,
+            f"64 or more Python files mention {_shown_names(names)}",
+            set_aside_paths,
+        )
     found = []
     reads = 0
     for path in candidates:
         if path in raw or not _test_source(config, path):
             continue
         if reads >= MAX_READS:
-            return _set_aside(skipped, helpers, f"more than {MAX_READS} tests mention {_shown_names(names)}")
+            return _set_aside(
+                skipped,
+                helpers,
+                f"more than {MAX_READS} tests mention {_shown_names(names)}",
+                set_aside_paths,
+            )
         reads += 1
         source = reader(path)
         if source is not None and len(source) <= MAX_SOURCE_BYTES:
@@ -653,11 +694,16 @@ def _search_outside(searcher, changed):
     return (lambda needles: searcher(needles, exclude=changed)) if takes_exclude else searcher
 
 
-def _set_aside(skipped, helpers, reason):
+def _set_aside(skipped, helpers, reason, set_aside_paths=None):
     if skipped is not None:
+        if set_aside_paths is not None:
+            set_aside_paths.update(path.replace("\\", "/") for path in helpers)
         listed = _listed([_shown(path) for path in sorted(helpers)])
-        skipped.append(f"analysis incomplete: {reason}, so unchanged tests that import {listed} "
-                       "were not read for their expected values")
+        skipped.append(
+            f"analysis incomplete: {reason}, so unchanged tests that import {listed} "
+            "were not read; each helper's own functions were checked, not expected "
+            "values resolved through its callers"
+        )
     return []
 
 

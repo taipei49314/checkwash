@@ -592,6 +592,8 @@ def _file_restructured(ir: IR, file_constants: dict[str, dict[str, str]]) -> dic
         gone = added = 0
         lost = arrived = False
         for unit in file.units:
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                continue
             if unit.before is not None and unit.after is None:
                 lost = True
                 gone += _oracle_mass(unit.before)
@@ -637,6 +639,8 @@ def _split_or_renamed(
         budget: dict[str, int] = {}
         gone: list[tuple[str, str, int]] = []  # (qualname, leaf, mass)
         for unit in file.units:
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                continue
             leaf = unit.qualname.rsplit(".", 1)[-1].split("#", 1)[0]
             if unit.before is not None and unit.after is None:
                 gone.append((unit.qualname, leaf, _oracle_mass(unit.before)))
