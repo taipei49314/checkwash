@@ -81,10 +81,12 @@ rejection, 8-state HTML5 attribute quote machine, trailing `</` bogus-comment
 state, paired custom elements, exact frontmatter preservation, adjacent
 blockquote/Setext/1+-col-GFM-table/indented-code re-contextualization, guard
 symmetry, `docs/embedding.md`, Unicode `Cf` rejection, and `@path` disclosure,
-re-verified clean by the reviewer); opened as a draft pull request awaiting
-Nelson's L1 approval before filling `D-211`'s `**Approval.**` and collecting its
-compact PJU digest receipt. Not run (`NOT_RUN`): macOS, Linux, and other
-platforms.
+re-verified clean by the reviewer); Nelson approved `SPEC.md` §4/§5,
+`DECISIONS.md` (`D-211`) and `src/checkwash/gating.py` (L1) on #611
+(`df5c54a2`) at 2026-11-15T09:34:17Z (asked at 2026-11-15T09:33:12Z, session
+`fa98badb`), and the pull request's description and hosted `checkwash` check
+record its compact PJU digest receipt (`collect_pju_receipts.py --compact`). Not
+run (`NOT_RUN`): macOS, Linux, and other platforms.
 
 ## 2026-11-15: 0.13, report note for changed test-shaped files not analysed (B6)
 

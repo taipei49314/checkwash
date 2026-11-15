@@ -2090,15 +2090,20 @@ Windows CPython 3.11.9):
 
 ## D-211 (2026-11-15): pure line additions to repository-root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`); deleting, editing, reordering or commenting/fencing existing lines escalates to `critical`
 
-**Approval.** Drafted in a draft pull request in response to Nelson's
+**Approval.** Drafted in #611 (`df5c54a2`) in response to Nelson's
 2026-11-11T02:44:43Z `G2 b` direction answer (choosing option `(b)` — lower pure
 additions to `CLAUDE.md` to `warn` and keep deletions/modifications at
 `critical`, with `SPEC.md` and the `gating.py` policy table reviewed as L1) and
 his 2026-11-15 Phase 3 handoff (`G2(b)` L1 draft PR: pure line additions to
 `CLAUDE.md` stay `warn`; deleting, modifying or reordering existing lines
 escalates to `critical`, covering `SPEC.md` §4/§5, `DECISIONS.md` D-211 and
-`src/checkwash/gating.py`, then stop for L1 approval). (Pending Nelson's L1
-approval on the concrete diff before merge.)
+`src/checkwash/gating.py`, then stop for L1 approval). At 2026-11-15T09:33:12Z
+(session `fa98badb`) Antigravity presented draft pull request #611 (`df5c54a2`)
+and asked 「請檢視 `#611` 的 L1 內容（`SPEC.md`、`DECISIONS.md` `D-211`、`src/checkwash/gating.py`）。若核可，請回覆確認；我會補入 `D-211` 的 `**Approval.**` 時間紀錄、收集 `cw611r1` 輕量收據並合併 `#611`，接著再啟動步驟 3（受保護文字 L1 集中 draft PR）。」;
+at 2026-11-15T09:34:17Z Nelson replied 「核可」, approving `SPEC.md` §4/§5,
+`DECISIONS.md` `D-211` and `src/checkwash/gating.py` (`GUARDRAIL_ADDITIVE_PATHS`
+and `GUARDRAIL_ADDITIVE`, L1) and authorizing collecting its compact PJU receipt
+(`cw611r1`) and merging #611 once the required `checkwash` check passes.
 
 **What was found (`ND-01` / `repro-13`).** In the 2026-11-10 newcomer and
 documentation re-review (`repro-13/run.sh`), appending a single housekeeping
