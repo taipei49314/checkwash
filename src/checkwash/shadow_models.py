@@ -7,6 +7,7 @@ import posixpath
 import re
 import shlex
 import sys
+import warnings
 from dataclasses import dataclass
 from typing import Any, Iterable
 
@@ -128,6 +129,13 @@ def _decode(data: bytes | None) -> str:
     if not data:
         return ""
     return data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _parse_ast(source: str | bytes) -> ast.Module:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return ast.parse(source)
 
 
 def _join(root: str, rel: str) -> str:

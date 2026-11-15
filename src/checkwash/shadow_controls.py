@@ -25,6 +25,7 @@ from checkwash.shadow_models import (
     _join,
     _live_shadow_attr,
     _normalise_root,
+    _parse_ast,
     _split_path_value,
 )
 from checkwash.shadow_providers import _extends_package_path
@@ -188,61 +189,70 @@ def _sys_path_roots(path: str, data: bytes | None) -> tuple[str, ...]:
     """Literal roots prepended by a conftest, in final runtime order."""
 
     try:
-        tree = ast.parse(_decode(data))
+        tree = _parse_ast(_decode(data))
     except (SyntaxError, ValueError):
         return ()
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow conftest parse exceeded recursion or memory limit"
+        ) from exc
     prepended: list[str] = []
     bindings: dict[str, str] = {}
-    for stmt in tree.body:
-        if isinstance(stmt, (ast.Assign, ast.AnnAssign)):
-            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
-            value = _path_expr(stmt.value, path, bindings) if stmt.value is not None else None
-            for target in targets:
-                if isinstance(target, ast.Name):
-                    if value is None:
-                        bindings.pop(target.id, None)
-                    else:
-                        bindings[target.id] = value
-        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
-            call = stmt.value
-            if (
-                isinstance(call.func, ast.Attribute)
-                and call.func.attr == "insert"
-                and _is_sys_path(call.func.value)
-                and len(call.args) >= 2
-                and isinstance(call.args[0], ast.Constant)
-                and call.args[0].value == 0
-            ):
-                root = _path_expr(call.args[1], path, bindings)
-                if root is not None:
-                    prepended.insert(0, root)
-        elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
-            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
-            value = stmt.value
-            for target in targets:
-                if not (
-                    isinstance(target, ast.Subscript)
-                    and _is_sys_path(target.value)
-                    and isinstance(target.slice, ast.Slice)
-                    and target.slice.upper is not None
-                    and isinstance(target.slice.upper, ast.Constant)
-                    and (
-                        target.slice.lower is None
-                        or (
-                            isinstance(target.slice.lower, ast.Constant)
-                            and target.slice.lower.value == 0
-                        )
-                    )
-                    and target.slice.upper.value == 0
-                    and isinstance(value, (ast.List, ast.Tuple))
+    try:
+        for stmt in tree.body:
+            if isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+                value = _path_expr(stmt.value, path, bindings) if stmt.value is not None else None
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        if value is None:
+                            bindings.pop(target.id, None)
+                        else:
+                            bindings[target.id] = value
+            if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Call):
+                call = stmt.value
+                if (
+                    isinstance(call.func, ast.Attribute)
+                    and call.func.attr == "insert"
+                    and _is_sys_path(call.func.value)
+                    and len(call.args) >= 2
+                    and isinstance(call.args[0], ast.Constant)
+                    and call.args[0].value == 0
                 ):
-                    continue
-                roots: list[str] = []
-                for elt in value.elts:
-                    root = _path_expr(elt, path, bindings)
+                    root = _path_expr(call.args[1], path, bindings)
                     if root is not None:
-                        roots.append(root)
-                prepended[0:0] = roots
+                        prepended.insert(0, root)
+            elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+                value = stmt.value
+                for target in targets:
+                    if not (
+                        isinstance(target, ast.Subscript)
+                        and _is_sys_path(target.value)
+                        and isinstance(target.slice, ast.Slice)
+                        and target.slice.upper is not None
+                        and isinstance(target.slice.upper, ast.Constant)
+                        and (
+                            target.slice.lower is None
+                            or (
+                                isinstance(target.slice.lower, ast.Constant)
+                                and target.slice.lower.value == 0
+                            )
+                        )
+                        and target.slice.upper.value == 0
+                        and isinstance(value, (ast.List, ast.Tuple))
+                    ):
+                        continue
+                    roots: list[str] = []
+                    for elt in value.elts:
+                        root = _path_expr(elt, path, bindings)
+                        if root is not None:
+                            roots.append(root)
+                    prepended[0:0] = roots
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow conftest analysis exceeded recursion or memory limit"
+        ) from exc
     return _dedupe_roots(prepended)
 
 

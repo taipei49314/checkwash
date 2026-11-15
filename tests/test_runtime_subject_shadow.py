@@ -2305,3 +2305,180 @@ def test_deleted_canonical_provider_can_expose_an_existing_standin():
             "alpha/value.py",
         )
     ]
+
+
+def test_candidate_test_parse_ok_false_fails_closed_instead_of_dropping_imports(monkeypatch):
+    from checkwash.frontends.python.frontend import ParsedFile
+    from checkwash.shadow import _test_fixture_requests
+
+    before_test = (
+        b"from calc import add\n\n\n"
+        b"def test_add():\n    assert add(2, 3) == 5\n"
+    )
+    after_test = (
+        b"from calc import add\nDEEP = 1 + 1\n\n\n"
+        b"def test_add():\n    assert add(2, 3) == 5\n"
+    )
+    real_parse_python = shadow_module.parse_python
+
+    def fail_on_deep(data: bytes, **kwargs):
+        if b"DEEP =" in data:
+            return ParsedFile(parse_ok=False)
+        return real_parse_python(data, **kwargs)
+
+    monkeypatch.setattr(shadow_module, "parse_python", fail_on_deep)
+
+    with pytest.raises(EngineError, match="runtime-shadow test parse exceeded"):
+        _test_fixture_requests(after_test)
+    with pytest.raises(EngineError, match="runtime-shadow test parse exceeded"):
+        _active_test_imports(after_test)
+
+    sources = {
+        "src/calc.py": b"def add(a, b):\n    return a + b\n",
+        "stub/calc.py": b"def add(a, b):\n    return 5\n",
+        "pytest.ini": b"[pytest]\npythonpath = stub src\n",
+        "tests/test_calc.py": after_test,
+    }
+    changes = [
+        FileChange("stub/calc.py", "added", None, sources["stub/calc.py"]),
+        FileChange(
+            "pytest.ini",
+            "modified",
+            b"[pytest]\npythonpath = src\n",
+            sources["pytest.ini"],
+        ),
+        FileChange("tests/test_calc.py", "modified", before_test, after_test),
+    ]
+    with pytest.raises(EngineError, match="runtime-shadow test parse exceeded"):
+        find_runtime_subject_shadows(
+            changes,
+            Config(),
+            head_path_lister=lambda: sorted(sources),
+            head_batch_reader=lambda paths: {item: sources.get(item) for item in paths},
+            head_searcher=lambda _needles: ["tests/test_calc.py"],
+        )
+
+
+def test_deep_candidate_test_across_recursion_boundary_never_silently_passes():
+    import sys
+
+    frame = sys._getframe()
+    depth = 0
+    while frame is not None:
+        depth += 1
+        frame = frame.f_back
+
+    before_test = (
+        b"from calc import add\n\n\n"
+        b"def test_add():\n    assert add(2, 3) == 5\n"
+    )
+    old_limit = sys.getrecursionlimit()
+    saw_hit = False
+    saw_engine_error = False
+    try:
+        sys.setrecursionlimit(depth + 130)
+        for terms in range(20, 420, 4):
+            expr = " + ".join(["1"] * terms)
+            after_test = (
+                f"from calc import add\nDEEP = {expr}\n\n\n"
+                "def test_add():\n    assert add(2, 3) == 5\n"
+            ).encode()
+            sources = {
+                "src/calc.py": b"def add(a, b):\n    return a + b\n",
+                "stub/calc.py": b"def add(a, b):\n    return 5\n",
+                "pytest.ini": b"[pytest]\npythonpath = stub src\n",
+                "tests/test_calc.py": after_test,
+            }
+            changes = [
+                FileChange("stub/calc.py", "added", None, sources["stub/calc.py"]),
+                FileChange(
+                    "pytest.ini",
+                    "modified",
+                    b"[pytest]\npythonpath = src\n",
+                    sources["pytest.ini"],
+                ),
+                FileChange("tests/test_calc.py", "modified", before_test, after_test),
+            ]
+            try:
+                hits = find_runtime_subject_shadows(
+                    changes,
+                    Config(),
+                    head_path_lister=lambda: sorted(sources),
+                    head_batch_reader=lambda paths: {
+                        item: sources.get(item) for item in paths
+                    },
+                    head_searcher=lambda _needles: ["tests/test_calc.py"],
+                )
+            except EngineError:
+                saw_engine_error = True
+                continue
+            assert [(h.before_provider, h.after_provider) for h in hits] == [
+                ("src/calc.py", "stub/calc.py")
+            ]
+            saw_hit = True
+    finally:
+        sys.setrecursionlimit(old_limit)
+
+    assert saw_hit and saw_engine_error
+
+
+def test_deep_fixture_conftest_and_package_init_fail_closed_with_engine_error():
+    import sys
+
+    from checkwash.shadow import _fixture_bindings
+
+    frame = sys._getframe()
+    depth = 0
+    while frame is not None:
+        depth += 1
+        frame = frame.f_back
+
+    deep_sum = " + ".join(["1"] * 450)
+    fixture_payload = (
+        f"import pytest\n@pytest.fixture\ndef f():\n    x = {deep_sum}\n    return x\n"
+    ).encode()
+    deep_path = " / ".join(["Path(__file__).parent", *(["'standins'"] * 220)])
+    conftest_payload = (
+        f"import sys\nfrom pathlib import Path\nsys.path.insert(0, str({deep_path}))\n"
+    ).encode()
+    nested_targets = "[" * 160 + "a" + "]" * 160
+    init_payload = f"{nested_targets} = 1\n".encode()
+
+    old_limit = sys.getrecursionlimit()
+    try:
+        sys.setrecursionlimit(depth + 110)
+        with pytest.raises(EngineError, match=r"runtime-shadow (fixture|import|scope)"):
+            _fixture_bindings(fixture_payload)
+        with pytest.raises(EngineError, match="runtime-shadow conftest"):
+            _sys_path_roots("tests/conftest.py", conftest_payload)
+        with pytest.raises(EngineError, match="runtime-shadow package-init"):
+            _extends_package_path(init_payload)
+    finally:
+        sys.setrecursionlimit(old_limit)
+
+
+def test_syntax_error_and_invalid_escape_in_shadow_parsers_stay_clean():
+    import warnings
+
+    from checkwash.shadow import _fixture_bindings, _test_fixture_requests
+
+    for invalid in (b"def broken(:\n    pass\n", b"x = 1\x00\n"):
+        assert _fixture_bindings(invalid) == {}
+        assert _test_fixture_requests(invalid) == set()
+        assert _active_test_imports(invalid) == set()
+        assert _sys_path_roots("tests/conftest.py", invalid) == ()
+        assert _extends_package_path(invalid) is False
+
+    escaped = (
+        b'PATTERN = "\\d+"\n'
+        b"from app.normalize import normalize\n\n"
+        b"def test_ok():\n    assert normalize('1') == '1'\n"
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert "app.normalize" in _active_test_imports(escaped)
+        assert _fixture_bindings(escaped) == {}
+        assert _sys_path_roots("tests/conftest.py", escaped) == ()
+        assert _extends_package_path(escaped) is False
+        assert _source_key(escaped) is not None
+    assert [w for w in caught if issubclass(w.category, (SyntaxWarning, DeprecationWarning))] == []

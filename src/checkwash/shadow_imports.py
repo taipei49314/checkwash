@@ -6,7 +6,7 @@ import ast
 from types import MappingProxyType
 from typing import Callable, Iterable, Mapping, Sequence
 
-from checkwash.change import FileChange
+from checkwash.change import EngineError, FileChange
 from checkwash.frontends.python.frontend import _static_truth, parse_python
 from checkwash.shadow_controls import _source_package
 from checkwash.shadow_runners import _scope_applies
@@ -15,6 +15,7 @@ from checkwash.shadow_models import (
     _decode,
     _dotted,
     _live_shadow_attr,
+    _parse_ast,
 )
 from checkwash.shadow_providers import (
     _provider_execution_key,
@@ -156,7 +157,12 @@ def _import_targets(
             if isinstance(current.ctx, ast.Load):
                 loads.setdefault(current.id, []).append(position(current))
 
-    Visitor(node).visit(node)
+    try:
+        Visitor(node).visit(node)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow import analysis exceeded recursion or memory limit"
+        ) from exc
 
     def reaches_use(local: str, imported_at: Position) -> bool:
         later_writes = [
@@ -232,7 +238,12 @@ def _scope_global_loads(scope: ast.AST) -> set[str]:
                 self.locals.add(current.id)
 
     names = Names()
-    names.visit(scope)
+    try:
+        names.visit(scope)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow scope analysis exceeded recursion or memory limit"
+        ) from exc
     return names.loads - (names.locals - names.globals)
 
 
@@ -256,9 +267,13 @@ def _fixture_bindings(data: bytes | None, *, package: str = "") -> dict[str, _Fi
     if not data:
         return {}
     try:
-        tree = ast.parse(_decode(data))
+        tree = _parse_ast(_decode(data))
     except (SyntaxError, ValueError):
         return {}
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow fixture parse exceeded recursion or memory limit"
+        ) from exc
     module = ast.Module(body=list(tree.body), type_ignores=[])
     out: dict[str, _FixtureBinding] = {}
     for node in tree.body:
@@ -411,13 +426,24 @@ def _test_fixture_requests(data: bytes | None) -> set[str]:
     if not data:
         return set()
     try:
-        tree = ast.parse(_decode(data))
+        tree = _parse_ast(_decode(data))
     except (SyntaxError, ValueError):
         return set()
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow test parse exceeded recursion or memory limit"
+        ) from exc
     parser = _live_shadow_attr("parse_python", parse_python)
-    parsed = parser(data, collect_tests=True)
+    try:
+        parsed = parser(data, collect_tests=True)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow test parse exceeded recursion or memory limit"
+        ) from exc
     if not parsed.parse_ok:
-        return set()
+        raise EngineError(
+            "runtime-shadow test parse exceeded recursion or memory limit"
+        )
     aliases = _pytest_mark_aliases(tree)
     functions: dict[str, tuple[ast.AST, tuple[ast.ClassDef, ...]]] = {}
 
@@ -433,7 +459,12 @@ def _test_fixture_requests(data: bytes | None) -> set[str]:
             elif isinstance(child, ast.ClassDef):
                 index(child, f"{prefix}{child.name}.", (*classes, child))
 
-    index(tree)
+    try:
+        index(tree)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow test analysis exceeded recursion or memory limit"
+        ) from exc
     requested: set[str] = set()
     for unit in parsed.units:
         indexed = functions.get(unit.qualname.split("#", 1)[0])
@@ -514,13 +545,24 @@ def _active_test_imports(
     if not data:
         return set()
     try:
-        tree = ast.parse(_decode(data))
+        tree = _parse_ast(_decode(data))
     except (SyntaxError, ValueError):
         return set()
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow test parse exceeded recursion or memory limit"
+        ) from exc
     parser = _live_shadow_attr("parse_python", parse_python)
-    parsed = parser(data, collect_tests=True)
+    try:
+        parsed = parser(data, collect_tests=True)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow test parse exceeded recursion or memory limit"
+        ) from exc
     if not parsed.parse_ok:
-        return set()
+        raise EngineError(
+            "runtime-shadow test parse exceeded recursion or memory limit"
+        )
 
     functions: dict[str, ast.AST] = {}
 
@@ -532,7 +574,12 @@ def _active_test_imports(
             elif isinstance(child, ast.ClassDef):
                 index(child, f"{prefix}{child.name}.")
 
-    index(tree)
+    try:
+        index(tree)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow test analysis exceeded recursion or memory limit"
+        ) from exc
     top_level = {
         stmt.name: stmt
         for stmt in tree.body
