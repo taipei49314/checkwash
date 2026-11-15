@@ -232,15 +232,19 @@ def _stream_prefixes(repo, objects):
 
 
 class GitSnapshot:
-    def __init__(self, repo, revision, side=None):
+    def __init__(self, repo, revision, side=None, *, resolved=None):
         self.repo = repo
         self.revision = revision
         # The diff side this tree is ("base" or "head"), named in a size
         # refusal; a snapshot no caller labelled names its revision (#415).
         self.side = side
-        self._resolved = None
+        if resolved is not None and (not isinstance(resolved, str) or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", resolved)):
+            raise EngineError("strict snapshot returned an invalid resolved commit")
+        self._resolved = resolved
         self._tree_entries = None
+        self._trees = None
         self._opaque = None
+        self._listed_paths = None
         self._owners = {}
 
     def list_paths(self):
@@ -254,10 +258,11 @@ class GitSnapshot:
         whose content is unknown (`split_inventory`, #335).
         """
         if self._tree_entries is None:
-            raw = _run(self.repo, ["ls-tree", "-r", "-l", "-z", self._rev()])
+            raw = _run(self.repo, ["ls-tree", "-r", "-t", "-l", "-z", self._rev()])
             if len(raw) > 64_000_000 or (raw and not raw.endswith(b"\0")):
                 raise EngineError("strict snapshot inventory returned incomplete records")
             entries = {}
+            trees = set()
             opaque = set()
             for record in raw[:-1].split(b"\0") if raw else []:
                 metadata, separator, raw_path = record.partition(b"\t")
@@ -273,8 +278,15 @@ class GitSnapshot:
                     raise EngineError("strict snapshot inventory has an undecodable path") from exc
                 if not path or any(c in path for c in "\r\n\0"):
                     raise EngineError("strict snapshot inventory returned an unsafe path")
-                if path in entries or path in opaque:
+                if path in entries or path in opaque or path in trees:
                     raise EngineError("strict snapshot inventory returned a duplicate path")
+                if kind == b"tree":
+                    if mode != b"040000" or size != b"-":
+                        raise EngineError("strict snapshot inventory returned an invalid tree")
+                    if len(trees) >= MAX_INVENTORY_PATHS:
+                        raise EngineError("strict snapshot inventory exceeds the path limit")
+                    trees.add(path)
+                    continue
                 if len(entries) + len(opaque) >= MAX_INVENTORY_PATHS:
                     raise EngineError("strict snapshot inventory exceeds the path limit")
                 if kind == b"commit":
@@ -288,8 +300,12 @@ class GitSnapshot:
                 if len(entries) + len(opaque) > MAX_INVENTORY_PATHS:
                     raise EngineError("strict snapshot inventory exceeds the path limit")
             self._tree_entries = entries
+            self._trees = frozenset(trees)
             self._opaque = tuple(sorted(opaque))
-        return sorted([*self._tree_entries, *(directory + "/" for directory in self._opaque)])
+            self._listed_paths = tuple(sorted([*self._tree_entries, *(directory + "/" for directory in self._opaque)]))
+        if self._listed_paths is None:
+            self._listed_paths = tuple(sorted([*self._tree_entries, *(directory + "/" for directory in self._opaque)]))
+        return list(self._listed_paths)
 
     def _side(self):
         return self.side or str(self.revision)
@@ -380,7 +396,7 @@ class GitSnapshot:
         Generic read/read_many and WorkingTreeSnapshot never call this API.
         Each logical alias pays for its link plus effective returned bytes.
         """
-        inventory = self.list_paths()
+        inventory = self._listed_paths if self._listed_paths is not None else self.list_paths()
 
         def directory(path):
             if not path:
@@ -547,6 +563,8 @@ class GitSnapshot:
         """
         if any(c in path for c in "\r\n\0"):
             raise EngineError("strict snapshot path cannot be represented in the batch protocol")
+        if self._tree_entries is not None and self.definitely_lacks(path):
+            return None
         spec = f"{self._rev()}:{path}".encode("utf-8")
         checked = _run(self.repo, ["cat-file", "--batch-check"], data=spec + b"\n")
         if not checked.endswith(b"\n") or checked.count(b"\n") != 1:
@@ -587,6 +605,23 @@ class GitSnapshot:
             raise EngineError("strict snapshot blob is incomplete or exceeds the source limit")
         _verify_blob(parts[0], body[:-1])
         return body[:-1]
+
+    def definitely_lacks(self, path):
+        """True when the cached tree inventory proves `read(path)` is None."""
+        if not path or any(c in path for c in "\\\r\n\0"):
+            return False
+        if path.startswith("/") or path.endswith("/") or any(part in {"", ".", ".."} for part in path.split("/")):
+            return False
+        inventory = self._listed_paths if self._listed_paths is not None else self.list_paths()
+        if path in self._tree_entries or path in self._opaque or (self._trees is not None and path in self._trees):
+            return False
+        if opaque_owner(path, self._opaque) is not None:
+            return False
+        prefix = path + "/"
+        index = bisect_left(inventory, prefix)
+        if index < len(inventory) and inventory[index].startswith(prefix):
+            return False
+        return True
 
     def alias(self, path):
         """The entry a path this tree lacks can stand for on disk, or None (#500).

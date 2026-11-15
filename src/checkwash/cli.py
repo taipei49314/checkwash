@@ -34,13 +34,17 @@ import dataclasses
 import datetime
 import os
 import posixpath
+import re
 import sys
 from dataclasses import dataclass
 
+import checkwash.config as _config_mod
+import checkwash.gitio as _gitio_pkg
+import checkwash.gitio.git as _git_mod
 from checkwash import __version__
 from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
 from checkwash.change import EngineError, SourceOverLimit, UnreadSide
-from checkwash.config import CONFIG_DIRS, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
+from checkwash.config import CONFIG_DIRS, DEFAULT_CONFIG_DIR, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, contract_diagnostics, load_contract
 from checkwash.deps import MANIFESTS, SKIPPABLE_OVERSIZED, parse_manifest, project_names
 from checkwash.policy_shadow import PolicyBase
@@ -52,12 +56,15 @@ from checkwash.gitio import (
     GitSourceOverLimit,
     RepositoryRoot,
     base_alias,
+    base_alias_from_snapshot,
     grep_head_paths,
     list_range_changes,
     list_session_changes,
     list_worktree_changes,
     merge_base,
     read_base_file,
+    read_base_file_from_snapshot,
+    read_base_manifests_from_snapshot,
     resolve_repository_root,
     rev_parse,
     resolve_commit,
@@ -82,6 +89,95 @@ from checkwash.session import (
     session_base,
 )
 from checkwash.sweep import sweep
+
+_DEFAULT_READ_BASE_CONFIG_FILE = read_base_config_file
+_DEFAULT_READ_BASE_FILE = read_base_file
+_DEFAULT_BASE_ALIAS = base_alias
+_DEFAULT_LIST_RANGE_CHANGES = list_range_changes
+_HEX_OID_RE = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
+
+
+def _resolved_oid(rev: str | None) -> str | None:
+    return rev if isinstance(rev, str) and _HEX_OID_RE.fullmatch(rev) else None
+
+
+def _can_use_base_snapshot_file() -> bool:
+    return (
+        read_base_file is _DEFAULT_READ_BASE_FILE
+        and _git_mod.read_base_file is _DEFAULT_READ_BASE_FILE
+        and _gitio_pkg.read_base_file is _DEFAULT_READ_BASE_FILE
+    )
+
+
+def _can_use_base_snapshot_policy() -> bool:
+    return (
+        read_base_config_file is _DEFAULT_READ_BASE_CONFIG_FILE
+        and _config_mod.read_base_config_file is _DEFAULT_READ_BASE_CONFIG_FILE
+        and _can_use_base_snapshot_file()
+    )
+
+
+def _can_use_base_snapshot_alias() -> bool:
+    return (
+        base_alias is _DEFAULT_BASE_ALIAS
+        and _git_mod.base_alias is _DEFAULT_BASE_ALIAS
+        and _gitio_pkg.base_alias is _DEFAULT_BASE_ALIAS
+    )
+
+
+def _can_use_range_snapshots() -> bool:
+    return (
+        list_range_changes is _DEFAULT_LIST_RANGE_CHANGES
+        and _git_mod.list_range_changes is _DEFAULT_LIST_RANGE_CHANGES
+        and _gitio_pkg.list_range_changes is _DEFAULT_LIST_RANGE_CHANGES
+    )
+
+
+def _call_read_base_file(repo: str, rev: str, path: str) -> bytes | None:
+    if read_base_file is not _DEFAULT_READ_BASE_FILE:
+        return read_base_file(repo, rev, path)
+    if _gitio_pkg.read_base_file is not _DEFAULT_READ_BASE_FILE:
+        return _gitio_pkg.read_base_file(repo, rev, path)
+    return _git_mod.read_base_file(repo, rev, path)
+
+
+def _call_base_alias(repo: str, rev: str, path: str) -> TreeAlias | None:
+    if base_alias is not _DEFAULT_BASE_ALIAS:
+        return base_alias(repo, rev, path)
+    if _gitio_pkg.base_alias is not _DEFAULT_BASE_ALIAS:
+        return _gitio_pkg.base_alias(repo, rev, path)
+    return _git_mod.base_alias(repo, rev, path)
+
+
+def _call_list_range_changes(repo: str, base: str, head: str):
+    if list_range_changes is not _DEFAULT_LIST_RANGE_CHANGES:
+        return list_range_changes(repo, base, head)
+    if _gitio_pkg.list_range_changes is not _DEFAULT_LIST_RANGE_CHANGES:
+        return _gitio_pkg.list_range_changes(repo, base, head)
+    return _git_mod.list_range_changes(repo, base, head)
+
+
+def _read_policy_file(
+    repo: str,
+    side: str,
+    name: str,
+    base_snapshot: GitSnapshot | None,
+) -> tuple[str, bytes | None]:
+    if base_snapshot is not None and _can_use_base_snapshot_policy():
+        for d in CONFIG_DIRS:
+            data = read_base_file_from_snapshot(base_snapshot, f"{d}/{name}")
+            if data is not None:
+                return f"{d}/{name}", data
+        return f"{DEFAULT_CONFIG_DIR}/{name}", None
+    if read_base_config_file is not _DEFAULT_READ_BASE_CONFIG_FILE:
+        return read_base_config_file(repo, side, name)
+    if _config_mod.read_base_config_file is not _DEFAULT_READ_BASE_CONFIG_FILE:
+        return _config_mod.read_base_config_file(repo, side, name)
+    for d in CONFIG_DIRS:
+        data = _call_read_base_file(repo, side, f"{d}/{name}")
+        if data is not None:
+            return f"{d}/{name}", data
+    return f"{DEFAULT_CONFIG_DIR}/{name}", None
 
 
 def _today() -> datetime.date:
@@ -219,7 +315,7 @@ def _task_path_context(args, mapped) -> str:
 
 def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label: str, head_label: str,
              head_reader, head_searcher, root_snapshot, pytest_configs, quiet: bool = False,
-             oracle_freeze: bool = False) -> _Run | int:
+             oracle_freeze: bool = False, base_snapshot: GitSnapshot | None = None) -> _Run | int:
     """One analysis of `changes` with policy read from `config_side`.
 
     `quiet` leaves stderr to an earlier run with the same `config_side`, so a
@@ -229,16 +325,18 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
     task contract says: the PreToolUse ask judges a weakening as such (D-189).
     """
     repo = args.repo
+    if base_snapshot is None and (_can_use_base_snapshot_policy() or _can_use_base_snapshot_file()):
+        base_snapshot = GitSnapshot(repo, config_side, side="base", resolved=_resolved_oid(config_side))
 
     def advise(text: str) -> None:
         if not quiet:
             write_text(text, sys.stderr)
 
-    config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
+    config_path, config_data = _read_policy_file(repo, config_side, "config.toml", base_snapshot)
     config, config_error, config_warnings = load_config(config_data, path=config_path)
     if args.fail_on:
         config.fail_on = args.fail_on
-    allow_path, allow_data = read_base_config_file(repo, config_side, "allow.toml")
+    allow_path, allow_data = _read_policy_file(repo, config_side, "allow.toml", base_snapshot)
     allow_entries, allow_error = load_allowlist(allow_data, path=allow_path)
     # Unsupported exemptions are not TOML parse errors. Keep machine stdout
     # intact and report the ignored base-side keys on stderr in every format.
@@ -284,7 +382,10 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
             advise(_task_path_context(args, None))
             raise
         try:
-            data = read_base_file(repo, config_side, rel)
+            if base_snapshot is not None and _can_use_base_snapshot_file():
+                data = read_base_file_from_snapshot(base_snapshot, rel)
+            else:
+                data = _call_read_base_file(repo, config_side, rel)
         except (GitError, SourceOverLimit):
             advise(_task_path_context(args, rel))
             raise
@@ -319,7 +420,10 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
             # base contract and opens the head's. Such a path is an engine
             # error naming the base entry (#500); the fallback stays for a
             # task file the base really lacks, with one stderr line.
-            alias = base_alias(repo, config_side, rel)
+            if base_snapshot is not None and _can_use_base_snapshot_alias():
+                alias = base_alias_from_snapshot(base_snapshot, rel)
+            else:
+                alias = _call_base_alias(repo, config_side, rel)
             if alias is not None:
                 if quiet:
                     return 2
@@ -344,22 +448,37 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
     # would deny the first party.
     self_modules: set[str] = set()
     found_manifest = False
-    for manifest in MANIFESTS:
-        try:
-            data = read_base_file(repo, config_side, manifest)
-        except GitSourceOverLimit as exc:
-            # A root lockfile is read on every run, touched or not. Over the
-            # limit, it is skipped as if absent, with a note (#415).
-            if manifest not in SKIPPABLE_OVERSIZED:
-                raise
-            advise(f"checkwash: skipped {exc.unread.described()}: over the source byte limit; "
-                   "the run continues without its declared modules\n")
-            continue
-        if data is None:
-            continue
-        found_manifest = True
-        declared |= parse_manifest(manifest, data)
-        self_modules |= project_names(manifest, data)
+    if base_snapshot is not None and _can_use_base_snapshot_file():
+        manifest_items, manifest_error = read_base_manifests_from_snapshot(
+            base_snapshot, MANIFESTS, SKIPPABLE_OVERSIZED
+        )
+        for manifest, item in manifest_items:
+            if isinstance(item, UnreadSide):
+                advise(f"checkwash: skipped {item.described()}: over the source byte limit; "
+                       "the run continues without its declared modules\n")
+                continue
+            found_manifest = True
+            declared |= parse_manifest(manifest, item)
+            self_modules |= project_names(manifest, item)
+        if manifest_error is not None:
+            raise manifest_error
+    else:
+        for manifest in MANIFESTS:
+            try:
+                data = _call_read_base_file(repo, config_side, manifest)
+            except GitSourceOverLimit as exc:
+                # A root lockfile is read on every run, touched or not. Over the
+                # limit, it is skipped as if absent, with a note (#415).
+                if manifest not in SKIPPABLE_OVERSIZED:
+                    raise
+                advise(f"checkwash: skipped {exc.unread.described()}: over the source byte limit; "
+                       "the run continues without its declared modules\n")
+                continue
+            if data is None:
+                continue
+            found_manifest = True
+            declared |= parse_manifest(manifest, data)
+            self_modules |= project_names(manifest, data)
     if found_manifest:
         known_modules = known_baseline() | declared
 
@@ -411,10 +530,21 @@ def _session_note(args: argparse.Namespace, window: _Window, readers: dict) -> s
     unread = "checkwash: commits made during this session were not analysed. "
     try:
         changes = list_session_changes(args.repo, window.base)
-        before = GitSnapshot(args.repo, window.base, side="base")
-        leg_readers = {**readers, "pytest_configs": PairedPytestConfigs(
-            before, WorktreePytestConfigs(readers["root_snapshot"], before,
-                                          [change for change in changes if not change.links]))}
+        cached_base = readers.get("base_snapshot")
+        before = (
+            cached_base
+            if isinstance(cached_base, GitSnapshot) and cached_base.revision == window.base
+            else GitSnapshot(args.repo, window.base, side="base", resolved=_resolved_oid(window.base))
+        )
+        leg_readers = {
+            **readers,
+            "pytest_configs": PairedPytestConfigs(
+                before,
+                WorktreePytestConfigs(readers["root_snapshot"], before,
+                                      [change for change in changes if not change.links]),
+            ),
+            "base_snapshot": before,
+        }
         leg = _analyse(args, changes, window.base,
                        base_label=rev_parse(args.repo, window.base), head_label="worktree",
                        quiet=True, **leg_readers)
@@ -507,17 +637,25 @@ def _cmd_check(args: argparse.Namespace) -> int:
             write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
             return 2
         base, head = resolve_commit(repo, base), resolve_commit(repo, head)
-        changes = list_range_changes(repo, base, head)
+        base_snapshot = GitSnapshot(repo, base, side="base", resolved=_resolved_oid(base))
+        head_snapshot = GitSnapshot(repo, head, side="head", resolved=_resolved_oid(head))
+        if _can_use_range_snapshots():
+            changes = list_range_changes(
+                repo, base, head,
+                snapshots={head: head_snapshot} if base == head else {base: base_snapshot, head: head_snapshot},
+            )
+        else:
+            changes = _call_list_range_changes(repo, base, head)
         base_label = rev_parse(repo, base)
         head_label = rev_parse(repo, head)
         config_side = base
 
         # D6 resolves skip-condition constants imported from files outside
         # the diff; the head snapshot is where those files live.
-        head_snapshot = GitSnapshot(repo, head, side="head")
-        pytest_configs = PairedPytestConfigs(GitSnapshot(repo, base, side="base"), head_snapshot)
+        pytest_configs = PairedPytestConfigs(base_snapshot, head_snapshot)
         head_reader = head_snapshot.read
         root_snapshot = head_snapshot
+        config_snapshot = base_snapshot
 
         def head_searcher(needles: list[str], _rev: str = head) -> list[str]:
             return grep_head_paths(repo, _rev, needles)
@@ -538,7 +676,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         config_side = base if window is None or window.base is None else window.base
 
         worktree_snapshot = WorkingTreeSnapshot(repo)
-        before = GitSnapshot(repo, base, side="base")
+        before = GitSnapshot(repo, base, side="base", resolved=_resolved_oid(base))
         # A virtual environment's own link has no bytes on either side, and
         # the engine refuses or sets it aside before the config evidence (D-208).
         pytest_configs = PairedPytestConfigs(before, WorktreePytestConfigs(
@@ -546,9 +684,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         head_reader = worktree_snapshot.read
         head_searcher = worktree_snapshot.search
         root_snapshot = worktree_snapshot
+        config_snapshot = before if config_side == base else GitSnapshot(repo, config_side, side="base", resolved=_resolved_oid(config_side))
 
     readers = {"head_reader": head_reader, "head_searcher": head_searcher,
-               "root_snapshot": root_snapshot, "pytest_configs": pytest_configs}
+               "root_snapshot": root_snapshot, "pytest_configs": pytest_configs,
+               "base_snapshot": config_snapshot}
     try:
         run = _analyse(args, changes, config_side, base_label=base_label, head_label=head_label, **readers)
     except SourceOverLimit as exc:
@@ -813,7 +953,12 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
         return {}
     window = _session_window(repo, hook_input)
     config_side = window.head if window.base is None else window.base
-    config_path, config_data = read_base_config_file(repo, config_side, "config.toml")
+    config_snapshot = (
+        GitSnapshot(repo, config_side, side="base", resolved=_resolved_oid(config_side))
+        if _can_use_base_snapshot_policy()
+        else None
+    )
+    config_path, config_data = _read_policy_file(repo, config_side, "config.toml", config_snapshot)
     config = load_config(config_data, path=config_path)[0]
     if not is_judged_test(config, rel):
         return {}
@@ -830,7 +975,11 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
     side = oversized(rel, before, after)
     if side is not None:
         return ask(oversized_reason(side))
-    head = GitSnapshot(repo, window.head, side="base")
+    head = (
+        config_snapshot
+        if config_snapshot is not None and config_side == window.head
+        else GitSnapshot(repo, window.head, side="base", resolved=_resolved_oid(window.head))
+    )
     if before is not None and not parses(before):
         # An unparseable working copy has no units to weaken, so a weakening
         # finished in this edit would pass silently: compare with HEAD's copy.
@@ -845,6 +994,7 @@ def _pre_tool_use(repo: str, hook_input: HookInput | None, state: dict) -> dict:
         "head_reader": proposed.read, "head_searcher": proposed.search, "root_snapshot": proposed,
         "pytest_configs": PairedPytestConfigs(WorktreePytestConfigs(WorkingTreeSnapshot(repo), head, ()),
                                               WorktreePytestConfigs(proposed, head, [change])),
+        "base_snapshot": config_snapshot,
     }
     run = _analyse(args, [change], config_side, base_label="worktree", head_label="proposed",
                    quiet=True, oracle_freeze=True, **readers)
