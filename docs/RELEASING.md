@@ -1129,8 +1129,11 @@ Remote workflows containing product tests remain disabled, with one
 exception: the [hosted release verification](#hosted-release-verification),
 which each release runs once, as two dispatched checkpoints, on
 GitHub-hosted macOS and Linux, under EC POLICY
-`checkwash-release-hosted-verification-20261111`. The existing
-[PJU receipt bridge](pju-receipt-bridge.md) retains its four required PR checks.
+`checkwash-release-hosted-verification-20261111`. Since D-209 (2026-11-13),
+ruleset `22032046` requires the `checkwash` context (GitHub Actions App
+`15368`), published via compact receipts on ordinary PRs, while the
+[PJU receipt bridge](pju-receipt-bridge.md) legacy packet mode and the release
+bridge's `pr` stage continue to publish all four `B.CONTEXTS` checks.
 The [PJU release handoff](pju-release-handoff.md) implements separate PR, main,
 tag, release-event and public-visitor subjects, local execution receipts, deep
 verification and credentialed publication. Its native end-to-end validation is

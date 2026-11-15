@@ -14,7 +14,7 @@ from checkwash.gating import GUARDRAIL_ADDITIVE_PATHS
 from checkwash.guardrail_additive import is_pure_line_addition
 from checkwash.ir.model import DiffGlobals, FileIR, IR, Marker, judged_as_test, normalize_text
 from checkwash.report.context import ReportContext
-from checkwash.unanalysed_tests import unanalysed_test_paths
+from checkwash.unanalysed_test_files import unanalysed_test_paths
 
 if TYPE_CHECKING:
     import types

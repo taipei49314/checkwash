@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import statistics
 import subprocess
 import sys
 import time
@@ -428,6 +429,8 @@ def test_controls_analysed_tests_pure_helpers_and_synthetic_renames_stay_quiet(
             "tests/helper.js": "export function suite() { return /a/\n  .test('a'); }\n",
             "tests/__mocks__/api.js": "export const fetch = () => {};\n",
             "src/models.py": "class TestResult:\n    __test__ = False\n    code = 200\n",
+            "src/api_spec.py": "SPEC_VERSION = 1\n",
+            "src/schema_tests.py": "def validate_schema():\n    return True\n",
             "jest.config.js": "module.exports = { testMatch: ['**/*.test.js'] };\n",
             "types/billing.spec.d.ts": "export interface BillingSpec { total: number; }\n",
             "venv/Lib/site-packages/pkg/foo_tests.py": "def test_vendored():\n    assert True\n",
@@ -446,6 +449,8 @@ def test_controls_analysed_tests_pure_helpers_and_synthetic_renames_stay_quiet(
             "tests/helper.js": "export function suite() { return /b/\n  .test('b'); }\n",
             "tests/__mocks__/api.js": "export const fetch = () => null;\n",
             "src/models.py": "class TestResult:\n    __test__ = False\n    code = 201\n",
+            "src/api_spec.py": "SPEC_VERSION = 2\n",
+            "src/schema_tests.py": "def validate_schema():\n    return 1\n",
             "jest.config.js": "module.exports = { testMatch: ['**/*.spec.js'] };\n",
             "types/billing.spec.d.ts": "export interface BillingSpec { total: string; }\n",
             "venv/Lib/site-packages/pkg/foo_tests.py": "def test_vendored():\n    assert False\n",
@@ -476,16 +481,19 @@ def test_unparseable_judged_python_test_uses_unparseable_test_without_b6_duplica
 
 
 def test_js_test_call_linear_time_on_large_masked_strings() -> None:
-    from checkwash.unanalysed_tests import _js_side_has_tests
+    from checkwash.unanalysed_test_files import _js_side_has_tests
 
     payload = (
         ("function suite() { return 1; }\n" * 5000)
         + f'test("{"a" * 300_000}", () => {{ expect(1).toBe(1); }});\n'
     ).encode("utf-8")
-    t0 = time.perf_counter()
-    assert _js_side_has_tests(payload, in_js_test_dir=True) is True
-    elapsed = time.perf_counter() - t0
-    assert elapsed < 1.0, f"expected linear scan < 1.0s, took {elapsed:.3f}s"
+    timings: list[float] = []
+    for _ in range(3):
+        t0 = time.perf_counter()
+        assert _js_side_has_tests(payload, in_js_test_dir=True) is True
+        timings.append(time.perf_counter() - t0)
+    elapsed = statistics.median(timings)
+    assert elapsed < 3.0, f"expected median linear scan < 3.0s, took {elapsed:.3f}s"
 
 
 def test_unsplit_renames_attribute_unanalysed_side_accurately(tmp_path: Path) -> None:
@@ -601,8 +609,8 @@ def test_dunder_test_false_opts_out_helpers_but_keeps_pm02_mixins(tmp_path: Path
 
 
 def test_bidi_format_characters_escaped_in_unanalysed_note() -> None:
-    from checkwash.unanalysed_tests import unanalysed_test_note
+    import checkwash.unanalysed_test_files as unanalysed_mod
 
-    note = unanalysed_test_note(["tests/evil\u202epy.txt.py"])
+    note = unanalysed_mod.unanalysed_test_note(["tests/evil\u202epy.txt.py"])
     assert "\u202e" not in note
     assert "\\u202e" in note

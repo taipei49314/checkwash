@@ -251,7 +251,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - name: Independently revalidate and publish genuine required checkwash context
+      - name: Revalidate compact receipt digests and publish checkwash check run
         run: >-
           python -I -B trusted/tools/pju_receipt_bridge.py publish-compact
           --trusted-root trusted --source-root candidate-data
@@ -267,7 +267,8 @@ jobs:
           if-no-files-found: warn
 
   # Bootstrap PR release evidence on a reviewed branch, without bypassing the
-  # existing four required contexts or enabling old hosted product tests.
+  # ruleset's required checkwash context (plus the release bridge's four PR
+  # contexts) or enabling old hosted product tests.
   capture-pju-release:
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'release-capture'
     runs-on: ubuntu-latest

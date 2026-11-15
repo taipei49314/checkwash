@@ -16,7 +16,7 @@ from checkwash.findings import Finding, is_content_bound_fingerprint
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 from checkwash.report.unread import sorted_unread
-from checkwash.unanalysed_tests import unanalysed_test_note
+from checkwash.unanalysed_test_files import unanalysed_test_note
 
 _SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 _INFORMATION_URI = "https://github.com/taipei49314/checkwash"

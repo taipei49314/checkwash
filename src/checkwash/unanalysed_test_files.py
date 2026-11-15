@@ -301,13 +301,13 @@ def _is_python_test_named(candidate: str, *, role: str) -> bool:
     lname = name.lower()
     if not lname.endswith(".py") or lname in _PY_NON_TEST_BASENAMES:
         return False
-    if lname == "tests.py" or lname.endswith(("_tests.py", "_test.py", "_spec.py", "_specs.py")):
-        return True
-    if lname.startswith("test_"):
+    if lname.startswith("test_") or lname.endswith("_test.py"):
         return True
     in_test_dir = role == "test" or any(d.lower() in _TEST_DIRS for d in dirs)
     if not in_test_dir:
         return False
+    if lname == "tests.py" or lname.endswith(("_tests.py", "_spec.py", "_specs.py")):
+        return True
     if lname.startswith("test") and lname not in _PY_HELPER_TEST_PREFIX_EXCLUSIONS:
         return True
     return lname.startswith(("spec_", "check_")) or lname.endswith(("_check.py", "_checks.py"))
@@ -422,7 +422,12 @@ def _is_side_unanalysed_test(
     if lower_name.endswith(".py"):
         if _is_python_test_named(side_path, role=role):
             return True
-        in_test_scope = role == "test" or any(d.lower() in _TEST_DIRS for d in segments[:-1])
+        in_test_scope = (
+            role == "test"
+            or any(d.lower() in _TEST_DIRS for d in segments[:-1])
+            or lower_name == "tests.py"
+            or lower_name.endswith(("_tests.py", "_spec.py", "_specs.py"))
+        )
         return any(_python_side_has_tests(side, in_test_scope=in_test_scope) for side in sides)
 
     if lower_name.endswith((".d.ts", ".d.mts", ".d.cts")):
