@@ -233,7 +233,7 @@ def test_original_deep_pair_has_every_literal_operator_and_source_position(
     if first["state"] == "RAISED":
         assert first["exception_class"] == "RecursionError", first
 
-    tokens = [token for token in tokenize.generate_tokens(io.StringIO(source).readline)
+    tokens = [token._replace(line="") for token in tokenize.generate_tokens(io.StringIO(source).readline)
               if token.type == tokenize.STRING and token.start[0] == 2]
     assert len(tokens) == 9899, first
     assignment = tree.body[1]
@@ -275,3 +275,81 @@ def test_original_deep_pair_has_every_literal_operator_and_source_position(
     assert sum(1 for _node in ast.walk(tree)) == expected_nodes, first
     assert ast.dump(tree.body[0], include_attributes=True) == ast.dump(shallow_tree.body[0], include_attributes=True)
     assert ast.dump(tree.body[2], include_attributes=True) == ast.dump(shallow_tree.body[2], include_attributes=True)
+
+
+def test_forced_fallback_on_deep_pair_recovers_in_bounded_memory(monkeypatch):
+    import time
+    import tracemalloc
+
+    source = pair(DEEP)[0].decode("utf-8-sig")
+    _failure, calls = force_first_recursion(monkeypatch)
+    tracemalloc.start()
+    try:
+        started = time.perf_counter()
+        tree = syntax.parse_module(source)
+        elapsed = time.perf_counter() - started
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert calls[0] == source and len(calls) > 1
+    assert elapsed < 5.0, f"deep fallback took {elapsed:.2f}s"
+    assert peak < 32 * 1024 * 1024, f"deep fallback peak allocation {peak} bytes"
+    assignment = tree.body[1]
+    assert isinstance(assignment, ast.Assign)
+    leaves = [node for node in ast.walk(assignment.value) if isinstance(node, ast.Constant)]
+    assert len(leaves) == 9899
+
+
+@pytest.mark.parametrize("builder", [
+    lambda: "x = " + "+".join(["1"] * 100_000) + "\n",
+    lambda: "x = " + "+".join(["1"] * 500_000) + "\n",
+    lambda: "x = (" + " + ".join(["'ab'"] * 5_000) + ")\n",
+    lambda: "y = (\n" + "+".join(["1"] * 100_000) + "\n)\n",
+])
+def test_long_nonchain_lines_reject_in_bounded_time_and_memory(monkeypatch, builder):
+    import time
+    import tracemalloc
+
+    source = builder()
+    failure, _calls = force_first_recursion(monkeypatch)
+    tracemalloc.start()
+    try:
+        started = time.perf_counter()
+        with pytest.raises(RecursionError) as raised:
+            syntax.parse_module(source)
+        elapsed = time.perf_counter() - started
+        _current, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert raised.value is failure
+    assert elapsed < 2.0, f"long non-chain rejection took {elapsed:.2f}s"
+    assert peak < 16 * 1024 * 1024, f"long non-chain peak allocation {peak} bytes"
+
+
+@pytest.mark.parametrize("template,recovers", [
+    ("s = '''\n{chain}\n'''\n", False),
+    ("y = (\n{chain}\n)\n", False),
+    ("y = 'lead' + \\\n{chain}\n", False),
+    ("def f():\n    {chain}\n", False),
+    ("{chain} # trailing comment\n", False),
+    ("if True:\n    pass\n{chain}\n", True),
+    ("K = u'雪' + " + " + ".join(["'ab'"] * 600) + "\r\n", True),
+])
+def test_long_chain_context_boundaries(monkeypatch, template, recovers):
+    long_chain = "x = " + " + ".join(["'abcd'"] * 600)
+    source = template.format(chain=long_chain)
+    assert max(len(line) for line in source.splitlines(keepends=True)) > 2048
+    failure, _calls = force_first_recursion(monkeypatch)
+    if not recovers:
+        with pytest.raises(RecursionError) as raised:
+            syntax.parse_module(source)
+        assert raised.value is failure
+    else:
+        tree = syntax.parse_module(source)
+        assigns = [node for node in tree.body if isinstance(node, ast.Assign)]
+        assert len(assigns) == 1
+        leaves = [node for node in ast.walk(assigns[0].value) if isinstance(node, ast.Constant)]
+        assert len(leaves) >= 600
+
