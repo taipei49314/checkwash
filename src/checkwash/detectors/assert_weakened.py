@@ -13,7 +13,13 @@ a known oracle whose replacement passes its operands through `*` or `**`
 
 from __future__ import annotations
 
-from checkwash.findings import Evidence, Finding, assertion_position, make_assertion_fingerprint
+from checkwash.findings import (
+    Evidence,
+    Finding,
+    make_assertion_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
+)
 from checkwash.ir import predicate as P
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import asserted_subject, same_expr
@@ -140,6 +146,7 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
@@ -161,18 +168,18 @@ def detect(ir: IR) -> list[Finding]:
                             rule="ASSERT_WEAKENED",
                             severity="warn",
                             message=(
-                                f"{unit.qualname}: assertion replaced; checkwash cannot verify the "
+                                f"{finding_unit}: assertion replaced; checkwash cannot verify the "
                                 f"replacement is equivalent (operands {b.text.strip()[:60]} -> "
                                 f"{a.text.strip()[:60]}: passed through * or **, which it cannot bind)"
                             ),
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             before=Evidence(text=b.text, span=b.span),
                             after=Evidence(text=a.text, span=a.span),
                             fingerprint=make_assertion_fingerprint(
-                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                "ASSERT_WEAKENED", file.path, finding_unit, fingerprint_text(file.path, b),
                                 before=b.text, after=a.text, kind="operands_unbound",
-                                position=assertion_position(unit.before, b), context=None,
+                                position=unit_assertion_position(file, unit, unit.before, b), context=None,
                             ),
                             # 999, as for an unverifiable predicate or tolerance:
                             # MILD_WEAKENING needs a drop under 30, so it never
@@ -203,17 +210,17 @@ def detect(ir: IR) -> list[Finding]:
                             rule="ASSERT_WEAKENED",
                             severity="warn",
                             message=(
-                                f"{unit.qualname}: assertion replaced; checkwash cannot verify the "
+                                f"{finding_unit}: assertion replaced; checkwash cannot verify the "
                                 f"replacement is equivalent (tolerance {lost} -> a tolerance it cannot read)"
                             ),
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             before=Evidence(text=b.text, span=b.span),
                             after=Evidence(text=a.text, span=a.span),
                             fingerprint=make_assertion_fingerprint(
-                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                "ASSERT_WEAKENED", file.path, finding_unit, fingerprint_text(file.path, b),
                                 before=b.text, after=a.text, kind="tolerance_unreadable",
-                                position=assertion_position(unit.before, b), context={"tolerance": lost},
+                                position=unit_assertion_position(file, unit, unit.before, b), context={"tolerance": lost},
                             ),
                             strength_drop=999,
                             strength_after=a.strength,
@@ -228,15 +235,15 @@ def detect(ir: IR) -> list[Finding]:
                         Finding(
                             rule="ASSERT_WEAKENED",
                             severity="warn",
-                            message=_keyed_message(unit.qualname, relation, b, a),
+                            message=_keyed_message(finding_unit, relation, b, a),
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             before=Evidence(text=b.text, span=b.span),
                             after=Evidence(text=a.text, span=a.span),
                             fingerprint=make_assertion_fingerprint(
-                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                "ASSERT_WEAKENED", file.path, finding_unit, fingerprint_text(file.path, b),
                                 before=b.text, after=a.text, kind=f"predicate:{relation}",
-                                position=assertion_position(unit.before, b), context=None,
+                                position=unit_assertion_position(file, unit, unit.before, b), context=None,
                             ),
                             # Only a proven widening is graded by the
                             # lattice, so MILD_WEAKENING can hold a widening
@@ -277,13 +284,13 @@ def detect(ir: IR) -> list[Finding]:
                     subject_changed = subject_changed or _checks_another_subject(file.path, b, a)
                     if subject_changed:
                         message = (
-                            f"{unit.qualname}: assertion replaced — subject and polarity "
+                            f"{finding_unit}: assertion replaced — subject and polarity "
                             f"both changed ({b.text.strip()[:60]} -> {a.text.strip()[:60]}); "
                             "checkwash cannot verify the replacement is equivalent"
                         )
                     elif b.form == a.form and not keys_differ:
                         message = (
-                            f"{unit.qualname}: assertion polarity inverted "
+                            f"{finding_unit}: assertion polarity inverted "
                             f"({'positive' if b.positive else 'negative'} -> "
                             f"{'positive' if a.positive else 'negative'}) — "
                             "the test now proves the opposite"
@@ -296,7 +303,7 @@ def detect(ir: IR) -> list[Finding]:
                         # claim SPEC §4 forbids (audit 2026-08-19). It still
                         # blocks — the drop is graded as an inversion below.
                         message = (
-                            f"{unit.qualname}: assertion form and polarity both changed "
+                            f"{finding_unit}: assertion form and polarity both changed "
                             f"({b.text.strip()[:60]} -> {a.text.strip()[:60]}); "
                             "checkwash cannot verify the replacement is equivalent"
                         )
@@ -306,13 +313,13 @@ def detect(ir: IR) -> list[Finding]:
                             severity="warn",
                             message=message,
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             before=Evidence(text=b.text, span=b.span),
                             after=Evidence(text=a.text, span=a.span),
                             fingerprint=make_assertion_fingerprint(
-                                "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                "ASSERT_WEAKENED", file.path, finding_unit, fingerprint_text(file.path, b),
                                 before=b.text, after=a.text, kind="polarity",
-                                position=assertion_position(unit.before, b), context={"subject_changed": bool(subject_changed)},
+                                position=unit_assertion_position(file, unit, unit.before, b), context={"subject_changed": bool(subject_changed)},
                             ),
                             # A true inversion is never "mild"; a rewrite is
                             # graded normally, and MILD_WEAKENING already
@@ -359,18 +366,18 @@ def detect(ir: IR) -> list[Finding]:
                         rule="ASSERT_WEAKENED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: assertion strength "
+                            f"{finding_unit}: assertion strength "
                             f"{name_of(b.strength)}({b.strength}) -> "
                             f"{name_of(a.strength)}({a.strength})"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "ASSERT_WEAKENED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                            "ASSERT_WEAKENED", file.path, finding_unit, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="strength",
-                            position=assertion_position(unit.before, b), context=None,
+                            position=unit_assertion_position(file, unit, unit.before, b), context=None,
                         ),
                         strength_drop=-pair.strength_change,
                         strength_after=a.strength,

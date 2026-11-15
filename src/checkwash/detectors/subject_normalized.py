@@ -29,10 +29,11 @@ from checkwash.change import EngineError
 from checkwash.findings import (
     Evidence,
     Finding,
-    assertion_position,
     identity_text,
     make_assertion_fingerprint,
     make_fingerprint,
+    unit_assertion_position,
+    unit_finding_name,
 )
 from checkwash.ir.assertion_identity import fingerprint_text
 from checkwash.ir.astutil import argument_wraps, dotted_name, expr_wraps, resolve_through, same_expr
@@ -239,6 +240,7 @@ def detect(ir: IR) -> list[Finding]:
         for unit in file.units:
             if unit.delta is None or unit.before is None or unit.after is None:
                 continue
+            finding_unit = unit_finding_name(unit)
             b_by_id = {a.id: a for a in unit.before.assertions}
             a_by_id = {a.id: a for a in unit.after.assertions}
             for pair in unit.delta.assertion_pairs:
@@ -259,24 +261,24 @@ def detect(ir: IR) -> list[Finding]:
                             rule="SUBJECT_NORMALIZED",
                             severity="warn",
                             message=(
-                                f"{unit.qualname}: the comparison stopped checking {what} "
+                                f"{finding_unit}: the comparison stopped checking {what} "
                                 f"({old_method} -> {new_method})"
                             ),
                             path=file.path,
-                            unit=unit.qualname,
+                            unit=finding_unit,
                             before=Evidence(text=b.text, span=b.span),
                             after=Evidence(text=a.text, span=a.span),
                             fingerprint=make_assertion_fingerprint(
-                                "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                                "SUBJECT_NORMALIZED", file.path, finding_unit, fingerprint_text(file.path, b),
                                 before=b.text, after=a.text,
                                 kind="keys_only" if keys_only else "order_dropped",
-                                position=assertion_position(unit.before, b),
+                                position=unit_assertion_position(file, unit, unit.before, b),
                                 context=[old_method, new_method],
                             ),
                         )
                     )
                     legacy.add(make_fingerprint(
-                        "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                        "SUBJECT_NORMALIZED", file.path, finding_unit, fingerprint_text(file.path, b)
                     ))
                     continue
                 # A weakened pair is ASSERT_WEAKENED's finding, and a rewritten
@@ -320,23 +322,23 @@ def detect(ir: IR) -> list[Finding]:
                         rule="SUBJECT_NORMALIZED",
                         severity="warn",
                         message=(
-                            f"{unit.qualname}: the asserted subject was wrapped "
+                            f"{finding_unit}: the asserted subject was wrapped "
                             f"({before_subject} -> {after_subject}) while the expected value stayed the same"
                         ),
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         before=Evidence(text=b.text, span=b.span),
                         after=Evidence(text=a.text, span=a.span),
                         fingerprint=make_assertion_fingerprint(
-                            "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b),
+                            "SUBJECT_NORMALIZED", file.path, finding_unit, fingerprint_text(file.path, b),
                             before=b.text, after=a.text, kind="normalized",
-                            position=assertion_position(unit.before, b),
+                            position=unit_assertion_position(file, unit, unit.before, b),
                             context=[identity_text(before_subject), identity_text(after_subject)],
                         ),
                     )
                 )
                 legacy.add(make_fingerprint(
-                    "SUBJECT_NORMALIZED", file.path, unit.qualname, fingerprint_text(file.path, b)
+                    "SUBJECT_NORMALIZED", file.path, finding_unit, fingerprint_text(file.path, b)
                 ))
     seen = {(f.path, f.unit, tuple(f.before.span), tuple(f.after.span)) for f in findings}
     # Duplicates are told apart by the legacy identity, as before: the

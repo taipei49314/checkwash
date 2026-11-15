@@ -108,9 +108,13 @@ def extract_raises_oracles(tree):
     return result
 
 
-def retain_raises_units(parsed, text, oracles):
+def retain_raises_units(parsed, text, oracles, source_units=None):
     if not oracles:
         return parsed
+    if source_units is None:
+        from .table_oracles import source_unit_map
+        source_units = source_unit_map(parsed)
+    from .table_oracles import resolve_source_unit
     counts, definitions = Counter(), []
     for oracle in oracles:
         digest = hashlib.sha256(oracle.key.encode()).hexdigest()[:24]
@@ -122,8 +126,14 @@ def retain_raises_units(parsed, text, oracles):
     offsets, units = _Offsets(text), list(parsed.units)
     for unit, oracle in zip(projected.units, oracles):
         span = offsets.span(oracle.owner)
+        source_unit = resolve_source_unit(source_units, span, oracle.owner)
         # The first assertion is the raises context; a second is its message.
         assertions = [replace(assertion, span=offsets.span(source))
                       for assertion, source in zip(unit.side.assertions, oracle.body)]
-        units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=assertions)))
+        units.append(replace(
+            unit,
+            span=span,
+            side=replace(unit.side, span=span, assertions=assertions),
+            source_unit=source_unit,
+        ))
     return replace(parsed, units=units)

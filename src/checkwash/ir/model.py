@@ -354,6 +354,11 @@ class Unit:
     before: UnitSide | None
     after: UnitSide | None
     delta: UnitDelta | None
+    # Optional enclosing Python test's qualified name when `qualname` is a
+    # projected concrete/exception/auxiliary IR unit (`test_concrete_*`,
+    # `test_exception_*`, `test_local_auxiliary_*`, D-210). Empty for ordinary
+    # units; IR_VERSION stays 3.
+    source_unit: str = ""
 
 
 @dataclass(frozen=True)

@@ -49,7 +49,7 @@ from __future__ import annotations
 
 import ast
 
-from checkwash.findings import Evidence, Finding, make_fingerprint
+from checkwash.findings import Evidence, Finding, make_fingerprint, unit_finding_name
 from checkwash.ir.markers import parse_expr
 from checkwash.ir.model import IR, judged_as_test
 from checkwash.pyenv import known_baseline
@@ -127,6 +127,7 @@ def detect(ir: IR) -> list[Finding]:
             # and the overwhelming majority of units install no stand-in at all.
             if not candidates:
                 continue
+            finding_unit = unit_finding_name(unit)
             reached = _reached(unit.after)
             for target, attr in candidates:
                 if attr == "*":
@@ -136,14 +137,14 @@ def detect(ir: IR) -> list[Finding]:
                     if not (owner in reached if owner is not None else reached):
                         continue
                     message = (
-                        f"{unit.qualname}: this test now replaces {target}, a target built at "
+                        f"{finding_unit}: this test now replaces {target}, a target built at "
                         f"runtime that checkwash cannot read, so its own assertions may check the stand-in"
                     )
                 elif attr not in reached:  # condition 3
                     continue
                 else:
                     message = (
-                        f"{unit.qualname}: this test now replaces {target}, which its own "
+                        f"{finding_unit}: this test now replaces {target}, which its own "
                         f"assertions check — the oracle runs against the stand-in"
                     )
                 findings.append(
@@ -152,10 +153,10 @@ def detect(ir: IR) -> list[Finding]:
                         severity="warn",  # gating escalates without a prod change
                         message=message,
                         path=file.path,
-                        unit=unit.qualname,
+                        unit=finding_unit,
                         after=Evidence(text=target, span=(0, 0)),
                         fingerprint=make_fingerprint(
-                            "TEST_PATCHES_SUBJECT", file.path, unit.qualname, target
+                            "TEST_PATCHES_SUBJECT", file.path, finding_unit, target
                         ),
                     )
                 )

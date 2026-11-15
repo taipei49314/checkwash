@@ -229,7 +229,8 @@ def _module(source, after):
 
 def _project(parsed, module):
     from .frontend import parse_python
-    from .table_oracles import _Substitute
+    from .table_oracles import _Substitute, resolve_source_unit, source_unit_map
+    source_units = source_unit_map(parsed)
     definitions, counts = [], Counter()
     for call, _expected, _function, _assertion, body in module[3]:
         digest = hashlib.sha256(stable_dump(call).encode()).hexdigest()[:24]
@@ -245,8 +246,14 @@ def _project(parsed, module):
     units = []
     for unit, case in zip(concrete.units, module[3]):
         span = module[1].span(case[2])
+        source_unit = resolve_source_unit(source_units, span, case[2])
         assertions = [replace(assertion, span=module[1].span(case[3])) for assertion in unit.side.assertions]
-        units.append(replace(unit, span=span, side=replace(unit.side, span=span, assertions=assertions)))
+        units.append(replace(
+            unit,
+            span=span,
+            side=replace(unit.side, span=span, assertions=assertions),
+            source_unit=source_unit,
+        ))
     return replace(parsed, units=units)
 
 
