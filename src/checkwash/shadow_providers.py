@@ -6,7 +6,7 @@ import ast
 import hashlib
 from typing import Callable, Iterable, Mapping, Sequence
 
-from checkwash.change import FileChange
+from checkwash.change import EngineError, FileChange
 from checkwash.ir.astutil import stable_dump
 from checkwash.opaque import opaque_error
 from checkwash.shadow_models import (
@@ -16,6 +16,7 @@ from checkwash.shadow_models import (
     _dotted,
     _join,
     _live_shadow_attr,
+    _parse_ast,
 )
 
 
@@ -98,9 +99,13 @@ def _extends_package_path(data: bytes | None) -> bool:
     if not data:
         return False
     try:
-        tree = ast.parse(_decode(data))
+        tree = _parse_ast(_decode(data))
     except (SyntaxError, ValueError):
         return False
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow package-init parse exceeded recursion or memory limit"
+        ) from exc
     bindings: dict[str, str] = {}
 
     def is_extend_call(node: ast.AST | None) -> bool:
@@ -133,42 +138,47 @@ def _extends_package_path(data: bytes | None) -> bool:
             return assigned_names(target.value)
         return set()
 
-    for stmt in tree.body:
-        if isinstance(stmt, ast.Import):
-            for alias in stmt.names:
-                local = alias.asname or alias.name.split(".", 1)[0]
-                if alias.name == "pkgutil":
-                    bindings[local] = "pkgutil"
-                else:
-                    bindings.pop(local, None)
-            continue
-        if isinstance(stmt, ast.ImportFrom):
-            for alias in stmt.names:
-                if alias.name == "*":
-                    continue
-                local = alias.asname or alias.name
-                if stmt.module == "pkgutil" and alias.name == "extend_path":
-                    bindings[local] = "extend_path"
-                else:
-                    bindings.pop(local, None)
-            continue
-        if isinstance(stmt, (ast.Assign, ast.AnnAssign)):
-            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
-            if any(
-                isinstance(target, ast.Name) and target.id == "__path__"
-                for target in targets
-            ) and is_extend_call(stmt.value):
-                return True
-            for target in targets:
-                for name in assigned_names(target):
-                    bindings.pop(name, None)
-            continue
-        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            bindings.pop(stmt.name, None)
-        elif isinstance(stmt, ast.Delete):
-            for target in stmt.targets:
-                for name in assigned_names(target):
-                    bindings.pop(name, None)
+    try:
+        for stmt in tree.body:
+            if isinstance(stmt, ast.Import):
+                for alias in stmt.names:
+                    local = alias.asname or alias.name.split(".", 1)[0]
+                    if alias.name == "pkgutil":
+                        bindings[local] = "pkgutil"
+                    else:
+                        bindings.pop(local, None)
+                continue
+            if isinstance(stmt, ast.ImportFrom):
+                for alias in stmt.names:
+                    if alias.name == "*":
+                        continue
+                    local = alias.asname or alias.name
+                    if stmt.module == "pkgutil" and alias.name == "extend_path":
+                        bindings[local] = "extend_path"
+                    else:
+                        bindings.pop(local, None)
+                continue
+            if isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+                if any(
+                    isinstance(target, ast.Name) and target.id == "__path__"
+                    for target in targets
+                ) and is_extend_call(stmt.value):
+                    return True
+                for target in targets:
+                    for name in assigned_names(target):
+                        bindings.pop(name, None)
+                continue
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                bindings.pop(stmt.name, None)
+            elif isinstance(stmt, ast.Delete):
+                for target in stmt.targets:
+                    for name in assigned_names(target):
+                        bindings.pop(name, None)
+    except (RecursionError, MemoryError) as exc:
+        raise EngineError(
+            "runtime-shadow package-init analysis exceeded recursion or memory limit"
+        ) from exc
     return False
 
 
@@ -261,7 +271,7 @@ def _source_key(data: bytes | None) -> tuple[str, str] | None:
         # Python's bytes parser honors an encoding cookie. Lossy UTF-8
         # replacement could otherwise equate different executable literals
         # in two valid non-UTF-8 providers.
-        tree = ast.parse(data)
+        tree = _parse_ast(data)
         return "ast", stable_dump(tree)
     except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
         # Attacker-controlled Python can exhaust the recursive AST builder or
