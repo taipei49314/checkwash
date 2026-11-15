@@ -19,7 +19,7 @@ receipts from LAPTOP-01AGNPJU, labelled
 
 | Component | Implemented behavior |
 | --- | --- |
-| `collect_pju_receipts.py` / `pju_receipt_bridge.py` | Existing PR collection and four required contexts remain available |
+| `collect_pju_receipts.py` / `pju_receipt_bridge.py` | Ordinary PR compact receipt (`checkwash` required context since D-209) plus legacy four-context packet mode |
 | `collect_pju_release.py` | One fresh shared-backend collection per real stage, with release-specific work; no synthetic PR ID |
 | `pju_release_bridge.py` | Native capture, deep data verification, distinct checks, exact asset upload/readback and protected PyPI handoff |
 | `quality-candidate-intake.yml` | Adds `release-capture` and `release-receipt` for PR bootstrap on reviewed code; preserves legacy modes |
@@ -45,7 +45,7 @@ fresh artifact installations plus the Git-tag visitor, and exercises public pyz.
 | Stage | Real native subject | Required previous report |
 | --- | --- | --- |
 | `pr` | Owner manual dispatch; live open same-repository PR number/head/base/tree | None; `parents` is `{}` |
-| `main` | Owner manual dispatch; live main commit/tree and first parent | New PR stage report, PR stage check and four required contexts |
+| `main` | Owner manual dispatch; live main commit/tree and first parent | New PR stage report, PR stage check and the release PR's four `B.CONTEXTS` checks (ruleset `22032046` requires `checkwash` since D-209; `validate_parents` still verifies all four on release PRs) |
 | `tag` | Owner manual dispatch; annotated public tag object and the release merge it names: up to v0.11.x its peeled commit, from v0.12.0 its message's `Release-Merge` line, with the tag on the merge's Action commit | Main stage report/check |
 | `release-event` | Real `release: published` event, Release ID/tag/source/run/attempt | Tag stage report/check |
 | `public-visitor` | Owner manual dispatch; exact existing Release/tag/source and public files | Release-event report/check |
@@ -54,8 +54,9 @@ Manual main/tag captures are not push runs. PR base is the live PR base, which
 need not equal the head's first parent. Other stages retain the release commit's
 first parent. Identical source or trees do not make stages interchangeable.
 New PR collection runs its release extras in the same backend, not a duplicate
-suite. Its publisher creates the unchanged four required contexts/App binding
-and `PJU release evidence (pr)`. Other stages create their own
+suite. Its publisher creates all four `B.CONTEXTS` checks with GitHub Actions
+App binding (`15368`, satisfying ruleset `22032046`'s required `checkwash`
+context and `main`-stage parent verification) and `PJU release evidence (pr)`. Other stages create their own
 `PJU release evidence (<stage>)` check only. A legacy four-green PR report alone
 does not prove the new PR visitor/verdict extras.
 

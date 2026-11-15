@@ -107,7 +107,7 @@ def test_shared_code_parses_text_through_one_helper():
     """Outside the frontends, and in the one Python pass the engine runs on every judged
     test file, no `ast.parse` is left but `markers.parse_text`'s own."""
     root = pathlib.Path(checkwash.__file__).parent
-    paths = [root / "engine.py", root / "frontends" / "python" / "subject_replacements.py",
+    paths = [*sorted(root.glob("engine*.py")), root / "frontends" / "python" / "subject_replacements.py",
              *sorted((root / "detectors").glob("*.py")), *sorted((root / "ir").glob("*.py"))]
     offenders = [f"{path.relative_to(root)}:{number}" for path in paths if path.name != "markers.py"
                  for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)

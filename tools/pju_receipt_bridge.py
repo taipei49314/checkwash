@@ -982,7 +982,7 @@ def validate_compact(raw_receipt, expected_sha256, *, repository, pr, base, head
                 source_tree=source_tree, collector_source_sha=collector, host=route["host"], provenance=route["provenance"],
                 checks=list(COMPACT_CONTEXTS), candidate_action_mode=cand_action["mode"],
                 junit=dict(tests=tests, passed=passed, skipped=skipped, passed_subtests=subtests),
-                trust="owner-admitted compact receipt digest; not hardware attestation", other_platforms="NOT_RUN")
+                trust="owner-admitted self-reported compact receipt digest; source/closure digest consistency verified, not hosted re-execution or hardware attestation", other_platforms="NOT_RUN")
 
 
 def publish_compact(api, report, manifest_sha256, run_url):
@@ -993,10 +993,10 @@ def publish_compact(api, report, manifest_sha256, run_url):
     summary = (f"Real local execution: {route['host']}; {route['provenance']}.\n\n"
                f"PR #{pr}; head `{head}`; base `{base}`.\n\n"
                f"Compact receipt SHA256 `{manifest_sha256}` (no evidence branch).\n\n"
-               f"Full pytest suite (`-n {COMPACT_PYTEST_WORKERS}`): {report['junit']}; "
-               f"wheel/sdist/pyz byte-matched to Git source and CLI-checked; "
-               f"Action replay ({report['candidate_action_mode']}) passed. "
-               "Owner-admitted compact digest evidence, not hardware attestation. Other platforms: NOT_RUN.")
+               f"PJU collector self-reports full pytest suite (`-n {COMPACT_PYTEST_WORKERS}`): {report['junit']}, "
+               f"wheel/sdist/pyz byte-identity and CLI `demo` checks, and Action replay ({report['candidate_action_mode']}); "
+               "hosted job verified Git source/contract/closure digest consistency only (no hosted test/build re-execution or hardware attestation). "
+               "Other platforms: NOT_RUN.")
     try:
         require(live_pr(api, repository, pr, head, base) == report["source_tree"], "source tree changed")
         for name in COMPACT_CONTEXTS:

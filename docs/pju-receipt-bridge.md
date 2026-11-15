@@ -24,7 +24,10 @@ one hosted workflow that runs the product is the release-time
 [hosted release verification](RELEASING.md#hosted-release-verification),
 which is not part of this bridge. Repository ruleset `22032046` and
 `action/required-ruleset.json` bind required context `checkwash` to GitHub
-Actions (`integration_id: 15368`).
+Actions (`integration_id: 15368`); because GitHub rulesets bind only by context
+name and App ID rather than by workflow file or `external_id`, another enabled
+GitHub Actions workflow defining a job named `checkwash` would also satisfy the
+ruleset unless blocked by workflow review and `CI_CONFIG` gating.
 
 ## Trust and scope
 
@@ -51,7 +54,7 @@ inside this trust boundary; receipt hashes alone cannot prove where a process ra
 The verifier reads exact Git source bytes and checks the receipt manifest,
 contract inventory, complete case identities, qualification and build receipts,
 artifact hashes, original command exits and JUnit results. Missing, failed,
-malformed or mismatched evidence produces no successful required check. It
+malformed or mismatched evidence produces no successful check from this bridge. It
 rechecks the live open PR head and base before validation and publication.
 Before any GitHub read it refuses a head whose `pyproject.toml` version
 differs from the version in its `release/advertised.toml` (D-194). Such a
@@ -89,24 +92,30 @@ Since D-209 (2026-11-13), ordinary non-release PRs use **`mode=receipt` with
   receipt and its SHA256 are passed to `workflow_dispatch` (adding zero bytes
   and zero `evidence/*` branches to the product repository; historical
   `evidence/*` branches remain untouched).
-- **Independent hosted verification (`verify-compact` / `publish-compact`):**
+- **Hosted digest consistency check (`verify-compact` / `publish-compact`):**
   refuses release heads (`validate_ordinary_head`), checks live open PR
   head/base/tree, recomputes `src_tree`, `source_package_sha256`, contract
   digests, Action YAML/run-block/engine digests and candidate closure digests
   directly from checked-out Git blobs, enforces exact equality between JUnit's
-  testcase count and the documented suite count across `README.md`,
+  self-reported testcase count and the documented suite count across `README.md`,
   `CONTRIBUTING.md` and `docs/launch.md` (`>= 23,065`, also enforced in legacy
   `verify`/`publish`), self-seals `workflow_dispatch` to `refs/heads/main` once
   `verify-pju-compact` is on `main` (and requires `refs/heads/main` in legacy
   `verify`/`publish`), and publishes the required `checkwash` check run (`integration_id:
-  15368`, `external_id = pju-compact:<sha256>:checkwash`). Release PRs still
+  15368`, `external_id = pju-compact:<sha256>:checkwash`). Because compact mode
+  uploads no raw JUnit XML, wheel/sdist/pyz bytes or command stdout/stderr
+  streams, test outcomes, archive byte-identity and exit codes are self-reported
+  by the local PJU collector and trusted on maintainer-authenticated dispatch
+  rather than independently re-executed on the hosted runner. Release PRs still
   use `tools/collect_pju_release.py` and `tools/pju_release_bridge.py` with
   full `3x283` distribution CLI qualification and artifact inventories.
 
-The publisher's job name is not a required check name; skipped workflow jobs
-cannot masquerade as successful product checks. Merge uses the exact verified
+The publisher's job name is not a required check name; skipped jobs in this
+workflow cannot masquerade as successful product checks (though any other
+enabled GitHub Actions workflow with a job literally named `checkwash` shares
+App ID `15368`, so workflow edits require review). Merge uses the exact verified
 head only after the required check is read back with its expected GitHub
-Actions App source (`15368`).
+Actions App source (`15368`) and `pju-compact:<sha256>:checkwash` `external_id`.
 
 The Action result is labelled **PJU local composite replay**, not a GitHub
 runner execution. Python/OS versions absent from the local receipt are

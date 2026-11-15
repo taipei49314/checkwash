@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'src/checkwash/frontends/python/frontend.py'
+      - 'src/checkwash/frontends/python/frontend_*.py'
       - 'src/checkwash/frontends/python/binding_canonical.py'
       - 'tests/test_binding_canonical.py'
       - 'tests/test_reliability_r1.py'

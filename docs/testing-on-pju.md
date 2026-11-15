@@ -67,20 +67,27 @@ the [PJU receipt bridge](pju-receipt-bridge.md) compact-receipt path
 (`mode=receipt` with `compact_receipt`) runs the full local test suite
 (`pytest -n 16`, including the in-process assertion contracts),
 pinned/candidate composite Action replay, and wheel/sdist/pyz byte-identity
-plus isolated wheel/pyz CLI checks on PJU, then verifies a maintainer-admitted
-compact JSON digest via `workflow_dispatch` without creating `evidence/*`
+plus isolated wheel/pyz CLI checks on PJU, then checks a maintainer-admitted
+self-reported compact JSON digest against checked-out Git source/contract/closure
+blobs via `workflow_dispatch` without creating `evidence/*`
 branches in the product repository (historical `evidence/*` branches are
 retained untouched). Release pull requests and
 release stages continue to use the full [release handoff](pju-release-handoff.md)
 (`tools/collect_pju_release.py` and `tools/pju_release_bridge.py`), including
 full `3x283` source/wheel/pyz CLI qualification and artifact inventories. Both
 modes perform hosted data verification only; product execution stays on PJU.
-This is maintainer-backed evidence, not hardware attestation or an unexecuted
-platform's result.
+This is maintainer-backed evidence, not hosted re-execution, hardware
+attestation or an unexecuted platform's result.
 
-Missing, failed or stale evidence produces no successful required check.
+Missing, failed or stale evidence produces no successful check from the bridge.
 The bridge publishes no success for a skipped job, and the ruleset has no
 standing bypass actor (read back 2026-11-10 UTC: `bypass_actors` is empty).
+Note that GitHub repository rulesets match required status checks by context
+name (`checkwash`) and GitHub App ID (`15368`, GitHub Actions) rather than by a
+specific workflow path or `external_id`: any enabled GitHub Actions workflow in
+this repository with a job named `checkwash` would satisfy ruleset `22032046` on
+its own, so workflow files remain human-reviewed and CheckWash's own `CI_CONFIG`
+escalations guard `.github/workflows/**` on PRs.
 One temporary bypass has been used: on 2026-10-24, under Nelson's approval
 (EC T-619), a bypass actor was added through the browser to merge #563,
 whose required `checkwash` check had no successful result because

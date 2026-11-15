@@ -1,6 +1,67 @@
 # STATE — read this first when taking over
 
-Updated: 2026-11-15 (0.13, public-facing `README.md` layering before `v0.13.0`: removes the disabled `ci.yml` status badge, folds deep guardrail-customization, repair-evidence/refactor-provenance, 1-MB size-limit and `A`-vs-`M` release-tag geometry details into collapsible `<details>` disclosures while keeping quickstarts, core limits and every contract/measurement pin intact, and updates the related-project footer link from `checkwash-corpus` / `smallestlie` to `checkwash-prove` (suite count: 23,283); earlier: 0.13, cross-platform compact collector helper test isolation in `test_pju_compact_receipt.py`: `test_collect_compact_binds_admitted_git_and_restores_helpers` resolves `tmp_path` and `git` to real paths, stubs `action_mod.execution_route` and materializes regular `python.exe`, `SystemRoot` and `ProgramFiles` directories under the resolved temporary root so the test no longer depends on the PJU Windows host route, non-symlinked POSIX/macOS `sys.executable`/`git`/`/var` paths, or default Windows `C:\Windows`/`C:\Program Files` directories (suite count: 23,283), merged as #614 (`eece00f3`); earlier: 0.13, CPython 3.12+ single-line `tokenize` memory DoS and OOM fix in `syntax.py` and `test_string_chain_syntax.py`: `syntax._chains` avoids retaining `TokenInfo.line` copies and pre-scans or condenses physical lines over `2,048` characters so PEP 701's `_tokenize.TokenizerIter` does not allocate `O(K * L)` full-line copies (`40 GB`–`1 TB` on `test_perf.py::test_pathological_file_does_not_hang` and `10`–`20 GB` on `DEEP` string chains), while `test_string_chain_syntax.py` drops retained `TokenInfo.line` references and adds `12` bounded-memory/time and lexical-boundary regressions (suite count: 23,283), merged as #613 (`66c4a9b1`); earlier: 0.13, protected threat-model, decision-log and gate-README text corrections (L1, #612, approved by Nelson at 2026-11-15T10:44:37Z and 10:47:09Z): updates `THREATMODEL.md` item 2 (`hook install` `.claude/settings.local.json` `info/exclude` behaviour since D-205), row 2 (#212's 2026-11-08 blind rating of the 11 JS/TS commits, D-203), rows 7, 31 and 40 (`Closed` -> `Partly closed` for `pytest_runtest_setup` sibling/signature/guard bounds and `pytest_runtest_call` / `'skipped'` report hooks, compound/raised module-level skips and compound/post-class `__test__ = False`), row 105 item 6 (`closed` -> `partly closed` for `collection_inventory._candidates` omitting `unittest.TestCase` and subclassed test classes) and row 157 (#428 closed as fixed on 2026-11-08 with D-152's targeted JS table scan and replay moved to #504, D-203), regenerates `benchmarks/FAILURES.md` (`84` of `205` not closed: `Closed in part` `16 -> 19`, `Closed` `121 -> 118`), corrects `DECISIONS.md` `D-203`'s question timestamp from `14:08:05Z` to `2026-11-12T14:07:42Z` (keeping Nelson's `14:08:05Z` answer), and replaces `tests/gates/README.md` item 2's present-tense `byte-compare` CI wording with the actual PJU pull-request and `release-hosted.yml` six-leg verification scope (suite count: 23,271), merged as #612 (`04473e4d`); earlier: 0.13, pure line additions to repository-root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`, D-211, #611, approved by Nelson at 2026-11-15T09:34:17Z): `guardrail_additive.is_pure_line_addition` + `DiffGlobals.guardrail_files_additive` + `gating.GUARDRAIL_ADDITIVE_PATHS` (`{"CLAUDE.md"}`) keep non-rename in-place line additions to root `CLAUDE.md` at `warn` (`GUARDRAIL_ADDITIVE`, `"additive": True` v2 fingerprint context) when any leading frontmatter is unchanged and every existing line survives in order and in its CommonMark / GFM / HTML structural context, while line deletions, edits, reorderings, frontmatter edits, comment/fence/HTML/Markdown wrapping or re-contextualization, renames, deletions, and all other guardrail paths escalate to `critical` (`META`) as before (suite count: 23,271), merged as #611 (`bce7c8d3`); earlier: 0.13, report note for changed test-shaped files outside the Python and JS/TS test parse gates (B6): `unanalysed_tests.py` + `ReportContext.unanalysed_test_files` emit a single-line `analysis incomplete: N test-shaped file(s) not analysed: ...` summary on `cli._cmd_check` `stderr`, `report/term.py` and SARIF `toolExecutionNotifications` for changed inherited/mixin Python test modules (`PM-02`), non-default Python test filenames (`PM-03`), and non-default JS/TS test directories and suffixes (`F-03`/`F-13`), while keeping verdicts, exit codes and `--format json` / `--emit-ir` / `--format hook-json` / `hook pre-tool-use` / `--coverage-report` machine `stdout` unchanged (suite count: 23,149), merged as #610 (`aa678cb3`); earlier: 0.13, findings on projected Python units report real test names and non-transitioning `captured-result` edits keep source assertion text (D-210, #608, approved by Nelson at 2026-11-14T02:55:05Z and 04:10:13Z): `ParsedUnit` and `Unit` carry optional `source_unit: str = ""` (`IR_VERSION = 3`, `FINDINGS_VERSION = 2` unchanged), all eleven unit-scoped detector modules and gating report the enclosing Python test's qualified name instead of `test_concrete_*` / `test_exception_*` / `test_local_auxiliary_*` while `_resolve_finding_unit` and `unit_assertion_position` preserve per-concrete-unit `REPAIR_EVIDENCE` isolation and duplicate-row v2 fingerprint distinctness, and same-carrier `captured-result` tests without special authorities or local renames skip projection so `repro-07` `v0`–`v6` and `repro-06` `a2`/`a2b` report consistent real unit names and source assertions (suite count: 23,122), merged as #608 (`0ffbeb31`); earlier: 0.13, CLI `GitSnapshot` reuse and batched base manifest reads: `cli._analyse`, `_cmd_check`, `_session_note` and `_pre_tool_use` share one resolved `GitSnapshot` across base policy (`config.toml`/`allow.toml`), `--task` base read and `#500` alias check, `MANIFESTS` batch read (`read_base_manifests_from_snapshot`), `list_range_changes`, and `PairedPytestConfigs`, while `GitSnapshot.read` short-circuits known-absent paths on inventoried snapshots and preserves cross-module monkeypatch fallbacks (suite count: 23,108), merged as #609 (`5e0fb5aa`); earlier: Phase 2 structural decomposition of five core God-function modules (`engine.py`, `shadow.py`, `frontends/python/frontend.py`, `gating.py`, `frontends/python/table_oracles.py`), reducing eight orchestrators (`build_ir`, `find_runtime_subject_shadows`, `_collect_unit`, `_parse_python`, `apply_gates`, `_test`, `_module`, `project_table_consolidation`) to 17–80 lines across 22 `src/checkwash/**` files with zero behavioral, L1 or `tests/**` changes (suite count: 23,098), merged as #607 (`3231a03f`); earlier: compact PJU digest receipts for ordinary PRs and ruleset App binding (D-209): `collect_pju_receipts.py --compact` runs the full local suite with 16 xdist workers on PJU, replays pinned and candidate Actions concurrently, builds and byte-matches wheel/sdist/pyz and runs isolated wheel/pyz `demo` checks, emitting a single-line ~6–9 KB JSON digest receipt with zero new `evidence/*` branches; `pju_receipt_bridge.py` enforces exact documented test-count equality (`>= 23,065`, RC-09) and `refs/heads/main` workflow dispatch (self-sealing after same-tree bootstrap on compact, immediate on legacy `verify`/`publish`, RC-02), removes `quality-candidate-intake.yml` from `pull_request.paths` and binds required check `checkwash` to GitHub Actions App `15368` in `action/required-ruleset.json` and ruleset `22032046` (RC-03), while release stages keep full `3x283` qualification, merged as #606 (`620f5236`); earlier: 0.13, a virtual environment's own links (D-208): on Linux (macOS by Python's source, not run) a check without a range and the Stop hook set aside an untracked link in an environment's `bin` or `Scripts`, or its `lib64` linking to `lib`, in an environment directory neither `HEAD` nor the session base holds, unless a detector must read its path or pytest's collection can reach the environment, and the working tree's listing leaves out non-directory own links in `bin` or `Scripts` and its walks pass over `lib64` linking to `lib` beside directory `lib`, so an environment beside the change, untracked or ignored, no longer stops the run, and the PreToolUse hook asks on a weakened helper beside one too; a range that adds or changes a link still refuses it, base-held links stop a range when read, and THREATMODEL row 186 records the local residual, merged as #605 (`b326f201`); earlier: 0.13, the signature block that ends a PowerShell file is not read for a test runner (D-207), so a Windows virtual environment's signed `Activate.ps1` no longer blocks, untracked or committed; THREATMODEL row 185 records the residual, a PowerShell-named file another program runs, merged as #604 (`0f054eef`); earlier: 0.13, a changed test helper's importers past the search limit (D-206): the expected-value pass searches each changed helper's module name on its own, without the diff's own paths; past that name's bounds, or the run's 192 importer reads, it reads none of its importers and says "analysis incomplete", where the hit limit used to stop every run; a helper renamed to another name, `sweep` and the root-helper search still exit 2 at the limit; THREATMODEL row 184 records older gaps of the pass, merged as #603 (`82b88866`); earlier: 0.13, first-week fixes (D-205): a check without a range and the Stop hook set aside the untracked zipapp checkwash runs from, and a local hook install keeps `.claude/settings.local.json` out of Git, merged as #602 (`6c2b7669`); earlier: toward 1.0 (D-203): 0.x outreach resumes as a trial with no quantitative quality promise; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves, a selected set and not a rate: 10 should pass and 1 is unclear, and it closes with its caveats; #428 closes as fixed; one macOS verification per release, since widened to macOS and Linux by D-204; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check; 1.0 is still NOT_MET, merged as #597 (`9b69183d`); earlier: the v0.12.0 Release notes end with a paragraph on its hosted verification after publication, added on Nelson's answer, merged as #601 (`f93e24ce`); earlier: v0.12.0's hosted verification after publication, run 43039360146, failed on macOS in 14 entries (13 tests) of the PJU release collector's tests, which now take each temporary directory by its real path; the published files, the corpus and the Action passed; the result is recorded with 0.12.0 and the run's artifacts are kept on an evidence branch, merged as #600 (`c4dee609`); earlier: from the release after v0.12.0 each release gets one hosted verification on GitHub-hosted macOS and Linux, in two checkpoints, and the macOS skip of the two budget checks stays at 1.0 (D-204), merged as #599 (`eb4fdab6`); earlier: the README states four more limits of a pass, leads its refactor paragraph with the current 6/60, links examples/invoice and no longer calls the eight demo cases real; stale statements in six documents are corrected; documentation and one test pin only, merged as #598 (`fb71bc75`); earlier: the release workflow's PyPI upload uses pypa/gh-action-pypi-publish v1.14.3, the first version advisory GHSA-5xjx-3w67-w9x9 lists as patched, merged as #596 (`8f610be9`); earlier: the T3.5 design note links the first execution satellite, checkwash-prove, a separate repository and package; nothing in checkwash runs code because of it, merged as #595 (`86e5322e`); earlier: v0.12.0 published and verified; the CLI and advertised pins move to v0.12.0 and the Action pin to its Action commit A, the commit the tag points to (D-200); the decision log moves D-197 to D-201 to archive 5, the verdict baseline rotates to v0.12.0 and i198/S1's label becomes block, on Nelson's answer (#594, D-202); THREATMODEL unchanged on Nelson's answer; earlier: the 0.12.0 release pull request: version 0.12.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison and D-176's 0.12 disposition; its stages are to be verified from the trusted ref `review/collector-d-012-20261107` (`e27eec6b`); earlier: three holes beside D-191's residual close, D-201, merged as #591 (`e27eec6b`): an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+Updated: 2026-11-16 (0.13, pre-release module-naming, timing-bound, receipt-prose and provenance hygiene: renames `frontends/python/table_oracles_test.py` -> `table_oracles_carriers.py` so pytest/CheckWash default `*_test.py` discovery never classifies the production helper as a test module, renames `unanalysed_tests.py` -> `unanalysed_test_files.py` and requires `prod`-role Python files outside test directories to declare test functions/classes before emitting the B6 `analysis incomplete` note, switches the single-sample timing assertion in `test_unanalysed_test_files.py` to a 3-run median with a `3.0` s bound, expands `test_issue319_quiet_parse.py` across `engine*.py`, updates stale paths in `handover_review_mutants.py` and `r1-seen-cost.yml`, adds `collect_compact` unsupported-host refusal coverage, clarifies ruleset `22032046` context-name/App-ID binding and compact-receipt self-reported digest semantics across `pju_receipt_bridge.py` and PJU docs, and completes `#607/#610/#612/#613/#614/#615` merge/provenance/boundary records in `STATE.md` (suite count: 23,283); earlier: 0.13, public-facing `README.md` layering before `v0.13.0`: removes the disabled `ci.yml` status badge, folds deep guardrail-customization, repair-evidence/refactor-provenance, 1-MB size-limit and `A`-vs-`M` release-tag geometry details into collapsible `<details>` disclosures while keeping quickstarts, core limits and every contract/measurement pin intact, and updates the related-project footer link from `checkwash-corpus` / `smallestlie` to `checkwash-prove` (suite count: 23,283), merged as #615 (`a5cfb161`); earlier: 0.13, cross-platform compact collector helper test isolation in `test_pju_compact_receipt.py`: `test_collect_compact_binds_admitted_git_and_restores_helpers` resolves `tmp_path` and `git` to real paths, stubs `action_mod.execution_route` and materializes regular `python.exe`, `SystemRoot` and `ProgramFiles` directories under the resolved temporary root so the test no longer depends on the PJU Windows host route, non-symlinked POSIX/macOS `sys.executable`/`git`/`/var` paths, or default Windows `C:\Windows`/`C:\Program Files` directories (suite count: 23,283), merged as #614 (`eece00f3`); earlier: 0.13, CPython 3.12.3 single-line `tokenize` memory DoS and OOM fix in `syntax.py` and `test_string_chain_syntax.py`: `syntax._chains` avoids retaining `TokenInfo.line` copies and pre-scans or condenses physical lines over `2,048` characters so CPython 3.12.3's `_tokenize.TokenizerIter` (fixed upstream in `3.12.14`) does not allocate `O(K * L)` full-line copies (`40 GB`–`1 TB` on `test_perf.py::test_pathological_file_does_not_hang` and `10`–`20 GB` on `DEEP` string chains), while `test_string_chain_syntax.py` drops retained `TokenInfo.line` references and adds `12` bounded-memory/time and lexical-boundary regressions (suite count: 23,283), merged as #613 (`66c4a9b1`); earlier: 0.13, protected threat-model, decision-log and gate-README text corrections (L1, #612, approved by Nelson at 2026-11-15T10:44:37Z and 10:47:09Z): updates `THREATMODEL.md` item 2 (`hook install` `.claude/settings.local.json` `info/exclude` behaviour since D-205), row 2 (#212's 2026-11-08 blind rating of the 11 JS/TS commits, D-203), rows 7, 31 and 40 (`Closed` -> `Partly closed` for `pytest_runtest_setup` sibling/signature/guard bounds and `pytest_runtest_call` / `'skipped'` report hooks, compound/raised module-level skips and compound/post-class `__test__ = False`), row 105 item 6 (`closed` -> `partly closed` for `collection_inventory._candidates` omitting `unittest.TestCase` and subclassed test classes) and row 157 (#428 closed as fixed on 2026-11-08 with D-152's targeted JS table scan and replay moved to #504, D-203), regenerates `benchmarks/FAILURES.md` (`84` of `205` not closed: `Closed in part` `16 -> 19`, `Closed` `121 -> 118`), corrects `DECISIONS.md` `D-203`'s question timestamp from `14:08:05Z` to `2026-11-12T14:07:42Z` (keeping Nelson's `14:08:05Z` answer), and replaces `tests/gates/README.md` item 2's present-tense `byte-compare` CI wording with the actual PJU pull-request and `release-hosted.yml` six-leg verification scope (suite count: 23,271), merged as #612 (`04473e4d`); earlier: 0.13, pure line additions to repository-root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`, D-211, #611, approved by Nelson at 2026-11-15T09:34:17Z): `guardrail_additive.is_pure_line_addition` + `DiffGlobals.guardrail_files_additive` + `gating.GUARDRAIL_ADDITIVE_PATHS` (`{"CLAUDE.md"}`) keep non-rename in-place line additions to root `CLAUDE.md` at `warn` (`GUARDRAIL_ADDITIVE`, `"additive": True` v2 fingerprint context) when any leading frontmatter is unchanged and every existing line survives in order and in its CommonMark / GFM / HTML structural context, while line deletions, edits, reorderings, frontmatter edits, comment/fence/HTML/Markdown wrapping or re-contextualization, renames, deletions, and all other guardrail paths escalate to `critical` (`META`) as before (suite count: 23,271), merged as #611 (`bce7c8d3`); earlier: 0.13, report note for changed test-shaped files outside the Python and JS/TS test parse gates (B6): `unanalysed_tests.py` + `ReportContext.unanalysed_test_files` emit a single-line `analysis incomplete: N test-shaped file(s) not analysed: ...` summary on `cli._cmd_check` `stderr`, `report/term.py` and SARIF `toolExecutionNotifications` for changed inherited/mixin Python test modules (`PM-02`), non-default Python test filenames (`PM-03`), and non-default JS/TS test directories and suffixes (`F-03`/`F-13`), while keeping verdicts, exit codes and `--format json` / `--emit-ir` / `--format hook-json` / `hook pre-tool-use` / `--coverage-report` machine `stdout` unchanged (suite count: 23,149), merged as #610 (`aa678cb3`); earlier: 0.13, findings on projected Python units report real test names and non-transitioning `captured-result` edits keep source assertion text (D-210, #608, approved by Nelson at 2026-11-14T02:55:05Z and 04:10:13Z): `ParsedUnit` and `Unit` carry optional `source_unit: str = ""` (`IR_VERSION = 3`, `FINDINGS_VERSION = 2` unchanged), all eleven unit-scoped detector modules and gating report the enclosing Python test's qualified name instead of `test_concrete_*` / `test_exception_*` / `test_local_auxiliary_*` while `_resolve_finding_unit` and `unit_assertion_position` preserve per-concrete-unit `REPAIR_EVIDENCE` isolation and duplicate-row v2 fingerprint distinctness, and same-carrier `captured-result` tests without special authorities or local renames skip projection so `repro-07` `v0`–`v6` and `repro-06` `a2`/`a2b` report consistent real unit names and source assertions (suite count: 23,122), merged as #608 (`0ffbeb31`); earlier: 0.13, CLI `GitSnapshot` reuse and batched base manifest reads: `cli._analyse`, `_cmd_check`, `_session_note` and `_pre_tool_use` share one resolved `GitSnapshot` across base policy (`config.toml`/`allow.toml`), `--task` base read and `#500` alias check, `MANIFESTS` batch read (`read_base_manifests_from_snapshot`), `list_range_changes`, and `PairedPytestConfigs`, while `GitSnapshot.read` short-circuits known-absent paths on inventoried snapshots and preserves cross-module monkeypatch fallbacks (suite count: 23,108), merged as #609 (`5e0fb5aa`); earlier: Phase 2 structural decomposition of five core God-function modules (`engine.py`, `shadow.py`, `frontends/python/frontend.py`, `gating.py`, `frontends/python/table_oracles.py`), reducing eight orchestrators (`build_ir`, `find_runtime_subject_shadows`, `_collect_unit`, `_parse_python`, `apply_gates`, `_test`, `_module`, `project_table_consolidation`) to 17–80 lines across 22 `src/checkwash/**` files with zero fixture/verdict-gate output, L1 severity-table or `tests/**` changes (recursion-frame boundary shifts by 1–6 frames near `~2,956` `+` operators; `gating.apply_gates` split ratified by Nelson at `2026-11-15T17:34:59Z`, suite count: 23,098), merged as #607 (`3231a03f`); earlier: compact PJU digest receipts for ordinary PRs and ruleset App binding (D-209): `collect_pju_receipts.py --compact` runs the full local suite with 16 xdist workers on PJU, replays pinned and candidate Actions concurrently, builds and byte-matches wheel/sdist/pyz and runs isolated wheel/pyz `demo` checks, emitting a single-line ~6–9 KB JSON digest receipt with zero new `evidence/*` branches; `pju_receipt_bridge.py` enforces exact documented test-count equality (`>= 23,065`, RC-09) and `refs/heads/main` workflow dispatch (self-sealing after same-tree bootstrap on compact, immediate on legacy `verify`/`publish`, RC-02), removes `quality-candidate-intake.yml` from `pull_request.paths` and binds required check `checkwash` to GitHub Actions App `15368` in `action/required-ruleset.json` and ruleset `22032046` (RC-03), while release stages keep full `3x283` qualification, merged as #606 (`620f5236`); earlier: 0.13, a virtual environment's own links (D-208): on Linux (macOS by Python's source, not run) a check without a range and the Stop hook set aside an untracked link in an environment's `bin` or `Scripts`, or its `lib64` linking to `lib`, in an environment directory neither `HEAD` nor the session base holds, unless a detector must read its path or pytest's collection can reach the environment, and the working tree's listing leaves out non-directory own links in `bin` or `Scripts` and its walks pass over `lib64` linking to `lib` beside directory `lib`, so an environment beside the change, untracked or ignored, no longer stops the run, and the PreToolUse hook asks on a weakened helper beside one too; a range that adds or changes a link still refuses it, base-held links stop a range when read, and THREATMODEL row 186 records the local residual, merged as #605 (`b326f201`); earlier: 0.13, the signature block that ends a PowerShell file is not read for a test runner (D-207), so a Windows virtual environment's signed `Activate.ps1` no longer blocks, untracked or committed; THREATMODEL row 185 records the residual, a PowerShell-named file another program runs, merged as #604 (`0f054eef`); earlier: 0.13, a changed test helper's importers past the search limit (D-206): the expected-value pass searches each changed helper's module name on its own, without the diff's own paths; past that name's bounds, or the run's 192 importer reads, it reads none of its importers and says "analysis incomplete", where the hit limit used to stop every run; a helper renamed to another name, `sweep` and the root-helper search still exit 2 at the limit; THREATMODEL row 184 records older gaps of the pass, merged as #603 (`82b88866`); earlier: 0.13, first-week fixes (D-205): a check without a range and the Stop hook set aside the untracked zipapp checkwash runs from, and a local hook install keeps `.claude/settings.local.json` out of Git, merged as #602 (`6c2b7669`); earlier: toward 1.0 (D-203): 0.x outreach resumes as a trial with no quantitative quality promise; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves, a selected set and not a rate: 10 should pass and 1 is unclear, and it closes with its caveats; #428 closes as fixed; one macOS verification per release, since widened to macOS and Linux by D-204; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check; 1.0 is still NOT_MET, merged as #597 (`9b69183d`); earlier: the v0.12.0 Release notes end with a paragraph on its hosted verification after publication, added on Nelson's answer, merged as #601 (`f93e24ce`); earlier: v0.12.0's hosted verification after publication, run 43039360146, failed on macOS in 14 entries (13 tests) of the PJU release collector's tests, which now take each temporary directory by its real path; the published files, the corpus and the Action passed; the result is recorded with 0.12.0 and the run's artifacts are kept on an evidence branch, merged as #600 (`c4dee609`); earlier: from the release after v0.12.0 each release gets one hosted verification on GitHub-hosted macOS and Linux, in two checkpoints, and the macOS skip of the two budget checks stays at 1.0 (D-204), merged as #599 (`eb4fdab6`); earlier: the README states four more limits of a pass, leads its refactor paragraph with the current 6/60, links examples/invoice and no longer calls the eight demo cases real; stale statements in six documents are corrected; documentation and one test pin only, merged as #598 (`fb71bc75`); earlier: the release workflow's PyPI upload uses pypa/gh-action-pypi-publish v1.14.3, the first version advisory GHSA-5xjx-3w67-w9x9 lists as patched, merged as #596 (`8f610be9`); earlier: the T3.5 design note links the first execution satellite, checkwash-prove, a separate repository and package; nothing in checkwash runs code because of it, merged as #595 (`86e5322e`); earlier: v0.12.0 published and verified; the CLI and advertised pins move to v0.12.0 and the Action pin to its Action commit A, the commit the tag points to (D-200); the decision log moves D-197 to D-201 to archive 5, the verdict baseline rotates to v0.12.0 and i198/S1's label becomes block, on Nelson's answer (#594, D-202); THREATMODEL unchanged on Nelson's answer; earlier: the 0.12.0 release pull request: version 0.12.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison and D-176's 0.12 disposition; its stages are to be verified from the trusted ref `review/collector-d-012-20261107` (`e27eec6b`); earlier: three holes beside D-191's residual close, D-201, merged as #591 (`e27eec6b`): an equality with `ANY` is a tautology, a single test's skip must provably run somewhere and the gates a change adds must leave it somewhere to run, and `assertEqual` -> `assertCountEqual` drops order; from v0.12.0 the release tag points at the release's Action commit A and names the release merge M, and the README installs the CLI only from PyPI and the pyz, D-200, merged as #589 (`54113c06`); the weakening, stand-in and subject rules take no repair evidence, a finding the evidence reached is labelled `REPAIR_EVIDENCE_REFUSED`, and 22 fixture expectations move with Nelson's approval by name, D-199, merged as #588 (`af0c5651`); #590 merged as `19f400ca`, the allow keys for D-199 and D-200; #587 merged as `7cd8549c`; earlier: receipts spread over the receipt host's cores: 8 pytest workers, the three qualification chains at once and the verdict gate's cases six at a time, D-198; #586 merged as `003e12dd`; earlier: v0.11.0 published and verified; the CLI and advertised pins move to v0.11.0 and the Action pin to its Action commit A; the decision log and the verdict baseline move to v0.11.0 (#586, D-197); THREATMODEL item 4 and row 2 state the 0.11.0 D-176 record, on Nelson's answer; earlier: the 0.11.0 release pull request: version 0.11.0, the release guide and known issues, the delegated release record with the fixed-corpus comparison, the uvloop diagnostic and D-176's 0.11 disposition, stale release labels fixed, a #455 test fixed that runs only where it can create symlinks, and R naming the release's own Action commit; 0.11 candidate: the README puts the three ways to start before the release history, which moves to `docs/releases/README.md`, merged as #583; D-196 keeps scheme S for 0.11 with its pin-updater and zizmor consequence accepted, lets the fixed-corpus candidate differ in `doctor`'s own pin line, and plans for 0.12 the tag at the Action commit and a change to D-191's residual, merged as #582; D-194 lets a release's `doctor` accept its own Action commit, which the release pull request's last commit names and the release bridge verifies (scheme S), merged as #581; D-195 restores five test relaxations that agent sessions left in checkwash's own tests, merged as #580; D-193 closes row 179 by reading the repository's own pytest collection settings, merged as #579; an outside report on #130 is fixed by D-192, which proves a lone `pytest.raises` carrier like an assertion, makes a file that lost no oracle mass a D5 candidate and stops substituting parametrize cells that never reach the test; D-190 and D-191 merged as #577; v0.10.0 published and verified; pins, decision log and verdict baseline moved to v0.10.0; 0.11 scope changed by D-189)
+
+## 2026-11-16: 0.13, pre-release module-naming, timing-bound, receipt-prose and provenance hygiene
+
+Addresses the non-L1 module-naming, test-hygiene, receipt-prose and governance
+record items from the 2026-11-15–16 read-only pre-release audit ahead of
+`v0.13.0` (`R607-03..05`, `XPLAT-01`, `XPLAT-02`, `XPLAT-04`, `RC-1`, `RC-2`,
+`RC-4`, `DG-01`, `DG-04`, `DG-05`, `DG-06`; heading date Asia/Taipei, timestamps
+UTC). Human authorization provenance: in session `5472d923` at
+`2026-11-15T14:24:06Z` Nelson instructed verbatim 「開一個session 對整體做一次檢查
+沒問題後就發」; after the external read-only audit reported `0.13` pre-release
+findings, Nelson answered `Q1`–`Q6` in session `c8f1073f` at
+`2026-11-15T17:34:59Z` verbatim 「可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎」
+and launched session `3da7dc8a` (`/goal`) at `2026-11-15T17:37:45Z` delegating
+Phase 1 atomic non-L1 PR merges via compact PJU receipts on **Antigravity**
+(agent scope interpretation: zero L1 files touched here; `1.0` remains
+`NOT_MET` and downstream `smallestlie` / `checkwash-corpus` re-pins remain out
+of scope):
+
+- **Module renames and B6 `src/` production-file guard
+  (`src/checkwash/frontends/python/table_oracles_carriers.py`,
+  `src/checkwash/unanalysed_test_files.py`).** Renames `table_oracles_test.py`
+  to `table_oracles_carriers.py` so default `*_test.py` discovery never treats
+  the production helper module as a pytest test file (`R607-03`), and renames
+  `unanalysed_tests.py` to `unanalysed_test_files.py` while requiring `prod`-role
+  Python files outside `_TEST_DIRS` (`src/api_spec.py`, `src/schema_tests.py`,
+  etc.) to declare `test_*` functions/methods or `Test*`/`TestCase` classes
+  before emitting the B6 `analysis incomplete` note, preserving Django
+  `src/shopcart/tests.py` and `[roles].test` overrides (`XPLAT-04`). Updates
+  `README.md` (`## Know the limits`) and `docs/KNOWN-ISSUES-next.md` accordingly.
+- **Median timing bound, quiet-parse scan, stale paths and route refusal
+  (`tests/test_unanalysed_test_files.py`, `tests/test_issue319_quiet_parse.py`,
+  `tests/test_receipt_execution_routes.py`, `tools/handover_review_mutants.py`,
+  `.github/workflows/r1-seen-cost.yml`).** Replaces the single-sample wall-clock
+  check in `test_unanalysed_test_files.py` with a 3-run median
+  (`statistics.median`, `< 3.0` s; `test_claude_md_additive.py`'s timing update
+  accompanies `guardrail_additive.py` in D-211's narrowing PR, `XPLAT-01`),
+  expands `test_issue319_quiet_parse.py` across `engine*.py` (`R607-04`),
+  updates post-`#607` module/method references in
+  `tools/handover_review_mutants.py` and `.github/workflows/r1-seen-cost.yml`
+  (`R607-05`), and adds `collect_compact` and `--compact` CLI unsupported-host
+  refusal assertions (`XPLAT-02`). Documented suite count unchanged: `23,283`.
+- **Receipt-bridge summary, ruleset scope and governance provenance
+  (`tools/pju_receipt_bridge.py`, `.github/workflows/quality-candidate-intake.yml`,
+  `docs/testing-on-pju.md`, `docs/pju-receipt-bridge.md`,
+  `docs/pju-release-handoff.md`, `docs/RELEASING.md`, `STATE.md`).** Clarifies
+  that `publish_compact` verifies Git source/contract/closure digest consistency
+  of a maintainer-admitted self-reported PJU compact receipt rather than
+  re-executing tests or builds on the hosted runner (`RC-2`), notes that GitHub
+  ruleset `22032046` binds required context `checkwash` by context name and
+  GitHub Actions App ID (`15368`) rather than by workflow file (`RC-1`), updates
+  stale "four required PR checks" prose to distinguish ordinary-PR compact single
+  `checkwash` checks from legacy/release-PR four-`B.CONTEXTS` checks (`RC-4`,
+  `DG-06`), and completes `#607/#610/#612/#613/#614/#615` merge, verbatim
+  provenance, `#607` recursion-frame boundary and `#613` CPython `3.12.3` /
+  targeted-WSL records below (`DG-01`, `DG-04`, `DG-05`).
+
+Checked on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows 11
+CPython `3.11.9`) across full `pytest -n 16` (`23,283` tests), `checkwash check`
+dogfood (`--fail-on high`: `verdict=pass`, 0 critical/high findings), and
+compact PJU digest receipt (`collect_pju_receipts.py --compact`). Not run
+(`NOT_RUN`): macOS, Linux, and other platforms.
 
 ## 2026-11-15: 0.13, public-facing `README.md` layering before `v0.13.0`
 
@@ -30,6 +91,21 @@ contract suites, `checkwash check` dogfood (`--fail-on info`), and compact PJU
 digest receipt (`collect_pju_receipts.py --compact`). Not run (`NOT_RUN`):
 macOS, Linux, and other platforms.
 
+#615 merged as `a5cfb1615065b57b240b589a0976d93c94b4e81c` at
+`2026-11-15T16:09:14Z`, with parents `eece00f3` and `87dc226b` and the tree its
+receipt verified (`ad695e75`, `ad695e7523dde0f6d5d567baae3164d73e03299f`). Human
+authorization provenance (session `1f0e5cb3`): Nelson answered verbatim
+「可以 就照你的建議」 at `2026-11-15T15:11:58Z`, selected the Step 1 `README.md`
+gentle-layering option at `15:13:41Z`, instructed verbatim
+「公開頁面只放成熟的專案 其餘的改私人」 at `15:14:20Z`, and confirmed the 4-public-repo
+list (`checkwash`, `checkwash-prove`, `starry-night-3d`,
+`taipei49314.github.io`) at `15:16:14Z` (agent scope interpretation: merge Step
+1's non-L1 `README.md` layering PR after compact PJU receipt verification,
+without starting the `0.13.0` release). Its compact receipt `959b2a35145a`
+(`C:\Users\nelson\dev\cw615r1\r\compact-receipt.json`, `8,655` B) was verified
+by workflow run `43733705906` dispatched from `refs/heads/main`, which set the
+required `checkwash` check (`132871812828`, GitHub Actions App `15368`).
+
 ## 2026-11-15: 0.13, cross-platform compact collector helper test isolation
 
 Pre-release Linux verification on `LAPTOP-01AGNPJU` WSL2 (`Ubuntu 24.04.4 LTS`,
@@ -53,19 +129,36 @@ roots, and unset `C:\Windows` / `C:\Program Files`):
   documented suite count unchanged: `23,283`).
 
 Checked on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`) across
-Windows 11 CPython `3.11.9` and WSL2 `Ubuntu 24.04.4 LTS` CPython `3.12.3`,
-`checkwash check` dogfood (`--fail-on high`: `critical=0 high=0 warn=0 info=0
-verdict=pass`), and compact PJU digest receipt (`collect_pju_receipts.py
---compact`: `a73ae9e81208` in `cw614r1`, workflow run `43721445044`, check run
-`132834305786`, merged as #614, `eece00f3`). Not run (`NOT_RUN`): macOS and
-Python 3.13.
+Windows 11 CPython `3.11.9` (full `23,283`-test compact receipt) and WSL2
+`Ubuntu 24.04.4 LTS` CPython `3.12.3` (targeted `test_pju_compact_receipt.py`
+on the PR, followed after merge by a full `23,283`-test WSL2 `3.12.3` suite run
+on `eece00f3` with `0` failures), `checkwash check` dogfood (`--fail-on high`:
+`critical=0 high=0 warn=0 info=0 verdict=pass`), and compact PJU digest receipt
+(`collect_pju_receipts.py --compact`). Not run (`NOT_RUN`): macOS, Linux Python
+3.11, and Python 3.13.
 
-## 2026-11-15: 0.13, CPython 3.12+ single-line `tokenize` memory DoS and OOM fix
+#614 merged as `eece00f3e7a566b5ec927e0c605a2e3081705bea` at
+`2026-11-15T13:56:11Z`, with parents `66c4a9b1` and `21d9778d` and the tree its
+receipt verified (`40b741d6`, `40b741d63e12a5150311833367f67ecaa77b5d09`). Human
+authorization provenance (session `5472d923`): Nelson asked verbatim
+「現在驗證還有linux沒驗過對吧」 (`2026-11-15T11:36:43Z`), answered verbatim 「對 先跑過」
+(`11:38:20Z`), and confirmed the `#613 -> #614` remediation-and-merge sequence
+verbatim 「好 照這個順序」 at `2026-11-15T12:51:08Z` (agent scope interpretation:
+merge non-L1 cross-platform test isolation fix `#614` after compact PJU receipt
+verification). Its compact receipt `a73ae9e81208`
+(`C:\Users\nelson\dev\cw614r1\r\compact-receipt.json`, `8,641` B) was verified
+by workflow run `43721445044` dispatched from `refs/heads/main`, which set the
+required `checkwash` check (`132834305786`, GitHub Actions App `15368`).
+
+## 2026-11-15: 0.13, CPython 3.12.3 single-line `tokenize` memory DoS and OOM fix
 
 Pre-release Linux verification on `LAPTOP-01AGNPJU` WSL2 (`Ubuntu 24.04.4 LTS`,
 CPython `3.12.3`) uncovered an `O(K * L)` memory and CPU explosion on CPython
-3.12+ (`_tokenize.TokenizerIter`, PEP 701), which allocates a fresh `str` copy
-of the entire physical line (`token.line`) on every yielded `TokenInfo`:
+`3.12.3` (`_tokenize.TokenizerIter`, PEP 701; CPython fixed the per-token full
+line allocation upstream by `3.12.14`, though single-line megabyte f-strings on
+`3.12` still incur multi-minute C tokenizer cost as in `0.12.0`), which on
+`3.12.3` allocated a fresh `str` copy of the entire physical line
+(`token.line`) on every yielded `TokenInfo`:
 
 - **Bounded-memory recursion recovery (`src/checkwash/frontends/python/syntax.py`).**
   `_Chain` and `statement` store compact `_Literal` / `_Tok` records without
@@ -88,13 +181,25 @@ of the entire physical line (`token.line`) on every yielded `TokenInfo`:
   `23,283`).
 
 Checked on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`) across
-Windows 11 CPython `3.11.9` and WSL2 `Ubuntu 24.04.4 LTS` CPython `3.12.3`
-(`MemoryMax=1G`), `checkwash check` dogfood (`--fail-on high`: `critical=0 high=0 warn=4 info=0
-verdict=pass`),
-and compact PJU digest receipt (`collect_pju_receipts.py --compact`: `91dce3d62e2f`
-in `cw613r1`, workflow run `43719291035`, check run `132827771431`, merged as #613,
-`66c4a9b1e5f8af9510d5d2dc9d8d3f85c814f8aa`). Not run
-(`NOT_RUN`): macOS and Python 3.13.
+Windows 11 CPython `3.11.9` (full `23,283`-test compact receipt) and WSL2
+`Ubuntu 24.04.4 LTS` CPython `3.12.3` (`MemoryMax=1G`, targeted
+`tests/gates/test_perf.py` and `tests/test_string_chain_syntax.py` suites),
+`checkwash check` dogfood (`--fail-on high`: `critical=0 high=0 warn=4 info=0
+verdict=pass`), and compact PJU digest receipt (`collect_pju_receipts.py
+--compact`). Not run (`NOT_RUN`): macOS, Linux Python 3.11, and Python 3.13.
+
+#613 merged as `66c4a9b1e5f8af9510d5d2dc9d8d3f85c814f8aa` at
+`2026-11-15T13:31:36Z`, with parents `04473e4d` and `d5e4360b` and the tree its
+receipt verified (`64ba4388`, `64ba4388a6fa915d27164f7c2e8200f155fd2ff3`). Human
+authorization provenance (session `5472d923`): Nelson asked verbatim
+「現在驗證還有linux沒驗過對吧」 (`2026-11-15T11:36:43Z`), answered verbatim 「對 先跑過」
+(`11:38:20Z`), and confirmed the `#613 -> #614` remediation-and-merge sequence
+verbatim 「好 照這個順序」 at `2026-11-15T12:51:08Z` (agent scope interpretation:
+merge non-L1 `syntax.py` `3.12.3` memory/OOM fix `#613` after compact PJU
+receipt verification). Its compact receipt `91dce3d62e2f`
+(`C:\Users\nelson\dev\cw613r1\r\compact-receipt.json`) was verified by workflow
+run `43719291035` dispatched from `refs/heads/main`, which set the required
+`checkwash` check (`132827771431`, GitHub Actions App `15368`).
 
 ## 2026-11-15: 0.13, protected threat-model, decision-log and gate-README text corrections (L1)
 
@@ -172,14 +277,20 @@ the reviewer); Nelson approved `THREATMODEL.md`, `DECISIONS.md` (`D-203`) and
 `tests/gates/README.md` (L1) on #612 (`b9f86a45`,
 `b9f86a457e016bc123cf36f2d3f922b290d347e1`, asked at 2026-11-15T10:43:41Z in
 session `fa98badb`, answered 「可以核可 但是開個新session?」 at
-2026-11-15T10:44:37Z in session `fa98badb` and formally confirmed in session
-`5472d923` at 2026-11-15T10:47:09Z, with `THREATMODEL.md`, `DECISIONS.md` and
+`2026-11-15T10:44:37Z` in session `fa98badb` and formally confirmed in session
+`5472d923` at `2026-11-15T10:47:09Z` verbatim 「接手 checkwash Phase 3 收尾：我已核可 draft
+PR `#612`（`b9f86a457e016bc123cf36f2d3f922b290d347e1`）的受保護 L1 文字變更（`THREATMODEL.md`、
+`DECISIONS.md` `D-203`、`tests/gates/README.md`），請完成 `#612` 的核可紀錄更新、輕量 PJU
+收據驗證與合併。」, with `THREATMODEL.md`, `DECISIONS.md` and
 `tests/gates/README.md` kept byte-identical to `b9f86a45`), and the pull
 request's description and hosted `checkwash` check record its compact PJU
 digest receipt (`collect_pju_receipts.py --compact`: `53efaee39b12` in `cw612r1`,
-workflow run `43707619674`, check run `132792231488`, merged as #612,
-`04473e4da16d68324c5c63a42b843312c8d529dd`). Not run (`NOT_RUN`):
+workflow run `43707619674`, check run `132792231488`). Not run (`NOT_RUN`):
 macOS, Linux, and other platforms.
+
+#612 merged as `04473e4da16d68324c5c63a42b843312c8d529dd` at
+`2026-11-15T11:14:01Z`, with parents `bce7c8d3` and `1636fe90` and the tree its
+receipt verified (`6d51a10a`, `6d51a10a87d023bf145020b53c4f010c162c1e35`).
 
 ## 2026-11-15: 0.13, pure line additions to `CLAUDE.md` stay at `warn` (D-211)
 
@@ -342,7 +453,11 @@ other platforms.
 #610 merged as `aa678cb387606a80ee1ca20587b9c9feffc7f382` at
 2026-11-15T06:43:25Z, with parents `0ffbeb31` and `932d4d23` and the tree its
 receipt verified (`a67e62cc`, `a67e62cc2d95a80d1de0496a340ddb54fcb1468b`).
-Nelson's 2026-11-15 Phase 3 handoff authorized merging non-L1 B6 once verified.
+Human authorization provenance (session `fa98badb`, `2026-11-15T05:29:32Z`):
+Nelson instructed verbatim 「接手 checkwash Phase 3 下一階段（`0.13` 剩餘功能 B6 → G2(b) →
+受保護文字 L1 收尾）... 輕量收據（`cw610r1`）後直接合併」 (agent scope interpretation: merge
+zero-L1 B6 report-note PR `#610` directly after compact PJU receipt
+verification).
 Its compact receipt `65d535618544` (`C:\Users\nelson\dev\cw610r1\r\compact-receipt.json`,
 `8,655` B) was verified by workflow run 43686511842 dispatched from
 `refs/heads/main`, which set the required `checkwash` check (`132728180876`,
@@ -481,12 +596,20 @@ which set the required `checkwash` check (`132474767837`, GitHub Actions App
 Following Nelson's 2026-11-13 authorizations (`13:46:28Z` selecting Phase 1
 compact PJU digest receipts and Phase 2 parallel decomposition of the five core
 God-function modules, `14:49:57Z` approving [D-209](DECISIONS.md) and ruleset
-`22032046`, and `15:33:34Z` approving merging #606 and executing Phase 2 in a
-fresh `/teamwork` session; heading date Asia/Taipei, timestamps UTC), Phase 2
-decomposes eight God functions across five core Python modules (`22`
-`src/checkwash/**` files total, branched from `main` `620f5236` on
-`antigravity/phase2-god-functions-20261114`) with zero behavioral, L1, `.gwcase`
-or `tests/**` changes:
+`22032046`, `15:33:34Z` in session `29e2789b` instructing verbatim 「先合併收尾 然後給我prompt
+我直接開session開工」, and `15:57:50Z` in session `bf74d6ef` `/teamwork` launch
+instructing verbatim 「接手 checkwash Phase 2：平行拆解 5 大核心 God-Function 檔案...
+合成為 1～2 支乾淨 PR... 發布綠燈 `checkwash` 後合併」; heading date Asia/Taipei,
+timestamps UTC), Phase 2 decomposes eight God functions across five core Python
+modules (`22` `src/checkwash/**` files total, branched from `main` `620f5236`
+on `antigravity/phase2-god-functions-20261114`) with zero `.gwcase` fixture or
+verdict-gate output changes, zero L1 severity-table (`gating.py` `L1–L682`)
+changes, and zero `tests/**` changes (helper indirection adds `1–6` Python call
+frames, shifting synthetic `RecursionError` boundaries near
+`sys.getrecursionlimit()`, e.g. around `~2,956` nested `+` operators under the
+default `1,000` limit; in session `c8f1073f` at `2026-11-15T17:34:59Z` Nelson
+explicitly ratified `#607`'s `857c88d4` structural split of `gating.apply_gates`
+verbatim 「可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎」):
 
 - **`src/checkwash/engine.py` (`2,351 -> 932` lines) +
   `engine_ir_{intake,resolvers,files,credits,postpass}.py` (`318`, `527`, `696`,
@@ -535,8 +658,9 @@ check record its compact PJU digest receipt (`collect_pju_receipts.py
 
 #607 merged as `3231a03f5000286ac022b849d52d66b93ba717b5` at
 2026-11-13T17:32:59Z, with parents `620f5236` and `e9a8dc4e` and the tree
-its receipt verified (`b3c5d5a0`). Nelson's 2026-11-13T13:46:28Z, 14:49:57Z
-and 15:33:34Z answers, above, approved the merge. Its compact receipt
+its receipt verified (`b3c5d5a0`). Nelson's 2026-11-13T13:46:28Z, 14:49:57Z,
+15:33:34Z and 15:57:50Z instructions (with `2026-11-15T17:34:59Z` ratification
+of `857c88d4` `gating.apply_gates`), above, authorized the merge. Its compact receipt
 `33717df2edf8` (`dev\cw607r1`, `8,654` B) was verified by run 43473325616
 dispatched from `refs/heads/main`, which set the required `checkwash` check
 (`132051150641`, GitHub Actions App `15368`).

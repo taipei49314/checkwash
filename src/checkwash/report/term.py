@@ -14,7 +14,7 @@ from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 from checkwash.report.unread import sorted_unread
 from checkwash.report.textio import unicode_decoration
-from checkwash.unanalysed_tests import unanalysed_test_note
+from checkwash.unanalysed_test_files import unanalysed_test_note
 
 _SEV_COLOR = {"critical": "35", "high": "31", "warn": "33", "info": "36"}
 

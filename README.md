@@ -203,8 +203,9 @@ Four core limits to know before relying on a pass:
   scanned when named `test_*.py` or `*_test.py` outside pytest's default
   ignored directories (`build/`, `dist/`, `venv/`, dot-directories), reading
   only default pytest test names; non-default filenames such as
-  `tests/pricing_tests.py` or Django `tests.py` are not parsed as test units
-  even if `pyproject.toml` collects them. JS/TS scans zero-configuration Jest
+  `tests/pricing_tests.py` or Django `tests.py` emit an `analysis incomplete`
+  note on `check` (`stderr`, terminal report and SARIF) when changed, and are
+  not parsed as test units even if `pyproject.toml` collects them. JS/TS scans zero-configuration Jest
   and Node paths (`*.test.*`, `*.spec.*`, `__tests__/**`, `.js`/`.ts` under
   `test/`, and `tests/` files importing `ava` or `tap`), without reading
   `jest.config.*`, `vitest.config.*`, `.mocharc.*` or `package.json` `jest`

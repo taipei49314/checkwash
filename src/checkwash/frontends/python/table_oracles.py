@@ -79,7 +79,7 @@ from checkwash.frontends.python.table_oracles_projection import (
     align_concrete_case_sequences, parse_compatible_carrier_pair,
     render_projected_pair, verify_module_snapshot_purity,
 )
-from checkwash.frontends.python.table_oracles_test import (
+from checkwash.frontends.python.table_oracles_carriers import (
     _UNMATCHED, expand_direct_test_carrier, finalize_test_cases,
     inline_row_aliases, resolve_test_carrier,
 )

@@ -118,6 +118,19 @@ def test_collector_and_internal_helper_refuse_unsupported_host_before_work(monke
     with pytest.raises(ValueError, match="unsupported local receipt host"):
         collector.collect(SimpleNamespace())
     with pytest.raises(ValueError, match="unsupported local receipt host"):
+        collector.collect_compact(SimpleNamespace())
+    compact_cli_args = [
+        "--compact",
+        "--pr", "1",
+        *(f"--{k}=x" for k in (
+            "source-root", "action-root", "python", "git", "bash", "output", "scratch",
+            "dependency-lock", "base-sha", "head-sha", "source-tree",
+            "collector-source-sha", "dependency-lock-sha256",
+        )),
+    ]
+    with pytest.raises(ValueError, match="unsupported local receipt host"):
+        collector.main(compact_cli_args)
+    with pytest.raises(ValueError, match="unsupported local receipt host"):
         collector.main(["--internal-helper", "tool", "receipt", "arg"])
 
 
