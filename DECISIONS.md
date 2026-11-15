@@ -143,16 +143,18 @@ and before it merges, this entry with THREATMODEL row 131 (L1) and the
 
 Claude described both texts in the conversation and linked the pull
 request, whose head was then `7a7cb136ec6ca8b7207cd779b84fec16e8222970`,
-after main was taken in. At 2026-11-12T14:08:05Z Claude asked
+after main was taken in. At 2026-11-12T14:07:42Z Claude asked
 「#597 的 L1／L2 核可，收據過了就用 merge commit 合併嗎？」 (approve #597's L1
-and L2, and merge with a merge commit once the receipt passes?), and he
-chose 「核可並合併」 (approve and merge). Claude wrote the question and both
-buttons; the other was 「我先看 PR」 (let me look at the pull request first).
+and L2, and merge with a merge commit once the receipt passes?), and at
+14:08:05Z he chose 「核可並合併」 (approve and merge). Claude wrote the
+question and both buttons; the other was 「我先看 PR」 (let me look at the
+pull request first).
 
 The answer approves the two texts as they stand at that commit. It also
 approves the merge, once the pull request's PJU receipt and the four
-required checks pass. This paragraph is the only change made to the entry
-after it.
+required checks pass. This `**Approval.**` section was the only change made
+to the entry after `7a7cb136` in #597 (with the question's timestamp
+corrected here from `14:08:05Z` to `14:07:42Z` on 2026-11-15).
 
 **Authority.**
 

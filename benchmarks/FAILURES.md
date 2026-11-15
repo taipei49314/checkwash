@@ -11,7 +11,7 @@ it is known not to.
 
 ## The short version
 
-- **205 bypasses** are documented, of which **81 are not closed**.
+- **205 bypasses** are documented, of which **84 are not closed**.
 - The **historical in-sample adjudication** labels **31 of 1800** human-written commits as blocked by mistake (1.72%), each one named below. The sweep JSONs record engine 0.3.0; the adjudication is dated 2026-09-07. This is not a new current-release measurement.
 - **2 false positives were shipped and corrected**, both found by
   adversarial review rather than by this project's own review.
@@ -78,12 +78,15 @@ it is known not to.
 | 130 | Launder a Python test through a rule that still takes opaque-change evidence. Make the same one-comment edit to an existing template, native source or JS module that the Python unit-less broad-except condition refuses, and rewrite the expected value to the buggy output (`EXPECTED_VALUE_CHANGED`, or an expectation's definition, `EXPECTATION_DEFINITION_CHANGED`), put a different assertion of the same strength in the old one's slot (`ASSERT_SUBSTITUTED`), or install a stand-in for the code under test (`TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`). Since D-199 the stand-in route is closed in a Python test, an import-shadow stand-in reported on a pytest configuration included, and the expected-value route includes a weakening respelled as an exact comparison (`assert (total > 0) == True`) and an expectation computed from the subject through a module alias (`calc.compute(2)`) | — |
 | 131 | Weaken, remove, skip or loosen an assertion in a JS/TS test, or add a broad catch around one, beside a no-op edit to any existing production file checkwash cannot read. In a JS/TS project that is any production module, because checkwash parses JS/TS tests but no JS/TS production code. Since D-199 the weakening, loosening, broad catch and a skip on a live test are refused; a removal, a test parked where no code runs, and a stand-in or subject change keep the credit | — |
 
-## Closed in part (16)
+## Closed in part (19)
 
 | # | shape | pinned by |
 |---|---|---|
+| 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
 | 7a | conftest runtime control: an execution/report hook (#84), or a no-op swapped in for `item.runtest`/`obj`/`_obj`, an item class's `runtest` or a native `unittest.TestCase` method — `report.outcome = 'passed'` in `pytest_runtest_makereport`, `item.runtest = lambda: None` in a hook, `pytest.Function.runtest = lambda self: None` or `unittest.TestCase.assertEqual = lambda self, *args, **kwargs: None` at module scope | `conftest_gate_lends_to_report_hook_pos.gwcase`, `conftest_item_class_runtest_noop_pos.gwcase`, `conftest_item_runtest_noop_pos.gwcase`, `conftest_testcase_assert_equal_noop_pos.gwcase`, `conftest_testcase_call_test_method_noop_pos.gwcase` |
 | 14 | Wrap both sides in `sorted()` to make an ordered check order-blind | `assert_count_equal_bare_assert_pos.gwcase`, `assert_count_equal_beside_reorder_pos.gwcase`, `assert_count_equal_dict_equal_pos.gwcase`, `assert_count_equal_dict_pos.gwcase`, `assert_count_equal_hoisted_subject_pos.gwcase`, `assert_count_equal_list_around_hoisted_pos.gwcase`, `assert_count_equal_list_unwrapped_pos.gwcase`, `assert_count_equal_multiline_pos.gwcase`, `assert_count_equal_order_dropped_pos.gwcase`, `assert_count_equal_permuted_reorder_pos.gwcase`, `assert_count_equal_receiver_hoisted_pos.gwcase`, `assert_count_equal_two_hops_pos.gwcase`, `row14_sorted_wrap_pos.gwcase` |
+| 31 | Module-level `pytest.skip(..., allow_module_level=True)` / `importorskip` | `module_level_skip_pos.gwcase` |
+| 40 | `__test__ = False` at module or class scope de-collects everything | `test_attr_false_class_pos.gwcase`, `test_attr_false_pos.gwcase` |
 | 76 | Disarm with `set -o errexit` / `set +o errexit` (long form), an unspaced or-fallback, an or-fallback into `echo`, or `if ! runner; then ... fi` | `runner_script_errexit_longform_pos.gwcase` |
 | 84 | Launder the oracle anywhere but the subject: hoist the wrapper to a preceding statement, wrap the *argument*, or make the expected side an inline re-implementation of the buggy behaviour | `subject_argument_wrap_pos.gwcase`, `subject_hoisted_wrap_pos.gwcase` |
 | 84a | The same family, hit in the wild: replace an assertion with a *different* assertion of equal strength whose expected side is not a literal — `assert invoice_total(items, 0.05) == 105.0` → `expected = sum(items)` / `assert invoice_total(items, 0.05) == expected` | `expectation_derived_inline_pos.gwcase`, `expectation_derived_pos.gwcase` |
@@ -127,7 +130,7 @@ it is known not to.
 | 3 | Remove the hook / run outside greenwash / use a tool the PreToolUse matcher does not name | — |
 | 96 | Supply-chain verification downgrade: an attestation / signing / provenance step made non-blocking (`continue-on-error: true` on the signing step), or a publish fallback that silently drops verification (`twine upload` without `--attestations` when signing fails) — the release-pipeline shape of "a verification step quietly unenforced to keep the pipeline green" (sqlalchemy `7776cfbf`, 2026-09-01 field run) | — |
 
-## Closed — each pinned by something that runs (121)
+## Closed — each pinned by something that runs (118)
 
 A row is Closed only when a fixture or a named end-to-end test pins
 it, enforced by `tests/test_threatmodel_pinned.py`. That gate cannot
@@ -140,7 +143,6 @@ behind it* unshippable.
 | 4 | Add a dead constant, reorder defs, or edit an unrelated function to defuse E1 | `dead_prod_line_pos.gwcase`, `evidence_annotation_neg.gwcase`, `evidence_dead_local_neg.gwcase`, `evidence_string_stmt_neg.gwcase`, `prod_reorder_pos.gwcase`, `trivial_prod_change_pos.gwcase` |
 | 5 | `git mv` / plain `mv` a test file out of collection | — |
 | 6 | Rename the test class out of pytest's `Test*` rule | `class_rename_out_of_collection_pos.gwcase` |
-| 7 | conftest hook that skips the whole suite | `conftest_skip_hook_pos.gwcase` |
 | 8 | Early `return`, deleted parametrize rows | `early_return_pos.gwcase`, `js_early_return_pos.gwcase`, `js_if_true_return_pos.gwcase`, `js_issue429_repro_pos.gwcase`, `parametrize_rows_pos.gwcase` |
 | 9 | Sacrificial `@pytest.mark.skip` test absorbing deleted assertions via D2 | `dead_def_pasted_copy_no_move_credit_pos.gwcase`, `js_dead_registration_assertion_moved_pos.gwcase`, `js_dead_registration_pasted_other_file_pos.gwcase`, `sacrificial_skip_pos.gwcase` |
 | 10 | `assert f(x) == f(x)` self-comparison | `js_issue429_repro_pos.gwcase`, `js_self_compare_node_pos.gwcase`, `js_self_compare_pos.gwcase`, `self_compare_pos.gwcase`, `unittest_self_compare_pos.gwcase` |
@@ -163,7 +165,6 @@ behind it* unshippable.
 | 28 | Move an assertion into a never-called nested `def` (or `lambda`) | `nested_scope_assertion_pos.gwcase` |
 | 29 | Park an assertion under `if False:` | `if_false_assertion_pos.gwcase`, `js_if_false_assertion_pos.gwcase`, `js_issue429_repro_pos.gwcase` |
 | 30 | `skipif(False)` → `skipif(True)` | `skipif_condition_flipped_pos.gwcase` |
-| 31 | Module-level `pytest.skip(..., allow_module_level=True)` / `importorskip` | `module_level_skip_pos.gwcase` |
 | 32 | `import pytest as p` then `@p.mark.skip` | `aliased_skip_marker_pos.gwcase` |
 | 33 | `== 42` → `!= 42` (also `is`/`is not`, `in`/`not in`, `assertTrue`/`assertFalse`, and `== pytest.approx(42)` → `!= pytest.approx(42)` or a `not` around it) | `approx_left_polarity_inverted_pos.gwcase`, `approx_not_polarity_inverted_pos.gwcase`, `approx_polarity_inverted_pos.gwcase`, `assertis_polarity_pos.gwcase`, `polarity_inverted_pos.gwcase` |
 | 34 | Delete the same assertion twice, re-add one copy — both excused as "moved" | `moved_multiset_pos.gwcase` |
@@ -172,7 +173,6 @@ behind it* unshippable.
 | 37 | Widen `abs` while leaving `rel` alone | `tolerance_second_kind_pos.gwcase` |
 | 38 | Put the expectation on the left: `assert 3 == calc()` | `expected_on_left_pos.gwcase` |
 | 39 | Hand-edit an exemption past the 180-day cap | — |
-| 40 | `__test__ = False` at module or class scope de-collects everything | `test_attr_false_class_pos.gwcase`, `test_attr_false_pos.gwcase` |
 | 41 | `pytest.param(..., marks=pytest.mark.skip)` on every row: the row count never changes | `param_marks_skip_pos.gwcase` |
 | 42 | Narrow `python_files` / `testpaths`, or add `addopts = -k ...`, in `pytest.ini` / `tox.ini` / `setup.cfg` / `pyproject.toml` | `pyproject_addopts_array_opened_with_element_selector_pos.gwcase`, `pyproject_addopts_array_respelled_one_line_neg.gwcase`, `pyproject_addopts_array_selector_after_equals_pos.gwcase`, `pytest_ini_narrowed_pos.gwcase`, `pytest_ini_quoted_addopts_continuation_selector_pos.gwcase`, `pytest_toml_string_then_indented_key_narrowed_pos.gwcase`, `setup_cfg_addopts_continuation_selector_pos.gwcase`, `setup_cfg_quoted_addopts_continuation_selector_pos.gwcase`, `setup_cfg_quoted_addopts_respelled_one_line_neg.gwcase` |
 | 43 | `git mv tests/test_x.py build/test_x.py` (or `.attic/`, `dist/`, `htmlcov/`, any dot-dir) | `moved_to_build_dir_pos.gwcase`, `moved_to_dot_dir_pos.gwcase` |

@@ -8,8 +8,15 @@ coding agents may run them, never edit them (AGENTS.md).
 
 1. Determinism: double-run byte-identical (tests/test_determinism.py) and
    cross-process byte-identical under fresh hash seeds (tests/e2e).
-2. Cross-platform: the `byte-compare` CI job — every OS × Python emits
-   byte-identical corpus findings.
+2. Cross-platform: `SPEC.md` §8 requires byte-identical corpus findings across
+   Linux, macOS and Windows on Python 3.11–3.13. Per-push `ci.yml`
+   (`byte-compare`) has been disabled since 2026-10-23: pull requests run on
+   one Windows host (LAPTOP-01AGNPJU, Python 3.11, `checkwash-pju-tests` /
+   D-209), and each release runs `release-hosted.yml` (`macos-latest` and
+   `ubuntu-latest` × Python 3.11–3.13, D-204), checking byte-identical
+   `corpus-findings.json` outputs across its six source legs and, when the
+   release has a PJU six-leg batch, against that batch's `SHA256`; a single-run
+   nine-leg comparison across all three OSes is not executed.
 3. Golden corpus: all `.gwcase` fixtures green (tests/test_cases_runner.py).
 4. Rename safety: renamed/moved tests never read as deletions
    (tests/test_diffalign.py, moved_test_file_neg.gwcase).
