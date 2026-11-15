@@ -727,6 +727,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
     # systemMessage on a pass; json stdout and --emit-ir keep their bytes.
     for gap in report_context.importer_gaps:
         write_text(f"checkwash: {gap}\n", sys.stderr)
+    if report_context.unanalysed_test_files:
+        from checkwash.unanalysed_tests import unanalysed_test_note
+
+        write_text(f"checkwash: {unanalysed_test_note(report_context.unanalysed_test_files)}\n", sys.stderr)
     if args.coverage_report:
         if args.coverage_report == "-":
             write_text("error: --coverage-report requires a file path, not stdout\n", sys.stderr)

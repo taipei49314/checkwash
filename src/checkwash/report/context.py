@@ -21,6 +21,8 @@ class ReportContext:
     # Changed test helpers whose unchanged importers the expected-value pass
     # did not read, one message per run (D-206).
     importer_gaps: list[str] = field(default_factory=list)
+    # Changed test-shaped files outside the Python and JS/TS test parse gates (0.13, B6).
+    unanalysed_test_files: list[str] = field(default_factory=list)
     coverage_files: list[tuple[str, str]] = field(default_factory=list)
     _sources: dict[tuple[str, int], str] = field(default_factory=dict)
     _origins: dict[tuple[str, int, tuple[int, int], str], set[str]] = field(

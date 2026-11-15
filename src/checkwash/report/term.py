@@ -14,6 +14,7 @@ from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 from checkwash.report.unread import sorted_unread
 from checkwash.report.textio import unicode_decoration
+from checkwash.unanalysed_tests import unanalysed_test_note
 
 _SEV_COLOR = {"critical": "35", "high": "31", "warn": "33", "info": "36"}
 
@@ -74,15 +75,17 @@ def render(
     blocking = verdict == "block"
     coverage_gaps = context.coverage_gaps if context is not None else []
     importer_gaps = context.importer_gaps if context is not None else []
+    unanalysed_test_files = context.unanalysed_test_files if context is not None else []
     unread_sides = sorted_unread(unread)
 
     if not visible and not suppressed:
         head = "checkwash: no known tampering pattern detected"
         # A pass that did not read a changed file must not look like one
         # that read every file (#454): an unread side switches the head as a
-        # coverage gap does, and so do importers left unread (D-206). With
+        # coverage gap does, and so do importers left unread (D-206) and
+        # changed test-shaped files outside the parse gates (B6). With
         # findings the head is unchanged.
-        if coverage_gaps or importer_gaps or unread_sides:
+        if coverage_gaps or importer_gaps or unanalysed_test_files or unread_sides:
             head = "checkwash: analysis incomplete; no known tampering pattern detected"
             lines.append(_c("33", sym["warn"] + " " + head, color))
         else:
@@ -139,6 +142,8 @@ def render(
         lines.append(_c("33", "! " + gap.message(), color))
     for gap in importer_gaps:
         lines.append(_c("33", "! " + gap, color))
+    if unanalysed_test_files:
+        lines.append(_c("33", "! " + unanalysed_test_note(unanalysed_test_files), color))
     for side in unread_sides:
         lines.append(_c("33", "! " + side.note(), color))
     if ir.skipped_files:

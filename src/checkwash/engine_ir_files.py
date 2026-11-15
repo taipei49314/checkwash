@@ -12,6 +12,7 @@ from checkwash.config import Config
 from checkwash.frontends.python.frontend import ParsedFile
 from checkwash.ir.model import DiffGlobals, FileIR, IR, Marker, judged_as_test, normalize_text
 from checkwash.report.context import ReportContext
+from checkwash.unanalysed_tests import unanalysed_test_paths
 
 if TYPE_CHECKING:
     import types
@@ -650,6 +651,21 @@ def populate_files_and_globals(
     for change in expanded_changes:
         path = change.path.replace("\\", "/")
         if eng.is_artifact(path):
+            if report_context is not None and change.old_path and change.synthetic is None:
+                for unanalysed_path in unanalysed_test_paths(
+                    path,
+                    change,
+                    config=config,
+                    role="prod",
+                    is_python=path.endswith(".py"),
+                    is_js_test=False,
+                    judged_test=False,
+                    collect=False,
+                    parse_ok=True,
+                ):
+                    if unanalysed_path not in report_context.unanalysed_test_files:
+                        report_context.unanalysed_test_files.append(unanalysed_path)
+                        report_context.unanalysed_test_files.sort()
             continue
         role, table_role, is_python, is_js_test, test_obligations, judged_test = (
             _classify_file_change(path, change, config, surface.one_hop)
@@ -664,6 +680,21 @@ def populate_files_and_globals(
             single_context_change, before_parsed, after_parsed, manifest, surface, intake,
             root_searcher, oracle_resolver, before_by_path, js_head_runners,
         )
+        if report_context is not None:
+            for unanalysed_path in unanalysed_test_paths(
+                path,
+                change,
+                config=config,
+                role=role,
+                is_python=is_python,
+                is_js_test=is_js_test,
+                judged_test=judged_test,
+                collect=collect,
+                parse_ok=file_ir.parse_ok,
+            ):
+                if unanalysed_path not in report_context.unanalysed_test_files:
+                    report_context.unanalysed_test_files.append(unanalysed_path)
+                    report_context.unanalysed_test_files.sort()
         _record_test_and_cross_cutting_globals(
             g, path, change, role, table_role, judged_test,
             file_ir, before_parsed, after_parsed, surface,

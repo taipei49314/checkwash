@@ -16,6 +16,7 @@ from checkwash.findings import Finding, is_content_bound_fingerprint
 from checkwash.ir.model import IR
 from checkwash.report.context import ReportContext
 from checkwash.report.unread import sorted_unread
+from checkwash.unanalysed_tests import unanalysed_test_note
 
 _SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 _INFORMATION_URI = "https://github.com/taipei49314/checkwash"
@@ -87,6 +88,11 @@ def findings_to_sarif(
             notifications.append(notification)
         # Importers left unread name no line of the head (D-206).
         notifications.extend({"level": "warning", "message": {"text": gap}} for gap in context.importer_gaps)
+        if context.unanalysed_test_files:
+            notifications.append({
+                "level": "warning",
+                "message": {"text": unanalysed_test_note(context.unanalysed_test_files)},
+            })
     # Unread sides follow the coverage gaps in the same invocation (#454).
     notifications.extend(_unread_notification(side) for side in sorted_unread(unread))
     if notifications:
