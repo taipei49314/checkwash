@@ -1,6 +1,5 @@
 # checkwash
 
-[![CI](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml/badge.svg)](https://github.com/taipei49314/checkwash/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/checkwash.svg)](https://pypi.org/project/checkwash/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/taipei49314/checkwash/blob/main/LICENSE)
 
@@ -15,7 +14,7 @@ tests, relaxed expectations, and CI checks that stop failing.
 + assert total > 0
 ```
 
-The new assertion accepts many incorrect totals. checkwash can flag changes
+The new assertion accepts many incorrect totals. checkwash flags changes
 like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
@@ -24,8 +23,8 @@ The install commands and Action pin below name v0.12.0, the latest release
 whose public files are verified
 ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
 
-Start in one of three ways, each below: Claude Code hooks, the CLI on a
-repository, or the GitHub Action as a required check.
+Start in one of three ways: **Claude Code hooks**, **the CLI on a repository**,
+or **the GitHub Action** as a required check.
 
 ## Use it with Claude Code
 
@@ -37,34 +36,34 @@ pipx install checkwash==0.12.0
 checkwash hook install --agent claude-code --local
 ```
 
-This writes checkwash's hooks to `.claude/settings.local.json`, the
-machine-local Claude Code settings.
+This writes checkwash's hooks to `.claude/settings.local.json`, your
+machine-local Claude Code settings (`--local` is the default; `--shared`
+writes `.claude/settings.json` without the PreToolUse prompt):
 
-- The **Stop hook** checks the working tree against HEAD when Claude is about
-  to stop. On a blocking finding it blocks the stop and gives Claude the
-  finding. A SessionStart hook in the same file records where each session
-  starts, so the Stop hook also checks what the session commits.
-- From 0.11.0, a local install also adds a **PreToolUse ask**.
-  When an Edit, Write or MultiEdit of a Python test file would leave a finding
-  of one of five weakening rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`,
-  `TEST_DISABLED`, `TOLERANCE_LOOSENED` and `BROAD_EXCEPT_ADDED`) at high, the
-  hook asks you before the edit is made. In a `claude -p` run nobody can
-  answer, so such an edit is denied; the interactive prompt is not verified in
-  any mode. From 0.11.0 a local install is the default, and `--shared` writes
-  `.claude/settings.json` with no PreToolUse ask.
+- **Stop hook:** checks the working tree and the session's commits when Claude
+  is about to finish (paired with a `SessionStart` hook that records where the
+  session began). On a blocking finding, it stops Claude and returns the
+  finding so Claude can restore the test or explain what blocked.
+- **PreToolUse ask (`--local` only):** prompts before an `Edit`, `Write` or
+  `MultiEdit` of a Python test file leaves a `high` finding under one of five
+  weakening rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
+  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`). Non-interactive `claude -p`
+  runs deny such edits because nobody can answer; the interactive prompt
+  itself is not verified in automated tests.
 
-Both hooks are author-side checks. An edit made through Bash never reaches the
-ask. When the Stop hook cannot analyse a change, it says so and does not block
-the stop, except for a changed file over the size limit (see "Know the
-limits"). Neither hook can stop someone else's merge: the required check under
-"Use it in CI" is the gate. The 0.11.0 hooks' limits are in the
+Both hooks are author-side checks: edits made through `Bash` bypass the
+PreToolUse ask, and engine errors in the Stop hook report a non-blocking note
+(except working-tree files over the size limit). To enforce verdicts on merges,
+configure the required CI check under [Use it in CI](#use-it-in-ci). Hook
+limits are documented in the
 [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
 
 ## Try it on a repository
 
-You need **Python 3.11+ and Git**. Download and try the offline examples first.
+You need **Python 3.11+ and Git**. Download the single-file zipapp and run the
+built-in offline examples first.
 
-Windows PowerShell (including 5.1):
+Windows PowerShell (including 5.1, where `curl` aliases `Invoke-WebRequest`):
 
 ```powershell
 curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz
@@ -72,7 +71,6 @@ python checkwash.pyz --version
 python checkwash.pyz demo
 ```
 
-PowerShell 5.1 aliases `curl` to `Invoke-WebRequest`; use `curl.exe` as written.
 macOS/Linux or Git Bash:
 
 ```bash
@@ -81,30 +79,23 @@ python checkwash.pyz --version
 python checkwash.pyz demo
 ```
 
-Then, from the root of a repository with at least two commits:
+You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz).
+Then, from a Git repository with at least two commits:
 
 ```bash
 python checkwash.pyz check HEAD~1..HEAD
 ```
 
-This checks your last commit. Start with a change you already understand.
-You can also [download the file in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz).
-For uncommitted changes use `python checkwash.pyz check`. For a branch review,
-use `python checkwash.pyz check BASE...HEAD` to compare from the merge base;
-`BASE..HEAD` compares the two named snapshots directly.
+- **Uncommitted changes:** `python checkwash.pyz check`
+- **Branch review from merge base:** `python checkwash.pyz check BASE...HEAD` (`BASE..HEAD` compares the two snapshots directly)
+- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
 
-To watch checkwash block a weakened test in a small repository, follow
-[`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md):
-a failing test, a one-line edit that makes it pass without fixing the bug,
-and the block. It needs a clone of this repository, pytest and an installed
-`checkwash`.
-
-From a subdirectory, `check` analyses the whole repository from its Git root
-and says so in one line on stderr (since v0.8.0,
-[#416](https://github.com/taipei49314/checkwash/issues/416)). Before v0.8.0,
-run it from the repository root.
-
-For JSON/SARIF output and more examples, see the [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) and the [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
+Running `check` from a subdirectory analyses the whole repository from its Git
+root and notes that root on `stderr`
+([#416](https://github.com/taipei49314/checkwash/issues/416)). For JSON/SARIF
+output and machine integration, see the
+[embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
+and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
 
 ## Use it in CI
 
@@ -137,36 +128,30 @@ jobs:
       - uses: taipei49314/checkwash/action@532f74ab070a924b23e2cc70e5d0091a05d8401d # v0.12.0
 ```
 
-After the workflow runs, open **Settings → Rules → Rulesets** and require
-the `checkwash` status context. Keep the job unconditional.
-
-If you administer the repository and have this project's ruleset file,
-you can instead create the rule with:
+After the workflow runs once, open **Settings → Rules → Rulesets** and require
+the `checkwash` status context (keep the job unconditional). Repository
+administrators with a clone of this project can also add the ruleset via:
 
 ```bash
 gh api repos/OWNER/REPO/rulesets --method POST --input action/required-ruleset.json
 ```
 
-This adds a ruleset; it does not replace existing ones. `checkwash doctor`
-can inspect the local workflow, but cannot verify live branch protection.
-`doctor` 0.12.0 accepts the pin above and v0.11.0's. `doctor` 0.11.0 accepts
-only v0.11.0's and v0.10.0's, so it reports the pin above as an unsupported
-SHA ("workflow analysis incomplete", exit 1): upgrade the CLI and its local
-hooks before the Action pin.
+`checkwash doctor` checks the local workflow file (it cannot inspect live
+GitHub branch protection). When upgrading, update the CLI and local hooks
+before bumping the Action pin; see [CI details](#ci-details-doctor-and-the-pin).
 
 ## When checkwash blocks
 
 | Result | What to do |
 |---|---|
-| **Pass · exit 0** | No finding requires blocking under your configuration. Keep running your normal tests and review. |
+| **Pass · exit 0** | No finding requires blocking under your configuration. Keep running your normal test suite and code review. |
 | **Block · exit 1** | Read the finding and the diff. It may be weakened verification or a false positive. |
 | **Error · exit 2** | Resolve the input or analysis error before relying on the result. |
 
-The default threshold is **high**: a visible **warn** can still pass.
+The default threshold is **high**: a visible **warn** still passes.
 
-**Read the finding.** Each finding names its rule, its severity, and the file
-and test it is in. If the change at the top is the whole diff, made in
-`test_invoice_total` in `tests/test_billing.py`, the finding reads:
+**Read the finding.** For the diff at the top of this page inside
+`test_invoice_total` in `tests/test_billing.py`, checkwash prints:
 
 ```text
 ASSERT_WEAKENED   HIGH   tests/test_billing.py :: test_invoice_total
@@ -177,287 +162,218 @@ ASSERT_WEAKENED   HIGH   tests/test_billing.py :: test_invoice_total
   after   assert total > 0
 ```
 
-`EXACT_VALUE(90) -> BOUND(40)` ranks the assertion's strength before and
-after; 90 is not the value the test expected. `why high` names what raised the
-finding: here the diff changes no production file
-(`NO_PROD_CHANGE_IN_DIFF`); from 0.12.0 a weakened test blocks beside a
-production change too (`REPAIR_EVIDENCE_REFUSED`). `checkwash check --format json` gives the same
-findings as JSON.
+`EXACT_VALUE(90) -> BOUND(40)` ranks assertion strength before and after;
+`why high` names the escalator (`NO_PROD_CHANGE_IN_DIFF`, or
+`REPAIR_EVIDENCE_REFUSED` when weakened alongside a production edit). Use
+`checkwash check --format json` for machine-readable output.
 
 **Fix the change, or record a reviewed exemption.** If the test was weakened
-by mistake, restore it, and fix the code if the restored test fails. If the
-weaker test is intended, the report also prints a `checkwash allow` command
-with the finding's fingerprint, and the ledger file to commit:
+by mistake, restore it and fix the code. If the weaker test is intentional,
+record a time-boxed exemption (90 days default, 180 max) using the fingerprint
+printed in the report:
 
 ```bash
 checkwash allow "<the fingerprint from the report>" --reason "why the weaker test is correct"
 ```
 
-Configuration and exemptions are read from the base side of the diff, so a
-change cannot exempt itself: commit the entry through review, and it applies
-to the next diff once it is on the base. Since v0.10.0, a newly winning
-`.checkwash` config or allowance is compared with its BASE `.greenwash`
-predecessor, so a change cannot approve its own relaxation either. An entry
-needs a reason and expires after 90 days by default, 180 at most. Keep
-`.checkwash/` and `.greenwash/` behind
-[code owners](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#4-codeowners).
-From 0.11.0, the Stop hook tells Claude not to add an exemption
-itself but to tell you which finding blocks and why, and the PreToolUse ask
-asks you to approve only if the weaker test is intended.
-[Exemption rules](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#3-allowlist--reviewed-time-boxed-base-side)
+Configuration and exemptions are read strictly from the **base** side of the
+diff (comparing `.checkwash/` against any `.greenwash/` predecessor), so a PR
+cannot exempt or relax rules for itself: merge the ledger entry through code
+review first, and protect `.checkwash/` and `.greenwash/` with
+[CODEOWNERS](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#4-codeowners)
+([exemption rules](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#3-allowlist--reviewed-time-boxed-base-side)).
 
-**Report a false block.** If the change is honest and checkwash blocks it,
-look for it in the [failure ledger](https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md)
+**Report a false block.** If checkwash blocks an honest change, check the
+[failure ledger](https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md)
 first, then open an [issue](https://github.com/taipei49314/checkwash/issues)
-with the **checkwash blocked honest work** template, giving the diff and the
-`checkwash check --format json` output. A report becomes a regression
-fixture, and the ledger credits the reporter.
+with the **checkwash blocked honest work** template (`checkwash check --format json`
+plus the diff). Accepted reports become regression fixtures crediting the
+reporter.
 
 ## Know the limits
 
-**checkwash is alpha.** A pass does not prove that a change is correct or honest.
-Python is the main language supported; JS/TS support covers a limited set of
-test patterns. Known gaps remain.
+**checkwash is alpha.** A pass means no known tampering pattern was flagged at
+or above your threshold; it does not prove a change is correct or honest.
+Python is the primary supported language; JS/TS support covers a bounded set of
+patterns.
 
-Four limits to know before you rely on a pass:
+Four core limits to know before relying on a pass:
 
-- **Test files are found by name.** A Python file is read as a test when its
-  name is `test_*.py` or `*_test.py`, pytest's default patterns, and it is
-  not under a directory pytest skips by default (`build/`, `dist/`, `venv/`,
-  a dot-directory); inside it, only pytest's default test names are read. A
-  weakened assertion in `tests/pricing_tests.py` or in a Django `tests.py`
-  passes with no finding and no notice, even when your pytest configuration
-  (`python_files`, `python_functions`, `python_classes`, `testpaths`)
-  collects it. JS/TS test files are found by the zero-configuration defaults
-  of Node's test runner and Jest, such as `*.test.*` and `*.spec.*` names,
-  files under `__tests__/`, and `.js` or `.ts` files under `test/` (a `.jsx`
-  or `.tsx` file there is not read). A file that is a test only because it
-  sits under `tests/` (unless it imports `ava` or `tap`), or because your
-  runner configuration collects it, is not read.
-- **A JS/TS pass covers less than a Python one.** Like any pass, it means
-  only that nothing at or above the threshold was found; in JS/TS fewer
-  patterns are modelled, and only in the test files checkwash read. Which
-  tests a runner configuration collects (`jest.config.*`, `vitest.config.*`,
-  `.mocharc.*`, the `jest` key of `package.json`) is not read, so a change
-  there that stops tests from being collected passes with no finding.
-- **Editing an agent-instruction file blocks, except pure line additions to `CLAUDE.md`.**
-  Deleting, editing or reordering an existing line in a tracked `CLAUDE.md`
-  at the repository root (or wrapping or re-contextualizing an existing line
-  in an HTML comment, raw HTML block/element/attribute, code fence, multi-line
-  inline code span, link reference definition, frontmatter block, blockquote,
-  Setext heading or table), and any change to a tracked `AGENTS.md` or
-  `.cursorrules` at the root or to a tracked file under the root's `.claude/`,
-  `.checkwash/` or `.greenwash/`, is `GUARDRAIL_TOUCHED` at critical. Three
-  exceptions stay at warn: adding new lines to the root `CLAUDE.md` while
-  keeping every existing line in order and in its Markdown/HTML context
-  (`GUARDRAIL_ADDITIVE`; an added prose override or `@path` import stays warn),
-  an entry appended to the exemption ledger (`EXEMPTION_ADDED`), and creating
-  one of these files (`GUARDRAIL_CREATED`) unless it is a checkwash config
-  that disables a detector or raises `fail_on`. The same names in a
-  subdirectory, and other agents' instruction files, are not guarded. To let a
-  blocking edit through, record a reviewed exemption for it, or replace the
-  `guardrail` role's paths in a base-side `.checkwash/config.toml`. For
-  example, to stop guarding `CLAUDE.md` and keep the rest:
+- **Test files are found by default naming conventions.** Python files are
+  scanned when named `test_*.py` or `*_test.py` outside pytest's default
+  ignored directories (`build/`, `dist/`, `venv/`, dot-directories), reading
+  only default pytest test names; non-default filenames such as
+  `tests/pricing_tests.py` or Django `tests.py` are not parsed as test units
+  even if `pyproject.toml` collects them. JS/TS scans zero-configuration Jest
+  and Node paths (`*.test.*`, `*.spec.*`, `__tests__/**`, `.js`/`.ts` under
+  `test/`, and `tests/` files importing `ava` or `tap`), without reading
+  `jest.config.*`, `vitest.config.*`, `.mocharc.*` or `package.json` `jest`
+  collection rules.
+- **A JS/TS pass covers fewer patterns than Python.** Fewer assertion and
+  helper idioms are modelled in JS/TS, and runner config changes that silently
+  drop test files are not read.
+- **Editing agent-instruction files blocks, except pure line additions to root `CLAUDE.md`.**
+  Changes to root `AGENTS.md`, `.cursorrules`, `.claude/**`, `.checkwash/**`
+  or `.greenwash/**`—and deleting, editing, reordering or Markdown/HTML-wrapping
+  existing lines in root `CLAUDE.md`—escalate `GUARDRAIL_TOUCHED` to `critical`.
+  Pure line additions to root `CLAUDE.md` (`GUARDRAIL_ADDITIVE`), appended
+  exemption entries (`EXEMPTION_ADDED`), and newly created guardrail files that
+  do not weaken checkwash config stay at `warn`.
+- **Claude Code hooks are author-side helpers, not a merge gate.** Only the
+  required CI check in range mode enforces verdicts on pull requests.
 
-  ```toml
-  [roles]
-  guardrail = ["AGENTS.md", ".cursorrules", ".claude/**", ".checkwash/**", ".greenwash/**"]
-  ```
-
-  The list replaces the default one, so keep `.checkwash/**` and
-  `.greenwash/**` in it: without them checkwash stops reporting edits to its
-  own config and ledger. Creating the config is a warn; adding the table to
-  a config that is already tracked is itself a guardrail edit and blocks; if
-  your config is `.greenwash/config.toml`, edit that file instead. Once the
-  list is on the base side, checkwash does not report edits to `CLAUDE.md`
-  at all.
-- **The Claude Code hooks are author-side checks, not a merge gate.** They
-  run only on the author's machine. When the Stop hook hits an engine error
-  it says so and lets Claude stop, whatever `on_engine_error` says, unless a
-  file it must read is over the size limit below in the working tree. An
-  edit made through Bash never reaches the PreToolUse ask. Only the required
-  check under "Use it in CI" stops a merge.
-
-An edit that changes nothing, such as `+ 0` in a function a test calls or
-one line in a template or `AUTHORS`, can still hold a weakened Python or
-JS/TS test at warn in 0.11.0, which passes at the default threshold. From
-0.12.0 ([0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)) a
-weakened, removed, skipped or loosened Python assertion takes no repair
-evidence at all, and neither does a weakened, loosened or skipped JS/TS one
-(D-199). That blocks honest changes too: a deprecated API removed with an
-assertion on it, a test rewritten beside a behaviour change. Each needs a
-reviewed exemption. A rewritten expected value or a substituted assertion
-still takes the evidence, a weakening respelled as one of them included,
-and so does a test deletion that a renamed private symbol escorts; in JS/TS
-so do a removed assertion or test, deleted parametrize rows, a test parked
-in dead code and a stand-in or subject change
-([what still passes and how to block it](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
-Read the [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)
-and the [earlier limits they build on](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)
-before relying on a pass.
-
-`REPAIR_EVIDENCE` describes related changes in the same diff; it does not
-prove a repair is correct, and an edit that changes nothing can earn it
-(#419). From 0.12.0, `REPAIR_EVIDENCE_REFUSED` marks a finding
-that such a change reached and whose rule takes none (D-199). To block the
-rest, set the
-Action's `fail-on: warn`
-(`checkwash doctor` then reports "workflow analysis incomplete" and exits 1,
-which is expected: it proves only a checkwash step with no `with:`), or run
-`checkwash check --task` in a CLI step of your own with a base-side
-`oracle_freeze` contract (the Action has no task input); both block more
-honest changes too. From 0.11.0, on a local hook install, the
-Claude Code PreToolUse hook asks before an Edit, Write or MultiEdit of a
-Python test leaves a finding of its five weakening rules at high, whatever
-repair evidence the rest of the working tree holds; its limits are in the
-[0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
-
-In v0.8.0, JS/TS `test.each`, `it.each` and `test.for` tables are not
-scanned: an assertion weakened or deleted in one, an edited row or a deleted
-table passes. In v0.9.0, each such table is a test
-unit, and its rows are read when they can be counted (an inline array or a
-tagged template, or a same-file `const` read only as a table). The rows of a
-`describe.each` table stay unread, and a table with a computed title is not a
-unit ([#428](https://github.com/taipei49314/checkwash/issues/428)).
-
-Legitimate refactors can be flagged. The project keeps a corpus of 60 test
-refactors, 57 of them strictly qualified. Its expected-verdict table
-(`benchmarks/refactors/expected.json`) marks **6 of 60** as blocking, 4 of
-them among the 57: the six the v0.10.0 table retains after the
-[D-185 dispositions](https://github.com/taipei49314/checkwash/blob/main/docs/oracle-context-dispositions-0.10.0.md), including the known
-legitimate-refactor false blocks `CASE_020_windows` and `CASE_029_flatten`.
-This is a static source readback; the published 0.12.0 CLI blocks the same
-six (run on Windows, 2026-11-10 UTC). The corpus's retained runtime
-snapshot, from v0.3.1, records 22 blocks out of 60 (36.7%), and a source
-replay before v0.3.4 records 4/60 blocks, including 2/57 strictly qualified
-cases; three existing fixture errors remain. The later readback does not
-rewrite those historical runtime results. These are selected examples, not a
-general false-positive rate.
-
-A changed file over 1,000,000 bytes is not read. An image, data file,
-lockfile, document or non-Python production source that large is reported on
-stderr and earns no repair evidence.
+**Honest refactors and behaviour changes can require exemptions.** Weakened,
+removed, skipped or loosened Python assertions (and weakened, loosened or
+skipped JS/TS assertions) refuse production repair evidence
+(`REPAIR_EVIDENCE_REFUSED`), so removing a deprecated API with its assertion or
+rewriting a test beside a behaviour change requires a reviewed `checkwash allow`
+entry. On the project's 60-case refactor corpus (57 strictly qualified), the
+expected-verdict table (`benchmarks/refactors/expected.json`) and the published
+0.12.0 CLI mark **6 of 60** as blocking (4 among the 57, including known false
+blocks `CASE_020_windows` and `CASE_029_flatten`). Changed files over
+**1,000,000 bytes** are not read (non-Python assets/docs warn on `stderr`;
+test, CI, guardrail, `.py` or pytest config files over the cap exit 2).
 
 <details>
-<summary>Which files over the limit stop the run, and how each output and the Stop hook report them</summary>
+<summary>Customizing guarded instruction files (for example, unguarding CLAUDE.md)</summary>
 
-Since v0.9.0
-([#454](https://github.com/taipei49314/checkwash/issues/454)), `--format json`
-also lists it under `unread`, SARIF names it in a tool execution
-notification, and the term report adds a `!` line and, when there is no
-finding, opens with "analysis incomplete"; the Stop hook's JSON and
-`--emit-ir` do not name it. A file a detector must read (test, conftest, CI,
-guardrail, snapshot, JS setup, runner script or test-command file) that large
-stops the run with exit 2, naming it. So do a `.py` module
-that large, whether added, deleted, renamed or edited, and a pytest
-configuration file (`pytest.ini`, `.pytest.ini`, `pytest.toml`,
-`.pytest.toml`, `tox.ini`, `setup.cfg`, `pyproject.toml`) at any depth:
-either can change the module a test's import resolves to. So do any
-non-generated file under the root `scripts/` directory, read for the pytest
-commands it runs, and any other changed file that large the analysis needs
-as context. A shell shebang gives a file the shape of a runner script, whatever
-its name, except a `.py` module or a JS/TS test file.
-Since v0.9.0
-([#455](https://github.com/taipei49314/checkwash/issues/455)), checkwash reads
-the first 200 bytes of a side over the limit to tell, and uses them for
-nothing else; a Git side is streamed and checked against its object id.
-Where those bytes are read, a file that large whose side starts with a shell
-shebang stops the run, naming that side, whatever its suffix (a `.py` module
-or a JS/TS test file that large stops the run anyway, by its own rule). A
-file with no extension (a dotfile such as `.envrc` counts) without one, such
-as a `README` or a `LICENSE`, is set aside like any document, unless another
-rule above makes it one a detector must read. v0.8.0 reads no byte of such a
-side, so every file with no extension that large stops the run there. In v0.9.0
-a Git side over 64,000,000 bytes is not streamed, so its first bytes are not
-known: a file with no extension still stops the run when one of its Git sides
-is that large, and a suffixed file whose shebang is only on such a side is
-still set aside.
-When a file that large stops the run, since v0.9.0
-`--format json` prints `{"unread": [...]}` on stdout instead of nothing: one
-`unread` entry, for the side the run refused. It is not a findings document,
-and term and SARIF output stay empty. With a range, json output stays empty
-too when the refused file is a symlinked pytest configuration's target that
-no detector must read.
-Generated output (`build/`, `dist/`, `node_modules/` and the like) is set
-aside like a production source unless it is a Python module, a pytest
-configuration, a CI file, a runner script or a file with no extension whose
-shebang is not known. A root
-`poetry.lock` or `uv.lock` that large at the base is skipped with a note on
-stderr, and the skip is not listed under `unread`; when the diff also changes
-that lockfile, the change's sides over the limit are listed like any other. A
-root `pyproject.toml` or `requirements*.txt` that large at the base stops
-every run, naming it: term, json and SARIF output exit 2 and name it on
-stderr only. The Claude Code Stop hook (`--format hook-json`) reports an
-engine error, this one included, as a non-blocking "not analysed" message
-on stdout that quotes the error, and exits 0.
-Since v0.9.0, when the run stops on a file the hook's diff
-changes and that file's working-tree side is over the limit, the hook blocks
-the stop instead, naming the file and asking to shrink, split or revert it
-([#456](https://github.com/taipei49314/checkwash/issues/456)). A file whose
-base side alone is over the limit, a root manifest over it at the base, and a
-padded file committed before the stop keep the message; the full list is in
-[subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/subject-integrity.md).
+Subdirectory instruction files and other agents' config filenames are not
+guarded by default. Note that `GUARDRAIL_ADDITIVE` on root `CLAUDE.md` stays
+at `warn` even if an added plain-text line contradicts earlier prose or adds an
+`@path` import.
+
+To let a blocking guardrail edit through, record a reviewed exemption or
+override `[roles].guardrail` in a base-side `.checkwash/config.toml` (or
+`.greenwash/config.toml` if your repository uses that directory):
+
+```toml
+[roles]
+guardrail = ["AGENTS.md", ".cursorrules", ".claude/**", ".checkwash/**", ".greenwash/**"]
+```
+
+Because this list replaces the default, keep `.checkwash/**` and
+`.greenwash/**` in it so checkwash continues guarding its own config and
+ledger. Creating a new config file is a `warn`; editing an already-tracked
+config is itself a `critical` guardrail edit until merged to the base.
 
 </details>
 
-Try it on your own changes before making it required. [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
+<details>
+<summary>Repair-evidence residuals, JS/TS table scope and refactor-corpus provenance</summary>
+
+`REPAIR_EVIDENCE` describes related changes in the same diff; it does not prove
+a repair is semantically valid, and a no-op production edit (such as `+ 0`) can
+earn it ([#419](https://github.com/taipei49314/checkwash/issues/419)). From
+0.12.0 ([0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md),
+[0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)),
+weakened/removed/skipped/loosened Python assertions and weakened/loosened/skipped
+JS/TS assertions take no repair evidence (`REPAIR_EVIDENCE_REFUSED`). By
+default, rewritten expected values, substituted assertions (including a
+weakening respelled as one), test deletions escorted by a renamed private
+symbol, and JS/TS removed assertions/units, deleted parametrize rows, dead-code
+parked units and stand-in/subject edits still accept repair evidence; to block
+those too, set `fail-on: warn` in the Action (`checkwash doctor` will then
+exit 1 because it proves only a step without `with:`) or run `checkwash check --task`
+with a base-side `oracle_freeze` contract
+([enterprise hardening guide](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
+
+In JS/TS (since v0.9.0, [#428](https://github.com/taipei49314/checkwash/issues/428)),
+each `test.each`, `it.each` and `test.for` table with a static title is a unit
+whose rows are counted when written as an inline array, tagged template or
+same-file `const` used only as a table; `describe.each` rows and computed-title
+tables remain unread.
+
+For the 60-case refactor corpus, **6 of 60** (4 of 57 strictly qualified) is
+the static source readback retained since the
+[D-185 dispositions](https://github.com/taipei49314/checkwash/blob/main/docs/oracle-context-dispositions-0.10.0.md)
+and matched by the published 0.12.0 CLI on Windows (2026-11-10 UTC). Earlier
+historical snapshots in the repository record 22/60 blocks (36.7%) at v0.3.1
+(`benchmarks/refactors/results-latest.json`) and 4/60 (2/57 strictly qualified,
+with three fixture errors) in a pre-v0.3.4 source replay; those historical
+records are preserved unchanged and are selected examples rather than a general
+false-positive rate.
+
+</details>
+
+<details>
+<summary>Which files over the 1,000,000-byte limit stop the run, and how each output reports them</summary>
+
+Since v0.9.0 ([#454](https://github.com/taipei49314/checkwash/issues/454),
+[#455](https://github.com/taipei49314/checkwash/issues/455)), oversized
+non-Python assets, lockfiles, docs and non-Python production sources are set
+aside without earning repair evidence: `--format json` lists them under
+`unread`, SARIF emits a tool execution notification, and terminal output prints
+a `!` note (opening with `analysis incomplete` when there are zero findings);
+`--format hook-json` and `--emit-ir` omit `unread`.
+
+Any oversized file a detector or import resolver must read—test, conftest, CI,
+guardrail, snapshot, JS setup, runner script, `.py` module, pytest config
+(`pytest.ini`, `.pytest.ini`, `pytest.toml`, `.pytest.toml`, `tox.ini`,
+`setup.cfg`, `pyproject.toml`) at any depth, or non-generated `scripts/**`
+file—stops the run with exit 2 (`--format json` prints `{"unread": [...]}`
+except on an unread symlinked pytest-config target in range mode; term and
+SARIF stay empty). checkwash streams up to 64,000,000 bytes per Git side and
+inspects the first 200 bytes of oversized sides solely to detect shell shebangs
+(an extensionless file with a side over 64 MB still stops the run). Generated
+paths (`build/`, `dist/`, `node_modules/`) are set aside unless they match `.py`,
+pytest config, CI, runner script or unknown-shebang extensionless rules. At the
+base, oversized root `poetry.lock`/`uv.lock` warn on `stderr`, while oversized
+root `pyproject.toml` or `requirements*.txt` exit 2 across term/json/SARIF. In
+the Claude Code Stop hook (`--format hook-json`), engine errors report a
+non-blocking message and exit 0, except when a file changed by the hook's diff
+exceeds the limit in the working tree, which blocks the stop and asks to
+shrink, split or revert it ([#456](https://github.com/taipei49314/checkwash/issues/456);
+see [subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/subject-integrity.md)).
+
+</details>
+
+Try it on your own changes before making it required.
+[Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
+· [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)
 
 ## CI details: doctor and the pin
 
-The recommended Action and the CLI above are both **v0.12.0**.
-Record which version you use. [Full setup and exemptions](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
+The recommended Action and CLI above are both **v0.12.0** (GitHub Release
+2026-11-07, PyPI 2026-11-08, Asia/Taipei). Always upgrade the CLI and its local
+hooks first, then update the Action SHA in `.github/workflows/checkwash.yml`.
+[Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
+· [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
-**Development snapshots:** the source in this checkout may be newer than the
-published CLI. [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
-records the version, tag commit and download bytes behind the installation commands
-above. New changes require their own candidate evidence and remain unreleased
-until the publication record verifies them; candidate CI success does not mean
-that the recommended Action pin includes them.
+<details>
+<summary>Pin verification, release tag geometry (A vs M), Dependabot/zizmor and &lt;= v0.7.0 advisory</summary>
 
-**Advisory: Action trust boundary.** Every published Action release up to and
-including v0.7.0 runs `python -m pip` and then `checkwash` with the pull
-request's checkout as the working directory, so a module in that checkout (for
-example a top-level `pip` package) can replace the installer and then the
-checker, and the pull request can tamper with the result it is judged by. Under
-checkwash's threat model that applies to every pull request it judges. v0.8.0
-fixes it ([#372](https://github.com/taipei49314/checkwash/pull/372)); pin the
-v0.12.0 Action above. If you stay on v0.7.0 or earlier, treat a pass as
-advisory, review the pull request before merging and keep `comment-pr` off.
-[Known issue](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary)
+**Development snapshots:** source on `main` may be ahead of the published CLI.
+[The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
+records the verified version, tag commit and artifact digests behind the
+commands above.
 
-**Which commit is the recommended pin?** The release's Action commit, which
-from v0.12.0 (D-200) is the commit the tag points to:
-`git rev-parse 'vX.Y.Z^{commit}'`. A release cannot embed its own commit SHA,
-so from v0.11.0 (D-194) a release has two commits: its Action commit, and the
-release merge, which differs from it in one line, `doctor`'s own Action pin,
-set to the Action commit. The PyPI package and the pyz are built from the
-merge. The Action runs only `checkwash check`, which does not import
-`doctor`, so it runs the same check at either commit. A release's `doctor`
-accepts two Action pins: the one recommended before the release and the
-release's own Action commit. The v0.11.0 tag points at the merge, so v0.11.0's
-Action commit is the tag's second parent's parent,
-`git rev-parse 'vX.Y.Z^2^1'`. Up to v0.10.0 the pin was the commit the tag
-points to.
+**Which commit is the recommended pin?** From v0.12.0 (D-200), the release tag
+points directly at the release's Action commit:
+`git rev-parse 'vX.Y.Z^{commit}'`. Because an Action commit cannot embed its own commit SHA,
+each release from v0.11.0 (D-194) has two commits: its Action
+commit `A`, and the release merge `M` (which differs only in setting `doctor`'s
+own Action pin line to `A`). PyPI distributions and `checkwash.pyz` are built from `M`, while
+`checkwash check` in the Action does not import `doctor` and behaves
+identically at `A` and `M`. Installing the CLI from a Git release tag installs
+`A`, whose `doctor` rejects that release's own Action pin (`exit 1`)—install
+the CLI from PyPI or `checkwash.pyz` instead. (For v0.11.0 only, the tag
+pointed at `M`, so its Action commit was `git rev-parse 'vX.Y.Z^2^1'`; up to
+v0.10.0 the tag pointed at the single release commit.)
 
-From v0.12.0, a CLI installed through Git from a release tag is the Action
-commit's, and its `doctor` rejects that release's own Action pin ("workflow
-analysis incomplete", exit 1). Install the CLI from PyPI or the pyz.
+**Pin updaters and `doctor`:** because v0.12.0+ tags point at the Action
+commit, Dependabot, Renovate and zizmor's `ref-version-mismatch` audit resolve
+`# v0.12.0` directly to the SHA `doctor` 0.12.0 accepts (inferred from those
+tools' documentation, not run; `doctor` 0.11.0 accepts only v0.10.0 and v0.11.0
+pins).
 
-Pin updaters such as Dependabot and Renovate follow the `# vX.Y.Z` comment and
-propose the commit the tag points to; what this paragraph says about them
-and about zizmor is inferred from those tools' documentation, not run. From
-v0.12.0 that commit is the release's Action commit, which that release's
-`doctor` accepts, and zizmor's `ref-version-mismatch` audit should not
-report the comment. For a v0.11.0 pin they can propose the v0.11.0 merge,
-which `doctor` rejects, and zizmor can report the comment; an update to
-v0.12.0 proposes v0.12.0's Action commit, which `doctor` 0.12.0 accepts and
-`doctor` 0.11.0 rejects. So upgrade the CLI and its local hooks first, then
-the Action pin. The
-recommended v0.12.0 Action includes the engine published as checkwash 0.12.0
-(GitHub Release 2026-11-07, PyPI 2026-11-08, Asia/Taipei). A CLI upgrade does
-not update an existing Action.
-[Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
+**Advisory for Action `<= v0.7.0`:** Action releases up to v0.7.0 ran
+`python -m pip` and `checkwash` with the PR checkout as working directory,
+allowing a PR to shadow `pip` or `checkwash` ([#372](https://github.com/taipei49314/checkwash/pull/372),
+fixed in v0.8.0). Pin the v0.12.0 Action above; see
+[SECURITY.md](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary).
+
+</details>
 
 ## More options and evidence
 
@@ -518,8 +434,9 @@ separate population; the general-commit rate does not predict it.
 | Contributing or reporting a problem | [Contributing](https://github.com/taipei49314/checkwash/blob/main/CONTRIBUTING.md) · [Issues](https://github.com/taipei49314/checkwash/issues) · [Security reports](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md) |
 | Readiness for 1.0 | [Criteria — not met](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#what-must-change-before-10) |
 
-Related projects: [checkwash-corpus](https://github.com/taipei49314/checkwash-corpus)
-and [smallestlie](https://github.com/taipei49314/smallestlie) hold evaluation work.
+Related project: [checkwash-prove](https://github.com/taipei49314/checkwash-prove)
+(experimental) executes your test suite against concrete mutants to show what
+protection a test change dropped.
 
 The package also includes a limited quality preview for coverage, Ruff and
 mypy configuration review. [Setup and CI adoption guide](https://github.com/taipei49314/checkwash/blob/main/docs/quality-adoption.md).
