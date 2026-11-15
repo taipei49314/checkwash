@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.frontends.python.frontend import ParsedFile
+from checkwash.gating import GUARDRAIL_ADDITIVE_PATHS
+from checkwash.guardrail_additive import is_pure_line_addition
 from checkwash.ir.model import DiffGlobals, FileIR, IR, Marker, judged_as_test, normalize_text
 from checkwash.report.context import ReportContext
 from checkwash.unanalysed_tests import unanalysed_test_paths
@@ -485,6 +487,14 @@ def _record_non_prod_role_change(
                 and eng._created_config_loosens(change.after)
             ):
                 g.guardrail_configs_created_loosening.append(path)
+        elif (
+            shadow is None
+            and path in GUARDRAIL_ADDITIVE_PATHS
+            and change.status == "modified"
+            and (change.old_path is None or change.old_path.replace("\\", "/") == path)
+            and is_pure_line_addition(change.before, change.after)
+        ):
+            g.guardrail_files_additive.append(path)
     elif role == "ci" and test_obligations:
         g.ci_files_changed.append(path)
     elif role == "ci":
@@ -592,6 +602,7 @@ def _finalize_file_globals_and_constants(
     g.hidden_unicode.sort()
     g.scope_drift.sort()
     g.exemptions_added.sort()
+    g.guardrail_files_additive.sort()
 
     if g.snapshot_files_changed and g.prod_files_changed and not g.test_logic_changed:
         paths = set(g.snapshot_files_changed) | set(g.prod_files_changed)

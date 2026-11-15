@@ -98,7 +98,7 @@
           "anyOf": [{"$ref": "#/$defs/evidence"}, {"type": "null"}]
         },
         "escalators": {
-          "description": "Labels gating attached when it raised the severity, most of them described in SPEC.md §5, and GUARDRAIL_CREATED, which marks a newly created guardrail file left at `warn`. New labels can appear without a version change.",
+          "description": "Labels gating attached when it raised the severity, most of them described in SPEC.md §5, plus GUARDRAIL_CREATED and GUARDRAIL_ADDITIVE, which mark a newly created guardrail file or a pure line addition to repository-root CLAUDE.md left at `warn`. New labels can appear without a version change.",
           "type": "array",
           "items": {"$ref": "#/$defs/label"}
         },

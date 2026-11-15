@@ -523,6 +523,10 @@ class DiffGlobals:
     # made checkwash's own installer produce a critical block (field
     # integration 2026-08-07).
     guardrail_files_created: list[str] = field(default_factory=list)
+    # Existing guardrail files (repository-root CLAUDE.md, D-211) modified by
+    # pure line additions: every base line survives in order with its Markdown
+    # fenced-code, raw-HTML-block and HTML-comment context unchanged.
+    guardrail_files_additive: list[str] = field(default_factory=list)
     ci_files_changed: list[str] = field(default_factory=list)
     ci_weakening_lines: list[tuple[str, str]] = field(default_factory=list)  # (path, line)
     snapshot_files_changed: list[str] = field(default_factory=list)
