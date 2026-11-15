@@ -353,3 +353,89 @@ def test_long_chain_context_boundaries(monkeypatch, template, recovers):
         leaves = [node for node in ast.walk(assigns[0].value) if isinstance(node, ast.Constant)]
         assert len(leaves) >= 600
 
+
+@pytest.mark.parametrize("prefix,field_head,field_tail", [
+    ('fr"', "{'''}\"", "'''}\""),
+    ("fr'", '{"""}\'', '"""}\''),
+    ('FR"', "{'''}\"", "'''}\""),
+    ('rf"', "{'''}\"", "'''}\""),
+    ('fr"', "{x # \"", "}\""),
+], ids=[
+    "fr_triple_single",
+    "fr_triple_double",
+    "FR_triple",
+    "rf_triple_single",
+    "fr_comment",
+])
+def test_pep701_prefixed_multiline_fstrings_refuse_condensation_and_preserve_later_chain(
+    monkeypatch, prefix, field_head, field_tail,
+):
+    pad = " + ".join(["a"] * 700)
+    deep = "deep = " + " + ".join(["'a'"] * 600)
+    first_line = f"y = {prefix}{field_head} + {pad}\n"
+    assert len(first_line) > 2048
+    assert syntax._condense_complete_nonchain_line(first_line) is None
+    assert syntax._condense_quote_free_line(first_line) is None
+
+    source = f"{first_line}{field_tail}\n{deep}\n"
+    if sys.version_info < (3, 12):
+        with pytest.raises(SyntaxError):
+            syntax.parse_module(source)
+    else:
+        force_first_recursion(monkeypatch)
+        tree = syntax.parse_module(source)
+        assert [type(node) for node in tree.body] == [ast.Assign, ast.Assign]
+
+
+def test_invalid_escape_python_source_parses_and_checks_without_warnings(monkeypatch, tmp_path):
+    import subprocess
+    import warnings
+
+    chain_source = "pattern = '\\d+' + '\\s+'\n"
+    with warnings.catch_warnings(record=True) as native_caught:
+        warnings.simplefilter("always")
+        native_tree = syntax.parse_module(chain_source)
+    assert [str(item.message) for item in native_caught] == []
+
+    force_first_recursion(monkeypatch)
+    with warnings.catch_warnings(record=True) as fallback_caught:
+        warnings.simplefilter("always")
+        fallback_tree = syntax.parse_module(chain_source)
+    assert [str(item.message) for item in fallback_caught] == []
+    assert ast.dump(fallback_tree, include_attributes=True) == ast.dump(
+        native_tree, include_attributes=True
+    )
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-b", "main")
+    git("config", "user.name", "checkwash")
+    git("config", "user.email", "checkwash@example.invalid")
+    git("config", "commit.gpgsign", "false")
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "__init__.py").write_bytes(b"")
+    (tmp_path / "app" / "code.py").write_text("def token():\n    return '42'\n", encoding="utf-8")
+    (tmp_path / "tests").mkdir()
+    test_file = tmp_path / "tests" / "test_code.py"
+    test_file.write_text(
+        'import re\nfrom app.code import token\n\ndef test_token():\n    assert re.match("\\d+", token()).group(0) == "42"\n',
+        encoding="utf-8",
+    )
+    git("add", "-A")
+    git("commit", "-m", "base")
+    test_file.write_text(
+        'import re\nfrom app.code import token\n\ndef test_token():\n    assert re.match("\\d+", token()).group(0) != ""\n',
+        encoding="utf-8",
+    )
+    git("commit", "-am", "head")
+    run = subprocess.run(
+        [sys.executable, "-W", "always", "-m", "checkwash", "check", "HEAD~1..HEAD", "--repo", str(tmp_path), "--format", "json"],
+        capture_output=True,
+        text=True,
+    )
+    assert run.returncode == 1, run.stderr
+    assert run.stderr == ""
+    assert '"ASSERT_WEAKENED"' in run.stdout
+
+

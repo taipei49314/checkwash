@@ -12,6 +12,7 @@ import ast
 import datetime
 import hashlib
 import re
+import warnings
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
@@ -824,59 +825,62 @@ def build_ir(
     pytest_configs=None,
     policy_base=None,
 ) -> IR:
-    intake = _prepare_diff_intake(
-        changes, config, scope_allow, head_reader=head_reader, report_context=report_context,
-        root_reader=root_reader, root_searcher=root_searcher,
-        root_path_lister=root_path_lister, root_batch_reader=root_batch_reader,
-    )
-    surface = _initialize_global_surface(
-        intake, config, base_label=base_label, head_label=head_label,
-        scope_allow=scope_allow, known_modules=known_modules, self_modules=self_modules,
-        pytest_configs=pytest_configs, root_path_lister=root_path_lister,
-    )
-    chain_resolver = _ConftestChainResolver(
-        intake.changes, config, intake.root_reader, report_context,
-    )
-    oracle_resolver = _CrossfileOracleResolver(
-        surface.raw_by_path, config, intake.root_reader, intake.head_reader,
-        report_context, intake.importer_reads, intake.reviewed_root_modules,
-    )
-    head_collection = _HeadCollectionResolver(
-        intake.changes, chain_resolver.chain_sources, intake.root_reader,
-        intake.root_batch_reader, root_path_lister, surface.config_evidence,
-    )
-    file_pass = _populate_files_and_globals(
-        surface, intake, config, chain_resolver=chain_resolver,
-        oracle_resolver=oracle_resolver, head_collection=head_collection,
-        root_searcher=root_searcher, report_context=report_context, policy_base=policy_base,
-    )
-    relocation = _RelocationContextResolver(
-        intake.changes, file_pass.expanded_changes, chain_resolver=chain_resolver,
-        root_reader=intake.root_reader, root_searcher=root_searcher,
-        root_path_lister=root_path_lister, report_context=report_context,
-    )
-    relocation.mark_ir_file_contexts(surface.ir)
-    _record_move_credits(
-        surface.ir, file_pass.js_head_runners, head_collection, relocation.relocation_sources,
-    )
-    _record_duplicate_survivors(
-        surface.ir, head_searcher=head_searcher, head_reader=intake.head_reader,
-        chain_resolver=chain_resolver, after_by_path=file_pass.after_by_path,
-        relocation_resolver=relocation, head_collection=head_collection,
-    )
-    _record_standin_installations(
-        surface.ir, intake.changes, intake.unread_changes, config,
-        root_reader=intake.root_reader, root_searcher=root_searcher,
-        root_path_lister=root_path_lister,
-    )
-    _mark_equivalence_and_provenance(
-        surface.ir, surface.raw_by_path, intake.root_reader, root_searcher,
-        config, report_context, oracle_resolver.strict_head_sources(),
-    )
-    _attach_config_report_evidence(
-        surface.ir, surface.config_report_changes, surface.rename_destinations,
-    )
-    return surface.ir
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        intake = _prepare_diff_intake(
+            changes, config, scope_allow, head_reader=head_reader, report_context=report_context,
+            root_reader=root_reader, root_searcher=root_searcher,
+            root_path_lister=root_path_lister, root_batch_reader=root_batch_reader,
+        )
+        surface = _initialize_global_surface(
+            intake, config, base_label=base_label, head_label=head_label,
+            scope_allow=scope_allow, known_modules=known_modules, self_modules=self_modules,
+            pytest_configs=pytest_configs, root_path_lister=root_path_lister,
+        )
+        chain_resolver = _ConftestChainResolver(
+            intake.changes, config, intake.root_reader, report_context,
+        )
+        oracle_resolver = _CrossfileOracleResolver(
+            surface.raw_by_path, config, intake.root_reader, intake.head_reader,
+            report_context, intake.importer_reads, intake.reviewed_root_modules,
+        )
+        head_collection = _HeadCollectionResolver(
+            intake.changes, chain_resolver.chain_sources, intake.root_reader,
+            intake.root_batch_reader, root_path_lister, surface.config_evidence,
+        )
+        file_pass = _populate_files_and_globals(
+            surface, intake, config, chain_resolver=chain_resolver,
+            oracle_resolver=oracle_resolver, head_collection=head_collection,
+            root_searcher=root_searcher, report_context=report_context, policy_base=policy_base,
+        )
+        relocation = _RelocationContextResolver(
+            intake.changes, file_pass.expanded_changes, chain_resolver=chain_resolver,
+            root_reader=intake.root_reader, root_searcher=root_searcher,
+            root_path_lister=root_path_lister, report_context=report_context,
+        )
+        relocation.mark_ir_file_contexts(surface.ir)
+        _record_move_credits(
+            surface.ir, file_pass.js_head_runners, head_collection, relocation.relocation_sources,
+        )
+        _record_duplicate_survivors(
+            surface.ir, head_searcher=head_searcher, head_reader=intake.head_reader,
+            chain_resolver=chain_resolver, after_by_path=file_pass.after_by_path,
+            relocation_resolver=relocation, head_collection=head_collection,
+        )
+        _record_standin_installations(
+            surface.ir, intake.changes, intake.unread_changes, config,
+            root_reader=intake.root_reader, root_searcher=root_searcher,
+            root_path_lister=root_path_lister,
+        )
+        _mark_equivalence_and_provenance(
+            surface.ir, surface.raw_by_path, intake.root_reader, root_searcher,
+            config, report_context, oracle_resolver.strict_head_sources(),
+        )
+        _attach_config_report_evidence(
+            surface.ir, surface.config_report_changes, surface.rename_destinations,
+        )
+        return surface.ir
 
 
 def run_detectors(ir: IR, config: Config) -> list[Finding]:

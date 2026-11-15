@@ -14,6 +14,7 @@ import math
 import operator
 import re
 import sys
+import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from types import SimpleNamespace
@@ -4456,7 +4457,10 @@ def parse_python(
     global _walks
     outer, _walks = _walks, None
     try:
-        return _parse_python(data, collect_tests, conftest, chain, imported)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return _parse_python(data, collect_tests, conftest, chain, imported)
     finally:
         _walks = outer
 
