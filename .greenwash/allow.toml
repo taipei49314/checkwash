@@ -1027,3 +1027,355 @@ reason = "PR #589 (D-200): the option Nelson chose for 0.12 removes the README's
 author = "taipei49314"
 created = "2026-11-06"
 expires = "2026-12-06"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:011f1774b4ebe69c6553170dfc1ff08b9955b774532436323d7923ee32fb7c1d"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_mid[0].severity == \"warn\"` -> `assert hits_mid[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:06d6bfc105c5cf9452edea4f5cf8be79bced4845de3b99843e89de02280de484"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_pre[0].severity == \"warn\"` -> `assert hits_pre[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:070a6c10db8a1595226c48fb000bfb1ca7ccb0b03a5dd0bab3ff659a59340d13"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert ir.globals.guardrail_files_additive == [\"CLAUDE.md\"]` -> `assert ir.globals.guardrail_files_additive == []` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:0acf22c08ad00be93fe351157e13fb6e99e8ecf902598a95f58f00702bb65275"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_ph[0].severity == \"warn\"` -> `assert hits_ph[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:1b7fd17d2daacd4274da3742e37ce7e170a527178ae91172de82bbe088a7b79c"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_bb == \"pass\"` -> `assert verdict_bb == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:1c581e1fb4fd1f3428d259e7f32d847d2a2291bf718a39261f9105074f57e0c9"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hit.escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hit.escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:29b71f1831994aa6815f1787600dae9a303e0cde9d244abcde748bf0bdceb887"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_pl == \"pass\"` -> `assert verdict_pl == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:31efc02ebb569d50bfe1763e41c994c63f5c2b8d1c9dd9cc005dda6675fff17c"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_fm[0].severity == \"warn\"` -> `assert hits_fm[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:37dbd82e7be7264d56346560c86a53c4ae23fb8aadbd9bb8124177c499d6b7d0"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_pre[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_pre[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:6aae0f542412822f2b426c0fc77f1a4b75c71e798e13cc47681159b8e251ea2b"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict == \"pass\"` -> `assert verdict == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:6bbdcbc6674111b8650e84a0340628a633df59773e208c78e0003cdc9d4c04a3"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert \"extended (CLAUDE.md)\" in hit.message` -> `assert \"changed (CLAUDE.md)\" in hit.message` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:6d3dbccd6b575acd69be07045c9f7b5fde05a1985fe0f801d930a332cf4bd829"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_fm == \"pass\"` -> `assert verdict_fm == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:710e14ac37f5448a72ffece0e832b7f55585bd023104038770aac29e4bde35e5"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_mid == \"pass\"` -> `assert verdict_mid == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:755775bb2332ad2618d15b34c8a220126033a27e2cde4f03621b273cd8278403"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_mid[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_mid[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:766cd2025c87be600910385aedff41d8a6ff2e0bcb29464ea06c1de627dd9528"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_pre == \"pass\"` -> `assert verdict_pre == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:7d50b7d0f7bf041b0181e2305c1dec03bd5f87f879b8a48d2a5f9e6f9b3381f8"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_pl[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_pl[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:8ab053003c93c57d0f4e0518b10533b35bb2ef42c45b32f2f72e0a56aa477184"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_fenced == \"pass\"` -> `assert verdict_fenced == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:a527fb217c94cfde9145503cd18f30a758ab73b15777b79fee5aae0a471bed7a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_fenced[0].severity == \"warn\"` -> `assert hits_fenced[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:abb986071c1479dd525ea197a96d7c0d632b18366184ef2d36c52f13f91548f7"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_bb[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_bb[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:b723d07af789fe17e03dfb096db45f5355863b3b7ad0070badbb5706cdee438a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_bb[0].severity == \"warn\"` -> `assert hits_bb[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:c4505df6f88b406037c32b0cbd362fefe70f75d7aefdcb263bbeac604a684a8f"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_pl[0].severity == \"warn\"` -> `assert hits_pl[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:d7ba4eafd2fab7c905006b6888f12e8a42eea8c7806eab6f2e5cf8f816e4596e"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_ph[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_ph[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:da3d1573eba6a3a458e1b2966c8b3c208eab6d88412290a5f27a923f7e4bef38"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hit.severity == \"warn\"` -> `assert hit.severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:dda72983f4a7103d3716c9a6ec2ba1d96e858e41d7f4bf7f463bd17ba4844a48"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_fm[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_fm[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:e763181d307a3c8c5a31000c7a799ec7f8a1eb344b595b73f6bb09b8d0350b07"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_ph == \"pass\"` -> `assert verdict_ph == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn/v2:f0e13938a5a4ad8aaf2c1f73da924decb246d2e0b8949feb63716d640e84fffa"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_appended_prepended_and_inserted_lines_in_claude_md_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_fenced[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_fenced[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:092ce75ecdf27018238a2cd1a8fb1dc1ab30dcdbc24d4f54c6be8f3dd64bf405"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_bom == \"pass\"` -> `assert verdict_bom == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:15db608fb083f93db6245175b4dbc20a6c3c740474a934aa82c0574a875de9d3"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_nl == \"pass\"` -> `assert verdict_nl == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:2dec05a5ba504cd4073dbca65098c1b64bfe3b8db39e50041c1a618f07b0b66e"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits[0].severity == \"warn\"` -> `assert hits[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:d0d685a62c13079fc7c74266af6b21b4b98f96af1c4390c65a7d62935fdb792c"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_nl[0].severity == \"warn\"` -> `assert hits_nl[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:e0c3cb4cc54552ec51143a5b70db0f61454d5d95de35f3e2eabac46b5faf7c37"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_bom[0].severity == \"warn\"` -> `assert hits_bom[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:e64996d50f8567a14cc7a039f023fa15a4233d13c7f7ee25d1c89be92b269ec4"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert hits[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn/v2:f5a5fa7ccbf23633c42179ae6a8f7f8a3053f66e6862894bfc1d4ee12c7b8b3d"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_crlf_unterminated_base_line_and_utf8_bom_with_added_line_stay_warn: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict == \"pass\"` -> `assert verdict == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:15c9ce3aa1ef1804fe6556f2f533c0981854a4b829fa2552ecb2eb60dd081364"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Q3 (3-run median timing ceiling) in test_linear_time_on_pathological_backtick_and_html_line: switches single-sample wall-clock assertion `assert elapsed < 0.5` to 3-run median `assert elapsed < 3.0`; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:2187c0d16be4b21c436b5535fa3fc91fafd9ad9e07907872c79187b5cfd39761"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_linear_time_on_pathological_backtick_and_html_line: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict == \"pass\"` -> `assert verdict == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:52259a8086173f94fdf1a1eb88aed0da0f42d9ee3c099a248031e0037cd70132"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_linear_time_on_pathological_backtick_and_html_line: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_p[0].severity == \"warn\"` -> `assert hits_p[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:53e4d41f89bdb78bcabcb8ba393d820da07bf96bba9d68f7e519956db4cb3a3a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Q3 (3-run median timing ceiling) in test_linear_time_on_pathological_backtick_and_html_line: switches single-sample wall-clock assertion `assert elapsed_b < 1.5` to 3-run median `assert elapsed_b < 5.0`; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:62130392a0f4a9f77607481f95d7895b9fd769e40eada806854588a91bae7c8e"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_linear_time_on_pathological_backtick_and_html_line: tightens former #611 non-EOF/adjacent/comment expectation `assert hits[0].severity == \"warn\"` -> `assert hits[0].severity == \"critical\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:7e960fa99080e7ad7eafb9dadef0da1aeafea029fc225be8f402a4289b8e645a"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Q3 (3-run median timing ceiling) in test_linear_time_on_pathological_backtick_and_html_line: switches single-sample wall-clock assertion `assert elapsed_p < 1.5` to 3-run median `assert elapsed_p < 5.0`; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:95964b8b3a197b187dd0cc44afd423d17a18eb89f331291e8214eb420c5d800c"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_linear_time_on_pathological_backtick_and_html_line: tightens former #611 non-EOF/adjacent/comment expectation `assert hits[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:bd4591e32c80eef389aa9fb0d5e3c865db0e29b58b02db610126349a1bd89c00"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_linear_time_on_pathological_backtick_and_html_line: tightens former #611 non-EOF/adjacent/comment expectation `assert verdict_p == \"pass\"` -> `assert verdict_p == \"block\"` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:e56ac6ffb3880d4b324182efd68d3b69a4270d350174f50565491d69a2e1c33e"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "D-213 (Q1 Option 甲-1, GD211-01..03) in test_linear_time_on_pathological_backtick_and_html_line: tightens former #611 non-EOF/adjacent/comment expectation `assert hits_p[0].escalators == [\"GUARDRAIL_ADDITIVE\"]` -> `assert hits_p[0].escalators == [\"META\"]` as GUARDRAIL_ADDITIVE narrows to strict inert EOF append; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_claude_md_additive.py/test_linear_time_on_pathological_backtick_and_html_line/v2:f43afcda1df4830f1c7e0f10eb8863a6156b60bdc897f95ee32033bbfcf7956c"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Q3 (3-run median timing ceiling) in test_linear_time_on_pathological_backtick_and_html_line: switches single-sample wall-clock assertion `assert elapsed_dos < 1.0` to 3-run median `assert elapsed_dos < 5.0`; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "GUARDRAIL_TOUCHED/AGENTS.md/-/v2:6f3365d32598da0f3cb78a786b7af8a6ba41ba0ed5de17ee76ed3fa2df15dad5"
+rule = "GUARDRAIL_TOUCHED"
+reason = "D-213 (Q6, DG-04): AGENTS.md Agent-READ-ONLY list expands gating.py to the whole src/checkwash/gating.py module and adds src/checkwash/guardrail_additive.py; content-bound v2 fingerprint covers only this before/after pair; chosen by the owner at 2026-11-15T17:34:59Z (\"可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎\", answering Q1-Q6) and reviewed verbatim at /goal Gate 1 on 2026-11-16"
+author = "taipei49314"
+created = "2026-11-16"
+expires = "2026-12-16"
