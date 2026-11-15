@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import io
 import re
 import tokenize
+import warnings
 
 _LONG_LINE = 2048
 _WS = " \t\f"
@@ -33,7 +34,7 @@ _NONCHAIN_ATOM_RE = re.compile(
     r'"(?:\\.|[^"\\\r\n])*"'
     r")|"
     r"[()\[\]{}]|"
-    r"[A-Za-z_][A-Za-z0-9_]*(?![\'\"])|"
+    r"[A-Za-z_][A-Za-z0-9_]*+(?![\'\"])|"
     r"[0-9+\-*/%&|^~<>=,.;:@ \t\f]+"
 )
 _QUOTE_FREE_RUN_RE = re.compile(r"[0-9A-Za-z_+\-*/%&|^~<>=,.;:@ ]+")
@@ -130,6 +131,10 @@ def _condense_complete_nonchain_line(raw_line: str) -> str | None:
         tok = match.group(0)
         pos = match.end()
         first = tok[0]
+        if (first.isalpha() or first == "_") and pos < n and (
+            body[pos] in "'\"" or body[pos].isalnum() or body[pos] == "_"
+        ):
+            return None
         if first == "#":
             saw_comment = True
             break
@@ -188,13 +193,14 @@ def _chain(tokens: list[_Tok]) -> _Chain | None:
 
 
 def _chains(source: str) -> list[_Chain]:
-    # CPython 3.12+ (_tokenize.TokenizerIter) allocates a fresh full-line str
-    # copy on every yielded TokenInfo (`token.line`), turning a single physical
-    # line of length L with K tokens into O(K * L) time and memory if tokenized
-    # token-by-token or retained as TokenInfo. Short lines go straight through
-    # generate_tokens; long lines (> _LONG_LINE) pre-scan or condense to a
-    # lexically equivalent stub so generate_tokens never copies a megabyte line
-    # hundreds of thousands of times while still governing indent/multiline state.
+    # Retaining every token on a long line keeps O(K) _Tok records per statement
+    # on all Python versions, and older CPython 3.12 patch releases (such as
+    # Ubuntu 24.04's 3.12.3, fixed by 3.12.14) also allocate a fresh full-line
+    # str copy on every yielded TokenInfo (`token.line`), turning a physical
+    # line of length L with K tokens into O(K * L) time and memory. Short lines
+    # go straight through generate_tokens; long lines (> _LONG_LINE) pre-scan or
+    # condense to a lexically equivalent stub so generate_tokens governs indent
+    # and multiline state in bounded memory.
     result: list[_Chain] = []
     statement: list[_Tok] = []
     precomputed: dict[int, _Chain] = {}
@@ -277,6 +283,20 @@ def _chains(source: str) -> list[_Chain]:
     return result
 
 
+def _parse_exec(source: str) -> ast.Module:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return ast.parse(source)
+
+
+def _parse_eval(source: str) -> ast.Expression:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return ast.parse(source, mode="eval")
+
+
 def _literal_tree(chain: _Chain, line: str, failure: RecursionError) -> ast.expr | None:
     root: ast.expr | None = None
     char_cursor = byte_cursor = 0
@@ -286,7 +306,7 @@ def _literal_tree(chain: _Chain, line: str, failure: RecursionError) -> ast.expr
         column = byte_cursor
         byte_cursor += len(line[start:end].encode("utf-8"))
         char_cursor = end
-        leaf = ast.parse(token.string, mode="eval").body
+        leaf = _parse_eval(token.string).body
         # Keep an unsupported statement untouched for the surrounding stdlib
         # parse; it must not prevent recovery of a different supported chain.
         if not isinstance(leaf, ast.Constant) or type(leaf.value) is not str:
@@ -325,7 +345,7 @@ def _recover(source: str, failure: RecursionError) -> ast.Module:
         replacements[chain.line] = root
     if not replacements:
         raise failure
-    tree = ast.parse("\n".join(lines))
+    tree = _parse_exec("\n".join(lines))
     for node in tree.body:
         root = replacements.get(node.lineno)
         if root is None:
@@ -352,6 +372,6 @@ def _recover(source: str, failure: RecursionError) -> ast.Module:
 def parse_module(source: str) -> ast.Module:
     """Return the full module AST; never fold or omit a string-chain node."""
     try:
-        return ast.parse(source)
+        return _parse_exec(source)
     except RecursionError as failure:
         return _recover(source, failure)
