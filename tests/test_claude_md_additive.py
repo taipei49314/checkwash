@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import importlib.util
 import json
 import os
 import subprocess
@@ -21,7 +22,20 @@ from checkwash.detectors.globals_rules import detect_guardrail
 from checkwash.engine import analyze
 from checkwash.gating import apply_gates
 from checkwash.ir.model import DiffGlobals, IR, to_jsonable
-from tests.test_findings_schema import _errors, _schema
+
+
+def _load_findings_schema_helpers():
+    spec = importlib.util.spec_from_file_location(
+        "_test_findings_schema",
+        Path(__file__).with_name("test_findings_schema.py"),
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._errors, mod._schema
+
+
+_errors, _schema = _load_findings_schema_helpers()
 
 TODAY = datetime.date(2026, 11, 15)
 BASE_CLAUDE = (
