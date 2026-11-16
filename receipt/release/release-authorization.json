@@ -1,0 +1,14 @@
+{
+ "kind": "checkwash.release-one-time-authorization.v1",
+ "status": "authorized",
+ "tag": "v0.13.0",
+ "max_attempts": 1,
+ "version": "0.13.0",
+ "source_sha": "7d45814211bbb458d310607b3a241761c7d5f7e3",
+ "maintainer": "Nelson",
+ "human_quote": "Pre-1.0 delegation (docs/RELEASING.md, 2026-10-27): 「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」; 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前 其餘你可以自主推」; session 5472d923-3651-42a1-9267-6490cb024f59 (2026-11-15T14:24:06Z): 「開一個session 對整體做一次檢查 沒問題後就發」; session c8f1073f-a39c-4c95-a65f-90c9037eff91 (2026-11-15T17:34:59Z): 「可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎」; session 3da7dc8a-5957-4ba3-bde0-bba9c03b8042 Gate 1 (2026-11-16T11:45:56Z): 「核可並合併」; session 3da7dc8a-5957-4ba3-bde0-bba9c03b8042 Gate 2 (2026-11-16T16:28:23Z / 16:28:58Z): 「ok 繼續」; 「開新session 」",
+ "human_evidence_reference": "docs/RELEASING.md §v0.13.0 release authorization and preparation (2026-11-15–16); Antigravity transcripts: 5472d923-3651-42a1-9267-6490cb024f59 (2026-11-15T14:24:06Z), c8f1073f-a39c-4c95-a65f-90c9037eff91 (2026-11-15T17:34:59Z), 3da7dc8a-5957-4ba3-bde0-bba9c03b8042 (Gate 1 2026-11-16T11:45:56Z; Gate 2 2026-11-16T16:28:23Z / 16:28:58Z), and 6f80cd00-4149-4060-a094-563025975764 (/goal handover). Agent scope interpretation (Antigravity, not additional words attributed to Nelson): authorizes one attempt to publish CheckWash 0.13.0 / tag v0.13.0 from release merge M (7d45814211bbb458d310607b3a241761c7d5f7e3) and accept the eight non-Windows-3.11 receipt matrix legs and strict nine-leg byte comparison as NOT_RUN in the PJU release-stage receipts for 0.13.0 only (supplementary local PJU 6-leg batch on R and GitHub-hosted macOS/Linux release-hosted.yml runs are recorded separately; 1.0 remains NOT_MET; PyPI deployment waits for Nelson's own approval; downstream smallestlie/checkwash-corpus re-pins excluded). PR #623 check 133384220945 (run 43891012178); main check 133486645794 (run 43919730015); hosted source-at-M run 43910068162 attempt 2; tag v0.13.0 f8ff8258d2e2 check 133521468206 (run 43929819941); GitHub Release 447438064 capture run 43931083783.",
+ "decision_mode": "PRE_1_0_DELEGATION",
+ "delegate": "Antigravity (LAPTOP-01AGNPJU)",
+ "personal_review_claimed": false
+}
