@@ -1,0 +1,21 @@
+{
+  "base_sha": "978d015e1d614448eb393403601cbb3b0f33f79a",
+  "event": {
+    "created_at": "2026-11-16T14:14:36Z",
+    "name": "workflow_dispatch",
+    "payload_sha256": "280d7524e23d7ec59a76f3d47a4f9a53ce0a12a479728623d434dbf19ad752d1",
+    "run_attempt": 1,
+    "run_id": 43883669592,
+    "workflow_sha": "978d015e1d614448eb393403601cbb3b0f33f79a"
+  },
+  "head_sha": "c37a341f733a3f4ed13d7e427132e5267bd5324c",
+  "kind": "checkwash.pju-release-subject.v1",
+  "pr_number": 623,
+  "release_id": null,
+  "repository": "taipei49314/checkwash",
+  "schema_version": 1,
+  "source_tree": "9f67f1cdc6836416cabd7cd87573476cf9206151",
+  "stage": "pr",
+  "tag": null,
+  "tag_object": null
+}
