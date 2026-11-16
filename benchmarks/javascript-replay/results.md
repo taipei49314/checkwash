@@ -259,6 +259,36 @@ Records, in the private checkwash-lab repository: `472d3786` and `c58bc9bf`
 0.12.0 section records the run identities and hashes. These in-sample counts
 are not a false-positive rate.
 
+## Run 8: actual v0.12.0 against the 0.13.0 candidate
+
+Same-host comparison for the 0.13.0 release, 2026-11-16 UTC, on
+LAPTOP-01AGNPJU (Windows 11, CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). The old engine is the published
+v0.12.0 zipapp (Action/tag commit `532f74ab070a924b23e2cc70e5d0091a05d8401d`,
+asset SHA256 `4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2`);
+the candidate is the `src/` tree `cfd205d7b913d867e9e3452841978ae38a01e77e` of
+main `978d015e1d614448eb393403601cbb3b0f33f79a`, run from source. Members are
+the fixed 3,600 of run 5, this set and the Python standard set, each checked
+against its first parent ([release
+guide](../../docs/releases/v0.13.0-public-launch.md)).
+
+| v0.12.0 -> candidate | Commits |
+|---|---:|
+| pass -> pass | 1,748 |
+| block -> block | 50 |
+| error -> error | 2 |
+| **total** | **1,800** |
+
+No JS/TS commit's exit code or `--format json` report (apart from `run`)
+changed, and the Python standard set also had zero moves or report differences
+(1,726 pass -> pass, 74 block -> block). The two errors remain apollo-client
+`8a51ea63` and undici `0f1f8903`, unchanged since run 5 and verified to emit
+identical symlink-refusal stderr. Records, in the private checkwash-lab
+repository: `ec15f59d` (`notes/r29-comparison-013-antigravity-20261116/`,
+superseding the pre-audit `eece00f3` run in `ae6ed8dc` and `6b27b9ea`); the
+release procedure's 0.13.0 section records the run identities and hashes. These
+in-sample counts are not a false-positive rate.
+
 ## What these runs do not show
 
 - **A false-positive rate.** The 39 commits that v0.7.0 and v0.8.0 both

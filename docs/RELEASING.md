@@ -174,6 +174,121 @@ rows SHA256 `9b04bd886cec8a63cd5fc1a02339593e58110611040f078330c9b91a8582baf9`).
 This differential is in-sample between two candidate trees; it is not native
 Linux, a false-positive rate or a new adjudication.
 
+## v0.13.0 release authorization and preparation (2026-11-15–16)
+
+0.13.0 is being released under Nelson's verbatim instructions below, together
+with the pre-1.0 delegation recorded at the top of this file (Nelson's
+「我覺得可以一次做完吧 可以推版號 但到1.0版前要停下問我」 and 「照著繼續做 完整spec在裡面 一樣我只卡1.0發佈前
+其餘你可以自主推」):
+
+1. Session `5472d923-3651-42a1-9267-6490cb024f59` at `2026-11-15T14:24:06Z`
+   (`2026-11-15T22:24:06+08:00`):
+   > 開一個session 對整體做一次檢查 沒問題後就發
+2. Session `c8f1073f-a39c-4c95-a65f-90c9037eff91` at `2026-11-15T15:15:53Z`
+   (`2026-11-15T23:15:53+08:00`):
+   > 我這邊也會做審查 等等交給你討論
+3. Session `c8f1073f-a39c-4c95-a65f-90c9037eff91` at `2026-11-15T17:34:59Z`
+   (`2026-11-16T01:34:59+08:00`), after discussing the eight-agent external
+   read-only pre-release audit (`Q1`–`Q6`):
+   > 可以 照你的建議走 開個新session? 需要用到goal 或其他技能嗎
+   followed by the `/goal` handover prompt in session
+   `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` (`2026-11-15T17:37:45Z`).
+4. Session `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` at `2026-11-16T11:45:56Z`
+   (`2026-11-16T19:45:56+08:00`), after reviewing the verbatim L1 `git diff`
+   package for `D-212`, `.greenwash/allow.toml` and `D-213`:
+   > 核可並合併
+
+Its scope (`D-202` to `D-213`, plus #595, #596, #598, #600, #601, #607, #609,
+#610, #612, #613, #614, #615, #616, #617, #618, #619, #620 and #621, with `0.14`
+tracking issue #622) was reviewed item by item, and `DECISIONS.md` quotes
+Nelson's words where protected entries were approved. This section attributes
+no further words to him.
+
+Agent interpretation: Nelson's `2026-11-15T14:24:06Z` quote above (paraphrased
+in English: open a session, perform an overall check, and release if there are
+no issues), together with his `2026-11-15T17:34:59Z` post-audit `Q1`–`Q6`
+ruling, the `/goal` handover and his `2026-11-16T11:45:56Z` Gate 1 L1 approval,
+is this release's one-time authorization for version `0.13.0` and tag
+`v0.13.0`, for one attempt, executed by Antigravity on LAPTOP-01AGNPJU.
+Antigravity performs the pre-release remediations (`#616`–`#621`), the final
+`main:src` R29 comparison and uvloop diagnostic, the release pull request (`A`
+and `R`, verified from the trusted collector ref
+`review/collector-d-013-20261116` at `978d015e1d614448eb393403601cbb3b0f33f79a`)
+and its stage evidence, the isolated six-leg Windows + WSL Linux Python
+`3.11`/`3.12`/`3.13` full-suite gate on `R`, the merge, the hosted release
+verification dispatches (`source-at-M` and `published-artifacts`, D-204), the
+tag, the GitHub Release, the release-event and public-visitor stages and the
+step-8 follow-up. Antigravity stops before merging the release pull request and
+tagging `v0.13.0` (Gate 2, presenting R29's empty movement list and the verdict
+gate report), stops when the `pypi` environment deployment awaits Nelson's own
+**Approve and deploy** click on the GitHub Actions run page (Gate 3, making no
+attempt to approve it or alter any protection or reviewer setting), and stops
+to ask Nelson before step 9 (`DECISIONS-archive-6.md` cut and
+`tests/verdict_gate/baseline.toml` rotation, Gate 4, which touch
+agent-read-only files). Release-stage receipts run on LAPTOP-01AGNPJU (Windows
+11, CPython 3.11.9, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), with native
+Linux, macOS and other Python versions `NOT_RUN` in those receipts; the PJU
+six-leg Windows + WSL Linux Python `3.11`/`3.12`/`3.13` batch on `R` and the
+GitHub-hosted macOS/Linux runs of `release-hosted.yml`
+(`HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT`, D-204) are recorded
+alongside them, not as PJU stage receipts. Not covered: `1.0` (`NOT_MET`) and
+downstream re-pins of `checkwash-corpus` and `smallestlie`.
+
+**Fixed-corpus comparison.** Antigravity ran it on 2026-11-16 UTC as a
+same-host comparison on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows 11, CPython 3.11.9): the published v0.12.0 zipapp (`checkwash.pyz`,
+Action/tag commit `532f74ab070a924b23e2cc70e5d0091a05d8401d`, built from merge
+`ffaf4ed86ecc2baeb8cc008487a44d8495da9177`, 1,013,508 bytes, SHA256
+`4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2`) against
+the final candidate `src/` tree `cfd205d7b913d867e9e3452841978ae38a01e77e` of
+main `978d015e1d614448eb393403601cbb3b0f33f79a` (the release pull request
+changes that tree only in `src/checkwash/__init__.py` at `A` and
+`src/checkwash/doctor.py` at `R`, D-196), on the fixed 3,600 members (SHA256
+`f6281caad596c5d6f054dd8f0050abb21d63a803fa7bf2fa3f6c694d05559de2`), each
+against its first parent, 240 seconds per call, 12 workers, from 12:59:08Z to
+13:46:51Z (2,859.7 seconds for the 3,600 members; the rest of the window
+verified the 237 candidate `src/` blobs and probed both engines' versions). All
+3,600 members gave identical exit codes and identical `--format json` reports
+apart from the `run` block (`different: 0`), with no timeouts: Python `1,726`
+`pass -> pass` and `74` `block -> block`; JS/TS `1,748` `pass -> pass`, `50`
+`block -> block` and `2` `error -> error` (apollo-client `8a51ea63` and undici
+`0f1f8903`, whose strict-snapshot symlink-refusal stderr was also verified
+identical in `errors-probe.json`, SHA256
+`7e21a384a39300492280b023ef753ca106e79b2df5556639769b3b59a05ccb16`). Zero
+commits move between pass, block and error (`owner_list: []`), and zero reports
+differ; under R29 the empty movement list is still presented to Nelson before
+the tag. Because R29 runs `check <parent>..<commit> --format json`, it does not
+capture stderr-only `analysis incomplete` notes (D-206, D-212, #610, #616) or
+exercise working-tree and hook paths (D-205, D-208). Records, in the private
+`checkwash-lab` repository: `ec15f59d`
+(`notes/r29-comparison-013-antigravity-20261116/`, `rows.json` SHA256
+`5c883da6c2f150279682ed9cb0acc04e901c4421abb6a4af06d200d56ae7ee9b`,
+`differences.json` `[]` SHA256
+`4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`,
+`movements.json` SHA256
+`8babbd7df7de5419c72d69e71306220e8d753c67d304be4839e425a5b4e270de`; the
+earlier pre-audit `eece00f3` run remains intact in `ae6ed8dc` and `6b27b9ea`).
+In-sample, not a false-positive rate or an adjudication.
+
+**The targeted uvloop diagnostic (D-176).** A separate run of the same script
+and engines checked the three uvloop inputs D-187 accepted as known false
+blocks for 0.10 only, each against its original first parent, from 13:46:51Z to
+13:46:58Z (6.3 seconds): v0.12.0 and the candidate each pass all three with
+identical reports, and `uvloop/probe.json` (SHA256
+`59e941a1d5bec5cb93517a405250eef051e5d1dec321915d0d8020915e7417f4`) records
+`verdict: pass` and `findings: []` for both engines on `7b202ccf`, `2081db89`
+and `9cba7493`, so the three costs D-190 removed stay removed.
+
+**D-176's remaining-history risk for 0.13.0.** Because the 0.12.0 disposition
+covers only 0.12.0's `src/` trees, 0.13.0 needs its own disposition. For a
+Python unit-less `BROAD_EXCEPT_ADDED` in a test or conftest, 0.13.0 changes
+nothing: D-176's refusal still removes `_file_repair_evidence` before D-199's
+refusal is reached, and D-190's relay reading is unchanged. Antigravity accepts
+that unmeasured remaining-history risk for 0.13.0 only, as a delegated decision
+after independent review rather than Nelson's personal review, in [the 0.13.0
+D176 disposition](d176-cost-disposition-0.13.0.md). It is not a history PASS, a
+census, an adjudicated rate or a standing waiver.
+
 ## v0.12.0 release under the pre-1.0 delegation (2026-11-07)
 
 0.12.0 is being released under the delegation recorded at the top of this
