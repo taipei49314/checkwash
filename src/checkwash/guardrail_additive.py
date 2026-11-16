@@ -1,31 +1,38 @@
-"""Pure-line-addition classifier for repository-root `CLAUDE.md` (SPEC §4/§5, D-211).
+"""Strict inert EOF-append classifier for repository-root `CLAUDE.md` (SPEC §4/§5, D-211, D-213).
 
-An existing `CLAUDE.md` edit stays at `warn` (`GUARDRAIL_ADDITIVE`) only when it
-adds one or more lines while preserving any leading frontmatter verbatim and
-preserving every base line's exact text, relative order, and CommonMark / GFM /
-HTML structural context in linear time `O(N)`. Any deleted, modified, reordered,
-commented-out, code-fenced, inline-code-wrapped, raw-HTML-wrapped, link-reference-
-swallowed, frontmatter-edited, or block-recontextualized base line — or any NUL
-byte, invalid UTF-8, lone CR, newly introduced Unicode format/hidden character
-(`Cf`), or non-LF Unicode line separator — fails closed (`False` -> `critical`
-under E4).
+An existing `CLAUDE.md` edit stays at `warn` (`GUARDRAIL_ADDITIVE`) only when it is a
+strict inert append at end-of-file in linear time `O(N)`: `after` begins with the exact
+unmodified `before` line sequence, at least one blank line separates `before`'s last
+non-blank line from `added`'s first non-blank line, both sides end cleanly with no
+unclosed fence or HTML block/comment/tag, frontmatter (both line-anchored YAML/TOML and
+Claude Code `ni()`'s non-anchored `---` slice) is invariant, added lines carry no `---`
+substring, no `3+` consecutive `` ` `` or `~`, no `<!--` or `-->`, and no `[label]:`
+definition opener, and no NUL byte, invalid UTF-8, lone CR, non-LF Unicode line break, or
+newly introduced `HIDDEN_UNICODE` / Unicode `Cf` / `Default_Ignorable_Code_Point`
+character is present. Everything else fails closed (`False` -> `critical` under E4).
 """
 
 from __future__ import annotations
 
 from bisect import bisect_left, bisect_right
 from collections import Counter, deque
+import re
 import unicodedata
 
 # Keep in lockstep with `engine._HIDDEN_CODEPOINTS` (SPEC §4 `HIDDEN_UNICODE`);
-# we also reject any newly introduced Unicode `"Cf"` format character (including
-# `U+E0000..U+E007F` Tags, `U+061C` ALM, and `U+2060` WJ).
+# we also reject any newly introduced Unicode `"Cf"` format character or Unicode
+# `Default_Ignorable_Code_Point` (including Variation Selectors `U+FE00..U+FE0F`,
+# `U+E0100..U+E01EF`, Hangul fillers `U+115F..U+1160`, `U+3164`, `U+FFA0`, and Tags).
 _HIDDEN_CODEPOINTS: frozenset[int] = frozenset(
     [0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0x00AD]
     + list(range(0x202A, 0x202F))
     + list(range(0x2066, 0x206A))
     + [0xFEFF]
 )
+
+# Claude Code 2.1.x `ni()` frontmatter stripper (`yx = /^---\s*\n([\s\S]*?)---\s*\n?/`),
+# whose closing `---` is not line-anchored.
+_CC_FRONTMATTER_RE = re.compile(r"^---\s*\n([\s\S]*?)---\s*\n?")
 
 # Non-LF line/paragraph separators that `str.splitlines()` splits on.
 _UNICODE_LINE_BREAKS: frozenset[str] = frozenset("\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029")
@@ -108,8 +115,31 @@ _ATTR_UNQUOTED = 6
 _ATTR_SELF_CLOSING = 7
 
 
+def _is_default_ignorable_non_cf(cp: int) -> bool:
+    """Unicode `Default_Ignorable_Code_Point` ranges outside General_Category `Cf`."""
+    return (
+        cp == 0x034F
+        or 0x115F <= cp <= 0x1160
+        or 0x17B4 <= cp <= 0x17B5
+        or 0x180B <= cp <= 0x180F
+        or 0x2060 <= cp <= 0x206F
+        or cp == 0x3164
+        or 0xFE00 <= cp <= 0xFE0F
+        or cp == 0xFFA0
+        or 0xFFF0 <= cp <= 0xFFF8
+        or 0xE0000 <= cp <= 0xE0FFF
+    )
+
+
 def _is_hidden_or_format_char(ch: str) -> bool:
-    return ord(ch) in _HIDDEN_CODEPOINTS or unicodedata.category(ch) == "Cf"
+    cp = ord(ch)
+    if cp < 0xAD:
+        return False
+    return (
+        cp in _HIDDEN_CODEPOINTS
+        or _is_default_ignorable_non_cf(cp)
+        or unicodedata.category(ch) == "Cf"
+    )
 
 
 def _split_lf_lines(text: str) -> list[str]:
@@ -403,6 +433,8 @@ def _match_open_containers(
     virt_sp = 0
     matched = 0
     last_bq = bq_positions[-1] if bq_positions else -1
+    cached_ws_pos = -1
+    cached_end_col = 0
 
     while matched < total_open:
         kind, width, _ = containers[matched]
@@ -411,6 +443,7 @@ def _match_open_containers(
             if res is None:
                 break
             pos, base_col, virt_sp = res
+            cached_ws_pos = -1
             matched += 1
         else:
             if pos > last_non_ws:
@@ -418,12 +451,16 @@ def _match_open_containers(
                     return total_open, len(line), base_col, 0
                 idx_pos = bisect_right(bq_positions, matched - 1)
                 return bq_positions[idx_pos], len(line), base_col, 0
-            lead_col, ws_pos = _scan_ws(line, pos, base_col, virt_sp)
-            if ws_pos > last_non_ws:
+            if cached_ws_pos < 0:
+                lead_col, cached_ws_pos = _scan_ws(line, pos, base_col, virt_sp)
+                cached_end_col = base_col + lead_col
+            else:
+                lead_col = cached_end_col - base_col
+            if cached_ws_pos > last_non_ws:
                 if last_bq < matched:
-                    return total_open, len(line), base_col + lead_col, 0
+                    return total_open, len(line), cached_end_col, 0
                 idx_pos = bisect_right(bq_positions, matched - 1)
-                return bq_positions[idx_pos], len(line), base_col + lead_col, 0
+                return bq_positions[idx_pos], len(line), cached_end_col, 0
             if lead_col < width:
                 break
             pos, base_col, virt_sp = _consume_cols(line, pos, base_col, virt_sp, width)
@@ -1658,7 +1695,13 @@ def _annotate_markdown_lines(
     lines: list[str],
     html_trie: dict[tuple[int, str], int],
     container_trie: dict[tuple[int, str], int],
-) -> tuple[list[tuple[str, str]], list[str] | None]:
+) -> tuple[
+    list[tuple[str, str]],
+    list[str] | None,
+    bool,
+    tuple[tuple[str, int], ...],
+    int,
+]:
     """Pair each line with its structural Markdown / HTML / frontmatter context in O(N)."""
     total = len(lines)
     states: list[str] = [""] * total
@@ -2020,11 +2063,90 @@ def _annotate_markdown_lines(
         para_texts.append(after_matched_stripped)
 
     _flush_paragraph()
-    return [(lines[i], states[i]) for i in range(total)], fm_lines
+    eof_clean = (
+        fence is None
+        and cm_html_block not in ("rule1",)
+        and not isinstance(cm_html_block, tuple)
+        and (cm_html_block != "rule67" or not html_state.stack)
+        and raw_mode is None
+        and unclosed_tag is None
+        and not any(tag.startswith("\x00") for tag, _ in html_state.stack)
+    )
+    return (
+        [(lines[i], states[i]) for i in range(total)],
+        fm_lines,
+        eof_clean,
+        tuple(html_state.stack),
+        html_state.unmatched_closes,
+    )
+
+
+def _cc_frontmatter_split(text: str) -> tuple[bool, str, str]:
+    """Split leading `--- ... ---` with Claude Code `ni()`'s non-anchored regex."""
+    m = _CC_FRONTMATTER_RE.match(text)
+    if m is None:
+        return False, "", text
+    return True, m.group(0), text[m.end() :]
+
+
+def _strip_bq_and_list_prefixes(line: str) -> str:
+    n = len(line)
+    p = 0
+    while p < n:
+        while p < n and line[p] in (" ", "\t"):
+            p += 1
+        if p >= n:
+            return ""
+        if line[p] == ">":
+            p += 1
+            continue
+        if line[p] in "-+*" and (p + 1 == n or line[p + 1] in (" ", "\t")):
+            p += 1
+            continue
+        if "0" <= line[p] <= "9":
+            d = p
+            while d < min(n, p + 9) and "0" <= line[d] <= "9":
+                d += 1
+            if d < n and line[d] in (".", ")") and (d + 1 == n or line[d + 1] in (" ", "\t")):
+                p = d + 1
+                continue
+        break
+    return line[p:]
+
+
+def _has_link_ref_opener(added_lines: list[str]) -> bool:
+    """Return True in O(N) if `added_lines` opens any `[label]:` or `[^footnote]:` definition."""
+    if not any("]:" in line for line in added_lines):
+        return False
+    in_label = False
+    for raw_line in added_lines:
+        stripped = _strip_bq_and_list_prefixes(raw_line)
+        if not stripped:
+            in_label = False
+            continue
+        i = 0
+        n = len(stripped)
+        if not in_label:
+            if stripped[0] != "[":
+                continue
+            in_label = True
+            i = 1
+        while i < n:
+            ch = stripped[i]
+            if ch == "\\" and i + 1 < n and stripped[i + 1] in _ASCII_PUNCTUATION:
+                i += 2
+                continue
+            if ch == "]":
+                if i + 1 < n and stripped[i + 1] == ":":
+                    return True
+                in_label = False
+                break
+            i += 1
+    return False
 
 
 def is_pure_line_addition(before: bytes | None, after: bytes | None) -> bool:
-    """Return True iff `after` adds >= 1 line to `before` while keeping every base line intact in order and context."""
+    """Return True iff `after` is a strict inert EOF append onto `before` (D-211, D-213)."""
     if not before or not after:
         return False
     if b"\x00" in before or b"\x00" in after:
@@ -2052,27 +2174,91 @@ def is_pure_line_addition(before: bytes | None, after: bytes | None) -> bool:
 
     before_lines = _split_lf_lines(before_norm)
     after_lines = _split_lf_lines(after_norm)
-    if not before_lines or len(after_lines) <= len(before_lines):
+    n_before = len(before_lines)
+    if not n_before or len(after_lines) <= n_before:
+        return False
+
+    if after_lines[:n_before] != before_lines:
+        return False
+
+    last_before_nb = -1
+    for idx in range(n_before - 1, -1, -1):
+        if before_lines[idx].strip(" \t") != "":
+            last_before_nb = idx
+            break
+    if last_before_nb < 0:
+        return False
+
+    added_lines = after_lines[n_before:]
+    first_added_nb = -1
+    for rel_idx, line in enumerate(added_lines):
+        if line.strip(" \t") != "":
+            first_added_nb = n_before + rel_idx
+            break
+    if first_added_nb < 0 or (first_added_nb - last_before_nb) < 2:
+        return False
+
+    before_starts_fm = before_lines[0].lstrip(" \t").startswith(("---", "+++"))
+    after_starts_fm = after_lines[0].lstrip(" \t").startswith(("---", "+++"))
+    if after_starts_fm and not before_starts_fm:
+        return False
+
+    canon_before = "\n".join(before_lines) + "\n"
+    canon_after = "\n".join(after_lines) + "\n"
+    b_cc_has, b_cc_fm, b_cc_rest = _cc_frontmatter_split(canon_before)
+    a_cc_has, a_cc_fm, a_cc_rest = _cc_frontmatter_split(canon_after)
+    if (b_cc_has, b_cc_fm) != (a_cc_has, a_cc_fm) or not a_cc_rest.startswith(b_cc_rest):
+        return False
+    raw_b_cc = _CC_FRONTMATTER_RE.match(before_norm)
+    raw_a_cc = _CC_FRONTMATTER_RE.match(after_norm)
+    if bool(raw_b_cc) != bool(raw_a_cc):
+        return False
+    if raw_b_cc is not None and raw_a_cc is not None and raw_b_cc.group(1) != raw_a_cc.group(1):
+        return False
+
+    for line in added_lines:
+        if (
+            "---" in line
+            or "```" in line
+            or "~~~" in line
+            or "<!--" in line
+            or "-->" in line
+        ):
+            return False
+        for ch in line:
+            if _is_hidden_or_format_char(ch) or ch in _UNICODE_LINE_BREAKS:
+                return False
+    if _has_link_ref_opener(added_lines):
         return False
 
     shared_html_trie: dict[tuple[int, str], int] = {}
     shared_container_trie: dict[tuple[int, str], int] = {}
-    before_annotated, before_fm = _annotate_markdown_lines(
+    (
+        before_annotated,
+        before_fm,
+        before_eof_clean,
+        before_stack,
+        before_unmatched,
+    ) = _annotate_markdown_lines(
         before_lines, shared_html_trie, shared_container_trie,
     )
-    after_annotated, after_fm = _annotate_markdown_lines(
+    if not before_eof_clean:
+        return False
+    (
+        after_annotated,
+        after_fm,
+        after_eof_clean,
+        after_stack,
+        after_unmatched,
+    ) = _annotate_markdown_lines(
         after_lines, shared_html_trie, shared_container_trie,
     )
-    if before_fm != after_fm:
+    if not after_eof_clean or before_fm != after_fm:
         return False
-
-    b_iter = iter(before_annotated)
-    target = next(b_iter, None)
-    if target is None:
+    if after_annotated[:n_before] != before_annotated:
         return False
-    for item in after_annotated:
-        if item == target:
-            target = next(b_iter, None)
-            if target is None:
-                return True
-    return False
+    if any(st.startswith("link_ref|") for _, st in after_annotated[n_before:]):
+        return False
+    if after_unmatched != before_unmatched or after_stack[: len(before_stack)] != before_stack:
+        return False
+    return True

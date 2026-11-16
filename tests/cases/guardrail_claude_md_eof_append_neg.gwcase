@@ -1,0 +1,23 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: a strict inert EOF append to root CLAUDE.md separated by a blank line stays at warn (D-211, D-213)
+=== before: CLAUDE.md ===
+# Project guide
+
+## Testing
+
+- Never modify test files to make a failing test pass.
+- Run `pytest -q` before you finish.
+=== after: CLAUDE.md ===
+# Project guide
+
+## Testing
+
+- Never modify test files to make a failing test pass.
+- Run `pytest -q` before you finish.
+
+## Releases
+
+- Tag from main only.
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "warn", "escalators": ["GUARDRAIL_ADDITIVE"]}]

@@ -2386,3 +2386,165 @@ unchanged).
   repositories, `benchmarks/make_failures.py`, full 6-leg Windows + WSL Linux
   Python `3.11`/`3.12`/`3.13` suites, and compact PJU receipt (`23,303` tests).
 - macOS: NOT_RUN (covered in hosted release verification at `M`).
+## D-213 (2026-11-16): `D-211` narrows `CLAUDE.md` `GUARDRAIL_ADDITIVE` to strict inert EOF appends, fixes `_match_open_containers` to `O(N)`, pins `.gwcase` cases, and adds all of `gating.py` and `guardrail_additive.py` to `AGENTS.md` L1
+
+**Approval and authorization chain (human words separated from agent scope
+interpretation).**
+
+- **Human verbatim words:**
+  1. Session `5472d923-3651-42a1-9267-6490cb024f59` at `2026-11-15T14:24:06Z`
+     (`2026-11-15T22:24:06+08:00`): 「開一個session 對整體做一次檢查 沒問題後就發」.
+  2. Session `c8f1073f-a39c-4c95-a65f-90c9037eff91` at `2026-11-15T17:34:59Z`
+     (`2026-11-16T01:34:59+08:00`), answering `Q1`–`Q6` after the 2026-11-15
+     external read-only pre-release audit: 「可以 照你的建議走 開個新session? 需要用到goal
+     或其他技能嗎」, followed by the `/goal` handover prompt in session
+     `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` (`2026-11-15T17:37:45Z`).
+  3. Session `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` at `2026-11-16T11:45:56Z`
+     (`2026-11-16T19:45:56+08:00`), after reviewing the complete 1,603-line
+     verbatim L1 `git diff` in `gate1-l1-verbatim-diff.md` (`56980027`,
+     `a496ddf8`, `30df9516`): 「核可並合併」.
+- **Agent scope interpretation:** Nelson's `Q1`, `Q3` and `Q6` rulings select
+  Option 甲-1 on `D-211` (`#611`, narrowing `is_pure_line_addition` to strict
+  inert EOF append, fixing `_match_open_containers` to linear time, and pinning
+  audit `repro-01..15` in tests plus representative `.gwcase` fixtures), switch
+  `tests/test_claude_md_additive.py` timing checks to 3-run medians with
+  generous ceilings (`Q3`), and add all of `src/checkwash/gating.py` and
+  `src/checkwash/guardrail_additive.py` to `AGENTS.md`'s `Agent-READ-ONLY` list
+  (`Q6`, `DG-04`); per `/goal` Gate 1, the verbatim L1 diff across `AGENTS.md`,
+  `SPEC.md`, `DECISIONS.md`, `src/checkwash/gating.py`,
+  `src/checkwash/guardrail_additive.py`, `.greenwash/allow.toml` (the 44
+  content-bound v2 keys printed by CheckWash's own check on `AGENTS.md` and the
+  tightened/median-updated `tests/test_claude_md_additive.py` pins), and the 5
+  new `.gwcase` fixtures was approved verbatim by Nelson at `2026-11-16T11:45:56Z` (`#620` `0a010788` landed the 44 base-side v2 keys first; this timestamp/PR note is the only post-Gate-1 edit).
+
+**What was found (`GD211-01..06`).** The 2026-11-15 external read-only audit
+(`3-guardrail-d211.md`, reproduced in `cwrev1115/work/guardrail-d211/repro-*`)
+found that `#611`'s general CommonMark/GFM/HTML subsequence parser left six
+issues before `v0.13.0` had shipped:
+
+1. **`GD211-01` (`repro-01`, `repro-02`): Claude Code non-anchored `ni()`
+   frontmatter swallowing.** Claude Code strips frontmatter with
+   `/^---\s*\n([\s\S]*?)---\s*\n?/` (without requiring the closing `---` to own
+   its line or sit outside GFM tables). When `before` began with YAML
+   frontmatter (`---\n...\n---\n`), inserting a GFM table whose delimiter row
+   held `---` (`| a | b |\n| --- | --- |`, `repro-01`), or when `before` began
+   with a horizontal rule `---` and an added line held `---` (`repro-02`), made
+   Claude Code swallow every existing guardrail line between the opening `---`
+   and the new `---` as ignored YAML frontmatter while `#611` passed at `warn`.
+2. **`GD211-02` (`repro-03`–`repro-08`): `marked` / `markdown-it` / GitHub
+   parser differentials on mid-file insertions.** Inserting ` ``` \n<!--`, list
+   indent mismatches, loose-list-item fences, `<svg>/<math>` foreign HTML,
+   `<select>` implied-close mismatches, or `[x]: <\n...\n>` multi-line link
+   destinations above existing lines kept `#611`'s custom context tuple constant
+   while downstream Markdown/HTML renderers hid or swallowed existing guardrail
+   rules.
+3. **`GD211-03` (`repro-10`–`repro-12`, `repro-15`): newly introduced
+   `Default_Ignorable` / Variation Selector / Hangul-filler invisible smuggling
+   and ZWJ/ZWNJ asymmetry.** `_has_disallowed_codepoint` rejected Unicode `Cf`
+   (including `U+200C` ZWNJ and `U+200D` ZWJ) and Plane-14 Tags, while Unicode
+   `Mn`/`Lo` `Default_Ignorable_Code_Point` characters — Variation Selectors
+   `U+FE00..U+FE0F` and `U+E0100..U+E01EF` (`repro-10`, `repro-11`, stealth
+   prompt-injection byte payloads) and Hangul/Halfwidth fillers `U+115F`,
+   `U+1160`, `U+3164`, `U+FFA0` (`repro-12`) — were absent from `HIDDEN_UNICODE`
+   and passed at `warn`.
+4. **`GD211-04` (`repro-52`, `repro-53`): `O(N^2)` staircase list-indentation
+   rescan in `_match_open_containers`.** Advancing `pos` by only `item_indent`
+   on open list containers forced each nested list marker to re-scan the same
+   leading spaces (`29.5` s on a `990 KB` staircase in `repro-52` and `57.2` s
+   on `repro-53`).
+5. **`GD211-05` & `GD211-06` (`repro-30`–`repro-32`, `DG-04`):** pre-existing
+   unguarded Claude Code inputs (`CLAUDE.local.md`, lowercase `claude.md`,
+   subdirectory `CLAUDE.md`, `.gitattributes` `working-tree-encoding`) needed
+   explicit documentation in `SPEC.md` / `KNOWN-ISSUES`, and `guardrail_additive.py`
+   plus the rest of `gating.py` needed explicit L1 read-only protection in
+   `AGENTS.md`.
+
+**Decision (Option 甲-1).**
+
+1. **Strict inert EOF append (`src/checkwash/guardrail_additive.py`, `SPEC.md`
+   §4/§5).** `is_pure_line_addition(before, after)` returns `True` only when:
+   - Both sides are valid UTF-8 with no NUL byte, lone `\r`, non-LF Unicode line
+     separator, or newly introduced `HIDDEN_UNICODE` / Unicode `Cf` format
+     character or Unicode `Default_Ignorable_Code_Point` (`U+034F`, `U+115F`,
+     `U+1160`, `U+17B4..U+17B5`, `U+180B..U+180D`, `U+3164`, `U+FE00..U+FE0F`,
+     `U+FFA0`, `U+FFF0..U+FFF8`, `U+1BCA0..U+1BCA3`, `U+1D173..U+1D17A`,
+     `U+E0000..U+E0FFF`; existing ignorable/Cf counts in `before` may survive
+     unchanged, while any newly added code point in those ranges is refused).
+   - After `\r\n` -> `\n` normalization and optional leading UTF-8 BOM removal,
+     `before` has at least one line, `len(after_lines) > len(before_lines)`,
+     `after_lines[:len(before_lines)] == before_lines` (strict prefix — zero
+     prepends, mid-file insertions, edits, deletions or reorderings), at least
+     one added line is non-blank, and if `before` contains any non-blank line at
+     least one blank line sits between `before`'s last non-blank line and the
+     added tail's first non-blank line (blocking Setext heading underlines, GFM
+     table continuations, lazy paragraph/blockquote continuations and adjacent
+     structural re-contextualization of `before`'s tail).
+   - Both `_annotate_markdown_lines(before_lines)` and
+     `_annotate_markdown_lines(after_lines)` report `eof_clean == True` (no
+     unclosed code fence, HTML block/comment/declaration/PI/CDATA, open HTML
+     element, unclosed tag attribute, open multi-line inline backtick span or
+     inline HTML/comment desynchronization on either side) and identical
+     per-line structural contexts across `0..len(before_lines) - 1`.
+   - `after` does not newly start with `---` or `+++`, `_frontmatter_end`
+     matches line-for-line, and `_CC_FRONTMATTER_RE`
+     (`re.compile(r"\A---\s*\n([\s\S]*?)---\s*\n?")`) produces the exact same
+     `(group(0), group(1))` tuple on normalized `before` and `after` (closing
+     `GD211-01`).
+   - No line in `added_lines` contains `"---"` as a substring, three or more
+     consecutive `` ` `` or `~` characters, `"<!--"` or `"-->"`, or a
+     `[label]:` / `[^footnote]:` reference opener (`_has_link_ref_opener`,
+     bounded `O(L)` without quadratic bracket backtracking).
+2. **True `O(N)` container and link-reference scanning
+   (`src/checkwash/guardrail_additive.py`).** `_match_open_containers` caches the
+   one-pass leading whitespace scan `(cached_ws_pos, cached_end_col)` across all
+   open list containers on a line (`repro-52`: `29.48` s -> `1.07` s;
+   `repro-53`: `57.23` s -> `0.70` s).
+3. **L1 boundary expansion and `.gwcase` fixture pins (`AGENTS.md`,
+   `tests/cases/guardrail_claude_md_*.gwcase`, `.greenwash/allow.toml`).**
+   `AGENTS.md` adds all of `src/checkwash/gating.py` and
+   `src/checkwash/guardrail_additive.py` to `Agent-READ-ONLY`. Five `.gwcase`
+   fixtures (`guardrail_claude_md_eof_append_neg`,
+   `guardrail_claude_md_frontmatter_table_swallow_pos`,
+   `guardrail_claude_md_base_hr_eof_dash_swallow_pos`,
+   `guardrail_claude_md_marked_fence_comment_pos`,
+   `guardrail_claude_md_variation_selector_pos`) pin the positive/negative
+   contract in `test_cases_runner.py`, and a preceding atomic `.greenwash/allow.toml`
+   commit records the 44 owner-reviewed content-bound v2 keys (`1`
+   `GUARDRAIL_TOUCHED` on `AGENTS.md` + `43` `EXPECTED_VALUE_CHANGED` on
+   `tests/test_claude_md_additive.py`).
+
+**Fingerprint movement (`docs/stability.md`).** Relative to the last published
+release `v0.12.0` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3` unchanged):
+- Strict inert end-of-file appends to repository-root `CLAUDE.md` move from
+  `v0.12.0`'s `critical` `GUARDRAIL_TOUCHED` v2 key (no `"additive"` context
+  key) to an additive `warn` v2 key carrying `"additive": True` (`GUARDRAIL_ADDITIVE`).
+- Relative to unreleased `#611` (`bce7c8d3`, never published in a release),
+  prepends, mid-file insertions, adjacent appends without a blank line, and
+  appends containing fences, HTML comments, `---`, `[label]:` definitions or
+  newly added `Default_Ignorable` code points return to `v0.12.0`'s byte-identical
+  `critical` `GUARDRAIL_TOUCHED` v2 key (`META`). No existing `.gwcase` fixture
+  expectation moves.
+
+**Residual.** CheckWash does not interpret natural-language prose or follow
+Claude Code `@path` imports, so a plain-text paragraph or `@path` reference
+appended after a blank line at clean EOF of `CLAUDE.md` stays at `warn`
+(`GUARDRAIL_ADDITIVE`); `--fail-on warn` blocks every `GUARDRAIL_TOUCHED`
+finding. Pre-existing Claude Code inputs outside default guardrail globs
+(`CLAUDE.local.md`, lowercase `claude.md`, subdirectory `CLAUDE.md`, and
+`.gitattributes` `working-tree-encoding`) remain unguarded unless added to
+`[roles].guardrail`. Honest additions containing ZWJ emoji sequences (`U+200D`),
+ZWNJ script joiners (`U+200C`, Persian/Arabic/Indic), fenced code examples, HTML
+comments, GFM tables or horizontal rules in `CLAUDE.md` escalate to `critical`
+(`META`).
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_claude_md_additive.py` (`171` collected tests, including `51`
+  audit regression cases across `repro-01..15` and `repro-30..32`, 3-run median
+  timing ceilings, and `repro-52`/`repro-53` staircase linear-time bounds) + `5`
+  new `.gwcase` fixtures (`23,358` collected tests total).
+- CLI replay across all `44` `cwrev1115/work/guardrail-d211/repro-*`
+  repositories (`repro-01..08`, `repro-10..15`, `repro-30..32` all blocked at
+  `critical` `META`; `repro-51` `1.16` s, `repro-52` `1.07` s, `repro-53`
+  `0.70` s; `repro-60` `pass` at `warn`), full 6-leg Windows + WSL Linux Python
+  `3.11`/`3.12`/`3.13` suites, and compact PJU receipts.
+- macOS: NOT_RUN (covered in hosted release verification at `M`).
