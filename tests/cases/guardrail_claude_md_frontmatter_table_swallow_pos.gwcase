@@ -1,0 +1,30 @@
+=== meta ===
+rule: GUARDRAIL_TOUCHED
+title: prepending --- above CLAUDE.md with a table swallows rules in Claude Code's frontmatter stripper (D-213, repro-04)
+=== before: CLAUDE.md ===
+# Project guide
+
+## Testing
+
+- Never modify test files to make a failing test pass.
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `pytest -q` | run the tests |
+=== after: CLAUDE.md ===
+---
+# Project guide
+
+## Testing
+
+- Never modify test files to make a failing test pass.
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `pytest -q` | run the tests |
+=== expect ===
+[{"rule": "GUARDRAIL_TOUCHED", "severity": "critical", "escalators": ["META"]}]

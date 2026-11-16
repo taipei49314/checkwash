@@ -9,8 +9,9 @@ The judge is immutable; the player runs free.
 ## Agent-READ-ONLY (changes only by the human maintainer)
 - `SPEC.md`, `THREATMODEL.md`, `DECISIONS.md` and its archives (`DECISIONS-archive-*.md`)
 - `tests/gates/**`
-- Escalation policy (`gating.py` severity table), strength lattice
-  (`ir/strength.py` values), alignment parameters.
+- `src/checkwash/gating.py` (escalation policy, severity table and gate application) and
+  `src/checkwash/guardrail_additive.py` (`GUARDRAIL_ADDITIVE` classifier)
+- Strength lattice (`ir/strength.py` values), alignment parameters.
 
 ## Rules
 1. One round = one detector or one named defect. Atomic commit; the commit

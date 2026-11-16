@@ -213,13 +213,14 @@ Four core limits to know before relying on a pass:
 - **A JS/TS pass covers fewer patterns than Python.** Fewer assertion and
   helper idioms are modelled in JS/TS, and runner config changes that silently
   drop test files are not read.
-- **Editing agent-instruction files blocks, except pure line additions to root `CLAUDE.md`.**
+- **Editing agent-instruction files blocks, except strict inert EOF appends to root `CLAUDE.md`.**
   Changes to root `AGENTS.md`, `.cursorrules`, `.claude/**`, `.checkwash/**`
-  or `.greenwash/**`—and deleting, editing, reordering or Markdown/HTML-wrapping
-  existing lines in root `CLAUDE.md`—escalate `GUARDRAIL_TOUCHED` to `critical`.
-  Pure line additions to root `CLAUDE.md` (`GUARDRAIL_ADDITIVE`), appended
-  exemption entries (`EXEMPTION_ADDED`), and newly created guardrail files that
-  do not weaken checkwash config stay at `warn`.
+  or `.greenwash/**`—and any prepend, mid-file insertion, adjacent append without
+  a blank line, deletion, edit, reorder, or fence/comment/`---`/`[label]:` addition
+  in root `CLAUDE.md`—escalate `GUARDRAIL_TOUCHED` to `critical`.
+  Strict inert appends at the end of root `CLAUDE.md` separated by a blank line
+  (`GUARDRAIL_ADDITIVE`), appended exemption entries (`EXEMPTION_ADDED`), and newly
+  created guardrail files that do not weaken checkwash config stay at `warn`.
 - **Claude Code hooks are author-side helpers, not a merge gate.** Only the
   required CI check in range mode enforces verdicts on pull requests.
 
@@ -238,10 +239,13 @@ test, CI, guardrail, `.py` or pytest config files over the cap exit 2).
 <details>
 <summary>Customizing guarded instruction files (for example, unguarding CLAUDE.md)</summary>
 
-Subdirectory instruction files and other agents' config filenames are not
-guarded by default. Note that `GUARDRAIL_ADDITIVE` on root `CLAUDE.md` stays
-at `warn` even if an added plain-text line contradicts earlier prose or adds an
-`@path` import.
+Subdirectory instruction files, `CLAUDE.local.md`, lowercase `claude.md`,
+`.gitattributes` working-tree-encoding rules, and other agents' config filenames
+are not guarded by default. `GUARDRAIL_ADDITIVE` on root `CLAUDE.md` covers only
+strict inert appends at end-of-file separated by a blank line (no `---`, code
+fences, HTML comments, `[label]:` definitions or `Cf`/`Default_Ignorable`
+characters), and stays at `warn` even if an appended plain-text line contradicts
+earlier prose or adds an `@path` import.
 
 To let a blocking guardrail edit through, record a reviewed exemption or
 override `[roles].guardrail` in a base-side `.checkwash/config.toml` (or
@@ -444,5 +448,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Its frozen legacy-byte comparison remains red; publication does not establish
 natural-case acceptance or effective enforcement.
 
-Alpha pre-release. 22 detectors, 23303 tests (collection denominator).
+Alpha pre-release. 22 detectors, 23358 tests (collection denominator).
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

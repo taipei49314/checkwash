@@ -135,13 +135,14 @@ REPAIR_REFUSED_JS: frozenset[str] = frozenset({
     "BROAD_EXCEPT_ADDED",
 })
 
-# D-211 (0.13, G2(b)): repository-root guardrail paths whose in-place pure
-# line additions (every base line preserved in order and Markdown fence /
-# raw-HTML / comment context) hold GUARDRAIL_TOUCHED at warn with
-# GUARDRAIL_ADDITIVE instead of escalating under E4 META. Every deletion,
-# modification, reordering, comment/fence wrapping or rename, and every edit
-# to AGENTS.md, .cursorrules, .claude/**, .checkwash/** or .greenwash/**,
-# escalates to critical.
+# D-211 / D-213 (0.13, G2(b)): repository-root guardrail paths whose in-place
+# strict inert EOF appends (every base line preserved as an exact prefix, >= 1
+# separating blank line, clean EOF, invariant frontmatter including Claude Code
+# `ni()`'s non-anchored `---` slice, and no `---`, `3+` `` ` ``/`~`, `<!--`/`-->`,
+# `[label]:` or `Default_Ignorable` characters on added lines) hold
+# GUARDRAIL_TOUCHED at warn with GUARDRAIL_ADDITIVE instead of escalating under
+# E4 META. Every other edit to CLAUDE.md, and every edit to AGENTS.md,
+# .cursorrules, .claude/**, .checkwash/** or .greenwash/**, escalates to critical.
 GUARDRAIL_ADDITIVE_PATHS: frozenset[str] = frozenset({"CLAUDE.md"})
 
 # Report order: most severe rule classes first within a path.
