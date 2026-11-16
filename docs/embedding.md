@@ -156,6 +156,69 @@ version, review it again and store the new key; the
 
 ## Upgrade notes
 
+### v0.12.0 to v0.13.0
+
+These are the changes in 0.13.0. A build from main before the 0.13.0
+release pull request reports `checkwash_version` `0.12.0`.
+
+- **The document and the IR version numbers did not change:** findings
+  version 2 and IR version 3. `--emit-ir` adds optional `source_unit` on
+  `Unit` ([D-210](../DECISIONS.md)), `kind = "helper_function"` on `Unit`
+  when a set-aside test/conftest helper module's own top-level functions are
+  checked directly ([D-212](../DECISIONS.md)), and `guardrail_files_additive`
+  on `DiffGlobals` ([D-211](../DECISIONS.md), [D-213](../DECISIONS.md)).
+- **Projected Python unit findings name the real test, and their fingerprints
+  move (D-210).** Findings emitted from projected Python concrete, exception
+  or local-auxiliary units (`test_concrete_*`, `test_exception_*`,
+  `test_local_auxiliary_*`) now report the enclosing Python test's qualified
+  name in `unit`, `message` and `fingerprint` across `term`, `json`, `sarif`
+  and `hook-json`, while `--emit-ir` keeps the concrete `qualname` for
+  alignment. A non-transitioning edit to a Python test with one local subject
+  capture (`total = invoice_total(...); assert total == 105.0`) no longer
+  projects, keeping its source `before`/`after` assertion text. Exemptions
+  recorded against `test_concrete_*`, `test_exception_*` or
+  `test_local_auxiliary_*` keys no longer match and must be re-recorded.
+- **A new escalator label, `GUARDRAIL_ADDITIVE`, on strict inert EOF appends to
+  root `CLAUDE.md`, and its fingerprint movement (D-211, D-213).** Modifying a
+  tracked repository-root `CLAUDE.md` in place keeps `GUARDRAIL_TOUCHED` at
+  `warn` with `escalators = ["GUARDRAIL_ADDITIVE"]` and binds `"additive":
+  True` into its v2 fingerprint context when `after` starts with the unmodified
+  `before` line sequence, at least one blank line separates `before`'s last
+  non-blank line from the added block, both sides end cleanly, frontmatter and
+  Claude Code's non-anchored `---` frontmatter slice are unchanged verbatim, no
+  added line holds `---`, `3+` consecutive `` ` ``/`~`, `<!--`/`-->` or
+  `[label]:`, and zero newly introduced `Cf` or `Default_Ignorable` code points
+  appear. Relative to `v0.12.0`, such strict inert EOF appends move from their
+  former `critical` (`META`) v2 key to the additive `warn` v2 key carrying
+  `"additive": True` (affecting only consumers gating at `--fail-on warn` or
+  storing `CLAUDE.md` v2 keys). Every non-EOF, adjacent, fenced, commented or
+  editing change to `CLAUDE.md` and every other guardrail path keeps its
+  `critical` (`META`) severity and byte-identical `v0.12.0` fingerprint.
+- **More runs produce a verdict instead of exiting 2, `on_engine_error = "block"`
+  exits 2 on `importer_gaps`, and two `analysis incomplete` notes appear on
+  stderr and in SARIF (D-205, D-206, D-207, D-208, D-212, #610, #616).** A
+  working-tree or Stop-hook run leaves out the untracked zipapp checkwash runs
+  from (D-205) and sets aside untracked virtual-environment own links on Linux
+  and macOS (D-208); Windows `Activate.ps1` Authenticode signature blocks are
+  excluded from the runner search (D-207); a changed test helper past the
+  importer search bounds sets its unchanged importers aside, checks the
+  helper's own non-`test*` top-level functions directly across
+  `REPAIR_REFUSED_PYTHON`, and notes `analysis incomplete` on stderr, `term`,
+  SARIF `toolExecutionNotifications` and non-blocking hook `systemMessage`
+  output under the default policy, while under `on_engine_error = "block"`
+  non-`hook-json` `check` exits 2 with empty standard output and `pre-tool-use`
+  asks with the note (D-206, D-212); and changed test-shaped files outside the
+  Python and JS/TS test parse gates (`B6`, #610, #616) emit
+  `checkwash: analysis incomplete: <N> test-shaped file(s) not analysed: <paths>`
+  on stderr, `term` and SARIF `toolExecutionNotifications` (after
+  `importer_gaps` and before `unread_sides`), leaving verdicts, exit codes,
+  `--format json` stdout, `--emit-ir`, `--format hook-json`, `hook pre-tool-use`
+  and `--coverage-report` unchanged. Neither `analysis incomplete` note is
+  added to `--format json` stdout.
+- **The release as a whole** moves 0 of the fixed corpus's 3,600 commits
+  between pass, block and error against v0.12.0, with 0 `--format json` report
+  differences ([0.13.0 release guide](releases/v0.13.0-public-launch.md)).
+
 ### v0.11.0 to v0.12.0
 
 These are the changes in 0.12.0. A build from main before the 0.12.0

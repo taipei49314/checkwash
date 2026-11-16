@@ -19,8 +19,12 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-The install commands and Action pin below name v0.12.0, the latest release
-whose public files are verified
+This README was written for checkwash 0.13.0. Its install commands and Action
+pin still name v0.12.0, the latest release whose public files had been
+verified when it was written; the
+[README on GitHub](https://github.com/taipei49314/checkwash#readme) moves them
+to 0.13.0 once 0.13.0's are. Once 0.13.0 is on PyPI, you can install it by
+writing `0.13.0` where the commands below say `0.12.0`
 ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
 
 Start in one of three ways: **Claude Code hooks**, **the CLI on a repository**,
@@ -269,7 +273,8 @@ config is itself a `critical` guardrail edit until merged to the base.
 `REPAIR_EVIDENCE` describes related changes in the same diff; it does not prove
 a repair is semantically valid, and a no-op production edit (such as `+ 0`) can
 earn it ([#419](https://github.com/taipei49314/checkwash/issues/419)). From
-0.12.0 ([0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md),
+0.12.0 ([0.13.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.0.md),
+[0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md),
 [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)),
 weakened/removed/skipped/loosened Python assertions and weakened/loosened/skipped
 JS/TS assertions take no repair evidence (`REPAIR_EVIDENCE_REFUSED`). By
@@ -335,6 +340,7 @@ see [subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/
 Try it on your own changes before making it required.
 [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
+· [0.13.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.0.md)
 · [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)
 
 ## CI details: doctor and the pin
@@ -369,7 +375,8 @@ v0.10.0 the tag pointed at the single release commit.)
 **Pin updaters and `doctor`:** because v0.12.0+ tags point at the Action
 commit, Dependabot, Renovate and zizmor's `ref-version-mismatch` audit resolve
 `# v0.12.0` directly to the SHA `doctor` 0.12.0 accepts (inferred from those
-tools' documentation, not run; `doctor` 0.11.0 accepts only v0.10.0 and v0.11.0
+tools' documentation, not run; `doctor` 0.13.0 accepts the v0.12.0 pin above and
+v0.13.0's own pin, while `doctor` 0.11.0 accepts only v0.10.0 and v0.11.0
 pins).
 
 **Advisory for Action `<= v0.7.0`:** Action releases up to v0.7.0 ran
@@ -432,7 +439,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.12.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-publication-verification.md) · [v0.12.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
+| Installation checks, versions and first use | [v0.12.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-publication-verification.md) · [v0.12.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.12.0-public-launch.md) · [0.13.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |

@@ -99,7 +99,7 @@ differs from the merge in one `doctor` line. Hosted per-pull-request CI is
 disabled: the full suite runs on the maintainer's receipt host (Windows) for
 each pull request and each release stage, and Linux also runs in a
 supplementary batch on that host, not as release evidence
-([docs/RELEASING.md](docs/RELEASING.md)). From the release after v0.12.0,
+([docs/RELEASING.md](docs/RELEASING.md)). From v0.13.0,
 each release also gets one verification on GitHub-hosted macOS and Linux, of the release merge and of
 the published files; it is hosted evidence beside the receipts, not a
 receipt, and a failure in it stops the release

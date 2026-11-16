@@ -9,6 +9,34 @@ has the current install commands and Action pin, and the
 version, commit and download bytes behind them. A new publication record
 starts from the [publication record template](publication-record-template.md).
 
+## v0.13.0
+
+Release candidate, prepared in the release pull request; the publication
+record follows once the public files are verified.
+
+**v0.13.0 removes four first-week working-tree and virtual-environment rough
+edges, reports the real Python test name on projected findings, keeps strict
+inert end-of-file appends to root `CLAUDE.md` at warn, and adds hosted macOS and
+Linux release verification.** A check without a range and the Stop hook leave
+out the untracked zipapp checkwash runs from, and local hook installs keep
+`.claude/settings.local.json` in `info/exclude` (D-205); a changed test helper
+past the importer search limit checks its own top-level functions across
+`REPAIR_REFUSED_PYTHON` and emits an `analysis incomplete` note under the
+default policy (`on_engine_error = "block"` exits 2 in `check`, D-206, D-212);
+Windows `Activate.ps1` Authenticode signatures no longer read as test runners
+(D-207); and Linux/macOS virtual-environment links no longer stop working-tree
+or hook runs (D-208). Findings on projected Python units name the enclosing test
+rather than `test_concrete_*` (D-210), changed test-shaped files outside the
+parse gates emit an `analysis incomplete` note on stderr, `term` and SARIF
+(#610, #616), strict inert end-of-file appends separated by a blank line in a
+tracked root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`, D-211, D-213),
+CPython 3.12+ single-line `tokenize` memory and quiet `SyntaxWarning` parsing
+are bounded (#613, #617, #618), and each release runs hosted verification on
+macOS and Linux across Python 3.11–3.13 (D-204).
+[Release evidence and known limits](v0.13.0-public-launch.md).
+
+Known issues: [v0.13.0](../KNOWN-ISSUES-v0.13.0.md).
+
 ## v0.12.0
 
 Published 2026-11-07 (GitHub Release) and 2026-11-08 (PyPI), Asia/Taipei;

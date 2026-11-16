@@ -127,8 +127,7 @@ Hosted CI has been disabled since 2026-10-23, so a pull request's suite, and
 with it these budgets, runs on Windows only, in the
 [PJU receipt](pju-receipt-bridge.md); Linux is `NOT_RUN` there, and the
 supplementary six-leg batch that [RELEASING](RELEASING.md) records before a
-release runs the suite in three Linux legs on the same host. From the
-release after v0.12.0, each release's
+release runs the suite in three Linux legs on the same host. From v0.13.0, each release's
 [hosted release verification](RELEASING.md#hosted-release-verification)
 also runs the suite on GitHub-hosted Linux, where the two budgets gate, and
 on macOS, where they are skipped; macOS still runs the 10-second
@@ -205,7 +204,7 @@ from archived rows, not a measurement of 0.11 (see *About the counts*).
 
    `checkwash doctor` proves only a checkwash step with `uses:` and no
    `with:`, so a workflow that sets `fail-on: warn` reports "WARN workflow
-   analysis incomplete" and doctor exits 1. In 0.12.0, as in 0.11.0, that is
+   analysis incomplete" and doctor exits 1. In 0.13.0, as in 0.12.0 and 0.11.0, that is
    expected: doctor still proves only a step with no `with:`. A pull request runs the
    workflow as it changes it, so one that lowers its own
    `fail-on` is judged at the lowered threshold, and its workflow edit
