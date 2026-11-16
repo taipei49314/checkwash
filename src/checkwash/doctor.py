@@ -33,7 +33,7 @@ _PREVIOUS_ACTION_PIN = "532f74ab070a924b23e2cc70e5d0091a05d8401d"
 # This release's own Action commit. Only a release PR's last commit changes the
 # next line, to that commit's parent (tools/own_action_pin.py), and the release
 # bridge verifies it. The release tools read both lines in exactly this shape.
-_OWN_ACTION_PIN = "532f74ab070a924b23e2cc70e5d0091a05d8401d"
+_OWN_ACTION_PIN = "9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638"
 _PINS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
