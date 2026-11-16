@@ -2125,27 +2125,43 @@ commit holds, tracked and changed, staged, beside a `pyvenv.cfg` that is not
 a regular file, at the repository root, or a link a range adds, changes or
 reads in a pass.
 
-**Helper importers left unread (D-206, 0.13).** A changed test or conftest
-file sends the expected-value pass looking for the unchanged tests that
-import it when the pass reads its old version (top-level imports,
+**Helper importers left unread (D-206, D-212, 0.13).** A changed test or
+conftest file sends the expected-value pass looking for the unchanged tests
+that import it when the pass reads its old version (top-level imports,
 functions, classes and assignments only) and finds a function whose name
 does not start with `test`. In a run with a report context the search goes
 by the file's module name, one name at a time, with every path the diff
 changes left out as Git spells it; a file mentions a name when it holds it
 as plain text. Each name has its own bounds, and past them none of that
-name's importers is read, and one note names its helpers: when 64 or more
-unchanged Python files mention the name (the search's hit limit), unless
-the diff renamed one of its helpers to that name, which stops the run (an
-engine error); when more than 48 unchanged tests do; or when the run's 192
-importer reads, given from the name with the fewest tests, are spent. More
-than 16 changed helper module names set every helper aside. The note reads
-`analysis incomplete: <reason>, so unchanged tests that import <helpers>
-were not read for their expected values`, with a path or name that would
-not print shown by its `repr`. It is written on stderr in every format, as
-a SARIF tool execution notification and as a `!` line of the term report,
-whose head then reads "analysis incomplete" when there is no finding. A
-passing `check --format hook-json` gives it as the `systemMessage`, and so
-does its analysis of the session's commits, after `commits made during this
+name's importers is read, one note names its helpers, and each set-aside
+test or conftest file has its own top-level functions whose names do not
+start with `test` (and, in a `conftest`, do not start with `pytest_`) judged
+directly as `helper_function` units across the `REPAIR_REFUSED_PYTHON` unit
+rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
+`TOLERANCE_LOOSENED`, `TEST_PATCHES_SUBJECT`, `CONFTEST_PATCHES_PROD`,
+`SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED`, `EXPECTED_VALUE_DERIVED`,
+with `TEST_DISABLED` `SHAPE_UNIT_REMOVED` emitted only when the removed
+helper held at least one assertion; decorator marks other than
+`@pytest.fixture` are not read as unit skip markers, conftest
+`@pytest.fixture` skip markers stay on `<suite>`, and cross-file, arrival,
+restructure, duplicate and move credits do not apply to `helper_function`
+units): when 64 or more unchanged Python files mention the name (the
+search's hit limit), unless the diff renamed one of its helpers to that
+name, which stops the run (an engine error); when more than 48 unchanged
+tests do; or when the run's 192 importer reads, given from the name with the
+fewest tests, are spent. More than 16 changed helper module names set every
+helper aside. The note reads `analysis incomplete: <reason>, so unchanged
+tests that import <helpers> were not read; each helper's own functions were
+checked, not expected values resolved through its callers`, with a path or
+name that would not print shown by its `repr`. It is written on stderr in
+every format, as a SARIF tool execution notification and as a `!` line of
+the term report, whose head then reads "analysis incomplete" when there is
+no finding. Under the base policy's `on_engine_error = "block"`, a
+non-`hook-json` `check` run whose `report_context.importer_gaps` is
+non-empty exits 2 with empty standard output after writing the note on
+stderr. A passing `check --format hook-json` gives it as the `systemMessage`
+(and keeps exit 0 under `on_engine_error = "block"`), and so does its
+analysis of the session's commits, after `commits made during this
 session:`. `hook pre-tool-use`, when it does not ask about a weakening,
 gives it as the `systemMessage`, or, under the base policy's
 `on_engine_error = "block"`, asks with it; a hook note longer than 1,200
@@ -2153,6 +2169,30 @@ characters ends in `…`. `--format json` stdout and `--emit-ir` do not name
 it. A run without a report context (`sweep`, `bench`) and a search that
 cannot leave paths out keep one search for every name, whose hit limit
 stops the run, as the root-helper search does.
+
+**Test-shaped files left unparsed (B6, 0.13).** In a `check` run with a
+report context, any changed, added, deleted or renamed Python or JS/TS file
+outside `conftest`, `guardrail`, `ci`, `snapshot` and `lockfile` roles,
+artifacts and `site-packages`/`dist-packages` that entered neither the
+Python unit collector nor `is_js_test_file`, and that looks like a test
+module (a Python file carrying `test` or `test_*` methods on a non-`Test*`
+class or `TestCase`/`TestSuite` bases, or bearing a non-default test
+filename such as `tests.py`, `*_tests.py`, `*_spec.py`, `test*.py` or
+`check_*.py` in a test directory or declaring `test`/`test_*` functions or
+methods or `Test*`/`TestCase` classes when `prod`-role outside test
+directories, unless `__test__ = False`; or a JS/TS file in a test directory
+or bearing a non-default test suffix such as `.unit`, `.integration`,
+`.int`, `.e2e`, `.cy`, `.tests`, `.specs`, `.ava`, `.tap`, `.playwright`,
+`.pw` or `*Spec`/`*Specs`/`*Tests` with runner or BDD call evidence), emits
+one note: `analysis incomplete: <N> test-shaped file(s) not analysed:
+<paths>` (up to four sorted POSIX paths, non-printable or `Cf`-carrying
+paths shown by `repr`, plus `and <K> more`). It is written on stderr in
+every `check` format except `hook-json`, as a `!` line of the term report
+(whose zero-finding head then reads "analysis incomplete"), and as a SARIF
+`warning` tool execution notification (after `importer_gaps` and before
+`unread_sides`). It never alters IR, findings, verdicts, exit codes,
+`--format json` stdout, `--emit-ir`, `--format hook-json`, `hook
+pre-tool-use` or `--coverage-report`.
 
 **Which directory a command reads (#416).** `check`, `sweep`, `allow`, `doctor` and the `quality` forms that read a repository (a range, the worktree review, `init`, `doctor`) first ask Git about `--repo` (default `.`) with `git -C <--repo> rev-parse --is-inside-work-tree --show-prefix`. If Git answers `true` with a non-empty prefix, a second query, `git -C <--repo> rev-parse --show-toplevel`, names the root. Its answer must decode as UTF-8, be a single line, be absolute and name an existing directory. The command then uses that root in place of `--repo` for every later Git call and working-tree read. A run from a subdirectory therefore analyses the whole repository. For `check`, `sweep`, `doctor` and the `quality` forms its stdout and exit code are those of the same run at the root; `allow` writes the root ledger and names it under Git's spelling of the root. This is not the behaviour of `git -C <subdirectory>`, under which `ls-tree` and `git grep` stay scoped to the subdirectory. The root is never `--repo` joined with `--show-cdup`.
 

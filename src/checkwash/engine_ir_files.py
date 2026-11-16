@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from checkwash.change import FileChange
@@ -128,14 +128,23 @@ def _parse_and_record_sides(
     before_parsed: ParsedFile | None = None
     after_parsed: ParsedFile | None = None
     collect = False
+    collect_helpers = False
     if is_python:
         is_conftest = role == "conftest"
         collect = is_conftest or (judged_test and eng.collectable(path))
+        collect_helpers = (
+            (judged_test or is_conftest)
+            and change.synthetic not in ("root_helper_importer", "expected_provenance_importer")
+            and path in intake.set_aside_helpers
+        )
         reaches_chain = (
             collect
             and not is_conftest
             and change.synthetic not in ("root_helper_importer", "expected_provenance_importer")
         )
+        reaches_helpers = (
+            (collect and not is_conftest) or collect_helpers
+        ) and change.synthetic not in ("root_helper_importer", "expected_provenance_importer")
         if change.before is not None:
             before_path = (change.old_path or path).replace("\\", "/")
             before_parsed = eng.parse_python(
@@ -146,8 +155,9 @@ def _parse_and_record_sides(
                 if reaches_chain
                 else (),
                 imported=chain_resolver.imported_helpers(before_path, 0)
-                if reaches_chain
+                if reaches_helpers
                 else None,
+                collect_helpers=collect_helpers,
             )
         if change.after is not None:
             after_parsed = eng.parse_python(
@@ -158,8 +168,9 @@ def _parse_and_record_sides(
                 if reaches_chain
                 else (),
                 imported=chain_resolver.imported_helpers(path, 1)
-                if reaches_chain
+                if reaches_helpers
                 else None,
+                collect_helpers=collect_helpers,
             )
     elif is_js_test:
         if change.before is not None:
@@ -180,6 +191,26 @@ def _parse_and_record_sides(
         and before_parsed is not None
         and after_parsed is not None
     ):
+        before_helpers = (
+            [u for u in before_parsed.units if u.kind == "helper_function"]
+            if collect_helpers
+            else []
+        )
+        after_helpers = (
+            [u for u in after_parsed.units if u.kind == "helper_function"]
+            if collect_helpers
+            else []
+        )
+        if before_helpers:
+            before_parsed = replace(
+                before_parsed,
+                units=[u for u in before_parsed.units if u.kind != "helper_function"],
+            )
+        if after_helpers:
+            after_parsed = replace(
+                after_parsed,
+                units=[u for u in after_parsed.units if u.kind != "helper_function"],
+            )
         before_parsed, after_parsed = _project_modified_python_test_pair(
             path,
             change,
@@ -189,6 +220,16 @@ def _parse_and_record_sides(
             root_searcher,
             intake.changes,
         )
+        if before_helpers:
+            before_parsed = replace(
+                before_parsed,
+                units=sorted([*before_parsed.units, *before_helpers], key=lambda u: u.span),
+            )
+        if after_helpers:
+            after_parsed = replace(
+                after_parsed,
+                units=sorted([*after_parsed.units, *after_helpers], key=lambda u: u.span),
+            )
 
     if report_context is not None:
         if is_js_test:
@@ -323,6 +364,8 @@ def _record_test_and_cross_cutting_globals(
         g.test_file_imports[path] = list(before_parsed.imports)
     if judged_test or role == "conftest":
         for unit in file_ir.units:
+            if unit.kind == "helper_function":
+                continue
             if unit.before is None or unit.after is None:
                 g.test_logic_changed = True
             elif unit.delta is not None:

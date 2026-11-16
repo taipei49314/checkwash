@@ -51,7 +51,7 @@ from checkwash.evidence import (
     _scope_match,
     _suppression_texts,
 )
-from checkwash.findings import Finding
+from checkwash.findings import SHAPE_UNIT_REMOVED, Finding, unit_finding_name
 from checkwash.frontends.javascript.frontend import parse_javascript
 from checkwash.frontends.javascript.module_mocks import _EXTENSIONS as _JS_EXTENSIONS, module_mock_events
 from checkwash.frontends.javascript.setup_files import is_carrier, listed_setup_files, setup_file_events
@@ -99,7 +99,7 @@ from checkwash.frontends.python.parametrized_string_standins import parametrized
 from checkwash.shadow import _PYTEST_CONFIGS, find_runtime_subject_shadows
 from checkwash.frontends.python.expected_provenance import importer_changes as expected_importer_changes, mark_expected_provenance
 from checkwash.frontends.javascript.expected_provenance import mark_js_expected_provenance
-from checkwash.gating import apply_gates, unit_is_live
+from checkwash.gating import REPAIR_REFUSED_PYTHON, apply_gates, unit_is_live
 from checkwash.arrival_collection import arrival_collector
 from checkwash.ir.astutil import same_expr
 from checkwash.ir.diffalign import align_file
@@ -889,6 +889,29 @@ def run_detectors(ir: IR, config: Config) -> list[Finding]:
         if rule in config.disabled_detectors:
             continue
         findings.extend(detect(ir))
+    helper_units: dict[tuple[str, str], object] = {}
+    test_unit_keys: set[tuple[str, str]] = set()
+    for file in ir.files:
+        for unit in file.units:
+            key = (file.path, unit_finding_name(unit))
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                helper_units[key] = unit
+            else:
+                test_unit_keys.add(key)
+    if helper_units:
+        filtered: list[Finding] = []
+        for f in findings:
+            if f.unit is not None:
+                key = (f.path, f.unit)
+                if key in helper_units and key not in test_unit_keys:
+                    if f.rule not in REPAIR_REFUSED_PYTHON:
+                        continue
+                    if f.rule == "TEST_DISABLED" and f.shape == SHAPE_UNIT_REMOVED:
+                        unit = helper_units[key]
+                        if unit.before is None or not unit.before.assertions:
+                            continue
+            filtered.append(f)
+        findings = filtered
     findings.sort(key=lambda f: f.sort_key())
     return findings
 

@@ -200,6 +200,7 @@ class ParsedUnit:
     side: UnitSide
     shingles: frozenset[tuple[str, ...]] = frozenset()
     source_unit: str = ""
+    kind: str = "test_function"
 
 
 @dataclass
@@ -4446,32 +4447,50 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
 
 
 def parse_python(
-    data: bytes, collect_tests: bool, conftest: bool = False, chain: tuple[ConftestLevel, ...] = (),
+    data: bytes,
+    collect_tests: bool,
+    conftest: bool = False,
+    chain: tuple[ConftestLevel, ...] = (),
     imported=None,
+    collect_helpers: bool = False,
 ) -> ParsedFile:
     """`chain`: the conftest files above a test module, nearest first, whose
     fixtures its units can request (#223). `imported`: reads the module a
     top-level `from M import f` names, `(module, original) -> outcomes`, for
     what calling `f` ends in (#272, second stage). Only a test module reads
-    either."""
+    either. `collect_helpers` also collects top-level non-`test*` functions as
+    `helper_function` units for set-aside helper modules (D-212)."""
     global _walks
     outer, _walks = _walks, None
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", SyntaxWarning)
             warnings.simplefilter("ignore", DeprecationWarning)
-            return _parse_python(data, collect_tests, conftest, chain, imported)
+            return _parse_python(
+                data,
+                collect_tests,
+                conftest,
+                chain,
+                imported,
+                collect_helpers=collect_helpers,
+            )
     finally:
         _walks = outer
 
 
 def _parse_python(
-    data: bytes, collect_tests: bool, conftest: bool, chain: tuple[ConftestLevel, ...], imported=None
+    data: bytes,
+    collect_tests: bool,
+    conftest: bool,
+    chain: tuple[ConftestLevel, ...],
+    imported=None,
+    *,
+    collect_helpers: bool = False,
 ) -> ParsedFile:
     """Orchestrate module parsing, subtree-walk caching, unit collection, and file assembly."""
     global _walks
     # Stage 1: decode source, extract doctests, strip docstrings, and normalize prod AST.
-    parsed = _parse_and_normalize_module(_FRONTEND_MODULE, data, collect_tests)
+    parsed = _parse_and_normalize_module(_FRONTEND_MODULE, data, collect_tests or collect_helpers)
     if parsed is None:
         return ParsedFile(parse_ok=False)
     raw, tree, off, doctests = parsed
@@ -4490,6 +4509,7 @@ def _parse_python(
         conftest=conftest,
         chain=chain,
         imported=imported,
+        collect_helpers=collect_helpers,
     )
 
     # Stage 4: collect rebindings, lexical scopes, inherited methods, and suite controls.

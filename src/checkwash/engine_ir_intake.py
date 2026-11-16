@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
 from checkwash.change import FileChange
@@ -35,6 +35,7 @@ class DiffIntake:
     root_batch_reader: Any
     importer_reads: int
     reviewed_root_modules: set[str]
+    set_aside_helpers: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -87,10 +88,17 @@ def prepare_diff_intake(
     # bench, demo) keeps the engine error. The root-helper channel above,
     # which reviews removed assertions, keeps its engine errors too.
     set_aside: list[str] | None = [] if report_context is not None else None
+    set_aside_helpers: set[str] = set()
     changes = [
         *changes,
         *eng.expected_importer_changes(
-            changes, config, root_reader, root_searcher, reviewed_root_modules, skipped=set_aside,
+            changes,
+            config,
+            root_reader,
+            root_searcher,
+            reviewed_root_modules,
+            skipped=set_aside,
+            set_aside_paths=set_aside_helpers if report_context is not None else None,
         ),
     ]
     if report_context is not None:
@@ -103,6 +111,7 @@ def prepare_diff_intake(
         root_batch_reader=root_batch_reader,
         importer_reads=importer_reads,
         reviewed_root_modules=reviewed_root_modules,
+        set_aside_helpers=set_aside_helpers,
     )
 
 

@@ -1779,8 +1779,10 @@ asked whether Nelson approved that one-clause L1 addition in D-209, and (on
 Nelson's 2026-11-13T15:32:46Z question 「要不要換個session開teamwork拆?」)
 recommended finishing `#606` in this session and opening a fresh `/teamwork`
 session for Phase 2; at 2026-11-13T15:33:34Z Nelson answered
-「先合併收尾 然後給我prompt 我直接開session開工」 (merge and wrap up `#606`
-first, then give him the prompt so he can open a new session and start work).
+「先合併收尾 然後給我prompt 我直接開session開工」 (a merge-and-wrap-up instruction in
+response to the session-transition recommendation, making acceptance of
+`f2bfe8e0`'s same-tree bootstrap clause implicit at the time; explicitly
+ratified by Nelson at `2026-11-15T17:34:59Z` in session `c8f1073f`, D-212).
 
 **What was asked.** After #605 merged (`b326f201`), at 2026-11-13T13:35:09Z
 Nelson wrote 「我覺得現在驗證成本太高了 / 而且有God Function」 (verification
@@ -1936,11 +1938,13 @@ captured-result 不重寫斷言文字）的 L1（SPEC.md §5 與 DECISIONS.md D-
 `核可 #608 的 L1，但輕量收據與 checkwash 必過檢查綠燈後先停在合併前等我看一眼`, and
 `先不核可，我想調整 SPEC.md 或 D-210 條文`). At 2026-11-14T02:55:05Z Nelson chose
 `(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
-approving `SPEC.md` §5 and `D-210` (`DECISIONS.md`, L1) and authorizing merging
+approving the `SPEC.md` §2b (*Bounded Python carriers and table projection*;
+mislabelled `SPEC.md §5` in the contemporaneous question and options, corrected
+under `Q6` in D-212) and `D-210` (`DECISIONS.md`, L1) edits and authorizing merging
 #608 once its compact PJU receipt and required `checkwash` check pass. At
 2026-11-14T04:07:01Z (session `98b9acf6`) Antigravity asked 「#608（7fe61445）連跑兩次輕量收據（cw608r1、cw608r2），23,112 題中其餘 23,111 題與雙向 Action 重播、wheel/sdist/pyz 驗證全數通過，唯獨 test_perf_git::test_range_check_through_git_stays_within_budget 在 16-worker 日間負載下分別跑出 12.46s 與 17.27s（上限 12.0s；單獨實測 main 與 #608 均為 3.1–3.3s，無 A4 退化）。cProfile 定位出主因是 cli._analyse 讀 config/allow/MANIFESTS 時未共用 GitSnapshot，每次 check 重複建 9 個 GitSnapshot 多生 ~27 個 git.exe 子行程（占總耗時 45%）。請問希望如何處理？」;
 at 2026-11-14T04:10:13Z Nelson chose `(Recommended) 先開一個獨立非 L1 小 PR 讓 cli._analyse 共用單一 GitSnapshot 批次讀取 base 設定與 manifest（每次 check 少生 ~25 個 git 子行程），合併後 rebase #608（維持已核可的 SPEC.md §5 與 D-210 實質內容，僅更新 commit 引用）跑收據並接續推進 B6`,
-authorizing rebasing #608 onto #609 (`5e0fb5aa`) with `SPEC.md` §5 and D-210's
+authorizing rebasing #608 onto #609 (`5e0fb5aa`) with `SPEC.md` §2b and D-210's
 substantive text preserved (`bf5f8177` -> `2cce7168`) and merging once its
 compact PJU receipt passes.
 
@@ -2254,3 +2258,131 @@ Windows CPython 3.11.9):
   `docs/embedding.md`, Unicode `Cf` rejection and `@path` residual disclosure —
   re-verified clean before opening the draft PR).
 - macOS, Linux, and other platforms: NOT_RUN.
+
+## D-212 (2026-11-16): set-aside helper modules check their own functions directly, `on_engine_error = "block"` exits 2 on `importer_gaps`, and pre-release threat-model and governance records are aligned
+
+**Approval and authorization chain (human words separated from agent scope
+interpretation).**
+
+- **Human verbatim words:**
+  1. Session `5472d923-3651-42a1-9267-6490cb024f59` at `2026-11-15T14:24:06Z`
+     (`2026-11-15T22:24:06+08:00`): 「開一個session 對整體做一次檢查 沒問題後就發」.
+  2. Session `c8f1073f-a39c-4c95-a65f-90c9037eff91` at `2026-11-15T17:34:59Z`
+     (`2026-11-16T01:34:59+08:00`), answering `Q1`–`Q6` after the 2026-11-15
+     external read-only pre-release audit: 「可以 照你的建議走 開個新session? 需要用到goal
+     或其他技能嗎」, followed by the `/goal` handover prompt in session
+     `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` (`2026-11-15T17:37:45Z`).
+  3. Session `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` at `2026-11-16T11:45:56Z`
+     (`2026-11-16T19:45:56+08:00`), after reviewing the complete 1,603-line
+     verbatim L1 `git diff` in `gate1-l1-verbatim-diff.md` (`56980027`,
+     `a496ddf8`, `30df9516`): 「核可並合併」.
+- **Agent scope interpretation:** Nelson's `Q2`, `Q4` and `Q6` rulings select
+  Option 甲 on `D-206` (`#603`), approve the `THREATMODEL.md` row `125`/`183`/
+  `187`/`188` updates (`DET13-03`, `RC-1`, `RC-2`) and the `SPEC.md` §9 B6
+  addition (`DG-06`), explicitly ratify `#607`'s (`857c88d4`) pure structural
+  extraction of helper functions inside `src/checkwash/gating.py` (`apply_gates`),
+  ratify `D-209`'s (`f2bfe8e0`) same-tree bootstrap clause with the `15:33:34Z`
+  merge-instruction clarification, and record the `D-210` `SPEC.md §5` -> `§2b`
+  section-number corrigendum; Nelson's `2026-11-16T11:45:56Z` 「核可並合併」 at
+  `/goal` Gate 1 approves the protected L1 texts as they stood at `56980027` and
+  authorizes pushing and merging via the PJU compact receipt bridge (this
+  timestamp note is the only change made to the entry after Gate 1; `1.0`
+  remains `NOT_MET`, and downstream `smallestlie` / `checkwash-corpus` re-pins
+  remain outside scope).
+
+**What was found (`DET13-01..03`, `DET13-05`, `RC-1`, `RC-2`, `DG-02`, `DG-06`).**
+The 2026-11-15 external read-only audit (`2-detection-0.13.md`,
+`5-release-chain.md`, `7-docs-governance.md`, reproduced in
+`cwrev1115/work/detection-0.13/repro-01..04,13,16`) found:
+
+1. **`DET13-01` / `DET13-02`: `D-206` dropped `REPAIR_REFUSED_PYTHON` checks
+   inside set-aside helper modules, not only cross-file expected-value
+   provenance.** Because `expected_provenance.importer_changes` is the sole
+   mechanism that projects non-`test*` top-level helper functions onto callers,
+   setting a helper module aside past any of `D-206`'s four bounds (`>=64`
+   unchanged Python files mentioning its name, `>48` unchanged test files, `192`
+   total importer reads spent, or `>16` changed helper module names — reachable
+   by touching comments in 17 test files that define `_make()`) left the helper
+   file with zero `test_function` units (`BROAD_EXCEPT_ADDED` still fired at
+   file level, whereas `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TOLERANCE_LOOSENED`
+   and `TEST_DISABLED` inside the helper passed at `exit 0`), while the stderr
+   note claimed only `were not read for their expected values`.
+2. **`DET13-05`: `[gate] on_engine_error = "block"` did not stop `check` on
+   `importer_gaps`.** On `v0.12.0`, `64+` mentions raised `SearchHitLimit`
+   (`exit 2` in `check`); `D-206` converted the bound into
+   `report_context.importer_gaps` and asked in `hook pre-tool-use` under
+   `on_engine_error = "block"`, while `cli._cmd_check` still returned `0` when
+   findings were empty (`repro-13`).
+3. **`DET13-03` (pre-existing since `#272` / `0.12.0`).** Adding `pytest.skip`
+   inside an imported helper module without editing its calling test file passed
+   even with one caller (`repro-03` `r_none_skip`), because `expected_provenance`
+   synthesizes unchanged importer `FileChange` entries only for expected-value
+   definitions, whereas `THREATMODEL.md` row 125 began `**Closed (#272).**`.
+4. **`RC-1`, `RC-2`, `DG-02`, `DG-06`.** `THREATMODEL.md` had no rows stating
+   the single-context `(checkwash, 15368)` GitHub Actions ruleset trust boundary
+   (`RC-1`) or the owner-attested execution fields and 90-day hosted retention
+   of `checkwash.pju-compact-receipt.v1` (`RC-2`); `SPEC.md` §9 did not yet
+   describe B6's `unanalysed_test_files` note (`DG-06`); `#607` (`857c88d4`)
+   split `gating.apply_gates` into private helpers in `src/checkwash/gating.py`
+   without changing severity outcomes (`DG-02`); `D-209` needed explicit
+   clarification of `15:33:34Z` (`DG-01`); and `D-210` cited `SPEC.md §5` where
+   `#608` edited `SPEC.md §2b` (`DG-03`).
+
+**Decision.**
+
+1. **Direct `helper_function` unit judgement on set-aside test/conftest helper
+   modules (`expected_provenance.py`, `engine_ir_intake.py`,
+   `engine_ir_files.py`, `frontend_file_parse.py`, `diffalign.py`, `engine.py`,
+   `gating.py`, `oracle_credit.py`).** When `expected_provenance.importer_changes`
+   sets aside a changed test or conftest file past any of `D-206`'s four bounds,
+   it records the path in `set_aside_paths`. `engine_ir_files` parses both sides
+   of that file with `collect_helpers=True`, collecting top-level functions
+   whose names do not start with `test` (and, in a `conftest`, do not start with
+   `pytest_`) as `ParsedUnit(kind="helper_function")` with full body assertion
+   and body/helper/module-level skip extraction (decorator marks other than
+   `@pytest.fixture` are stripped so non-pytest decorators are never misread as
+   skip marks, and conftest `@pytest.fixture` marks remain on `<suite>`).
+   `diffalign` aligns units within matching `(kind, qualname)` namespaces,
+   `engine.run_detectors` emits unit findings on `helper_function` units strictly
+   from `REPAIR_REFUSED_PYTHON` (requiring `unit.before.assertions` for
+   `TEST_DISABLED` `SHAPE_UNIT_REMOVED` so deleting a pure data/utility helper
+   stays clean), and cross-file, arrival, restructure, duplicate and move
+   credits skip `helper_function` units so helper bodies neither spend nor mint
+   test-unit oracle credits.
+2. **Honest note wording and `on_engine_error = "block"` fail-closed `exit 2` in
+   `check` (`expected_provenance.py`, `cli.py`, `SPEC.md` §9).** `_set_aside`
+   now formats `analysis incomplete: <reason>, so unchanged tests that import
+   <helpers> were not read; each helper's own functions were checked, not
+   expected values resolved through its callers`. In `cli._cmd_check`, when
+   `report_context.importer_gaps` is non-empty and `config.on_engine_error ==
+   "block"` on any non-`hook-json` invocation, `check` writes the stderr note
+   and returns `exit 2` with empty standard output (`check --format hook-json`
+   keeps `exit 0` and its `systemMessage`).
+3. **Threat-model, spec and governance alignment (`THREATMODEL.md` rows 125,
+   183, 187, 188; `SPEC.md` §9; `DECISIONS.md` `D-209`, `D-210`).** Row 125 is
+   relabelled `**Closed in part (#272).**` and names the unchanged-caller
+   imported-helper `pytest.skip` residual (tracked in a `0.14` issue); row 183
+   records `D-212`'s narrowing and remaining expected-value residual; rows 187
+   and 188 record `RC-1` and `RC-2`; `SPEC.md` §9 adds **Test-shaped files left
+   unparsed (B6, 0.13)**; `#607`'s structural split of `gating.apply_gates` and
+   `D-209`'s `f2bfe8e0` bootstrap clause are explicitly ratified; and `D-210`'s
+   `SPEC.md §2b` corrigendum is recorded.
+
+**Fingerprint movement (`docs/stability.md`).** No existing finding or `.gwcase`
+fixture moves. Set-aside helper modules that previously emitted zero unit
+findings on internal `REPAIR_REFUSED_PYTHON` weakenings now emit findings on
+`(helper_path, helper_qualname)` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3`
+unchanged).
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_importer_search_skip.py` (`+10` collected test entries:
+  `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TOLERANCE_LOOSENED`, `TEST_DISABLED`
+  body skip and lambda replacement at the 64-file hit limit, >48-test, >192-read
+  and >16-name bounds, non-asserting helper deletion control, set-aside conftest
+  helper weakening beside `collect_ignore`, default-policy `PreToolUse` ask on
+  set-aside helper weakening, and `on_engine_error = "block"` `exit 2` across
+  `json`/`term`/`sarif`/`--emit-ir`/worktree vs `exit 0` Stop `hook-json`),
+  verified against all `cwrev1115/work/detection-0.13/repro-01..04,13,16`
+  repositories, `benchmarks/make_failures.py`, full 6-leg Windows + WSL Linux
+  Python `3.11`/`3.12`/`3.13` suites, and compact PJU receipt (`23,303` tests).
+- macOS: NOT_RUN (covered in hosted release verification at `M`).

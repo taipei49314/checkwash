@@ -371,6 +371,8 @@ class CrossfileOracleResolver:
         conftest_path = f"{tdir}/conftest.py" if tdir else "conftest.py"
 
         for unit in parsed.units:
+            if getattr(unit, "kind", "test_function") == "helper_function":
+                continue
             uside = unit.side
             extra: list = []
 

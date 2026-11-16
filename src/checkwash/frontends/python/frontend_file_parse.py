@@ -49,6 +49,7 @@ class ModuleParseState:
     condition: Callable[[ast.AST], str]
     helper_outcomes: Any
     class_attrs: Any
+    collect_helpers: bool = False
     units: list[Any] = field(default_factory=list)
     symbols: dict[str, str] = field(default_factory=dict)
     symbol_calls: dict[str, tuple[str, ...]] = field(default_factory=dict)
@@ -200,12 +201,15 @@ def build_module_parse_state(
     conftest: bool,
     chain: tuple[Any, ...],
     imported: Any,
+    collect_helpers: bool = False,
 ) -> ModuleParseState:
     """Prepare module-level scopes, marks, setup scopes and class attribute caches."""
     # Symbol fingerprints exist to answer "did prod behaviour change?"; test
     # files never need them, and computing them dominated parse time.
-    want_symbols = not collect_tests
-    module_aliases = fe._mark_aliases(tree.body) if collect_tests else {}
+    any_collect = collect_tests or collect_helpers
+    body_collect = (collect_tests and not conftest) or collect_helpers
+    want_symbols = not any_collect
+    module_aliases = fe._mark_aliases(tree.body) if any_collect else {}
     module_markers = (
         fe._pytestmark_markers(tree.body, off, off, module_aliases) + fe._module_skip_markers(tree, off, off)
         if collect_tests
@@ -216,7 +220,7 @@ def build_module_parse_state(
     # rebuild the same map 200 times.
     module_scopes: dict[str, ast.AST] = {}
     test_class_names: frozenset[str] = frozenset()
-    if collect_tests:
+    if any_collect:
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 module_scopes[node.name] = node
@@ -224,16 +228,17 @@ def build_module_parse_state(
                 for target in node.targets:
                     if isinstance(target, ast.Name):
                         module_scopes[target.id] = node.value
+    if collect_tests:
         test_class_names = fe._transitive_test_classes(tree)
     # One file's worth of scope-walk memoisation: (scope-nodes, invocations),
     # shared by every unit so a helper reached by many tests is walked once.
     file_caches: tuple[dict, dict] = ({}, {})
-    branch_fixtures = fe.literal_fixtures(tree) if collect_tests else {}
+    branch_fixtures = fe.literal_fixtures(tree) if any_collect else {}
 
     setup_scopes: tuple[Any, ...] = ()
     marker_origins: dict[tuple[str, tuple[int, int], str], str] = {}
     # What a test body's names resolve to at module level, for its skips (#220).
-    body_names = fe.module_bindings(tree, mutated=False) if collect_tests and not conftest else {}
+    body_names = fe.module_bindings(tree, mutated=False) if body_collect else {}
     # Names a test can import inside itself, read when an import is indented.
     body_roots = (
         frozenset(
@@ -251,7 +256,7 @@ def build_module_parse_state(
 
     imported_helpers = (
         fe.ImportedHelpers(fe.imported_helper_names(tree), imported)
-        if imported is not None and collect_tests and not conftest
+        if imported is not None and body_collect
         else None
     )
     if imported_helpers is not None and not imported_helpers.names:
@@ -259,7 +264,7 @@ def build_module_parse_state(
     spells_outcome = any(token in raw for token in fe._SETUP_OUTCOME_TOKENS)
     helper_outcomes = (
         fe.HelperOutcomes(module_scopes, condition, branch_fixtures, imported_helpers)
-        if collect_tests and not conftest and (spells_outcome or imported_helpers is not None)
+        if body_collect and (spells_outcome or imported_helpers is not None)
         else None
     )
     if collect_tests and not conftest and (
@@ -299,12 +304,13 @@ def build_module_parse_state(
         condition=condition,
         helper_outcomes=helper_outcomes,
         class_attrs=class_attrs,
+        collect_helpers=collect_helpers,
     )
 
 
 def compute_rebound_statuses(state: ModuleParseState) -> None:
     """Compute final name rebinding and dead-definition statuses (#424, #499)."""
-    if not state.collect_tests or state.conftest:
+    if not ((state.collect_tests and not state.conftest) or state.collect_helpers):
         return
     fe = state.fe
     off = state.off
@@ -450,6 +456,51 @@ def visit_module_scopes(state: ModuleParseState) -> None:
                     producers=unit_fixture_producers(state, child, classes),
                 )
                 state.units.append(credit_abstract_base_unit(state, unit, child, owner) if owner is not None else unit)
+            elif (
+                state.collect_helpers
+                and prefix == ""
+                and not fe._is_test_name(child.name)
+                and not (state.conftest and child.name.startswith("pytest_"))
+                and not (bound and bound.dropped)
+            ):
+                is_fixture = fe._is_fixture_def(child)
+                inherited_helper = (
+                    fe._module_skip_markers(state.tree, off, off) if not state.conftest else []
+                )
+                unit = fe._collect_unit(
+                    child,
+                    qual,
+                    off,
+                    off,
+                    inherited_helper + (bound.markers if bound and is_fixture else []),
+                    state.module_scopes,
+                    state.file_caches,
+                    state.branch_fixtures,
+                    state.doctests,
+                    aliases if is_fixture else None,
+                    outcome_bindings=state.body_names,
+                    method=False,
+                    outcome_roots=state.body_roots,
+                    attrs=None,
+                    helpers=state.helper_outcomes,
+                    origins=state.marker_origins,
+                    instance=None,
+                    resolved=state.resolved_methods,
+                    producers=(),
+                )
+                if state.conftest and is_fixture:
+                    unit = replace(unit, side=replace(unit.side, markers=[]))
+                elif not is_fixture:
+                    dec_spans = {m.span for m in fe._decorator_markers(child, off, off, None)}
+                    if dec_spans:
+                        unit = replace(
+                            unit,
+                            side=replace(
+                                unit.side,
+                                markers=[m for m in unit.side.markers if m.span not in dec_spans],
+                            ),
+                        )
+                state.units.append(replace(unit, kind="helper_function"))
             # Nested defs are never collected as pytest items.
             frames.append((ast.iter_child_nodes(child), qual + ".", inherited, False, (), None, None, ()))
         elif isinstance(child, ast.ClassDef):
@@ -520,7 +571,10 @@ def collect_inherited_and_suite_units(state: ModuleParseState) -> None:
                 producers=unit_fixture_producers(state, method, (owner, cls)),
             ))
     if state.conftest:
-        state.units = [fe._conftest_unit(state.tree, off, off)]
+        state.units = [
+            fe._conftest_unit(state.tree, off, off),
+            *(u for u in state.units if u.kind == "helper_function"),
+        ]
 
     seen_names: dict[str, int] = {}
     for unit in state.units:
@@ -648,7 +702,7 @@ def assemble_parsed_file(state: ModuleParseState, scan: ModuleScanResult) -> Any
     """Sort units, extract module helper/fixture oracle scopes, and build `ParsedFile`."""
     fe = state.fe
     state.units.sort(key=lambda u: u.span)
-    if state.collect_tests:
+    if state.collect_tests or state.collect_helpers:
         helper_asserts, fixture_asserts, autouse = fe._module_oracle_scopes(state.tree, state.off, state.off)
         helper_calls = fe._module_helper_calls(state.tree)
         for via, method_node in sorted(state.resolved_methods.items()):
@@ -669,7 +723,7 @@ def assemble_parsed_file(state: ModuleParseState, scan: ModuleScanResult) -> Any
         relay_handlers=scan.relay_handlers,
         constants=fe._top_level_constants(state.tree, state.off),
         from_imports=fe._top_level_from_imports(state.tree),
-        fixture_defs=fe._fixture_definitions(state.tree) if state.collect_tests else {},
+        fixture_defs=fe._fixture_definitions(state.tree) if (state.collect_tests or state.collect_helpers) else {},
         helper_asserts=helper_asserts,
         helper_calls=helper_calls,
         fixture_asserts=fixture_asserts,

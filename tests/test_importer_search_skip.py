@@ -42,8 +42,11 @@ OTHER = b"def make_items():\n    return [1, 2]\n"
 
 
 def note(reason, helpers="tests/helpers.py"):
-    return (f"analysis incomplete: {reason}, so unchanged tests that import {helpers} "
-            "were not read for their expected values")
+    return (
+        f"analysis incomplete: {reason}, so unchanged tests that import {helpers} "
+        "were not read; each helper's own functions were checked, not expected "
+        "values resolved through its callers"
+    )
 
 
 NOTE = note("64 or more unchanged Python files mention `helpers`")
@@ -551,3 +554,192 @@ def test_under_a_blocking_policy_the_pre_tool_use_hook_asks(tmp_path):
     assert code == 0, err
     assert json.loads(out) == {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
                                                       "permissionDecisionReason": "checkwash: " + NOTE}}
+
+
+@pytest.mark.parametrize(
+    ("before_body", "after_body", "expected_rule"),
+    [
+        (
+            b"def check(actual):\n    assert actual == 4\n",
+            b"def check(actual):\n    assert actual >= 0\n",
+            "ASSERT_WEAKENED",
+        ),
+        (
+            b"def check(actual):\n    assert actual == 4\n",
+            b"def check(actual):\n    pass\n",
+            "ASSERT_REMOVED",
+        ),
+        (
+            b"import pytest\n\ndef check(actual):\n    assert actual == pytest.approx(4.0, rel=1e-9)\n",
+            b"import pytest\n\ndef check(actual):\n    assert actual == pytest.approx(4.0, rel=0.5)\n",
+            "TOLERANCE_LOOSENED",
+        ),
+        (
+            b"import pytest\n\ndef check(actual):\n    assert actual == 4\n",
+            b"import pytest\n\ndef check(actual):\n    pytest.skip('flaky')\n    assert actual == 4\n",
+            "TEST_DISABLED",
+        ),
+        (
+            b"def check(actual):\n    assert actual == 4\n",
+            b"check = lambda actual: None\n",
+            "TEST_DISABLED",
+        ),
+    ],
+    ids=["assert-weakened", "assert-removed", "tolerance-loosened", "skip-added", "asserting-helper-replaced"],
+)
+def test_a_set_aside_helper_own_tampering_blocks_at_the_hit_limit(
+    tmp_path, before_body, after_body, expected_rule
+):
+    root, base = make_repo(tmp_path, 70, {"tests/helpers.py": before_body})
+    commit(root, {"tests/helpers.py": after_body}, "tamper inside set-aside helper")
+    code, out, err = check(root, base)
+    payload = json.loads(out)
+    assert code == 1, err
+    assert payload["verdict"] == "block"
+    assert [(f["rule"], f["path"], f["unit"], f["severity"]) for f in payload["findings"]] == [
+        (expected_rule, "tests/helpers.py", "check", "high")
+    ]
+    assert f"checkwash: {NOTE}\n" in err
+
+
+def test_a_set_aside_helper_own_weakening_blocks_past_test_read_and_name_bounds(tmp_path):
+    weakened = b"def check(actual):\n    assert actual >= 0\n"
+    # Bound 2: >48 unchanged tests mention `helpers`.
+    t1 = tmp_path / "tests55"
+    t1.mkdir()
+    callers = {f"tests/test_{i:02}.py": CALLER for i in range(55)}
+    root1, base1 = make_repo(t1, 0, {"tests/helpers.py": b"def check(actual):\n    assert actual == 4\n", **callers})
+    commit(root1, {"tests/helpers.py": weakened}, "weaken helper past 48-test bound")
+    code1, out1, err1 = check(root1, base1)
+    assert code1 == 1 and json.loads(out1)["findings"][0]["rule"] == "ASSERT_WEAKENED"
+    assert note(f"more than {P.MAX_READS} unchanged tests mention `helpers`") in err1
+
+    # Bound 3: >192 total importer reads across helper names.
+    t2 = tmp_path / "reads192"
+    t2.mkdir()
+    crowd_helpers = {f"tests/h_{name}.py": OTHER for name in "abcd"}
+    crowd_tests = {
+        f"tests/test_{name}_{i:02}.py": f"from .h_{name} import make_items\n\ndef test_{name}_{i:02}():\n    assert make_items() == [1, 2]\n".encode()
+        for name in "abcd"
+        for i in range(P.MAX_READS)
+    }
+    extra_callers = {f"tests/test_z_{i:02}.py": CALLER for i in range(P.MAX_READS)}
+    root2, base2 = make_repo(
+        t2,
+        0,
+        {
+            "tests/z_helpers.py": b"def check(actual):\n    assert actual == 4\n",
+            **crowd_helpers,
+            **crowd_tests,
+            **{k: v.replace(b".helpers", b".z_helpers") for k, v in extra_callers.items()},
+        },
+    )
+    commit(
+        root2,
+        {
+            "tests/z_helpers.py": weakened,
+            **{f"tests/h_{name}.py": OTHER + b"# touch\n" for name in "abcd"},
+        },
+        "spend 192 reads then weaken z_helpers",
+    )
+    code2, out2, err2 = check(root2, base2)
+    assert code2 == 1 and json.loads(out2)["findings"][0]["rule"] == "ASSERT_WEAKENED"
+    assert note("the run's 192 importer reads are spent", "tests/z_helpers.py") in err2
+
+    # Bound 4: >16 changed helper module names.
+    t3 = tmp_path / "names17"
+    t3.mkdir()
+    many = {f"tests/helper_{i:02}.py": OTHER for i in range(16)}
+    root3, base3 = make_repo(
+        t3,
+        0,
+        {"tests/helpers.py": b"def check(actual):\n    assert actual == 4\n", **many},
+    )
+    commit(
+        root3,
+        {
+            "tests/helpers.py": weakened,
+            **{k: v + b"# touch\n" for k, v in many.items()},
+        },
+        "weaken helper among 17 helper module names",
+    )
+    code3, out3, err3 = check(root3, base3)
+    assert code3 == 1 and json.loads(out3)["findings"][0]["rule"] == "ASSERT_WEAKENED"
+    assert "the change touches helpers with more than 16 module names" in err3
+
+
+def test_deleting_a_non_asserting_helper_in_a_set_aside_module_stays_clean(tmp_path):
+    before_src = HELPER + b"\n\ndef make_items():\n    return [1, 2]\n"
+    root, base = make_repo(tmp_path, 70, {"tests/helpers.py": before_src})
+    commit(root, {"tests/helpers.py": HELPER}, "remove unused non-asserting helper")
+    code, out, err = check(root, base)
+    assert code == 0, err
+    assert json.loads(out)["findings"] == []
+    assert f"checkwash: {NOTE}\n" in err
+
+
+def test_a_set_aside_conftest_helper_weakening_blocks_without_losing_suite_controls(tmp_path):
+    conftest_before = b"def check(actual):\n    assert actual == 4\n"
+    conftest_after = b"collect_ignore = ['test_calc.py']\n\ndef check(actual):\n    assert actual >= 0\n"
+    root, base = make_repo(
+        tmp_path,
+        0,
+        {"tests/conftest.py": conftest_before, **mentions(70, "notes", "conftest")},
+    )
+    commit(root, {"tests/conftest.py": conftest_after}, "weaken conftest helper and add collect_ignore")
+    code, out, err = check(root, base)
+    payload = json.loads(out)
+    assert code == 1, err
+    rules = {(f["rule"], f["unit"], f["severity"]) for f in payload["findings"]}
+    assert ("ASSERT_WEAKENED", "check", "high") in rules
+    assert ("TEST_DISABLED", "<suite>", "high") in rules
+    assert note("64 or more unchanged Python files mention `conftest`", "tests/conftest.py") in err
+
+
+def test_pre_tool_use_asks_on_weakening_inside_a_set_aside_helper_under_default_policy(tmp_path):
+    root, _base = make_repo(
+        tmp_path,
+        70,
+        {"tests/helpers.py": b"def check(actual):\n    assert actual == 4\n"},
+    )
+    event = json.dumps({
+        "session_id": "s-1", "transcript_path": "", "cwd": str(root), "permission_mode": "default",
+        "hook_event_name": "PreToolUse", "tool_name": "Write", "tool_use_id": "toolu_1",
+        "tool_input": {
+            "file_path": str(root / "tests" / "helpers.py"),
+            "content": "def check(actual):\n    assert actual >= 0\n",
+        },
+    }).encode("utf-8")
+    code, out, err = run(root, ["hook", "pre-tool-use"], event)
+    assert code == 0, err
+    payload = json.loads(out)
+    assert payload["hookSpecificOutput"]["permissionDecision"] == "ask"
+    assert "ASSERT_WEAKENED tests/helpers.py :: check" in payload["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_under_on_engine_error_block_check_exits_two_while_stop_hook_stays_protocol_zero(tmp_path):
+    root, base = make_repo(
+        tmp_path,
+        70,
+        {".checkwash/config.toml": b'[gate]\non_engine_error = "block"\nfail_on = "warn"\n'},
+    )
+    commit(root, {"tests/helpers.py": WEAKENED}, "rewrite expected value past importer limit")
+    for fmt in ("json", "term", "sarif"):
+        code, out, err = check(root, base, fmt=fmt)
+        assert code == 2, (fmt, out, err)
+        assert out == ""
+        assert f"checkwash: {NOTE}\n" in err
+    code_ir, out_ir, err_ir = run(root, ["check", f"{base}..HEAD", "--emit-ir"])
+    assert code_ir == 2 and out_ir == "" and f"checkwash: {NOTE}\n" in err_ir
+
+    # Worktree mode without hook-json also exits 2; Stop hook-json exits 0 with systemMessage (or blocks on weakening).
+    (root / "tests" / "helpers.py").write_bytes(ADDED)
+    code_wt, out_wt, err_wt = run(root, ["check", "--format", "json"])
+    assert code_wt == 2 and out_wt == "" and f"checkwash: {NOTE}\n" in err_wt
+    code_hk, out_hk, err_hk = run(root, ["check", "--format", "hook-json"])
+    assert code_hk == 0, err_hk
+    assert json.loads(out_hk) == {"systemMessage": "checkwash: " + NOTE}
+    (root / "tests" / "helpers.py").write_bytes(b"def check(actual):\n    assert actual >= 0\n")
+    code_hkb, out_hkb, _err_hkb = run(root, ["check", "--format", "hook-json"])
+    assert code_hkb == 0
+    assert json.loads(out_hkb)["decision"] == "block"
