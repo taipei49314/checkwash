@@ -1,8 +1,9 @@
 # Known issues for 0.13.0
 
-Status, 2026-11-16: the 0.13.0 release candidate, prepared in the release pull
-request; not a published release record. The publication record follows once
-the public files are verified.
+Status, 2026-11-18: limits of the published v0.13.0
+([publication record](releases/v0.13.0-publication-verification.md)). The
+rows were written for the release candidate in the release pull request; the
+Publication section was updated after publication.
 
 From v0.13.0, each release gets one hosted verification on macOS and Linux
 ([RELEASING](RELEASING.md#hosted-release-verification),
@@ -103,7 +104,9 @@ guarantee.
   merge commit. Its install commands and Action pin still name v0.12.0, the
   release verified before 0.13.0 was published, and its version sentence says
   so; the [GitHub README](https://github.com/taipei49314/checkwash#readme)
-  moves them to 0.13.0 once its public files are verified.
+  has named 0.13.0 since the
+  [publication record](releases/v0.13.0-publication-verification.md)
+  verified its public files.
 - **Install the CLI from PyPI or the pyz.** As in v0.12.0 ([D-200](../DECISIONS-archive-5.md)),
   a CLI installed through Git from the v0.13.0 tag is the Action commit A's,
   and its `doctor` rejects v0.13.0's own Action pin ("workflow analysis
@@ -112,3 +115,12 @@ guarantee.
 - **`doctor` across the upgrade.** `doctor` 0.12.0 accepts only v0.11.0's and
   v0.12.0's Action pins, so it rejects the 0.13.0 pin (exit 1): upgrade the CLI
   and its local hooks before the Action pin.
+- **Hosted macOS and Linux verification passed.** Both checkpoints of
+  `release-hosted.yml` (`source-at-M` run 43910068162 attempt 2 after attempt
+  1's hosted macOS 3.11 runner non-acquisition, and `published-artifacts` run
+  43940303262 attempt 1) passed on GitHub-hosted `macos-latest` (Apple silicon)
+  and `ubuntu-latest` across Python 3.11, 3.12 and 3.13, including the
+  macOS `/var` symlink collector tests (#600, #614) and the Linux composite
+  Action at A ([record](releases/v0.13.0-publication-verification.md#hosted-release-verification-2026-11-16)).
+  The two perf-gate budget checks stay skipped on macOS by maintainer decision
+  ([D-204](../DECISIONS.md)).

@@ -11,8 +11,9 @@ starts from the [publication record template](publication-record-template.md).
 
 ## v0.13.0
 
-Release candidate, prepared in the release pull request; the publication
-record follows once the public files are verified.
+Published 2026-11-17 (GitHub Release and PyPI, Asia/Taipei; 2026-11-16 and
+2026-11-17 UTC); its public files are verified in the
+[publication record](v0.13.0-publication-verification.md).
 
 **v0.13.0 removes four first-week working-tree and virtual-environment rough
 edges, reports the real Python test name on projected findings, keeps strict
@@ -33,6 +34,7 @@ tracked root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`, D-211, D-213),
 CPython 3.12+ single-line `tokenize` memory and quiet `SyntaxWarning` parsing
 are bounded (#613, #617, #618), and each release runs hosted verification on
 macOS and Linux across Python 3.11–3.13 (D-204).
+[Publication evidence](v0.13.0-publication-verification.md) ·
 [Release evidence and known limits](v0.13.0-public-launch.md).
 
 Known issues: [v0.13.0](../KNOWN-ISSUES-v0.13.0.md).
