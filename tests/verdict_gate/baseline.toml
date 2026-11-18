@@ -130,11 +130,11 @@ schema_version = 1
 # at 532f74a as at 3455530, so [t3.cases] stays, and the [canary] pair and
 # its 71 block -> pass IDs are not rotated.
 [baseline]
-tag = "v0.12.0"
-version = "0.12.0"
-commit = "532f74ab070a924b23e2cc70e5d0091a05d8401d"
-sha256 = "4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2"
-size = 1013508
+tag = "v0.13.0"
+version = "0.13.0"
+commit = "9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638"
+sha256 = "326e2a0c1e5e983869893a4c11c4f0ddba5e75e7c23a8984a3357042a87fbeff"
+size = 1077802
 
 [baseline_blocked]
 count = 161
