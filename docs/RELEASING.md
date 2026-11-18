@@ -424,10 +424,38 @@ SHA256 `326e2a0c...`, 1,077,802 bytes) and moves the README CLI/pyz commands to
 `SECURITY.md`, `action/README.md`, `docs/quality-adoption.md` and the two pin
 literals in `tests/test_doctor.py` to `A`,
 `9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638`; `action/action.yml` did not change,
-so `ACTION_YAML_SHA256` stays `94abd7b9...`. Step 9 (`DECISIONS-archive-6.md`
-cut and `tests/verdict_gate/baseline.toml` rotation) touches agent-read-only
-files and stops at Gate 4 for Nelson's separate decision. `THREATMODEL.md` is
-unchanged. No downstream re-pin is authorized, and `1.0` remains `NOT_MET`.
+so `ACTION_YAML_SHA256` stays `94abd7b9...`. `THREATMODEL.md` is unchanged. No
+downstream re-pin is authorized, and `1.0` remains `NOT_MET`.
+
+The decision-log cut and the verdict-baseline rotation that
+[After the release](#after-the-release) and step 9 require came in the separate
+pull request [#633](https://github.com/taipei49314/checkwash/pull/633). After
+Step 8 pull request [#632](https://github.com/taipei49314/checkwash/pull/632)
+merged as `f81928a717ddae07cfb7c0e074be06ef685f8445` in Antigravity session
+`6f80cd00-4149-4060-a094-563025975764`, Antigravity stopped at Gate 4
+(`2026-11-18T15:07:02Z`) and listed the two Step 9 items before touching any
+agent-read-only file: cutting `D-202` to `D-213` unchanged to
+`DECISIONS-archive-6.md` (with link updates and `D-214`), and rotating
+`tests/verdict_gate/baseline.toml` from `v0.12.0` to `v0.13.0` (`commit` = `A`,
+`checkwash.pyz` `326e2a0c...`, `1,077,802` B, expecting zero case movements and
+`baseline_blocked` unchanged at `161`), asking
+「請問是否要授權繼續執行 Step 9，或今天到此收工即可？」 (Antigravity wrote the two
+items and the question, with no buttons; [D-214](../DECISIONS.md) quotes both
+items verbatim). At `2026-11-18T15:08:53Z` (`23:08:53+08:00`) Nelson replied
+verbatim 「執行」, and at `15:09:07Z` (`23:09:07+08:00`) added verbatim
+「換個sassion 執行」, followed by the `/goal` handover prompt in Antigravity
+session `24d0281f-c2d0-4493-a2a5-ea727cbbe01a` (alongside his earlier
+`12:21:13Z` 「我上面有開issue 先不要解」 and `12:22:25Z` 「幫我做13.0收尾就好
+謝謝哈基米」). Agent scope interpretation: execute the bounded archive-6 cut and
+zero-move `v0.13.0` baseline rotation on `LAPTOP-01AGNPJU`, run the PJU
+proposal run first (stopping immediately on any unexpected drift), verify `#633`
+with its own PJU release-stage `pr` receipt and five checks, leave newly opened
+issues `#624`–`#631` and `#622` untouched, and stop before merging `#633` so
+Nelson can confirm the verbatim `L1` diff. `#633` moved `D-202` to `D-213` to
+`DECISIONS-archive-6.md` and rotated the verdict baseline to `v0.13.0` with
+`baseline_blocked` unchanged at `161` and `labels.toml` untouched
+([D-214](../DECISIONS.md); proposal receipt `14dd72c6...` on
+`evidence/v0130-rotation-proposal-20261118` `838be0d0`).
 
 ## v0.12.0 release under the pre-1.0 delegation (2026-11-07)
 
