@@ -1957,7 +1957,7 @@ false-positive cost at the next release, instead of citing #212.
 
 Each release gets one verification on GitHub-hosted macOS and Linux runners,
 under EC POLICY `checkwash-release-hosted-verification-20261111` and
-[D-204](../DECISIONS.md). It has two checkpoints, each dispatched on its
+[D-204](../DECISIONS-archive-6.md). It has two checkpoints, each dispatched on its
 own: `source-at-M` in step 3 and `published-artifacts` in step 7. The
 `both` choice, which runs the two in one dispatch, is only for a version
 published before the workflow existed (v0.12.0).
@@ -2103,7 +2103,7 @@ skipped for their recorded reason; the leg's summary step fails otherwise.
   through the release bridge, and its content can carry the failure's
   records.
 - The Release notes get the notice below, whose wording
-  [D-204](../DECISIONS.md) records. Editing a published Release is still
+  [D-204](../DECISIONS-archive-6.md) records. Editing a published Release is still
   asked of Nelson at the time, in one line; the wording is not reviewed
   again.
 
@@ -2159,7 +2159,7 @@ blocking a change on a hosted runner; the Action on another Python, with
 macOS runner; the Claude Code hooks in a real Claude Code session; and the
 two perf-gate budget checks on macOS. Those two have been skipped on macOS
 since 2026-10-01; D-170 kept the skip until a revisit before 1.0, and
-[D-204](../DECISIONS.md) keeps it at 1.0. checkwash has not verified those
+[D-204](../DECISIONS-archive-6.md) keeps it at 1.0. checkwash has not verified those
 two budgets on a Mac, and Windows and Linux timings are not evidence of
 macOS performance. On Linux they run and gate.
 

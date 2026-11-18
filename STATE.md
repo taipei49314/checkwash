@@ -502,14 +502,14 @@ approved by Nelson at 2026-11-15T10:44:37Z and 10:47:09Z):
 
 - **`THREATMODEL.md` and `benchmarks/FAILURES.md`.**
   - Item 2 (`Out-of-band tampering`): replaces the stale 0.12.0 wording (`a
-    file that is often git-ignored`) with the [D-205](DECISIONS.md) (0.13)
+    file that is often git-ignored`) with the [D-205](DECISIONS-archive-6.md) (0.13)
     behaviour (`hook install` adds `.claude/settings.local.json` to the
     repository's `info/exclude` file when Git neither tracks nor ignores it; in
     0.12.0 a repository without an ignore rule of its own left the file
     unignored, and whenever Git ignores or excludes it an agent edit to the
     handlers there shows in no diff).
   - Row 2: replaces `none is adjudicated (D-199)` with `#212`'s 2026-11-08
-    blind rating and arbitration of the 11 JS/TS commits ([D-203](DECISIONS.md),
+    blind rating and arbitration of the 11 JS/TS commits ([D-203](DECISIONS-archive-6.md),
     row 131: 10 should pass, 7 of them honest changes whose tests now check
     less, 1 is unclear and none should block, a selected set and not a
     false-block rate), while the 7 Python commits and D-088's 53 (#464's 11
@@ -534,7 +534,7 @@ approved by Nelson at 2026-11-15T10:44:37Z and 10:47:09Z):
     id>`, `--ignore` and collection settings).
   - Row 157: updates the two pre-closure `D-152` sentences to record that
     v0.9.0's combined sweep moved no verdict over its 4,818 rows and `#428`
-    closed as fixed on 2026-11-08 ([D-203](DECISIONS.md)), with D-152's
+    closed as fixed on 2026-11-08 ([D-203](DECISIONS-archive-6.md)), with D-152's
     targeted JS table scan and replay moved to `#504` (after `1.0`).
   - `benchmarks/FAILURES.md`: regenerated via `benchmarks/make_failures.py`
     (`205` bypasses, `84` not closed: `Closed in part` `16 -> 19`, `Closed`
@@ -547,9 +547,9 @@ approved by Nelson at 2026-11-15T10:44:37Z and 10:47:09Z):
   present-tense statement (`the byte-compare CI job — every OS × Python emits
   byte-identical corpus findings`) with the actual state since 2026-10-23:
   `ci.yml` (`byte-compare`) is disabled, pull requests run on one Windows host
-  (LAPTOP-01AGNPJU, Python 3.11, `checkwash-pju-tests` / [D-209](DECISIONS.md)),
+  (LAPTOP-01AGNPJU, Python 3.11, `checkwash-pju-tests` / [D-209](DECISIONS-archive-6.md)),
   and each release runs `release-hosted.yml` (`macos-latest` and
-  `ubuntu-latest` × Python 3.11–3.13, [D-204](DECISIONS.md)), checking
+  `ubuntu-latest` × Python 3.11–3.13, [D-204](DECISIONS-archive-6.md)), checking
   byte-identical `corpus-findings.json` outputs across its six source legs and,
   when run, against the PJU six-leg batch's `SHA256`, while a single-run
   nine-leg comparison across all three OSes is not executed.
@@ -590,7 +590,7 @@ to a tracked repository-root `CLAUDE.md` whose existing testing rule was
 untouched fired `GUARDRAIL_TOUCHED` at `critical` (`META`), blocking `checkwash
 check`, the Claude Code Stop hook (`decision = "block"`), and range-mode CI.
 Following Nelson's `2026-11-11T02:44:43Z` `G2 b` direction answer and
-`2026-11-15` Phase 3 handoff, [D-211](DECISIONS.md) (L1, approved by Nelson at
+`2026-11-15` Phase 3 handoff, [D-211](DECISIONS-archive-6.md) (L1, approved by Nelson at
 `2026-11-15T09:34:17Z` with `SPEC.md` §4/§5 and `src/checkwash/gating.py`, #611)
 keeps pure line additions to repository-root `CLAUDE.md` at `warn` while
 escalating every deletion, edit, reordering or Markdown / HTML / frontmatter
@@ -769,7 +769,7 @@ projected consolidation (`table_oracles`, `normalized_result_tables`,
 `test_local_auxiliary_*`) leaked synthetic `test_*_<digest>_<n>` unit names the
 same way whenever an oracle changed inside a projected carrier.
 
-[D-210](DECISIONS.md) fixes both without touching `gating.py` `L1–L682`
+[D-210](DECISIONS-archive-6.md) fixes both without touching `gating.py` `L1–L682`
 (SHA-256 `cfa19f5589cf650136e243f9b7404bd1bf5da85a95b4f6d72001b6931f868f5d`),
 `ir/strength.py`, alignment parameters, or existing `.gwcase` expectations:
 
@@ -886,7 +886,7 @@ which set the required `checkwash` check (`132474767837`, GitHub Actions App
 
 Following Nelson's 2026-11-13 authorizations (`13:46:28Z` selecting Phase 1
 compact PJU digest receipts and Phase 2 parallel decomposition of the five core
-God-function modules, `14:49:57Z` approving [D-209](DECISIONS.md) and ruleset
+God-function modules, `14:49:57Z` approving [D-209](DECISIONS-archive-6.md) and ruleset
 `22032046`, `15:33:34Z` in session `29e2789b` instructing verbatim 「先合併收尾 然後給我prompt
 我直接開session開工」, and `15:57:50Z` in session `bf74d6ef` `/teamwork` launch
 instructing verbatim 「接手 checkwash Phase 2：平行拆解 5 大核心 God-Function 檔案...
@@ -960,7 +960,7 @@ dispatched from `refs/heads/main`, which set the required `checkwash` check
 
 On Nelson's 2026-11-13 instruction to reduce PR verification cost before
 decomposing the repository's God functions (`13:43:37Z` / `13:46:28Z`),
-[D-209](DECISIONS.md) replaces ordinary-PR 53 MiB `evidence/*` Git branches and
+[D-209](DECISIONS-archive-6.md) replaces ordinary-PR 53 MiB `evidence/*` Git branches and
 duplicate `3x283` Windows CLI subprocess loops with a compact PJU digest
 receipt while keeping all product execution on LAPTOP-01AGNPJU
 (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9):
@@ -1030,7 +1030,7 @@ link (exit 2), and the Stop hook said the change was not analysed, a
 weakened test beside it included; ignored, an environment named `env` did
 the same whenever a pass walked into it, and the PreToolUse hook said a
 Write to a test helper or a root helper beside `env` was not analysed.
-[D-208](DECISIONS.md):
+[D-208](DECISIONS-archive-6.md):
 
 - **A virtual environment's own link** is one directly in `<D>/bin` or
   `<D>/Scripts` whose name does not end in `.py` in any case, or `<D>/lib64`
@@ -1118,7 +1118,7 @@ ignore, unless named `.venv` or `venv`, blocked at high on the
 range and the Stop hook, and committed in a range. Windows builds of Python
 sign it, and the base64 of its signature (in Python 3.11.9's copy) spelled
 `tox` and `nox`, two runner tokens, so the script read as a test runner
-whose command was weakened. [D-207](DECISIONS.md):
+whose command was weakened. [D-207](DECISIONS-archive-6.md):
 
 - **The closing block only.** In a PowerShell file the runner search leaves
   out the signature block that ends it, when every line between its markers
@@ -1197,7 +1197,7 @@ above, approved the merge. Its receipt
 
 The 2026-11-10 re-review's FB-02: a change to a test helper module whose
 name 64 or more Python files mention made every check exit 2, which no
-exemption released. [D-206](DECISIONS.md):
+exemption released. [D-206](DECISIONS-archive-6.md):
 
 - **Each name on its own.** The expected-value pass searches each changed
   helper's module name on its own, with every path the diff changes left
@@ -1272,7 +1272,7 @@ On 2026-11-12, after #597 merged, Nelson wrote 「繼續做 0.13」 (go on with
 re-review: its five first-week problems (group A), a report line for
 test-looking files that are not analysed (group B), and G2 (b). Groups C
 and D wait. This change takes group A's problems 3 and 5
-([D-205](DECISIONS.md)):
+([D-205](DECISIONS-archive-6.md)):
 
 - **The zipapp.** A check without a range and the Stop hook leave out the
   untracked zipapp that checkwash runs from, with one stderr line, when
@@ -1330,7 +1330,7 @@ above, approved the merge. Its receipt
 
 ## 2026-11-12: toward 1.0 (D-203, Nelson's answers of 2026-11-08)
 
-[D-203](DECISIONS.md) records Nelson's answers of 2026-11-08 on what 1.0
+[D-203](DECISIONS-archive-6.md) records Nelson's answers of 2026-11-08 on what 1.0
 waits for, quoting him. At 13:24:11Z he answered Claude's list of seven
 decisions with 「重啟對外 上1.0」 (restart outreach; go for 1.0),
 「都看過 可以照建議」 (I have read them all; follow the recommendations) and
@@ -1567,7 +1567,7 @@ question and options), answered eight of the design's nine questions with
 「都照建議」 (all as recommended), approved the POLICY row with
 「照這樣入帳並開始」 (enter it like this and start) and, after a review found
 two factual errors in the row, its correction with 「照兩處更正入帳」.
-[D-204](DECISIONS.md) has the record. He approved D-204 (L1) and the
+[D-204](DECISIONS-archive-6.md) has the record. He approved D-204 (L1) and the
 Determinism row of `docs/stability.md` (L2) with 「核可 L1 和 L2」 at
 13:58:22Z; that answer is not a merge approval. The workflow has not run
 yet. Its first run, for

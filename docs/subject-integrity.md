@@ -324,7 +324,7 @@ environment — a directory below the repository root holding a regular
 directly in `bin` or `Scripts` (`.py` in any case aside), and both the
 inventory and the searches pass over `lib64` when it links to `lib` beside a
 directory `lib`, while any other directory link stays opaque
-([D-208](../DECISIONS.md)). Ignored files count
+([D-208](../DECISIONS-archive-6.md)). Ignored files count
 toward the 200,000-path limit, so a very large tree is still rejected,
 naming the path where the walk stopped, instead of claimed clean.
 
