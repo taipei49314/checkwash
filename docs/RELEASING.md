@@ -289,6 +289,146 @@ after independent review rather than Nelson's personal review, in [the 0.13.0
 D176 disposition](d176-cost-disposition-0.13.0.md). It is not a history PASS, a
 census, an adjudicated rate or a standing waiver.
 
+## v0.13.0 checked publication and pin promotion (2026-11-18)
+
+Antigravity (on LAPTOP-01AGNPJU) carried out the 0.13.0 publication operations
+under the authorization and pre-1.0 delegation recorded in the section above.
+Human words vs. agent scope interpretations across the mandatory stops:
+
+- **The release merge and fixed-corpus review (Gate 2, D-196).** In session
+  `3da7dc8a-5957-4ba3-bde0-bba9c03b8042`, after PR
+  [#623](https://github.com/taipei49314/checkwash/pull/623) (`A` + `R`), its
+  PJU `pr` stage checks, and the supplementary six-leg Windows + WSL2 Linux
+  Python `3.11`/`3.12`/`3.13` batch on `R` all passed, Antigravity presented
+  the empty R29 movement list (`0` moves and `0` report differences across
+  3,600 commits; `owner_list: []`) and the 185-case verdict gate's zero-move
+  report against `v0.12.0`, and stopped before merging `#623` or creating tag
+  `v0.13.0`. At `2026-11-16T16:28:23Z` (`2026-11-17T00:28:23+08:00`) Nelson
+  replied verbatim 「ok 繼續」, and at `16:28:58Z` verbatim 「開新session 」,
+  followed by the `/goal` handover prompt in session
+  `6f80cd00-4149-4060-a094-563025975764`. Agent scope interpretation: those
+  replies accept the empty R29 list and authorize merging `#623` via `--merge`,
+  running `main` and `source-at-M`, tagging `v0.13.0` at `A`, creating the
+  GitHub Release, running `release-event` and `published-artifacts`, and
+  stopping at Gate 3 for PyPI deployment approval and Gate 4 before Step 9.
+- **The PyPI deployment and closeout scope (Gate 3).** After `release.yml` run
+  [43938228666](https://github.com/taipei49314/checkwash/actions/runs/43938228666)
+  attempt 2 verified the three GitHub Release assets and placed its `pypi` job
+  (`133555629367`) in `waiting`, and `release-hosted.yml` `published-artifacts`
+  run [43940303262](https://github.com/taipei49314/checkwash/actions/runs/43940303262)
+  succeeded across macOS and Linux, Antigravity stopped at Gate 3 and made zero
+  approval or environment-protection calls (its logs record only reads of
+  `pending_deployments` and `approvals`). GitHub's
+  `runs/43938228666/approvals` API records `state: "approved"` by account
+  `taipei49314` on environment `pypi` (`19521264361`) with the verbatim
+  comment `"Codex approving as delegate under Nelson explicit instruction in
+  Codex chat 01a1e7f1-7484-7973-8995-88cbe3d868d6 on 2026-11-17: approve PyPI
+  publication and finish v0.13.0 verification/pin updates. Release
+  M=7d45814211bbb458d310607b3a241761c7d5f7e3,
+  A=9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638. Hosted source run 43910068162 and
+  published-artifacts run 43940303262 succeeded; pending pypi deployment
+  reports this account eligible. Existing reviewer and protection settings
+  retained."` In Antigravity session `6f80cd00-4149-4060-a094-563025975764` at
+  `2026-11-18T12:10:35Z` (`20:10:35+08:00`) Nelson replied verbatim
+  「我部屬好了」, and at `12:21:13Z` and `12:22:25Z` added verbatim
+  「我上面有開issue 先不要解」 and 「幫我做13.0收尾就好 謝謝哈基米」 (agent scope
+  interpretation: complete `public-visitor`, hosted evidence archiving and the
+  Step 8 pin-promotion PR while leaving newly opened issues `#624`–`#631`
+  untouched, then stop at Gate 4 before Step 9).
+
+`#623` merged as `M` = `7d45814211bbb458d310607b3a241761c7d5f7e3` at
+`2026-11-16T16:38:35Z`; `M`'s first parent is the reviewed base
+`978d015e1d614448eb393403601cbb3b0f33f79a` (`review/collector-d-013-20261116`),
+its second parent is `R` = `c37a341f733a3f4ed13d7e427132e5267bd5324c`, and its
+tree equals `R`'s, `9f67f1cdc6836416cabd7cd87573476cf9206151`. Unsigned
+annotated tag `v0.13.0` (object `f8ff8258d2e2a9a68488d5c1894f1518dfe02bce`,
+tagger Antigravity) peels to `A` =
+`9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638` (tree
+`90ac5b446657c0ac006b2e28035f1a9d7275dfe6`) and names `M` on its
+`Release-Merge:` line (D-200); after `tools/own_action_pin.py check --stage tag`
+passed locally (replacing an unpushed local draft `ff1190cc` that had used the
+repository default author string), `f8ff8258` was pushed alone with no public
+tag moved or deleted. GitHub Release `447438064` was published without assets
+at `2026-11-16T18:39:12Z`, triggering native `release: published` capture run
+`43931083783` at `A`. Run `43938228666`'s `publish-assets` attached and
+verified the three receipt artifacts (`checkwash-0.13.0-py3-none-any.whl`
+`8244e21b...`, `checkwash-0.13.0.tar.gz` `8338315a...`, `checkwash.pyz`
+`326e2a0c...`), and after the deployment approval above its `pypi` job uploaded
+the wheel and sdist at `2026-11-17T05:23:43Z`–`05:23:45Z` with provenance
+attestations; PyPI `0.13.0` serves the exact Release bytes. Every stage's
+receipt ran on LAPTOP-01AGNPJU, Windows 11, CPython 3.11.9
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), collected and verified from
+`review/collector-d-013-20261116` (`978d015e`) with no fix to the collector or
+verifier. Native Linux, macOS and other Python versions remain `NOT_RUN` inside
+those stage receipts, covered for `0.13.0` only by the sealed platform
+acceptance (`c1b2ddf2`). The
+[publication record](releases/v0.13.0-publication-verification.md) lists all
+five stages' captures, receipts, verification runs and checks, including the
+5-second local `cw013main1` preflight stop (nothing pushed or dispatched) and
+run `43938228666` attempt 1's post-upload transient HTTP 500 reconciled in
+attempt 2.
+
+**Package-page and `publication_authority` pre-checks.** Before asking for PyPI
+approval, Antigravity ran [Check the public package
+page](#check-the-public-package-page) on the candidate wheel (`8244e21b...`):
+metadata (`checkwash` `0.13.0`, `Requires-Python >=3.11`, `Apache-2.0`,
+`Homepage`), byte-for-byte description equality with `M:README.md` (24,624
+bytes), and all 55 links (2 in-page anchors, 39 repository links / 31 distinct
+at `M`, 14 external links / 13 distinct returning HTTP 200) passed with zero
+problems. For `release-event`, `publication_authority` accepted
+`release-authorization.json` (`3244e4dc`) and `platform-acceptance.json`
+(`c1b2ddf2`) both on the collection inputs and on the published receipt's
+independent readback checkout before `mode=publish` was dispatched. No Claude
+Code hook lifecycle run was made on `#623`.
+
+**Supplementary six-leg PJU batch and hosted release verification (D-204).**
+Before `#623` merged, `R` passed the full 23,358-test suite (23,425 JUnit rows
+including 67 subtests, 0 failures, 0 errors) across six isolated runtimes on
+LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): Windows 11 CPython
+`3.11.16`, `3.12.14` and `3.13.15` (`81` skipped each) and WSL2 Ubuntu 24.04
+CPython `3.11.18`, `3.12.16` and `3.13.18` (`15` skipped each, both perf-gate
+budgets passing), with six byte-identical `corpus-findings.json` outputs
+(10,061,088 bytes, SHA256
+`f57e1ba64023d7fb947d8fa287c82a31248d953a5c92c3a29004c173ec01ede8`). On
+GitHub-hosted `macos-latest` (arm64) and `ubuntu-latest` (x86_64) across Python
+3.11, 3.12 and 3.13 (`HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT`),
+`release-hosted.yml` passed both checkpoints: `source-at-M` run
+[43910068162](https://github.com/taipei49314/checkwash/actions/runs/43910068162)
+succeeded in full on attempt 2 (after attempt 1's `macos-latest` Python 3.11
+job `133449434654` was cancelled unacquired by GitHub with `runner_name: ""`
+and `steps: []`), including all 14 macOS `/var` symlink collector test entries
+(#600, #614), six byte-identical `corpus-findings.json` files matching the PJU
+batch, and the Linux composite Action at `A` (`exit 0`, verdict `pass`, one
+`WARN`); and `published-artifacts` run
+[43940303262](https://github.com/taipei49314/checkwash/actions/runs/43940303262)
+succeeded on attempt 1 across identity, Release `447438064` and all six
+macOS/Linux published-file legs. All raw artifacts, logs and job records from
+both hosted runs are archived on
+`evidence/v0130-hosted-runs-43910068162-43940303262-20261117`
+([`fe4c3fcb`](https://github.com/taipei49314/checkwash/tree/fe4c3fcb8a092ff0c5633888f165dc14e28c6841)).
+
+The `public-visitor` stage passed after PyPI publication (check `134818745070`,
+run [44308669264](https://github.com/taipei49314/checkwash/actions/runs/44308669264),
+capture [44301977547](https://github.com/taipei49314/checkwash/actions/runs/44301977547),
+receipt `4b4e3de6` / `23e6de6c4001`): it downloaded all three GitHub Release
+assets and both PyPI files over HTTPS, verified byte-for-byte identity between
+PyPI and GitHub, installed all four wheels and sdists into fresh environments,
+and qualified and ran the downloaded `checkwash.pyz`.
+
+This follow-up promotes `release/advertised.toml` to `v0.13.0` (`commit` = `A`,
+`tag_object` = `f8ff8258d2e2a9a68488d5c1894f1518dfe02bce`, `checkwash.pyz`
+SHA256 `326e2a0c...`, 1,077,802 bytes) and moves the README CLI/pyz commands to
+`0.13.0`. It moves the README Action pin and annotation,
+`.github/workflows/checkwash.yml`, `doctor`'s `_PREVIOUS_ACTION_PIN`,
+`tools/pju_receipt_bridge.py` and `tools/replay_pju_action.py` `ACTION_SHA`,
+`SECURITY.md`, `action/README.md`, `docs/quality-adoption.md` and the two pin
+literals in `tests/test_doctor.py` to `A`,
+`9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638`; `action/action.yml` did not change,
+so `ACTION_YAML_SHA256` stays `94abd7b9...`. Step 9 (`DECISIONS-archive-6.md`
+cut and `tests/verdict_gate/baseline.toml` rotation) touches agent-read-only
+files and stops at Gate 4 for Nelson's separate decision. `THREATMODEL.md` is
+unchanged. No downstream re-pin is authorized, and `1.0` remains `NOT_MET`.
+
 ## v0.12.0 release under the pre-1.0 delegation (2026-11-07)
 
 0.12.0 is being released under the delegation recorded at the top of this

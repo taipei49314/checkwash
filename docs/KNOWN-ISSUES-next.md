@@ -1,10 +1,12 @@
 # 0.13 candidate — 2026-11-11
 
-Status, 2026-11-16: the 0.13.0 release pull request carries this section's
-rows into [KNOWN-ISSUES-v0.13.0](KNOWN-ISSUES-v0.13.0.md), the page to read
-for 0.13.0. The rows stay here, unchanged, as the dated preparation record.
+Status, 2026-11-18: shipped in v0.13.0
+([publication record](releases/v0.13.0-publication-verification.md)). The
+release pull request carried this section's rows into
+[KNOWN-ISSUES-v0.13.0](KNOWN-ISSUES-v0.13.0.md), the page to read for
+0.13.0. The rows stay here, unchanged, as the dated preparation record.
 
-Nothing here is released yet. From the next release, each release gets one
+Nothing here was released when this section was written. From the next release, each release gets one
 hosted verification on macOS and Linux
 ([RELEASING](RELEASING.md#hosted-release-verification),
 [D-204](../DECISIONS.md)), two first-week behaviours change
@@ -136,7 +138,7 @@ source.
 The changes below shipped in v0.9.0. The previous unreleased/NOT_RUN
 wording is retained as a dated preparation record. Publication at the time:
 [v0.9.0 verification](releases/v0.9.0-publication-verification.md). The
-current release is v0.12.0 ([publication record](releases/v0.12.0-publication-verification.md)).
+current release is v0.13.0 ([publication record](releases/v0.13.0-publication-verification.md)).
 
 ## 2026-10-23: measured #345 / #469 residual exits
 

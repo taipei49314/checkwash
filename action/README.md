@@ -118,18 +118,18 @@ Action commit is the tag's second parent's parent. From v0.12.0 (D-200)
 the tag points at the Action commit, so the recommended pin is the tag's
 peeled commit again. Source changes here do not update that public
 pin.
-The recommended v0.12.0 Action contains this installation repair; v0.7.0 and
+The recommended v0.13.0 Action contains this installation repair; v0.7.0 and
 earlier do not. Promoting a security release/pin requires a separate recorded
 publication decision; do not silently re-pin consumers to unreleased source.
 
 Verify the current pins. The checkout and setup-python pins and the
-recommended checkwash pin, v0.12.0's Action commit, are their tags' peeled
+recommended checkwash pin, v0.13.0's Action commit, are their tags' peeled
 commits:
 
 ```bash
 git ls-remote https://github.com/actions/checkout.git refs/tags/v7.0.1
 git ls-remote https://github.com/actions/setup-python.git refs/tags/v7.0.0
-git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.12.0^{}'
+git ls-remote https://github.com/taipei49314/checkwash.git 'refs/tags/v0.13.0^{}'
 ```
 
 A checkwash pin up to v0.10.0 is its tag's peeled commit too: use that tag in
@@ -150,9 +150,9 @@ v0.12.0 that commit is the release's Action commit, which that release's
 doctor accepts, and zizmor's `ref-version-mismatch` audit (1.14.0 and later)
 and its pedantic `stale-action-refs` should not report the pin. For a
 v0.11.0 pin they can propose the v0.11.0 merge, which doctor rejects, and
-zizmor can report the comment and the untagged commit; an update to v0.12.0
-proposes v0.12.0's Action commit, which doctor 0.12.0 accepts and doctor
-0.11.0 rejects. The Action itself is unaffected: it runs the same check at
+zizmor can report the comment and the untagged commit; an update to v0.13.0
+proposes v0.13.0's Action commit, which doctor 0.13.0 accepts and doctor
+0.12.0 rejects. The Action itself is unaffected: it runs the same check at
 either commit. Upgrade the CLI and its local hooks first, then the Action
 pin. From v0.12.0 a CLI installed through Git from the release tag is the
 Action commit's, and its doctor rejects that release's own pin: install the
@@ -174,9 +174,11 @@ also runs the composite at the release's Action commit once on a
 GitHub-hosted `ubuntu-latest` runner with Python 3.12, on the release's own
 range with the default inputs except `base`, which a dispatched run gives,
 and with `CHECKWASH_TODAY` set to the release merge's commit date, from a
-checkout of that commit used by a local path. Its first run, for v0.12.0 after publication on 2026-11-11,
-exited 0 ([record](../docs/releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11)).
-That range passes, so the run does not show the Action blocking a change.
+checkout of that commit used by a local path. Its first run, for v0.12.0 after publication on 2026-11-11, and v0.13.0's
+`source-at-M` run on 2026-11-16 (run 43910068162, attempt 2), each exited 0
+([v0.12.0 record](../docs/releases/v0.12.0-publication-verification.md#hosted-verification-after-publication-2026-11-11),
+[v0.13.0 record](../docs/releases/v0.13.0-publication-verification.md#hosted-release-verification-2026-11-16)).
+Those ranges pass, so the runs do not show the Action blocking a change.
 macOS, Windows, other Python versions and inputs, GitHub's resolution of
 `taipei49314/checkwash/action@<sha>` and a `pull_request` trigger remain
 `NOT_RUN`. A successful source review or a local wrapper test does not

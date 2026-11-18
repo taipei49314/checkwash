@@ -1,16 +1,16 @@
 # The public installation subject, independent of the development version.
-# Values verified in docs/releases/v0.12.0-publication-verification.md.
+# Values verified in docs/releases/v0.13.0-publication-verification.md.
 # Advance only after public source, download and visitor receipts are retained.
 schema_version = 1
 
 [release]
-tag = "v0.12.0"
-version = "0.12.0"
-commit = "532f74ab070a924b23e2cc70e5d0091a05d8401d"
-tag_object = "6f8b8b7a95f8c6070a0c4bfb1e3ea5a9cb534fe2"
+tag = "v0.13.0"
+version = "0.13.0"
+commit = "9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638"
+tag_object = "f8ff8258d2e2a9a68488d5c1894f1518dfe02bce"
 repository = "https://github.com/taipei49314/checkwash.git"
 
 [pyz]
-url = "https://github.com/taipei49314/checkwash/releases/download/v0.12.0/checkwash.pyz"
-sha256 = "4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2"
-bytes = 1013508
+url = "https://github.com/taipei49314/checkwash/releases/download/v0.13.0/checkwash.pyz"
+sha256 = "326e2a0c1e5e983869893a4c11c4f0ddba5e75e7c23a8984a3357042a87fbeff"
+bytes = 1077802
