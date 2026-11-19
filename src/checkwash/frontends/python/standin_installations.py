@@ -412,8 +412,10 @@ _DEFINITION = "definition:"  # opens the identity of an effect installed by a de
 
 
 def _definition_identity(node):
-    """A definition's words, less what cannot change what it returns: a leading
-    docstring, `pass`, and the annotations of its parameters and return value.
+    """A definition's code, less what cannot change what it returns: in it and
+    in every function and class nested in it, a leading docstring, `pass`
+    written directly in a body, and the annotations of parameters and return
+    values. Comments and layout are not in the tree at all.
 
     Adding a docstring or type hints to a local definition that already took
     over an import is not a new stand-in. Any other edit is, like an edited
@@ -421,7 +423,9 @@ def _definition_identity(node):
 
     The tree is read in place, with those fields set aside and put back: a
     copy of a deep expression exhausts the interpreter's stack, and
-    `stable_dump` does not.
+    `stable_dump` does not. The text is the same on every supported Python:
+    from 3.12 a def or class dumps an empty `type_params` that 3.11 does not
+    have, and a conftest row's fingerprint is made from this text.
     """
     saved = []
     try:
@@ -440,10 +444,27 @@ def _definition_identity(node):
             elif isinstance(item, ast.arg):
                 saved.append((item, "annotation", item.annotation))
                 item.annotation = None
-        return _DEFINITION + stable_dump(node)
+        return _DEFINITION + stable_dump(node).replace(", type_params=[]", "")
     finally:
         for item, name, value in reversed(saved):
             setattr(item, name, value)
+
+
+def _import_target(node, name):
+    """What an import statement binds `name` to, as the trace names it; None if it does not bind it."""
+    for item in node.names:
+        if isinstance(node, ast.Import):
+            if (item.asname or item.name.split(".")[0]) == name:
+                return item.name if item.asname else item.name.split(".")[0]
+        elif (item.asname or item.name) == name:
+            return "." * node.level + (node.module or "") + "." + item.name
+    return None
+
+
+def _type_checking(test):
+    """`if TYPE_CHECKING:` (or `typing.TYPE_CHECKING`): a branch no test run takes."""
+    return (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
+            or isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
 
 
 def _bindings(tree):
@@ -451,13 +472,15 @@ def _bindings(tree):
 
     `entries[(scope, name)]` lists every statement of that scope that binds
     the name: an import, a def or class, an assignment, a loop or `with`
-    target, an `except ... as`, a walrus, a `match` capture, `del`, `global`.
-    A star import is filed under `*`. Each entry carries the compound
-    statements around it, and for each whether the trace follows it: a `with`,
-    or the taken branch of an `if` with a literal test.
+    target, an `except ... as`, a walrus, a `match` capture, `del`; and a
+    `global` or `nonlocal` declaration, as kind `global`. A star import is
+    filed under `*`. Each entry carries the compound statements around it, and
+    for each whether the trace follows it: a `with`, or the taken branch of an
+    `if` with a literal test.
 
-    `definitions` lists each def and class with its scope and whether the
-    trace reads a definition there (it does not in a class body).
+    `definitions` lists each def and class with its scope, whether the trace
+    reads a definition there (it does not in a class body), and the functions
+    around it, innermost last.
     """
     entries, definitions = {}, []
 
@@ -472,8 +495,6 @@ def _bindings(tree):
                 continue  # another scope
             if isinstance(item, ast.Name) and isinstance(item.ctx, (ast.Store, ast.Del)):
                 names.add(item.id)
-            elif isinstance(item, (ast.Global, ast.Nonlocal)):
-                names.update(item.names)
             elif isinstance(item, (ast.MatchAs, ast.MatchStar)) and item.name:
                 names.add(item.name)
             elif isinstance(item, ast.MatchMapping) and item.rest:
@@ -481,13 +502,17 @@ def _bindings(tree):
             pending.extend(ast.iter_child_nodes(item))
         return names
 
-    def visit(statements, scope, where, in_class):
+    def visit(statements, scope, where, in_class, functions):
         readable = not in_class and all(live for _tag, _at, live in where)
         for node in statements:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 add(scope, node.name, where, node, "definition")
-                definitions.append((scope, node, readable))
-                visit(node.body, f"{scope}.{node.name}" if scope else node.name, (), isinstance(node, ast.ClassDef))
+                definitions.append((scope, node, readable, functions))
+                inner = f"{scope}.{node.name}" if scope else node.name
+                if isinstance(node, ast.ClassDef):
+                    visit(node.body, inner, (), True, functions)
+                else:
+                    visit(node.body, inner, (), False, functions + (node,))
             elif isinstance(node, (ast.Import, ast.ImportFrom)):
                 for item in node.names:
                     if item.name == "*":
@@ -495,36 +520,40 @@ def _bindings(tree):
                     else:
                         add(scope, item.asname or (item.name.split(".")[0] if isinstance(node, ast.Import) else item.name),
                             where, node, "import")
+            elif isinstance(node, (ast.Global, ast.Nonlocal)):
+                for name in node.names:
+                    add(scope, name, where, node, "global")
             elif isinstance(node, ast.If):
                 truth = _static_truth(node.test)
                 for name in bound(node.test):
                     add(scope, name, where, node.test, "header")
-                visit(node.body, scope, where + (("if", node.test, truth is True),), in_class)
-                visit(node.orelse, scope, where + (("else", node.test, truth is False),), in_class)
+                tag = "type-checking" if _type_checking(node.test) else "if"
+                visit(node.body, scope, where + ((tag, node.test, truth is True),), in_class, functions)
+                visit(node.orelse, scope, where + (("else", node.test, truth is False),), in_class, functions)
             elif isinstance(node, (ast.For, ast.AsyncFor)):
                 for name in bound(node.target, node.iter):
                     add(scope, name, where, node.target, "header")
-                visit(node.body, scope, where + (("for", None, False),), in_class)
-                visit(node.orelse, scope, where + (("for-else", None, False),), in_class)
+                visit(node.body, scope, where + (("for", None, False),), in_class, functions)
+                visit(node.orelse, scope, where + (("for-else", None, False),), in_class, functions)
             elif isinstance(node, ast.While):
                 for name in bound(node.test):
                     add(scope, name, where, node.test, "header")
-                visit(node.body, scope, where + (("while", node.test, False),), in_class)
-                visit(node.orelse, scope, where + (("while-else", None, False),), in_class)
+                visit(node.body, scope, where + (("while", node.test, False),), in_class, functions)
+                visit(node.orelse, scope, where + (("while-else", None, False),), in_class, functions)
             elif isinstance(node, (ast.With, ast.AsyncWith)):
                 for item in node.items:
                     for name in bound(item.context_expr, item.optional_vars):
                         add(scope, name, where, item, "header")
-                visit(node.body, scope, where + (("with", None, True),), in_class)
+                visit(node.body, scope, where + (("with", None, True),), in_class, functions)
             elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
-                visit(node.body, scope, where + (("try", None, False),), in_class)
+                visit(node.body, scope, where + (("try", None, False),), in_class, functions)
                 for handler in node.handlers:
                     inner = where + (("except", handler.type, False),)
                     if handler.name:
                         add(scope, handler.name, inner, handler.type, "header")
-                    visit(handler.body, scope, inner, in_class)
-                visit(node.orelse, scope, where + (("try-else", None, False),), in_class)
-                visit(node.finalbody, scope, where + (("finally", None, False),), in_class)
+                    visit(handler.body, scope, inner, in_class, functions)
+                visit(node.orelse, scope, where + (("try-else", None, False),), in_class, functions)
+                visit(node.finalbody, scope, where + (("finally", None, False),), in_class, functions)
             elif isinstance(node, ast.Match):
                 for name in bound(node.subject):
                     add(scope, name, where, node.subject, "header")
@@ -532,12 +561,12 @@ def _bindings(tree):
                     inner = where + (("case", case.pattern, False),)
                     for name in bound(case.pattern, case.guard):
                         add(scope, name, inner, case.pattern, "header")
-                    visit(case.body, scope, inner, in_class)
+                    visit(case.body, scope, inner, in_class, functions)
             else:
                 for name in bound(node):
                     add(scope, name, where, node, "statement")
 
-    visit(tree.body, "", (), False)
+    visit(tree.body, "", (), False, ())
     return entries, definitions
 
 
@@ -546,19 +575,41 @@ def _scope_chain(scope):
     return [".".join(parts[:count]) for count in range(len(parts) + 1)]
 
 
-def _binding_signature(entries, scope, name):
+def _binding_signature(entries, scope, name, memo):
     """How `name` comes to be bound for a definition in `scope`: every binding
-    of it, and every star import, in that scope and the scopes around it, each
-    with the compound statements around it and its own words (a definition's
-    identity; any other statement whole)."""
-    def words(node):
-        return stable_dump(node) if node is not None else ""
+    of it in that scope and the scopes around it, each with the compound
+    statements around it and what it binds the name to.
 
-    return tuple(
-        (inner, kind, tuple((tag, words(at)) for tag, at, _live in where),
-         _definition_identity(node) if kind == "definition" else words(node))
-        for inner in _scope_chain(scope) for key in ((inner, name), (inner, "*"))
-        for where, node, kind in entries.get(key, ()))
+    - An import counts by what it binds this name to, not by its whole
+      statement: another name added to the line, the names re-sorted, or
+      `x as x` written `x`, changes nothing here.
+    - A definition counts by its identity; any other statement whole.
+    - A binding under `if TYPE_CHECKING:` is left out: no run takes it.
+    - A star import counts only in the definition's own scope and below its
+      first definition there, where it could bind the name after it.
+
+    `memo` holds the texts already computed for this pair of trees.
+    """
+    def words(node, kind=None):
+        key = (id(node), kind == "definition")
+        if key not in memo:
+            memo[key] = ("" if node is None else _definition_identity(node) if kind == "definition"
+                         else stable_dump(node))
+        return memo[key]
+
+    first = min((node.lineno for _where, node, kind in entries.get((scope, name), ()) if kind == "definition"),
+                default=None)
+    out = []
+    for inner in _scope_chain(scope):
+        found = [(entry, False) for entry in entries.get((inner, name), ())]
+        if inner == scope and first is not None:
+            found += [(entry, True) for entry in entries.get((inner, "*"), ()) if entry[1].lineno > first]
+        for (where, node, kind), star in found:
+            if any(tag == "type-checking" for tag, _at, _live in where):
+                continue
+            what = (_import_target(node, name) if kind == "import" and not star else words(node, kind))
+            out.append((inner, "star" if star else kind, tuple((tag, words(at)) for tag, at, _live in where), what))
+    return tuple(out)
 
 
 def _only_defined(entries, scope, name):
@@ -568,26 +619,33 @@ def _only_defined(entries, scope, name):
 
 
 def _settled(before, after):
-    """The (scope, name) of the after side's definitions whose name is bound
-    the same way on both sides (#635).
+    """The (scope, name) of definitions that this rule leaves as 0.13.0 read them (#635).
 
-    The diff did not add, edit or move such a definition, or anything else
-    that binds its name around it, so it installed nothing: the trace reads it
-    exactly as it did before this rule. A copy of the definition parked
-    somewhere else on the before side (in another function, under `if False:`,
-    above the import instead of below it) is not the same binding, and neither
-    is the same definition after a changed import of the name.
+    A definition is settled when its name is bound the same way on both sides
+    (`_binding_signature`). The diff did not add, edit or move it, or anything
+    else that binds its name around it, so it installed nothing. A copy of the
+    definition parked somewhere else on the before side (in another function,
+    under `if False:`, above the import instead of below it) is not the same
+    binding, and neither is the same definition after a changed import of the
+    name.
+
+    A definition that only the before side has is in the set too. The diff
+    removed it, so it cannot be a new installation, and reading it as an
+    installation would change how the before side's later bindings of the
+    name are read: a stand-in that 0.13.0 reports behind it would look as if
+    it had been there already.
     """
     if before is None or after is None:
         return frozenset()
-    old, new = _bindings(before)[0], _bindings(after)
-    judged = {}
-    for scope, node, _readable in new[1]:
+    (old, old_definitions), (new, new_definitions) = _bindings(before), _bindings(after)
+    memo, judged = {}, {}
+    for scope, node, _readable, _functions in new_definitions:
         key = (scope, node.name)
         if key not in judged:
-            judged[key] = not (_only_defined(old, *key) and _only_defined(new[0], *key)) and (
-                _binding_signature(old, *key) == _binding_signature(new[0], *key))
-    return frozenset(key for key, same in judged.items() if same)
+            judged[key] = not (_only_defined(old, *key) and _only_defined(new, *key)) and (
+                _binding_signature(old, *key, memo) == _binding_signature(new, *key, memo))
+    removed = {(scope, node.name) for scope, node, _readable, _functions in old_definitions} - set(judged)
+    return frozenset(key for key, same in judged.items() if same) | removed
 
 
 def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
@@ -596,20 +654,22 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
     Scheduling filter only, like `_import_rebind`: a definition changes
     nothing the call/assignment filters see. It asks for a def or class
 
-    - where the trace reads definitions (not in a class body, and under no
-      compound statement but `with` and the taken branch of a literal `if`);
+    - outside a class body and under no compound statement but `with` and the
+      taken branch of a literal `if`, and not inside the body of a pytest
+      fixture when `pytest.fixture` can only be pytest's there (the trace
+      installs nothing in those places);
     - of a name its own scope, or a scope around it, captures on either side:
       by an import the trace reads whose root is not standard library or a
       declared dependency, or by `name = <captured>` (deleting the import and
       defining the name is the same swap);
-    - whose name is not bound the same way on the before side (`_settled`);
-    - whose name is read where the read can see the definition: anywhere in
-      the file but inside a function that takes the name as a parameter, and
-      but in code above the definition that runs as the module is loaded. A
-      fixture that tests receive by parameter binds a module-level name nobody
-      reads, whatever decorator makes it a fixture, and a module-level read
-      above the definition reads the import. Nothing the trace follows could
-      consume such a definition.
+    - whose name is not bound the same way on the before side (`_settled`).
+
+    A definition decorated as a fixture, by whatever decorator is called
+    `fixture`, must also be read somewhere the read can see it: as a name
+    outside the functions that take it as a parameter or bind it themselves
+    and not only in load-time code above it, as an attribute, or as a string.
+    Tests receive a fixture by parameter, so its module-level name is usually
+    read by nobody, and editing one must not trace every test beneath it.
 
     An unchanged definition schedules nothing, in a test file or a conftest,
     and the trace reports nothing for it either.
@@ -617,12 +677,13 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
     tree = _syntax(after, path=path, side="after")
     if tree is None:
         return False
-    new = _bindings(tree)
-    if not any(readable for _scope, _node, readable in new[1]):
+    new, definitions = _bindings(tree)
+    if not any(readable for _scope, _node, readable, _functions in definitions):
         return False
     other = _syntax(before, path=path, side="before") if before is not None else None
     old = _bindings(other)[0] if other is not None else None
-    sides = [entries for entries in (old, new[0]) if entries is not None]
+    sides = [entries for entries in (old, new) if entries is not None]
+    memo = {}
 
     def captured(scope, name, depth=0):
         for entries in sides:
@@ -631,14 +692,11 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
                     if not all(live for _tag, _at, live in where):
                         continue
                     if kind == "import":
-                        for item in node.names:
-                            if isinstance(node, ast.Import):
-                                local, root = item.asname or item.name.split(".")[0], item.name.split(".")[0]
-                            else:
-                                local = item.asname or item.name
-                                root = "@relative" if node.level else (node.module or "").split(".")[0]
-                            if local == name and root not in deny:
-                                return True
+                        root = (_import_target(node, name) or "").split(".")[0]
+                        if isinstance(node, ast.ImportFrom) and node.level:
+                            root = "@relative"
+                        if root not in deny:
+                            return True
                     elif kind == "statement" and depth < 4 and isinstance(node, (ast.Assign, ast.AnnAssign)):
                         base = node.value
                         while isinstance(base, ast.Attribute):
@@ -649,49 +707,100 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
                             return True
         return False
 
-    def read(name, line):
-        pending = [(tree, False, False)]
+    def decorated(node, test):
+        for decorator in getattr(node, "decorator_list", ()):
+            target, parts = decorator.func if isinstance(decorator, ast.Call) else decorator, []
+            while isinstance(target, ast.Attribute):
+                parts.append(target.attr)
+                target = target.value
+            if isinstance(target, ast.Name) and test(target.id, list(reversed(parts))):
+                return True
+        return False
+
+    def fixture_like(node):
+        return decorated(node, lambda root, parts: (parts[-1] if parts else root) == "fixture")
+
+    replaced_fixture, origins = [], {}
+
+    def pytest_fixture(node):
+        """Decorated by `pytest.fixture`, where nothing in the file can make that something else."""
+        if not replaced_fixture:
+            replaced_fixture.append(any(
+                isinstance(item, ast.Attribute) and item.attr == "fixture" and isinstance(item.ctx, (ast.Store, ast.Del))
+                or isinstance(item, ast.Constant) and item.value == "fixture" for item in ast.walk(tree)))
+        if replaced_fixture[0]:
+            return False
+
+        def genuine(root, parts):
+            if root not in origins:
+                bound_as = [(scope, entry) for (scope, name), found in new.items() if name == root for entry in found]
+                origins[root] = (_import_target(bound_as[0][1][1], root) if len(bound_as) == 1 and bound_as[0][0] == ""
+                                 and bound_as[0][1][2] == "import" else None)
+            return origins[root] is not None and ".".join([origins[root], *parts]) == "pytest.fixture"
+
+        return decorated(node, genuine)
+
+    def local(scope, name):
+        kinds = {kind for _where, _node, kind in new.get((scope, name), ())}
+        return bool(kinds) and "global" not in kinds
+
+    def read(name, scope, line):
+        pending = [(tree, "", scope == "", False, False)]
         while pending:
-            node, masked, later = pending.pop()
+            node, here, inside, masked, later = pending.pop()
             if isinstance(node, ast.Name):
-                if node.id == name and isinstance(node.ctx, ast.Load) and not masked and (later or node.lineno >= line):
+                if (node.id == name and isinstance(node.ctx, ast.Load) and inside and not masked
+                        and (later or node.lineno >= line)):
                     return True
-            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            elif isinstance(node, ast.Attribute) and node.attr == name and isinstance(node.ctx, ast.Load):
+                return True  # `request.module.name`, `sys.modules[__name__].name`
+            elif isinstance(node, ast.Constant) and node.value == name:
+                return True  # `getattr(module, "name")`, `globals()["name"]`
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
                 args = node.args
                 parameters = [*args.posonlyargs, *args.args, *args.kwonlyargs,
                               *(arg for arg in (args.vararg, args.kwarg) if arg is not None)]
-                body = node.body if isinstance(node.body, list) else [node.body]
-                # A function's body runs when it is called, which may be after the definition.
-                pending.extend((child, masked or any(arg.arg == name for arg in parameters), True) for child in body)
                 # Defaults, decorators and annotations are evaluated in the scope around the function.
                 around = [*args.defaults, *(default for default in args.kw_defaults if default is not None),
                           *(arg.annotation for arg in parameters if arg.annotation is not None)]
-                if not isinstance(node, ast.Lambda):
+                body = node.body if isinstance(node.body, list) else [node.body]
+                if isinstance(node, ast.Lambda):
+                    inner = here
+                    hidden = any(arg.arg == name for arg in parameters)
+                else:
                     around += [*node.decorator_list, *([node.returns] if node.returns is not None else [])]
-                pending.extend((child, masked, later) for child in around)
+                    inner = f"{here}.{node.name}" if here else node.name
+                    # Its own parameter or local binding of the name is what it reads, unless it is the definition's scope.
+                    hidden = inner != scope and (any(arg.arg == name for arg in parameters) or local(inner, name))
+                pending.extend((child, here, inside, masked, later) for child in around)
+                # A function's body runs when it is called, which may be after the definition.
+                pending.extend((child, inner, inside or inner == scope, False if inner == scope else masked or hidden,
+                                later or inside) for child in body)
+            elif isinstance(node, ast.ClassDef):
+                inner = f"{here}.{node.name}" if here else node.name
+                pending.extend((child, here, inside, masked, later) for child in (*node.decorator_list, *node.bases,
+                                                                                    *(k.value for k in node.keywords)))
+                pending.extend((child, inner, inside, masked, later) for child in node.body)
             else:
-                pending.extend((child, masked, later) for child in ast.iter_child_nodes(node))
+                pending.extend((child, here, inside, masked, later) for child in ast.iter_child_nodes(node))
         return False
 
     first = {}
-    for scope, node, readable in new[1]:
+    for scope, node, readable, _functions in definitions:
         if readable:
             first[scope, node.name] = min(node.lineno, first.get((scope, node.name), node.lineno))
     judged = {}
-    for scope, node, readable in new[1]:
+    for scope, node, readable, functions in definitions:
         key = (scope, node.name)
-        if readable and key not in judged:
-            judged[key] = captured(*key) and read(node.name, first[key]) and not (
-                old is not None and _binding_signature(old, *key) == _binding_signature(new[0], *key))
-            if judged[key]:
-                return True
+        if not readable:
+            continue
+        if key not in judged:
+            judged[key] = captured(*key) and not (
+                old is not None and _binding_signature(old, *key, memo) == _binding_signature(new, *key, memo))
+        if (judged[key] and not any(pytest_fixture(function) for function in functions)
+                and (not fixture_like(node) or read(node.name, scope, first[key]))):
+            return True
     return False
-
-
-def _type_checking(test):
-    """`if TYPE_CHECKING:` (or `typing.TYPE_CHECKING`): a branch no test run takes."""
-    return (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
-            or isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
 
 
 def _defined_by(effect):
@@ -1064,6 +1173,12 @@ class _Trace:
         a def binding its name to the local function and a class leaving the
         name as it was.
 
+        A statement under `try` or an unknown `if` is not read after it, as
+        it is not after an assignment: a fallback definition above an optional
+        import of the name stays reported, although that import wins when it
+        succeeds. Reading the import instead lost findings 0.13.0 gives, and
+        let an import under a branch no run takes hide the definition.
+
         Not inside a pytest fixture's body, nor in what the fixture calls. The
         fixture passes judge a local implementation there under their own
         proof obligations, and report it only in the shapes they prove; this
@@ -1091,49 +1206,6 @@ class _Trace:
         if effect is not None:
             value = replace(value, effects=value.effects | {effect})
         env[node.name] = value
-
-    def unknown_imports(self, statements, module, env):
-        """After a definition took a name over, an import of that name from a
-        module the repository holds, in a `try` body or under an unknown `if`,
-        may be what the name ends up bound to (a fallback definition above an
-        optional import), so the takeover is no longer proved.
-
-        The definition's effect is dropped. The name's other effects stay,
-        and so does its alias when it names a provider (a class leaves it
-        so); a name that held the local function reads as the import from
-        here on, so an attribute written on it afterwards names production.
-        An import that cannot restore production leaves the definition
-        reported: one from a module the repository does not hold (its package
-        existing is not enough), one from the standard library, one in an
-        `except` arm, and one under `if TYPE_CHECKING:`, which no run takes.
-        """
-        pending = list(statements)
-        while pending:
-            child = pending.pop()
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                continue  # not run here
-            if isinstance(child, ast.Import):
-                names = [(item.asname or item.name.split(".")[0], item.name,
-                          item.name if item.asname else item.name.split(".")[0]) for item in child.names]
-            elif isinstance(child, ast.ImportFrom):
-                imported = _import_module(child, module.package)
-                names = [(item.asname or item.name, imported, f"{imported}.{item.name}")
-                         for item in child.names if imported and item.name != "*"]
-            else:
-                if isinstance(child, ast.If) and _type_checking(child.test):
-                    pending.extend(child.orelse)
-                elif isinstance(child, (ast.Try, getattr(ast, "TryStar", ast.Try))):
-                    pending.extend(child.body)
-                else:
-                    pending.extend(item for item in ast.iter_child_nodes(child)
-                                   if isinstance(item, (ast.stmt, ast.match_case)))
-                continue
-            for local, source, target in names:
-                value = env.get(local)
-                if (value is not None and _defined(value) and self.context is not None
-                        and source.split(".", 1)[0] not in self.deny and self.context.module(source, self.side)):
-                    env[local] = _Value(value.alias if value.alias and not value.alias.startswith("@") else target,
-                                        frozenset(e for e in value.effects if not _defined_by(e)))
 
     def block(self, statements, module, env, qualname, *, native_setattr=True, class_body=False):
         result = _Value()
@@ -1232,10 +1304,6 @@ class _Trace:
                     for child in ast.walk(node):
                         if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                             env.pop(child.id, None)
-                    self.unknown_imports(node.orelse if _type_checking(node.test) else [*node.body, *node.orelse],
-                                         module, env)
-            elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
-                self.unknown_imports(node.body, module, env)
             elif (isinstance(node, ast.For) and _literal_assertion_loop(node, previous)
                   and any(value.alias in self.patch_results for value in env.values())):
                 # One iteration suffices to prove a consumed installation;
@@ -1635,19 +1703,28 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
             after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
             previous = {effect.key for effect in before}
+            # A definition the test already read through, whose provider the
+            # diff renamed or removed: the import in front of it follows the
+            # rename, the definition is the one it was, and it replaces
+            # nothing new (#635).
+            renamed = {(e.kind, e.replacement) for e in before if _defined_by(e) and not context.contains(e.target, 1)}
             fresh = [effect for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span))
-                     if effect.key not in previous]
+                     if effect.key not in previous
+                     and not (_defined_by(effect) and (effect.kind, effect.replacement) in renamed)]
             # One report per replacement (#635). A definition whose value an
             # assignment carries on (`total = make()`) is the stand-in that
-            # assignment already reports, and a second definition of the name
-            # replaces the same provider: neither is a second finding with the
-            # same fingerprint.
+            # assignment already reports, and of several definitions of the
+            # name the last one written is what the test reads: neither case
+            # is a second finding with the same fingerprint.
             reported = {(effect.path, effect.target) for effect in fresh if not _defined_by(effect)}
+            last = {}
             for effect in fresh:
-                if _defined_by(effect):
-                    if (effect.path, effect.target) in reported:
-                        continue
-                    reported.add((effect.path, effect.target))
+                key = (effect.path, effect.target)
+                if _defined_by(effect) and key not in reported and (key not in last or effect.span > last[key].span):
+                    last[key] = effect
+            for effect in fresh:
+                if _defined_by(effect) and last.get((effect.path, effect.target)) is not effect:
+                    continue
                 text = effect.text
                 if _defined_by(effect) and effect.path != path:
                     # A conftest row's fingerprint is its path and this text.

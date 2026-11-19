@@ -16,8 +16,10 @@ that everything binding its name, in its scope and the scopes around it, is
 the same on both sides; such a definition is read exactly as before #635.
 
 Not read, for the assignment as for the definition: a statement under `try`,
-a loop, `match` or an `if` whose test is not a literal. Not read for the
-definition only: the body of a pytest fixture, which the fixture passes judge.
+a loop, `match` or an `if` whose test is not a literal. So an optional import
+of the name after the definition changes nothing, as it changes nothing after
+an assignment. Not read for the definition only: the body of a pytest fixture,
+which the fixture passes judge.
 """
 import ast
 import datetime
@@ -127,6 +129,14 @@ POSITIVES = {
         "def total(lines):"),
     "def_then_import_in_an_except_arm": (
         BEFORE, DEF + "\n\ntry:\n    pass\nexcept ImportError:\n    from app.prod import total\n\n\n" + TEST,
+        "def total(lines):"),
+    "def_then_import_under_a_branch_no_test_run_takes": (
+        BEFORE, SHADOWED.replace(TEST, "if __name__ == \"__main__\":\n    from app.prod import total\n\n\n" + TEST),
+        "def total(lines):"),
+    # The test reads the name through its own module object.
+    "read_through_request_module": (
+        IMPORT + "\n\ndef test_total(request):\n    assert request.module.total([(100, 1)]) == 105.0\n",
+        IMPORT + "\n\n" + DEF + "\n\ndef test_total(request):\n    assert request.module.total([(100, 1)]) == 105.0\n",
         "def total(lines):"),
     # The definition was already in the file, where it did not bind the name the test reads.
     "import_moved_above_the_def": (DEF + "\n\n" + IMPORT + "\n\n" + TEST, SHADOWED, "def total(lines):"),
@@ -253,15 +263,6 @@ NEGATIVES = {
         IMPORT + "\n\ndef rows():\n    return [(100, 1)]\n\n\ndef test_total():\n    assert total(rows()) == 105.0\n",
         IMPORT + "\n\ndef rows():\n    def total(lines):\n        return 'label'\n\n    return [(100, 1)]\n\n\n"
         "def test_total():\n    assert total(rows()) == 105.0\n", None),
-    # An optional import from a module the repository holds wins when it succeeds.
-    "fallback_definition_above_an_optional_import": (
-        BEFORE, DEF + "\n\ntry:\n    from app.prod import total\nexcept ImportError:\n    pass\n\n\n" + TEST, None),
-    "fallback_definition_above_a_version_branch_import": (
-        BEFORE, "import sys\n\n\n" + DEF + "\n\nif sys.version_info >= (3, 11):\n    from app.prod import total\n\n\n" + TEST,
-        None),
-    "fallback_definition_above_an_optional_import_by_another_path": (
-        BEFORE, DEF + "\n\ntry:\n    from app.pricing import total\nexcept ImportError:\n    pass\n\n\n" + TEST,
-        {"src/app/pricing.py": b"from app.prod import total\n"}),
     # A module-level definition does not take over an import made inside the test.
     "import_inside_the_test": (
         "def test_total():\n    from app.prod import total\n\n    assert total([(100, 1)]) == 105.0\n",
@@ -280,6 +281,28 @@ def test_a_definition_that_does_not_take_over_the_subject_reports_nothing(name):
     before, after, context = NEGATIVES[name]
     _verdict, standins, events = judged(before, after, context=context)
     assert standins == [] and events == []
+
+
+OPTIONAL = {
+    "try": "try:\n    from app.prod import total\nexcept ImportError:\n    pass\n",
+    "version_branch": "import sys\n\nif sys.version_info >= (3, 11):\n    from app.prod import total\n",
+    "another_path": "try:\n    from app.pricing import total\nexcept ImportError:\n    pass\n",
+}
+
+
+@pytest.mark.parametrize("name", sorted(OPTIONAL))
+def test_a_fallback_above_an_optional_import_is_reported_as_its_assignment_spelling_is(name):
+    """A known cost, pinned: the import wins at run time when it succeeds, and neither spelling reads it.
+
+    Reading it for the definition lost findings 0.13.0 gives and let a branch
+    no run takes hide the definition, so the two spellings are judged alike.
+    """
+    context = {"src/app/pricing.py": b"from app.prod import total\n"}
+    for install, evidence in ((DEF, "def total(lines):"), ("total = lambda lines: 105.0\n", "total = lambda lines: 105.0")):
+        verdict, standins, events = judged(BEFORE, install + "\n\n" + OPTIONAL[name] + "\n\n" + TEST, context=context)
+        assert verdict == "block"
+        assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+        assert [text for _path, _unit, _target, text, _span in events] == [evidence]
 
 
 def test_a_module_level_definition_after_a_deleted_function_scope_import_is_a_known_gap():
@@ -330,8 +353,8 @@ def test_a_fixture_whose_decorator_was_replaced_is_followed_like_a_helper():
     assert [text for _path, _unit, _target, text, _span in events] == ["def total(lines):"]
 
 
-def test_a_specialised_pass_that_reports_the_same_replacement_keeps_its_evidence():
-    """One finding per fingerprint: the fixture pass's, not a second one for the inner def."""
+def test_the_fixture_pass_reports_a_fixture_s_inner_definition_as_before():
+    """One finding, the fixture pass's: the inner def is in a fixture's body, which this rule does not read."""
     before = ("from app.prod import square\ndef test_square():\n"
               "    checks = (square(i) == i * i for i in range(2, 5))\n    assert all(checks)\n")
     after = ("import pytest\nfrom app.prod import square\n@pytest.fixture\ndef correct_square():\n"
@@ -417,8 +440,10 @@ RELEASED = {
     # An optional import of the provider after a class of the name leaves the name's alias as it was.
     "attribute_after_an_optional_import_beside_an_existing_shadow_class": (
         MONEY_SHADOW + MONEY_TEST, MONEY_SHADOW + OPTIONAL_MONEY + MONEY_PATCHED, None, ["app.prod.Money.total"]),
+    # A new class is reported too; the attribute's finding, which is 0.13.0's, stays.
     "attribute_after_an_optional_import_beside_a_new_class": (
-        MONEY_IMPORT + "\n\n" + MONEY_TEST, MONEY_SHADOW + OPTIONAL_MONEY + MONEY_PATCHED, None, ["app.prod.Money.total"]),
+        MONEY_IMPORT + "\n\n" + MONEY_TEST, MONEY_SHADOW + OPTIONAL_MONEY + MONEY_PATCHED, None,
+        ["app.prod.Money", "app.prod.Money.total"]),
     # A closed `mock.patch.object` on an existing shadow class.
     "closed_patch_object_on_an_existing_shadow_class": (
         "from unittest import mock\n" + MONEY_SHADOW + MONEY_TEST,
@@ -437,16 +462,86 @@ def test_what_the_release_reports_beside_a_local_class_is_still_reported(name):
     assert [target for _path, _unit, target, _text, _span in events] == targets
 
 
-def test_an_attribute_written_after_a_def_of_a_module_s_name_and_its_optional_import_names_production():
-    """`def app` then `try: import app.prod as app`: the import wins, and the attribute write is on production."""
-    before = "import app.prod as billing\n\n\ndef test_total():\n    assert billing.total([(100, 1)]) == 105.0\n"
-    after = ("import app.prod as billing\n\n\ndef billing():\n    return None\n\n\n"
-             "try:\n    import app.prod as billing\nexcept ImportError:\n    pass\n\n\n"
-             "def test_total():\n    billing.total = lambda lines: 105.0\n    assert billing.total([(100, 1)]) == 105.0\n")
-    verdict, _standins, events = judged(before, after)
+WRAPPER_HEAD = "from app import prod\n" + IMPORT + "\n\n"
+FORWARD = "def total(lines):\n    return prod.total(lines)\n"
+FAILING = "try:\n    from app.fast import total\nexcept ImportError:\n    pass\n"
+PATCHED = "def test_total():\n    prod.total = lambda lines: 105.0\n    assert total([(100, 1)]) == 105.0\n"
+BESIDE_A_WRAPPER = {
+    # A new wrapper that writes the attribute itself, then an optional import that fails.
+    "wrapper_that_patches_then_a_failing_optional_import": (
+        WRAPPER_HEAD + TEST,
+        WRAPPER_HEAD + "def total(lines):\n    prod.total = lambda rows: 105.0\n    return prod.total(lines)\n\n\n"
+        + FAILING + "\n\n" + TEST, ("app.prod.total", "prod.total = lambda rows: 105.0")),
+    # A new forwarding wrapper, a failing optional import, and the attribute written in the test.
+    "new_wrapper_failing_optional_import_and_attribute_in_the_test": (
+        WRAPPER_HEAD + TEST, WRAPPER_HEAD + FORWARD + "\n\n" + FAILING + "\n\n" + PATCHED,
+        ("app.prod.total", "prod.total = lambda lines: 105.0")),
+    # The wrapper and the import were there; only the wrapper is edited beside the attribute write.
+    "edited_wrapper_beside_an_optional_import": (
+        WRAPPER_HEAD + FORWARD + "\n\n" + FAILING + "\n\n" + TEST,
+        WRAPPER_HEAD + FORWARD.replace("return prod.total(lines)", "return prod.total(list(lines))") + "\n\n" + FAILING
+        + "\n\n" + PATCHED, ("app.prod.total", "prod.total = lambda lines: 105.0")),
+    # The optional import succeeds and imports what the module-level write installed.
+    "module_level_write_wrapper_and_an_optional_import_that_succeeds": (
+        WRAPPER_HEAD + TEST,
+        WRAPPER_HEAD + "prod.total = lambda lines: 105.0\n\n\n" + FORWARD + "\n\n"
+        + FAILING.replace("app.fast", "app.prod") + "\n\n" + TEST, ("app.prod.total", "prod.total = lambda lines: 105.0")),
+    # Both sides rebind the name through a helper; the diff deletes the local def in front of that.
+    "definition_removed_in_front_of_an_assignment": (
+        IMPORT + "\n\ndef fixed(function):\n    return lambda lines: 105.0\n\n\ndef total(lines):\n    return 0\n\n\n"
+        "total = fixed(total)\n\n\n" + TEST,
+        IMPORT + "\n\ndef fixed(function):\n    return lambda lines: 105.0\n\n\ntotal = fixed(total)\n\n\n" + TEST,
+        ("app.prod.total", "total = fixed(total)")),
+}
+
+
+@pytest.mark.parametrize("name", sorted(BESIDE_A_WRAPPER))
+def test_what_the_release_reports_beside_a_local_def_is_still_reported(name):
+    """Each of these blocks on 0.13.0 with this evidence; the definition's own row must not replace it."""
+    before, after, event = BESIDE_A_WRAPPER[name]
+    verdict, standins, events = judged(before, after)
     assert verdict == "block"
-    assert [(target, text) for _path, _unit, target, text, _span in events] == [
-        ("app.prod.total", "billing.total = lambda lines: 105.0")]
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [(target, text) for _path, _unit, target, text, _span in events] == [event]
+
+
+def test_an_untouched_definition_in_a_file_scheduled_for_another_reason_installs_nothing():
+    """The trace runs here whatever the definition filter says, so this pins the trace's own reading."""
+    head = "import app.prod as billing\n" + IMPORT + "\n\n" + DEF + "\n\ndef test_total(monkeypatch):\n"
+    patch = "    monkeypatch.setattr(billing, \"rate\", 0.05)\n"
+    before = head + patch + "    assert billing.rate == 0.05\n"
+    _verdict, standins, events = judged(before, before + "    assert total([(100, 1)]) == 105.0\n", PRODUCTION + "rate = 0.0\n")
+    assert [target for _path, _unit, target, _text, _span in events if target == "app.prod.total"] == []
+    assert [row for row in standins if "app.prod.total " in row[3]] == []
+
+
+def test_a_closed_patch_of_an_attribute_of_a_new_class_is_still_one():
+    """The class carries its own effect; the patched attribute's result must still be followed."""
+    before = "from unittest import mock\n" + MONEY_IMPORT + "\n\n" + MONEY_TEST
+    after = ("from unittest import mock\n" + MONEY_SHADOW + "def test_total():\n"
+             "    with mock.patch.object(Money, 'total', return_value=105.0) as fake:\n        assert fake([(100, 1)]) == 105.0\n")
+    verdict, _standins, events = judged(before, after, MONEY)
+    assert verdict == "block"
+    assert "app.prod.Money.total" in [target for _path, _unit, target, _text, _span in events]
+
+
+def test_a_renamed_provider_under_an_untouched_definition_is_not_a_new_installation():
+    """The production module is renamed and the import follows; the local subclass is the one it was."""
+    def files(module):
+        return {f"{module}.py": MONEY, "tests/test_money.py": f"from {module} import Money\n\n\n" + SHADOW_CLASS + "\n\n" + MONEY_TEST}
+
+    before, after = files("money"), files("pricing")
+    paths = sorted(before.keys() | after.keys())
+    changes = [FileChange(path, "added" if path not in before else "deleted" if path not in after else "modified",
+                          before[path].encode() if path in before else None, after[path].encode() if path in after else None)
+               for path in paths]
+    snapshot = {path: source.encode() for path, source in after.items()}
+    _ir, findings, _verdict = analyze(changes, Config(), Contract(), [], datetime.date(2026, 11, 20),
+                                      root_reader=snapshot.get,
+                                      root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+                                      root_path_lister=lambda: sorted(snapshot),
+                                      root_batch_reader=lambda wanted: {path: snapshot.get(path) for path in wanted})
+    assert [f.message for f in findings if f.rule == "TEST_PATCHES_SUBJECT"] == []
 
 
 def test_an_attribute_standin_beside_a_wrapper_and_a_type_checking_import_is_still_reported():
@@ -470,16 +565,6 @@ def test_a_new_class_keeps_the_released_finding_for_an_attribute_written_on_it()
     assert verdict == "block"
     assert sorted((target, text) for _path, _unit, target, text, _span in events) == [
         ("app.prod.Config", "class Config:"), ("app.prod.Config.rate", "Config.rate = 0.05")]
-
-
-def test_a_class_of_a_name_that_was_never_imported_leaves_the_name_unbound():
-    """`billing` stays the module: a class named `billing` would otherwise hide the attribute write."""
-    before = "import app.prod as billing\n\n\ndef test_total():\n    assert billing.total([(100, 1)]) == 105.0\n"
-    after = ("import app.prod as billing\n\n\nclass Rows:\n    total = None\n\n\n"
-             "def test_total():\n    Rows.total = 1\n    billing.total = lambda lines: 105.0\n    assert billing.total([(100, 1)]) == 105.0\n")
-    _verdict, standins, events = judged(before, after)
-    assert [row[:3] for row in standins] == [("TEST_PATCHES_SUBJECT", "high", "test_total")]
-    assert [target for _path, _unit, target, _text, _span in events] == ["app.prod.total"]
 
 
 CONFTEST = "import pytest\nfrom app.prod import total\n\n\n@pytest.fixture\ndef amount():\n    return total([(100, 1)])\n"
@@ -524,6 +609,15 @@ def test_a_conftest_definition_s_fingerprint_follows_its_body():
     forwarding = fingerprint("    return sum(p * q for p, q in lines)\n")
     assert fingerprint("    return 105.0\n") != forwarding
     assert fingerprint("    \"\"\"Forward.\"\"\"\n    return sum(p * q for p, q in lines)\n") == forwarding
+
+
+def test_a_conftest_definition_s_evidence_text_is_the_same_on_every_python():
+    """Pinned as a literal: from 3.12 a def dumps an empty `type_params`, which must not reach the digest."""
+    _ir, findings, _verdict = judge_files({"tests/conftest.py": CONFTEST},
+                                          {"tests/conftest.py": conftest_with("def total(lines):\n    return 105.0\n")},
+                                          {"tests/test_total.py": CONFTEST_TEST})
+    assert [f.after.text for f in findings if f.rule == "CONFTEST_PATCHES_PROD"] == [
+        "def total(lines):  # definition d7ac38bf9b7c"]
 
 
 def test_a_definition_inside_a_conftest_fixture_stays_with_the_fixture_passes():
@@ -574,19 +668,37 @@ SCHEDULING = [
     (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF + "\n\ndef test_total(total):\n    assert total\n", (), False),
     (BEFORE, "import pytest\n" + IMPORT + "\n\n@pytest.fixture\n" + DEF
      + "\n\ndef test_total(total):\n    assert total\n\n\ndef test_other(value=total):\n    assert value\n", (), True),
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total):\n    assert total\n\n\ndef test_other():\n    total = 1\n    assert total\n", (), False),   # a local
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total, request):\n    assert request.module.total\n", (), True),                       # an attribute
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total):\n    assert globals()[\"total\"]\n", (), True),                                 # a string
     # ... or read only above the definition, as the module is loaded: that read sees the import.
     (BEFORE, "import wrappers\n" + IMPORT + "\nDEFAULT = total([])\n\n\n@wrappers.fixture\n" + DEF
      + "\n\ndef test_total(total):\n    assert total\n", (), False),
     (BEFORE, IMPORT + "\n\ndef early():\n    return total([])\n\n\n" + DEF + "\n\ndef test_total(total):\n    assert early()\n",
      (), True),                                                             # a function above it runs later
     ("import os\n" + BEFORE, "import os\nfrom os.path import join as total\n\n\n" + DEF + "\n\n" + TEST, ("os",), True),   # one owned import is enough
+    (SHADOWED, "from app.prod import *\n" + DEF + "\n\n" + TEST, (), True),                # the import became a star import
+    (SHADOWED, SHADOWED.replace(DEF, DEF + "\nfrom app.extra import *\n"), (), True),        # a star import below it
+    (SHADOWED, SHADOWED.replace(DEF, DEF + "\n\ntry:\n    from app.prod import total\nexcept ImportError:\n    pass\n"),
+     (), True),                                                             # an optional import of the name is a binding
     # A definition the diff did not touch schedules nothing, whatever else changed.
+    (SHADOWED, SHADOWED.replace("import total", "import total, other"), (), False),          # the import line gains a name
+    (SHADOWED.replace("import total", "import total, other"), SHADOWED.replace("import total", "import other, total"),
+     (), False),                                                            # its names re-sorted
+    (SHADOWED.replace("import total", "import total as total"), SHADOWED, (), False),         # a useless alias removed
+    (SHADOWED, "from app.extra import *\n" + SHADOWED, (), False),                            # a star import above it
+    (SHADOWED, "from typing import TYPE_CHECKING\n" + SHADOWED
+     + "\n\nif TYPE_CHECKING:\n    from app.types import total\n", (), False),                # no run takes that branch
     (SHADOWED, SHADOWED + "\n\nX = 1\n", (), False),
     (SHADOWED, "import os\n" + SHADOWED.replace("assert total", "assert os and total"), (), False),
     (SHADOWED, IMPORT + "\n\ndef total(lines):\n    \"\"\"Words.\"\"\"\n    return 105.0\n\n\n" + TEST, (), False),
     (SHADOWED, IMPORT + "\n\ndef total(lines: list) -> float:\n    return 105.0\n\n\n" + TEST, (), False),
     (UNUSED_HELPER, UNUSED_HELPER + "\n\nX = 1\n", (), False),
     # Where the trace installs nothing, nothing is scheduled.
+    (FIXTURE_BEFORE, FIXTURE_HEAD + "    def total(lines):\n        return 0\n\n" + FIXTURE_TAIL, (), False),   # a pytest fixture's body
     (BEFORE, TRY, (), False),
     (BEFORE, IMPORT + "\n\nif False:\n    def total(lines):\n        return 0\n\n\n" + TEST, (), False),
     (BEFORE, IMPORT + "\n\nif flag():\n    def total(lines):\n        return 0\n\n\n" + TEST, (), False),
@@ -596,6 +708,11 @@ SCHEDULING = [
     (BEFORE, IMPORT + "\n\ndef rows():\n    return []\n\n\n" + TEST, (), False),
     (BEFORE, SHADOWED, ("app",), False),                                   # a declared dependency
     (BEFORE, "def broken(:\n", (), False),
+    # A fixture's body is read when the decorator is not, or may not be, pytest's.
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\ndef amount():\n    def total(lines):\n        return 0\n\n"
+     + FIXTURE_TAIL, (), True),
+    (FIXTURE_BEFORE, FIXTURE_HEAD.replace("import pytest\n", "import pytest\npytest.fixture = print\n")
+     + "    def total(lines):\n        return 0\n\n" + FIXTURE_TAIL, (), True),
     # A name the definition's own scope chain does not capture.
     ("def test_total():\n    from app.prod import total\n\n    assert total\n",
      DEF + "\n\ndef test_total():\n    from app.prod import total\n\n    assert total\n\n\ndef test_other():\n    assert total\n",
@@ -625,6 +742,13 @@ def test_settled_names_the_definitions_whose_binding_is_the_same_on_both_sides()
     # A changed binding of the name in the module unsettles a definition inside a function too.
     assert _settled(ast.parse(after), ast.parse(after.replace("app.prod", "app.other"))) == frozenset()
     assert _settled(None, ast.parse(after)) == frozenset()
+    # A definition only the before side has is read as before too.
+    assert _settled(ast.parse(after), ast.parse(SHADOWED)) == {("", "total"), ("", "helper"), ("helper", "total")}
+    # A `global` declaration and a star import below the definition are bindings of the name.
+    assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED + "\n\ndef rebind():\n    global total\n")) == {("", "total")}
+    assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED.replace(TEST, "global total\n\n\n" + TEST))) == frozenset()
+    assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED + "\nfrom app.extra import *\n")) == frozenset()
+    assert _settled(ast.parse(SHADOWED), ast.parse("from app.extra import *\n" + SHADOWED)) == {("", "total")}
 
 
 def test_a_definition_s_identity_leaves_out_docstrings_pass_and_signature_annotations():
