@@ -2,7 +2,7 @@
 bypass: 90
 rule: TEST_PATCHES_SUBJECT
 title: a method named like the imported subject binds a class attribute, not the name the tests read
-origin: issue #635 family bound — a test class gains a helper method called `invoice_total`; the tests in it still call the imported function through the module name, so nothing stands in for the subject
+origin: issue #635 family bound — a test class gains a helper method called `invoice_total`; the tests in it still call the imported function by its module-level name, so nothing stands in for the subject
 === before: tests/test_billing.py ===
 from app.billing import invoice_total
 

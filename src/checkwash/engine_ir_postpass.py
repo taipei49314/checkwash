@@ -34,6 +34,7 @@ def record_standin_installations(
     """Collect Python and JS stand-in/subject replacement events onto `ir.globals`."""
     eng = _eng()
     g = ir.globals
+    definitions: set[tuple] = set()
     for path, unit, target, text, span in eng.installation_events(
         ir,
         changes,
@@ -41,6 +42,7 @@ def record_standin_installations(
         root_reader=root_reader,
         root_searcher=root_searcher,
         root_path_lister=root_path_lister,
+        definitions=definitions,
     ):
         if unit is None:
             if (path, text) not in g.conftest_prod_patches:
@@ -71,6 +73,14 @@ def record_standin_installations(
     for event_source in python_standin_passes:
         for event in event_source():
             if event not in g.subject_installations:
+                if definitions:
+                    # A specialised pass that reports the same replacement keeps
+                    # its own evidence; the definition's row would be a second
+                    # finding with the same fingerprint (#635).
+                    g.subject_installations[:] = [
+                        earlier for earlier in g.subject_installations
+                        if not (earlier in definitions and earlier[:3] == event[:3])
+                    ]
                 g.subject_installations.append(event)
     read_tsconfig = eng._base_root_file(changes, root_reader, "tsconfig.json", unread_changes)
     for event in eng.module_mock_events(ir, changes, read_tsconfig):

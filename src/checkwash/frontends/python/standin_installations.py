@@ -90,6 +90,7 @@ class _Function:
     fixture_name: str | None = None
     autouse: bool = False
     patch_env: dict[str, _Value] | None = None
+    fixture_body: bool = False  # decorated by pytest's own `fixture`, not by a replaced one (#635)
 
 
 @dataclass
@@ -404,43 +405,157 @@ def _import_rebind(before, after, *, path="<unknown>"):
     return any(name in new and new[name] != target for name, target in old.items())
 
 
-def _definition_rebind(before, after, *, path="<unknown>"):
-    """A def or class, outside a class body, that binds an imported name and
-    is not on the before side in the same words (#635).
+_DEFINITION = "definition:"  # opens the identity of an effect installed by a def or class (#635)
+
+
+def _definition_identity(node):
+    """A definition's words without its docstrings and annotations.
+
+    Adding a docstring or type hints to a local definition that already took
+    over an import changes nothing it returns, so it is not a new stand-in.
+    A renamed parameter or an edited body is a new one, like an edited lambda.
+    """
+    clone = copy.deepcopy(node)
+    for item in ast.walk(clone):
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            first = item.body[0]
+            if (len(item.body) > 1 and isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)
+                    and isinstance(first.value.value, str)):
+                item.body = item.body[1:]
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            item.returns = None
+        if isinstance(item, ast.arg):
+            item.annotation = None
+    return _DEFINITION + stable_dump(clone)
+
+
+def _definition_rebind(before, after, deny=(), *, path="<unknown>", changed_only=False):
+    """Whether the after side defines, where the trace reads definitions, a
+    name that either side captures by import (#635).
 
     Scheduling filter only, like `_import_rebind`: a definition changes
-    nothing the call/assignment filters see. The import may be on either
-    side, since removing it and defining the name is the same swap. Scope,
-    ownership and oracle reach belong to the trace.
+    nothing the call/assignment filters see. For a test file it does not
+    compare the two sides. Newness is the trace's, per test, by what its
+    assertions consume, so a copy of the definition parked elsewhere on the
+    before side hides nothing. The import may be on either side: deleting it
+    and defining the name is the same swap. A name bound by
+    `name = <captured>` counts too.
+
+    `changed_only` is for a conftest, whose scheduling inventories every test
+    beneath it: there the definition must also be absent from the before
+    side, in any place the trace reads, as `_new_assignment_candidate` asks of
+    an assignment. An unchanged legacy definition acquires no new inventory.
+
+    Left out, because the trace installs nothing there: a method; a pytest
+    fixture and what its body defines, when `pytest.fixture` can only be
+    pytest's; a definition under `try`, a loop, `match` or an `if` whose test
+    is not a literal; and a name every import of which is standard library or
+    a declared dependency.
     """
-    def definitions(source, side):
+    def read(source, side):
         tree = _syntax(source, path=path, side=side)
         if tree is None:
             return None
-        imports = {a.asname or a.name.split(".")[0] for node in ast.walk(tree)
-                   if isinstance(node, (ast.Import, ast.ImportFrom)) for a in node.names}
-        found = []
-        pending = [(node, False) for node in tree.body]  # (statement, directly in a class body)
-        while pending:
-            node, in_class = pending.pop()
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                if not in_class:
-                    found.append(node)
-                pending.extend((child, isinstance(node, ast.ClassDef)) for child in node.body)
-                continue
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, ast.stmt):
-                    pending.append((child, in_class))
-                elif isinstance(child, (ast.ExceptHandler, ast.match_case)):
-                    pending.extend((item, in_class) for item in child.body)
-        return imports, found
+        targets = {}
+        # `pytest.fixture` is trusted only where nothing in this file can make
+        # it something else: a decoy decorator must not hide a definition.
+        stored, patched = set(), False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for item in node.names:
+                    targets.setdefault(item.asname or item.name.split(".")[0], set()).add(
+                        item.name if item.asname else item.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                origin = f"@relative.{node.module or ''}" if node.level else (node.module or "")
+                for item in node.names:
+                    if item.name != "*":
+                        targets.setdefault(item.asname or item.name, set()).add(f"{origin}.{item.name}")
+            elif isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
+                stored.add(node.id)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                stored.add(node.name)
+            elif isinstance(node, ast.arg):
+                stored.add(node.arg)
+            elif isinstance(node, (ast.Global, ast.Nonlocal)):
+                stored.update(node.names)
+            elif isinstance(node, ast.Attribute) and node.attr == "fixture" and isinstance(node.ctx, (ast.Store, ast.Del)):
+                patched = True
+            elif isinstance(node, ast.Constant) and node.value == "fixture":
+                patched = True  # setattr(pytest, "fixture", ...), vars(pytest)["fixture"] = ...
 
-    old, new = definitions(before, "before"), definitions(after, "after")
-    if old is None or new is None:
+        def fixture(node):
+            if patched or isinstance(node, ast.ClassDef):
+                return False
+            for decorator in node.decorator_list:
+                target, parts = decorator.func if isinstance(decorator, ast.Call) else decorator, []
+                while isinstance(target, ast.Attribute):
+                    parts.append(target.attr)
+                    target = target.value
+                if not isinstance(target, ast.Name) or target.id in stored:
+                    continue
+                origin = targets.get(target.id, ())
+                if len(origin) == 1 and ".".join([*origin, *reversed(parts)]) == "pytest.fixture":
+                    return True
+            return False
+
+        found = []
+
+        def visit(statements, in_class):
+            for node in statements:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    if fixture(node):
+                        continue  # nor anything in its body: the fixture passes judge that
+                    if not in_class:
+                        found.append(node)
+                    visit(node.body, isinstance(node, ast.ClassDef))
+                elif isinstance(node, ast.If):
+                    truth = _static_truth(node.test)
+                    if truth is not None:
+                        visit(node.body if truth else node.orelse, in_class)
+                elif isinstance(node, (ast.With, ast.AsyncWith)):
+                    visit(node.body, in_class)
+
+        visit(tree.body, False)
+        return tree, found, targets
+
+    new = read(after, "after")
+    if new is None or not new[1]:
         return False
-    names = old[0] | new[0]
-    known = {stable_dump(node) for node in old[1] if node.name in names}
-    return any(node.name in names and stable_dump(node) not in known for node in new[1])
+    old = read(before, "before") if before is not None else None
+    sides = [side for side in (old, new) if side is not None]
+    captured = {name for _tree, _found, targets in sides for name, origins in targets.items()
+                if any(origin.split(".")[0] not in deny for origin in origins)}
+    for _round in range(4):  # `total = billing.invoice_total`, and an alias of that alias
+        grown = set(captured)
+        for tree, _found, _targets in sides:
+            for node in ast.walk(tree):
+                if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                        and isinstance(node.targets[0], ast.Name)
+                        and isinstance(node.value, (ast.Name, ast.Attribute))):
+                    base = node.value
+                    while isinstance(base, ast.Attribute):
+                        base = base.value
+                    if isinstance(base, ast.Name) and base.id in grown:
+                        grown.add(node.targets[0].id)
+        if grown == captured:
+            break
+        captured = grown
+    taken = [node for node in new[1] if node.name in captured]
+    if not changed_only:
+        return bool(taken)
+    known = {(node.name, _definition_identity(node)) for node in (old[1] if old is not None else ())
+             if node.name in captured}
+    return any((node.name, _definition_identity(node)) not in known for node in taken)
+
+
+def _defined_by(effect):
+    """Whether an effect was installed by a def or class (#635)."""
+    return effect.replacement.startswith(_DEFINITION)
+
+
+def _defined(value):
+    """Whether a name's value came from a definition that took over an import (#635)."""
+    return any(_defined_by(effect) for effect in value.effects)
 
 
 class _Trace:
@@ -455,6 +570,7 @@ class _Trace:
         self.patch_results: dict[str, _Effect] = {}
         self.called_patch_results: set[str] = set()
         self.stack = []
+        self.fixture_bodies = 0  # fixtures being followed; their bodies stay with the fixture passes
         self.steps = 0
         self.test_module = None
         self.budget = budget if budget is not None else [0]
@@ -742,8 +858,15 @@ class _Trace:
 
     def assign(self, target, value, replacement, node, module, env, qualname):
         if isinstance(target, ast.Name):
-            old = (env.get(target.id, _Value()).alias or module.baseline_imports.get((qualname, target.id))
-                   or module.baseline_imports.get(("", target.id)))
+            current = env.get(target.id, _Value())
+            baseline = (module.baseline_imports.get((qualname, target.id))
+                        or module.baseline_imports.get(("", target.id)))
+            old = current.alias or baseline
+            if (old and old.startswith("@") and _defined(current)
+                    and not any((e.target, e.kind) == (baseline, "binding") for e in value.effects if _defined_by(e))):
+                # `def name` then `name = ...` still replaces the import (#635),
+                # unless the value is that definition carried on (`name = name`).
+                old = baseline
             if old and not old.startswith("@") and value.alias != old:
                 effect = self.install(old, "binding", value, replacement, node, module)
                 if effect is not None:
@@ -765,34 +888,54 @@ class _Trace:
                 for dest, source in zip(target.elts, replacement.elts):
                     self.assign(dest, self.expression(source, module, env, qualname), source, node, module, env, qualname)
 
-    def rebinds(self, qualname, class_body):
-        """Where a def or class can take over a name the observed test reads:
-        the module body and that test's own body. A method binds a class
-        attribute, and a definition inside a fixture or helper is local to
-        it; the fixture and parameter implementation passes judge those.
-        """
-        return not class_body and qualname in ("", self.unit)
-
-    def define(self, node, value, module, env, qualname, *, bind=True):
+    def define(self, node, value, module, env, qualname):
         """A def or class that rebinds a captured import is the definition
         spelling of a local stand-in (#635), as `name = ...` is (#88).
 
-        Its identity is the whole definition, so the same definition on both
-        sides is no new effect and an edited one is, like an edited lambda.
-        A class name is bound only when it takes over a captured import;
-        other classes stay unbound, as before.
+        What it takes over is the import the module captured first, read past
+        whatever the name holds now: a second definition, a definition after a
+        class, or one after a decoy import of the name still replaces it. Only
+        without such an import is the name's current provider used, for
+        `total = billing.invoice_total` followed by `def total`.
+
+        Not inside a pytest fixture's body, nor in what the fixture calls. The
+        fixture passes judge a local implementation there under their own
+        proof obligations, and report it only in the shapes they prove; this
+        rule adds no report beside theirs. The assignment spelling is read
+        there, so the two spellings still differ inside a fixture.
+
+        A class keeps the provider as the name's alias, as it did before this
+        rule, so an attribute written on the name afterwards still names
+        production; a class that takes over nothing stays unbound.
         """
-        old = (env.get(node.name, _Value()).alias or module.baseline_imports.get((qualname, node.name))
-               or module.baseline_imports.get(("", node.name)))
+        current = env.get(node.name, _Value())
+        old = (module.baseline_imports.get((qualname, node.name)) or module.baseline_imports.get(("", node.name))
+               or current.alias)
         if old and not old.startswith("@"):
-            header = (ast.get_source_segment(module.source, node) or ast.unparse(node)).split("\n", 1)[0]
+            header = (ast.get_source_segment(module.source, node) or ast.unparse(node)).split("\n", 1)[0].rstrip("\r")
             effect = self.install(old, "binding", value, node, node, module,
-                                  identity=stable_dump(node), text=header)
+                                  identity=_definition_identity(node), text=header)
+            if isinstance(node, ast.ClassDef):
+                value = _Value(old, frozenset(e for e in current.effects if (e.target, e.kind) != (old, "binding")))
             if effect is not None:
                 value = replace(value, effects=value.effects | {effect})
             env[node.name] = value
-        elif bind:
+        elif not isinstance(node, ast.ClassDef):
             env[node.name] = value
+
+    def unknown_imports(self, node, env):
+        """An import of the name under `try` or an unknown `if` may be what the
+        name ends up bound to (a fallback definition above an optional import),
+        so a definition's takeover of that name is no longer proved.
+
+        Only a definition's: the assignment spelling keeps the reading it had.
+        """
+        for child in ast.walk(node):
+            if isinstance(child, (ast.Import, ast.ImportFrom)):
+                for item in child.names:
+                    local = item.asname or item.name.split(".")[0]
+                    if _defined(env.get(local, _Value())):
+                        env[local] = _Value()
 
     def block(self, statements, module, env, qualname, *, native_setattr=True, class_body=False):
         result = _Value()
@@ -824,6 +967,7 @@ class _Trace:
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{qualname}.{node.name}" if qualname else node.name
                 function = _Function(module, node, qual)
+                fixture = False
                 for decorator in node.decorator_list:
                     call = decorator if isinstance(decorator, ast.Call) else None
                     value = self.expression(call.func if call else decorator, module, env, qualname)
@@ -831,7 +975,9 @@ class _Trace:
                             and value.alias in {"unittest.mock.patch", "unittest.mock.patch.object"}):
                         function.patch_env = dict(env)
                     if value.alias == "pytest.fixture":
+                        fixture = fixture or not value.effects
                         function.fixture_name = node.name
+                        function.fixture_body = fixture
                         if call:
                             for keyword in call.keywords:
                                 if keyword.arg == "name" and _literal(keyword.value):
@@ -840,18 +986,18 @@ class _Trace:
                                     function.autouse = keyword.value.value is True
                 module.functions[qual] = function
                 value = _Value(f"@function:{qual}")
-                if self.rebinds(qualname, class_body):
-                    self.define(node, value, module, env, qualname)
+                if class_body or fixture or self.fixture_bodies:
+                    env[node.name] = value  # a method or a fixture takes over no name a test calls
                 else:
-                    env[node.name] = value
+                    self.define(node, value, module, env, qualname)
             elif isinstance(node, ast.ClassDef):
                 # Keep class fixtures separate; a test outside this class must
                 # never inherit its providers or autouse markers.
                 qual = f"{qualname}.{node.name}" if qualname else node.name
                 class_env = dict(env)
                 self.block(node.body, module, class_env, qual, class_body=True)
-                if self.rebinds(qualname, class_body):
-                    self.define(node, _Value(f"@class:{qual}"), module, env, qualname, bind=False)
+                if not class_body and not self.fixture_bodies:
+                    self.define(node, _Value(f"@class:{qual}"), module, env, qualname)
             elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                 if node.value is None:
                     continue
@@ -886,6 +1032,9 @@ class _Trace:
                     for child in ast.walk(node):
                         if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                             env.pop(child.id, None)
+                    self.unknown_imports(node, env)
+            elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
+                self.unknown_imports(node, env)
             elif (isinstance(node, ast.For) and _literal_assertion_loop(node, previous)
                   and any(value.alias in self.patch_results for value in env.values())):
                 # One iteration suffices to prove a consumed installation;
@@ -919,6 +1068,7 @@ class _Trace:
             return _Value()
         kwargs = kwargs or {}
         self.stack.append(identity)
+        self.fixture_bodies += function.fixture_body
         try:
             node = function.node
             parameters = [a.arg for a in node.args.posonlyargs + node.args.args]
@@ -957,6 +1107,7 @@ class _Trace:
                 env[arg.arg] = kwargs.get(arg.arg, _Value())
             return self.block(node.body, function.module, env, function.qualname, native_setattr="setattr" not in lexical)
         finally:
+            self.fixture_bodies -= function.fixture_body
             self.stack.pop()
 
 
@@ -1107,8 +1258,14 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
     return trace.observed
 
 
-def installation_events(ir, changes, config, *, root_reader=None, root_searcher=None, root_path_lister=None):
-    """(path, unit, target, text, span) for new effects on existing oracles."""
+def installation_events(ir, changes, config, *, root_reader=None, root_searcher=None, root_path_lister=None,
+                        definitions=None):
+    """(path, unit, target, text, span) for new effects on existing oracles.
+
+    `definitions`, when given, receives the rows a def or class produced
+    (#635), so the caller can keep a specialised pass's report of the same
+    replacement instead of a second finding with the same fingerprint.
+    """
     # Legacy direct callers (including frozen corpus emitters) do not provide
     # a complete repository view. Preserve that API's established coverage;
     # absence of callbacks is not evidence that a provider is repository-owned.
@@ -1135,14 +1292,15 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 f"context_bytes={candidate_bytes}, limit={_MAX_CONTEXT_BYTES}"
             )
         imported = _imports(sides[0], path=path, side="before")
-        rebound = (
+        defined = sides[1] is not None and _definition_rebind(
+            sides[0], sides[1], deny, path=path, changed_only=role == "conftest")
+        rebound = defined or (
             role == "test" and sides[0] is not None and sides[1] is not None
-            and (_import_rebind(sides[0], sides[1], path=path)
-                 or _definition_rebind(sides[0], sides[1], path=path))
+            and _import_rebind(sides[0], sides[1], path=path)
         )
         if (rebound or any(_candidate(source, imported, path=path, side=side)
                            for side, source in zip(("before", "after"), sides))) and (
-            role == "test" or _new_assignment_candidate(sides, deny, path=path)
+            role == "test" or defined or _new_assignment_candidate(sides, deny, path=path)
         ):
             candidates.add(path)
     if not candidates:
@@ -1274,10 +1432,24 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
             after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
             previous = {effect.key for effect in before}
-            for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span)):
-                if effect.key not in previous:
-                    events.append((effect.path, qualname if effect.path == path else None,
-                                   effect.target, effect.text, effect.span))
+            fresh = [effect for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span))
+                     if effect.key not in previous]
+            # One report per replacement (#635). A definition whose value an
+            # assignment carries on (`total = make()`) is the stand-in that
+            # assignment already reports, and a second definition of the name
+            # replaces the same provider: neither is a second finding with the
+            # same fingerprint.
+            reported = {(effect.path, effect.target) for effect in fresh if not _defined_by(effect)}
+            for effect in fresh:
+                if _defined_by(effect):
+                    if (effect.path, effect.target) in reported:
+                        continue
+                    reported.add((effect.path, effect.target))
+                row = (effect.path, qualname if effect.path == path else None,
+                       effect.target, effect.text, effect.span)
+                events.append(row)
+                if definitions is not None and _defined_by(effect):
+                    definitions.add(row)
     return sorted(set(events), key=lambda row: (row[0], row[1] or "", row[2], row[3], row[4]))
 
 
