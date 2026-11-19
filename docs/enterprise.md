@@ -120,7 +120,7 @@ test module with 200 weakened assertions **< 1.5 s**; 500 files **< 3.5 s**,
 widened from 1.0 s and 2.5 s by maintainer decision on 2026-10-20 (D-170). A
 regression beyond those fails the suite. Since v0.5.0 the two budget checks
 are skipped on macOS by maintainer decision (2026-10-01), and on 2026-11-08
-the maintainer kept that skip for 1.0 ([D-204](../DECISIONS.md)). **These
+the maintainer kept that skip for 1.0 ([D-204](../DECISIONS-archive-6.md)). **These
 two budgets have not been verified on a Mac.** The Windows and Linux runs
 enforce them, but their timings are not evidence of macOS performance.
 Hosted CI has been disabled since 2026-10-23, so a pull request's suite, and

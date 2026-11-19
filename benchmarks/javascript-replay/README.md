@@ -67,7 +67,7 @@ the release criterion. The owner ruled them, and what #212 delivers, on 2026-10-
   under a line registered before it runs
   ([#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6261643029)).
   #212 stays open for that. *Superseded on 2026-11-08
-  ([D-203](../../DECISIONS.md)): #212 was narrowed to a blind rating of the
+  ([D-203](../../DECISIONS-archive-6.md)): #212 was narrowed to a blind rating of the
   11 commits of this set that 0.12.0 moved from pass to block, all among
   `cf-js131`'s 55. Two blind raters rated them and Nelson ruled where they
   differed: 10 should pass (7 of them honest changes whose tests now check

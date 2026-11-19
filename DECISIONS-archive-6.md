@@ -1,0 +1,2550 @@
+# Decision log archive 6
+D-202 through D-213, archived at the v0.13.0 publication on 2026-11-18 from 9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638; original line numbers retained.
+Entries D-001 to D-140, everything up to and including the v0.8.0 release
+entry, are in [DECISIONS-archive-1.md](DECISIONS-archive-1.md). They moved
+there unchanged on 2026-10-20, when this file had passed 1,000,000 bytes,
+checkwash's source byte limit, above which it sets a documentation file
+aside unread (F40). The archive keeps the line numbers they had here: read
+against `94953c83`, the last commit before the move, a reference
+`DECISIONS.md:N` with N up to 10833 is `DECISIONS-archive-1.md:N`. Any
+other line reference written before the move reads against that commit.
+Entry numbers do not change, and new entries are added here.
+
+Entries D-141 to D-172 moved unchanged at v0.9.0 publication to [DECISIONS-archive-2.md](DECISIONS-archive-2.md), except its prescribed archive title and single-line provenance; old line references read against release commit d6eda4f6.
+
+Entries D-173 to D-187 moved unchanged at v0.10.0 publication to [DECISIONS-archive-3.md](DECISIONS-archive-3.md), except its prescribed archive title and single-line provenance; line references to those entries written before the move read against release commit 10069979.
+
+Entries D-188 to D-196 moved unchanged at v0.11.0 publication to [DECISIONS-archive-4.md](DECISIONS-archive-4.md), except its prescribed archive title and single-line provenance; line references to those entries written before the move read against release commit 34555301.
+
+Entries D-197 to D-201 moved unchanged at v0.12.0 publication to [DECISIONS-archive-5.md](DECISIONS-archive-5.md), except its prescribed archive title and single-line provenance; line references to those entries written before the move read against tag commit 532f74ab, where the file is the same as at release merge ffaf4ed8.
+
+## D-202 (2026-11-08): post-publication verdict baseline v0.12.0, and i198/S1 relabelled block
+
+The v0.12.0 decision-log cut and this verdict-baseline rotation change
+agent-read-only files, and a case label changes only by maintainer ruling.
+Nelson's answer of 2026-10-28 covered the cut and the rotation only after
+0.11.0 (the 0.12.0 delegation section of
+[RELEASING](docs/RELEASING.md#v0120-release-under-the-pre-10-delegation-2026-11-07)),
+so Claude asked first. After #593 merged, the next-step box Claude wrote
+asked 「step 9 要照建議開始嗎？」 (start step 9 as recommended?) with the buttons
+「照建議開始」 and 「先不要」, and Claude's message that followed
+(2026-11-07T21:06:38Z) listed what the recommendation includes, four items,
+quoted here without their bold markup:
+「切檔：DECISIONS.md 裡的 D-197～D-201（71 KB）移到 `DECISIONS-archive-5.md`，指向這幾條的連結改指 archive-5。新的 DECISIONS.md 從 D-202 開始，D-202 記這次輪替。」
+(the cut);
+「輪替：verdict baseline 從 v0.11.0 換成 v0.12.0（commit A、pyz `4ef6eda2…`、1,013,508 B）。先跑 proposal run，預期唯一的變化是 `baseline_blocked` 從 160 變 161，多出的那個是 i198/S1。結果不一樣的話，我會停下來回報。」
+(the rotation, with a proposal run first, the expected change 160 -> 161 in
+`baseline_blocked` from i198/S1 alone, and a stop on any other result);
+「i198/S1 標籤從 `pass` 改成 `block`：算你的維護者裁決，寫進 labels.toml 和 D-202。」
+(the label change, as his maintainer ruling); and
+「驗證照常：PJU 收據、4 個必要檢查、1 個子 agent 審查。合併前會再問你。」
+(the usual verification, and a separate merge question). The message also
+said the label and the rotation could be decided apart and that the label
+would stay `pass` if he wanted only the rotation. At 2026-11-08T02:44:42Z
+Nelson answered 「照建議開始」 (start as recommended), the first button's label.
+Claude wrote the question, both labels and the message, and the answer adds
+no words to them. Agent interpretation: the answer covers changes of the
+shape the four items name, entries moved to the archive unchanged, a
+rotation whose only proposed movement is i198/S1 joining the blocked set,
+and that one label; any other movement would have stopped the work. This
+entry records the cut, that rotation and that ruling, not standing authority
+for another release or another label.
+
+The cut moves D-197 to D-201, the whole log at tag commit `532f74ab` (the
+same file as at release merge `ffaf4ed8` and at main `25823bbb`), to
+[DECISIONS-archive-5.md](DECISIONS-archive-5.md): line 1 retitled, line 2
+one provenance line, lines 3-1092 byte-identical to `DECISIONS.md` at
+`25823bbb` and at their old numbers. Twelve links in six documents were
+named after a moved entry and pointed at `DECISIONS.md`, and the v0.12.0
+release guide linked its "changes D-197 to D-201" there; all thirteen now
+point at the archive. No document links to an anchor in a moved entry.
+Review found five older links of the same kind that earlier cuts left: the
+v0.11.0 release guide's link for D-189 to D-196, and two "Details" links
+each in KNOWN-ISSUES-next and KNOWN-ISSUES-v0.9.0 for D-163 and D-164. They
+now point at archive 4 and archive 2.
+
+The baseline becomes public v0.12.0, version 0.12.0, commit
+`532f74ab070a924b23e2cc70e5d0091a05d8401d`, the tag's peeled commit and the
+release's Action commit A (tag object
+`6f8b8b7a95f8c6070a0c4bfb1e3ea5a9cb534fe2`). Its Release pyz is 1013508
+bytes, SHA256 `4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2`:
+the asset the release-event receipt built and the public-visitor stage
+downloaded and verified
+([publication record](docs/releases/v0.12.0-publication-verification.md)),
+and the digest the GitHub Releases API reports. The pyz is built from the
+release merge M `ffaf4ed8`; under D-200 the gate binds its members to A's
+`src/checkwash` with `doctor.py`'s own Action pin line set to A, A's two pin
+lines being equal. The proposal run below checked that binding: the public
+pyz's 218 `checkwash/*` members equal A's with that line set, and its CLI
+reports 0.12.0. Since scheme S (D-194) separated the Action pin from the
+release commit, this is the first rotation in which the recommended Action
+pin, the advertised commit and the baseline commit are one commit again, so
+a release-stage receipt's baseline source is the pinned Action checkout
+([RELEASING](docs/RELEASING.md#the-releases-own-action-pin-scheme-s-d-194)).
+
+i198/S1 becomes `block` under the third item. Its Vitest test replaces
+`toBeNull()` with chai's `.to.exist` beside a production edit. v0.11.0
+passed it, taking the production edit as repair evidence for the weakening;
+0.12.0 blocks it, because D-199 refuses that evidence to a JS/TS loosening.
+Its `pass` label came from #198's Acceptance section ("S1, S2, S4, S5 keep
+verdict pass (a warn finding is fine)"), written when #198 was registered on
+2026-10-02, before D-199. With `block`, a later engine that passes the case
+again needs a `known-regression` entry under the label anchor instead of an
+`fp-fix` one. S2, S4 and S5 keep `pass`, and v0.12.0 passes them.
+
+The protected `tests/gates/verdict_gate_accepted.toml` changes only its
+baseline header and comment from v0.11.0 to v0.12.0. It has no `[[accept]]`
+entries; none is added, retired or re-adjudicated. Fixture expectations,
+every other label and the rule that a still-passing block-labelled case
+needs acceptance remain unchanged.
+
+A PJU proposal run of the gate (LAPTOP-01AGNPJU, Windows, CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`; the gate from main `25823bbb`)
+used candidate `70ff0489`, the rotation's pins commit with the new label,
+whose `src/` equals main `25823bbb`'s, with its cases and labels and, as
+its baseline engine, the public v0.12.0 pyz: the copy the public-visitor
+stage downloaded from the Release, whose size and SHA256 equal the pin. It
+ran all 185 cases (159 T1, 26
+T3) in 3 minutes 24 seconds: 161 block -> block, 24 pass -> pass and zero
+reported. Of the 161, 160 are labelled `block`, i198/S1 among them, and
+i197/Q5a keeps its `pass` label (D-188). Its only failure was the blocked
+pin, `baseline-blocked-drift`: v0.12.0 blocks i198/S1, so `baseline_blocked`
+goes from 160 / `40be07fce6801395902303cd2da797d7a4e473ef46d1b8444892d607a2dc4cd0`
+to 161 / `55aed7f5f15d00352d838f49f9d21e86e1f3dffbf09452c3d16455e6dde90245`,
+which adds i198/S1 and removes no case. It proposed no accept entry, engine
+pin, T3 change or canary change, so the run has the shape the second item
+named, and this entry pins the observed set. The canary's 71 block -> pass
+IDs are unchanged. The chai input file is the same blob (`4f363109`) at
+`532f74ab` as at `34555301`, so the 26-case T3 map stays, and the v0.4.2 to
+v0.5.0 canary is not rotated. The run's receipt (SHA256
+`72e8055a4b1a7f48c1c265268e98f3fdf08691331140b508d7f8d1bd6199b0a8`),
+summary and output are kept on `evidence/v0120-rotation-proposal-20261108`
+(`fc7dadc2`). That receipt records the host and the four engines; the
+gate's commit, the runtime, the start and end times and the exit code (1,
+from the blocked-pin failure) come from the run's directory on PJU, which
+was not published.
+
+Hosted test workflows remain disabled. Accepting this configuration requires
+the rotation PR's own PJU release-stage receipt, which downloads the public
+v0.12.0 pyz again and runs the full gate with these pins with zero failures,
+plus the PR's required checks. The proposal run is the basis, not a
+substitute. No public tag change or downstream re-pin is part of this
+rotation.
+
+## D-203 (2026-11-08): toward 1.0: 0.x outreach resumes as a trial; the fifteen frozen P0/P1 issues gate 1.0; #212 is narrowed to a blind rating of 0.12's eleven JS/TS moves and closes with its caveats; #428 closes as fixed; one macOS check per release; the cohort answers are research design, not a frozen protocol; a string-chain test regains its at-limit check, not counted for now as a sixth weakening
+
+**Approval.** Claude wrote this entry in the pull request that records it,
+#597. `DECISIONS.md` and `THREATMODEL.md` are maintainer text (AGENTS.md).
+Nelson's 2026-11-08 answer says that a concrete pull request's L1 and L2
+follow the existing process, and that the answer does not stand in for a
+final diff not yet shown. So the pull request asked him to approve, by name
+and before it merges, this entry with THREATMODEL row 131 (L1) and the
+"What must change before 1.0" section of `docs/stability.md` (L2).
+
+Claude described both texts in the conversation and linked the pull
+request, whose head was then `7a7cb136ec6ca8b7207cd779b84fec16e8222970`,
+after main was taken in. At 2026-11-12T14:07:42Z Claude asked
+「#597 的 L1／L2 核可，收據過了就用 merge commit 合併嗎？」 (approve #597's L1
+and L2, and merge with a merge commit once the receipt passes?), and at
+14:08:05Z he chose 「核可並合併」 (approve and merge). Claude wrote the
+question and both buttons; the other was 「我先看 PR」 (let me look at the
+pull request first).
+
+The answer approves the two texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This `**Approval.**` section was the only change made
+to the entry after `7a7cb136` in #597 (with the question's timestamp
+corrected here from `14:08:05Z` to `14:07:42Z` on 2026-11-15).
+
+**Authority.**
+
+- At 2026-11-08T12:57:56Z Nelson asked 「1.0等我的決定是什麼」 (what are the
+  decisions 1.0 is waiting on from me?).
+- At 13:19:00Z Claude answered, in a Claude Code session on
+  LAPTOP-01AGNPJU, with seven decisions, each with options, their
+  consequences and a recommendation. Claude wrote the list, the options and
+  the recommendations; the message offered no buttons.
+- At 13:24:11Z Nelson answered in three lines: 「重啟對外 上1.0」 (restart
+  outreach; go for 1.0), 「都看過 可以照建議」 (I have read them all; follow
+  the recommendations) and 「macos採用你的建議」 (for macOS, adopt your
+  recommendation).
+- On that answer #212's rating ran and #428 closed (items 3 and 4). At
+  15:18:06Z Claude sent a second list: the rulings only he could make, the
+  questions its drafts raised, with options and recommendations Claude
+  wrote, and a correction of its own estimate of when 1.0 could come.
+- At 15:58:03Z Nelson answered item by item in his own words, beginning
+  「我看過補充評估，這輪照以下決定推進，不要記成「其餘全部照原建議」。」
+  (I have read the supplementary assessment; this round goes ahead on the
+  decisions below; do not record it as "everything else as originally
+  recommended"). He ended
+  「具體 PR 的 L1／L2、正式標註批次及 1.0 發布仍依既有流程；這份回覆不替代尚未呈現的最終 diff 或 1.0 發版核可。」
+  (the concrete pull requests' L1 and L2, the formal labelling batches and
+  the 1.0 release still follow the existing process; this reply does not
+  stand in for a final diff not yet shown or for approval of the 1.0
+  release).
+
+Claude maintains checkwash under Nelson's 2026-10-27 delegation
+(「Checkwash 一樣給你」, with 「一樣我只卡1.0發佈前 其餘你可以自主推」;
+[RELEASING](docs/RELEASING.md)). 「上1.0」 directs the work toward 1.0. It
+is not the explicit one-time authorization for version 1.0.0 that
+AGENTS.md rule 5 requires, and the stop before 1.0 stands. Whose words:
+each Chinese quote in this entry is Nelson's own, at the time given,
+except those marked as Claude's recommendations and the 2026-10-26 row of
+item 8, which is text he pasted. Claude wrote the recommendations, the
+English glosses and everything else in this entry, under the delegation;
+none of it is Nelson's personal review.
+
+**What is decided.**
+
+1. *0.x outreach resumes as a trial with no quantitative quality promise,
+   and the 1.0 quality goals stay.* At 15:58:
+   「先恢復 0.x 對外試用，正式 1.0 的品質目標保留；以下尚待修訂的研究設計，不必全部卡住不帶量化品質承諾的試用招募文。」
+   (first resume 0.x outreach as a trial; the formal 1.0 quality goals
+   stay; the research design below, still to be revised, need not all hold
+   up a recruiting post for the trial that makes no quantitative quality
+   promise). A trial result is not 1.0 acceptance evidence (item 8,
+   question 1), and the outreach itself is not tracked in this repository.
+   On the post he wrote
+   「這輪不為現稿擴大 benchmarks 的數字准入規則。」
+   (this round does not widen benchmarks' admission rule for numbers for
+   the current draft), so `benchmarks/README.md`'s rule for numbers in a
+   launch post stays as it is, and 「README 第一屏這次不改。」 (the README's
+   first screen does not change this time). His other answers on the
+   post's wording and on the threshold the outreach is to pre-register,
+   which is not frozen yet, concern no file here.
+2. *The fifteen frozen P0/P1 issues are a precondition for 1.0, not for
+   outreach.* Claude recommended
+   「不當對外的前提，改當 1.0 的前提。」
+   (not a precondition for outreach; make it one for 1.0), and
+   「都看過 可以照建議」 adopted it. They are the fifteen open P0/P1 issues
+   read on 2026-10-18 that R1 of the 2026-10-19 ruling lists
+   ([#419](https://github.com/taipei49314/checkwash/issues/419#issuecomment-6261642679)):
+   #212, #414, #416, #418, #419, #421, #422, #424, #428, #429, #431, #432,
+   #456, #462 and #496. On 2026-11-08 fourteen are closed, #419 as D-191's
+   documented residual and #428 under item 4, and #212 closes on this
+   entry (item 3). A closed issue is not a fixed cost; item 3's caveats say
+   so for #212.
+3. *#212 is narrowed to a blind rating of the eleven JS/TS commits that
+   0.12.0 moved from pass to block, and closes with three caveats.*
+
+   *The design.* Claude recommended
+   「兩個盲評 agent 只評那 11 筆，分歧由你裁決。建議一個用 Claude 子 agent、一個用 Argon，換一個模型家族」
+   (two blind rater agents rate only those eleven, and he rules where they
+   disagree; one a Claude sub-agent and one Argon, another model family)
+   and said
+   「但這改掉了原本選的設計和範圍，Argon 也超出 11-04 定的使用範圍，要你明說。」
+   (but this changes the design and scope chosen before, and Argon goes
+   beyond the use set on 2026-11-04, so he must say so explicitly). His
+   13:24 answer adopted it, and at 15:58 he wrote
+   「同意將 POLICY 中 #212 的舊設計改為本次具名的兩位盲評、由我裁分歧；同意關閉 EC PR #226，T-602、T-603 以 `CANCELLED` 退場，保留原準備成果、失敗紀錄與歷史授權狀態。」
+   (he agrees to change #212's old design in POLICY to the two blind
+   raters named this time, with him settling disagreements; he agrees to
+   close EC PR #226 and to retire EC T-602 and T-603 as `CANCELLED`,
+   keeping their preparation, their failure records and their historical
+   authorization state), and on Argon
+   「Argon 用途限本次 #212 及之後具名的 cohort 標註；正式標註批次仍到時具名核可，不擴成通用模型批次授權。」
+   (Argon's use is limited to this #212 rating and to cohort labelling
+   named later; a formal labelling batch is still approved by name when it
+   comes, and this is no general authorization for model batches). This
+   replaces the design chosen on 2026-10-19 (R21, R30): two raters over the
+   55 commits that the report-only counterfactual cf-js131 moved, as
+   independent agents on the estate's pool with arbitration
+   ([testing on PJU](docs/testing-on-pju.md)). The estate recorded the
+   change the same day: EC POLICY commit `227236bc` (EC T-646) adds the row
+   `checkwash-212-blind-raters-20261108`, which replaces only the #212
+   sentence of `checkwash-pju-tests`; EC T-602 and T-603 were retired as
+   `CANCELLED`, and EC PR #226 was closed.
+
+   *The eleven* are the JS/TS commits of #212's fixed 1,800 that 0.12.0
+   blocks and v0.11.0 passed
+   ([RELEASING](docs/RELEASING.md#v0120-release-under-the-pre-10-delegation-2026-11-07);
+   THREATMODEL row 131): hono `5463db27`, `c831020f` and `f0b094db`;
+   typeorm `324c46cd`, `46d5b843`, `b9aa8355`, `c6745f3d`, `df09802e` and
+   `ff00a3cd`; undici `2764d996`; and vue-core `8b44b021`. All eleven are
+   among cf-js131's 55 (its frozen case manifest, checkwash-lab
+   `cee6b8b7`); the other 44 are not rated.
+
+   *Fixed before the rating.* Commit `cac11989` of the private
+   checkwash-lab repository (branch `evidence/cw212-rating-20261108`,
+   2026-11-08T13:37:59Z) holds the packet, which Claude assembled from
+   upstream diffs and messages, and the rubric, which Claude wrote. The
+   packet has each commit's diff against its first parent and its verbatim
+   message, read from the GitHub API, with a trimmed copy of undici
+   `2764d996`'s diff to read first, and no checkwash output.
+   The rubric asks whether the commit reduces what its tests verify (Q1)
+   and whether a deliberate change in the same commit, visible in its
+   production diff or its message, explains each reduction (Q2), and it
+   derives the verdict: `PASS_EXPECTED` when nothing is reduced or every
+   reduction is explained, `BLOCK_EXPECTED` when one is not, `UNCLEAR`
+   otherwise; `honest_but_weaker` marks a commit whose every reduction is
+   explained though its tests check less. It names the raters, a Claude
+   Code sub-agent (Claude Opus 5.5) and Gemini 4 Argon (High) through the
+   Antigravity CLI, neither of whom sees the other's labels or any
+   checkwash output; an agreed verdict stands, and a disagreement goes to
+   Nelson. It says that the eleven are not a random sample, so a count over
+   them is not a rate, and that no count changes checkwash by itself: any
+   change it suggests is a separate decision for Nelson. It registers no
+   decision line. R30's line was registered for cf-js131's 55 and is not
+   applied to the eleven, and none is added after the fact. After rater A
+   was dispatched (13:38:40Z) and the runner's secret scan refused Argon's
+   first attempt, `5175d6a6` (13:39:07Z) changed only Argon's
+   `request.md`, which rater A was not given, to record why the run allows
+   two secret-scan hits, base64 WebAssembly modules in undici's vendored
+   parser files; this was before the Argon run (13:39:14Z).
+
+   *After the fact.* The ratings ran on the 13:24 answer. The explicit word
+   that Claude's recommendation asked for, on the changed design and on
+   Argon, came at 15:58, after both ratings had run, so EC POLICY's row is
+   an after-the-fact record of the design, not a pre-registration. While
+   the ratings ran, EC POLICY `checkwash-pju-tests` still named the pool
+   design. Both
+   raters ran on LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`;
+   receipt `c90708e4`). Rater A was dispatched at 13:38:40Z, and the Argon
+   run (agy 1.5.3, exit 0, 30 file reads, none denied) ran from 13:39:14Z to
+   13:53:43Z. Both ratings, the run's receipts and the comparison were saved
+   at `c61702b9` (14:00:25Z); the comparison says that its column of
+   checkwash's findings was added only after both ratings were saved. The
+   verdicts agreed on ten, all `PASS_EXPECTED`. On vue-core `8b44b021`
+   rater A gave `UNCLEAR` and rater B `BLOCK_EXPECTED`, and on typeorm
+   `ff00a3cd` they differed only in `honest_but_weaker`. Nelson ruled both
+   at 15:58:
+   「第 11 筆 Vue：判 `UNCLEAR`。 斷言確實放寬，但已有 transitionstart 時序註解及依賴更新。缺少這次升級與測試修改的因果證據，不等於已證實沒有正當理由。保留原盲評；之後補證據時另記補充判讀。」
+   (commit 11, Vue: `UNCLEAR`; the assertion was loosened, but there are a
+   comment on transitionstart timing and a dependency update; lacking
+   causal evidence that links this upgrade and the test change is not
+   proof that there was no good reason; the blind ratings stay, and
+   evidence found later is recorded as a separate supplementary reading)
+   and
+   「第 9 筆 TypeORM：維持 `PASS_EXPECTED`，`honest_but_weaker=true`。 按這份 rubric 的歷史覆蓋口徑，被移除 API 的行為確實不再受測，但同 commit 移除 API，理由正當。這不代表現存 API 的測試品質退步。」
+   (commit 9, TypeORM: `PASS_EXPECTED` stays, with `honest_but_weaker`
+   true; by this rubric's reading of historical coverage, the removed API's
+   behaviour is no longer tested, but the same commit removes the API,
+   which is a good reason; it does not mean the tests of the APIs that
+   remain got weaker). `arbitration.md` at `e1f7119a` records the rulings
+   (its sentence on cf-js131's 55 corrected at `445f6225`) and the result: `PASS_EXPECTED` 10, `BLOCK_EXPECTED` 0, `UNCLEAR` 1;
+   `honest_but_weaker` 7 (hono `c831020f` and `f0b094db`, typeorm
+   `324c46cd`, `46d5b843`, `c6745f3d` and `ff00a3cd`, undici `2764d996`).
+   For hono `5463db27` and typeorm `b9aa8355` and `df09802e` both raters
+   found no reduction at all, while 0.12.0 raised high `ASSERT_WEAKENED`
+   findings on them; whether those findings misread the tests is not ruled
+   here. The result is on
+   [#212](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6723728427),
+   with its execution receipt in the
+   [next comment](https://github.com/taipei49314/checkwash/issues/212#issuecomment-6724069716).
+
+   *Closing, also after the fact.* At 15:58:
+   「#212 可以在結果、範圍變更及殘餘完成記錄後關閉，但要明寫：」
+   (#212 may close once the result, the change of scope and the residual
+   are recorded, but it must say plainly:)
+   「這是選定的 11 筆，不是一般誤擋率。」
+   (these are 11 selected commits, not a general false-block rate),
+   「其中 10 筆兩位均判應放行，實際卻新增阻擋；即使部分屬產品刻意攔下的誠實變弱，仍是使用者的審查／豁免成本。」
+   (both raters judged 10 of them as commits that should pass, yet they are
+   newly blocked; even where some are honest weakenings the product stops
+   on purpose, each is a review or exemption cost to users) and
+   「關閉 issue 不代表這項成本已修好，也不代表原本 55 筆全部完成評審。」
+   (closing the issue does not mean this cost is fixed, nor that all of the
+   original 55 were reviewed). This entry, STATE, the #212 row of
+   KNOWN-ISSUES-next, THREATMODEL row 131 and the JS/TS replay's selection
+   record carry the result, the change of scope and the residual with
+   those caveats. #212 closes after this pull request merges, and its
+   closing comment repeats them. Recording the residual is not its
+   acceptance for 1.0, which item 6 leaves to the residual register. The
+   rubric also says the result is recorded in that register; the register
+   is Claude's draft outside this repository, not changed by this entry,
+   and #212's result goes into it before the 1.0 candidate.
+4. *#428 closes as fixed.* Its fix shipped in v0.9.0. Claude recommended
+   「算已修：v0.9.0 的合併 sweep 有 4,818 列，沒有任何判決改變。剩下的量測移進 #504（1.0 之後），關掉 #428」
+   (treat it as fixed: v0.9.0's combined sweep has 4,818 rows and no
+   verdict changed; move the remaining measurements to #504, after 1.0,
+   and close #428), and 「都看過 可以照建議」 adopted it. #428 closed as
+   completed at 2026-11-08T13:29:26Z, with this decision in its
+   [closing comment](https://github.com/taipei49314/checkwash/issues/428#issuecomment-6722098644),
+   and [#504](https://github.com/taipei49314/checkwash/issues/504)'s body
+   lists the measurements #428 kept open as not scheduled before 1.0:
+   D-152's targeted selection over the 13 in-sample JS histories (S1) with
+   its engine replay (S2), and the review of E1's Jest, Vitest and Bun
+   empty-table observations. No new scan runs: the estate's prepared scan,
+   EC T-602, is retired (item 3). The residuals stay where they are stated:
+   `describe.each` rows in THREATMODEL rows 108 and 157, the rest in
+   KNOWN-ISSUES.
+5. *One macOS verification per release; its workflow comes in its own
+   pull request.* Claude recommended
+   「改 POLICY，每次發版對 M 跑一次 GitHub 代管的 macOS」
+   (change the policy so that each release runs GitHub-hosted macOS once
+   against M), with a one-time try of the Claude Code hooks on a real Mac
+   that Nelson borrows, and
+   「D-170 的那兩個測試一起決定」
+   (decide D-170's two tests together), and 「macos採用你的建議」 adopted
+   it. At 15:58 he set its scope:
+   「同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次；先把設計及 workflow 補完整：」
+   (one macOS verification per release, and one catch-up run for v0.12.0;
+   complete the design and the workflow first:)
+   「除完整測試和語料比對，須驗實際將發布／已發布的 wheel、pyz，記錄 SHA256。」
+   (besides the full tests and the corpus comparison, verify the wheel and
+   the pyz actually to be published or already published, and record their
+   SHA256),
+   「v0.12.0 優先用原已發布成品。同一個 M 重建，若未證明 bytes 相同，只能稱重建成品驗證。」
+   (for v0.12.0, prefer the artifacts already published; a rebuild from the
+   same M is only a verification of rebuilt artifacts unless its bytes are
+   shown to be the same),
+   「明定產品測試失敗與 `NOT_RUN` 如何影響發版。「不是 branch required status」不表示可以忽略失敗。」
+   (state how a product test failure and `NOT_RUN` affect a release; not
+   being a branch's required status does not mean that a failure can be
+   ignored),
+   「D-170 選 A，保留兩個效能預算的 skip，清楚揭露 Mac 這兩項未驗；Windows／Linux 結果不當成 Mac 效能證明。」
+   (D-170: option A; the two performance budgets stay skipped, with a plain
+   disclosure that these two are not verified on a Mac; Windows and Linux
+   results are not evidence of Mac performance),
+   「POLICY、CLAUDE.md 及相關規則同步實際採用的範圍。」
+   (EC POLICY, CLAUDE.md and the related rules follow the scope actually
+   adopted) and
+   「借 Mac 手測 hook 仍作一次性觀察記錄，不替代正式成品驗證。」
+   (testing the hooks by hand on a borrowed Mac stays a one-time
+   observation and does not replace the formal verification of the
+   artifacts). So the two budget checks of `tests/gates/test_perf.py` stay
+   skipped on macOS at 1.0: D-170 kept them skipped "until they are
+   revisited before 1.0", this is that revisit, and the file does not
+   change. The workflow, what it runs, how its result enters a release's
+   record and how a failure or `NOT_RUN` affects the release come with the
+   pull request that adds it, together with the documents that describe
+   the two skips. Until EC POLICY `checkwash-pju-tests`
+   ([testing on PJU](docs/testing-on-pju.md)), which keeps checkwash's
+   tests on LAPTOP-01AGNPJU with no hosted fallback, allows the run, macOS
+   stays NOT_RUN, as for v0.10.0 to v0.12.0; changing that policy is the
+   estate's step. The hook test on a borrowed Mac is recorded as a one-time
+   observation, not as release evidence. This entry adds no workflow.
+6. *1.0's residuals are accepted item by item at the 1.0 candidate.*
+   Claude recommended
+   「我整理成一頁「1.0 殘餘清單」，你看完核可一次」
+   (Claude compiles a one-page "1.0 residual list", and he approves it once
+   after reading it), and 「都看過 可以照建議」 adopted it. At 15:58 he set
+   when and how:
+   「04 殘餘清單留到候選版時再核可，不能用 Closed／Partly closed 的總數代替逐項風險接受。」
+   (the residual list, Claude's draft numbered 04, waits for approval until
+   the candidate, and a total of Closed or Partly closed rows cannot stand
+   in for accepting each risk item by item). The register is not in this
+   repository, and this entry approves none of it. Each delegated
+   acceptance so far excludes 1.0: each D-176 disposition "does not
+   authorize 1.0".
+7. *1.x keeps the fingerprint rule.* Claude recommended
+   「1.x 照 0.x 的規則 → 偵測器可以照常修，但升 minor 時，使用者的豁免可能失效。」
+   (1.x keeps 0.x's rule: detectors can be fixed as usual, but on a minor
+   upgrade users' exemptions may stop matching) and
+   「分類欄位等真的有嵌入者再做。」
+   (the classification field waits until there really is an embedder), and
+   「都看過 可以照建議」 adopted both. So in 1.x, as now, a minor release
+   may move fingerprints in any namespace, its decision entry and release
+   notes naming the rules and shapes that move, and within one minor line a
+   recorded exemption keeps matching
+   ([stability](docs/stability.md#fingerprint-stability)). The optional
+   classification field, proposed in a text Nelson pasted on 2026-10-26,
+   waits for an embedder who needs it.
+8. *The adoption floor and the study design are research-design
+   decisions, not a frozen protocol.* At 15:58 he answered the nine cohort
+   questions of Claude's second list; Claude wrote the questions, their
+   options and the recommendations. His answers, with Claude's glosses:
+   1. 「第 1 題：同意分兩段。 先做 0.x 試用；固定候選版後另開正式輪，試用結果不冒充正式驗收。」
+      (two stages: a 0.x trial first, then, once a candidate is fixed, a
+      formal round of its own; trial results do not pass for formal
+      acceptance)
+   2. 「第 2 題：同意。 採用者主動加入、同意資料用途，我對該倉沒有寫入權；招募時說清楚資料、模型處理與計時負擔。」
+      (adopters join on their own initiative and agree to the use of their
+      data, and he has no write access to their repositories; recruiting
+      states plainly the data, the model processing and the timing burden)
+   3. 「第 3 題：修改後採用。 被拿去修工具的倉仍保留在採用及健康紀錄，分暴露／未暴露層呈現，不能把出問題的倉剔除後只報順利者。是否能計入 A 的新證據，先解決 SPEC §10／G15；改叫 `new evidence (PR-unit)` 不會自行取得資格。」
+      (adopted with a change: a repository whose reports are used to fix
+      the tool stays in the adoption and health records, shown in exposed
+      and unexposed strata, and the repositories with problems cannot be
+      dropped to report only the smooth ones; whether such a repository
+      counts as new evidence for A waits until SPEC §10 and the draft
+      specification's G15 are resolved, and calling it
+      `new evidence (PR-unit)` does not qualify it by itself)
+   4. 「第 4 題：20 可作活躍度下限。 不把它說成與舊每倉 100 等價，也不只憑較晚交接筆記自動覆蓋舊批准。正式 1.0 採用門檻隨整套方案定稿；若取代舊決定，明記取代範圍。「人類按合併」也不自動等於實質審查。」
+      (20 can serve as an activity floor; it is not to be called equivalent
+      to the old 100 per repository, and a later handover note does not by
+      itself override the old approval; the formal 1.0 adoption threshold
+      is settled with the whole design, and if it replaces an old decision
+      it states what it replaces; a human pressing merge is not by itself a
+      substantive review)
+   5. 「第 5 題：先修改。 使用者關閉或撤回 PR 要另列為放棄，不能直接算誤擋成功解除；最終 100% 跑完不能取代完成時限。事件少可以不設不穩定的 p95 門檻，但仍保留逐筆等待、最大成本與放棄紀錄。」
+      (revise first: a pull request its user closes or withdraws is listed
+      apart as abandoned, not counted as a false block resolved; completing
+      100% in the end does not replace a time limit for completing; with
+      few events an unstable p95 threshold may be left out, but each wait,
+      the largest cost and the abandonments are still recorded)
+   6. 「第 6 題：暫不鎖定 100 筆／180 天。 先從試用確認正常重構流量和記錄負擔，再定正式數量、期限及追蹤結束條件。」
+      (100 pull requests and 180 days are not locked yet; the trial first
+      shows the flow of normal refactors and the recording burden, and then
+      the formal count, the deadline and the end of tracking are set)
+   7. 「第 7 題：同意雙模型初標的設計，但補人類盲抽一致案例。 不能只裁分歧而完全不查共同偏誤。Argon 用途限本次 #212 及之後具名的 cohort 標註；正式標註批次仍到時具名核可，不擴成通用模型批次授權。」
+      (two models label first, and a human also samples, blind, cases where
+      they agree; settling only the disagreements without checking for a
+      shared bias is not enough; Argon's limits as in item 3)
+   8. 「第 8 題：同意 PJU 標準化重跑。 同時保留實際採用中的首次結果、延遲與人工成本，不能用重跑結果替代真實困擾。」
+      (a standardized rerun on PJU, keeping the first results, the delays
+      and the human cost seen in actual adoption; a rerun's result cannot
+      replace the trouble users really met)
+   9. 「第 9 題：與第 6 題一起重整。 2% 可以是觀察樣本的驗收尺，不能宣稱證明母體誤擋率不超過 2%；最低 100 筆先不要獨立定死。」
+      (reworked with question 6: 2% can be the acceptance ruler for the
+      observed sample, but cannot be claimed to prove that the population's
+      false-block rate is at most 2%; a minimum of 100 is not to be fixed
+      on its own yet)
+
+   He also corrected Claude's 15:18 message:
+   「請修正「工時改只揭露就能加快」的說明：A 的 cohort 層若仍要求 100 筆，取消 B 工時門檻也不會解除等待。 8～33 個月只是依假設推算，不是實測預測。本輪不藉此自動取消既有品質目標。」
+   (correct the statement that making the time measure disclosure-only
+   would make things faster: if A's cohort layer still requires 100,
+   cancelling B's time threshold does not end the wait; 8 to 33 months is
+   only an extrapolation from assumptions, not a measured prediction; this
+   round does not use it to cancel the existing quality goals). Claude's
+   message had said that 1.0 waits for at least 100 normal refactor pull
+   requests from the natural cohort on the 1.0 candidate, that with only
+   minimal traffic this would take 8 to 33 months, from a share of normal
+   refactors that was assumed, not measured, and that making the time
+   measure disclosure-only would shorten the wait.
+
+   A and B are the first two measures of the refactor-cost row of a
+   proposal that Nelson pasted on 2026-10-26 at 08:10:02Z, under his words
+   「這邊一樣 先討論」 (same here, discuss first); it was drafted outside that
+   Claude session, which does not record by whom. The row reads
+   「以 1.0 候選版的確切 SHA，依指定版本的計算協定驗證：新證據上的 unnecessary merge-block rate on normal refactors ≤2%；自然採用中的實測人工成本平均 ≤30 秒／合格 PR；完整揭露固定 60 案的歷史回歸結果。樣本不足或關鍵結果缺測不得記為通過。」
+   (verified on the exact SHA of the 1.0 candidate under a pinned version
+   of the measurement protocol: on new evidence, an unnecessary
+   merge-block rate on normal refactors of at most 2%; in natural
+   adoption, measured human handling cost averaging at most 30 seconds per
+   qualifying PR; full disclosure of the fixed 60 cases' historical
+   regression results; insufficient samples or missing key results are not
+   a pass). At 08:12:15Z he answered Claude's four questions on it, ending
+   「可以開完整規格了」 (go ahead with the full specification). Claude's draft
+   protocol of that day names the first measure A and the second B; it is
+   not in this repository and is not frozen. Claude reads this row as the
+   quality goals that item 1 keeps; question 9 sets how its 2% is read.
+
+   The old 100 of question 4 is the estate's record EC T-157 (D1): three
+   repositories, 30 consecutive days each and at least 100 reviewed
+   changes each, with health thresholds (D3), drafted by Codex on
+   2026-09-06 and recorded as approved on 2026-09-07 by a Claude session
+   on LAPTOP-16NUA5I8 on Nelson's 「6條都幫我搞定 授權」 (get all six done
+   for me; authorized). The 20 is the figure of stability's adoption-study
+   proposal. On 2026-10-14 Claude asked whether the adoption study's
+   thresholds pass as proposed, Nelson answered
+   「照建議，先修 #414 和 #415」 (as recommended; fix #414 and #415 first),
+   and Claude's handover notes of 2026-10-15 recorded the 20 as his
+   threshold. Neither figure was ever in this repository as an adopted
+   threshold. Stability's 1.0 section now says that 20 is an activity floor
+   only and points here.
+
+   None of these answers is a frozen protocol: no sample size, duration,
+   stopping rule or threshold is fixed in this repository, and nothing is
+   measured against the goals until a protocol is frozen here. A formal
+   labelling batch is approved by name when it comes (question 7).
+9. *A string-chain test regains its at-limit check, and replay item 392
+   is not counted, for now, as a sixth unexplained weakening.* At 15:58:
+   「同意補回 forced-fallback 路徑在剛好達到 node limit 時仍成功的驗證，保留新版 path／side 及錯誤訊息檢查，不要整段回退。」
+   (put back the check that the forced-fallback path still succeeds when
+   the node count is exactly at the limit, keep the newer path, side and
+   error-message checks, and do not revert the whole block) and
+   「但先不要把它算成第六筆無理由弱化。packet 截掉了重要任務內容，完整紀錄有恢復 #391 測試的脈絡。保留 packet-only 標籤與完整脈絡判讀的區別；補測試不自動等於確認「完全沒有理由」。」
+   (but do not count it yet as a sixth weakening without a reason: the
+   packet cut important task content, and the full record shows the
+   context of restoring #391's tests; keep the packet-only label apart
+   from the full-context reading; putting the test back does not by itself
+   confirm that there was no reason at all).
+
+   Replay item 392 of the 2026-10-28 session replay (D-189's *Why*; D-195
+   names its repository) is an agent edit of 2026-10-14T03:08:38Z to
+   `test_subject_counts_the_complete_reconstructed_tree` in
+   `tests/test_string_chain_syntax.py`. Reading only its packet, both of
+   Claude's labelling passes called it a loosening with no reason in its
+   context. The packet clips the sub-agent's task text, which the parent
+   Claude session's workflow computed. The full transcript shows that task:
+   rebuild the closed draft #391 on #439, taking "#391's five new test
+   files" and restoring "#391's side=/path= keywords and #389-style message
+   expectations where the earlier port had rewritten them for main". The
+   edit replaced the earlier port's form of this test, from a local commit
+   `207b9ad6` (2026-10-14T10:43:22+08:00) that was never pushed, which
+   anchored main's old refusal message and, beyond #391, also checked that
+   the fallback's tree is read at exactly the limit, with #391's own test:
+   the function main has had since `37d59b7c` (merged with #441) is the
+   one at #391's head `e63ba5b5`, line for line. The at-limit check was
+   never in #391 or on main.
+
+   The test now checks again, after the over-limit refusal with its path,
+   side and count, that with the limit set to the node count `_syntax`
+   reads the forced fallback's complete tree, called with the same path
+   and side keywords, and that the first parse failed and the fallback
+   parsed again. Other tests read a tree at exactly the limit only through
+   a native parse:
+   `tests/test_standin_source_limits.py::test_real_trees_at_and_below_the_ruled_limit_are_readable`
+   for this pass and
+   `tests/test_issue469_limit_messages.py::test_trees_up_to_the_shared_limit_are_read`
+   for the subject-replacement pass; on the fallback path the count was
+   pinned only through the refusal's message. No test is added, so the
+   documented test count does not move. The replay's labels are not
+   changed, and this entry does not rule on the edit's reason.
+
+**Not changed.** No `src/`, SPEC, `tests/gates`, fixture, label, workflow
+or `benchmarks/README.md` change. THREATMODEL changes only row 131's
+verdict sentence on JS/TS adjudication and its prose on the eleven. Row
+157 still names D-152's sweep for the new blocks on honest table edits,
+whose measurements are now listed on #504 (item 4); whether that row
+changes is Nelson's to decide. Row 2 still says that none of D-199's
+eleven JS/TS moves is adjudicated; on 2026-11-07 Nelson kept row 2 and
+item 4 as they were (「先不要改」), so it is unchanged here, and whether it
+now changes is his to decide. `docs/testing-on-pju.md` changes only its
+restatement of EC POLICY's sentence on #212's raters, to follow the
+estate's POLICY commit (item 3). RELEASING's stop before 1.0 and its
+fixed-corpus step, and AGENTS.md, are unchanged. No cohort protocol, sample size, duration
+or threshold is frozen, and stability's table carries none of the
+2026-10-26 numbers. The residual register (item 6) is not approved.
+
+**Maintainer text.** This entry and THREATMODEL row 131 (L1). The pull
+request also changes STATE, stability's 1.0 section (L2), two
+KNOWN-ISSUES-next rows, one sentence of `docs/testing-on-pju.md`, one dated
+note in the JS/TS replay's selection record and one test in
+`tests/test_string_chain_syntax.py`; none of them is agent-read-only.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): `tests/test_string_chain_syntax.py`,
+`tests/test_standin_source_limits.py`, `tests/test_docs_links.py`,
+`tests/test_documentation_contracts.py`, `tests/test_state_claims.py` (the
+failures ledger included), `tests/test_threatmodel_pinned.py` and
+`tests/test_packaging.py`'s documented count; in a scratch copy, the
+restored check under the mutation `nodes >= _MAX_SOURCE_NODES` in
+`_syntax`, which by reading fails it while the refusal check beside it
+still passes; checkwash's own check on the pull request's range at
+`--fail-on high`; and the pull request's PJU receipt, whose intake sets the
+four required checks. Other platforms: NOT_RUN.
+
+## D-204 (2026-11-11): one hosted verification per release, on GitHub-hosted macOS and Linux, in two checkpoints; the macOS skip of the two budget checks kept at 1.0
+
+**Approval.** Claude wrote this entry in the pull request that implements
+it, #599. `DECISIONS.md` is maintainer text (AGENTS.md), and Nelson's
+2026-11-08 answer says that a concrete pull request's L1 and L2 follow the
+existing process, so the pull request asked him to approve this entry (L1)
+with the Determinism row of `docs/stability.md` (L2). Claude sent him both
+texts as they stood at `30b83d075d7ebaf0257d9833e409bf9e2d6c6ffe`, and at
+2026-11-11T13:58:22Z, to Claude's question
+「D-204（L1）和 stability 的 Determinism 列（L2）照 PR 的文字核可嗎？」 (approve
+D-204 (L1) and stability's Determinism row (L2) as the pull request words
+them?), he chose 「核可 L1 和 L2」 (approve L1 and L2). Claude wrote the
+question and both buttons; the other was 「我先看文字」 (let me read the text
+first). The answer approves the two texts, not the merge. This paragraph is
+the only change made to the entry after it.
+
+**What was asked.** On 2026-11-08 Claude listed the decisions checkwash 1.0
+waits for, with options and a recommendation for each; Claude wrote the
+list, the options and the recommendations. Item 4, on macOS, offered as
+option A 「改 POLICY，每次發版對 M 跑一次 GitHub 代管的 macOS」 (change POLICY
+so that each release runs one GitHub-hosted macOS check against M) and
+recommended 「A，再加上發文前借一台真的 Mac，測一次 Claude Code hook（跟今天給你的建議一樣）。D-170 的那兩個測試一起決定。」
+(A, and before the post borrow a real Mac to test the Claude Code hooks
+once; decide D-170's two tests with it). At 13:24:11Z Nelson answered,
+among two other lines, 「macos採用你的建議」 (for macOS, adopt your
+recommendation). At 15:58:03Z he wrote of macOS:
+
+> 同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次；先把設計及 workflow 補完整：
+>
+> * 除完整測試和語料比對，須驗實際將發布／已發布的 wheel、pyz，記錄 SHA256。
+> * v0.12.0 優先用原已發布成品。同一個 M 重建，若未證明 bytes 相同，只能稱重建成品驗證。
+> * 明定產品測試失敗與 `NOT_RUN` 如何影響發版。「不是 branch required status」不表示可以忽略失敗。
+> * D-170 選 A，保留兩個效能預算的 skip，清楚揭露 Mac 這兩項未驗；Windows／Linux 結果不當成 Mac 效能證明。
+> * POLICY、CLAUDE.md 及相關規則同步實際採用的範圍。
+> * 借 Mac 手測 hook 仍作一次性觀察記錄，不替代正式成品驗證。
+
+(Claude's translation: agreed to one macOS verification per release, and to
+one run for v0.12.0; complete the design and the workflow first. Besides the
+full tests and the corpus comparison, verify the wheel and pyz that will be
+or have been published, recording their SHA256. For v0.12.0 prefer the
+files originally published; a rebuild from the same M whose bytes are not
+proven equal may only be called a rebuilt-artifact verification. State how
+a product test failure and `NOT_RUN` affect a release; "not a branch
+required status" does not mean a failure may be ignored. D-170: option A,
+keep the two performance-budget skips and disclose clearly that these two
+are not verified on a Mac; Windows and Linux results are not taken as Mac
+performance evidence. Bring POLICY, CLAUDE.md and the related rules in line
+with the scope actually adopted. The hand test of the hooks on a borrowed
+Mac stays a one-time observation and does not replace the formal
+verification of the published files.)
+
+On 2026-11-10 Nelson asked for a fresh review of the project
+(「從新審一次checkwash」). Its plan, which Claude wrote, asked whether the
+hosted verification should cover macOS only or Linux too, and offered as
+D-甲 「同一個新 workflow，每版一次，跑 macOS 和 Linux 兩條，Linux 那條順便用真的 Action 跑一次 README 的設定。」
+(one new workflow, once per release, running macOS and Linux, the Linux
+side also running the real Action once with the README's setup). On
+2026-11-11 he answered the plan's table of direction questions with six
+lines, one of them 「G3 D」. Claude asked 「G3 的「D」是指 D-甲（每版一次，macOS 和 Linux 都跑）嗎？」
+with the buttons 「是，D-甲」 and 「D-乙，只補 macOS」, and he answered
+「是，D-甲」 (02:51:04Z). To 「要我現在把 macOS 設計稿改寫成含 Linux 的版本嗎？」
+(shall I rewrite the macOS design to include Linux now?) he answered
+「開始改設計」 (start rewriting the design). Claude rewrote the design, had
+one sub-agent review it, and put nine questions with a recommendation for
+each. To 「02c 第 11 節除 POLICY 列以外的八題，都照建議嗎？」 (the eight
+questions of section 11 other than the POLICY row: all as recommended?),
+with the buttons 「都照建議」 and 「我逐題答」, he answered 「都照建議」
+(11:38:11Z). To 「POLICY 列照 02c 第 8.1 節入帳，然後照順序開始做嗎？」 (enter
+the POLICY row as in section 8.1 of 02c, then start in order?), with the
+buttons 「照這樣入帳並開始」 and 「我先看列的文字」, he answered
+「照這樣入帳並開始」 (enter it like this and start; 11:46:59Z). A review
+before the row was entered found two statements in it wrong: the date of
+Claude's options and the sentence on the job's token. Claude asked
+「POLICY 列要照這兩處更正後再入帳嗎？」 with the buttons 「照兩處更正入帳」 and
+「照原文入帳」, and he answered 「照兩處更正入帳」 (enter it with the two
+corrections; 12:23:16Z). The row was entered with both corrections, at EC
+commit `a46c91f68cc5daf0c30ce809afc5f6b5f8519c7f`. Claude wrote every
+question and button. The nine questions and the recommendations are in the
+evidence of EC T-647,
+`evidence/requests/baeb05f5-7bb3-4682-8d7b-e5d33c56eb4e/checkwash-hosted-policy-authority.md`.
+
+**Decision.**
+
+1. *One verification, two checkpoints, two systems (question 1).*
+   `.github/workflows/release-hosted.yml`, dispatched only, from main, on
+   LAPTOP-01AGNPJU, and holding `contents: read` only, verifies each release
+   once on GitHub-hosted `macos-latest` and `ubuntu-latest` with Python 3.11
+   to 3.13, in two checkpoints dispatched separately. `source-at-M` runs once
+   M is on main and before the tag: the whole suite, the source
+   assertion-contract qualification and the fixed corpus at M on six legs,
+   and the composite Action at A once on `ubuntu-latest` with Python 3.12 on
+   M's release range. `published-artifacts` runs once `publish-assets` has
+   attached the Release's files and before Nelson is asked to approve the
+   `pypi` deployment: the published wheel, sdist and pyz are checked against
+   the release record and downloaded on six legs, the wheel installed and
+   run, the pyz run, both qualified, and all three inventoried against M;
+   the sdist is not installed. One `both` dispatch is only for a version
+   published before the workflow existed. The workflow rebuilds none of the
+   published files; the Action builds its own engine from A, as it does for
+   any user. EC POLICY `checkwash-release-hosted-verification-20261111` (EC
+   T-647) allows the hosted runs;
+   [RELEASING, "Hosted release verification"](docs/RELEASING.md#hosted-release-verification)
+   has the checks.
+2. *A failure stops the release, and is reported to Nelson.* No tag after a
+   failed `source-at-M`. After a failed `published-artifacts`: no request
+   for the PyPI approval, no step-8 pin promotion, the notice below in the
+   Release notes, the fix in a new version, and the tag and the Release left
+   as they are (not moved, deleted or marked prerelease; their files not
+   deleted or replaced). A failure includes a timing test that fails on a
+   hosted runner, and Claude reports the measured seconds (question 7); on
+   Linux the two perf-gate budget checks must run and pass, and on macOS
+   they must be skipped for their recorded reason. When the release has a
+   PJU six-leg batch, a Linux leg whose test-case count differs from the
+   batch's for the same tree is a failure too; Claude checks that from the
+   legs' summaries. No run is repeated to obtain a pass. Only a runner,
+   GitHub or PyPI service failure, including a cancellation by GitHub that
+   neither a timeout nor a person caused, allows one rerun of the whole run.
+   A run that refuses its own dispatch before any test (a malformed input, a
+   dispatch from another branch, or one before `publish-assets` attached the
+   files) is recorded and dispatched again. An unavailable hosted runner
+   leaves its legs `NOT_RUN`; no self-hosted, larger or paid runner stands
+   in. Nelson may decide another remedy than these.
+3. *The notice (question 2).* Question 2 proposed the macOS design's
+   notice with a new heading and the rest unchanged, and Nelson agreed.
+   Claude then also changed the second sentence, which said "the hosted
+   macOS verification", to name the system, to match the heading; that
+   change is part of what approving this entry approves. The notice reads:
+
+   > **Hosted verification failed for this release (〔macOS／Linux〕).** Its
+   > published files failed the hosted verification on 〔macOS／Linux〕 (run
+   > 〔id〕, 〔date〕): 〔one line〕. This version was not published to PyPI
+   > and is not the version the README recommends; the fix ships as
+   > v〔next〕. Details: 〔link to the RELEASING paragraph〕.
+
+   Editing a published Release is still asked of Nelson at the time, in one
+   line; the wording is not reviewed again.
+4. *`NOT_RUN` (question 3).* A checkpoint that was not dispatched, or any
+   of whose legs did not complete after the one allowed rerun, holds the
+   release until Nelson accepts that checkpoint's `NOT_RUN` for that
+   version in his own words, naming the system that did not run. The
+   pre-1.0 delegation does not cover that acceptance.
+5. *The Action (question 8).* It runs from a checkout of A by a local path,
+   because a `uses:` value must be a literal and cannot take an expression;
+   that checkout sits in the subject's workspace, and the engine judges
+   allowlist expiry as on M's commit date. GitHub's resolution of
+   `taipei49314/checkwash/action@<A>`, the pull-request trigger and the
+   Action blocking a change stay `NOT_RUN`. No extra dispatch that runs the
+   README's pin verbatim, and no blocking case, are added.
+6. *v0.12.0 (question 9).* One `both` run, Linux and the Action included,
+   on M `ffaf4ed86ecc2baeb8cc008487a44d8495da9177` and on the files GitHub
+   Release 437647350 and PyPI 0.12.0 serve, after this merges and before
+   the outreach post, recorded as supplementary evidence after publication.
+   His 2026-11-08 「同意每版一次 macOS 驗證，也同意對 v0.12.0 補跑一次」 named
+   macOS; the wider run is what he took with 「都照建議」.
+7. *The macOS skip of the two budget checks, option A, done as A1
+   (question 4).* The two budget checks of `tests/gates/test_perf.py` have
+   been skipped on macOS since a maintainer decision of 2026-10-01; D-170
+   kept that skip until a revisit before 1.0. This is that revisit: the
+   skip stays at 1.0, and the file does not change. The release records,
+   KNOWN-ISSUES and `docs/enterprise.md` say that these two budgets are not
+   verified on a Mac and that Windows and Linux timings are not evidence of
+   macOS performance. On Linux they run and gate.
+8. *Determinism coverage (question 5).* `docs/stability.md`'s Determinism
+   row says what this verification adds, and that the one-run nine-leg
+   comparison stays unexecuted.
+9. *The hooks on a borrowed Mac.* Nelson's own try is a one-time
+   observation, recorded as his; it is not release evidence and replaces
+   neither checkpoint.
+
+Claude's design, which the POLICY row names as Claude's: holding two
+checkpoints as one verification, not rebuilding the published files, and
+applying the published-file checks and the consequences of a failure or
+`NOT_RUN` to Linux too. Nelson's 2026-11-08 words name macOS. Question 6
+asked him to confirm these three, and he answered it with
+「照這樣入帳並開始」; 「都照建議」 had answered the other eight questions.
+
+**Not changed.** Each pull request's tests still run on PJU (EC POLICY
+`checkwash-pju-tests`); hosted Windows does not run; `release.yml`; the
+release bridge and its missing-platform list, since the receipts still hold
+no Linux or macOS leg; the required checks; the disabled hosted test
+workflows (`ci.yml`, `assertion-qualification.yml` and `verdict-gate.yml`
+would also run at A on a tag push; `checkwash.yml` runs only on pull
+requests); `tests/gates/**`; the PJU stages. Draft pull request #597's
+entry D-203 records the 2026-11-08 answers as a whole; its line that macOS
+stays `NOT_RUN` until the POLICY allows it is out of date once this merges.
+
+**Risks.** The first run may find failures that exist only on macOS or only
+on Linux: the last hosted run of the suite was `ci.yml` at `618c415d` on
+2026-10-23, and about 2,400 tests have been added since. Linux ran the same
+tree in the PJU six-leg batch, so a Linux surprise there would come from the
+host, not the code. The workflow has not run before this merges.
+`macos-latest` and `ubuntu-latest` move to newer images; each record names
+the image. The Action fetches an unpinned build backend from PyPI. A failure
+after `publish-assets` leaves a GitHub Release without PyPI, which the next
+release's verdict gate takes as its baseline
+([baseline identity](docs/published-release-baseline.md)), and ordinary pull
+requests are refused until a new version is advertised.
+
+## D-205 (2026-11-12): a working-tree run sets aside the untracked zipapp checkwash runs from; a local hook install keeps its settings file out of Git
+
+**Approval.** Claude wrote this entry in the pull request that records it,
+#602. `DECISIONS.md` and `SPEC.md` are maintainer text (AGENTS.md). So the
+pull request asked Nelson to approve, by name and before it merges, this
+entry with the new §9 paragraph of `SPEC.md` (L1).
+
+Claude described the change in the conversation, named the two texts and
+linked the pull request, whose head was then
+`5bb823e64bec0b335c68b58291c9a5bd0504004d`. At 2026-11-12T17:41:56Z Claude
+asked 「#602 的 L1（D-205 和 SPEC §9 新段）核可，收據過了就合併嗎？」
+(approve #602's L1, D-205 and the new SPEC §9 paragraph, and merge once
+the receipt passes?), and at 23:38:29Z he chose 「核可並合併」 (approve and
+merge). Claude wrote the question and both buttons; the other was
+「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the two texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
+
+**What was asked.**
+- **The launch waits for the fixes.** At 2026-11-10T15:49:22Z Claude asked
+  「發文要等門面和第一週的坑修完（出一個小版本）之後再發嗎？」 (should the
+  launch post wait until the front page and the first-week problems are
+  fixed, in a small release?). At 16:10:48Z Nelson answered 「先修再發」
+  (fix first, then post). Claude wrote the question and both buttons; the
+  other was 「現在就發」 (post now).
+- **Claude leads in what he does not know.** At 2026-11-12T12:34:02Z he
+  wrote, of projects that interest him in fields he does not know well,
+  「所以會需要你帶 你的建議」 (so I need you to lead, with your
+  recommendations) and 「遇到不懂的地方我還是需要你做完我在看 去學」 (where
+  I do not understand, I still need you to finish the work, then I look at
+  it and learn). Claude restated this as deciding such technical details
+  itself and showing him the finished work, the direction staying his.
+- **The re-sort.** At 12:37:30Z Claude asked 「要我現在照新做法，把各專案等你
+  決定的事重整一遍嗎？」 (shall I now re-sort, the new way, what each project
+  is waiting on you for?), and at 12:38:55Z he chose 「好，現在重整」 (yes,
+  re-sort now). Claude wrote that question and both buttons; the other was
+  「先不用」 (not now).
+- **0.13.** After #597 merged, he wrote 「繼續做 0.13」 (go on with 0.13) at
+  15:05:30Z, in his own words.
+
+Claude chose 0.13's scope from the 2026-11-10 re-review: the five
+first-week problems (group A), a report line for test-looking files that
+are not analysed (group B), and G2 (b). Claude wrote the re-review, its
+options and this scope. This entry covers group A's problems 3 and 5.
+Problem 2 was in the first version of the pull request and is withdrawn
+(below).
+
+**What was found.** The 2026-11-10 re-review of main `8f610be9` had one
+Claude sub-agent review newcomers and documentation on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Two of its findings are fixed
+here:
+
+- **ND-09, the zipapp in the repository root.** The README's first path
+  has a newcomer run the downloaded `checkwash.pyz` from the root of a
+  repository, which works when the file is there. For 0.12.0 the file is
+  1,013,508 bytes, over the 1,000,000-byte source limit, so `python
+  checkwash.pyz check` on a clean tree reported it as not read and the
+  analysis as incomplete.
+- **ND-05, the machine-local settings file.** A local hook install (the
+  default, or `--local`) writes `.claude/settings.local.json`. That file
+  holds this machine's interpreter path, and Claude Code documents saving
+  permission grants into it. The install left the file for Git to list, so
+  every check without a range warned on it (`GUARDRAIL_TOUCHED`). Once it
+  was committed, a grant written into it blocked at critical. In the
+  re-review, that grant was written by hand.
+
+**Decision.**
+
+1. **The running zipapp.** A check without a range, the Stop hook's verdict
+   diff and the session-commits analysis leave out the zipapp that the
+   running checkwash is imported from, matched by name and real path. It is left
+   out only when Git lists it as untracked and no file sits at its path in
+   the compared commit or, in the Stop hook, in the session base. The
+   verdict diff's listing names it once on stderr (`SPEC.md` §9). If Git
+   cannot say whether a commit holds the path, the file is read.
+2. **The local hook install.** When Git neither tracks nor ignores
+   `.claude/settings.local.json`, a local install adds a rule for it to the
+   `info/exclude` file Git names for the repository, and says so.
+   - **Which file.** The path comes from `git rev-parse --path-format=absolute
+     --git-path info/exclude`. Git before 2.31 prints that option back as
+     its first line; the plain relative answer is then asked for and joined
+     to the real path of the install folder.
+   - **The rule.** It is anchored at the install folder, whose name is
+     escaped as literal pattern text. A folder name with a line break gets
+     no rule, and a note.
+   - **A tracked file** is left alone and named, with how to untrack it
+     from the repository root.
+   - **A rule that does not take.** When another rule, such as a `!` line
+     in a `.gitignore`, includes the file again, the note says so, and a
+     second install adds no second rule.
+   - **Outside Git** nothing is written.
+
+   `info/exclude` is never committed, so this changes only the user's own
+   clone.
+
+**Why the zipapp rule cannot hide a change.** Only the archive the running
+process was imported from qualifies, and only as an untracked record whose
+path neither the compared commit nor the session base holds. These are
+read as before:
+- a tracked, staged or vendored copy;
+- a copy whose path the compared commit or, in the Stop hook, the session
+  base holds;
+- another file of that name;
+- everything in range mode.
+
+The file set aside is the program doing the check, so an agent able to
+replace it already controls the check.
+
+**Problem 2, withdrawn.** The first version of this pull request also set
+aside an untracked virtual environment: any directory with an untracked
+`pyvenv.cfg` or `conda-meta/history` of its own and nothing tracked under
+it. Three Claude review sub-agents found that rule unsafe, and found that
+it misread the symptom's cause.
+
+- **Unsafe.** Each of these let a working-tree or Stop run pass a change
+  that main blocks:
+  - a case-only rename of a tracked `tests/` on a case-insensitive disk;
+  - a marker in `.checkwash/`, `.github/` or `.claude/`;
+  - on Linux, a symlinked marker that pytest does not count, such as a
+    dangling link.
+- **On Windows.** Python's signed `Activate.ps1` reads as a test runner
+  only because its base64 signature block holds the letters `tox` and
+  `nox`, which `roles._runs_tests` matches as plain substrings. The
+  unsigned copy on Linux and macOS draws no finding.
+- **On Linux.** The re-review's symptom is an engine error instead: the
+  environment's `bin/python` link leaves the repository.
+
+A later pull request takes those causes.
+
+**Residual.**
+- **Hook edits out of view.** A local install now makes the settings file
+  ignored where it was not, so a change an agent makes to the hooks there
+  shows in no diff. That was already so wherever Git ignored the file
+  (THREATMODEL item 2). Before this change, an untracked file showed only
+  as created, with a warning on every run whatever its content. Item 2's
+  words "often git-ignored" go to Nelson with the other protected text the
+  re-review listed.
+- **A vendored zipapp.** A tracked copy over the source byte limit still
+  makes the report say the analysis is incomplete.
+- **A zipapp untracked during a session.** A copy that a session untracked
+  and that sits on disk under a name differing only in case, or one whose
+  session base moved to before it was vendored, is set aside. It is the
+  running program either way.
+
+**Not changed.**
+- Detectors, severities, the gating table, fixtures, `tests/gates`, range
+  mode, the PreToolUse hook and the JSON schema.
+- The README's first screen and install text. The first screen waits for
+  Nelson (2026-11-08), and the release pull request takes the install
+  text. Only the README's test count moves.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- **`tests/test_first_week_fixes.py`, 25 tests.** Copied into a scratch
+  worktree of main `9b69183d`: 4 pass, 15 fail and 6 error. Four of the
+  21 that fail or error assert what main already does: a tracked, a staged
+  and another copy of the zipapp, and Git unable to answer. They fail there
+  only because main has no `_running_archive` to patch.
+- The full suite.
+- checkwash's own check of the pull request's range.
+- Three Claude review sub-agents reviewed the first version, and one the
+  second. This version answers their findings.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+Other platforms: NOT_RUN. The review of the second version ran its 18
+tests under WSL (Ubuntu 24.04, Python 3.12.3, Git 2.43.0), and all passed;
+this version's 25 ran on Windows only.
+
+## D-206 (2026-11-13): past its own bounds a changed test helper's importers are set aside, with a note; each helper's name is searched on its own, without the paths the diff changes
+
+**Approval.** Claude wrote this entry in the pull request that records it,
+#603. `DECISIONS.md`, `SPEC.md` and `THREATMODEL.md` are maintainer text
+(AGENTS.md). So the pull request asked Nelson to approve, by name and
+before it merges, this entry with the new §9 paragraph of `SPEC.md` and its
+two edited §9 sentences on hook output, and THREATMODEL rows 183 and 184
+(L1).
+
+Claude described the change in the conversation, named the texts and
+linked the pull request, whose head was then
+`bc5d25e0d2a294d8f9cb6ab81b791e4605428f37`. At 2026-11-13T02:48:06Z Claude
+asked 「#603 的 L1（D-206、SPEC §9、THREATMODEL 183／184）核可，收據過了就合併嗎？」
+(approve #603's L1, D-206, SPEC §9 and THREATMODEL rows 183 and 184, and
+merge once the receipt passes?), and at 02:50:44Z he chose 「核可並合併」
+(approve and merge). Claude wrote the question and both buttons; the other
+was 「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
+
+**What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
+of 2026-11-12T15:05:30Z, and his words on Claude leading in fields he does
+not know. Claude chose 0.13's scope from the 2026-11-10 re-review. This
+entry covers group A's problem 1, the re-review's FB-02, which it put first
+of the three things most worth fixing because nothing releases it.
+
+**What was found.** The 2026-11-10 re-review of main `8f610be9` had one
+Claude sub-agent measure false blocks and adoption cost on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). Its finding FB-02, rated high:
+
+- **The symptom.** A change to a test helper module with a common name,
+  such as four lines added to `tests/utils.py`, made every check exit 2
+  once 64 Python files mentioned that name. So did a docstring change, and
+  `tests/base.py`. The control with 63 files passed. In checkwash's own
+  history, `96ef295d`, which adds 33 lines to `tests/conftest.py`, exits 2
+  the same way. No exemption releases an exit 2, and the hooks reported the
+  change as not analysed.
+- **The cause.** When a test or conftest file that defines a function not
+  named `test…` changes, the expected-value pass
+  (`expected_provenance.importer_changes`) searches the analysed snapshot
+  for the file's module name, to find the unchanged tests that import it.
+  The snapshot search raises at 64 hits, so in a real run the pass's own
+  `return []` for 64 candidates could not be reached, and every engine
+  error exits 2.
+
+**Decision.**
+
+1. **The hit limit** raises `SearchHitLimit`, an engine error, so every
+   caller that does not handle it still stops the run. The message, and
+   `sweep`'s `exception_type`, now name that type: `checkwash engine
+   error: SearchHitLimit: strict snapshot importer search exceeds the hit
+   limit`.
+2. **A search can leave paths out.** The Git and working-tree snapshot
+   searches, and the PreToolUse hook's proposed tree, take `exclude`. An
+   ordinary search neither returns nor counts those paths, compared as Git
+   spells them, and the working-tree search does not read them. The
+   inventory, which lists every nonempty Python source, is never narrowed.
+3. **Each name on its own.** In a run that reports what it says, the
+   expected-value pass searches each changed helper's module name on its
+   own, with every path the diff changes left out: each changed path, both
+   paths of a rename, and the unchanged files that other passes added to
+   the diff. A file mentions a name when it holds it as plain text, so
+   `database` mentions `base`. Each name has its own bounds, and past them
+   the helpers of that name are set aside: none of their importers is read,
+   and one note names them and the bound.
+   - **The search reaches its limit:** 64 or more unchanged Python files
+     mention the name. When the diff renamed one of that name's helpers to
+     it, the name is the diff's choice and could be one every file holds,
+     so the hit limit stops the run instead. A helper the diff deletes, or
+     moves under the same name, keeps the name its importers use.
+   - **More than 48 unchanged tests mention the name.**
+   - **The run's budget is spent.** The names whose tests fit are read
+     from the one with the fewest, and the run reads at most 192 importers
+     (4 × 48) for all of them together.
+   - **More than 16 names** in one change set every helper aside.
+
+   The read budget and the name bound read nothing before this change too,
+   without a note, and every name shared one read budget of 48.
+4. **The run that cannot report it keeps the old way.** Without a report
+   context (`sweep`, `bench`), or with a searcher that cannot leave paths
+   out, one search covers every name and its hit limit stops the run, as
+   before.
+5. **The note** (`SPEC.md` §9) is `analysis incomplete: <reason>, so
+   unchanged tests that import <helpers> were not read for their expected
+   values`. A path or name that would not print is shown by its `repr`.
+   - It is written on stderr in every format, as a SARIF tool execution
+     notification and as a `!` line of the term report, whose head then
+     reads "analysis incomplete" when there is no finding.
+   - When the Stop hook passes it is the `systemMessage`, for its check of
+     the working tree and, after `commits made during this session:`, for
+     the session's commits.
+   - When the PreToolUse hook does not ask about a weakening, it gives the
+     note as its `systemMessage`; under the base policy's `on_engine_error
+     = "block"` it asks with it instead, as it asks for an edit it could not
+     analyse. A hook note longer than 1,200 characters ends in `…`.
+   - JSON stdout and `--emit-ir` keep their bytes.
+6. **The root-helper search**, which reviews the assertions a changed root
+   helper removes, is unchanged: at its limit the run still stops
+   ([root assertion helpers](docs/root-assertion-helpers.md)).
+
+**Why the diff cannot use the limit.** Before this change a diff could fill
+the search with files of its own, but that stopped the run. Now:
+- The search leaves the diff's paths out as Git spells them, a path that
+  holds `\` included, so only files the diff does not change count toward
+  a name's limit. Two of the new tests pad a weakened helper's search with
+  70 added files, one with names that hold `\`: the importer is read, and
+  the change blocks.
+- Each name has its own search and budget, so touching a commonly named
+  helper sets aside that helper, not the one beside it.
+- A helper the diff renames to another name keeps the engine error at the
+  limit, so a rename to a name every file holds stops the run, as before.
+- The run's budget reads the smallest names first. Pushing one helper past
+  it takes other changed helpers that each have at least as many
+  importers, enough to fill 192 reads; more than 16 names set every helper
+  aside anyway.
+
+The range check, the required gate, searches only committed files and
+leaves out the range's whole change. The hooks count more, since their
+diff is narrower than the change:
+- **The PreToolUse hook.** Its diff is the one edit it is asked about, so
+  files the session wrote before that edit count.
+- **The Stop hook.** Its check compares HEAD with the working tree, so
+  files the session committed count there.
+- **Working-tree mode**, both hooks included. The search walks the disk,
+  so files Git ignores count, and so does a changed file renamed by case
+  only on a disk that ignores case.
+
+Before this change such files stopped the run, and both hooks then reported
+the change not analysed: the Stop hook let it through, and the PreToolUse
+hook asked only under `on_engine_error = "block"` (THREATMODEL row 128).
+
+**Residual (THREATMODEL row 183).** Past its own bounds a weakened helper's
+importers are not read. `expected = 4` -> `expected = 5` in
+`tests/helpers.py`, which an unchanged test calls, passes with the note
+when 64 or more unchanged Python files mention `helpers`, or when more than
+48 unchanged tests do. In the range check those two bounds are the
+repository's; in the hooks, the cases above add to them. The 16-name bound
+is the change's own choice, as it was before this entry, and is easy to
+reach: any test or conftest file with a top-level function whose name does
+not start with `test` counts as a helper.
+
+Before this entry the hit limit stopped every check, and the other two
+bounds passed without a note. The hooks change with it: before, they
+called such a change not analysed; now they give a verdict on the rest of
+the change, with the note when the Stop hook passes or the PreToolUse hook
+does not ask about a weakening.
+
+**Cost.** Each name has its own search, which in a working tree walks every
+Python file, and the run may read up to 192 importers where one budget read
+48. On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- an honest edit to 16 helper modules among 4,000 files: 18.5 s in a
+  working tree (main 4.6 s) and 3.3 s in range mode (main 2.7 s);
+- 16 helpers each imported by 48 unchanged tests, in range mode: 20.1 s,
+  reading 192 importers and setting 12 names aside; main stopped at the hit
+  limit in 2.0 s.
+
+**Older than this change, found by its review** (THREATMODEL row 184). Each
+passes on main `6c2b7669` without a note, and still does:
+- **The pass's own read budget.** Reading the tests it analyses, the
+  expected-value pass shares 48 source reads across the whole run; past
+  them it drops the rest without a note. A weakened helper beside an
+  edited test file that gains 25 one-line tests, each calling a different
+  module, passes; with 10 such tests it blocks.
+- **What the pass reads.** A helper whose old version has a top-level
+  statement the pass does not read (an `if`, `try`, `with`, `for` or a
+  call) is never searched.
+- **Moves the search misses.** A helper moved into a package's
+  `__init__.py`, which is searched as `__init__`, or renamed by case only,
+  is searched by a name its importers do not use.
+- **Also:** an unchanged test over the source byte limit that mentions a
+  helper's name stops the run, and so does any Python file over that
+  limit in a working-tree search; and a diff path that holds `\` can hide
+  an unchanged importer whose path reads the same with `/`.
+
+**Not changed.**
+- Detectors, severities, the gating table, fixtures, `tests/gates`, the
+  JSON schema and the coverage report, whose scope is JavaScript assertion
+  candidates.
+- The root-helper search.
+- The needle, which stays the bare module name, and the limits 64, 48 and
+  16.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_importer_search_skip.py`, 39 tests. Its thirteen command-line
+  tests, run with the command line from main `6c2b7669`'s tree: twelve
+  fail, as the run exits 2 or a hook reports the change not analysed; the
+  thirteenth asserts what main already does, exit 2, for a helper renamed to
+  a common name. The file's other 26 tests call code main does not have.
+- Twenty one-line mutants of the change, each run against that file in its
+  own copy: all twenty fail it.
+- The full suite, and checkwash's own check of the pull request's range.
+- Review. Three Claude review sub-agents reviewed the first version
+  (`6ba50a02`): one for bypasses, one for code and tests, one for
+  documents and claims. One reviewed the second (`383a0906`). This version
+  answers them:
+  - for the first: one search and one budget for every name; a backslash
+    in a path; the Stop hook's session commits; `sweep`; the SPEC and
+    stability statements on hook output; eight mutants that survived;
+  - for the second: the backslash fallback, which brought the shared
+    budget back; honest deletions and same-name moves, which kept exiting
+    2; the PreToolUse hook under `on_engine_error = "block"`; three mutants
+    that survived; the cost, now bounded by the run's budget; and the older
+    gaps above, now recorded.
+
+  This version was not reviewed again.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+Other platforms: NOT_RUN.
+
+## D-207 (2026-11-13): the signature block that ends a PowerShell file is not read for a test runner
+
+**Approval.** Claude wrote this entry in the pull request that records it,
+#604. `DECISIONS.md`, `SPEC.md` and `THREATMODEL.md` are maintainer text
+(AGENTS.md). So the pull request asked Nelson to approve, by name and
+before it merges, this entry with the two new sentences of `SPEC.md` §2 and
+THREATMODEL row 185 (L1).
+
+Claude described the change in the conversation, named the texts and
+linked the pull request, whose head was then
+`d7ffc93f734237356ede7d7c93f5bc1aa1a7780f`. At 2026-11-13T06:22:22Z Claude
+asked 「#604 的 L1（D-207、SPEC §2 兩句、THREATMODEL 185）核可，收據過了就合併嗎？」
+(approve #604's L1, D-207, the two SPEC §2 sentences and THREATMODEL row
+185, and merge once the receipt passes?), and at 06:31:24Z he chose
+「核可並合併」 (approve and merge). Claude wrote the question and both
+buttons; the other was 「我先看 PR」 (let me look at the pull request first).
+
+The answer approves the texts as they stand at that commit. It also
+approves the merge, once the pull request's PJU receipt and the four
+required checks pass. This paragraph is the only change made to the entry
+after it.
+
+**What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
+of 2026-11-12T15:05:30Z and the scope Claude chose for 0.13. D-205 withdrew
+group A's problem 2, the re-review's ND-02, and left its two causes to a
+later pull request. This entry takes the cause on Windows; the cause on
+Linux and macOS waits (below).
+
+**What was found.**
+- **ND-02.** The 2026-11-10 re-review had one Claude sub-agent review
+  newcomers and documentation on LAPTOP-01AGNPJU
+  (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`). With a virtual environment
+  that Git did not ignore and that was not named `.venv` or `venv`, whose
+  files checkwash sets aside as artifacts, a check without a range and the
+  Stop hook blocked at high on the `Activate.ps1` that `python -m venv`
+  writes: `CI_WORKFLOW_TOUCHED`, "test command weakened", for its
+  `-ErrorAction SilentlyContinue`. The same files committed blocked a range
+  check too. Its report adds 61 warnings on the source of a package
+  installed in the environment.
+- **The cause**, found by #602's review (D-205). A `.ps1` file is shaped
+  like a runner script, and it reads as one when either side of the diff
+  invokes a test runner (`SPEC.md` §2). `roles._runs_tests` looks for runner
+  tokens anywhere in the file, comments included. Windows builds of Python
+  sign `Activate.ps1`. The signature ends the file, as base64 in lines
+  between `# SIG # Begin signature block` and `# SIG # End signature block`,
+  and in Python 3.11.9's copy two of those lines hold the letters `tox` and
+  `nox`. The copy Ubuntu 24.04's Python 3.12.3 writes has no signature and
+  neither word.
+- **The same search serves other readers**, and each read such a
+  signature as a runner: the opaque-exemption denial
+  (`roles._mentions_test_runner`, THREATMODEL row 87), the one hop from a
+  script to the runner script it calls (row 89), the CI weakening scan, the
+  collection inventory and the runner invocations `shadow` reads. Measured
+  on main, beside a signed script whose signature spells a token:
+  - a script that swallowed a call to the signed script blocked as a
+    weakened runner;
+  - a signed runner script whose command was removed, under a new
+    signature that spelled a token, passed as still running a suite;
+  - the collection inventory, which sets itself aside for a runner it
+    cannot parse, set itself aside: a first `pytest.ini` whose `testpaths`
+    left `tests/test_total.py` out of collection passed at warn, where
+    beside an unsigned script it blocks at high;
+  - an edited signed script got no opaque exemption: beside it, an expected
+    value rewritten from 5 to 6 blocked (`EXPECTED_VALUE_CHANGED`, high),
+    where beside an edited unsigned script, or an edited JSON file, it is a
+    warning (THREATMODEL item 4).
+
+**Decision.** In a PowerShell file (`.ps1`, `.psm1` or `.psd1`), the runner
+search leaves out the signature block that ends the file, from a line
+`# SIG # Begin signature block` to a last line `# SIG # End signature
+block`, when every line between those two is `#`, a space and base64
+(ASCII letters, digits, `+` and `/`, then at most two `=`). The markers and
+the base64 are matched as PowerShell writes them, before the search
+lowercases the text. Each reader above passes the file's path, and reads
+each side of a rename under its own. The rest of the file is read as
+before, comments included, and so is every other file; so is a block with
+any other line, a block without either marker on a line of its own, a
+block followed by anything but spaces, tabs and line ends, and any block
+before the last (`SPEC.md` §2). So each reader now reads a signed script
+as it reads the same script unsigned, in both directions measured above:
+the swallowed call, the collection inventory and the opaque exemption as
+an unsigned script gets them, and the removed command read as removed.
+
+**Why PowerShell runs none of it.** As PowerShell reads the file, a line
+that starts with `#` is a comment unless a block comment or a string holds
+it: a here-string, or a quoted string, which can span lines. Base64 holds
+neither `#` nor `>`, so no line of the block can end a block comment opened
+above it (`#>`). A string opened above it would need its closing quote on a
+later line, and only spaces, tabs and line ends follow the block, so the
+file does not parse and nothing in it runs. The two marker lines are
+comments too. A line that is not base64, such as `#> pytest` or
+`# MIIv #> pytest`, makes the whole block read, as does `#&pytest` and
+every non-PowerShell file, since cmd has no `#` comment and make can take
+`#` as its recipe prefix.
+
+**Residual (THREATMODEL row 185).** A program other than PowerShell can
+read those lines otherwise. make, given `.RECIPEPREFIX := \#` (unescaped,
+`#` starts a comment there) and a `SIG` program on the `PATH` for the
+marker lines, runs each line of the block as a recipe, so `# pytest` there
+is the suite. GNU Make 4.4.1 ran that shape on Windows, with harmless
+commands for the suite. Every reader then treats such a PowerShell-named
+makefile as holding no runner:
+- replacing that line passes, and so does a caller that swallows the make
+  run, where main blocks each at high (rows 69 and 89);
+- where the configuration makes the file `ci` (`.github/workflows/`), the
+  replaced line draws only a warning;
+- an edit to it is an opaque production change (row 87, item 4).
+
+A check without a range and the Stop hook give the same; the PreToolUse
+hook gives `{}` on that edit with main as with this version, as it does for
+the same edit to a `.mk` file. Each line of the block is one word: it can
+name any program whose path is base64, and passes it no argument of its
+own, though make lines above the block (`SHELL`, exported variables) can
+shape what runs. A script that reads its own block and runs it is row
+137's class: a command built from text the search does not match.
+
+**Not changed.**
+- The runner tokens, the positional runners (#216), the runner shapes, and
+  the swallow and narrowing tokens. The positional-runner reader still
+  reads the whole file; a base64 line holds no command separator, so it
+  puts no word in command position.
+- The workflow-deletion rule (`CI_WORKFLOW_TOUCHED` in `SPEC.md` §4) reads
+  only YAML pipelines, which are never PowerShell files, so "a runner name
+  anywhere in it" still holds there.
+- ND-02's cause on Linux and macOS. There `python -m venv` links the
+  environment's Python instead of copying it (Python 3.12's
+  `venv/__init__.py`). Measured on Linux: `bin/python` links to `python3`,
+  which links to `/usr/bin/python3`, outside the repository. A check without
+  a range refuses the link ("strict snapshot path leaves the repository")
+  and exits 2, whether the environment is named `env` or `.venv`, and the
+  Stop hook says the change was not analysed. A range that commits the
+  environment exits 2 ("strict snapshot batch cannot inspect nonregular
+  source"). The PreToolUse hook, which reads the one edit it is asked about,
+  analyses that edit as before. Reading a link in the working tree, or
+  setting one aside, needs a design of its own, since a link can point a
+  test path at a file the diff does not hold. A later pull request takes
+  it.
+- The warnings an environment's package sources draw, and the warning its
+  `activate.bat` draws when the environment's path spells a runner name:
+  the file holds that path, and it is read whole (measured, the path
+  `C:\Users\knox\src\pytest-plugin\env`). Warn level, not blocking. From
+  Python 3.13, `python -m venv` writes a `.gitignore` into each new
+  environment, by Python's documentation; there is no Python 3.13 on
+  LAPTOP-01AGNPJU, and that was not run.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_signature_block_runner.py`, 41 tests. Its fourteen
+  command-line tests, run with the command line from main `82b88866`'s
+  tree: nine fail there. Main blocks, at high, an untracked and a
+  committed signed `Activate.ps1`; a script that swallows a call to a
+  signed script; an expected value rewritten beside an edited signed
+  script; and the residual's replaced line, in a PowerShell-named file and
+  in a `ci` path, and the caller that swallows its run. It passes a runner
+  removed under a signature that spells one, and a first pytest config that
+  leaves a test out beside a signed script. The other five assert what main
+  already does.
+  Its other 27 tests call the runner search directly: on main 26 of them
+  fail with a `TypeError`, as main's search takes no path, and one because
+  main reads the signature as a runner.
+- GNU Make 4.4.1 (WinLibs) on Windows, on the residual's shape with
+  harmless commands for the suite: a block line `# false` fails make (exit
+  2), and `# true` in its place passes. With `.RECIPEPREFIX := #`,
+  unescaped, the prefix is empty and make runs no line of the block.
+- Forty one-line mutants of the change, each run against that file in its
+  own copy: 33 fail it. Two of the other seven are equivalent: dropping
+  the check that the text ends with the end marker, which the last-line
+  check repeats, and the workflow-deletion rule reading a deleted workflow
+  whole, since a workflow is never a PowerShell file. The other five are
+  readers whose path no test reaches: the CI base surface reading a
+  renamed file's old side under its new name (`ci.py:115`), and four that
+  read a signed script whole, as main does: the collection-option scan
+  (`ci.py:255`), the collection inventory's `_calls` and `opaque_reached`,
+  and `shadow._runner_invocations`.
+- Windows, CPython 3.11.9. The whole environment `python -m venv
+  --without-pip` wrote, signed `Activate.ps1` included, in a fixture
+  repository:
+  - untracked as `env`: main exits 1 at high (`CI_WORKFLOW_TOUCHED`) in a
+    check without a range, and its Stop hook blocks; this version exits 0,
+    and its Stop hook does not block;
+  - untracked as `.venv` or `venv`: both exit 0;
+  - committed in a range: main exits 1 at high, this version 0;
+  - the PreToolUse hook, asked about an honest edit beside it: `{}` from
+    both.
+
+  Ubuntu's unsigned copy, untracked in its place: both exit 0.
+- Linux, WSL2 Ubuntu 24.04 on the same machine, CPython 3.12.3, the source
+  of main and of this version. An environment `python -m venv
+  --without-pip` wrote:
+  - untracked as `env` or `.venv`: a check without a range exits 2 with
+    both, and the Stop hook says the change was not analysed;
+  - the PreToolUse hook, asked about an honest edit: `{}` from both;
+  - committed in a range: exit 2 with both.
+- The 70 PowerShell files with a signature block under
+  `C:\Windows\System32\WindowsPowerShell\v1.0` and
+  `C:\Program Files\WindowsPowerShell\Modules` on that machine: each block
+  holds only base64 lines of that shape and is left out.
+- The full suite, the fixture cases, `tests/gates`, and checkwash's own
+  check of the pull request's range.
+- Review. Three Claude review sub-agents reviewed the first version
+  (`01775322`, `7a872262`): one for bypasses, one for code and tests, one
+  for documents and claims. That version left out every complete block of
+  comment lines, in every file the search read and anywhere in it. This
+  version answers them:
+  - for bypasses: lines that run although they start with `#`: in a bash
+    here-document (`$(...)`), under cmd (`#&pytest`), under make (a `#`
+    recipe prefix, `define`, `$(shell ...)`), and in PowerShell a line
+    such as `#> pytest` that closes a block comment opened above, or a
+    block held in a here-string that the script then runs. Now only a
+    PowerShell file's last block of base64 lines is left out, and the
+    residual is row 185;
+  - for code and tests: a pattern whose search took time quadratic in
+    the markers, now one pass from the end; the claim that no comment
+    runs; mutants that survived;
+  - for documents and claims: the claim that a block left out cannot hide
+    a runner; the readers the search serves; links on Linux and macOS,
+    `.venv` on Linux and a committed environment; which hook says the
+    change was not analysed; ND-02 in a range; the basis for what the
+    unsigned copy does; the docstring's "one warn-level finding"; and
+    the runtime and exit codes.
+
+  One Claude review sub-agent then reviewed this version as `093f86c7`
+  and `468233a0`. With the Windows PowerShell 5.1 parser it found no way
+  to run a hidden runner while PowerShell runs the file. It found that the
+  residual's make example did not run as written (`.RECIPEPREFIX := #`
+  leaves the prefix empty); that the residual reaches more than a replaced
+  line (a caller that swallows the run, a `ci` path, the opaque
+  exemption); that the opaque exemption a signed script now gets went
+  unrecorded; that a mutant called equivalent was not (the hop reading a
+  renamed script's old side under its new name); and claims stated more
+  broadly than measured. This version answers each: the example as make
+  runs it; the residual above and in row 185, with tests for its other
+  shapes; the opaque exemption under What was found; a test for that hop;
+  and the claims. It was not reviewed again.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+macOS and other platforms: NOT_RUN.
+
+## D-208 (2026-11-13): a virtual environment's own links: a working-tree run sets aside an untracked one, and the working tree's listing and walks leave out non-directory ones in bin or Scripts and pass over lib64
+
+**Approval.** Claude drafted this entry and Antigravity finished it in the
+pull request that records it, #605. `DECISIONS.md`, `SPEC.md` and
+`THREATMODEL.md` are maintainer text (AGENTS.md). So the pull request asked
+Nelson to approve, by name and before it merges, this entry with the new §9
+paragraph and the §2b and §4b clauses of `SPEC.md`, and THREATMODEL rows 128,
+180 and 186 (L1).
+
+Antigravity opened the pull request, whose head was then
+`bc729cf12b143e2208f21cf1a0b7b171239d5ac5`. At 2026-11-13T11:56:55Z Antigravity
+asked 「#605 的 L1（D-208、SPEC §9／§2b／§4b、THREATMODEL 128／180／186）核可，收據過了就合併嗎？」
+(approve #605's L1, D-208, the SPEC §9, §2b and §4b text and THREATMODEL rows
+128, 180 and 186, and merge once the receipt passes?), and at 12:30:39Z he
+chose 「核可並合併」 (approve and merge; offered with `(Recommended)`).
+Antigravity wrote the question and both options; the other was 「我先看 PR」
+(let me look at the pull request first).
+
+The answer approves the texts as they stand at that commit. It also approves
+the merge, once the pull request's PJU receipt and the four required checks
+pass. This paragraph is the only change made to the entry after it.
+
+**What was asked.** D-205 records Nelson's 「繼續做 0.13」 (go on with 0.13)
+of 2026-11-12T15:05:30Z and the scope Claude chose for 0.13. D-207 took the
+re-review's ND-02 on Windows and left its cause on Linux and macOS to a
+later pull request. At 2026-11-13T07:35:10Z Nelson wrote 「從第 1d 節接著做」
+(go on from section 1d): section 1d of Claude's handover file names this
+cause as 0.13's next piece. Claude chose the design below and ran its first
+three reviews (`78696e87`); after that session paused, Nelson instructed
+Antigravity 「你來接手」 (take over) on 2026-11-13 to finish answering the
+reviews and open the pull request.
+
+**What was found.** Measured on LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`), WSL2 Ubuntu 24.04, CPython
+3.12.3, Git 2.43.0, main `0f054eef`. Beside an environment
+`python -m venv` wrote, eight changes were checked: none, an honest
+production change, a weakened assertion, an expected value moved with
+production, a weakened test helper, a weakened root helper, a first
+`pytest.ini` that leaves tests out, and a new provider of a module a test
+imports. Without an environment they pass, pass, block, pass, block, block,
+block and pass, in a check without a range, the Stop hook and a range.
+
+- **Untracked**, named `env` (with pip and without) or `.venv` (without
+  pip): a check without a range exits 2, and the Stop hook says the change
+  was not analysed, for every change, the weakened ones included. The
+  change-list read refuses the environment's first link: `"strict snapshot
+  path leaves the repository: path='env/bin/python'…"`. A range that adds
+  the environment exits 2 too (`"strict snapshot batch cannot inspect
+  nonregular source env/bin/python (a symlink)"`). In the PreToolUse hook,
+  asked about a Write to the test, it asks about the weakening and passes
+  the honest edit, as without one; asked about a Write to `tests/helpers.py`
+  or the root `conftest.py` beside `env`, main says the edit was not
+  analysed (`"strict snapshot inventory cannot follow directory symlink
+  env/lib64: the importer search needs its sources"`), so under the default
+  policy the weakening goes ahead unasked (`.venv` is skipped as a hidden
+  directory by `search`, so it asked on main too).
+- **Ignored** by a `.gitignore`, named `env`, with pip: the first four
+  changes get their verdicts, but the other four exit 2 in a check without a
+  range, and the Stop hook says they were not analysed: the importer search
+  and the collection checks walk the working tree, ignored files included,
+  and refuse the environment's `lib64` link to `lib` as an opaque directory
+  (#414). The PreToolUse hook also says a Write to `tests/helpers.py` or the
+  root `conftest.py` was not analysed. So the known issue's "ignoring the
+  environment in Git avoids all of these" did not hold on Linux. A range is
+  unaffected.
+- **The links.** CPython 3.12.3's environment holds `bin/python -> python3`,
+  `bin/python3 -> /usr/bin/python3`, `bin/python3.12 -> python3` and
+  `lib64 -> lib`. In the `python:3.13-slim` and `python:3.14-slim` Docker
+  images on the same machine (CPython 3.13.18 and 3.14.10; D-207 noted no
+  host Python 3.13), `bin/python` links to `/usr/local/bin/python`,
+  `bin/python3` and `bin/python3.X` to `python`, Python 3.14 adds
+  `bin/𝜋thon -> python`, and both write into the environment a `.gitignore`
+  that holds `*`. A list of names would have missed `𝜋thon`.
+- **A committed link survives `python -m venv` without `--clear`.** In WSL
+  (CPython 3.12.3) and in the 3.13.18 and 3.14.10 images, over a
+  `pyvenv.cfg` and an interpreter link to `/bin/true` already in place,
+  `python -m venv --without-pip env` run again without `--clear` exited 0
+  and kept the link (`symlink_or_copy`), and `env/bin/python -m pytest` then
+  exited 0 having run nothing; `--clear` replaced it. So a committed
+  interpreter link in an environment a CI job runs `venv` over again without
+  `--clear` could stand in for the suite's interpreter.
+
+**Decision.**
+
+1. **A virtual environment's own link** is a symbolic link directly in
+   `<D>/bin` or `<D>/Scripts` whose name does not end in `.py` in any case,
+   or `<D>/lib64` whose link text is `lib` beside a directory `<D>/lib`,
+   where `<D>` is a directory other than the repository root that holds
+   `pyvenv.cfg` as a regular file: the file PEP 405 names, whose presence
+   pytest checks with `is_file()` to skip the directory while recursing (it
+   still enters a directory given as an initial collection path). `bin` is
+   where `python -m venv` links the interpreter on Linux and macOS,
+   `Scripts` where it does with `--symlinks` on Windows. Each test is an
+   `lstat`, or a `readlink` on `lib64`, so nothing is followed, and a
+   `pyvenv.cfg` that is a link or directory does not count.
+2. **The change list.** A check without a range, the Stop hook's verdict
+   diff and its session-commits analysis carry such a link with no bytes on
+   either side when Git lists it as untracked (`??`) and no compared commit
+   holds `<D>`: `HEAD` and, in the Stop hook, the session base. If Git
+   cannot say, the link is read, and refused, as before. After unread sides
+   over the source byte limit are set aside and guarded (so #456's Stop-hook
+   size block still wins over a refused link), the engine judges the link's
+   path by the rule a side over the limit meets (`SPEC.md` §4b, #415;
+   generated-output paths such as `.venv/**` keep §4b's scope and role
+   exemption), together with non-artifact test, conftest and test-support
+   roles, and checks whether pytest's collection can enter `<D>`
+   (`testpaths`, `addopts`, shell/Makefile/workflow runner commands or
+   `--collect-in-virtualenv`). If
+   a detector must read the path or collection can enter `<D>`, the run
+   refuses it as an engine error (exit 2; `check --format hook-json` reports
+   it as any engine error, with no `decision`), naming the link and reason.
+   Otherwise it is set aside before any pass: no detector reads it, it earns
+   no repair evidence, and the verdict diff names it on stderr in every
+   format (the session-commits analysis prints no stderr note). #455's
+   question of a shell shebang on a side whose prefix was not read asks
+   nothing of it: a link holds no bytes checkwash reads, and an untracked
+   link reaches no commit, so no required check runs it (row 186).
+3. **The working tree's listing and walks.** The working-tree inventory
+   leaves out such a link in `<D>/bin` or `<D>/Scripts` that does not link
+   to a directory, untracked, ignored or tracked alike. A link to a
+   directory stays an opaque directory (#414), except `<D>/lib64` whose text
+   is `lib` beside a directory `<D>/lib`, which the walks (the inventory and
+   the importer search) pass over since its files are listed under `lib`.
+   The PreToolUse hook reads the same listing and walks
+   (`pretool.ProposedTree`): on main, a Write to a test helper or a root
+   helper beside an environment named `env` whose `lib64` links to `lib`,
+   ignored or untracked, was not analysed, so under the default policy a
+   weakening went ahead unasked; now the hook asks.
+
+Every other link is read, and refused, as before: a link elsewhere, one in a
+directory a compared commit holds, a tracked link the diff changes, a staged
+link, one beside a `pyvenv.cfg` that is not a regular file, one at the
+repository root, and a link a range adds, changes or reads in a pass.
+
+**Why it cannot hide a change.**
+- Nothing follows a link. A pass that asks for one's bytes still refuses,
+  so no pass reads bytes it did not mean to.
+- Only links. An environment's regular files are listed and read as
+  before. The first version of D-205 set aside every file under a directory
+  holding an untracked marker of its own and nothing tracked, and three
+  review sub-agents found it let a run pass changes main blocks; this rule
+  never sets aside a regular file.
+- In the diff, only untracked links in an environment directory `<D>` that
+  no compared commit holds. A range that adds or changes a link refuses it,
+  so the required check passes no pull request that commits one, for the
+  reason the last measurement above gives; links the range's base already
+  holds are listed, and a pass that reads one refuses, as before.
+- A path a detector must read (test, conftest and test-support paths
+  included) or an environment pytest's collection can enter refuses, and an
+  environment planted inside a directory a compared commit already holds
+  does not qualify.
+
+**Residual (THREATMODEL row 186).**
+- **On this machine.** An untracked environment link can point at another
+  program: with `env/bin/python3 -> /bin/true`, a local
+  `env/bin/python -m pytest` exits 0 having run nothing, and no diff shows
+  it. Planting `pyvenv.cfg` inside an existing tracked directory (`tests/`,
+  `suite/`), under non-artifact `tests`/`test`/`__tests__`/`__mocks__`, or in
+  an environment named in `testpaths`, `addopts` or a shell, Makefile, tox or
+  workflow runner file refuses; in an untracked custom directory outside those
+  roles and unmentioned by the repository's configuration and those runners, a
+  manual `pytest <dir>` or Python runner code (`noxfile.py`) enters `<D>` as an
+  initial path and follows a link in `<D>/bin` (as do a differently cased
+  spelling of `<D>` or `bin` on a case-insensitive file system, as in row 179,
+  and pytest before 8.3, which detected environments by activation scripts
+  rather than `pyvenv.cfg`; inferred, not run). On main such an untracked link stopped
+  the run (an ignored one already passed when no walk met it), so a check
+  without a range exited 2 and the Stop hook said the change was not
+  analysed; they now judge the rest of the change, naming the skipped link
+  on stderr only. The required check, in range mode, passes no pull request
+  that commits a link.
+- **Left out of the listing.** The working tree's inventory leaves out
+  non-directory links directly in `<D>/bin` or `<D>/Scripts` whatever their
+  name, `.py` (in any case) aside, tracked, ignored and untracked alike,
+  while directory links there stay opaque (#414) and only `<D>/lib64`
+  linking to `lib` beside directory `<D>/lib` is passed over. The passes
+  that batch-read the inventory's runner-shaped paths and paths with no dot
+  (the collection inventory and the runtime-provider pass) no longer meet a
+  non-directory link there, and so no longer refuse it; its bytes were never
+  read on main either.
+
+**Not changed.**
+- Range mode, and Git's tree listing: a committed environment's links,
+  unchanged in a range, are listed, and a pass that reads one refuses, as
+  before.
+- The `unread` key, the findings and every other output: the note is on
+  stderr only.
+- A conda environment: pytest also skips a directory that holds
+  `conda-meta/history` while recursing, which is no marker here.
+
+**What runs before merge.** On LAPTOP-01AGNPJU
+(`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_environment_links.py`, 93 tests. On Windows (CPython 3.11.9)
+  37 pass and 56 skip: 54 with `WinError 1314` because the account lacks the
+  symbolic-link privilege, and 2 with `skipif(os.name == "nt")` because
+  Windows `python -m venv` without `--symlinks` writes no link. In the
+  six-leg Linux images (Docker, no network; CPython 3.11.17, 3.12.15 and
+  3.13.16) all 93 pass, the two that run `python -m venv` included. Its 22
+  command-line tests, run in the 3.12.15 image with the command line from
+  main `0f054eef`'s tree: 19 fail there (main exits 2 on an untracked
+  environment and on an ignored `env` walked by a helper, root-helper,
+  collection or provider pass, and gives "not analysed" in the Stop and
+  PreToolUse hooks), and the other 3 assert refusals main already makes (an
+  environment planted inside `tests/`, a must-read link in the Stop hook,
+  and a range that adds an environment). Across all 93 tests against main's
+  `src` (with the four new symbols stubbed so the module imports), 80 fail
+  and 13 assert refusals and opaque-directory rules main already keeps.
+- The probe above, run in WSL2 Ubuntu 24.04 (CPython 3.12.3, Git 2.43.0,
+  340 rows) with this version against main `0f054eef`:
+  - untracked `env` (without pip) and `.venv` (without pip): all eight
+    changes get the same verdicts in a check without a range and the Stop
+    hook as without an environment (pass, pass, block, pass, block, block,
+    block and pass, in 0.52 to 0.61 s, with four stderr notes), where main
+    exited 2 and said "not analysed";
+  - untracked `env` with pip: the same eight verdicts, plus 434 warn-level
+    findings (`104 BROAD_EXCEPT_ADDED`, `330 SUPPRESSION_ADDED`) from pip's
+    untracked package sources in 11.7 to 14.1 s (honest production change:
+    13.1 s in `check`, 12.2 s in the Stop hook), where main exited 2 in
+    0.5 s;
+  - ignored `env` with pip: the same eight verdicts and zero extra warnings
+    in 0.46 to 0.77 s, where main exited 2 and said "not analysed" on the
+    last four;
+  - PreToolUse `Write` on the test, `tests/helpers.py` and the root
+    `conftest.py` (honest and weakened): `{}` on every honest edit and
+    `permissionDecision: "ask"` on every weakening across all five setups,
+    where main gave "not analysed" on `tests/helpers.py` and `conftest.py`
+    beside `env` (untracked, with pip, and ignored);
+  - range mode adding the environment: exits 2 on both versions.
+- The bypass review's four planted-`tests/` shapes in WSL (`tests/bin/plugins`,
+  `tests/bin/test_patch.txt`, `tests/lib64 -> outside`, and beside a weakened
+  assertion): exit 2 in `check` and "not analysed" in the Stop hook, identical
+  to main.
+- Forty-three one-line mutants of the change, each run without `-x` against
+  `tests/test_environment_links.py` in its own copy in the 3.12.15 Linux
+  image: 38 fail it. Three of the other five are equivalent: leaving link
+  changes in `WorktreePytestConfigs` in `_cmd_check` and `_session_note` (2),
+  since `_set_aside_links` refuses every config-named link and no other link
+  path is a config candidate, and leaving `links` out of `listed` in
+  `list_session_changes`, since `links` holds only untracked paths in
+  environments neither `since` nor `head` holds, which `diff-tree` never
+  lists. The other two reach paths no test constructs: dropping the
+  `""`/`.`/`..` segment guard in `environment_of_link`, which `git status`
+  and `os.walk` never emit, and omitting `head` from `(since, head)` in
+  `list_session_changes`, which matters only when a session commit adds `<D>`
+  after `since` (omitting `HEAD` in `list_worktree_changes` fails 4 tests).
+- Walk timings on a 24,021-path tree (400 `bin` directories, median of 5
+  interleaved runs): WSL 0.498 s (main) vs 0.538 s (`list_paths`) and
+  0.075 s vs 0.079 s (`search`); Windows 1.418 s vs 1.514 s (`list_paths`)
+  and 1.168 s vs 1.200 s (`search`).
+- The full suite, the fixture cases, `tests/gates`, and checkwash's own
+  check of the pull request's range.
+- Review. Three read-only Claude review sub-agents reviewed the first
+  version (`78696e87`): one for bypasses, one for code and tests, one for
+  documents and claims. This version answers them:
+  - for bypasses: an untracked `pyvenv.cfg` planted in a directory pytest is
+    given to collect (`tests/` under `testpaths = ["tests"]` or `pytest
+    tests`, or `--collect-in-virtualenv`), where pytest still enters the
+    directory and follows links in `bin`, `Scripts` or `lib64`. Now a
+    compared commit holding `<D>`, a non-artifact `test`, `conftest` or
+    `test_support` role on the link's path, a case-folded `.py` link name,
+    an `env/lib64` not linking to `lib` beside directory `lib`, or
+    collection reaching `<D>` refuses, and row 180 and row 186 record what
+    was measured and what stays local; plus the generated-output scope
+    qualification and directory links staying opaque in `list_paths`;
+  - for code and tests: the PreToolUse improvement on helper and root-helper
+    edits; running `_set_aside_links` after `_set_aside_unread` so #456's
+    Stop-hook size block wins over a refused link; explicit `S_ISLNK` in
+    `environment_lib64`; `d == "lib64"` before `is_symlink()` in `search`
+    and once-per-directory `in_scripts` in `list_paths`; tests for Jest
+    `setupFiles` second pass and first-pass ordering, case-sensitive `bin`
+    and `Scripts`, dangling `lib64`, `LinkSide` printability, end-to-end
+    `REPAIR_EVIDENCE` absence, Stop-hook session-commits analysis, `_held_at_any`
+    `GitError` fallback, and specific `match=` patterns;
+  - for documents and claims: PreToolUse in "What was found", Decision 3 and
+    "Not changed"; must-read link refusals as engine errors in `hook-json`
+    (row 128, §4b, §9); range mode refusing added or changed links and
+    base-held links only when a pass reads one; only non-directory links in
+    `bin` or `Scripts` leaving the listing; `HEAD` and the session base
+    (no nonexistent base flag); the #455 rationale; the listing residual
+    covering tracked links and batch-read passes; Stop hook exit 0 "not
+    analysed" on ignored `env`; KNOWN-ISSUES macOS qualification, untracked
+    pip warning count and timing, and untracked link wording; §4b in the
+    Approval list; the D-205 paraphrase; `docs/subject-integrity.md`; and
+    the nits (`venv` without `--clear`, Windows skip split, Python 3.14
+    `𝜋thon`, `is_file()`, `readlink`).
+
+  One read-only review sub-agent then reviewed this version as `091c85f5`
+  and `40d7271b`. It found no blocker and confirmed the first version's
+  findings resolved. It found that `environment_reached` read `-o` overrides
+  through `_spelled_options` (which never yields `-o`), took positional runner
+  arguments only from `shadow._runner_invocations` (missing quoted YAML `run:`
+  steps, `pytest . <env>`, compound or line-continued shell steps, workflow
+  `working-directory`, `PYTEST_ADDOPTS`, and `-c`/`--pyargs`/`--rootdir`), fell
+  back to `resolved_collection_settings` (missing `[tool.pytest]` and INI `:`)
+  when `addopts` held an unknown short flag, and missed leading-`]` bracket
+  globs and `{toxinidir}`/`$PWD` in `_target_enters_environment`; that
+  `environment_of_link` checked `parts[-1] == "lib64"` before `parts[-2] in
+  _ENVIRONMENT_SCRIPTS`, rejecting `<D>/bin/lib64`; and that Python runner code
+  (`noxfile.py`) and case-insensitive file systems were unstated in row 186,
+  `"non-artifact"` was omitted in one sentence of row 186 and Residual, the
+  four planted-`tests/` shapes sat under the 340-row bullet, and the commit
+  message counted `test_zipapp.py`'s five tests twice (`1,015` instead of
+  `1,011 passed, 10 skipped`). This version answers each: `arrival_collection._load`
+  and `_consume_pytest_words` in `environment_reached`, with workflow
+  `working-directory` and `PYTEST_ADDOPTS`, ten parameterized reachability
+  tests, `bin/lib64` ordered under `_ENVIRONMENT_SCRIPTS` and tested, and the
+  wording and counts corrected. It was not reviewed again.
+- The pull request's PJU receipt, whose intake sets the four required
+  checks.
+
+macOS and Windows `--symlinks` (without the symbolic-link privilege on this
+account), and other platforms: NOT_RUN.
+
+## D-209 (2026-11-13): compact PJU digest receipts for ordinary pull requests, ruleset App binding, and self-sealing intake dispatch
+
+**Approval.** Antigravity drafted this entry in #606 (`06fe2f1e`). At
+2026-11-13T14:48:20Z Antigravity asked two questions (Antigravity wrote both
+questions and all four options):
+
+1. 「#606 的 L1（DECISIONS.md D-209）核可，並確認 GitHub ruleset 22032046 已改為單一 checkwash（GitHub Actions 15368），收據過了就合併嗎？」 — at
+   2026-11-13T14:49:57Z Nelson answered
+   `(Recommended) 核可 D-209、已改好 ruleset 22032046，收據過了就合併 #606`
+   (the other option was `核可 D-209，但先停在合併前等我再看一眼`). The answer
+   approves D-209 (`DECISIONS.md`, L1) and merging #606 once live ruleset
+   `22032046` reflects `{"context": "checkwash", "integration_id": 15368}` and
+   the pull request's compact PJU receipt and required `checkwash` check pass.
+2. 「Phase 2 God-function 拆解 swarm 規模預告（5 author + 1 verifier + 1 monitor，預估約 2～3M tokens，合成 1～2 個 PR）確認開跑嗎？」 — at
+   2026-11-13T14:49:57Z Nelson answered
+   `(Recommended) 好，#606 合併後直接照這個規模啟動 Phase 2 swarm` (the other
+   option was `先完成 #606 合併就好，啟動 swarm 前再停下來問我`).
+
+After intake run `43450393694` showed that a same-SHA `workflow_dispatch` on
+`8d28b559` attaches `checkwash` to a `workflow_dispatch` `CheckSuite` ignored by
+ruleset `statusCheckRollup`, Antigravity pushed `f2bfe8e0` allowing pre-merge
+bootstrap dispatch from a separate same-tree ref (`review/collector-d209-20261113`),
+asked whether Nelson approved that one-clause L1 addition in D-209, and (on
+Nelson's 2026-11-13T15:32:46Z question 「要不要換個session開teamwork拆?」)
+recommended finishing `#606` in this session and opening a fresh `/teamwork`
+session for Phase 2; at 2026-11-13T15:33:34Z Nelson answered
+「先合併收尾 然後給我prompt 我直接開session開工」 (a merge-and-wrap-up instruction in
+response to the session-transition recommendation, making acceptance of
+`f2bfe8e0`'s same-tree bootstrap clause implicit at the time; explicitly
+ratified by Nelson at `2026-11-15T17:34:59Z` in session `c8f1073f`, D-212).
+
+**What was asked.** After #605 merged (`b326f201`), at 2026-11-13T13:35:09Z
+Nelson wrote 「我覺得現在驗證成本太高了 / 而且有God Function」 (verification
+cost is too high right now, and there are God functions), followed by
+「這個是個大工程喔」 (`13:39:32Z`), 「0.13會很急嗎」 (`13:42:20Z`), and
+「先整頓驗證成本跟 God Function」 (`13:43:37Z`: put verification cost and the
+God functions in order first). At 2026-11-13T13:46:13Z Antigravity asked two
+questions (Antigravity wrote both questions and all six options):
+
+1. 「一般 PR 的驗證減重要採哪一種方案？」 — at 13:46:28Z Nelson chose
+   `(Recommended) PJU 輕量雜湊制：維持 PJU 執行，廢掉 53MiB evidence 分支與重複 3×283，改 ruleset 綁 app 15368（約 6～8 分鐘／PR）`
+   (the other two options were restoring one GitHub-hosted Ubuntu 3.12 PR CI
+   leg with an EC POLICY update, or keeping the four-context `evidence/*`
+   branch format with 24-core parallelism).
+2. 「驗證減重完成後，God Function 重構的範圍與執行方式？」 — at 13:46:28Z
+   Nelson chose
+   `(Recommended) 開精簡 swarm（4～5 worker）平行拆核心 5 大檔（engine、shadow、python/frontend、gating 流程、table_oracles），合成 1～2 個 PR`
+   (recorded here as the next task after D-209 merges; the other options were
+   two swarm waves across all 16 functions over 200 lines, or single-threaded
+   decomposition of only the 4 functions over 500 lines).
+
+**What was found.** Measured on #605's PJU receipt (`C:\Users\nelson\dev\cw605r1`,
+`12:35:59Z` to `13:07:05Z`, 31m06s wall time on 24-core LAPTOP-01AGNPJU):
+
+- `qualify-source` (834.4 s), `qualify-wheel` (838.3 s) and `qualify-pyz`
+  (904.5 s = 15m05s wall time) ran 283 JS/TS assertion-contract cases across
+  three distributions as 849 × 5 sequential Windows `git`/`python` child
+  processes, even though `tests/test_assertion_contract.py` and
+  `tests/test_js_foundation.py` already run all 283 cases in-process during
+  `pytest` and `tools/release_inventory.py` checks byte-for-byte SHA256
+  equality of every `checkwash/*.py` archive member against `src/checkwash`.
+- `pytest -n 8` took 674.1 s (11m14s) using 8 of 24 logical cores.
+- `action-dogfood` (51.1 s) and `candidate-action-dogfood` (47.4 s) ran
+  sequentially (98.5 s combined).
+- Each ordinary PR committed 254 files (~53.30 MiB, mostly built `.whl`,
+  `.tar.gz`, `.pyz`, JUnit XML and binary command streams) to a new
+  `evidence/pr<N>-...` branch in the product repository (50 `evidence/*`
+  branches, ~2.9 GB accumulated).
+- The 2026-11-10 supply-chain re-review also identified three open bridge/CI
+  gaps: **RC-02 Understated 2** (`admit_environment` accepted any branch ref
+  matching `quality-candidate-intake.yml@*` even after bootstrap), **RC-03**
+  (live ruleset `22032046` left `integration_id: null` on `checkwash`, and
+  `quality-candidate-intake.yml` included itself in `pull_request.paths`), and
+  **RC-09** (`validate_junit` accepted any non-empty JUnit file without
+  checking the documented suite count).
+
+**Decision.**
+
+1. **Compact PJU digest receipts for ordinary PRs
+   (`checkwash.pju-compact-receipt.v1`).** `tools/collect_pju_receipts.py
+   --compact` keeps all product execution on LAPTOP-01AGNPJU
+   (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`, Windows CPython 3.11.9, isolated
+   task-local venv and frozen Git checkouts):
+   - runs `action-dogfood` (at `ACTION_SHA`) and, when the candidate's
+     `action/`/`src/`/`pyproject.toml` closure differs, runs
+     `candidate-action-dogfood` concurrently;
+   - builds `.whl`, `.tar.gz` and `checkwash.pyz` into scratch, verifies exact
+     archive metadata, entrypoints and `checkwash/*` member byte-identity
+     against `src/checkwash` via `tools/release_inventory.py`, installs the
+     wheel into a fresh venv, verifies the loaded wheel's files, and runs
+     `checkwash demo` on both the installed wheel and `checkwash.pyz`;
+   - runs the full `pytest` suite with **16 xdist workers**
+     (`COMPACT_PYTEST_WORKERS = "16"`), validates JUnit and subtest stdout,
+     checks exact equality with the documented suite count, keeps raw logs on
+     PJU, and writes a single-line canonical ASCII JSON digest receipt (~6–9
+     KB) with zero new `evidence/*` branches in Git. Historical `evidence/*`
+     branches are left untouched.
+2. **Hosted verification, test-count floor and App-bound check publication.**
+   Under `.github/workflows/quality-candidate-intake.yml` (`mode=receipt` with
+   non-empty `compact_receipt`, keeping the existing four `mode` options intact
+   and staying at 10 `workflow_dispatch` inputs), `verify-pju-compact` and
+   `publish-pju-compact` call `tools/pju_receipt_bridge.py verify-compact` and
+   `publish-compact`:
+   - refuse release heads (`validate_ordinary_head`) before any GitHub API
+     read, verify live open PR head/base/tree, reject `receipt_commit` when
+     `compact_receipt` is supplied, and require canonical sorted-key ASCII JSON
+     wire framing;
+   - recompute `src_tree`, `source_package_sha256`, `builder_sha256`, contract
+     suite digests, Action YAML/run-block/engine digests and candidate closure
+     digests directly from checked-out `trusted` and `candidate-data` Git
+     blobs;
+   - enforce **RC-09** across both `verify-compact`/`publish-compact` and
+     legacy `verify`/`publish`: `documented_test_count(source_root, head)` reads
+     `README.md`, `CONTRIBUTING.md` and `docs/launch.md` from `head`'s Git
+     blobs, requires all documented counts to agree and meet the 23,065 floor,
+     and requires JUnit's testcase count to equal that exact number;
+   - enforce **RC-02 Understated 2**: `admit_compact_environment` allows a
+     branch `GITHUB_WORKFLOW_REF` only while `base` on `main` does not yet
+     contain `verify-pju-compact` and only when `trusted_workflow_sha ==
+     collector_source_sha` with the exact Git tree of `head` (dispatched from a
+     separate same-tree commit ref `review/collector-d209-20261113` so GitHub
+     creates a standalone `CheckSuite` on `head` rather than attaching the
+     check to a `workflow_dispatch` suite that ruleset `statusCheckRollup`
+     ignores); once D-209 merges to `main`, `base` contains
+     `verify-pju-compact` and any non-`refs/heads/main` dispatch is refused
+     automatically (and legacy `verify`/`publish` in `main()` requires
+     `refs/heads/main` immediately);
+   - enforce **RC-03**: remove `.github/workflows/quality-candidate-intake.yml`
+     from `pull_request.paths`, restrict the `intake` job on
+     `workflow_dispatch` to `inputs.mode == 'intake'`, bind `checkwash` to
+     `integration_id: 15368` (GitHub Actions) in `action/required-ruleset.json`
+     and repository ruleset `22032046` (removing the three ordinary-PR
+     `candidate assertion contract (...)` entries there), and publish
+     `COMPACT_CONTEXTS = ("checkwash",)` (`external_id =
+     pju-compact:<sha256>:checkwash`).
+
+**Not changed.**
+- Release verification (`tools/collect_pju_release.py`,
+  `tools/pju_release_bridge.py`, `.github/workflows/release.yml` and
+  `.github/workflows/release-hosted.yml`): release PRs and release stages keep
+  full `3x283` source/wheel/pyz CLI qualification, binary artifact inventories
+  and hosted macOS/Linux verification.
+- Legacy `mode=receipt` low-level helpers (`PYTEST_WORKERS = "8"`, `CONTEXTS`
+  with four checks, `admit_environment`, `validate_packet`) and all existing
+  bridge/release unit tests.
+- Historical `evidence/*` branches on `taipei49314/checkwash`.
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9):
+- `tests/test_pju_compact_receipt.py` (33 tests: workflow graph and 10-input
+  ceiling, RC-03 path exclusion, ruleset `integration_id: 15368`, both Action
+  closure modes, canonical ASCII JSON wire framing and SHA256 digest binding,
+  17 tamper-rejection mutations, documented test-count drift/floor rejection on
+  both compact and legacy `main()` paths, self-sealing bootstrap admission
+  before and after merge plus legacy `refs/heads/main` enforcement, check
+  publication/App-ID verification and failure rollback, CLI release-head refusal
+  before GitHub reads, `collect_compact` `--git`/sanitized-env binding, and
+  Action replay summarization) plus all existing bridge, release, packaging,
+  zipapp, documentation and workflow tests.
+- `checkwash check` on the pull request's range at `--fail-on high`: pass (0
+  high/critical; expected warn `CI_WORKFLOW_TOUCHED` on
+  `quality-candidate-intake.yml`).
+- Independent read-only review sub-agent audit on `1a4d7163` found 1 high
+  (enforce `refs/heads/main` and `documented_test_count` on legacy `verify`/
+  `publish` in `main()`), 1 medium (bind `inventory_mod.git` and `bridge.git`
+  in `collect_compact` to `--git` and sanitized `env`), 2 low (canonical ASCII
+  JSON wire check, explicit release-head refusal + `collect_compact` unit tests,
+  and 23,065 floor), and 3 nits (`~6–9 KB` size prose, dual Action replay error
+  collection, and check-run `app.id == 15368` assertion); all fixed before PR
+  receipt collection. Followed by the pull request's own compact PJU receipt
+  (`pytest -n 16`) and green `checkwash` check run (`app 15368`).
+- macOS, Linux outside local checks, and other platforms: NOT_RUN.
+
+## D-210 (2026-11-14): findings on projected Python units report the source test's qualified name, and non-transitioning captured-result tests keep their source assertion text
+
+**Approval.** Drafted in #608 (`bf5f8177`, rebased onto #609 `5e0fb5aa` as
+`2cce7168` with `SPEC.md` byte-identical) in response to Nelson's 2026-11-13
+Phase 3 handoff (`A4: finding 用真的測試名 (ND-04 / repro-07)`). At
+2026-11-13T20:19:53Z Antigravity asked 「#608（A4：投影 Python 單位回報真實測試名與同載體
+captured-result 不重寫斷言文字）的 L1（SPEC.md §5 與 DECISIONS.md D-210）如何處理？」
+(Antigravity wrote the question and all three options:
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+`核可 #608 的 L1，但輕量收據與 checkwash 必過檢查綠燈後先停在合併前等我看一眼`, and
+`先不核可，我想調整 SPEC.md 或 D-210 條文`). At 2026-11-14T02:55:05Z Nelson chose
+`(Recommended) 核可 #608 的 L1（SPEC.md §5 與 DECISIONS.md D-210），補上 Approval 並跑過輕量收據後直接合併，接著推進 B6`,
+approving the `SPEC.md` §2b (*Bounded Python carriers and table projection*;
+mislabelled `SPEC.md §5` in the contemporaneous question and options, corrected
+under `Q6` in D-212) and `D-210` (`DECISIONS.md`, L1) edits and authorizing merging
+#608 once its compact PJU receipt and required `checkwash` check pass. At
+2026-11-14T04:07:01Z (session `98b9acf6`) Antigravity asked 「#608（7fe61445）連跑兩次輕量收據（cw608r1、cw608r2），23,112 題中其餘 23,111 題與雙向 Action 重播、wheel/sdist/pyz 驗證全數通過，唯獨 test_perf_git::test_range_check_through_git_stays_within_budget 在 16-worker 日間負載下分別跑出 12.46s 與 17.27s（上限 12.0s；單獨實測 main 與 #608 均為 3.1–3.3s，無 A4 退化）。cProfile 定位出主因是 cli._analyse 讀 config/allow/MANIFESTS 時未共用 GitSnapshot，每次 check 重複建 9 個 GitSnapshot 多生 ~27 個 git.exe 子行程（占總耗時 45%）。請問希望如何處理？」;
+at 2026-11-14T04:10:13Z Nelson chose `(Recommended) 先開一個獨立非 L1 小 PR 讓 cli._analyse 共用單一 GitSnapshot 批次讀取 base 設定與 manifest（每次 check 少生 ~25 個 git 子行程），合併後 rebase #608（維持已核可的 SPEC.md §5 與 D-210 實質內容，僅更新 commit 引用）跑收據並接續推進 B6`,
+authorizing rebasing #608 onto #609 (`5e0fb5aa`) with `SPEC.md` §2b and D-210's
+substantive text preserved (`bf5f8177` -> `2cce7168`) and merging once its
+compact PJU receipt passes.
+
+**What was found (ND-04 / `repro-07`, `repro-06/a2b`).** The 2026-11-10
+newcomer/documentation re-review (`repro-07` `v0`–`v6` and `repro-06` `a2` vs
+`a2b`) showed two newcomer-facing regressions produced by Python oracle
+projection (`frontends/python/table_oracles.py`,
+`normalized_result_tables.py`, `raises_oracles.py`,
+`local_auxiliary_oracles.py`):
+
+1. **Synthetic unit names leaked into user-facing findings and fingerprints.**
+   On the README's own quickstart example (`def test_invoice_total(): total =
+   invoice_total([(2, 25.0), (1, 50.0)]); assert total == 105.3` rewritten to
+   `assert total == 105.0` without touching `billing.py`), `table_oracles`
+   classified `test_invoice_total` as a `"captured-result"` carrier, set
+   `has_table = True` on both sides even though neither side held a table or
+   carrier transition, and replaced `ParsedFile.units` with a synthetic unit
+   `test_concrete_0db8e46ba092fc0cd762a5b6_1`. Every unit-scoped detector and
+   gating rule then read `unit.qualname`, so CLI `term`, `json`, `sarif` and
+   Stop-hook `hook-json` reported `tests/test_billing.py ::
+   test_concrete_0db8e46ba092fc0cd762a5b6_1` instead of `test_invoice_total`,
+   and the v2 fingerprint bound that synthetic name. Across `repro-07`'s seven
+   shapes of the same test edit (`v0` local capture, `v1` two single-assert
+   tests where one has a local capture, `v2` two assertions in one test, `v3`
+   direct assertion, `v4` `unittest.TestCase`, `v5` `@pytest.mark.parametrize`,
+   `v6` renamed function with local capture), `v0`, `v1` and `v6` printed
+   `test_concrete_*` while `v2`–`v5` printed the real test name. All genuine
+   projected consolidations (`table_oracles._project`,
+   `normalized_result_tables._project`, `raises_oracles.retain_raises_units`
+   `test_exception_*`, and `local_auxiliary_oracles.retain_local_auxiliary_units`
+   `test_local_auxiliary_*`) leaked synthetic `test_*_<digest>_<n>` names the
+   same way whenever an expectation, assertion, tolerance, input or unit changed
+   inside a projected carrier.
+2. **Asymmetric `before`/`after` text and fingerprint between co-changed and
+   test-only edits (`repro-06` `a2` vs `a2b`).** When `billing.py` also changed
+   (`a2`), `_compatible_cochanges` withheld projection, so the finding reported
+   `unit = "test_invoice_total"` and `before = "assert total == 105.3"` /
+   `after = "assert total == 105.0"`. When only `tests/test_billing.py` changed
+   (`a2b`), projection substituted the local variable into the AST and
+   unparsed `before = "assert invoice_total([(2, 25.0), (1, 50.0)]) == 105.3"`,
+   giving the exact same test line a different `unit`, different `before`/`after`
+   evidence text, and a different v2 fingerprint depending on whether an
+   unrelated line of `billing.py` was touched in the same diff.
+
+**Decision.**
+1. **`Unit.source_unit` preserves the enclosing Python test's qualified name
+   while `Unit.qualname` stays concrete for alignment.** `ParsedUnit` and `Unit`
+   gain an optional trailing field `source_unit: str = ""` (`IR_VERSION` stays
+   `3`; `FINDINGS_VERSION` stays `2`, and `UnitSide`'s native field set is
+   unchanged). When `table_oracles._project`,
+   `normalized_result_tables._project`, `raises_oracles.retain_raises_units` or
+   `local_auxiliary_oracles.retain_local_auxiliary_units` synthesizes projected
+   units, `source_unit_map` / `resolve_source_unit` records the original
+   `ParsedUnit.qualname` (preserving class qualification such as
+   `TestDiscounts.test_rates` and same-name `#N` numbering) onto `ParsedUnit`
+   and `diffalign.align_file` copies it onto `Unit` (`a.source_unit` on paired
+   and added units, `b.source_unit` on removed units). `findings.unit_finding_name(unit)`
+   returns `unit.source_unit` when non-empty and `unit.qualname` otherwise; all
+   eleven unit-scoped detector modules (`expected_changed`, `expected_hardcoded`,
+   `expectation_definition`, `assert_weakened`, `assert_removed`,
+   `assert_substituted`, `tolerance_loosened`, `subject_normalized`,
+   `subject_input_changed`, `test_disabled`, `test_patches`) emit `Finding.unit`,
+   unit-naming messages and v2 fingerprints using `unit_finding_name(unit)`.
+2. **Exact per-concrete-unit gating and duplicate-row fingerprint distinctness.**
+   When multiple projected concrete units share one `source_unit` (for example a
+   consolidated loop or table where row 1 calls a changed symbol and row 2 calls
+   an unchanged symbol), `_resolve_finding_unit` in `gating.py` resolves each
+   `Finding` back to the specific concrete `Unit` whose evidence/delta emitted
+   it, so row 2 cannot inherit row 1's `REPAIR_EVIDENCE` (`gating.py` `L1–L682`
+   severity table and escalation policy are byte-identical). For v2 fingerprints
+   within a shared `source_unit`, `findings.unit_assertion_position` computes
+   `(ordinal, count)` across sibling units sharing `unit_finding_name(unit)`,
+   and `test_disabled` numbers duplicate disappeared concrete units sharing one
+   `(source_unit, identity, assertion_texts)` tuple so exempting one duplicate
+   row never exempts its sibling.
+3. **Non-transitioning same-carrier `captured-result` modules skip projection.**
+   In `table_oracles_projection.parse_compatible_carrier_pair`, when both sides
+   have the same carrier sequence (`old[6] == new[6]`), no closed-purity
+   block/unittest/tuple carrier, plain-class, raises-oracle or local-auxiliary
+   projection is active, and every `captured-result` unit keeps the same
+   function name, single local assignment target, left-hand variable comparison
+   orientation, subject call/operator key, and plain non-specialized assertion
+   authority (`_same_captured_results`), `_ordinary_rows_cover(...,
+   allow_captured=True)` declines projection so the general Python frontend
+   judges the edit directly. Special authorities (`is None` -> `pytest.approx`
+   operator transitions, boolean comparisons, derived literals including empty
+   `frozenset()` authorities, literal-left operand flips, tuple arity, closed
+   helpers, partial dictionary blocks) and local-variable renames (`total` ->
+   `result`) still project so concrete-oracle proofs and rename alignment remain
+   intact, and their findings now report `source_unit`.
+
+**Fingerprint movement (`docs/stability.md`).** Scheduled for minor release
+`v0.13.0` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3` unchanged):
+- Any unit-scoped finding previously emitted from a projected Python unit
+  (`test_concrete_*`, `test_exception_*`, `test_local_auxiliary_*`) moves its
+  `unit` segment (and unit-bound v2 pre-image, plus multi-unit `(ordinal,
+  count)` when sibling projected units share identical assertion text) from the
+  synthetic `test_*_<digest>_<n>` name to the enclosing Python test's qualified
+  name across `EXPECTED_VALUE_CHANGED`, `EXPECTED_VALUE_DERIVED`,
+  `EXPECTED_VALUE_HARDCODED`, `EXPECTATION_DEFINITION_CHANGED`,
+  `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `ASSERT_SUBSTITUTED`,
+  `TOLERANCE_LOOSENED`, `SUBJECT_NORMALIZED`, `SUBJECT_INPUT_CHANGED`,
+  `TEST_DISABLED` (`unit_removed`, `marker_added`, `guard_weakened`,
+  `param_cases_removed`) and `TEST_PATCHES_SUBJECT`.
+- On a test-only edit to a non-transitioning `captured-result` Python test
+  (such as `repro-07` `v0`/`v1` and `repro-06/a2b`), `Finding.unit` moves from
+  `test_concrete_*` to the Python test's qualified name and `before`/`after`
+  keep the source assertion text (`assert total == 105.3` -> `assert total ==
+  105.0`), matching the co-changed diff (`repro-06/a2`). No existing `.gwcase`
+  fixture expectation moves.
+
+**Residual.** When a `captured-result` test renames its local capture variable
+or changes its subject call in the same test-only diff as an expectation edit
+(or transitions across carriers, such as `repro-07` `v6` or folding plain tests
+into a `for` loop), projection still runs so concrete cases align; `Finding.unit`
+now names the real HEAD Python test, while `before`/`after` show the projected
+inlined call (`assert invoice_total(...) == ...`) with source spans pointing to
+the original `assert` lines.
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9):
+- `tests/test_real_test_names.py` (14 collected tests: all seven `repro-07`
+  module shapes `v0`–`v6`, `repro-06` `a2` vs `a2b` identity/evidence/fingerprint
+  parity, `is None` -> `pytest.approx` authority retention and local-variable
+  rename guards, top-level loop / plain-class `TestDiscounts.test_rates` /
+  duplicate `test_dup#2` / `normalized_result_tables` consolidations, synthetic
+  `test_exception_*` and `test_local_auxiliary_*` detector + gating units,
+  sibling projected unit `REPAIR_EVIDENCE` isolation, duplicate projected row
+  and removed-unit v2 fingerprint distinctness, and CLI `term`/`json` schema /
+  `sarif`/`hook-json`/`--emit-ir` `source_unit` round-trip; 10 fail against
+  `main` `5e0fb5aa`, 4 are preserving controls, and all 14 pass on this branch)
+  plus `tests/test_expected_provenance.py` (`test_double` instead of
+  `test_concrete_*`).
+- Full `pytest -n 16` suite (`23,122` collected tests), `checkwash check`
+  dogfood on the branch range (`--fail-on high`: `verdict=pass`, 0
+  critical/high findings), and `gating.py` `L1–L682` SHA-256 invariance check
+  (`cfa19f5589cf650136e243f9b7404bd1bf5da85a95b4f6d72001b6931f868f5d`).
+- Independent adversarial read-only review sub-agent audit on the initial A4
+  diff found 1 blocker (`_CAPTURED_SPECIAL_AUTHORITIES` initially included
+  `"_requires_primitive_string"` and needed an explicit `ast.Name` left-operand
+  guard for literal-left operand flips), 1 medium (`_requires_derived_authority
+  = frozenset()` falsiness in `_same_captured_results`), 1 low
+  (`TOLERANCE_LOOSENED` sibling-unit escalator-reason disambiguation in
+  `_unit_matches_finding`), and 3 nits (`findings.assertion_identity`
+  docstring, D-210 guard prose, and lazy `allow_captured` evaluation); all
+  resolved with regression sub-checks in `tests/test_real_test_names.py` before
+  opening the draft PR.
+- macOS, Linux, and other platforms: NOT_RUN.
+
+## D-211 (2026-11-15): pure line additions to repository-root `CLAUDE.md` stay at `warn` (`GUARDRAIL_ADDITIVE`); deleting, editing, reordering or commenting/fencing existing lines escalates to `critical`
+
+**Approval.** Drafted in #611 (`df5c54a2`) in response to Nelson's
+2026-11-11T02:44:43Z `G2 b` direction answer (choosing option `(b)` — lower pure
+additions to `CLAUDE.md` to `warn` and keep deletions/modifications at
+`critical`, with `SPEC.md` and the `gating.py` policy table reviewed as L1) and
+his 2026-11-15 Phase 3 handoff (`G2(b)` L1 draft PR: pure line additions to
+`CLAUDE.md` stay `warn`; deleting, modifying or reordering existing lines
+escalates to `critical`, covering `SPEC.md` §4/§5, `DECISIONS.md` D-211 and
+`src/checkwash/gating.py`, then stop for L1 approval). At 2026-11-15T09:33:12Z
+(session `fa98badb`) Antigravity presented draft pull request #611 (`df5c54a2`)
+and asked 「請檢視 `#611` 的 L1 內容（`SPEC.md`、`DECISIONS.md` `D-211`、`src/checkwash/gating.py`）。若核可，請回覆確認；我會補入 `D-211` 的 `**Approval.**` 時間紀錄、收集 `cw611r1` 輕量收據並合併 `#611`，接著再啟動步驟 3（受保護文字 L1 集中 draft PR）。」;
+at 2026-11-15T09:34:17Z Nelson replied 「核可」, approving `SPEC.md` §4/§5,
+`DECISIONS.md` `D-211` and `src/checkwash/gating.py` (`GUARDRAIL_ADDITIVE_PATHS`
+and `GUARDRAIL_ADDITIVE`, L1) and authorizing collecting its compact PJU receipt
+(`cw611r1`) and merging #611 once the required `checkwash` check passes.
+
+**What was found (`ND-01` / `repro-13`).** In the 2026-11-10 newcomer and
+documentation re-review (`repro-13/run.sh`), appending a single housekeeping
+bullet (`- Use pytest -q to run the tests; the suite takes about a minute.`) to
+a tracked repository-root `CLAUDE.md` whose existing testing rule (`- Never
+modify test files to make a failing test pass.`) was untouched fired
+`GUARDRAIL_TOUCHED` at `critical` (`META`), blocking `checkwash check`, the
+Claude Code Stop hook (`decision = "block"`), and range-mode CI until a
+per-edit exemption was merged to the base branch first or `CLAUDE.md` was
+removed from `[roles] guardrail` altogether. For Claude Code adopters — the
+README's primary audience — routine project memory additions (`CLAUDE.md`)
+blocked every Stop and pull request even when no existing instruction line was
+altered.
+
+**Decision.**
+1. **Path scope (`gating.GUARDRAIL_ADDITIVE_PATHS`).** Only an existing
+   repository-root `CLAUDE.md` whose resolved role is `guardrail`, modified in
+   place (`change.status == "modified"`, non-empty `before` and `after`, no
+   policy-shadow transition, and `change.old_path is None` or normalized
+   `change.old_path == "CLAUDE.md"`), is eligible for `GUARDRAIL_ADDITIVE`.
+   `GUARDRAIL_ADDITIVE_PATHS = frozenset({"CLAUDE.md"})` is declared in
+   `src/checkwash/gating.py`'s auditable policy header and pinned in
+   `tests/test_oracle_rules_pinned.py`. Renaming another file onto `CLAUDE.md`
+   (`git mv AGENTS.md CLAUDE.md`), deleting `CLAUDE.md`, and any edit to
+   `AGENTS.md`, `.cursorrules`, `.claude/**` (including `.claude/CLAUDE.md` and
+   `.claude/settings.json`), `.checkwash/**` or `.greenwash/**` remain `critical`
+   (`META`).
+2. **Pure-line-addition predicate (`guardrail_additive.is_pure_line_addition`).**
+   `engine_ir_files._record_non_prod_role_change` records `"CLAUDE.md"` in
+   `DiffGlobals.guardrail_files_additive` (`IR_VERSION = 3` and
+   `FINDINGS_VERSION = 2` unchanged; optional field defaulting to `[]`) if and
+   only if:
+   - Neither side contains a NUL byte (`\x00`), and both sides decode strictly
+     as UTF-8 (strip at most one leading file-start UTF-8 BOM `\ufeff`).
+   - After normalizing `\r\n` -> `\n`, neither side contains a lone `\r`, and
+     `after` introduces no additional `HIDDEN_UNICODE` / Unicode `Cf` format
+     characters (including `U+E0000..U+E007F` Tags, `U+061C` and `U+2060`) or
+     non-LF Unicode line/paragraph separators (`\x0b`, `\x0c`, `\x1c`, `\x1d`,
+     `\x1e`, `\x85`, `\u2028`, `\u2029`).
+   - Splitting strictly on `\n` (dropping one trailing empty element when the
+     side ends with `\n`), `before` has at least one line, `len(after_lines) >
+     len(before_lines)` (zero-added-line rewrites such as stripping a trailing
+     newline, CRLF-only edits or BOM-only edits do not qualify), and any leading
+     YAML (`--- ... ---`/`...`) or TOML (`+++ ... +++`) frontmatter is unchanged
+     line-for-line (adding or editing lines such as `paths:` inside frontmatter
+     does not qualify).
+   - Every `(line_text, markdown_context)` entry of `before` survives as an
+     ordered subsequence of `after` in linear time (`O(N)`), where
+     `markdown_context` tracks CommonMark fenced code blocks (`0..3` leading
+     columns before `>= 3` backticks with no backtick in the info string or
+     `>= 3` tildes, top-level, blockquoted or list-prefixed / list-continued with
+     4-column tab stops, distinguishing opening delimiter, code interior and
+     matching closing delimiter without per-line string multiplication),
+     Phase-1 CommonMark §4.6 rules 1–5 HTML blocks (interrupting open paragraphs
+     without inline backtick pairing), paragraph-scoped multi-line inline
+     backtick code spans (§6.1) with §2.4 `\` escapes, HTML comments
+     (`<!-- ... -->`), raw HTML blocks / declarations / PIs / CDATA (`<pre>`,
+     `<script>` with HTML5 §13.2.5.4–30 escaped/double-escaped state tracking,
+     `<style>`, `<textarea>`, `<iframe>`, `<noembed>`, `<noframes>`, `<noscript>`,
+     `<title>`, `<xmp>`, `<listing>`, `<plaintext>`, `<!...>`, `<?...?>`,
+     `<![CDATA[...]]>`), open HTML elements (via a trie-interned amortized `O(1)`
+     stack, ignoring bogus `/>` on non-void HTML tags, restricting implied closes
+     to HTML5 §13.2.6.3 tags, and tracking paired custom elements) and multi-line
+     quoted/unquoted tag attributes, CommonMark §4.7 link reference definitions
+     (`[label]: ...`), frontmatter lines, and interleaved blockquote/list
+     containers, Setext heading underlines (`===`/`---`), 1+-column GFM tables
+     and indented code blocks. Deleting,
+     editing (including whitespace changes or appending to an unterminated final
+     line), reordering any existing line, editing frontmatter, or wrapping /
+     re-contextualizing an existing line inside any of those constructs fails the
+     subsequence check and escalates to `critical` (`META`).
+3. **Detector, gating and fingerprint contract (`globals_rules.py`,
+   `gating.py`, `SPEC.md` §4/§5).** When `path` is in both
+   `GUARDRAIL_ADDITIVE_PATHS` and `ir.globals.guardrail_files_additive` (and not
+   `created`, `loosening` or in `policy_shadows`), `detect_guardrail` formats
+   `guardrail file extended (CLAUDE.md) — added lines only; existing constraints
+   preserved` and binds `"additive": True` into `GUARDRAIL_TOUCHED`'s v2
+   `make_change_fingerprint` context, and `gating._apply_non_oracle_gates` keeps
+   `severity = "warn"` and attaches `escalators = ["GUARDRAIL_ADDITIVE"]`. At
+   the default `fail_on = "high"`, `checkwash check`, range-mode CI and the
+   Claude Code Stop hook (`hook-json`) pass while keeping the `WARN` visible;
+   `--fail-on warn` blocks as for any `warn` finding.
+
+**Fingerprint movement (`docs/stability.md`).** Scheduled for minor release
+`v0.13.0` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3` unchanged):
+- Pure-line-addition modifications to repository-root `CLAUDE.md` move from
+  their former `critical` `GUARDRAIL_TOUCHED` v2 key (which carried no
+  `"additive"` context key) to an additive `warn` v2 key carrying
+  `"additive": True`. Because `warn` findings do not block at the default
+  `fail_on = "high"`, this affects only repositories gating at `--fail-on warn`.
+- Every non-additive `GUARDRAIL_TOUCHED` finding (line deletions, edits,
+  reorderings or comment/fence/HTML/Markdown wraps in `CLAUDE.md`, renames,
+  deletions, and all edits to `AGENTS.md`, `.cursorrules`, `.claude/**`,
+  `.checkwash/**` and `.greenwash/**`) keeps its byte-identical v2 fingerprint,
+  and no existing `.gwcase` fixture expectation moves.
+
+**Residual.** CheckWash does not interpret natural-language instructions or
+follow Claude Code `@path` file references. A newly added line in `CLAUDE.md`
+that contradicts or overrides an earlier line in prose ("ignore the testing rule
+above") or adds an `@path` import while leaving every earlier line intact in
+order and Markdown/HTML context stays at `warn` (`GUARDRAIL_ADDITIVE`) rather
+than `critical`; repositories that want every `CLAUDE.md` edit to block can run
+with `--fail-on warn` (or `fail_on = "warn"` in `.checkwash/config.toml`).
+Conversely, fixing a typo or rewording an existing line in `CLAUDE.md` still
+escalates to `critical` (`META`).
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`,
+Windows CPython 3.11.9):
+- `tests/test_claude_md_additive.py` (121 collected tests: `repro-13` appended,
+  prepended and mid-file insertions including fenced code blocks with blank
+  lines, list-indented fences, `<env>` placeholders, autolinks, void/foreign
+  self-closing tags, implied `<li>` closes, closed `<script>`/`<title>`/
+  `<noscript>`, pipe-less `:---` prose, body additions
+  below unchanged YAML frontmatter, closed HTML comments and inline `` `<!--` ``
+  code spans, CRLF/BOM/unterminated-base-line additions, line
+  deletions/edits/reorders/zero-line rewrites, 86 HTML-comment/code-fence/
+  container-fence/list-continuation-fence/post-`>`-tab-fence/Phase-1-HTML-block/
+  CommonMark-HTML5-desync/multi-line-backtick/backslash-escape/`<script>`-3-
+  state/raw-HTML/non-void-`/>`/HTML5-rawtext/`<pre>`-`<noscript>`-`<template>`/
+  implied-end-tag/open-element/§6.6-close-attr/HTML5-attr-quote/bogus-`</\n`/
+  link-ref/frontmatter-`paths:`/interleaved-blockquote-list/Setext/1+-col-GFM-
+  table/indented-code wrapping and re-contextualization attacks, 12 NUL/
+  invalid-UTF-8/lone-CR/bidi-Cf-Tag/Unicode-separator smuggling cases, `O(N)`
+  pathological backtick+HTML, 400 KB open-fence, `<`*999K, `<pre></pre>`*90K,
+  `- `*499K, `<script><!--`*999K and `<a x="`*160K timing bounds, 8 non-root
+  guardrail paths, renames/deletions/forged-IR rejection, custom `guardrail`
+  roles, and end-to-end Git `check` worktree/range + `SessionStart`/`Stop`
+  `hook-json` + `json` schema + `sarif` + `--emit-ir` + `--fail-on warn` +
+  `checkwash allow` CLI round-trip; 5 positive test functions fail on `main`
+  `aa678cb3` and 116 preserving negative controls pass on `main`, with 121/121
+  passing on this branch) plus `tests/test_oracle_rules_pinned.py`
+  (`GUARDRAIL_ADDITIVE_PATHS` pin).
+- Full `pytest -n 16` suite (`23,271` collected tests), `checkwash check`
+  dogfood on the branch range (`--fail-on high`: `verdict=pass`, 0
+  critical/high findings), and 1 independent adversarial read-only review
+  sub-agent across multiple rounds (all blocking, medium and low findings
+  resolved with regression tests — `O(N)` fence-close, autolink, single-pass
+  interleaved container and lazy `text.lower()` bounds, Phase-1 §4.6 rules 1–5
+  HTML block interruption, paragraph-scoped multi-line inline backtick spans and
+  §2.4 `\` escapes, list-stack and post-`>` tab-stop container fences, non-void
+  `/>` rejection, HTML5 `<script>` 3-state machine, `<iframe|noembed|noframes|
+  noscript|title|xmp|listing|plaintext>`, `_IMPLIED_END_HTML_TAGS` and paired
+  custom elements, unclosed inline/container HTML poisoning, exact frontmatter
+  preservation, adjacent blockquote/Setext/1+-col-GFM-table/indented-code
+  re-contextualization, `globals_rules`/`gating` guard symmetry,
+  `docs/embedding.md`, Unicode `Cf` rejection and `@path` residual disclosure —
+  re-verified clean before opening the draft PR).
+- macOS, Linux, and other platforms: NOT_RUN.
+
+## D-212 (2026-11-16): set-aside helper modules check their own functions directly, `on_engine_error = "block"` exits 2 on `importer_gaps`, and pre-release threat-model and governance records are aligned
+
+**Approval and authorization chain (human words separated from agent scope
+interpretation).**
+
+- **Human verbatim words:**
+  1. Session `5472d923-3651-42a1-9267-6490cb024f59` at `2026-11-15T14:24:06Z`
+     (`2026-11-15T22:24:06+08:00`): 「開一個session 對整體做一次檢查 沒問題後就發」.
+  2. Session `c8f1073f-a39c-4c95-a65f-90c9037eff91` at `2026-11-15T17:34:59Z`
+     (`2026-11-16T01:34:59+08:00`), answering `Q1`–`Q6` after the 2026-11-15
+     external read-only pre-release audit: 「可以 照你的建議走 開個新session? 需要用到goal
+     或其他技能嗎」, followed by the `/goal` handover prompt in session
+     `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` (`2026-11-15T17:37:45Z`).
+  3. Session `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` at `2026-11-16T11:45:56Z`
+     (`2026-11-16T19:45:56+08:00`), after reviewing the complete 1,603-line
+     verbatim L1 `git diff` in `gate1-l1-verbatim-diff.md` (`56980027`,
+     `a496ddf8`, `30df9516`): 「核可並合併」.
+- **Agent scope interpretation:** Nelson's `Q2`, `Q4` and `Q6` rulings select
+  Option 甲 on `D-206` (`#603`), approve the `THREATMODEL.md` row `125`/`183`/
+  `187`/`188` updates (`DET13-03`, `RC-1`, `RC-2`) and the `SPEC.md` §9 B6
+  addition (`DG-06`), explicitly ratify `#607`'s (`857c88d4`) pure structural
+  extraction of helper functions inside `src/checkwash/gating.py` (`apply_gates`),
+  ratify `D-209`'s (`f2bfe8e0`) same-tree bootstrap clause with the `15:33:34Z`
+  merge-instruction clarification, and record the `D-210` `SPEC.md §5` -> `§2b`
+  section-number corrigendum; Nelson's `2026-11-16T11:45:56Z` 「核可並合併」 at
+  `/goal` Gate 1 approves the protected L1 texts as they stood at `56980027` and
+  authorizes pushing and merging via the PJU compact receipt bridge (this
+  timestamp note is the only change made to the entry after Gate 1; `1.0`
+  remains `NOT_MET`, and downstream `smallestlie` / `checkwash-corpus` re-pins
+  remain outside scope).
+
+**What was found (`DET13-01..03`, `DET13-05`, `RC-1`, `RC-2`, `DG-02`, `DG-06`).**
+The 2026-11-15 external read-only audit (`2-detection-0.13.md`,
+`5-release-chain.md`, `7-docs-governance.md`, reproduced in
+`cwrev1115/work/detection-0.13/repro-01..04,13,16`) found:
+
+1. **`DET13-01` / `DET13-02`: `D-206` dropped `REPAIR_REFUSED_PYTHON` checks
+   inside set-aside helper modules, not only cross-file expected-value
+   provenance.** Because `expected_provenance.importer_changes` is the sole
+   mechanism that projects non-`test*` top-level helper functions onto callers,
+   setting a helper module aside past any of `D-206`'s four bounds (`>=64`
+   unchanged Python files mentioning its name, `>48` unchanged test files, `192`
+   total importer reads spent, or `>16` changed helper module names — reachable
+   by touching comments in 17 test files that define `_make()`) left the helper
+   file with zero `test_function` units (`BROAD_EXCEPT_ADDED` still fired at
+   file level, whereas `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TOLERANCE_LOOSENED`
+   and `TEST_DISABLED` inside the helper passed at `exit 0`), while the stderr
+   note claimed only `were not read for their expected values`.
+2. **`DET13-05`: `[gate] on_engine_error = "block"` did not stop `check` on
+   `importer_gaps`.** On `v0.12.0`, `64+` mentions raised `SearchHitLimit`
+   (`exit 2` in `check`); `D-206` converted the bound into
+   `report_context.importer_gaps` and asked in `hook pre-tool-use` under
+   `on_engine_error = "block"`, while `cli._cmd_check` still returned `0` when
+   findings were empty (`repro-13`).
+3. **`DET13-03` (pre-existing since `#272` / `0.12.0`).** Adding `pytest.skip`
+   inside an imported helper module without editing its calling test file passed
+   even with one caller (`repro-03` `r_none_skip`), because `expected_provenance`
+   synthesizes unchanged importer `FileChange` entries only for expected-value
+   definitions, whereas `THREATMODEL.md` row 125 began `**Closed (#272).**`.
+4. **`RC-1`, `RC-2`, `DG-02`, `DG-06`.** `THREATMODEL.md` had no rows stating
+   the single-context `(checkwash, 15368)` GitHub Actions ruleset trust boundary
+   (`RC-1`) or the owner-attested execution fields and 90-day hosted retention
+   of `checkwash.pju-compact-receipt.v1` (`RC-2`); `SPEC.md` §9 did not yet
+   describe B6's `unanalysed_test_files` note (`DG-06`); `#607` (`857c88d4`)
+   split `gating.apply_gates` into private helpers in `src/checkwash/gating.py`
+   without changing severity outcomes (`DG-02`); `D-209` needed explicit
+   clarification of `15:33:34Z` (`DG-01`); and `D-210` cited `SPEC.md §5` where
+   `#608` edited `SPEC.md §2b` (`DG-03`).
+
+**Decision.**
+
+1. **Direct `helper_function` unit judgement on set-aside test/conftest helper
+   modules (`expected_provenance.py`, `engine_ir_intake.py`,
+   `engine_ir_files.py`, `frontend_file_parse.py`, `diffalign.py`, `engine.py`,
+   `gating.py`, `oracle_credit.py`).** When `expected_provenance.importer_changes`
+   sets aside a changed test or conftest file past any of `D-206`'s four bounds,
+   it records the path in `set_aside_paths`. `engine_ir_files` parses both sides
+   of that file with `collect_helpers=True`, collecting top-level functions
+   whose names do not start with `test` (and, in a `conftest`, do not start with
+   `pytest_`) as `ParsedUnit(kind="helper_function")` with full body assertion
+   and body/helper/module-level skip extraction (decorator marks other than
+   `@pytest.fixture` are stripped so non-pytest decorators are never misread as
+   skip marks, and conftest `@pytest.fixture` marks remain on `<suite>`).
+   `diffalign` aligns units within matching `(kind, qualname)` namespaces,
+   `engine.run_detectors` emits unit findings on `helper_function` units strictly
+   from `REPAIR_REFUSED_PYTHON` (requiring `unit.before.assertions` for
+   `TEST_DISABLED` `SHAPE_UNIT_REMOVED` so deleting a pure data/utility helper
+   stays clean), and cross-file, arrival, restructure, duplicate and move
+   credits skip `helper_function` units so helper bodies neither spend nor mint
+   test-unit oracle credits.
+2. **Honest note wording and `on_engine_error = "block"` fail-closed `exit 2` in
+   `check` (`expected_provenance.py`, `cli.py`, `SPEC.md` §9).** `_set_aside`
+   now formats `analysis incomplete: <reason>, so unchanged tests that import
+   <helpers> were not read; each helper's own functions were checked, not
+   expected values resolved through its callers`. In `cli._cmd_check`, when
+   `report_context.importer_gaps` is non-empty and `config.on_engine_error ==
+   "block"` on any non-`hook-json` invocation, `check` writes the stderr note
+   and returns `exit 2` with empty standard output (`check --format hook-json`
+   keeps `exit 0` and its `systemMessage`).
+3. **Threat-model, spec and governance alignment (`THREATMODEL.md` rows 125,
+   183, 187, 188; `SPEC.md` §9; `DECISIONS.md` `D-209`, `D-210`).** Row 125 is
+   relabelled `**Closed in part (#272).**` and names the unchanged-caller
+   imported-helper `pytest.skip` residual (tracked in a `0.14` issue); row 183
+   records `D-212`'s narrowing and remaining expected-value residual; rows 187
+   and 188 record `RC-1` and `RC-2`; `SPEC.md` §9 adds **Test-shaped files left
+   unparsed (B6, 0.13)**; `#607`'s structural split of `gating.apply_gates` and
+   `D-209`'s `f2bfe8e0` bootstrap clause are explicitly ratified; and `D-210`'s
+   `SPEC.md §2b` corrigendum is recorded.
+
+**Fingerprint movement (`docs/stability.md`).** No existing finding or `.gwcase`
+fixture moves. Set-aside helper modules that previously emitted zero unit
+findings on internal `REPAIR_REFUSED_PYTHON` weakenings now emit findings on
+`(helper_path, helper_qualname)` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3`
+unchanged).
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_importer_search_skip.py` (`+10` collected test entries:
+  `ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TOLERANCE_LOOSENED`, `TEST_DISABLED`
+  body skip and lambda replacement at the 64-file hit limit, >48-test, >192-read
+  and >16-name bounds, non-asserting helper deletion control, set-aside conftest
+  helper weakening beside `collect_ignore`, default-policy `PreToolUse` ask on
+  set-aside helper weakening, and `on_engine_error = "block"` `exit 2` across
+  `json`/`term`/`sarif`/`--emit-ir`/worktree vs `exit 0` Stop `hook-json`),
+  verified against all `cwrev1115/work/detection-0.13/repro-01..04,13,16`
+  repositories, `benchmarks/make_failures.py`, full 6-leg Windows + WSL Linux
+  Python `3.11`/`3.12`/`3.13` suites, and compact PJU receipt (`23,303` tests).
+- macOS: NOT_RUN (covered in hosted release verification at `M`).
+## D-213 (2026-11-16): `D-211` narrows `CLAUDE.md` `GUARDRAIL_ADDITIVE` to strict inert EOF appends, fixes `_match_open_containers` to `O(N)`, pins `.gwcase` cases, and adds all of `gating.py` and `guardrail_additive.py` to `AGENTS.md` L1
+
+**Approval and authorization chain (human words separated from agent scope
+interpretation).**
+
+- **Human verbatim words:**
+  1. Session `5472d923-3651-42a1-9267-6490cb024f59` at `2026-11-15T14:24:06Z`
+     (`2026-11-15T22:24:06+08:00`): 「開一個session 對整體做一次檢查 沒問題後就發」.
+  2. Session `c8f1073f-a39c-4c95-a65f-90c9037eff91` at `2026-11-15T17:34:59Z`
+     (`2026-11-16T01:34:59+08:00`), answering `Q1`–`Q6` after the 2026-11-15
+     external read-only pre-release audit: 「可以 照你的建議走 開個新session? 需要用到goal
+     或其他技能嗎」, followed by the `/goal` handover prompt in session
+     `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` (`2026-11-15T17:37:45Z`).
+  3. Session `3da7dc8a-5957-4ba3-bde0-bba9c03b8042` at `2026-11-16T11:45:56Z`
+     (`2026-11-16T19:45:56+08:00`), after reviewing the complete 1,603-line
+     verbatim L1 `git diff` in `gate1-l1-verbatim-diff.md` (`56980027`,
+     `a496ddf8`, `30df9516`): 「核可並合併」.
+- **Agent scope interpretation:** Nelson's `Q1`, `Q3` and `Q6` rulings select
+  Option 甲-1 on `D-211` (`#611`, narrowing `is_pure_line_addition` to strict
+  inert EOF append, fixing `_match_open_containers` to linear time, and pinning
+  audit `repro-01..15` in tests plus representative `.gwcase` fixtures), switch
+  `tests/test_claude_md_additive.py` timing checks to 3-run medians with
+  generous ceilings (`Q3`), and add all of `src/checkwash/gating.py` and
+  `src/checkwash/guardrail_additive.py` to `AGENTS.md`'s `Agent-READ-ONLY` list
+  (`Q6`, `DG-04`); per `/goal` Gate 1, the verbatim L1 diff across `AGENTS.md`,
+  `SPEC.md`, `DECISIONS.md`, `src/checkwash/gating.py`,
+  `src/checkwash/guardrail_additive.py`, `.greenwash/allow.toml` (the 44
+  content-bound v2 keys printed by CheckWash's own check on `AGENTS.md` and the
+  tightened/median-updated `tests/test_claude_md_additive.py` pins), and the 5
+  new `.gwcase` fixtures was approved verbatim by Nelson at `2026-11-16T11:45:56Z` (`#620` `0a010788` landed the 44 base-side v2 keys first; this timestamp/PR note is the only post-Gate-1 edit).
+
+**What was found (`GD211-01..06`).** The 2026-11-15 external read-only audit
+(`3-guardrail-d211.md`, reproduced in `cwrev1115/work/guardrail-d211/repro-*`)
+found that `#611`'s general CommonMark/GFM/HTML subsequence parser left six
+issues before `v0.13.0` had shipped:
+
+1. **`GD211-01` (`repro-01`, `repro-02`): Claude Code non-anchored `ni()`
+   frontmatter swallowing.** Claude Code strips frontmatter with
+   `/^---\s*\n([\s\S]*?)---\s*\n?/` (without requiring the closing `---` to own
+   its line or sit outside GFM tables). When `before` began with YAML
+   frontmatter (`---\n...\n---\n`), inserting a GFM table whose delimiter row
+   held `---` (`| a | b |\n| --- | --- |`, `repro-01`), or when `before` began
+   with a horizontal rule `---` and an added line held `---` (`repro-02`), made
+   Claude Code swallow every existing guardrail line between the opening `---`
+   and the new `---` as ignored YAML frontmatter while `#611` passed at `warn`.
+2. **`GD211-02` (`repro-03`–`repro-08`): `marked` / `markdown-it` / GitHub
+   parser differentials on mid-file insertions.** Inserting ` ``` \n<!--`, list
+   indent mismatches, loose-list-item fences, `<svg>/<math>` foreign HTML,
+   `<select>` implied-close mismatches, or `[x]: <\n...\n>` multi-line link
+   destinations above existing lines kept `#611`'s custom context tuple constant
+   while downstream Markdown/HTML renderers hid or swallowed existing guardrail
+   rules.
+3. **`GD211-03` (`repro-10`–`repro-12`, `repro-15`): newly introduced
+   `Default_Ignorable` / Variation Selector / Hangul-filler invisible smuggling
+   and ZWJ/ZWNJ asymmetry.** `_has_disallowed_codepoint` rejected Unicode `Cf`
+   (including `U+200C` ZWNJ and `U+200D` ZWJ) and Plane-14 Tags, while Unicode
+   `Mn`/`Lo` `Default_Ignorable_Code_Point` characters — Variation Selectors
+   `U+FE00..U+FE0F` and `U+E0100..U+E01EF` (`repro-10`, `repro-11`, stealth
+   prompt-injection byte payloads) and Hangul/Halfwidth fillers `U+115F`,
+   `U+1160`, `U+3164`, `U+FFA0` (`repro-12`) — were absent from `HIDDEN_UNICODE`
+   and passed at `warn`.
+4. **`GD211-04` (`repro-52`, `repro-53`): `O(N^2)` staircase list-indentation
+   rescan in `_match_open_containers`.** Advancing `pos` by only `item_indent`
+   on open list containers forced each nested list marker to re-scan the same
+   leading spaces (`29.5` s on a `990 KB` staircase in `repro-52` and `57.2` s
+   on `repro-53`).
+5. **`GD211-05` & `GD211-06` (`repro-30`–`repro-32`, `DG-04`):** pre-existing
+   unguarded Claude Code inputs (`CLAUDE.local.md`, lowercase `claude.md`,
+   subdirectory `CLAUDE.md`, `.gitattributes` `working-tree-encoding`) needed
+   explicit documentation in `SPEC.md` / `KNOWN-ISSUES`, and `guardrail_additive.py`
+   plus the rest of `gating.py` needed explicit L1 read-only protection in
+   `AGENTS.md`.
+
+**Decision (Option 甲-1).**
+
+1. **Strict inert EOF append (`src/checkwash/guardrail_additive.py`, `SPEC.md`
+   §4/§5).** `is_pure_line_addition(before, after)` returns `True` only when:
+   - Both sides are valid UTF-8 with no NUL byte, lone `\r`, non-LF Unicode line
+     separator, or newly introduced `HIDDEN_UNICODE` / Unicode `Cf` format
+     character or Unicode `Default_Ignorable_Code_Point` (`U+034F`, `U+115F`,
+     `U+1160`, `U+17B4..U+17B5`, `U+180B..U+180D`, `U+3164`, `U+FE00..U+FE0F`,
+     `U+FFA0`, `U+FFF0..U+FFF8`, `U+1BCA0..U+1BCA3`, `U+1D173..U+1D17A`,
+     `U+E0000..U+E0FFF`; existing ignorable/Cf counts in `before` may survive
+     unchanged, while any newly added code point in those ranges is refused).
+   - After `\r\n` -> `\n` normalization and optional leading UTF-8 BOM removal,
+     `before` has at least one line, `len(after_lines) > len(before_lines)`,
+     `after_lines[:len(before_lines)] == before_lines` (strict prefix — zero
+     prepends, mid-file insertions, edits, deletions or reorderings), at least
+     one added line is non-blank, and if `before` contains any non-blank line at
+     least one blank line sits between `before`'s last non-blank line and the
+     added tail's first non-blank line (blocking Setext heading underlines, GFM
+     table continuations, lazy paragraph/blockquote continuations and adjacent
+     structural re-contextualization of `before`'s tail).
+   - Both `_annotate_markdown_lines(before_lines)` and
+     `_annotate_markdown_lines(after_lines)` report `eof_clean == True` (no
+     unclosed code fence, HTML block/comment/declaration/PI/CDATA, open HTML
+     element, unclosed tag attribute, open multi-line inline backtick span or
+     inline HTML/comment desynchronization on either side) and identical
+     per-line structural contexts across `0..len(before_lines) - 1`.
+   - `after` does not newly start with `---` or `+++`, `_frontmatter_end`
+     matches line-for-line, and `_CC_FRONTMATTER_RE`
+     (`re.compile(r"\A---\s*\n([\s\S]*?)---\s*\n?")`) produces the exact same
+     `(group(0), group(1))` tuple on normalized `before` and `after` (closing
+     `GD211-01`).
+   - No line in `added_lines` contains `"---"` as a substring, three or more
+     consecutive `` ` `` or `~` characters, `"<!--"` or `"-->"`, or a
+     `[label]:` / `[^footnote]:` reference opener (`_has_link_ref_opener`,
+     bounded `O(L)` without quadratic bracket backtracking).
+2. **True `O(N)` container and link-reference scanning
+   (`src/checkwash/guardrail_additive.py`).** `_match_open_containers` caches the
+   one-pass leading whitespace scan `(cached_ws_pos, cached_end_col)` across all
+   open list containers on a line (`repro-52`: `29.48` s -> `1.07` s;
+   `repro-53`: `57.23` s -> `0.70` s).
+3. **L1 boundary expansion and `.gwcase` fixture pins (`AGENTS.md`,
+   `tests/cases/guardrail_claude_md_*.gwcase`, `.greenwash/allow.toml`).**
+   `AGENTS.md` adds all of `src/checkwash/gating.py` and
+   `src/checkwash/guardrail_additive.py` to `Agent-READ-ONLY`. Five `.gwcase`
+   fixtures (`guardrail_claude_md_eof_append_neg`,
+   `guardrail_claude_md_frontmatter_table_swallow_pos`,
+   `guardrail_claude_md_base_hr_eof_dash_swallow_pos`,
+   `guardrail_claude_md_marked_fence_comment_pos`,
+   `guardrail_claude_md_variation_selector_pos`) pin the positive/negative
+   contract in `test_cases_runner.py`, and a preceding atomic `.greenwash/allow.toml`
+   commit records the 44 owner-reviewed content-bound v2 keys (`1`
+   `GUARDRAIL_TOUCHED` on `AGENTS.md` + `43` `EXPECTED_VALUE_CHANGED` on
+   `tests/test_claude_md_additive.py`).
+
+**Fingerprint movement (`docs/stability.md`).** Relative to the last published
+release `v0.12.0` (`FINDINGS_VERSION = 2` and `IR_VERSION = 3` unchanged):
+- Strict inert end-of-file appends to repository-root `CLAUDE.md` move from
+  `v0.12.0`'s `critical` `GUARDRAIL_TOUCHED` v2 key (no `"additive"` context
+  key) to an additive `warn` v2 key carrying `"additive": True` (`GUARDRAIL_ADDITIVE`).
+- Relative to unreleased `#611` (`bce7c8d3`, never published in a release),
+  prepends, mid-file insertions, adjacent appends without a blank line, and
+  appends containing fences, HTML comments, `---`, `[label]:` definitions or
+  newly added `Default_Ignorable` code points return to `v0.12.0`'s byte-identical
+  `critical` `GUARDRAIL_TOUCHED` v2 key (`META`). No existing `.gwcase` fixture
+  expectation moves.
+
+**Residual.** CheckWash does not interpret natural-language prose or follow
+Claude Code `@path` imports, so a plain-text paragraph or `@path` reference
+appended after a blank line at clean EOF of `CLAUDE.md` stays at `warn`
+(`GUARDRAIL_ADDITIVE`); `--fail-on warn` blocks every `GUARDRAIL_TOUCHED`
+finding. Pre-existing Claude Code inputs outside default guardrail globs
+(`CLAUDE.local.md`, lowercase `claude.md`, subdirectory `CLAUDE.md`, and
+`.gitattributes` `working-tree-encoding`) remain unguarded unless added to
+`[roles].guardrail`. Honest additions containing ZWJ emoji sequences (`U+200D`),
+ZWNJ script joiners (`U+200C`, Persian/Arabic/Indic), fenced code examples, HTML
+comments, GFM tables or horizontal rules in `CLAUDE.md` escalate to `critical`
+(`META`).
+
+**Verification.** On LAPTOP-01AGNPJU (`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`):
+- `tests/test_claude_md_additive.py` (`171` collected tests, including `51`
+  audit regression cases across `repro-01..15` and `repro-30..32`, 3-run median
+  timing ceilings, and `repro-52`/`repro-53` staircase linear-time bounds) + `5`
+  new `.gwcase` fixtures (`23,358` collected tests total).
+- CLI replay across all `44` `cwrev1115/work/guardrail-d211/repro-*`
+  repositories (`repro-01..08`, `repro-10..15`, `repro-30..32` all blocked at
+  `critical` `META`; `repro-51` `1.16` s, `repro-52` `1.07` s, `repro-53`
+  `0.70` s; `repro-60` `pass` at `warn`), full 6-leg Windows + WSL Linux Python
+  `3.11`/`3.12`/`3.13` suites, and compact PJU receipts.
+- macOS: NOT_RUN (covered in hosted release verification at `M`).

@@ -129,12 +129,26 @@ schema_version = 1
 # i198/S1's label becomes block (labels.toml). The chai file is the same blob
 # at 532f74a as at 3455530, so [t3.cases] stays, and the [canary] pair and
 # its 71 block -> pass IDs are not rotated.
+# 2026-11-18: rotated to v0.13.0 (docs/RELEASING.md step 9, D-214), under
+# Nelson's reply 「執行」 (and 「換個sassion 執行」) of 2026-11-18, which D-214
+# quotes. [baseline] pins the tag's commit, the release's Action commit A
+# 9ada8cfa (tag object f8ff8258, D-200), and the Release's checkwash.pyz:
+# 1077802 bytes, the SHA256 the publication record and the GitHub Releases API
+# report. The pyz is built from the release merge 7d45814, and the gate binds
+# its members to A's src/checkwash with doctor.py's own Action pin line set to
+# A. A PJU proposal run with this [baseline] (LAPTOP-01AGNPJU,
+# HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL; candidate 86139468, src equal to
+# main f81928a7) ran all 185 cases (159 T1, 26 T3): 161 block -> block, 24
+# pass -> pass, zero reported and no failure. v0.13.0 blocks the same 161
+# cases as v0.12.0, so [baseline_blocked] stays, and labels.toml is unchanged.
+# The chai file is the same blob at 9ada8cfa as at 532f74a, so [t3.cases]
+# stays, and the [canary] pair and its 71 block -> pass IDs are not rotated.
 [baseline]
-tag = "v0.12.0"
-version = "0.12.0"
-commit = "532f74ab070a924b23e2cc70e5d0091a05d8401d"
-sha256 = "4ef6eda2d4ff5b378c12874f43b825be3ce2d8ef97c2f1c5f44bfae06ee18cb2"
-size = 1013508
+tag = "v0.13.0"
+version = "0.13.0"
+commit = "9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638"
+sha256 = "326e2a0c1e5e983869893a4c11c4f0ddba5e75e7c23a8984a3357042a87fbeff"
+size = 1077802
 
 [baseline_blocked]
 count = 161

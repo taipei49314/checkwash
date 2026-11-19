@@ -46,8 +46,8 @@ run (the [v0.9.0 notes](#v080-to-v090) list the exceptions).
   expected-value pass did not read
   (`checkwash: analysis incomplete: <reason>, so unchanged tests that import <helpers> were not read; each helper's own functions were checked, not expected values resolved through its callers`;
   under `on_engine_error = "block"`, `check` exits 2 with empty standard
-  output when this note is present, [D-206](../DECISIONS.md),
-  [D-212](../DECISIONS.md)), and changed test-shaped files outside the Python
+  output when this note is present, [D-206](../DECISIONS-archive-6.md),
+  [D-212](../DECISIONS-archive-6.md)), and changed test-shaped files outside the Python
   and JS/TS test parse gates
   (`checkwash: analysis incomplete: <N> test-shaped file(s) not analysed: <paths>`).
   An expired exemption is
@@ -163,10 +163,10 @@ release pull request reports `checkwash_version` `0.12.0`.
 
 - **The document and the IR version numbers did not change:** findings
   version 2 and IR version 3. `--emit-ir` adds optional `source_unit` on
-  `Unit` ([D-210](../DECISIONS.md)), `kind = "helper_function"` on `Unit`
+  `Unit` ([D-210](../DECISIONS-archive-6.md)), `kind = "helper_function"` on `Unit`
   when a set-aside test/conftest helper module's own top-level functions are
-  checked directly ([D-212](../DECISIONS.md)), and `guardrail_files_additive`
-  on `DiffGlobals` ([D-211](../DECISIONS.md), [D-213](../DECISIONS.md)).
+  checked directly ([D-212](../DECISIONS-archive-6.md)), and `guardrail_files_additive`
+  on `DiffGlobals` ([D-211](../DECISIONS-archive-6.md), [D-213](../DECISIONS-archive-6.md)).
 - **Projected Python unit findings name the real test, and their fingerprints
   move (D-210).** Findings emitted from projected Python concrete, exception
   or local-auxiliary units (`test_concrete_*`, `test_exception_*`,
