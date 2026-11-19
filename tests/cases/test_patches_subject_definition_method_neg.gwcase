@@ -1,0 +1,40 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: a method named like the imported subject binds a class attribute, not the name the tests read
+origin: issue #635 family bound — a test class gains a helper method called `invoice_total`; the tests in it still call the imported function through the module name, so nothing stands in for the subject
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+class TestBilling:
+    def test_total_exact_value(self):
+        assert invoice_total(ITEMS) == EXPECTED_TOTAL
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+class TestBilling:
+    def invoice_total(self):
+        return "widget, gadget"
+
+    def test_total_exact_value(self):
+        assert invoice_total(ITEMS) == EXPECTED_TOTAL
+=== head: src/app/billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal * (1 + tax_rate), 2)
+=== expect ===
+[]

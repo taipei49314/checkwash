@@ -404,6 +404,45 @@ def _import_rebind(before, after, *, path="<unknown>"):
     return any(name in new and new[name] != target for name, target in old.items())
 
 
+def _definition_rebind(before, after, *, path="<unknown>"):
+    """A def or class, outside a class body, that binds an imported name and
+    is not on the before side in the same words (#635).
+
+    Scheduling filter only, like `_import_rebind`: a definition changes
+    nothing the call/assignment filters see. The import may be on either
+    side, since removing it and defining the name is the same swap. Scope,
+    ownership and oracle reach belong to the trace.
+    """
+    def definitions(source, side):
+        tree = _syntax(source, path=path, side=side)
+        if tree is None:
+            return None
+        imports = {a.asname or a.name.split(".")[0] for node in ast.walk(tree)
+                   if isinstance(node, (ast.Import, ast.ImportFrom)) for a in node.names}
+        found = []
+        pending = [(node, False) for node in tree.body]  # (statement, directly in a class body)
+        while pending:
+            node, in_class = pending.pop()
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if not in_class:
+                    found.append(node)
+                pending.extend((child, isinstance(node, ast.ClassDef)) for child in node.body)
+                continue
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, ast.stmt):
+                    pending.append((child, in_class))
+                elif isinstance(child, (ast.ExceptHandler, ast.match_case)):
+                    pending.extend((item, in_class) for item in child.body)
+        return imports, found
+
+    old, new = definitions(before, "before"), definitions(after, "after")
+    if old is None or new is None:
+        return False
+    names = old[0] | new[0]
+    known = {stable_dump(node) for node in old[1] if node.name in names}
+    return any(node.name in names and stable_dump(node) not in known for node in new[1])
+
+
 class _Trace:
     def __init__(self, modules, context, side, deny, budget=None, search=None, *,
                  path="<unknown>", unit="<unknown>"):
@@ -678,7 +717,7 @@ class _Trace:
             return value
         return replace(value, effects=value.effects | {effect})
 
-    def install(self, target, kind, value, replacement, node, module):
+    def install(self, target, kind, value, replacement, node, module, *, identity=None, text=None):
         test_binding = None
         if target.startswith("@test_module.") and self.test_module is not None:
             name = target.removeprefix("@test_module.")
@@ -693,8 +732,8 @@ class _Trace:
                 self.test_module.env[test_binding] = value
             return None
         effect = _Effect(module.path, target, kind,
-                         value.alias or stable_dump(replacement),
-                         ast.get_source_segment(module.source, node) or ast.unparse(node),
+                         identity or value.alias or stable_dump(replacement),
+                         text or ast.get_source_segment(module.source, node) or ast.unparse(node),
                          (node.lineno, getattr(node, "end_lineno", node.lineno)))
         self.active[target, kind] = effect
         if test_binding:
@@ -726,7 +765,36 @@ class _Trace:
                 for dest, source in zip(target.elts, replacement.elts):
                     self.assign(dest, self.expression(source, module, env, qualname), source, node, module, env, qualname)
 
-    def block(self, statements, module, env, qualname, *, native_setattr=True):
+    def rebinds(self, qualname, class_body):
+        """Where a def or class can take over a name the observed test reads:
+        the module body and that test's own body. A method binds a class
+        attribute, and a definition inside a fixture or helper is local to
+        it; the fixture and parameter implementation passes judge those.
+        """
+        return not class_body and qualname in ("", self.unit)
+
+    def define(self, node, value, module, env, qualname, *, bind=True):
+        """A def or class that rebinds a captured import is the definition
+        spelling of a local stand-in (#635), as `name = ...` is (#88).
+
+        Its identity is the whole definition, so the same definition on both
+        sides is no new effect and an edited one is, like an edited lambda.
+        A class name is bound only when it takes over a captured import;
+        other classes stay unbound, as before.
+        """
+        old = (env.get(node.name, _Value()).alias or module.baseline_imports.get((qualname, node.name))
+               or module.baseline_imports.get(("", node.name)))
+        if old and not old.startswith("@"):
+            header = (ast.get_source_segment(module.source, node) or ast.unparse(node)).split("\n", 1)[0]
+            effect = self.install(old, "binding", value, node, node, module,
+                                  identity=stable_dump(node), text=header)
+            if effect is not None:
+                value = replace(value, effects=value.effects | {effect})
+            env[node.name] = value
+        elif bind:
+            env[node.name] = value
+
+    def block(self, statements, module, env, qualname, *, native_setattr=True, class_body=False):
         result = _Value()
         for index, node in enumerate(statements):
             if self.failed_assertion:
@@ -771,13 +839,19 @@ class _Trace:
                                 if keyword.arg == "autouse" and isinstance(keyword.value, ast.Constant):
                                     function.autouse = keyword.value.value is True
                 module.functions[qual] = function
-                env[node.name] = _Value(f"@function:{qual}")
+                value = _Value(f"@function:{qual}")
+                if self.rebinds(qualname, class_body):
+                    self.define(node, value, module, env, qualname)
+                else:
+                    env[node.name] = value
             elif isinstance(node, ast.ClassDef):
                 # Keep class fixtures separate; a test outside this class must
                 # never inherit its providers or autouse markers.
                 qual = f"{qualname}.{node.name}" if qualname else node.name
                 class_env = dict(env)
-                self.block(node.body, module, class_env, qual)
+                self.block(node.body, module, class_env, qual, class_body=True)
+                if self.rebinds(qualname, class_body):
+                    self.define(node, _Value(f"@class:{qual}"), module, env, qualname, bind=False)
             elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                 if node.value is None:
                     continue
@@ -806,7 +880,8 @@ class _Trace:
             elif isinstance(node, ast.If):
                 truth = _static_truth(node.test)
                 if truth is not None:
-                    result = self.block(node.body if truth else node.orelse, module, env, qualname, native_setattr=native_setattr)
+                    result = self.block(node.body if truth else node.orelse, module, env, qualname,
+                                        native_setattr=native_setattr, class_body=class_body)
                 else:
                     for child in ast.walk(node):
                         if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
@@ -816,7 +891,8 @@ class _Trace:
                 # One iteration suffices to prove a consumed installation;
                 # no loop state or equality/refactor credit is inferred.
                 env[node.target.id] = _Value()
-                result = self.block(node.body, module, env, qualname, native_setattr=native_setattr)
+                result = self.block(node.body, module, env, qualname,
+                                    native_setattr=native_setattr, class_body=class_body)
             elif isinstance(node, (ast.With, ast.AsyncWith)):
                 # Track only the bound result of a closed stdlib patch context.
                 # Attribute installation/lifetime remains the frontend's job.
@@ -828,7 +904,8 @@ class _Trace:
                         if value is not None:
                             env[item.optional_vars.id] = value
                             patch_values.add(value.alias)
-                result = self.block(node.body, module, env, qualname, native_setattr=native_setattr)
+                result = self.block(node.body, module, env, qualname,
+                                    native_setattr=native_setattr, class_body=class_body)
                 # This bounded proof covers the closed context body. A later
                 # closure mutation requires its own source-order provenance.
                 for name, value in list(env.items()):
@@ -1060,7 +1137,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         imported = _imports(sides[0], path=path, side="before")
         rebound = (
             role == "test" and sides[0] is not None and sides[1] is not None
-            and _import_rebind(sides[0], sides[1], path=path)
+            and (_import_rebind(sides[0], sides[1], path=path)
+                 or _definition_rebind(sides[0], sides[1], path=path))
         )
         if (rebound or any(_candidate(source, imported, path=path, side=side)
                            for side, source in zip(("before", "after"), sides))) and (
