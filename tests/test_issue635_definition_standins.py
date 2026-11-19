@@ -91,6 +91,16 @@ POSITIVES = {
         "import pytest\n" + BEFORE,
         "import pytest\n" + IMPORT + "\npytest.fixture = lambda function: function\n\n\n@pytest.fixture\n"
         + DEF + "\n\n" + TEST, "def total(lines):"),
+    # An optional import of anything but the replaced provider cannot restore production.
+    "def_then_optional_import_of_another_module": (
+        BEFORE, IMPORT + "\n\n" + DEF + "\n\ntry:\n    from app.fast import total\nexcept ImportError:\n    pass\n\n\n" + TEST,
+        "def total(lines):"),
+    "def_then_optional_import_of_a_standard_library_name": (
+        BEFORE, DEF + "\n\ntry:\n    from math import fsum as total\nexcept ImportError:\n    pass\n\n\n" + TEST,
+        "def total(lines):"),
+    "def_then_unknown_branch_importing_another_module": (
+        BEFORE, "import sys\n" + IMPORT + "\n\n" + DEF + "\n\nif sys.platform == 'plan9':\n    from app.fast import total\n\n\n" + TEST,
+        "def total(lines):"),
     # The definition was already in the file, where it did not bind the name the test reads.
     "import_moved_above_the_def": (DEF + "\n\n" + IMPORT + "\n\n" + TEST, IMPORT + "\n\n" + DEF + "\n\n" + TEST,
                                    "def total(lines):"),
@@ -179,9 +189,11 @@ NEGATIVES = {
         "import pytest\nfrom app import prod\n\n\ndef test_total():\n    assert prod.total([(100, 1)]) == 105.0\n",
         "import pytest\nfrom app import prod\n\n\n@pytest.fixture\ndef prod():\n    return [(100, 1)]\n\n\n"
         "def test_total():\n    assert prod.total([(100, 1)]) == 105.0\n"),
-    # The import still wins when it succeeds, so the takeover is not proved.
+    # The same provider's import still wins when it succeeds, so the takeover is not proved.
     "fallback_definition_above_an_optional_import": (
         BEFORE, DEF + "\n\ntry:\n    from app.prod import total\nexcept ImportError:\n    pass\n\n\n" + TEST),
+    "fallback_definition_above_a_version_branch_import": (
+        BEFORE, "import sys\n\n\n" + DEF + "\n\nif sys.version_info >= (3, 11):\n    from app.prod import total\n\n\n" + TEST),
     # A module-level definition does not take over an import made inside the test.
     "import_inside_the_test": (
         "def test_total():\n    from app.prod import total\n\n    assert total([(100, 1)]) == 105.0\n",

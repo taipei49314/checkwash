@@ -923,19 +923,30 @@ class _Trace:
         elif not isinstance(node, ast.ClassDef):
             env[node.name] = value
 
-    def unknown_imports(self, node, env):
-        """An import of the name under `try` or an unknown `if` may be what the
-        name ends up bound to (a fallback definition above an optional import),
-        so a definition's takeover of that name is no longer proved.
+    def unknown_imports(self, node, module, env):
+        """An import of the replaced provider under `try` or an unknown `if`
+        may be what the name ends up bound to (a fallback definition above an
+        optional import of the same thing), so the definition's takeover of
+        that name is no longer proved.
 
-        Only a definition's: the assignment spelling keeps the reading it had.
+        Only that provider's import: one of anything else cannot restore
+        production, whether it succeeds or not. And only a definition's
+        takeover: the assignment spelling keeps the reading it had.
         """
         for child in ast.walk(node):
-            if isinstance(child, (ast.Import, ast.ImportFrom)):
-                for item in child.names:
-                    local = item.asname or item.name.split(".")[0]
-                    if _defined(env.get(local, _Value())):
-                        env[local] = _Value()
+            if isinstance(child, ast.Import):
+                names = [(item.asname or item.name.split(".")[0],
+                          item.name if item.asname else item.name.split(".")[0]) for item in child.names]
+            elif isinstance(child, ast.ImportFrom):
+                imported = _import_module(child, module.package)
+                names = [(item.asname or item.name, f"{imported}.{item.name}")
+                         for item in child.names if imported and item.name != "*"]
+            else:
+                continue
+            for local, target in names:
+                if any(_defined_by(e) and (e.target, e.kind) == (target, "binding")
+                       for e in env.get(local, _Value()).effects):
+                    env[local] = _Value()
 
     def block(self, statements, module, env, qualname, *, native_setattr=True, class_body=False):
         result = _Value()
@@ -1032,9 +1043,9 @@ class _Trace:
                     for child in ast.walk(node):
                         if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
                             env.pop(child.id, None)
-                    self.unknown_imports(node, env)
+                    self.unknown_imports(node, module, env)
             elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
-                self.unknown_imports(node, env)
+                self.unknown_imports(node, module, env)
             elif (isinstance(node, ast.For) and _literal_assertion_loop(node, previous)
                   and any(value.alias in self.patch_results for value in env.values())):
                 # One iteration suffices to prove a consumed installation;
