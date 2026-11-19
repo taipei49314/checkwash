@@ -1,3 +1,13 @@
+# After 0.13.0 — 2026-11-19
+
+Found after v0.13.0 was published. 0.13.0 has these limits, and
+[KNOWN-ISSUES-v0.13.0](KNOWN-ISSUES-v0.13.0.md) does not list them. Nothing in
+this section changes what checkwash does.
+
+| Scope | Known limit and what it means for you |
+| --- | --- |
+| Import-level stand-ins and removed setup that 0.13.0 does not report | Found 2026-11-18 while reviewing other work, each reproduced with pytest going from failing to passing on unchanged production: a test's import switched to a stand-in module beside the test file (#634); a module-level `def` of the subject's name in the test file (#635); a test moved into a directory that holds a same-named stand-in (#636); a newly imported module that replaces the subject at import time, a new test that rebinds the subject through `global`, and an autouse fixture removed (THREATMODEL rows 189 to 191, open). Two more were already stated: an import rebound to third-party or standard-library code (row 90) and a `pytestmark` bound by an import (row 117). |
+
 # 0.13 candidate — 2026-11-11
 
 Status, 2026-11-18: shipped in v0.13.0
