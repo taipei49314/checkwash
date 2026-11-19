@@ -71,6 +71,9 @@ class _Effect:
     replacement: str
     text: str
     span: tuple[int, int]
+    # `def name`, then `name = ...`: the assignment carries the definition's takeover on (#635).
+    # Not part of the effect's identity.
+    carried: bool = field(default=False, compare=False)
 
     @property
     def key(self):
@@ -105,6 +108,10 @@ class _Module:
     baseline_imports: dict[tuple[str, str], str] = field(default_factory=dict)
     settled: frozenset = frozenset()  # (scope, name) of definitions bound the same way on both sides (#635)
     identities: dict[int, str] = field(default_factory=dict)  # a definition node's identity, computed once
+    # Non-empty once a definition here installed something, so that this reading differs from 0.13.0's.
+    # A list, because the trace follows copies of the module (`replace`) and they must share the mark.
+    took_over: list = field(default_factory=list)
+    fixtures: frozenset | None = None  # ids of the functions pytest's own `fixture` decorates, computed once
 
 
 def _value(*values, alias=None):
@@ -423,9 +430,12 @@ def _definition_identity(node):
 
     The tree is read in place, with those fields set aside and put back: a
     copy of a deep expression exhausts the interpreter's stack, and
-    `stable_dump` does not. The text is the same on every supported Python:
-    from 3.12 a def or class dumps an empty `type_params` that 3.11 does not
-    have, and a conftest row's fingerprint is made from this text.
+    `stable_dump` does not. From 3.12 a def or class has an empty
+    `type_params` that 3.11 does not have; it is set aside too, so the same
+    source gives the same tree text on each. A string constant can still dump
+    differently: `repr` escapes the characters the interpreter's Unicode
+    database does not know. The digest a conftest row carries is therefore
+    taken from the ASCII form of this text (`_definition_digest`).
     """
     saved = []
     try:
@@ -438,21 +448,35 @@ def _definition_identity(node):
                                  and isinstance(statement.value.value, str))]
                 saved.append((item, "body", item.body))
                 item.body = body
+                if getattr(item, "type_params", None) == []:
+                    saved.append((item, "type_params", item.type_params))
+                    del item.type_params
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 saved.append((item, "returns", item.returns))
                 item.returns = None
             elif isinstance(item, ast.arg):
                 saved.append((item, "annotation", item.annotation))
                 item.annotation = None
-        return _DEFINITION + stable_dump(node).replace(", type_params=[]", "")
+        return _DEFINITION + stable_dump(node)
     finally:
         for item, name, value in reversed(saved):
             setattr(item, name, value)
 
 
+def _definition_digest(identity):
+    """Twelve hex digits for a conftest row's text. Non-ASCII characters are
+    written as backslash escapes first, as `repr` writes the ones it does not
+    know, so the digest does not depend on the interpreter's Unicode database.
+    """
+    return hashlib.sha256(identity.encode("ascii", "backslashreplace")).hexdigest()[:12]
+
+
 def _import_target(node, name):
-    """What an import statement binds `name` to, as the trace names it; None if it does not bind it."""
-    for item in node.names:
+    """What an import statement binds `name` to, as the trace names it; None if it does not bind it.
+
+    The last alias of the name: `from a import x, y as x` leaves `x` bound to `a.y`.
+    """
+    for item in reversed(node.names):
         if isinstance(node, ast.Import):
             if (item.asname or item.name.split(".")[0]) == name:
                 return item.name if item.asname else item.name.split(".")[0]
@@ -474,7 +498,9 @@ def _bindings(tree):
     the name: an import, a def or class, an assignment, a loop or `with`
     target, an `except ... as`, a walrus, a `match` capture, `del`; and a
     `global` or `nonlocal` declaration, as kind `global`. A star import is
-    filed under `*`. Each entry carries the compound statements around it, and
+    filed under `*`. A `for` is filed by its target and by its iterable. A
+    comprehension's loop variables are its own and are not listed; a walrus
+    inside one is. Each entry carries the compound statements around it, and
     for each whether the trace follows it: a `with`, or the taken branch of an
     `if` with a literal test.
 
@@ -488,18 +514,23 @@ def _bindings(tree):
         entries.setdefault((scope, name), []).append((where, node, kind))
 
     def bound(*nodes):
-        names, pending = set(), [node for node in nodes if node is not None]
+        names, pending = set(), [(node, False) for node in nodes if node is not None]
         while pending:
-            item = pending.pop()
+            item, comprehension = pending.pop()
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
                 continue  # another scope
-            if isinstance(item, ast.Name) and isinstance(item.ctx, (ast.Store, ast.Del)):
-                names.add(item.id)
+            if isinstance(item, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                comprehension = True  # its loop variables are its own; a walrus in it binds out here
+            if isinstance(item, ast.NamedExpr) and isinstance(item.target, ast.Name):
+                names.add(item.target.id)
+            elif isinstance(item, ast.Name) and isinstance(item.ctx, (ast.Store, ast.Del)):
+                if not comprehension:
+                    names.add(item.id)
             elif isinstance(item, (ast.MatchAs, ast.MatchStar)) and item.name:
                 names.add(item.name)
             elif isinstance(item, ast.MatchMapping) and item.rest:
                 names.add(item.rest)
-            pending.extend(ast.iter_child_nodes(item))
+            pending.extend((child, comprehension) for child in ast.iter_child_nodes(item))
         return names
 
     def visit(statements, scope, where, in_class, functions):
@@ -524,15 +555,24 @@ def _bindings(tree):
                 for name in node.names:
                     add(scope, name, where, node, "global")
             elif isinstance(node, ast.If):
-                truth = _static_truth(node.test)
-                for name in bound(node.test):
-                    add(scope, name, where, node.test, "header")
-                tag = "type-checking" if _type_checking(node.test) else "if"
-                visit(node.body, scope, where + ((tag, node.test, truth is True),), in_class, functions)
-                visit(node.orelse, scope, where + (("else", node.test, truth is False),), in_class, functions)
+                # Arm by arm, not arm inside arm: a chain of a thousand `elif`
+                # must not need a thousand frames.
+                chain = where
+                while True:
+                    truth = _static_truth(node.test)
+                    for name in bound(node.test):
+                        add(scope, name, chain, node.test, "header")
+                    tag = "type-checking" if _type_checking(node.test) else "if"
+                    visit(node.body, scope, chain + ((tag, node.test, truth is True),), in_class, functions)
+                    chain = chain + (("else", node.test, truth is False),)
+                    if len(node.orelse) != 1 or not isinstance(node.orelse[0], ast.If):
+                        break
+                    node = node.orelse[0]
+                visit(node.orelse, scope, chain, in_class, functions)
             elif isinstance(node, (ast.For, ast.AsyncFor)):
                 for name in bound(node.target, node.iter):
                     add(scope, name, where, node.target, "header")
+                    add(scope, name, where, node.iter, "header")
                 visit(node.body, scope, where + (("for", None, False),), in_class, functions)
                 visit(node.orelse, scope, where + (("for-else", None, False),), in_class, functions)
             elif isinstance(node, ast.While):
@@ -612,6 +652,34 @@ def _binding_signature(entries, scope, name, memo):
     return tuple(out)
 
 
+def _enclosing(entries, scope):
+    """What each scope around a definition is, outermost first: True for a class, False for a function.
+
+    None when one of them is defined more than once in its own scope: the key
+    then names more than one body, and nothing says which one a run uses.
+    """
+    kinds = []
+    for inner in _scope_chain(scope)[1:]:
+        outer, _dot, name = inner.rpartition(".")
+        nodes = [node for _where, node, kind in entries.get((outer, name), ()) if kind == "definition"]
+        if len(nodes) != 1:
+            return None
+        kinds.append(isinstance(nodes[0], ast.ClassDef))
+    return tuple(kinds)
+
+
+def _bound_alike(old, new, scope, name, memo):
+    """Whether `name` is bound the same way for a definition in `scope` on both sides.
+
+    The scopes around it must be the same kind of thing on both sides, each
+    defined once: a method of `class helper` and a def nested in
+    `def helper()` have the same key and are not the same binding.
+    """
+    kinds = _enclosing(old, scope)
+    return (kinds is not None and kinds == _enclosing(new, scope)
+            and _binding_signature(old, scope, name, memo) == _binding_signature(new, scope, name, memo))
+
+
 def _only_defined(entries, scope, name):
     """No import or assignment of the name around the definition: nothing it could take over."""
     return all(kind == "definition" for inner in _scope_chain(scope)
@@ -622,30 +690,66 @@ def _settled(before, after):
     """The (scope, name) of definitions that this rule leaves as 0.13.0 read them (#635).
 
     A definition is settled when its name is bound the same way on both sides
-    (`_binding_signature`). The diff did not add, edit or move it, or anything
-    else that binds its name around it, so it installed nothing. A copy of the
+    (`_bound_alike`). The diff did not add, edit or move it, or anything else
+    that binds its name around it, so it installed nothing. A copy of the
     definition parked somewhere else on the before side (in another function,
     under `if False:`, above the import instead of below it) is not the same
     binding, and neither is the same definition after a changed import of the
     name.
 
-    A definition that only the before side has is in the set too. The diff
-    removed it, so it cannot be a new installation, and reading it as an
-    installation would change how the before side's later bindings of the
-    name are read: a stand-in that 0.13.0 reports behind it would look as if
-    it had been there already.
+    A definition that only the before side has is not in the set. Reading it
+    as an installation there is what lets the same definition, moved to
+    another scope or kept under a renamed helper, count as the one the test
+    already read through. What that reading could hide on the before side (a
+    stand-in 0.13.0 reports behind the removed definition) is reported by the
+    released reading, which `installation_events` runs beside this one.
     """
     if before is None or after is None:
         return frozenset()
-    (old, old_definitions), (new, new_definitions) = _bindings(before), _bindings(after)
+    (old, _old_definitions), (new, new_definitions) = _bindings(before), _bindings(after)
     memo, judged = {}, {}
     for scope, node, _readable, _functions in new_definitions:
         key = (scope, node.name)
         if key not in judged:
-            judged[key] = not (_only_defined(old, *key) and _only_defined(new, *key)) and (
-                _binding_signature(old, *key, memo) == _binding_signature(new, *key, memo))
-    removed = {(scope, node.name) for scope, node, _readable, _functions in old_definitions} - set(judged)
-    return frozenset(key for key, same in judged.items() if same) | removed
+            judged[key] = (not (_only_defined(old, *key) and _only_defined(new, *key))
+                           and _bound_alike(old, new, *key, memo))
+    return frozenset(key for key, same in judged.items() if same)
+
+
+def _decorated(node, test):
+    """Whether a decorator of `node` is a dotted name that `test(root, parts)` accepts, called or not."""
+    for decorator in getattr(node, "decorator_list", ()):
+        target, parts = decorator.func if isinstance(decorator, ast.Call) else decorator, []
+        while isinstance(target, ast.Attribute):
+            parts.append(target.attr)
+            target = target.value
+        if isinstance(target, ast.Name) and test(target.id, list(reversed(parts))):
+            return True
+    return False
+
+
+def _pytest_fixtures(tree, entries):
+    """ids of the functions decorated by `pytest.fixture`, where nothing in the file can make that something else (#635).
+
+    The decorator's first name is bound once in the whole file, by an import
+    at module level, and the file neither stores an attribute called `fixture`
+    nor holds the string "fixture". A class or assignment that takes the name
+    `pytest` over, anywhere in the file, leaves no function in the set.
+    """
+    if any(isinstance(item, ast.Attribute) and item.attr == "fixture" and isinstance(item.ctx, (ast.Store, ast.Del))
+           or isinstance(item, ast.Constant) and item.value == "fixture" for item in ast.walk(tree)):
+        return frozenset()
+    origins = {}
+
+    def genuine(root, parts):
+        if root not in origins:
+            bound_as = [(scope, entry) for (scope, name), found in entries.items() if name == root for entry in found]
+            origins[root] = (_import_target(bound_as[0][1][1], root) if len(bound_as) == 1 and bound_as[0][0] == ""
+                             and bound_as[0][1][2] == "import" else None)
+        return origins[root] is not None and ".".join([origins[root], *parts]) == "pytest.fixture"
+
+    return frozenset(id(node) for node in ast.walk(tree)
+                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _decorated(node, genuine))
 
 
 def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
@@ -685,7 +789,15 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
     sides = [entries for entries in (old, new) if entries is not None]
     memo = {}
 
+    answers = {}
+
     def captured(scope, name, depth=0):
+        key = (scope, name, depth)
+        if key not in answers:
+            answers[key] = capture(scope, name, depth)
+        return answers[key]
+
+    def capture(scope, name, depth):
         for entries in sides:
             for inner in _scope_chain(scope):
                 for where, node, kind in entries.get((inner, name), ()):
@@ -707,38 +819,16 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
                             return True
         return False
 
-    def decorated(node, test):
-        for decorator in getattr(node, "decorator_list", ()):
-            target, parts = decorator.func if isinstance(decorator, ast.Call) else decorator, []
-            while isinstance(target, ast.Attribute):
-                parts.append(target.attr)
-                target = target.value
-            if isinstance(target, ast.Name) and test(target.id, list(reversed(parts))):
-                return True
-        return False
-
     def fixture_like(node):
-        return decorated(node, lambda root, parts: (parts[-1] if parts else root) == "fixture")
+        return _decorated(node, lambda root, parts: (parts[-1] if parts else root) == "fixture")
 
-    replaced_fixture, origins = [], {}
+    fixtures = []
 
     def pytest_fixture(node):
         """Decorated by `pytest.fixture`, where nothing in the file can make that something else."""
-        if not replaced_fixture:
-            replaced_fixture.append(any(
-                isinstance(item, ast.Attribute) and item.attr == "fixture" and isinstance(item.ctx, (ast.Store, ast.Del))
-                or isinstance(item, ast.Constant) and item.value == "fixture" for item in ast.walk(tree)))
-        if replaced_fixture[0]:
-            return False
-
-        def genuine(root, parts):
-            if root not in origins:
-                bound_as = [(scope, entry) for (scope, name), found in new.items() if name == root for entry in found]
-                origins[root] = (_import_target(bound_as[0][1][1], root) if len(bound_as) == 1 and bound_as[0][0] == ""
-                                 and bound_as[0][1][2] == "import" else None)
-            return origins[root] is not None and ".".join([origins[root], *parts]) == "pytest.fixture"
-
-        return decorated(node, genuine)
+        if not fixtures:
+            fixtures.append(_pytest_fixtures(tree, new))
+        return id(node) in fixtures[0]
 
     def local(scope, name):
         kinds = {kind for _where, _node, kind in new.get((scope, name), ())}
@@ -795,12 +885,25 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
         if not readable:
             continue
         if key not in judged:
-            judged[key] = captured(*key) and not (
-                old is not None and _binding_signature(old, *key, memo) == _binding_signature(new, *key, memo))
+            judged[key] = captured(*key) and not (old is not None and _bound_alike(old, new, *key, memo))
         if (judged[key] and not any(pytest_fixture(function) for function in functions)
                 and (not fixture_like(node) or read(node.name, scope, first[key]))):
             return True
     return False
+
+
+class _EveryDefinition(frozenset):
+    """`_Module.settled` for the released reading: every definition is read as 0.13.0 read it."""
+
+    def __contains__(self, key):
+        return True
+
+
+_EVERY_DEFINITION = _EveryDefinition()
+
+
+def _in_order(effects):
+    return sorted(effects, key=lambda e: (e.path, e.target, e.text, e.span))
 
 
 def _defined_by(effect):
@@ -1089,7 +1192,7 @@ class _Trace:
             return value
         return replace(value, effects=value.effects | {effect})
 
-    def install(self, target, kind, value, replacement, node, module, *, identity=None, text=None):
+    def install(self, target, kind, value, replacement, node, module, *, identity=None, text=None, carried=False):
         test_binding = None
         if target.startswith("@test_module.") and self.test_module is not None:
             name = target.removeprefix("@test_module.")
@@ -1106,7 +1209,7 @@ class _Trace:
         effect = _Effect(module.path, target, kind,
                          identity or value.alias or stable_dump(replacement),
                          text or ast.get_source_segment(module.source, node) or ast.unparse(node),
-                         (node.lineno, getattr(node, "end_lineno", node.lineno)))
+                         (node.lineno, getattr(node, "end_lineno", node.lineno)), carried)
         self.active[target, kind] = effect
         if test_binding:
             self.test_module.env[test_binding] = replace(value, effects=value.effects | {effect})
@@ -1117,11 +1220,12 @@ class _Trace:
             current = env.get(target.id, _Value())
             old = (current.alias or module.baseline_imports.get((qualname, target.id))
                    or module.baseline_imports.get(("", target.id)))
-            if old and old.startswith("@") and _defined(current):
+            carried = bool(old and old.startswith("@") and _defined(current))
+            if carried:
                 # `def name` then `name = ...` replaces what the definition replaced (#635).
                 old = min(e.target for e in current.effects if _defined_by(e))
             if old and not old.startswith("@") and value.alias != old:
-                effect = self.install(old, "binding", value, replacement, node, module)
+                effect = self.install(old, "binding", value, replacement, node, module, carried=carried)
                 if effect is not None:
                     value = replace(value, effects=value.effects | {effect})
             env[target.id] = value
@@ -1196,6 +1300,8 @@ class _Trace:
             if not isinstance(node, ast.ClassDef):
                 env[node.name] = value
             return
+        if not module.took_over:
+            module.took_over.append(True)
         if id(node) not in module.identities:
             module.identities[id(node)] = _definition_identity(node)
         header = (ast.get_source_segment(module.source, node) or ast.unparse(node)).split("\n", 1)[0].rstrip("\r")
@@ -1245,7 +1351,11 @@ class _Trace:
                             and value.alias in {"unittest.mock.patch", "unittest.mock.patch.object"}):
                         function.patch_env = dict(env)
                     if value.alias == "pytest.fixture":
-                        fixture = fixture or not value.effects
+                        if module.fixtures is None:
+                            module.fixtures = _pytest_fixtures(module.tree, _bindings(module.tree)[0])
+                        # Only pytest's own decorator keeps a body with the fixture passes: a class or
+                        # assignment that takes the name `pytest` over makes this an ordinary helper.
+                        fixture = fixture or (not value.effects and id(node) in module.fixtures)
                         function.fixture_name = node.name
                         function.fixture_body = fixture  # its body stays with the fixture passes
                         if call:
@@ -1534,6 +1644,14 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     `definitions`, when given, receives the rows a def or class produced
     (#635), so the caller can keep a specialised pass's report of the same
     replacement instead of a second finding with the same fingerprint.
+
+    A test file that 0.13.0 scheduled, and in which a definition installs
+    something, is read twice: as this rule reads it, and as 0.13.0 read it.
+    The rows of the second reading are returned as they stand, and a row of
+    the first is left out where the second already reports that target. In a
+    file where no definition installs anything the two readings are the same
+    statement for statement, and only one is made. A file that only this rule
+    schedules is read once: 0.13.0 reported nothing there.
     """
     # Legacy direct callers (including frozen corpus emitters) do not provide
     # a complete repository view. Preserve that API's established coverage;
@@ -1549,6 +1667,7 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             changed[old] = (change.before, None)
     deny = known_baseline() | set(ir.globals.third_party_roots)
     candidates = set()
+    released_candidates = set()  # what 0.13.0 scheduled: the released reading is made for these only (#635)
     candidate_bytes = 0
     for path, sides in changed.items():
         role = config.role_of(path)
@@ -1562,14 +1681,16 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             )
         imported = _imports(sides[0], path=path, side="before")
         defined = sides[1] is not None and _definition_rebind(sides[0], sides[1], deny, path=path)
-        rebound = defined or (
+        rebound = (
             role == "test" and sides[0] is not None and sides[1] is not None
             and _import_rebind(sides[0], sides[1], path=path)
         )
         if (rebound or any(_candidate(source, imported, path=path, side=side)
                            for side, source in zip(("before", "after"), sides))) and (
-            role == "test" or defined or _new_assignment_candidate(sides, deny, path=path)
+            role == "test" or _new_assignment_candidate(sides, deny, path=path)
         ):
+            released_candidates.add(path)
+        if defined or path in released_candidates:
             candidates.add(path)
     if not candidates:
         return []
@@ -1605,6 +1726,13 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     test_paths = {path for path in candidates if config.role_of(path) == "test"}
     test_paths.update(path for path in inventory if config.role_of(path) == "test" and collectable(path)
                       and scoped(path))
+    # The tests 0.13.0 followed: its own candidates, and the tests beneath a conftest among them.
+    released_conftests = {path for path in released_candidates if config.role_of(path) == "conftest"}
+    released_paths = {
+        path for path in test_paths
+        if path in released_candidates or any(
+            not conftest.rpartition("/")[0] or path.startswith(conftest.rpartition("/")[0] + "/")
+            for conftest in released_conftests)}
     # A changed conftest's fixtures reach the tests beneath it, and those
     # inside a submodule pytest can collect are unknown (#335).
     beneath = tuple(directory for directory in opaque if scoped(directory))
@@ -1649,6 +1777,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 raise EngineError("stand-in inventoried source disappeared")
         return memo[path]
 
+    released_budget = [0]  # analysis steps of the released reading (#635)
+
     # Ownership probes share the same bounded reader as consumer discovery.
     context = ConftestContext(changes, lambda path: read(path, 1))
     authority_search = root_searcher
@@ -1675,42 +1805,79 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             if not directory:
                 break
             directory = directory.rpartition("/")[0]
-        modules = [[], []]
-        for source_path in [*reversed(ancestors), path]:
-            baseline = None
-            settled = _settled(*(_syntax(read(source_path, side), path=source_path, side=name)
-                                 for side, name in enumerate(("before", "after"))))
-            for side in (0, 1):
-                source = read(source_path, side)
-                if source is None:
-                    continue
-                package = _package(source_path, lambda candidate: read(candidate, side) is not None)
-                module = _module(source_path, source, package, baseline, side=("before", "after")[side])
-                if module is None:
-                    raise EngineError("stand-in provider context could not be parsed")
-                module.settled = settled
-                # Baseline imports identify the removal-and-assignment form;
-                # they do not execute or activate a provider on the head side.
-                seed = _Trace([], context, side, deny, budget, path=source_path, unit="<module body>")
-                seed.block(module.tree.body, module, module.env, "")
-                if side == 0:
-                    baseline = dict(module.baseline_imports)
-                modules[side].append(module)
-        event = restructured_patch_event(path, modules, live, context, deny, budget, authority_search)
-        if event is not None:
+
+        def reading(released, steps):
+            """The restructured-patch event, each live test's effects on both
+            sides, and whether a definition installed anything on the way.
+
+            With `released`, every definition is read as 0.13.0 read it.
+            """
+            modules = [[], []]
+            for source_path in [*reversed(ancestors), path]:
+                baseline = None
+                settled = _EVERY_DEFINITION if released else _settled(
+                    *(_syntax(read(source_path, side), path=source_path, side=name)
+                      for side, name in enumerate(("before", "after"))))
+                for side in (0, 1):
+                    source = read(source_path, side)
+                    if source is None:
+                        continue
+                    package = _package(source_path, lambda candidate: read(candidate, side) is not None)
+                    module = _module(source_path, source, package, baseline, side=("before", "after")[side])
+                    if module is None:
+                        raise EngineError("stand-in provider context could not be parsed")
+                    module.settled = settled
+                    # Baseline imports identify the removal-and-assignment form;
+                    # they do not execute or activate a provider on the head side.
+                    seed = _Trace([], context, side, deny, steps, path=source_path, unit="<module body>")
+                    seed.block(module.tree.body, module, module.env, "")
+                    if side == 0:
+                        baseline = dict(module.baseline_imports)
+                    modules[side].append(module)
+            event = restructured_patch_event(path, modules, live, context, deny, steps, authority_search)
+            observed = {}
+            for qualname in sorted(live[0] & live[1]):
+                observed[qualname] = (
+                    _observed_for_test(modules[0], path, qualname, context, 0, deny, steps, authority_search),
+                    _observed_for_test(modules[1], path, qualname, context, 1, deny, steps, authority_search))
+            return event, observed, any(module.took_over for side in modules for module in side)
+
+        event, observed, took_over = reading(False, budget)
+        # Where a definition installed something, this reading and 0.13.0's
+        # part ways, and an effect this reading puts on the before side can
+        # stand where 0.13.0 saw none: `def name` in front of `name = ...` on
+        # the before side makes that assignment look as if it had replaced the
+        # provider already. Whatever 0.13.0's reading reports is therefore
+        # reported as it stands; this rule only adds to it (#635). Its steps are
+        # counted apart, so the second reading cannot exhaust the first one's
+        # budget. It is made only for a file 0.13.0 scheduled: in a file that only
+        # this rule schedules, 0.13.0 reported nothing.
+        released_event, released = (reading(True, released_budget)[:2]
+                                    if took_over and path in released_paths else (None, {}))
+        if released_event is not None:
+            events.append(released_event)
+        if event is not None and (released_event is None or event[:3] != released_event[:3]):
             events.append(event)
-        for qualname in sorted(live[0] & live[1]):
-            before = _observed_for_test(modules[0], path, qualname, context, 0, deny, budget, authority_search)
-            after = _observed_for_test(modules[1], path, qualname, context, 1, deny, budget, authority_search)
+        for qualname, (before, after) in observed.items():
+            kept = set()
+            if qualname in released:
+                seen = {effect.key for effect in released[qualname][0]}
+                for effect in _in_order(released[qualname][1]):
+                    if effect.key not in seen:
+                        kept.add((effect.path, effect.target))
+                        events.append((effect.path, qualname if effect.path == path else None,
+                                       effect.target, effect.text, effect.span))
             previous = {effect.key for effect in before}
             # A definition the test already read through, whose provider the
             # diff renamed or removed: the import in front of it follows the
             # rename, the definition is the one it was, and it replaces
             # nothing new (#635).
-            renamed = {(e.kind, e.replacement) for e in before if _defined_by(e) and not context.contains(e.target, 1)}
-            fresh = [effect for effect in sorted(after, key=lambda e: (e.path, e.target, e.text, e.span))
-                     if effect.key not in previous
-                     and not (_defined_by(effect) and (effect.kind, effect.replacement) in renamed)]
+            # The same holds for an assignment that carries such a definition on.
+            renamed = {(e.kind, e.replacement) for e in before
+                       if (_defined_by(e) or e.carried) and not context.contains(e.target, 1)}
+            fresh = [effect for effect in _in_order(after)
+                     if effect.key not in previous and (effect.path, effect.target) not in kept
+                     and not ((_defined_by(effect) or effect.carried) and (effect.kind, effect.replacement) in renamed)]
             # One report per replacement (#635). A definition whose value an
             # assignment carries on (`total = make()`) is the stand-in that
             # assignment already reports, and of several definitions of the
@@ -1731,7 +1898,7 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                     # A definition's first line does not change with its body,
                     # so the body's digest goes with it: an exemption granted
                     # for one body must not cover another.
-                    text += "  # definition " + hashlib.sha256(effect.replacement.encode("utf-8")).hexdigest()[:12]
+                    text += "  # definition " + _definition_digest(effect.replacement)
                 row = (effect.path, qualname if effect.path == path else None, effect.target, text, effect.span)
                 events.append(row)
                 if definitions is not None and _defined_by(effect):

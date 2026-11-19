@@ -30,7 +30,13 @@ from checkwash.change import FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
-from checkwash.frontends.python.standin_installations import _definition_identity, _definition_rebind, _settled
+from checkwash.frontends.python.standin_installations import (
+    _definition_digest,
+    _definition_identity,
+    _definition_rebind,
+    _import_target,
+    _settled,
+)
 from checkwash.gitio.snapshot import search_source_mapping
 from checkwash.ir.astutil import stable_dump
 from test_issue_expectation_families import run
@@ -114,7 +120,7 @@ POSITIVES = {
         "import pytest\n" + BEFORE,
         "import pytest\n" + IMPORT + "\n\ndef plain(fixture):\n    return fixture.__wrapped__\n\n\n@plain\n@pytest.fixture\n"
         + DEF + "\n\n" + TEST, "def total(lines):"),
-    # An optional import that cannot restore production leaves the definition reported.
+    # A statement under `try` or an unknown `if` below the definition is not read, whatever it would import.
     "def_then_optional_import_of_a_missing_module": (
         BEFORE, SHADOWED.replace(TEST, "try:\n    from app.fast import total\nexcept ImportError:\n    pass\n\n\n" + TEST),
         "def total(lines):"),
@@ -147,6 +153,16 @@ POSITIVES = {
         IMPORT + "\n\ndef unused():\n    def total(lines):\n        return 105.0\n\n    return total\n\n\n" + TEST,
         IMPORT + "\n\n" + DEF + "\n\ndef unused():\n    def total(lines):\n        return 105.0\n\n    return total\n\n\n" + TEST,
         "def total(lines):"),
+    "function_scope_import_replaced_by_def": (
+        "def test_total():\n    from app.prod import total\n\n    assert total([(100, 1)]) == 105.0\n",
+        "def test_total():\n    def total(lines):\n        return 105.0\n\n    assert total([(100, 1)]) == 105.0\n",
+        "def total(lines):"),
+    # `class pytest:` takes the name `pytest` over, so the decorator is the class's and the helper is no fixture.
+    "def_in_a_helper_under_a_fixture_of_a_class_named_pytest": (
+        "import pytest\n" + BEFORE,
+        "import pytest\n" + IMPORT + "\n\nclass pytest:\n    fixture = staticmethod(lambda function: function)\n\n\n"
+        "@pytest.fixture\ndef compute(lines):\n    def total(lines):\n        return 105.0\n\n    return total(lines)\n\n\n"
+        "def test_total():\n    assert compute([(100, 1)]) == 105.0\n", "def total(lines):"),
     "dead_branch_made_live": (
         IMPORT + "\n\nif False:\n    def total(lines):\n        return 105.0\n\n\n" + TEST,
         IMPORT + "\n\nif True:\n    def total(lines):\n        return 105.0\n\n\n" + TEST, "def total(lines):"),
@@ -400,7 +416,9 @@ def test_two_definitions_that_both_reach_the_assertion_are_one_finding():
     before = IMPORT + "\n\nFIRST = total([(100, 1)])\n\n\ndef test_total():\n    assert FIRST == 105.0\n    assert total([(100, 1)]) == 105.0\n"
     _verdict, standins, events = judged(before, after)
     assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
-    assert len(events) == 1
+    # Of the two definition rows, the one kept is the last definition written.
+    line = after.count("\n", 0, after.rindex(DEF)) + 1
+    assert [span for _path, _unit, _target, _text, span in events] == [(line, line + 1)]
 
 
 def test_a_respelled_call_beside_the_definition_is_one_finding_with_the_released_evidence():
@@ -677,8 +695,19 @@ SCHEDULING = [
     # ... or read only above the definition, as the module is loaded: that read sees the import.
     (BEFORE, "import wrappers\n" + IMPORT + "\nDEFAULT = total([])\n\n\n@wrappers.fixture\n" + DEF
      + "\n\ndef test_total(total):\n    assert total\n", (), False),
-    (BEFORE, IMPORT + "\n\ndef early():\n    return total([])\n\n\n" + DEF + "\n\ndef test_total(total):\n    assert early()\n",
-     (), True),                                                             # a function above it runs later
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\ndef early():\n    return total([])\n\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total):\n    assert early()\n", (), True),          # a function above it runs later
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF + "\nDEFAULT = total\n\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total):\n    assert total\n", (), True),            # read below its first definition
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total):\n    assert total\n\n\ndef test_other():\n    global total\n    assert total\n", (), True),  # `global`
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\n" + DEF
+     + "\n\ndef test_total(total):\n    assert (lambda total: total)(1)\n", (), False),                          # a lambda's parameter
+    (BEFORE, "import wrappers\n" + IMPORT + "\n\ndef helper():\n    @wrappers.fixture\n    def total(lines):\n        return 0\n\n\n"
+     "def test_total():\n    assert total\n", (), False),                         # read outside the definition's scope
+    (BEFORE, IMPORT + "\n\n" + DEF + "\n\ndef test_total():\n    assert 1\n", (), True),   # a plain definition needs no reader
+    ("from .helpers import total\n\n\n" + TEST, "from .helpers import total\n\n\n" + DEF + "\n\n" + TEST, (), True),  # relative
+    (BEFORE, IMPORT + "\n\nif False:\n    pass\nelse:\n    def total(lines):\n        return 0\n\n\n" + TEST, (), True),
     ("import os\n" + BEFORE, "import os\nfrom os.path import join as total\n\n\n" + DEF + "\n\n" + TEST, ("os",), True),   # one owned import is enough
     (SHADOWED, "from app.prod import *\n" + DEF + "\n\n" + TEST, (), True),                # the import became a star import
     (SHADOWED, SHADOWED.replace(DEF, DEF + "\nfrom app.extra import *\n"), (), True),        # a star import below it
@@ -742,8 +771,8 @@ def test_settled_names_the_definitions_whose_binding_is_the_same_on_both_sides()
     # A changed binding of the name in the module unsettles a definition inside a function too.
     assert _settled(ast.parse(after), ast.parse(after.replace("app.prod", "app.other"))) == frozenset()
     assert _settled(None, ast.parse(after)) == frozenset()
-    # A definition only the before side has is read as before too.
-    assert _settled(ast.parse(after), ast.parse(SHADOWED)) == {("", "total"), ("", "helper"), ("helper", "total")}
+    # A definition only the before side has is not set apart: only the after side's definitions are judged.
+    assert _settled(ast.parse(after), ast.parse(SHADOWED)) == {("", "total")}
     # A `global` declaration and a star import below the definition are bindings of the name.
     assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED + "\n\ndef rebind():\n    global total\n")) == {("", "total")}
     assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED.replace(TEST, "global total\n\n\n" + TEST))) == frozenset()
@@ -770,7 +799,7 @@ def test_a_definition_s_identity_leaves_out_docstrings_pass_and_signature_annota
 
 
 def test_a_deep_expression_in_a_definition_is_not_an_engine_error():
-    """0.13.0 passes this honest diff; a copy of the definition used to exhaust the stack."""
+    """A new definition with a deep expression is reported; a copy of the definition used to exhaust the stack."""
     chain = " + ".join(["1"] * 400)
     after = IMPORT + "\n\ndef total(lines):\n    return sum(p * q for p, q in lines) + (" + chain + ") * 0\n\n\n" + TEST
     verdict, standins, _events = judged(BEFORE, after)
@@ -783,3 +812,267 @@ def test_a_deep_expression_in_a_definition_is_not_an_engine_error():
     definition.body[0].value = deep
     assert _definition_identity(definition).startswith("definition:FunctionDef(")
     assert definition.body[0].value is deep
+
+
+# ---- Fifth version (2026-11-20) -----------------------------------------------------------------------------------------
+# What 0.13.0 reports is reported as it stands: where a definition installs something, the released
+# reading runs beside this one, and this rule only adds to it.
+
+FIXED_HEAD = IMPORT + "\n\ndef fixed(function):\n    return lambda lines: 105.0\n\n\n"
+LOCAL = "def total(lines):\n    return 0\n"
+CARRIED = "total = fixed(total)\n\n\n" + TEST
+PARKED = FIXED_HEAD + LOCAL + "\n\n" + CARRIED
+DEAD_COPY = "if False:\n    def total(lines):\n        return 1\n\n\n"
+# Both sides hold `def total` in front of `total = fixed(total)`. On the before side the definition
+# makes the name local, so the assignment replaces nothing; each diff takes the definition out of the way.
+DISPLACED = {
+    "put_under_if_false": (PARKED, FIXED_HEAD + "if False:\n    def total(lines):\n        return 0\n\n\n" + CARRIED),
+    "edited_and_put_under_if_false": (PARKED, FIXED_HEAD + DEAD_COPY + CARRIED),
+    "moved_above_the_import": (PARKED, LOCAL + "\n\n" + FIXED_HEAD + CARRIED),
+    "put_under_type_checking": (
+        "from typing import TYPE_CHECKING\n" + PARKED,
+        "from typing import TYPE_CHECKING\n" + FIXED_HEAD + "if TYPE_CHECKING:\n    def total(lines):\n        return 0\n\n\n" + CARRIED),
+    "put_under_an_environment_branch": (
+        "import os\n" + PARKED,
+        "import os\n" + FIXED_HEAD + "if os.environ.get(\"LOCAL_TOTAL\"):\n    def total(lines):\n        return 0\n\n\n" + CARRIED),
+    "moved_below_the_assignment_under_if_false": (
+        PARKED, FIXED_HEAD + CARRIED.replace(TEST, "if False:\n    def total(lines):\n        return 0\n\n\n" + TEST)),
+    # The diff only deletes the definition, in a file that keeps another definition of the name.
+    "deleted_while_a_dead_copy_stays": (FIXED_HEAD + DEAD_COPY + LOCAL + "\n\n" + CARRIED, FIXED_HEAD + DEAD_COPY + CARRIED),
+    "deleted_while_a_type_checking_stub_stays": (
+        "from typing import TYPE_CHECKING\n" + FIXED_HEAD + "if TYPE_CHECKING:\n    def total(lines): ...\n\n\n" + LOCAL + "\n\n" + CARRIED,
+        "from typing import TYPE_CHECKING\n" + FIXED_HEAD + "if TYPE_CHECKING:\n    def total(lines): ...\n\n\n" + CARRIED),
+    # The definition stays; one line behind it puts production back under the name.
+    "production_restored_behind_it": (
+        "from app import prod\n" + PARKED, "from app import prod\n" + FIXED_HEAD + LOCAL + "\ntotal = prod.total\n\n\n" + CARRIED),
+    "production_restored_under_an_environment_branch": (
+        "import os\nfrom app import prod\n" + PARKED,
+        "import os\nfrom app import prod\n" + FIXED_HEAD + LOCAL + "\nif not os.environ.get(\"LOCAL_TOTAL\"):\n    total = prod.total\n\n\n"
+        + CARRIED),
+}
+
+
+@pytest.mark.parametrize("name", sorted(DISPLACED))
+def test_a_stand_in_behind_a_displaced_definition_is_reported_as_on_the_release(name):
+    """0.13.0 blocks each of these with this evidence. Read as an installation, the before side's
+    definition made the assignment behind it look as if it had replaced production already."""
+    before, after = DISPLACED[name]
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [(target, text) for _path, _unit, target, text, _span in events] == [("app.prod.total", "total = fixed(total)")]
+
+
+def test_a_stand_in_behind_a_definition_removed_inside_the_test_is_reported_as_on_the_release():
+    """Here the definition installs while the test's body is followed, not while the module is loaded."""
+    before = (IMPORT + "\n\ndef test_total():\n    def total(lines):\n        return 105.0\n\n"
+              "    total = lambda lines: 105.0\n    assert total([(100, 1)]) == 105.0\n")
+    after = before.replace("    def total(lines):\n        return 105.0\n\n", "")
+    assert after != before
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [(target, text) for _path, _unit, target, text, _span in events] == [("app.prod.total", "total = lambda lines: 105.0")]
+
+
+def test_the_released_reading_is_made_only_for_a_file_the_release_scheduled():
+    """Both sides alias the name and rebind the alias; the diff only moves an old local definition above the import.
+
+    0.13.0 does not schedule this file (nothing assigns to an imported name) and reports nothing. Read its way
+    all the same, the second assignment would look new.
+    """
+    tail = "alias = total\nalias = lambda lines: 105.0\n\n\ndef test_total():\n    assert alias([(100, 1)]) == 105.0\n"
+    before = IMPORT + "\n\n" + LOCAL + "\n\n" + tail
+    after = LOCAL + "\n\n" + IMPORT + "\n\n" + tail
+    _verdict, standins, events = judged(before, after)
+    assert standins == [] and events == []
+
+
+def test_a_conftest_stand_in_behind_a_displaced_definition_is_reported_as_on_the_release():
+    head = "import pytest\nfrom app.prod import total\n\n\ndef fixed(function):\n    return lambda lines: 105.0\n\n\n"
+    tail = "total = fixed(total)\n\n\n@pytest.fixture\ndef amount():\n    return total([(100, 1)])\n"
+    verdict, found = conftest_findings(head + "if False:\n    def total(lines):\n        return 0\n\n\n" + tail,
+                                       head + LOCAL + "\n\n" + tail)
+    assert verdict == "block"
+    assert [row[:3] for row in found] == [("CONFTEST_PATCHES_PROD", "high", "tests/conftest.py")]
+
+
+INNER = "    def total(lines):\n        return 105.0\n\n"
+IN_HELPER = IMPORT + "\n\ndef computed():\n" + INNER + "    return total([(100, 1)])\n\n\ndef test_total():\n    assert computed() == 105.0\n"
+IN_TEST = IMPORT + "\n\ndef test_total():\n" + INNER + "    assert total([(100, 1)]) == 105.0\n"
+MOVED = {
+    # The definition is the one the test already read through; the diff changes where it stands.
+    "the_helper_around_it_is_renamed": (IN_HELPER, IN_HELPER.replace("computed", "priced")),
+    "hoisted_out_of_the_test": (IN_TEST, SHADOWED + "\n\ndef test_other():\n    assert total([]) == 105.0\n"),
+    "moved_into_the_only_test_that_uses_it": (SHADOWED, IN_TEST),
+    "moved_from_a_helper_into_the_test": (
+        IN_HELPER, IMPORT + "\n\ndef test_total():\n" + INNER + "    assert total([(100, 1)]) == 105.0\n"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(MOVED))
+def test_a_definition_the_test_already_read_through_is_not_new_where_it_moves(name):
+    before, after = MOVED[name]
+    assert before != after
+    _verdict, standins, events = judged(before, after)
+    assert standins == [] and events == []
+
+
+def test_a_definition_moved_into_the_test_s_reach_is_still_new():
+    """The control for the moves above: on the before side no test read through the definition."""
+    verdict, standins, _events = judged(UNUSED_HELPER, IN_TEST)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+def judge_renamed(before, after):
+    paths = sorted(before.keys() | after.keys())
+    changes = [FileChange(path, "added" if path not in before else "deleted" if path not in after else "modified",
+                          before[path].encode() if path in before else None, after[path].encode() if path in after else None)
+               for path in paths if before.get(path) != after.get(path)]
+    snapshot = {path: source.encode() for path, source in after.items()}
+    _ir, findings, _verdict = analyze(changes, Config(), Contract(), [], datetime.date(2026, 11, 20),
+                                      root_reader=snapshot.get,
+                                      root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+                                      root_path_lister=lambda: sorted(snapshot),
+                                      root_batch_reader=lambda wanted: {path: snapshot.get(path) for path in wanted})
+    return [(f.unit, f.after.text if f.after else None) for f in findings if f.rule == "TEST_PATCHES_SUBJECT"]
+
+
+CACHED = ("import functools\nfrom {module} import total\n\n\n_real = total\n\n\ndef total(lines):\n    return _real(tuple(lines))\n\n\n"
+          "total = functools.lru_cache(maxsize=None)(total)\n\n\ndef test_total():\n    assert total(((100, 1),)) == 100\n")
+
+
+def test_a_renamed_provider_under_an_untouched_definition_and_the_assignment_that_carries_it_on_is_not_new():
+    """The module is renamed and the import follows; the wrapper and the `lru_cache` line are as they were."""
+    def files(module):
+        return {f"{module}.py": PRODUCTION, "tests/test_total.py": CACHED.format(module=module)}
+
+    assert judge_renamed(files("billing"), files("invoicing")) == []
+
+
+def test_an_import_moved_to_another_live_provider_under_an_untouched_definition_is_still_reported():
+    """Not a rename: the old module is still there. The import's own row, which is 0.13.0's, is the finding."""
+    def files(module):
+        return {"money.py": MONEY, "pricing.py": MONEY,
+                "tests/test_money.py": f"from {module} import Money\n\n\n" + SHADOW_CLASS + "\n\n" + MONEY_TEST}
+
+    assert judge_renamed(files("money"), files("pricing")) == [("test_total", "from pricing import Money")]
+
+
+def test_the_provider_a_definition_replaces_is_its_own_function_s_import_first():
+    before = ("from app.prod import total\n\n\ndef test_total():\n    from app.other import total\n\n"
+              "    assert total([(100, 1)]) == 105.0\n")
+    after = ("from app.prod import total\n\n\ndef test_total():\n    def total(lines):\n        return 105.0\n\n"
+             "    assert total([(100, 1)]) == 105.0\n")
+    _verdict, _standins, events = judged(before, after, context={"src/app/other.py": PRODUCTION.encode()})
+    assert [(target, text) for _path, _unit, target, text, _span in events] == [("app.other.total", "def total(lines):")]
+
+
+def test_an_import_binds_a_name_to_its_last_alias():
+    def target(source, name="total"):
+        return _import_target(ast.parse(source).body[0], name)
+
+    assert target("from app.prod import total\n") == "app.prod.total"
+    assert target("from app.prod import total, other as total\n") == "app.prod.other"
+    assert target("from app.prod import other as total, total\n") == "app.prod.total"
+    assert target("from ..prod import total\n") == "..prod.total"
+    assert target("import app.prod as total\n") == "app.prod"
+    assert target("import app.prod\n", "app") == "app"
+    assert target("from app.prod import other\n") is None
+
+
+def test_settled_compares_what_each_binding_binds_the_name_to():
+    def settled(before, after):
+        return _settled(ast.parse(before), ast.parse(after))
+
+    # The imported name and the relative level are part of what an import binds.
+    assert settled(SHADOWED, SHADOWED.replace("import total", "import other as total")) == frozenset()
+    assert settled(SHADOWED.replace("from app.prod", "from .prod"), SHADOWED.replace("from app.prod", "from prod")) == frozenset()
+    assert settled(SHADOWED, SHADOWED.replace("import total", "import total, other as total")) == frozenset()
+    # `typing.TYPE_CHECKING` is the same branch as `TYPE_CHECKING`: no run takes it.
+    assert settled(SHADOWED, "import typing\n" + SHADOWED + "\n\nif typing.TYPE_CHECKING:\n    from app.types import total\n") == {
+        ("", "total")}
+    # A star import counts only in the definition's own scope.
+    assert ("unused", "total") in settled(UNUSED_HELPER, UNUSED_HELPER + "\nfrom app.extra import *\n")
+    # The same import statement in another scope is another binding.
+    inside = "def helper():\n    from app.prod import total\n\n    def total(lines):\n        return 1\n\n    return total\n"
+    outside = IMPORT + "\n\ndef helper():\n    def total(lines):\n        return 1\n\n    return total\n"
+    assert ("helper", "total") not in settled(outside, inside)
+    # A comprehension's loop variable is its own; a walrus in it binds in the scope around it.
+    assert settled(SHADOWED, SHADOWED + "\nROWS = [total for total in (1, 2)]\n") == {("", "total")}
+    assert settled(SHADOWED, SHADOWED + "\nROWS = [(total := 1) for _ in (1,)]\n") == frozenset()
+    # A `for` binds the name to what its iterable yields.
+    loop = SHADOWED + "\nfor total in [len]:\n    pass\n"
+    assert settled(loop, loop) == {("", "total")}
+    assert settled(loop, loop.replace("[len]", "[max]")) == frozenset()
+
+
+def test_settled_tells_a_class_s_method_from_a_helper_s_definition_and_one_helper_from_another():
+    method = IMPORT + "\n\nclass compute:\n    def total(lines):\n        return 105.0\n\n\n" + TEST
+    nested = IMPORT + "\n\ndef compute():\n    def total(lines):\n        return 105.0\n\n\n" + TEST
+    assert ("compute", "total") not in _settled(ast.parse(method), ast.parse(nested))
+    assert ("compute", "total") in _settled(ast.parse(nested), ast.parse(nested))
+    twice = nested + "\n\ndef compute():\n    return None\n"
+    assert ("compute", "total") not in _settled(ast.parse(twice), ast.parse(twice))
+    # The filter asks the same question.
+    assert _definition_rebind(method.encode(), nested.encode(), set()) is True
+
+
+def test_a_class_namespace_turned_into_a_helper_is_reported():
+    before = IMPORT + "\n\nclass compute:\n    def total(lines):\n        return 105.0\n\n\n" + TEST
+    after = (IMPORT + "\n\ndef compute(lines):\n    def total(lines):\n        return 105.0\n\n    return total(lines)\n\n\n"
+             "def test_total():\n    assert compute([(100, 1)]) == 105.0\n")
+    verdict, standins, _events = judged(before, after)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+def test_a_definition_s_identity_keeps_what_can_change_what_it_returns():
+    def identity(source):
+        return _definition_identity(ast.parse(source).body[0])
+
+    # Text that looks like the empty `type_params` field, inside a string, stays.
+    assert identity("def total(lines):\n    return 'a, type_params=[]'\n") != identity("def total(lines):\n    return 'a'\n")
+    assert "type_params" not in identity("def total(lines):\n    return 1\n")
+    # Nested definitions are normalised like the outer one.
+    nested = "def total(lines):\n    def inner(x):\n        return x\n\n    return inner(1)\n"
+    assert identity(nested.replace("def inner(x):\n", "def inner(x: int) -> int:\n        \"\"\"Words.\"\"\"\n")) == identity(nested)
+    # Only a leading string is a docstring.
+    assert identity("def total(lines):\n    x = 1\n    'note'\n    return x\n") != identity("def total(lines):\n    x = 1\n    return x\n")
+
+
+def test_a_conftest_definition_s_digest_does_not_depend_on_the_interpreter_s_unicode_database():
+    """U+1FA77 arrived with Unicode 15.0: CPython 3.11 writes it as an escape in the tree text and 3.12 as itself."""
+    heart = "def total(lines):\n    return 105.0 if lines else \"\U0001FA77\"\n"
+    assert _definition_digest(_definition_identity(ast.parse(heart).body[0])) == "d2906f60a85c"
+    assert _definition_digest("definition:\u00e9") == _definition_digest("definition:\\xe9")
+    _ir, findings, _verdict = judge_files({"tests/conftest.py": CONFTEST}, {"tests/conftest.py": conftest_with(heart)},
+                                          {"tests/test_total.py": CONFTEST_TEST})
+    assert [f.after.text for f in findings if f.rule == "CONFTEST_PATCHES_PROD"] == ["def total(lines):  # definition d2906f60a85c"]
+
+
+def test_a_long_elif_chain_is_not_an_engine_error():
+    """The filter reads every changed test file; a chain of 1,200 arms used to need 1,200 frames."""
+    arms = "".join(f"    elif code == {index}:\n        return {index}\n" for index in range(1, 1200))
+    helper = "def label(code):\n    if code == 0:\n        return 0\n" + arms + "    return -1\n"
+    before = IMPORT + "\n\n" + helper + "\n\n" + TEST
+    after = before.replace("    return -1\n", "    return -2\n")
+    assert _definition_rebind(before.encode(), after.encode(), set()) is False
+    assert _settled(ast.parse(before), ast.parse(after)) == frozenset()
+    _verdict, standins, events = judged(before, after)
+    assert standins == [] and events == []
+    # A definition in one of the arms is found where it stands.
+    shadow = before.replace("    elif code == 600:\n        return 600\n",
+                            "    elif code == 600:\n        def total(lines):\n            return 105.0\n        return 600\n")
+    assert shadow != before and _definition_rebind(before.encode(), shadow.encode(), set()) is False  # not a literal branch
+
+
+def test_a_chain_of_aliases_is_judged_once_per_name():
+    """Four names, each assigned sixty times from the next: the filter used to walk every path through them."""
+    names = ["total", "second", "third", "fourth"]
+    lines = ["fourth = len"]
+    for left, right in zip(names, names[1:]):
+        lines += [f"{left} = {right}"] * 60
+    source = "\n".join(lines) + "\n\n\n" + DEF + "\n\n" + TEST
+    assert _definition_rebind(None, source.encode(), set()) is False
+    captured = source.replace("fourth = len", "from app import prod\nfourth = prod.total")
+    assert _definition_rebind(None, captured.encode(), set()) is True
