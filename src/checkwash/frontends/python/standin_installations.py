@@ -94,7 +94,6 @@ class _Function:
     fixture_name: str | None = None
     autouse: bool = False
     patch_env: dict[str, _Value] | None = None
-    fixture_body: bool = False  # decorated by pytest's own `fixture`, not by a replaced one (#635)
 
 
 @dataclass
@@ -111,7 +110,6 @@ class _Module:
     # Non-empty once a definition here installed something, so that this reading differs from 0.13.0's.
     # A list, because the trace follows copies of the module (`replace`) and they must share the mark.
     took_over: list = field(default_factory=list)
-    fixtures: frozenset | None = None  # ids of the functions pytest's own `fixture` decorates, computed once
 
 
 def _value(*values, alias=None):
@@ -728,30 +726,6 @@ def _decorated(node, test):
     return False
 
 
-def _pytest_fixtures(tree, entries):
-    """ids of the functions decorated by `pytest.fixture`, where nothing in the file can make that something else (#635).
-
-    The decorator's first name is bound once in the whole file, by an import
-    at module level, and the file neither stores an attribute called `fixture`
-    nor holds the string "fixture". A class or assignment that takes the name
-    `pytest` over, anywhere in the file, leaves no function in the set.
-    """
-    if any(isinstance(item, ast.Attribute) and item.attr == "fixture" and isinstance(item.ctx, (ast.Store, ast.Del))
-           or isinstance(item, ast.Constant) and item.value == "fixture" for item in ast.walk(tree)):
-        return frozenset()
-    origins = {}
-
-    def genuine(root, parts):
-        if root not in origins:
-            bound_as = [(scope, entry) for (scope, name), found in entries.items() if name == root for entry in found]
-            origins[root] = (_import_target(bound_as[0][1][1], root) if len(bound_as) == 1 and bound_as[0][0] == ""
-                             and bound_as[0][1][2] == "import" else None)
-        return origins[root] is not None and ".".join([origins[root], *parts]) == "pytest.fixture"
-
-    return frozenset(id(node) for node in ast.walk(tree)
-                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _decorated(node, genuine))
-
-
 def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
     """Whether the after side holds a definition this rule could report (#635).
 
@@ -759,9 +733,7 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
     nothing the call/assignment filters see. It asks for a def or class
 
     - outside a class body and under no compound statement but `with` and the
-      taken branch of a literal `if`, and not inside the body of a pytest
-      fixture when `pytest.fixture` can only be pytest's there (the trace
-      installs nothing in those places);
+      taken branch of a literal `if` (the trace installs nothing elsewhere);
     - of a name its own scope, or a scope around it, captures on either side:
       by an import the trace reads whose root is not standard library or a
       declared dependency, or by `name = <captured>` (deleting the import and
@@ -822,14 +794,6 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
     def fixture_like(node):
         return _decorated(node, lambda root, parts: (parts[-1] if parts else root) == "fixture")
 
-    fixtures = []
-
-    def pytest_fixture(node):
-        """Decorated by `pytest.fixture`, where nothing in the file can make that something else."""
-        if not fixtures:
-            fixtures.append(_pytest_fixtures(tree, new))
-        return id(node) in fixtures[0]
-
     def local(scope, name):
         kinds = {kind for _where, _node, kind in new.get((scope, name), ())}
         return bool(kinds) and "global" not in kinds
@@ -886,8 +850,7 @@ def _definition_rebind(before, after, deny=(), *, path="<unknown>"):
             continue
         if key not in judged:
             judged[key] = captured(*key) and not (old is not None and _bound_alike(old, new, *key, memo))
-        if (judged[key] and not any(pytest_fixture(function) for function in functions)
-                and (not fixture_like(node) or read(node.name, scope, first[key]))):
+        if judged[key] and (not fixture_like(node) or read(node.name, scope, first[key])):
             return True
     return False
 
@@ -928,7 +891,6 @@ class _Trace:
         self.patch_results: dict[str, _Effect] = {}
         self.called_patch_results: set[str] = set()
         self.stack = []
-        self.fixture_bodies = 0  # fixtures being followed; their bodies stay with the fixture passes
         self.steps = 0
         self.test_module = None
         self.budget = budget if budget is not None else [0]
@@ -1283,11 +1245,10 @@ class _Trace:
         succeeds. Reading the import instead lost findings 0.13.0 gives, and
         let an import under a branch no run takes hide the definition.
 
-        Not inside a pytest fixture's body, nor in what the fixture calls. The
-        fixture passes judge a local implementation there under their own
-        proof obligations, and report it only in the shapes they prove; this
-        rule adds no report beside theirs. The assignment spelling is read
-        there, so the two spellings still differ inside a fixture.
+        Inside a pytest fixture's body too, and in what the fixture calls, as
+        the assignment spelling is. One thing stays with the fixture passes:
+        the function or class a fixture defines and hands the test as its
+        value (`_observed_for_test`).
 
         A class that takes over a provider leaves the name's alias and its
         other effects as they were, so an attribute written on the name
@@ -1343,7 +1304,6 @@ class _Trace:
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 qual = f"{qualname}.{node.name}" if qualname else node.name
                 function = _Function(module, node, qual)
-                fixture = False
                 for decorator in node.decorator_list:
                     call = decorator if isinstance(decorator, ast.Call) else None
                     value = self.expression(call.func if call else decorator, module, env, qualname)
@@ -1351,13 +1311,7 @@ class _Trace:
                             and value.alias in {"unittest.mock.patch", "unittest.mock.patch.object"}):
                         function.patch_env = dict(env)
                     if value.alias == "pytest.fixture":
-                        if module.fixtures is None:
-                            module.fixtures = _pytest_fixtures(module.tree, _bindings(module.tree)[0])
-                        # Only pytest's own decorator keeps a body with the fixture passes: a class or
-                        # assignment that takes the name `pytest` over makes this an ordinary helper.
-                        fixture = fixture or (not value.effects and id(node) in module.fixtures)
                         function.fixture_name = node.name
-                        function.fixture_body = fixture  # its body stays with the fixture passes
                         if call:
                             for keyword in call.keywords:
                                 if keyword.arg == "name" and _literal(keyword.value):
@@ -1366,7 +1320,7 @@ class _Trace:
                                     function.autouse = keyword.value.value is True
                 module.functions[qual] = function
                 value = _Value(f"@function:{qual}")
-                if class_body or self.fixture_bodies:
+                if class_body:
                     env[node.name] = value  # a method binds a class attribute, not the name a test reads
                 else:
                     # A fixture too: its decorator returns an object that the
@@ -1378,7 +1332,7 @@ class _Trace:
                 qual = f"{qualname}.{node.name}" if qualname else node.name
                 class_env = dict(env)
                 self.block(node.body, module, class_env, qual, class_body=True)
-                if not class_body and not self.fixture_bodies:
+                if not class_body:
                     self.define(node, _Value(f"@class:{qual}"), module, env, qualname)
             elif isinstance(node, (ast.Assign, ast.AnnAssign)):
                 if node.value is None:
@@ -1447,7 +1401,6 @@ class _Trace:
             return _Value()
         kwargs = kwargs or {}
         self.stack.append(identity)
-        self.fixture_bodies += function.fixture_body
         try:
             node = function.node
             parameters = [a.arg for a in node.args.posonlyargs + node.args.args]
@@ -1486,7 +1439,6 @@ class _Trace:
                 env[arg.arg] = kwargs.get(arg.arg, _Value())
             return self.block(node.body, function.module, env, function.qualname, native_setattr="setattr" not in lexical)
         finally:
-            self.fixture_bodies -= function.fixture_body
             self.stack.pop()
 
 
@@ -1601,7 +1553,18 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
             return _Value()
         pending.add(name)
         kwargs = {dependency: activate(dependency) for dependency in _fixture_requests(function)}
-        values[name] = trace.function(function, kwargs=kwargs)
+        value = trace.function(function, kwargs=kwargs)
+        if (value.alias or "").startswith((f"@function:{function.qualname}.", f"@class:{function.qualname}.")):
+            # A fixture that hands the test a function or class defined in its
+            # own body: the fixture passes judge that local implementation
+            # under their own proof obligations and report it in the shapes
+            # they prove, and the definition rule adds no report beside theirs
+            # (#635). A definition the fixture uses in any other way (calls
+            # it, declares `global`), and one from outside its body that it
+            # merely passes on (`return request.module.name`), is read like
+            # one anywhere else.
+            value = replace(value, effects=frozenset(e for e in value.effects if not _defined_by(e)))
+        values[name] = value
         pending.remove(name)
         return values[name]
 

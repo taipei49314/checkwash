@@ -18,8 +18,12 @@ the same on both sides; such a definition is read exactly as before #635.
 Not read, for the assignment as for the definition: a statement under `try`,
 a loop, `match` or an `if` whose test is not a literal. So an optional import
 of the name after the definition changes nothing, as it changes nothing after
-an assignment. Not read for the definition only: the body of a pytest fixture,
-which the fixture passes judge.
+an assignment.
+
+A definition in a fixture's body is read like one anywhere else. One thing
+stays with the fixture passes: the function or class a fixture defines and
+hands the test as its value, which they judge under their own proof
+obligations (tests/test_generator_fixture_subjects.py).
 """
 import ast
 import datetime
@@ -162,6 +166,12 @@ POSITIVES = {
         "import pytest\n" + BEFORE,
         "import pytest\n" + IMPORT + "\n\nclass pytest:\n    fixture = staticmethod(lambda function: function)\n\n\n"
         "@pytest.fixture\ndef compute(lines):\n    def total(lines):\n        return 105.0\n\n    return total(lines)\n\n\n"
+        "def test_total():\n    assert compute([(100, 1)]) == 105.0\n", "def total(lines):"),
+    # The helper is a registered pytest fixture and, unwrapped, a function the test calls.
+    "def_in_a_helper_under_an_unwrapped_pytest_fixture": (
+        "import pytest\n" + BEFORE,
+        "import pytest\n" + IMPORT + "\n\ndef plain(fixture):\n    return fixture.__wrapped__\n\n\n@plain\n@pytest.fixture\n"
+        "def compute(lines=()):\n    def total(lines):\n        return 105.0\n\n    return total(lines)\n\n\n"
         "def test_total():\n    assert compute([(100, 1)]) == 105.0\n", "def total(lines):"),
     "dead_branch_made_live": (
         IMPORT + "\n\nif False:\n    def total(lines):\n        return 105.0\n\n\n" + TEST,
@@ -336,27 +346,61 @@ FIXTURE_HEAD = "import pytest\n" + IMPORT + "\n\n@pytest.fixture\ndef amount():\
 FIXTURE_TAIL = "    return total([(100, 1)])\n\n\ndef test_total(amount):\n    assert amount == 105.0\n"
 
 
-@pytest.mark.parametrize("inner", ["    def total(lines):\n        return 105.0\n\n", "    class total(float):\n        pass\n\n"])
-def test_a_definition_inside_a_fixture_body_stays_with_the_fixture_passes(inner):
-    """Known gap, pinned: the assignment in the same place is reported, the definition is not.
+@pytest.mark.parametrize("inner", ["    def total(lines):\n        return 105.0\n\n", "    class total(float):\n        pass\n\n",
+                                   "    total = lambda lines: 105.0\n"])
+def test_a_definition_a_fixture_s_body_uses_is_reported_as_the_assignment_there_is(inner):
+    """The fixture calls its own definition of the name and hands the test the result.
 
-    The fixture passes report a local implementation only in the shapes they
-    prove (tests/test_generator_fixture_subjects.py pins what they decline).
+    Until the fifth version the definition spelling passed here, in one commit,
+    while the assignment spelling blocked on 0.13.0.
     """
-    _verdict, standins, events = judged(FIXTURE_BEFORE, FIXTURE_HEAD + inner + FIXTURE_TAIL)
-    assert standins == [] and events == []
-    verdict, standins, _events = judged(FIXTURE_BEFORE, FIXTURE_HEAD + "    total = lambda lines: 105.0\n" + FIXTURE_TAIL)
+    verdict, standins, _events = judged(FIXTURE_BEFORE, FIXTURE_HEAD + inner + FIXTURE_TAIL)
     assert verdict == "block"
     assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
 
 
-def test_a_definition_in_a_helper_that_a_fixture_calls_stays_with_the_fixture_passes():
+def test_a_definition_a_fixture_hands_the_test_as_its_value_stays_with_the_fixture_passes():
+    """`return total`: the local function itself is the fixture's value. This rule adds no row of its own."""
+    before = FIXTURE_HEAD + "    return total\n\n\ndef test_total(amount):\n    assert amount([(100, 1)]) == 105.0\n"
+    after = before.replace("def amount():\n", "def amount():\n    def total(lines):\n        return 105.0\n\n")
+    assert after != before
+    _verdict, _standins, events = judged(before, after)
+    assert "def total(lines):" not in [text for _path, _unit, _target, text, _span in events]
+
+
+@pytest.mark.parametrize("fixture", [
+    "@pytest.fixture\ndef subject():\n    return total\n",                       # the module-level name
+    "@pytest.fixture\ndef subject(request):\n    return request.module.total\n",  # through the test's module
+])
+def test_a_module_level_definition_a_fixture_passes_on_is_reported(fixture):
+    """The fixture did not define what it returns; the stand-in is the module's."""
+    test = "def test_total(subject):\n    assert subject([(100, 1)]) == 105.0\n"
+    before = "import pytest\n" + IMPORT + "\n\n" + fixture + "\n\n" + test
+    after = "import pytest\n" + IMPORT + "\n\n" + DEF + "\n\n" + fixture + "\n\n" + test
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [text for _path, _unit, _target, text, _span in events] == ["def total(lines):"]
+
+
+def test_a_module_level_definition_a_conftest_fixture_passes_on_is_reported():
+    conftest = b"import pytest\n\n\n@pytest.fixture\ndef subject(request):\n    return request.module.total\n"
+    test = "def test_total(subject):\n    assert subject([(100, 1)]) == 105.0\n"
+    verdict, standins, _events = judged(IMPORT + "\n\n" + test, IMPORT + "\n\n" + DEF + "\n\n" + test,
+                                        context={"tests/conftest.py": conftest})
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+def test_a_definition_in_a_helper_that_a_fixture_calls_is_reported():
     before = (FIXTURE_HEAD.replace("@pytest.fixture", "def computed():\n    return total([(100, 1)])\n\n\n@pytest.fixture")
               + "    return computed()\n\n\ndef test_total(amount):\n    assert amount == 105.0\n")
     after = before.replace("def computed():\n", "def computed():\n    def total(lines):\n        return 105.0\n\n")
     assert after != before
-    _verdict, standins, events = judged(before, after)
-    assert standins == [] and events == []
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [text for _path, _unit, _target, text, _span in events] == ["def total(lines):"]
 
 
 def test_a_fixture_whose_decorator_was_replaced_is_followed_like_a_helper():
@@ -370,7 +414,7 @@ def test_a_fixture_whose_decorator_was_replaced_is_followed_like_a_helper():
 
 
 def test_the_fixture_pass_reports_a_fixture_s_inner_definition_as_before():
-    """One finding, the fixture pass's: the inner def is in a fixture's body, which this rule does not read."""
+    """One finding, the fixture pass's: the inner def is the fixture's value, which stays with that pass."""
     before = ("from app.prod import square\ndef test_square():\n"
               "    checks = (square(i) == i * i for i in range(2, 5))\n    assert all(checks)\n")
     after = ("import pytest\nfrom app.prod import square\n@pytest.fixture\ndef correct_square():\n"
@@ -638,13 +682,12 @@ def test_a_conftest_definition_s_evidence_text_is_the_same_on_every_python():
         "def total(lines):  # definition d7ac38bf9b7c"]
 
 
-def test_a_definition_inside_a_conftest_fixture_stays_with_the_fixture_passes():
-    """The same known gap as in a test file's fixture; the assignment there is reported."""
+def test_a_definition_a_conftest_fixture_s_body_uses_is_reported_as_the_assignment_there_is():
     head = "import pytest\nfrom app.prod import total\n\n\n@pytest.fixture\ndef amount():\n"
     tail = "    return total([(100, 1)])\n"
-    assert conftest_findings(head + "    def total(lines):\n        return 105.0\n\n" + tail)[1] == []
-    verdict, found = conftest_findings(head + "    total = lambda lines: 105.0\n" + tail)
-    assert verdict == "block" and [row[:3] for row in found] == [("CONFTEST_PATCHES_PROD", "high", "tests/conftest.py")]
+    for install in ("    def total(lines):\n        return 105.0\n\n", "    total = lambda lines: 105.0\n"):
+        verdict, found = conftest_findings(head + install + tail)
+        assert verdict == "block" and [row[:3] for row in found] == [("CONFTEST_PATCHES_PROD", "high", "tests/conftest.py")]
 
 
 def test_an_untouched_definition_in_a_conftest_installs_nothing_when_a_fixture_starts_to_read_it():
@@ -726,8 +769,8 @@ SCHEDULING = [
     (SHADOWED, IMPORT + "\n\ndef total(lines):\n    \"\"\"Words.\"\"\"\n    return 105.0\n\n\n" + TEST, (), False),
     (SHADOWED, IMPORT + "\n\ndef total(lines: list) -> float:\n    return 105.0\n\n\n" + TEST, (), False),
     (UNUSED_HELPER, UNUSED_HELPER + "\n\nX = 1\n", (), False),
+    (FIXTURE_BEFORE, FIXTURE_HEAD + "    def total(lines):\n        return 0\n\n" + FIXTURE_TAIL, (), True),    # a pytest fixture's body
     # Where the trace installs nothing, nothing is scheduled.
-    (FIXTURE_BEFORE, FIXTURE_HEAD + "    def total(lines):\n        return 0\n\n" + FIXTURE_TAIL, (), False),   # a pytest fixture's body
     (BEFORE, TRY, (), False),
     (BEFORE, IMPORT + "\n\nif False:\n    def total(lines):\n        return 0\n\n\n" + TEST, (), False),
     (BEFORE, IMPORT + "\n\nif flag():\n    def total(lines):\n        return 0\n\n\n" + TEST, (), False),
@@ -737,7 +780,7 @@ SCHEDULING = [
     (BEFORE, IMPORT + "\n\ndef rows():\n    return []\n\n\n" + TEST, (), False),
     (BEFORE, SHADOWED, ("app",), False),                                   # a declared dependency
     (BEFORE, "def broken(:\n", (), False),
-    # A fixture's body is read when the decorator is not, or may not be, pytest's.
+    # A fixture's body is read whatever its decorator is.
     (BEFORE, "import wrappers\n" + IMPORT + "\n\n@wrappers.fixture\ndef amount():\n    def total(lines):\n        return 0\n\n"
      + FIXTURE_TAIL, (), True),
     (FIXTURE_BEFORE, FIXTURE_HEAD.replace("import pytest\n", "import pytest\npytest.fixture = print\n")
