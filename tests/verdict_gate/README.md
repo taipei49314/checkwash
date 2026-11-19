@@ -61,6 +61,20 @@ on every CI leg (no git, no engine).
 
 ## Reading a run
 
+The v0.13.0 post-publication rotation (D-214) pins the tag's commit, the
+release's Action commit A `9ada8cfa`, and its actual 1077802-byte pyz
+(`326e2a0c…`), which is built from the release merge `7d45814`; under D-200
+the gate binds the pyz's members to A's source with `doctor.py`'s own Action
+pin line set to A. Against it the 185 cases run 161 block -> block and 24
+pass -> pass with nothing reported and no failure: v0.13.0 blocks the same
+161 cases as v0.12.0, so the blocked pin and `labels.toml` stay. The 26-case
+T3 map and the v0.4.2 to v0.5.0 canary stay. The protected acceptance list is
+still empty, so only its baseline header changes. The Action pin, the
+advertised commit and the baseline commit are again one commit, A, so a
+release-stage receipt takes the baseline's source from the pinned Action
+checkout. Hosted test workflows are disabled; the rotation PR's own PJU
+release-stage receipt runs the gate against the downloaded public pyz.
+
 The v0.12.0 post-publication rotation (D-202) pins the tag's commit, the
 release's Action commit A `532f74a`, and its actual 1013508-byte pyz
 (`4ef6eda2…`), which is built from the release merge `ffaf4ed`; from v0.12.0

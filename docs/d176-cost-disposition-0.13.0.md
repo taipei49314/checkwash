@@ -57,8 +57,8 @@ the finding keeps v0.12.0's labels (`OPAQUE_PROD_CHANGE_NOT_EVIDENCE` where an
 opaque production change exists) and blocks or passes as on v0.12.0. Without
 D-176's refusal, D-199 would still refuse the same route at the same severity,
 labelled `REPAIR_EVIDENCE_REFUSED`. Phase 2's structural decomposition of
-`gating.py` (#607, ratified in [D-212](../DECISIONS.md)) changed no gating
-condition or label; [D-210](../DECISIONS.md) and [D-212](../DECISIONS.md) touch
+`gating.py` (#607, ratified in [D-212](../DECISIONS-archive-6.md)) changed no gating
+condition or label; [D-210](../DECISIONS-archive-6.md) and [D-212](../DECISIONS-archive-6.md) touch
 only unit-scoped Python findings on projected or set-aside `helper_function`
 units (`BROAD_EXCEPT_ADDED` remains file-scoped with `unit is None`); and
 D-190's relay reading is unchanged: a broad `except` that relays the failure

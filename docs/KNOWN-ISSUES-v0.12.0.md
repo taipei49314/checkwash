@@ -92,7 +92,7 @@ correctness guarantee.
   ([publication record](releases/v0.12.0-publication-verification.md)). The
   baseline binding under the new rule first ran for real in the PJU
   proposal run of the rotation to v0.12.0 (#594,
-  [D-202](../DECISIONS.md); LAPTOP-01AGNPJU only,
+  [D-202](../DECISIONS-archive-6.md); LAPTOP-01AGNPJU only,
   `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`): the public pyz's members equal
   A's source with `doctor.py`'s own Action pin line set to A. The rotation
   pull request's own release-stage receipt has to pass it again before
