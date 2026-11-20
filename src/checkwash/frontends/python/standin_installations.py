@@ -557,7 +557,12 @@ def _bindings(tree):
                 # must not need a thousand frames.
                 chain = where
                 while True:
-                    truth = _static_truth(node.test)
+                    try:
+                        truth = _static_truth(node.test)
+                    except RecursionError:
+                        # A test nested deeper than the stack (`not not ... x`)
+                        # is not a literal; the walk goes on (#635).
+                        truth = None
                     for name in bound(node.test):
                         add(scope, name, chain, node.test, "header")
                     tag = "type-checking" if _type_checking(node.test) else "if"
@@ -651,27 +656,40 @@ def _binding_signature(entries, scope, name, memo):
 
 
 def _enclosing(entries, scope):
-    """What each scope around a definition is, outermost first: True for a class, False for a function.
+    """What each scope around a definition is, outermost first.
 
-    None when one of them is defined more than once in its own scope: the key
-    then names more than one body, and nothing says which one a run uses.
+    For a scope defined once in its own scope: True for a class, False for a
+    function. For one defined more than once, the key names more than one
+    body, and nothing says which one a run uses; so it stands for every
+    binding of its name there, each definition by its identity and any other
+    binding by its text, with the compound statements around each. The
+    definition inside is then settled only where all of them are the same on
+    both sides, and a duplicate that a diff leaves alone (an F811 name) costs
+    nothing (#635). None when the scope is not defined at all.
     """
     kinds = []
     for inner in _scope_chain(scope)[1:]:
         outer, _dot, name = inner.rpartition(".")
-        nodes = [node for _where, node, kind in entries.get((outer, name), ()) if kind == "definition"]
-        if len(nodes) != 1:
+        found = entries.get((outer, name), ())
+        nodes = [node for _where, node, kind in found if kind == "definition"]
+        if not nodes:
             return None
-        kinds.append(isinstance(nodes[0], ast.ClassDef))
+        if len(nodes) == 1:
+            kinds.append(isinstance(nodes[0], ast.ClassDef))
+        else:
+            kinds.append(tuple(
+                (kind, _definition_identity(node) if kind == "definition" else stable_dump(node),
+                 tuple((tag, "" if at is None else stable_dump(at)) for tag, at, _live in where))
+                for where, node, kind in found))
     return tuple(kinds)
 
 
 def _bound_alike(old, new, scope, name, memo):
     """Whether `name` is bound the same way for a definition in `scope` on both sides.
 
-    The scopes around it must be the same kind of thing on both sides, each
-    defined once: a method of `class helper` and a def nested in
-    `def helper()` have the same key and are not the same binding.
+    The scopes around it must be the same on both sides (`_enclosing`): a
+    method of `class helper` and a def nested in `def helper()` have the same
+    key and are not the same binding.
     """
     kinds = _enclosing(old, scope)
     return (kinds is not None and kinds == _enclosing(new, scope)
@@ -712,6 +730,32 @@ def _settled(before, after):
             judged[key] = (not (_only_defined(old, *key) and _only_defined(new, *key))
                            and _bound_alike(old, new, *key, memo))
     return frozenset(key for key, same in judged.items() if same)
+
+
+def _holds_new_definition(before, after):
+    """Whether the after side holds a def or class the trace reads that is
+    neither settled nor the same module-level definition moved (#635).
+
+    A moved definition counts as the same one only at module level, and only
+    where the before side holds it, by name and identity, at module level in
+    a place the trace reads (not in a class body, a dead branch, `try` or a
+    loop). A module's body runs before every test, so such a definition was
+    in force on the before side too. A definition parked where nothing runs
+    it, or in a function, and brought out by the diff is new.
+
+    A conftest that only the definition rule schedules, and that fails this
+    test, only kept or moved what it had: nothing it defines is a new stand-in.
+    """
+    if after is None:
+        return False
+    settled = _settled(before, after)
+    old = set()
+    if before is not None:
+        old = {(node.name, _definition_identity(node))
+               for scope, node, readable, _functions in _bindings(before)[1] if readable and not scope}
+    return any(readable and (scope, node.name) not in settled
+               and (scope or (node.name, _definition_identity(node)) not in old)
+               for scope, node, readable, _functions in _bindings(after)[1])
 
 
 def _decorated(node, test):
@@ -1247,8 +1291,9 @@ class _Trace:
 
         Inside a pytest fixture's body too, and in what the fixture calls, as
         the assignment spelling is. One thing stays with the fixture passes:
-        the function or class a fixture defines and hands the test as its
-        value (`_observed_for_test`).
+        a function a fixture defines in its own body and hands, as its whole
+        value, to a test that takes the fixture as a parameter
+        (`_observed_for_test`). A class is read wherever it goes.
 
         A class that takes over a provider leaves the name's alias and its
         other effects as they were, so an attribute written on the name
@@ -1409,28 +1454,26 @@ class _Trace:
             # a later/conditional one. Do not borrow that name from the module.
             lexical = set(parameters) | {a.arg for a in node.args.kwonlyargs}
 
-            class Bindings(ast.NodeVisitor):
-                def visit_Name(self, item):
+            # The names the body binds, as 0.13.0's `ast.NodeVisitor` collected
+            # them, walked with a list instead of recursion: a definition the
+            # trace calls can hold an expression deeper than the interpreter's
+            # stack (#635). A nested def or class binds its name and is not
+            # entered; an import binds its names; a stored or deleted name binds
+            # itself; everything else is entered.
+            pending = list(node.body)
+            while pending:
+                item = pending.pop()
+                if isinstance(item, ast.Name):
                     if isinstance(item.ctx, (ast.Store, ast.Del)):
                         lexical.add(item.id)
-
-                def visit_FunctionDef(self, item):
+                elif isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                     lexical.add(item.name)
-
-                visit_AsyncFunctionDef = visit_FunctionDef
-
-                def visit_ClassDef(self, item):
-                    lexical.add(item.name)
-
-                def visit_Import(self, item):
+                elif isinstance(item, ast.Import):
                     lexical.update(a.asname or a.name.split(".")[0] for a in item.names)
-
-                def visit_ImportFrom(self, item):
+                elif isinstance(item, ast.ImportFrom):
                     lexical.update(a.asname or a.name for a in item.names)
-
-            visitor = Bindings()
-            for statement in node.body:
-                visitor.visit(statement)
+                else:
+                    pending.extend(ast.iter_child_nodes(item))
             for name in lexical:
                 env[name] = _Value()
             for index, name in enumerate(parameters):
@@ -1538,6 +1581,7 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
                 autouse.add(candidate.fixture_name)
     values = {}
     pending = set()
+    handed_over = {}  # fixture name -> the function its own body defines and returns or yields as its value
 
     def activate(name):
         if name in values:
@@ -1554,23 +1598,38 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
         pending.add(name)
         kwargs = {dependency: activate(dependency) for dependency in _fixture_requests(function)}
         value = trace.function(function, kwargs=kwargs)
-        if (value.alias or "").startswith((f"@function:{function.qualname}.", f"@class:{function.qualname}.")):
-            # A fixture that hands the test a function or class defined in its
-            # own body: the fixture passes judge that local implementation
-            # under their own proof obligations and report it in the shapes
-            # they prove, and the definition rule adds no report beside theirs
-            # (#635). A definition the fixture uses in any other way (calls
-            # it, declares `global`), and one from outside its body that it
-            # merely passes on (`return request.module.name`), is read like
-            # one anywhere else.
-            value = replace(value, effects=frozenset(e for e in value.effects if not _defined_by(e)))
+        prefix = f"@function:{function.qualname}."
+        local = (value.alias or "").removeprefix(prefix) if (value.alias or "").startswith(prefix) else ""
+        if local and "." not in local:
+            handed_over[name] = function.module.functions.get(f"{function.qualname}.{local}")
         values[name] = value
         pending.remove(name)
         return values[name]
 
+    def as_the_test_receives(name, value):
+        """A fixture that hands the test, as the whole value the test takes as
+        a parameter, a function defined in the fixture's own body: the fixture
+        passes judge that local implementation under their own proof
+        obligations and report it in the shapes they prove, and the definition
+        rule adds no report beside theirs (#635). Only that function's own
+        definition effect is dropped, and only from what the test receives. A
+        fixture that requests it receives it with the effect, so calling it
+        there, or handing on its result or one of its attributes, is read like
+        any other use. A class is not handed over this way: a class keeps the
+        name's earlier value, so its definition is read wherever it goes.
+        """
+        local = handed_over.get(name)
+        if local is None:
+            return value
+        identity = local.module.identities.get(id(local.node))
+        span = (local.node.lineno, getattr(local.node, "end_lineno", local.node.lineno))
+        return replace(value, effects=frozenset(
+            e for e in value.effects
+            if not (_defined_by(e) and e.replacement == identity and e.span == span and e.path == local.module.path)))
+
     for name in sorted(autouse):
         activate(name)
-    kwargs = {name: activate(name) for name in _fixture_requests(function)
+    kwargs = {name: as_the_test_receives(name, activate(name)) for name in _fixture_requests(function)
               if decorated is None or name != decorated[0]}
     if decorated is not None:
         kwargs[decorated[0]] = decorated[1]
@@ -1658,6 +1717,26 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     if not candidates:
         return []
     conftest_changed = {path for path in candidates if config.role_of(path) == "conftest"}
+    # The conftests 0.13.0 scheduled, and those only the definition rule
+    # schedules. One of the latter whose definitions all stay settled, or only
+    # move at module level (`_holds_new_definition`), is lenient: nothing it
+    # defines is a new stand-in, so what 0.13.0 never listed for this diff (an
+    # inventory over its limits, an invalid or unsafe path in it, an opaque
+    # directory pytest's collection reaches) is skipped beneath it instead of
+    # stopping the run (#635). A file the run reads beneath it is read in full
+    # or stops the run, as anywhere else. The others refuse as 0.13.0 refuses
+    # for a conftest it schedules.
+    released_conftests = {path for path in released_candidates if config.role_of(path) == "conftest"}
+    lenient_conftests = {
+        path for path in conftest_changed - released_conftests
+        if not _holds_new_definition(*(
+            None if changed[path][side] is None else _syntax(changed[path][side], path=path, side=name)
+            for side, name in enumerate(("before", "after"))))}
+    strict_conftests = conftest_changed - lenient_conftests
+
+    def covered(path, conftests):
+        return any(not c.rpartition("/")[0] or path.startswith(c.rpartition("/")[0] + "/") for c in conftests)
+
     raw_inventory = ()
     if conftest_changed:
         if root_path_lister is not None:
@@ -1669,22 +1748,27 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             raw_inventory = root_searcher([""])
     if (not isinstance(raw_inventory, Sequence) or isinstance(raw_inventory, (str, bytes))
             or len(raw_inventory) > 200_000):
-        raise EngineError("stand-in strict inventory is invalid or exceeds the path limit")
+        if strict_conftests:
+            raise EngineError("stand-in strict inventory is invalid or exceeds the path limit")
+        raw_inventory = ()
     # A submodule is listed as a directory whose content is unknown (#335).
     raw_inventory, opaque = split_inventory(raw_inventory)
     inventory = set()
     for path in (*raw_inventory, *opaque):
         if not isinstance(path, str):
-            raise EngineError("stand-in strict inventory contains an invalid path")
+            if strict_conftests:
+                raise EngineError("stand-in strict inventory contains an invalid path")
+            continue
         path = path.replace("\\", "/")
         if not path or path.startswith("/") or ":" in path or any(p in {"", ".", ".."} for p in path.split("/")):
-            raise EngineError("stand-in strict inventory contains an unsafe path")
+            if strict_conftests:
+                raise EngineError("stand-in strict inventory contains an unsafe path")
+            continue
         if path not in opaque:
             inventory.add(path)
 
     def scoped(path):
-        return any(not c.rpartition("/")[0] or path.startswith(c.rpartition("/")[0] + "/")
-                   for c in conftest_changed)
+        return covered(path, conftest_changed)
 
     test_paths = {path for path in candidates if config.role_of(path) == "test"}
     test_paths.update(path for path in inventory if config.role_of(path) == "test" and collectable(path)
@@ -1697,8 +1781,9 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             not conftest.rpartition("/")[0] or path.startswith(conftest.rpartition("/")[0] + "/")
             for conftest in released_conftests)}
     # A changed conftest's fixtures reach the tests beneath it, and those
-    # inside a submodule pytest can collect are unknown (#335).
-    beneath = tuple(directory for directory in opaque if scoped(directory))
+    # inside a submodule pytest can collect are unknown (#335). Beneath a
+    # lenient conftest only, they are skipped (#635).
+    beneath = tuple(directory for directory in opaque if covered(directory, strict_conftests))
     if beneath and root_reader is not None:
         from checkwash.collection_inventory import collection_sources, opaque_reached
 
@@ -1706,48 +1791,59 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         reached = opaque_reached(beneath, {p: s for p, s in sources.items() if isinstance(s, bytes)}, changes)
         if reached is not None:
             raise opaque_error(reached, "pytest's collection can reach it")
-    memo = {}
-    read_bytes = [0]
+    def reader():
+        """A bounded reader of the snapshot, with its own memo and byte count."""
+        memo = {}
+        read_bytes = [0]
+
+        def read(path, side):
+            if path in changed:
+                return changed[path][side]
+            if path not in memo:
+                if len(memo) >= _MAX_CONTEXT_READS:
+                    raise EngineError("stand-in context exceeds the source read limit")
+                if root_reader is None:
+                    memo[path] = None
+                else:
+                    memo[path] = root_reader(path)
+                if memo[path] is not None and not isinstance(memo[path], bytes):
+                    raise EngineError("stand-in strict snapshot returned invalid source bytes")
+                if memo[path] is not None:
+                    read_bytes[0] += len(memo[path])
+                    if len(memo[path]) > _MAX_SOURCE_BYTES:
+                        raise EngineError(
+                            f"stand-in context exceeds the source byte limit: path={path!r}, "
+                            f"requested_side={('before', 'after')[side]!r}, source='root_reader', "
+                            f"bytes={len(memo[path])}, limit={_MAX_SOURCE_BYTES}"
+                        )
+                    if read_bytes[0] > _MAX_CONTEXT_BYTES:
+                        raise EngineError(
+                            f"stand-in context exceeds the source byte limit: trigger_path={path!r}, "
+                            f"requested_side={('before', 'after')[side]!r}, source='root_reader', "
+                            f"context_bytes={read_bytes[0]}, limit={_MAX_CONTEXT_BYTES}"
+                        )
+                if path in inventory and memo[path] is None:
+                    raise EngineError("stand-in inventoried source disappeared")
+            return memo[path]
+
+        return read
+
+    # The released reading has its own reader, probe cache and step count, so
+    # the definition rule's reading cannot use up a limit that 0.13.0's reading
+    # of the same diff stays within (#635).
+    read, released_read = reader(), reader()
     budget = [0]
-
-    def read(path, side):
-        if path in changed:
-            return changed[path][side]
-        if path not in memo:
-            if len(memo) >= _MAX_CONTEXT_READS:
-                raise EngineError("stand-in context exceeds the source read limit")
-            if root_reader is None:
-                memo[path] = None
-            else:
-                memo[path] = root_reader(path)
-            if memo[path] is not None and not isinstance(memo[path], bytes):
-                raise EngineError("stand-in strict snapshot returned invalid source bytes")
-            if memo[path] is not None:
-                read_bytes[0] += len(memo[path])
-                if len(memo[path]) > _MAX_SOURCE_BYTES:
-                    raise EngineError(
-                        f"stand-in context exceeds the source byte limit: path={path!r}, "
-                        f"requested_side={('before', 'after')[side]!r}, source='root_reader', "
-                        f"bytes={len(memo[path])}, limit={_MAX_SOURCE_BYTES}"
-                    )
-                if read_bytes[0] > _MAX_CONTEXT_BYTES:
-                    raise EngineError(
-                        f"stand-in context exceeds the source byte limit: trigger_path={path!r}, "
-                        f"requested_side={('before', 'after')[side]!r}, source='root_reader', "
-                        f"context_bytes={read_bytes[0]}, limit={_MAX_CONTEXT_BYTES}"
-                    )
-            if path in inventory and memo[path] is None:
-                raise EngineError("stand-in inventoried source disappeared")
-        return memo[path]
-
-    released_budget = [0]  # analysis steps of the released reading (#635)
+    released_budget = [0]
 
     # Ownership probes share the same bounded reader as consumer discovery.
     context = ConftestContext(changes, lambda path: read(path, 1))
+    released_context = ConftestContext(changes, lambda path: released_read(path, 1))
     authority_search = root_searcher
     if authority_search is None and root_path_lister is not None:
         authority_search = lambda _needles: root_path_lister()
     events = []
+    settled_by_path = {}  # `_settled` depends only on a source path's two sides
+
     for path in sorted(test_paths):
         if not collectable(path):
             continue
@@ -1773,36 +1869,43 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             """The restructured-patch event, each live test's effects on both
             sides, and whether a definition installed anything on the way.
 
-            With `released`, every definition is read as 0.13.0 read it.
+            With `released`, every definition is read as 0.13.0 read it, through
+            the released reading's own reader and probe cache.
             """
+            rd, ctx = (released_read, released_context) if released else (read, context)
             modules = [[], []]
             for source_path in [*reversed(ancestors), path]:
                 baseline = None
-                settled = _EVERY_DEFINITION if released else _settled(
-                    *(_syntax(read(source_path, side), path=source_path, side=name)
-                      for side, name in enumerate(("before", "after"))))
+                if released:
+                    settled = _EVERY_DEFINITION
+                else:
+                    if source_path not in settled_by_path:
+                        settled_by_path[source_path] = _settled(
+                            *(_syntax(read(source_path, side), path=source_path, side=name)
+                              for side, name in enumerate(("before", "after"))))
+                    settled = settled_by_path[source_path]
                 for side in (0, 1):
-                    source = read(source_path, side)
+                    source = rd(source_path, side)
                     if source is None:
                         continue
-                    package = _package(source_path, lambda candidate: read(candidate, side) is not None)
+                    package = _package(source_path, lambda candidate: rd(candidate, side) is not None)
                     module = _module(source_path, source, package, baseline, side=("before", "after")[side])
                     if module is None:
                         raise EngineError("stand-in provider context could not be parsed")
                     module.settled = settled
                     # Baseline imports identify the removal-and-assignment form;
                     # they do not execute or activate a provider on the head side.
-                    seed = _Trace([], context, side, deny, steps, path=source_path, unit="<module body>")
+                    seed = _Trace([], ctx, side, deny, steps, path=source_path, unit="<module body>")
                     seed.block(module.tree.body, module, module.env, "")
                     if side == 0:
                         baseline = dict(module.baseline_imports)
                     modules[side].append(module)
-            event = restructured_patch_event(path, modules, live, context, deny, steps, authority_search)
+            event = restructured_patch_event(path, modules, live, ctx, deny, steps, authority_search)
             observed = {}
             for qualname in sorted(live[0] & live[1]):
                 observed[qualname] = (
-                    _observed_for_test(modules[0], path, qualname, context, 0, deny, steps, authority_search),
-                    _observed_for_test(modules[1], path, qualname, context, 1, deny, steps, authority_search))
+                    _observed_for_test(modules[0], path, qualname, ctx, 0, deny, steps, authority_search),
+                    _observed_for_test(modules[1], path, qualname, ctx, 1, deny, steps, authority_search))
             return event, observed, any(module.took_over for side in modules for module in side)
 
         event, observed, took_over = reading(False, budget)
@@ -1811,10 +1914,11 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         # stand where 0.13.0 saw none: `def name` in front of `name = ...` on
         # the before side makes that assignment look as if it had replaced the
         # provider already. Whatever 0.13.0's reading reports is therefore
-        # reported as it stands; this rule only adds to it (#635). Its steps are
-        # counted apart, so the second reading cannot exhaust the first one's
-        # budget. It is made only for a file 0.13.0 scheduled: in a file that only
-        # this rule schedules, 0.13.0 reported nothing.
+        # reported as it stands; this rule only adds to it (#635). It has its
+        # own step count, reader and probe cache, so what the first reading
+        # used up cannot make it fail where 0.13.0's reading would not. It is
+        # made only for a file 0.13.0 scheduled: in a file that only this rule
+        # schedules, 0.13.0 reported nothing.
         released_event, released = (reading(True, released_budget)[:2]
                                     if took_over and path in released_paths else (None, {}))
         if released_event is not None:

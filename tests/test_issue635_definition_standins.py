@@ -21,16 +21,20 @@ of the name after the definition changes nothing, as it changes nothing after
 an assignment.
 
 A definition in a fixture's body is read like one anywhere else. One thing
-stays with the fixture passes: the function or class a fixture defines and
-hands the test as its value, which they judge under their own proof
-obligations (tests/test_generator_fixture_subjects.py).
+stays with the fixture passes: a function a fixture defines in its own body
+and hands, as its whole value, to a test that takes the fixture as a
+parameter, which they judge under their own proof obligations
+(tests/test_generator_fixture_subjects.py). Another fixture that receives it
+receives it with the definition's effect, and a class is read wherever it
+goes.
 """
 import ast
 import datetime
+import time
 
 import pytest
 
-from checkwash.change import FileChange
+from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
@@ -38,6 +42,7 @@ from checkwash.frontends.python.standin_installations import (
     _definition_digest,
     _definition_identity,
     _definition_rebind,
+    _holds_new_definition,
     _import_target,
     _settled,
 )
@@ -1055,10 +1060,17 @@ def test_settled_tells_a_class_s_method_from_a_helper_s_definition_and_one_helpe
     nested = IMPORT + "\n\ndef compute():\n    def total(lines):\n        return 105.0\n\n\n" + TEST
     assert ("compute", "total") not in _settled(ast.parse(method), ast.parse(nested))
     assert ("compute", "total") in _settled(ast.parse(nested), ast.parse(nested))
+    # A helper defined twice (an F811 name): the definition inside is settled
+    # while every copy stays as it was, and not once one of them changes.
     twice = nested + "\n\ndef compute():\n    return None\n"
-    assert ("compute", "total") not in _settled(ast.parse(twice), ast.parse(twice))
+    assert ("compute", "total") in _settled(ast.parse(twice), ast.parse(twice))
+    edited = twice.replace("    return None\n", "    return 0\n")
+    assert ("compute", "total") not in _settled(ast.parse(twice), ast.parse(edited))
+    live = twice.replace("\n\ndef compute():\n    return None\n", "\n\nif False:\n    def compute():\n        return None\n")
+    assert ("compute", "total") not in _settled(ast.parse(twice), ast.parse(live))
     # The filter asks the same question.
     assert _definition_rebind(method.encode(), nested.encode(), set()) is True
+    assert _definition_rebind(twice.encode(), (twice + "\n\nVALUE = 1\n").encode(), set()) is False
 
 
 def test_a_class_namespace_turned_into_a_helper_is_reported():
@@ -1119,3 +1131,325 @@ def test_a_chain_of_aliases_is_judged_once_per_name():
     assert _definition_rebind(None, source.encode(), set()) is False
     captured = source.replace("fourth = len", "from app import prod\nfourth = prod.total")
     assert _definition_rebind(None, captured.encode(), set()) is True
+
+
+def test_the_alias_walk_is_judged_once_per_name_even_at_two_hundred_assignments():
+    """Without the memo the walk takes seconds here (about 11 s on the author's machine); with it, milliseconds."""
+    names = ["total", "second", "third", "fourth"]
+    lines = ["fourth = len"]  # nothing captured: the walk has to try every path
+    for left, right in zip(names, names[1:]):
+        lines += [f"{left} = {right}"] * 200
+    source = "\n".join(lines) + "\n\n\n" + DEF + "\n\n" + TEST
+    started = time.perf_counter()
+    assert _definition_rebind(None, source.encode(), set()) is False
+    assert time.perf_counter() - started < 3.0
+
+
+def test_the_alias_walk_remembers_each_name_at_its_own_depth():
+    """`a` is five hops from the import, past the walk's limit; `c`, defined after it, is three.
+
+    The walk for `a` meets `c` at depth 2 and `z` at depth 3 and gives up at
+    `w`; the walk for `c` meets the same names nearer the import and must not
+    take the earlier answers for them.
+    """
+    chain = "from app import prod\nw = prod.total\nz = w\nc = z\nb = c\na = b\n\n\n"
+    defs = "def a(lines):\n    return 105.0\n\n\ndef c(lines):\n    return 105.0\n"
+    assert _definition_rebind(chain.encode(), (chain + defs).encode(), set()) is True
+    assert _definition_rebind(chain.encode(), (chain + defs.split("\n\n\ndef c")[0] + "\n").encode(), set()) is False
+
+
+# Fifth review (#638). The fixture exemption reaches only what the test itself
+# receives, and only the function the fixture's own body defines.
+
+HANDED = "import pytest\n" + IMPORT + "\n\n@pytest.fixture\ndef fake_total():\n    {hand} total\n\n\n"
+IN_BODY = "    def total(lines):\n        return 105.0\n\n"
+
+
+@pytest.mark.parametrize("hand", ["return", "yield"])
+def test_a_fixture_that_calls_another_fixture_s_handed_over_definition_is_reported(hand):
+    consumer = ("@pytest.fixture\ndef amount(fake_total):\n    {hand} fake_total([(100, 1)])\n\n\n"
+                "def test_total(amount):\n    assert amount == 105.0\n").format(hand=hand)
+    before = HANDED.format(hand=hand) + consumer
+    after = before.replace("def fake_total():\n", "def fake_total():\n" + IN_BODY)
+    assert after != before
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [text for _path, _unit, _target, text, _span in events] == ["def total(lines):"]
+
+
+def test_a_fixture_that_passes_another_fixture_s_handed_over_definition_on_is_reported():
+    before = (HANDED.format(hand="return") + "@pytest.fixture\ndef amount(fake_total):\n    return fake_total\n\n\n"
+              "def test_total(amount):\n    assert amount([(100, 1)]) == 105.0\n")
+    after = before.replace("def fake_total():\n", "def fake_total():\n" + IN_BODY)
+    verdict, standins, _events = judged(before, after)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+def test_a_conftest_fixture_that_calls_another_s_handed_over_definition_is_reported():
+    before = ("import pytest\nfrom app.prod import total\n\n\n@pytest.fixture\ndef fake_total():\n    return total\n\n\n"
+              "@pytest.fixture\ndef amount(fake_total):\n    return fake_total([(100, 1)])\n")
+    after = before.replace("def fake_total():\n", "def fake_total():\n" + IN_BODY)
+    verdict, found = conftest_findings(after, before)
+    assert verdict == "block"
+    assert [rule for rule, _severity, _path, _fingerprint in found] == ["CONFTEST_PATCHES_PROD"]
+
+
+@pytest.mark.parametrize("hand_over", [
+    "    total.result = total([(100, 1)])\n    return total.result\n",
+    "    total.result = total([(100, 1)])\n    return getattr(total, 'result')\n",
+])
+def test_an_attribute_of_the_fixture_s_own_function_is_not_the_function(hand_over):
+    """Only the bare function is handed over; an attribute holding its result is a use of it."""
+    after = FIXTURE_HEAD + IN_BODY + hand_over + "\n\ndef test_total(amount):\n    assert amount == 105.0\n"
+    verdict, standins, events = judged(FIXTURE_BEFORE, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [text for _path, _unit, _target, text, _span in events] == ["def total(lines):"]
+
+
+@pytest.mark.parametrize("before_class", ["", "    def total(lines):\n        return 0\n\n"])
+def test_a_class_a_fixture_hands_the_test_is_reported(before_class):
+    """A class keeps the name's earlier value, so it is never the fixture's handed-over function,
+    even after a def of the same name in the same body."""
+    test = "\n\ndef test_total(amount):\n    assert amount([(100, 1)]) == 105.0\n"
+    before = FIXTURE_HEAD + "    return total\n" + test
+    after = (FIXTURE_HEAD + before_class
+             + "    class total(float):\n        def __new__(cls, lines):\n            return float.__new__(cls, 105.0)\n\n"
+             + "    return total\n" + test)
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block"
+    assert standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert "class total(float):" in [text for _path, _unit, _target, text, _span in events]
+
+
+def test_a_definition_a_fixture_yields_to_the_test_stays_with_the_fixture_passes():
+    before = FIXTURE_HEAD + "    yield total\n\n\ndef test_total(amount):\n    assert amount([(100, 1)]) == 105.0\n"
+    after = before.replace("def amount():\n", "def amount():\n" + IN_BODY)
+    _verdict, _standins, events = judged(before, after)
+    assert "def total(lines):" not in [text for _path, _unit, _target, text, _span in events]
+
+
+def test_a_fixture_named_like_the_start_of_a_module_level_stand_in_hands_that_stand_in_on():
+    """`@function:tot.` is not a prefix of `@function:total`: the fixture's own body defines nothing."""
+    fixture = "@pytest.fixture\ndef tot():\n    return total\n\n\ndef test_total(tot):\n    assert tot([(100, 1)]) == 105.0\n"
+    before = "import pytest\n" + IMPORT + "\n\n" + fixture
+    after = "import pytest\n" + IMPORT + "\n\n" + DEF + "\n\n" + fixture
+    verdict, standins, events = judged(before, after)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+    assert [text for _path, _unit, _target, text, _span in events] == ["def total(lines):"]
+
+
+# Fifth review (#638). A conftest that only the definition rule schedules, and
+# that only kept its definitions or moved them at module level, does not bring
+# in the refusals that 0.13.0 makes for a conftest it schedules over paths it
+# never listed (an opaque directory pytest's collection reaches, an unsafe
+# path). A file the run reads beneath it is read in full or stops the run.
+
+MOVED_BEFORE = "import contextlib\nfrom app import prod\nfrom app.prod import total\n\n\ndef total(lines):\n    return prod.total(lines)\n"
+MOVED_AFTER = ("import contextlib\nfrom app import prod\nfrom app.prod import total\n\n\n"
+               "with contextlib.nullcontext():\n    def total(lines):\n        return prod.total(lines)\n")
+NEW_AFTER = MOVED_BEFORE.replace("return prod.total(lines)", "return 105.0")
+
+
+def judge_listed(before, after, unchanged, listed=()):
+    """`judge_files` with extra entries in the path listing (a submodule as `dir/`, an unsafe name)."""
+    common = {"app/__init__.py": b"", "app/prod.py": PRODUCTION.encode(), **unchanged}
+    changes = [FileChange(path, "modified", before[path].encode(), after[path].encode())
+               for path in sorted(after) if before[path] != after[path]]
+    snapshot = {**common, **{path: source.encode() for path, source in after.items()}}
+    listing = sorted(snapshot) + list(listed)
+    return analyze(changes, Config(), Contract(), [], datetime.date(2026, 11, 21),
+                   root_reader=snapshot.get,
+                   root_searcher=lambda needles: search_source_mapping(snapshot, needles),
+                   root_path_lister=lambda: listing,
+                   root_batch_reader=lambda paths: {path: snapshot.get(path) for path in paths})
+
+
+TOTAL_TEST = IMPORT + "\n\n" + TEST
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+def test_a_conftest_definition_only_moved_brings_in_no_refusal(listed):
+    before = {"conftest.py": MOVED_BEFORE, "tests/test_total.py": TOTAL_TEST}
+    honest = {"conftest.py": MOVED_AFTER, "tests/test_total.py": TOTAL_TEST}
+    _ir, findings, verdict = judge_listed(before, honest, {}, listed)
+    assert verdict == "pass" and [f.rule for f in findings if f.severity in ("high", "critical")] == []
+    # The same move beside a stand-in in a test file keeps 0.13.0's report.
+    cheat = {"conftest.py": MOVED_AFTER, "tests/test_total.py": TOTAL_TEST.replace(
+        "\n\ndef test_total", "\ntotal = lambda lines: 105.0\n\n\ndef test_total")}
+    _ir, findings, verdict = judge_listed(before, cheat, {}, listed)
+    assert verdict == "block"
+    assert [(f.rule, f.after.text) for f in findings if f.rule == "TEST_PATCHES_SUBJECT"] == [
+        ("TEST_PATCHES_SUBJECT", "total = lambda lines: 105.0")]
+
+
+def test_a_file_over_a_limit_beneath_a_conftest_whose_definition_only_moved_stops_the_run():
+    """The run does not skip what it cannot read: a stand-in brought out where
+    it was parked could be read there."""
+    before = {"conftest.py": MOVED_BEFORE, "tests/test_total.py": TOTAL_TEST}
+    honest = {"conftest.py": MOVED_AFTER, "tests/test_total.py": TOTAL_TEST}
+    big = {"tests/test_vectors.py": b"DATA = '" + b"x" * 1_000_001 + b"'\n\n\ndef test_vectors():\n    assert DATA\n"}
+    with pytest.raises(EngineError, match="source byte limit"):
+        judge_listed(before, honest, big)
+
+
+def test_a_new_conftest_definition_above_a_submodule_pytest_reaches_still_stops_the_run():
+    """What the submodule's tests read is unknown, as for a conftest 0.13.0 schedules."""
+    before = {"conftest.py": MOVED_BEFORE, "tests/test_total.py": TOTAL_TEST}
+    after = {"conftest.py": NEW_AFTER, "tests/test_total.py": TOTAL_TEST}
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed(before, after, {}, ["vendor/extlib/"])
+
+
+PARKED = MOVED_BEFORE.replace("\n\ndef total(lines):\n    return prod.total(lines)\n",
+                              "\n\nif False:\n    def total(lines):\n        return 105.0\n")
+OUT_OF_PARKING = PARKED.replace("if False:\n    def total(lines):\n        return 105.0\n",
+                                "def total(lines):\n    return 105.0\n")
+
+
+def test_a_conftest_definition_brought_out_where_it_was_parked_is_new():
+    """Moved within the module from a place the trace reads, a definition was in
+    force on the before side too; brought out of a dead branch, a class body
+    or a function, it was not, and the conftest refuses as for a new one."""
+    def new(before, after):
+        return _holds_new_definition(ast.parse(before), ast.parse(after))
+
+    assert not new(MOVED_BEFORE, MOVED_AFTER)
+    assert new(MOVED_BEFORE, NEW_AFTER)
+    assert new(PARKED, OUT_OF_PARKING)
+    helper = MOVED_BEFORE.replace("\n\ndef total(lines):\n    return prod.total(lines)\n",
+                                  "\n\ndef helper():\n    def total(lines):\n        return prod.total(lines)\n")
+    assert new(helper, MOVED_BEFORE)
+    method = MOVED_BEFORE.replace("\n\ndef total(lines):\n    return prod.total(lines)\n",
+                                  "\n\nclass Holder:\n    def total(lines):\n        return prod.total(lines)\n")
+    assert new(method, MOVED_BEFORE)
+    before = {"conftest.py": PARKED, "tests/test_total.py": TOTAL_TEST}
+    after = {"conftest.py": OUT_OF_PARKING, "tests/test_total.py": TOTAL_TEST}
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed(before, after, {}, ["vendor/extlib/"])
+
+
+# Fifth review (#638). Guards of the released reading, each pinned by a diff
+# that a mutation of it gets wrong.
+
+FLAGGED = {"app/__init__.py": b"", "app/prod.py": (PRODUCTION + "\nflag = False\n").encode()}
+FIXED = "def fixed(function):\n    return lambda lines: 105.0\n"
+
+
+def test_the_released_reading_keeps_a_stand_in_behind_a_definition_removed_in_a_conftest_fixture():
+    """0.13.0 schedules the conftest for `prod.flag = True`; the copies of the conftest each test gets share the mark."""
+    head = "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\nprod.flag = True\n\n\n@pytest.fixture\ndef amount():\n"
+    tail = "    total = lambda lines: 105.0\n    return total([(100, 1)])\n"
+    before = {"tests/conftest.py": head.replace("prod.flag = True\n\n\n", "") + "    def total(lines):\n        return 0\n\n" + tail}
+    after = {"tests/conftest.py": head + tail}
+    _ir, findings, verdict = judge_files(before, after, {**FLAGGED, "tests/test_total.py": CONFTEST_TEST})
+    assert verdict == "block"
+    assert [(f.rule, f.after.text) for f in findings if f.rule == "CONFTEST_PATCHES_PROD"] == [
+        ("CONFTEST_PATCHES_PROD", "total = lambda lines: 105.0")]
+
+
+def test_the_released_reading_covers_the_tests_beneath_a_root_conftest():
+    head = "import pytest\nfrom app.prod import total\n\n\n" + FIXED + "\n\n"
+    tail = "total = fixed(total)\n\n\n@pytest.fixture\ndef amount():\n    return total([(100, 1)])\n"
+    before = {"conftest.py": head + "def total(lines):\n    return 0\n\n\n" + tail}
+    after = {"conftest.py": head + "if False:\n    def total(lines):\n        return 0\n\n\n" + tail}
+    _ir, findings, verdict = judge_files(before, after, {**FLAGGED, "tests/test_total.py": CONFTEST_TEST})
+    assert verdict == "block"
+    assert [(f.rule, f.after.text) for f in findings if f.rule == "CONFTEST_PATCHES_PROD"] == [
+        ("CONFTEST_PATCHES_PROD", "total = fixed(total)")]
+
+
+def test_two_rows_for_one_target_in_one_test_are_one_finding():
+    before = ("from app import prod\n" + IMPORT + "\n\n" + FIXED + "\n\n"
+              "def test_total():\n    assert total([(100, 1)]) == 105.0\n    assert prod.total([(100, 1)]) == 105.0\n")
+    after = ("from app import prod\n" + IMPORT + "\n\n" + FIXED + "\n\ndef total(lines):\n    return 0\n\n\n"
+             "total = fixed(total)\n\n\ndef test_total():\n    prod.total = lambda lines: 105.0\n"
+             "    assert total([(100, 1)]) == 105.0\n    assert prod.total([(100, 1)]) == 105.0\n")
+    _ir, findings, verdict = run(before, after, PRODUCTION)
+    assert verdict == "block"
+    fingerprints = [f.fingerprint for f in findings if f.rule == "TEST_PATCHES_SUBJECT"]
+    assert fingerprints and len(fingerprints) == len(set(fingerprints))
+
+
+def test_a_moved_definition_beside_an_old_stand_in_reports_nothing():
+    production = PRODUCTION + "\n\nrate = 0.0\n"
+    before = ("from app import prod\n" + IMPORT + "\n\nprod.rate = 0.05\n\n\n"
+              "def computed():\n    def total(lines):\n        return 105.0\n\n    return total([(100, 1)])\n\n\n"
+              "def test_total():\n    assert computed() == 105.0\n    assert prod.rate == 0.05\n")
+    verdict, standins, events = judged(before, before.replace("computed", "priced"), production)
+    assert verdict == "pass" and standins == [] and events == []
+
+
+def test_a_new_definition_on_a_target_with_an_old_attribute_stand_in_is_reported():
+    test = ("def test_total():\n    prod.total = lambda lines: 105.0\n    assert prod.total([(100, 1)]) == 105.0\n"
+            "    assert total([(100, 1)]) == 105.0\n")
+    before = "from app import prod\n" + IMPORT + "\n\n" + test
+    verdict, standins, events = judged(before, "from app import prod\n" + IMPORT + "\n\n" + DEF + "\n\n" + test)
+    assert verdict == "block"
+    assert "def total(lines):" in [text for _path, _unit, _target, text, _span in events]
+
+
+def test_the_released_reading_counts_its_steps_apart(monkeypatch):
+    """Each reading stays within the limit on its own; together they would not."""
+    from checkwash.frontends.python import standin_installations
+
+    def many(wrapped, scheduled):
+        head = "import contextlib\n" + IMPORT + "\n\n"
+        head += ("with contextlib.suppress(KeyError):\n    def total(lines):\n        return 105.0\n\n\n" if wrapped
+                 else "def total(lines):\n    return 105.0\n\n\n")
+        if scheduled:  # an attribute write 0.13.0 schedules the file for
+            head += "class Box:\n    pass\n\n\nBox.x = 1\n\n\n"
+        return head + "".join(f"def test_{i}():\n    assert total([(1, 1)]) == 105.0\n\n\n" for i in range(40))
+
+    peaks = {}
+    original = standin_installations._Trace._step
+
+    def counted(self):
+        original(self)
+        peaks[id(self.budget)] = max(peaks.get(id(self.budget), 0), self.budget[0])
+
+    monkeypatch.setattr(standin_installations._Trace, "_step", counted)
+    judged(many(False, False), many(True, False))  # one reading: the file is not 0.13.0's
+    one = max(peaks.values())
+    monkeypatch.setattr(standin_installations._Trace, "_step", original)
+    monkeypatch.setattr(standin_installations, "_MAX_ANALYSIS_STEPS", one * 3 // 2)
+    verdict, _standins, _events = judged(many(False, True), many(True, True))  # both readings
+    assert verdict == "pass"
+
+
+@pytest.mark.parametrize("dead, live", [
+    ("if True:\n    pass\nelif False:\n    pass\nelif True:\n", "if False:\n    pass\nelif False:\n    pass\nelif True:\n"),
+    ("if True:\n    pass\nelif True:\n    pass\nelse:\n", "if False:\n    pass\nelif False:\n    pass\nelse:\n"),
+])
+def test_a_definition_in_a_later_arm_made_live_by_an_earlier_test_is_reported(dead, live):
+    arm = "    def total(lines):\n        return 105.0\n"
+    verdict, standins, _events = judged(IMPORT + "\n\n" + dead + arm + "\n\n" + TEST,
+                                        IMPORT + "\n\n" + live + arm + "\n\n" + TEST)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+@pytest.mark.parametrize("comprehension", [
+    "[total for total in (1, 2)]", "list(total for total in (1, 2))", "{total for total in (1, 2)}",
+    "{total: 0 for total in (1, 2)}",
+])
+def test_a_comprehension_variable_beside_an_untouched_definition_binds_nothing(comprehension):
+    shadowed = IMPORT + "\n\n" + DEF + "\n\n" + TEST
+    after = shadowed + "\n\nROWS = " + comprehension + "\n"
+    assert ("", "total") in _settled(ast.parse(shadowed), ast.parse(after))
+    assert _definition_rebind(shadowed.encode(), after.encode(), set()) is False
+
+
+# Fifth review (#638). Robustness.
+
+def test_a_definition_the_trace_calls_may_hold_an_expression_deeper_than_the_stack():
+    chain = " + ".join(["0"] * 1199 + ["105.0"])
+    after = IMPORT + "\n\ndef total(lines):\n    return " + chain + "\n\n\n" + TEST
+    verdict, standins, _events = judged(BEFORE, after)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+def test_a_test_folded_deeper_than_the_stack_is_not_an_engine_error():
+    before = IMPORT + "\n\nFLAG = True\n\n\nif " + "not " * 1200 + "FLAG:\n    pass\n\n\n" + TEST
+    after = before + "\n\ndef test_more():\n    assert total([(1, 1)]) == 1\n"
+    assert _definition_rebind(before.encode(), after.encode(), set()) is False
