@@ -1309,9 +1309,9 @@ OUT_OF_PARKING = PARKED.replace("if False:\n    def total(lines):\n        retur
 
 
 def test_a_conftest_definition_brought_out_where_it_was_parked_is_new():
-    """Moved within the module from a place the trace reads, a definition was in
-    force on the before side too; brought out of a dead branch, a class body
-    or a function, it was not, and the conftest refuses as for a new one."""
+    """Only wrapped in a `with`, a definition reads as one the diff left alone;
+    brought out of a dead branch, a class body or a function, it is bound
+    another way, and the conftest refuses as for a new one."""
     def new(before, after):
         return _holds_new_definition(ast.parse(before), ast.parse(after))
 
@@ -1453,3 +1453,181 @@ def test_a_test_folded_deeper_than_the_stack_is_not_an_engine_error():
     before = IMPORT + "\n\nFLAG = True\n\n\nif " + "not " * 1200 + "FLAG:\n    pass\n\n\n" + TEST
     after = before + "\n\ndef test_more():\n    assert total([(1, 1)]) == 1\n"
     assert _definition_rebind(before.encode(), after.encode(), set()) is False
+
+
+# Sixth review (#638). A conftest stays lenient only where every definition of
+# a captured name is bound as before, once a `with` or the taken branch of a
+# literal `if` around it is set aside. A definition brought into force by any
+# other change around its name keeps the conftest strict, and a definition no
+# capture reaches does not count.
+
+SHADOW_FAKE = "def total(lines):\n    return 105.0\n"
+SHADOW_FIXTURE = "\n\n@pytest.fixture\ndef amount():\n    return total\n"
+SHADOW_READER = b"def test_total(amount):\n    assert amount([(100, 1)]) == 105.0\n"
+BROUGHT_INTO_FORCE = {
+    "import-moved-above": (
+        "import pytest\n\n\n" + SHADOW_FAKE + "\n\nfrom app.prod import total\n" + SHADOW_FIXTURE,
+        "import pytest\nfrom app.prod import total\n\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+    "later-definition-deleted": (
+        "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\n" + SHADOW_FAKE
+        + "\n\ndef total(lines):\n    return prod.total(lines)\n" + SHADOW_FIXTURE,
+        "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+    "restoring-import-made-dead": (
+        "import pytest\nfrom app.prod import total\n\n\n" + SHADOW_FAKE
+        + "\n\nif True:\n    from app.prod import total\n" + SHADOW_FIXTURE,
+        "import pytest\nfrom app.prod import total\n\n\n" + SHADOW_FAKE
+        + "\n\nif False:\n    from app.prod import total\n" + SHADOW_FIXTURE),
+    "restoring-assignment-deleted": (
+        "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\n" + SHADOW_FAKE
+        + "\n\ntotal = prod.total\n" + SHADOW_FIXTURE,
+        "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+    "del-and-reimport-deleted": (
+        "import pytest\nfrom app.prod import total\n\n\n" + SHADOW_FAKE
+        + "\n\ndel total\nfrom app.prod import total\n" + SHADOW_FIXTURE,
+        "import pytest\nfrom app.prod import total\n\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+    "getattr-replaced-by-an-import-above": (
+        "import pytest\nfrom app import prod\n\n\n" + SHADOW_FAKE + "\n\ntotal = getattr(prod, \"total\")\n"
+        + SHADOW_FIXTURE,
+        "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+}
+
+
+@pytest.mark.parametrize("name", sorted(BROUGHT_INTO_FORCE))
+def test_a_conftest_stand_in_brought_into_force_keeps_the_conftest_strict(name):
+    """The stand-in was on the before side at module level, but a later
+    binding of its name shadowed it. Readable, it is reported; beneath a
+    submodule pytest reaches or beside a path holding `:`, the run stops."""
+    before, after = BROUGHT_INTO_FORCE[name]
+    assert _holds_new_definition(ast.parse(before), ast.parse(after))
+    _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after},
+                                          {"tests/test_total.py": SHADOW_READER})
+    assert verdict == "block" and "CONFTEST_PATCHES_PROD" in {f.rule for f in findings}
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["vendor/extlib/"])
+    with pytest.raises(EngineError, match="unsafe path"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["data/2024-01-01T00:00:00.json"])
+
+
+HONEST_BEFORE = ("import contextlib\nimport pytest\nfrom app import prod\nfrom app.prod import total\n\n\n"
+                 "def total(lines):\n    return prod.total(lines)\n")
+HONEST_AFTER = HONEST_BEFORE.replace("def total(lines):\n    return prod.total(lines)\n",
+                                     "with contextlib.nullcontext():\n    def total(lines):\n"
+                                     "        return prod.total(lines)\n")
+ROWS = "\n\n@pytest.fixture\ndef rows():\n    return [(1, 1)]\n"
+HONEST_ALONGSIDE = {
+    "an-unchanged-factory-fixture": (
+        "\n\n@pytest.fixture\ndef make_lines():\n    def make(count):\n        return [(1, 1)] * count\n\n"
+        "    return make\n",) * 2,
+    "an-unchanged-method-holding-a-nested-def": (
+        "\n\nclass Recorder:\n    def record(self, value):\n        def keep(item):\n            return item\n\n"
+        "        return keep(value)\n",) * 2,
+    "an-unrelated-fixture-edited": (ROWS, ROWS.replace("[(1, 1)]", "[(2, 1)]")),
+    "an-unrelated-fixture-added": ("", ROWS),
+    "an-unchanged-helper-holding-the-same-wrapper": (
+        "\n\ndef helper():\n    def total(lines):\n        return prod.total(lines)\n\n    return total\n",) * 2,
+    "an-unchanged-fixture-handing-over-a-definition-of-another-captured-name": (
+        "\n\nfrom app.prod import rate\n\n\n@pytest.fixture\ndef discount():\n    def rate():\n        return 1.0\n\n"
+        "    return rate\n",) * 2,
+    "a-method-named-like-the-import-edited": (
+        "\n\nclass Recorder:\n    def total(self, lines):\n        return 0\n",
+        "\n\nclass Recorder:\n    def total(self, lines):\n        return 1\n"),
+}
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+@pytest.mark.parametrize("name", sorted(HONEST_ALONGSIDE))
+def test_an_honest_conftest_move_beside_other_definitions_brings_in_no_refusal(name, listed):
+    """A conftest wrapper moved under `with`, beside definitions no capture
+    reaches, definitions left alone, or another fixture edited or added."""
+    extra_before, extra_after = HONEST_ALONGSIDE[name]
+    before, after = HONEST_BEFORE + extra_before, HONEST_AFTER + extra_after
+    assert not _holds_new_definition(ast.parse(before), ast.parse(after))
+    _ir, findings, verdict = judge_listed({"conftest.py": before, "tests/test_total.py": TOTAL_TEST},
+                                          {"conftest.py": after, "tests/test_total.py": TOTAL_TEST}, {}, listed)
+    assert verdict == "pass" and [f.rule for f in findings if f.severity in ("high", "critical")] == []
+
+
+def test_an_edited_conftest_definition_of_a_captured_name_keeps_the_conftest_strict():
+    after = HONEST_AFTER.replace("        return prod.total(lines)\n", "        return prod.total(lines) + 0\n")
+    assert _holds_new_definition(ast.parse(HONEST_BEFORE), ast.parse(after))
+    assert not _holds_new_definition(ast.parse(HONEST_BEFORE), ast.parse(HONEST_BEFORE.replace(
+        "def total(lines):\n", "if True:\n    def total(lines):\n").replace(
+        "    return prod.total(lines)\n", "        return prod.total(lines)\n")))
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed({"conftest.py": HONEST_BEFORE, "tests/test_total.py": TOTAL_TEST},
+                     {"conftest.py": after, "tests/test_total.py": TOTAL_TEST}, {}, ["vendor/extlib/"])
+
+
+COLON_READER = {"tests/run:2024/test_total.py": SHADOW_READER}
+STRICT_BASE = "import pytest\nfrom app.prod import total\n\n\n@pytest.fixture\ndef amount():\n    return total\n"
+
+
+@pytest.mark.parametrize("install", ["def total(lines):\n    return 105.0\n", "total = lambda lines: 105.0\n"])
+def test_a_reader_at_an_unsafe_path_beneath_a_strict_conftest_stops_the_run(install):
+    """A new definition, or an assignment 0.13.0 schedules (and refuses there
+    too), above a test whose path holds `:`."""
+    after = STRICT_BASE.replace("\n\n\n@pytest", "\n\n\n" + install + "\n\n@pytest")
+    with pytest.raises(EngineError, match="unsafe path"):
+        judge_listed({"conftest.py": STRICT_BASE}, {"conftest.py": after}, COLON_READER)
+
+
+TWICE_HELPERS = ("def _real():\n    return total([(100, 1)])\n\n\n"
+                 "def helper():\n    return total([(100, 1)])\n\n\n"
+                 "def helper():\n    def total(lines):\n        return 105.0\n\n    return total([(100, 1)])\n\n\n")
+WITH_STAND_IN = "def helper():\n    def total(lines):\n        return 105.0\n\n    return total([(100, 1)])\n\n\n"
+WITHOUT = "def helper():\n    return total([(100, 1)])\n\n\n"
+HELPER_TEST = "def test_total():\n    assert helper() == 105.0\n"
+
+
+@pytest.mark.parametrize("before, after", [
+    (IMPORT + "\n\n" + TWICE_HELPERS + "helper = _real\n\n\n" + HELPER_TEST, IMPORT + "\n\n" + TWICE_HELPERS + HELPER_TEST),
+    (IMPORT + "\n\n" + WITH_STAND_IN + WITHOUT + HELPER_TEST, IMPORT + "\n\n" + WITHOUT + WITH_STAND_IN + HELPER_TEST),
+], ids=["shadowing-assignment-deleted", "copies-swapped"])
+def test_a_stand_in_in_a_twice_defined_helper_brought_into_force_is_reported(before, after):
+    """Every binding of a scope defined twice counts, in order, assignments too."""
+    verdict, standins, _events = judged(before, after)
+    assert verdict == "block" and standins
+
+
+def test_a_test_s_nested_helper_that_binds_the_name_leaves_the_released_finding():
+    """The trace's walk of a test's own bindings does not enter a function nested in it."""
+    body = ("def test_total():\n    def helper():\n        total = 1\n        return total\n\n"
+            "    assert total([(100, 1)]) == 105.0\n")
+    verdict, standins, _events = judged(IMPORT + "\n\n" + body, IMPORT + "\ntotal = lambda lines: 105.0\n\n\n" + body)
+    assert verdict == "block" and standins
+
+
+@pytest.mark.parametrize("dead", ["from app.prod import total", "del total", "class total:\n            pass",
+                                  "total = None"], ids=["import", "del", "class", "assignment"])
+def test_a_name_the_test_binds_only_in_a_dead_branch_is_the_test_s_own(dead):
+    """Python makes it local to the test wherever it is bound, so the test reads no stand-in."""
+    body = "def test_total():\n    assert total([(100, 1)]) == 105.0\n    if False:\n        " + dead + "\n"
+    verdict, standins, _events = judged(IMPORT + "\n\n" + body, IMPORT + "\ntotal = lambda lines: 105.0\n\n\n" + body)
+    assert verdict == "pass" and standins == []
+
+
+def test_a_scope_defined_twice_is_compared_once_for_the_definitions_inside_it():
+    methods = "".join(f"    def test_{i}(self):\n        def total(lines):\n            return sum(p * q for p, q in lines)\n\n"
+                      f"        assert total([(1, {i})]) == {i}\n\n" for i in range(150))
+    klass = "class TestTotals:\n" + methods
+    before = IMPORT + "\n\n" + klass + "\n\n" + klass + "\n\nVALUE = 1\n"
+    started = time.perf_counter()
+    assert len(_settled(ast.parse(before), ast.parse(before.replace("VALUE = 1", "VALUE = 2")))) == 150
+    assert time.perf_counter() - started < 1.5
+
+
+def test_an_added_conftest_holding_a_definition_of_a_captured_name_is_strict():
+    assert _holds_new_definition(None, ast.parse(STRICT_BASE.replace("\n\n\n@pytest", "\n\n\n" + SHADOW_FAKE + "\n\n@pytest")))
+    assert not _holds_new_definition(None, ast.parse(STRICT_BASE))
+
+
+def test_a_definition_of_a_standard_library_name_does_not_keep_a_conftest_strict():
+    """Only a capture of a first-party provider counts, as in the scheduling filter."""
+    stdlib = "\n\nfrom json import dumps\n\n\ndef dumps(value):\n    return str(value)\n"
+    before, after = HONEST_BEFORE + stdlib, HONEST_AFTER + stdlib.replace("str(value)", "repr(value)")
+    assert _holds_new_definition(ast.parse(before), ast.parse(after))
+    assert not _holds_new_definition(ast.parse(before), ast.parse(after), {"json"})
+    _ir, findings, verdict = judge_listed({"conftest.py": before, "tests/test_total.py": TOTAL_TEST},
+                                          {"conftest.py": after, "tests/test_total.py": TOTAL_TEST}, {},
+                                          ["vendor/extlib/"])
+    assert verdict == "pass"
