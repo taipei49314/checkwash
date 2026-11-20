@@ -618,7 +618,19 @@ def _scope_chain(scope):
     return [".".join(parts[:count]) for count in range(len(parts) + 1)]
 
 
-def _binding_signature(entries, scope, name, memo, loose=False):
+def _words(memo, node, kind=None):
+    """A binding's text: a definition's identity, any other node whole.
+
+    `memo` holds the texts already computed for the pair of trees being compared.
+    """
+    key = (id(node), kind == "definition")
+    if key not in memo:
+        memo[key] = ("" if node is None else _definition_identity(node) if kind == "definition"
+                     else stable_dump(node))
+    return memo[key]
+
+
+def _binding_signature(entries, scope, name, memo):
     """How `name` comes to be bound for a definition in `scope`: every binding
     of it in that scope and the scopes around it, each with the compound
     statements around it and what it binds the name to.
@@ -630,20 +642,7 @@ def _binding_signature(entries, scope, name, memo, loose=False):
     - A binding under `if TYPE_CHECKING:` is left out: no run takes it.
     - A star import counts only in the definition's own scope and below its
       first definition there, where it could bind the name after it.
-    - With `loose`, the compound statements the trace reads straight through
-      (a `with`, the taken branch of an `if` with a literal test) are left
-      out, so a binding only wrapped in one or taken out of one reads as
-      unchanged (`_holds_new_definition`).
-
-    `memo` holds the texts already computed for this pair of trees.
     """
-    def words(node, kind=None):
-        key = (id(node), kind == "definition")
-        if key not in memo:
-            memo[key] = ("" if node is None else _definition_identity(node) if kind == "definition"
-                         else stable_dump(node))
-        return memo[key]
-
     first = min((node.lineno for _where, node, kind in entries.get((scope, name), ()) if kind == "definition"),
                 default=None)
     out = []
@@ -654,9 +653,9 @@ def _binding_signature(entries, scope, name, memo, loose=False):
         for (where, node, kind), star in found:
             if any(tag == "type-checking" for tag, _at, _live in where):
                 continue
-            what = (_import_target(node, name) if kind == "import" and not star else words(node, kind))
-            out.append((inner, "star" if star else kind,
-                        tuple((tag, words(at)) for tag, at, live in where if not (loose and live)), what))
+            what = (_import_target(node, name) if kind == "import" and not star else _words(memo, node, kind))
+            out.append((inner, "star" if star else kind, tuple((tag, _words(memo, at)) for tag, at, _live in where),
+                        what))
     return tuple(out)
 
 
@@ -699,16 +698,16 @@ def _enclosing(entries, scope, memo=None):
     return tuple(kinds)
 
 
-def _bound_alike(old, new, scope, name, memo, loose=False):
+def _bound_alike(old, new, scope, name, memo):
     """Whether `name` is bound the same way for a definition in `scope` on both sides.
 
     The scopes around it must be the same on both sides (`_enclosing`): a
     method of `class helper` and a def nested in `def helper()` have the same
-    key and are not the same binding. `loose` is `_binding_signature`'s.
+    key and are not the same binding.
     """
     kinds = _enclosing(old, scope, memo)
     return (kinds is not None and kinds == _enclosing(new, scope, memo)
-            and _binding_signature(old, scope, name, memo, loose) == _binding_signature(new, scope, name, memo, loose))
+            and _binding_signature(old, scope, name, memo) == _binding_signature(new, scope, name, memo))
 
 
 def _only_defined(entries, scope, name):
@@ -789,36 +788,106 @@ def _captures(sides, deny):
     return captured
 
 
+def _own_bindings(entries, scope, name, memo):
+    """The bindings of `name` in `scope` itself, star imports among them, in
+    source order, and the index of the first definition among them (None
+    when there is none) (#635).
+
+    Each counts as in `_binding_signature`, but without the compound
+    statements the trace reads straight through (a `with`, the taken branch
+    of an `if` with a literal test): a binding only wrapped in one, or taken
+    out of one, reads as unchanged. A binding under `if TYPE_CHECKING:` is
+    left out.
+    """
+    def position(node):
+        node = getattr(node, "context_expr", node)  # a `with` item has no position of its own
+        return node.lineno, node.col_offset
+
+    found = sorted([(entry, False) for entry in entries.get((scope, name), ())]
+                   + [(entry, True) for entry in entries.get((scope, "*"), ())],
+                   key=lambda item: position(item[0][1]))
+    out, first = [], None
+    for (where, node, kind), star in found:
+        if any(tag == "type-checking" for tag, _at, _live in where):
+            continue
+        if first is None and kind == "definition":
+            first = len(out)
+        what = (_import_target(node, name) if kind == "import" and not star else _words(memo, node, kind))
+        out.append(("star" if star else kind, tuple((tag, _words(memo, at)) for tag, at, live in where if not live),
+                    what))
+    return tuple(out), first
+
+
+def _left_alone(old, new, scope, name, memo):
+    """Whether the definitions of `name` in `scope` bind it, for whatever
+    reads it after them, as the before side's did (#635).
+
+    From the after side's first definition of the name in `scope` on, its
+    bindings there must be the last ones there on the before side
+    (`_own_bindings`), inside the same scopes (`_enclosing`). What comes
+    before the first definition, and the bindings in the scopes around it,
+    do not count: what reads the name there receives an import, an
+    assignment, or a definition judged on its own. A `global` or `nonlocal`
+    of the name in `scope`, on either side, makes its definitions bind a
+    name in another scope: never left alone.
+    """
+    if any(kind == "global" for entries in (old, new) for _where, _node, kind in entries.get((scope, name), ())):
+        return False
+    kinds = _enclosing(old, scope, memo)
+    if kinds is None or kinds != _enclosing(new, scope, memo):
+        return False
+    whole, _first = _own_bindings(old, scope, name, memo)
+    after, first = _own_bindings(new, scope, name, memo)
+    if first is None:
+        return False
+    tail = after[first:]
+    return whole[-len(tail):] == tail
+
+
 def _holds_new_definition(before, after, deny=()):
     """Whether the after side holds a definition that could install something
     the before side did not (#635): a def or class the trace reads, of a name
-    a capture reaches (`_captures`), whose name is not bound the same way on
-    both sides once the compound statements the trace reads straight through
-    are set aside (`_bound_alike` with `loose`).
+    a capture reaches (`_captures`), that `_left_alone` does not find on the
+    before side. Each scope and name is judged once.
 
-    A definition the diff only wraps in a `with` or the taken branch of a
-    literal `if`, or takes out of one, reads as one the diff left alone; and
-    a definition left alone installs nothing (`_settled`). So whatever a test
-    receives from such a definition, it would receive with the definition
-    untouched, and the rule would report nothing for it there. Any other
-    change to how its name is bound (the definition edited or added, an
-    import moved above it, a later binding deleted, a branch around one made
-    dead) makes it new, wherever it is defined. A definition whose name no
-    capture reaches (a fixture's own name, a factory's inner function) can
-    take nothing over and does not count.
+    A definition `_left_alone` finds is followed by what followed the
+    matching one on the before side. Whatever reads its name after it
+    receives what it would have received at the same place there. The diff
+    can still have moved what reads it, as for a definition it left alone
+    (`_settled`). It can have changed which provider a definition replaces:
+    the import a wrapper shadows deleted, renamed, moved under
+    `if TYPE_CHECKING:`, or pointed at another provider. And it can have
+    changed what reads the name before the first definition, which receives
+    an import or an assignment, as 0.13.0 reads them. Any change from the
+    first definition on (the definition edited or added, a binding of its
+    name added, deleted or moved, a branch around one made dead), or to the
+    scopes around it, makes it new. A definition whose name no capture
+    reaches (a fixture's own name, a factory's inner function) can take
+    nothing over and does not count.
+
+    The trace reads a `with` and the taken branch of a literal `if` straight
+    through, and so does this comparison. A run may not: a `with` can skip
+    the rest of its body (`contextlib.suppress`, `pytest.raises`) or install
+    something through its context manager. Such a wrapper, added around a
+    definition or taken away, is not seen here.
 
     A conftest that only the definition rule schedules, and that fails this
-    test, defines no new stand-in.
+    test, is lenient (`installation_events`).
     """
     if after is None:
         return False
     new, definitions = _bindings(after)
     old = _bindings(before)[0] if before is not None else None
     captured = _captures([entries for entries in (old, new) if entries is not None], deny)
-    memo = {}
-    return any(readable and captured(scope, node.name)
-               and not (old is not None and _bound_alike(old, new, scope, node.name, memo, loose=True))
-               for scope, node, readable, _functions in definitions)
+    memo, judged = {}, {}
+    for scope, node, readable, _functions in definitions:
+        key = (scope, node.name)
+        if not readable or key in judged:
+            continue
+        judged[key] = captured(*key) and not (old is not None and _left_alone(old, new, *key, memo))
+        if judged[key]:
+            return True
+    return False
 
 
 def _decorated(node, test):
@@ -1752,15 +1821,15 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         return []
     conftest_changed = {path for path in candidates if config.role_of(path) == "conftest"}
     # The conftests 0.13.0 scheduled, and those only the definition rule
-    # schedules. One of the latter whose definitions of a captured name are
-    # bound as before, or only wrapped in or taken out of a `with` or a taken
-    # literal `if` (`_holds_new_definition`), is lenient: nothing it defines
-    # is a new stand-in, so what 0.13.0 never listed for this diff (an
-    # inventory over its limits, an invalid or unsafe path in it, an opaque
-    # directory pytest's collection reaches) is skipped beneath it instead of
-    # stopping the run (#635). A file the run reads beneath it is read in full
-    # or stops the run, as anywhere else. The others refuse as 0.13.0 refuses
-    # for a conftest it schedules.
+    # schedules. One of the latter in which every definition of a captured
+    # name is followed, in its own scope, by what followed one on the before
+    # side (`_holds_new_definition`) is lenient: what 0.13.0 never listed for
+    # this diff does not stop the run for it (#635). An inventory over its
+    # limits, or an invalid or unsafe path anywhere in it, stops the run when
+    # any changed conftest is strict; an opaque directory pytest's collection
+    # reaches, when it lies beneath a strict one. A file the run reads is read
+    # in full or stops the run, as anywhere else. The strict ones refuse as
+    # 0.13.0 refuses for a conftest it schedules.
     released_conftests = {path for path in released_candidates if config.role_of(path) == "conftest"}
     lenient_conftests = {
         path for path in conftest_changed - released_conftests

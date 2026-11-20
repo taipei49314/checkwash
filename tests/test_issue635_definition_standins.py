@@ -1455,11 +1455,12 @@ def test_a_test_folded_deeper_than_the_stack_is_not_an_engine_error():
     assert _definition_rebind(before.encode(), after.encode(), set()) is False
 
 
-# Sixth review (#638). A conftest stays lenient only where every definition of
-# a captured name is bound as before, once a `with` or the taken branch of a
-# literal `if` around it is set aside. A definition brought into force by any
-# other change around its name keeps the conftest strict, and a definition no
-# capture reaches does not count.
+# Sixth review (#638). A conftest stays lenient only where, from the first
+# definition of a captured name in its scope on, the name is bound as the
+# before side's last bindings there bind it, once a `with` or the taken branch
+# of a literal `if` around a binding is set aside. A definition brought into
+# force by a change from there on keeps the conftest strict, and a definition
+# no capture reaches does not count.
 
 SHADOW_FAKE = "def total(lines):\n    return 105.0\n"
 SHADOW_FIXTURE = "\n\n@pytest.fixture\ndef amount():\n    return total\n"
@@ -1631,3 +1632,198 @@ def test_a_definition_of_a_standard_library_name_does_not_keep_a_conftest_strict
                                           {"conftest.py": after, "tests/test_total.py": TOTAL_TEST}, {},
                                           ["vendor/extlib/"])
     assert verdict == "pass"
+
+
+# Seventh review (#638). A change above a conftest's first definition of a
+# captured name (the import a wrapper shadows deleted, renamed, moved under
+# `if TYPE_CHECKING:` or pointed at another provider; a dead first copy
+# deleted) changes only what the definition replaces: the conftest stays
+# lenient. A change from the first definition on keeps it strict. Most pins
+# below are diffs that one mutation of the comparison gets wrong.
+
+PROVIDERS = {"app/prod.py": (PRODUCTION + "\n\ndef rate():\n    return 1.0\n").encode(),
+             "app/pricing.py": PRODUCTION.encode()}
+ABOVE = "import pytest\nfrom app import prod\nfrom app.prod import total\n\n\n"
+WRAPPER = "def total(lines):\n    return prod.total(lines)\n"
+TYPED = "from typing import TYPE_CHECKING\n\n" + ABOVE
+BOTH = ABOVE.replace(IMPORT, "from app.prod import rate, total\n")
+LEFT_ALONE = {
+    "shadowed-import-deleted": (ABOVE + WRAPPER, ABOVE.replace(IMPORT, "") + WRAPPER),
+    "shadowed-import-renamed": (
+        ABOVE + WRAPPER, ABOVE.replace(IMPORT, "from app.prod import total as _total  # noqa: F401\n") + WRAPPER),
+    "name-dropped-from-the-import-line": (BOTH + WRAPPER, ABOVE.replace(IMPORT, "from app.prod import rate\n") + WRAPPER),
+    "shadowed-import-moved-under-type-checking": (
+        TYPED + WRAPPER, TYPED.replace(IMPORT, "if TYPE_CHECKING:\n    " + IMPORT) + WRAPPER),
+    "import-pointed-at-another-provider": (ABOVE + WRAPPER, ABOVE.replace("app.prod import", "app.pricing import") + WRAPPER),
+    "dead-first-copy-deleted": (
+        ABOVE + "def total(lines):\n    return sum(p * q for p, q in lines)\n\n\n" + WRAPPER, ABOVE + WRAPPER),
+    "typing-only-import-added-below": (TYPED + WRAPPER, TYPED + WRAPPER + "\n\nif TYPE_CHECKING:\n    " + IMPORT),
+    "wrapper-moved-into-the-else-of-a-dead-if": (
+        ABOVE + WRAPPER, ABOVE + "if False:\n    pass\nelse:\n    def total(lines):\n        return prod.total(lines)\n"),
+    "wrapper-moved-and-another-deleted": (
+        BOTH + WRAPPER + "\n\ndef rate():\n    return prod.rate()\n",
+        BOTH + "if True:\n    def total(lines):\n        return prod.total(lines)\n"),
+    "wrapper-moved-and-a-name-added-to-the-import-below-it": (
+        ABOVE.replace(IMPORT, "") + WRAPPER + "\n\n" + IMPORT,
+        ABOVE.replace(IMPORT, "") + "if True:\n    def total(lines):\n        return prod.total(lines)\n\n\n"
+        "from app.prod import rate, total\n"),
+}
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+@pytest.mark.parametrize("name", sorted(LEFT_ALONE))
+def test_a_conftest_wrapper_followed_by_what_followed_it_brings_in_no_refusal(name, listed):
+    """Whatever reads `total` after the wrapper receives the same wrapper on both sides."""
+    before, after = LEFT_ALONE[name]
+    assert not _holds_new_definition(ast.parse(before), ast.parse(after))
+    _ir, findings, verdict = judge_listed({"conftest.py": before, "tests/test_total.py": TOTAL_TEST},
+                                          {"conftest.py": after, "tests/test_total.py": TOTAL_TEST}, PROVIDERS, listed)
+    assert verdict == "pass" and [f.rule for f in findings if f.severity in ("high", "critical")] == []
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+def test_a_conftest_import_cleanup_keeps_0130_s_report_elsewhere_in_the_diff(listed):
+    """A strict conftest would stop the run, and 0.13.0's block of the test file's stand-in with it."""
+    before, after = LEFT_ALONE["shadowed-import-deleted"]
+    cheat = TOTAL_TEST.replace("\n\ndef test_total", "\ntotal = lambda lines: 105.0\n\n\ndef test_total")
+    _ir, findings, verdict = judge_listed({"conftest.py": before, "tests/test_total.py": TOTAL_TEST},
+                                          {"conftest.py": after, "tests/test_total.py": cheat}, PROVIDERS, listed)
+    assert verdict == "block"
+    assert [(f.rule, f.after.text) for f in findings if f.rule == "TEST_PATCHES_SUBJECT"] == [
+        ("TEST_PATCHES_SUBJECT", "total = lambda lines: 105.0")]
+
+
+PARKED_HEAD = "import contextlib\nimport pytest\nfrom app import prod\nfrom app.prod import total\n\n\n"
+LOCAL_FAKE = "import pytest\n\n\n@pytest.fixture\ndef amount():\n    def total(lines):\n        return 105.0\n\n"
+TWICE_FIXTURE = ("import pytest\nfrom app.prod import total\n\n\n@pytest.fixture\ndef amount():\n    return total\n\n\n"
+                 "if {flag}:\n    @pytest.fixture\n    def amount():\n        def total(lines):\n            return 105.0\n\n"
+                 "        return lambda lines: total(lines)\n")
+INSTALLER = ("\n\n@pytest.fixture(autouse=True)\ndef install():\n{declared}    def total(lines):\n        return 105.0\n\n"
+             "    yield\n")
+FROM_THE_FIRST_DEFINITION = {
+    "star-import-below-a-parked-stand-in-deleted": (
+        PARKED_HEAD + SHADOW_FAKE + "\n\nfrom app.prod import *\n" + SHADOW_FIXTURE, PARKED_HEAD + SHADOW_FAKE + SHADOW_FIXTURE),
+    "with-as-below-a-parked-stand-in-deleted": (
+        PARKED_HEAD + SHADOW_FAKE + "\n\nwith contextlib.nullcontext(prod.total) as total:\n    pass\n" + SHADOW_FIXTURE,
+        PARKED_HEAD + SHADOW_FAKE + SHADOW_FIXTURE),
+    "only-import-below-a-parked-stand-in-deleted": (
+        "import pytest\n\n\n" + SHADOW_FAKE + "\n\nfrom app.prod import total\n" + SHADOW_FIXTURE,
+        "import pytest\n\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+    "a-fixture-s-restoring-import-deleted": (
+        LOCAL_FAKE + "    from app.prod import total\n    return lambda lines: total(lines)\n",
+        LOCAL_FAKE + "    return lambda lines: total(lines)\n"),
+    "dead-copy-of-a-twice-defined-fixture-made-live": (TWICE_FIXTURE.format(flag="False"), TWICE_FIXTURE.format(flag="True")),
+    "global-added-in-a-fixture-holding-the-definition": (
+        ABOVE + WRAPPER + INSTALLER.format(declared="") + SHADOW_FIXTURE,
+        ABOVE + WRAPPER + INSTALLER.format(declared="    global total\n") + SHADOW_FIXTURE),
+    # The fixture's wrapper overrode the module's stand-in when it ran; local, it no longer does.
+    "global-removed-from-a-fixture-that-overrode-a-stand-in": (
+        ABOVE + SHADOW_FAKE + INSTALLER.replace("return 105.0", "return prod.total(lines)").format(
+            declared="    global total\n") + SHADOW_FIXTURE,
+        ABOVE + SHADOW_FAKE + INSTALLER.replace("return 105.0", "return prod.total(lines)").format(declared="")
+        + SHADOW_FIXTURE),
+    "star-import-below-the-wrapper-pointed-elsewhere": (
+        ABOVE + WRAPPER + "\n\nfrom app.prod import *\n" + SHADOW_FIXTURE,
+        ABOVE + WRAPPER + "\n\nfrom app.fakes import *\n" + SHADOW_FIXTURE),
+    "restoring-import-between-two-definitions-deleted": (
+        ABOVE + SHADOW_FAKE + "\n\nfrom app.prod import total\ncalc = total\n\n\n" + WRAPPER
+        + "\n\n@pytest.fixture\ndef amount():\n    return calc\n",
+        ABOVE + SHADOW_FAKE + "\n\ncalc = total\n\n\n" + WRAPPER + "\n\n@pytest.fixture\ndef amount():\n    return calc\n"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(FROM_THE_FIRST_DEFINITION))
+def test_a_change_from_a_conftest_s_first_definition_on_keeps_it_strict(name):
+    before, after = FROM_THE_FIRST_DEFINITION[name]
+    assert _holds_new_definition(ast.parse(before), ast.parse(after))
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["vendor/extlib/"])
+    with pytest.raises(EngineError, match="unsafe path"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["data/2024-01-01T00:00:00.json"])
+
+
+def test_a_stand_in_whose_only_import_was_below_it_is_reported_where_its_reader_is_readable():
+    """The import captured the name on the before side only."""
+    before, after = FROM_THE_FIRST_DEFINITION["only-import-below-a-parked-stand-in-deleted"]
+    _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after},
+                                          {"tests/test_total.py": SHADOW_READER})
+    assert verdict == "block" and "CONFTEST_PATCHES_PROD" in {f.rule for f in findings}
+
+
+def test_a_star_import_counts_where_it_stands_among_a_scope_s_bindings():
+    """A production star import moved above a parked stand-in brings the stand-in into force. The trace does
+    not read what a star import binds, so nothing reports this diff, in either spelling; the comparison
+    still orders the star import among the other bindings."""
+    star = "from app.prod import *\n"
+    before = ABOVE + WRAPPER + "\n\n" + DEF + "\n\n" + star
+    after = ABOVE + WRAPPER + "\n\n" + star + "\n\n" + DEF
+    assert _holds_new_definition(ast.parse(before), ast.parse(after))
+    assert not _holds_new_definition(ast.parse(before), ast.parse(before))
+
+
+SCOPE_BEFORE = ("import pytest\nfrom app import prod\nfrom app.prod import total\n\ntotal = lambda lines: 105.0\n"
+                "from app.prod import total\n\n\n@pytest.fixture\ndef helper():\n    def total(lines):\n"
+                "        return prod.total(lines)\n\n    return total\n\n\n@pytest.fixture\ndef amount():\n    return total\n")
+SCOPE_AFTER = SCOPE_BEFORE.replace("total = lambda lines: 105.0\nfrom app.prod import total\n",
+                                   "total = lambda lines: 105.0\n").replace(
+    "def helper():\n    def total", "def helper():\n    from app.prod import total\n    def total")
+
+
+def test_an_assignment_brought_into_force_beside_a_nested_wrapper_is_reported_where_its_reader_is_readable():
+    """The stand-in is the module's `total = lambda`, brought into force by
+    moving the import that restored production into a fixture. 0.13.0 does
+    not report it, readable or not, and no version does when the fixture's
+    wrapper is written as an assignment. The wrapper's scope binds `total`
+    as before from the wrapper on, so the conftest is lenient: beneath a
+    submodule the run passes, as on 0.13.0."""
+    assert not _holds_new_definition(ast.parse(SCOPE_BEFORE), ast.parse(SCOPE_AFTER))
+    _ir, findings, verdict = judge_listed({"conftest.py": SCOPE_BEFORE}, {"conftest.py": SCOPE_AFTER},
+                                          {"tests/test_total.py": SHADOW_READER})
+    assert verdict == "block"
+    assert [(f.rule, f.after.text) for f in findings if f.rule == "CONFTEST_PATCHES_PROD"] == [
+        ("CONFTEST_PATCHES_PROD", "total = lambda lines: 105.0")]
+    _ir, _findings, verdict = judge_listed({"conftest.py": SCOPE_BEFORE}, {"conftest.py": SCOPE_AFTER}, {},
+                                           ["vendor/extlib/"])
+    assert verdict == "pass"
+
+
+@pytest.mark.parametrize("alias", ["from app import prod\n\ntotal: object = prod.total\n",
+                                   "import app.prod\n\ntotal = app.prod.total\n"], ids=["annotated", "two-attributes"])
+def test_a_definition_after_an_alias_of_the_subject_is_reported(alias):
+    verdict, standins, _events = judged(alias + "\n\n" + TEST, alias + "\n\n" + DEF + "\n\n" + TEST)
+    assert verdict == "block" and standins == [("TEST_PATCHES_SUBJECT", "high", "test_total", MESSAGE)]
+
+
+TWICE_DEFINED_HELPERS = (
+    IMPORT + "\n\ndef first():\n    def total(lines):\n        return 1\n\n    return total\n\n\n"
+    "def first():\n    def total(lines):\n        return 2\n\n    return total\n\n\n"
+    "def helper():\n    return total\n\n\n"
+    "if {flag}:\n    def helper():\n        def total(lines):\n            return 105.0\n\n        return total\n\n\n"
+    "def test_total():\n    assert helper()([(100, 1)]) == 105.0\n")
+TWICE_DEFINED_TESTS = (
+    IMPORT + "\n\nclass TestA:\n    def test_x(self):\n        def total(lines):\n            return 1\n\n"
+    "        assert total([(1, 1)]) == 1\n\n    def test_x(self):\n        def total(lines):\n            return 1\n\n"
+    "        assert total([(1, 1)]) == 1\n\n\n"
+    "class TestB:\n    def test_x(self):\n        assert total([(100, 1)]) == 105.0\n\n"
+    "    if {flag}:\n        def test_x(self):\n            def total(lines):\n                return 105.0\n\n"
+    "            assert total([(100, 1)]) == 105.0\n")
+
+
+@pytest.mark.parametrize("source, unit", [(TWICE_DEFINED_HELPERS, "test_total"), (TWICE_DEFINED_TESTS, "TestB.test_x")],
+                         ids=["helpers", "test-classes"])
+def test_a_stand_in_made_live_in_the_second_of_two_scopes_defined_twice_is_reported(source, unit):
+    """Each scope defined twice is compared on its own: the copies of the first say nothing about the second."""
+    verdict, standins, _events = judged(source.format(flag="False"), source.format(flag="True"))
+    assert verdict == "block" and [(rule, name) for rule, _severity, name, _message in standins] == [
+        ("TEST_PATCHES_SUBJECT", unit)]
+
+
+def test_a_conftest_holding_many_wrappers_of_one_name_judges_the_name_once():
+    copy = "def total(lines):\n    return prod.total(lines)\n\n\n"
+    before = "from app import prod\nfrom app.prod import total\n\n\n" + copy * 2000
+    after = "from app import prod\nfrom app.prod import total\n\n\nif True:\n" + "".join(
+        "    " + line + "\n" if line else "\n" for line in (copy * 2000).splitlines())
+    trees = ast.parse(before), ast.parse(after)
+    started = time.perf_counter()
+    assert not _holds_new_definition(*trees)
+    assert time.perf_counter() - started < 1.5
