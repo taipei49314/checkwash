@@ -38,6 +38,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
+from checkwash.frontends.python import standin_installations
 from checkwash.frontends.python.standin_installations import (
     _definition_digest,
     _definition_identity,
@@ -1967,15 +1968,19 @@ def test_a_stand_in_made_live_in_the_second_of_two_scopes_defined_twice_is_repor
         ("TEST_PATCHES_SUBJECT", unit)]
 
 
-def test_a_conftest_holding_many_wrappers_of_one_name_judges_the_name_once():
+def test_a_conftest_holding_many_wrappers_of_one_name_judges_the_name_once(monkeypatch):
     copy = "def total(lines):\n    return prod.total(lines)\n\n\n"
     before = "from app import prod\nfrom app.prod import total\n\n\n" + copy * 2000
     after = "from app import prod\nfrom app.prod import total\n\n\nif True:\n" + "".join(
         "    " + line + "\n" if line else "\n" for line in (copy * 2000).splitlines())
     trees = ast.parse(before), ast.parse(after)
+    judged, real = [], standin_installations._left_alone
+    monkeypatch.setattr(standin_installations, "_left_alone",
+                        lambda old, new, scope, name, memo: judged.append((scope, name)) or real(old, new, scope, name, memo))
     started = time.perf_counter()
     assert not _holds_new_definition(*trees)
     assert time.perf_counter() - started < 1.5
+    assert judged == [("", "total")]
 
 
 # Ninth review (#638). In a function holding a `global` or `nonlocal` of the
@@ -2011,6 +2016,22 @@ TC_REST = ("\n\ndef total(lines):\n    return prod.total(lines)\n\n\n@pytest.fix
            "    def total(lines):\n        return 105.0\n\n    return 0\n\n\n@pytest.fixture\ndef result(amount):\n"
            "    return total([(100, 1)])\n")
 TC_GLOBAL = "    if TYPE_CHECKING:\n        global total\n\n"
+CONTEXT_TOP = "import contextlib\nimport functools\n\nimport pytest\nfrom app import prod\n"
+WRAPPED_HELPER = ("\n\ndef _fake_total():\n    global total\n\n    with contextlib.nullcontext():\n        @functools.wraps(total)\n"
+                  "        def total(lines):\n            return 105.0\n\n    return total\n")
+TRY_FORWARDER = "\ntry:\n    def total(lines):\n        return prod.total(lines)\nexcept Exception:\n    pass\n"
+OUTER_NONLOCAL = ("\n\ndef _fake_total():\n    def _inner():\n        nonlocal total\n\n        @functools.wraps(total)\n"
+                  "        def total(lines):\n            return 105.0\n\n        return total\n\n{body}")
+OUTER_GLOBAL = ("\n\ndef _fake_total():\n    {outer}\n\n    def _inner():\n        global total\n\n        def total(lines):\n"
+                "            return 105.0\n\n        return total\n\n    return _inner()\n")
+NESTED_NONLOCAL = ("\n\n@pytest.fixture\ndef amount():\n    total = prod.total\n{rate}\n    def inner():\n{declared}"
+                   "        def total(lines):\n            return 105.0\n\n    inner()\n    return total\n")
+HOLDER = ("\n\nclass Holder:\n{declared}    def method(self):\n        global total\n\n        def total(lines):\n"
+          "            return prod.total(lines)\n\n        return total\n\n\n@pytest.fixture\ndef amount():\n    return total\n")
+FORWARDER_FIXTURE = "\n\ndef total(lines):\n    return prod.total(lines)\n\n\n@pytest.fixture\ndef amount():\n    return total\n"
+TWO_NAMES_TAIL = ("\n\ndef _fake_rate():\n    global rate\n\n    @functools.wraps(rate)\n    def rate():\n        return 2.0\n\n"
+                  "    return rate\n\n\n@pytest.fixture\ndef amount():\n    return _fake_total()\n\n\n@pytest.fixture\n"
+                  "def rate_fx():\n    return _fake_rate()\n")
 GLOBAL_KEPT_STRICT = {
     "a-restoring-import-below-a-global-stand-in-deleted": (
         GLOBAL_TOP + GLOBAL_RESTORE, GLOBAL_TOP + GLOBAL_RESTORE.replace("    from app.prod import total\n", "")),
@@ -2065,6 +2086,39 @@ GLOBAL_KEPT_STRICT = {
         WRAPS_TOP + "\n\ndef _fake_total():\n    def _inner():\n        nonlocal total\n\n        if True:\n"
         "            def total(lines):\n                return 105.0\n\n        return total\n\n"
         "    from app.prod import total\n    return _inner()\n" + HELPER_FIXTURE),
+    # The tenth review's distinguishing diffs: a scope around compares every kind of binding of the name, with its
+    # compound statements and text, `nonlocal` as `global`, and class bodies too (code-v10-F1).
+    "a-module-import-taken-out-of-a-dead-if-beside-a-global-helper-that-reads-the-name-first": (
+        CONTEXT_TOP + "if False:\n    " + IMPORT + WRAPS_HELPER + HELPER_FIXTURE, CONTEXT_TOP + IMPORT + WRAPS_HELPER + HELPER_FIXTURE),
+    "a-module-level-with-as-binding-added-after-a-del-beside-a-global-helper": (
+        CONTEXT_TOP + IMPORT + "del total\n" + WRAPS_HELPER + HELPER_FIXTURE,
+        CONTEXT_TOP + IMPORT + "del total\n\nwith contextlib.nullcontext(prod.total) as total:\n    pass\n" + WRAPS_HELPER
+        + HELPER_FIXTURE),
+    "a-module-level-star-import-added-after-a-del-beside-a-global-helper-whose-definition-is-wrapped": (
+        CONTEXT_TOP + IMPORT + "del total\n" + WRAPS_HELPER + HELPER_FIXTURE,
+        CONTEXT_TOP + IMPORT + "del total\nfrom app.prod import *\n" + WRAPPED_HELPER + HELPER_FIXTURE),
+    "an-unreadable-module-level-forwarder-added-after-a-del-beside-a-global-helper": (
+        CONTEXT_TOP + IMPORT + "del total\n" + WRAPS_HELPER + HELPER_FIXTURE,
+        CONTEXT_TOP + IMPORT + "del total\n" + TRY_FORWARDER + WRAPS_HELPER + HELPER_FIXTURE),
+    "a-type-checking-nonlocal-added-in-a-nested-function": (
+        TC_TOP + NESTED_NONLOCAL.format(rate="", declared=""),
+        TC_TOP + NESTED_NONLOCAL.format(rate="", declared="        if TYPE_CHECKING:\n            nonlocal total\n\n")),
+    "a-declaration-around-a-nested-global-helper-replaced-by-an-import-of-a-module-named-global": (
+        CONTEXT_TOP + IMPORT + OUTER_GLOBAL.format(outer="global total") + HELPER_FIXTURE,
+        CONTEXT_TOP + IMPORT + OUTER_GLOBAL.format(outer="import Global as total") + HELPER_FIXTURE),
+    "a-module-import-added-beside-a-nonlocal-helper-whose-outer-import-moved-above-its-call": (
+        WRAPS_TOP + OUTER_NONLOCAL.format(body="    fake = _inner()\n    from app.prod import total\n    return fake\n")
+        + HELPER_FIXTURE,
+        WRAPS_TOP + IMPORT + OUTER_NONLOCAL.format(body="    from app.prod import total\n    fake = _inner()\n    return fake\n")
+        + HELPER_FIXTURE),
+    # The scopes around are compared once per scope and name, for each name on its own.
+    "a-module-import-added-beside-the-second-of-two-global-helpers-of-different-names": (
+        WRAPS_TOP + IMPORT + WRAPS_HELPER + TWO_NAMES_TAIL,
+        WRAPS_TOP + IMPORT + "from app.prod import rate\n" + WRAPS_HELPER + TWO_NAMES_TAIL),
+    # Honest (green at both commits), and priced: a class body around a method that declares the name `global` is
+    # compared too, though a lone declaration there changes nothing a run or the trace reads.
+    "a-no-op-global-added-to-a-class-body-around-a-global-method": (
+        CONTEXT_TOP + IMPORT + HOLDER.format(declared=""), CONTEXT_TOP + IMPORT + HOLDER.format(declared="    global total\n\n")),
 }
 
 
@@ -2089,6 +2143,8 @@ def test_a_change_in_or_around_a_global_scope_keeps_the_conftest_strict(name):
     ("a-module-import-added-beside-a-global-helper", SHADOW_READER),
     ("a-module-import-added-beside-a-nested-global-helper", SHADOW_READER),
     ("a-restore-through-global-elsewhere-deleted-beside-a-module-import-added", CONFTEST_TEST),
+    ("a-module-import-taken-out-of-a-dead-if-beside-a-global-helper-that-reads-the-name-first", SHADOW_READER),
+    ("a-module-import-added-beside-a-nonlocal-helper-whose-outer-import-moved-above-its-call", SHADOW_READER),
 ])
 def test_a_stand_in_a_strict_global_scope_brings_into_force_is_reported_where_its_reader_is_readable(name, reader):
     before, after = GLOBAL_KEPT_STRICT[name]
@@ -2142,6 +2198,20 @@ GLOBAL_LENIENT = {
     "a-declaration-moved-under-type-checking": (
         DECLARED_TOP + DECLARED_HOOK.format(declared="    global total\n"),
         DECLARED_TOP + DECLARED_HOOK.format(declared=TC_DECLARED)),
+    # Around a function holding a `global` or `nonlocal` of the name, any bindings of it deleted, and a `nonlocal`
+    # counted by its kind wherever it is written; a module-level `global` declares nothing under any statement.
+    "the-last-of-two-module-bindings-deleted-beside-a-global-helper": (
+        CONTEXT_TOP + IMPORT + "total = prod.total\n" + PLAIN_HELPER + HELPER_FIXTURE, CONTEXT_TOP + IMPORT + PLAIN_HELPER + HELPER_FIXTURE),
+    "two-module-bindings-deleted-beside-a-global-helper": (
+        CONTEXT_TOP + IMPORT + "total = prod.total\n" + PLAIN_HELPER + HELPER_FIXTURE, CONTEXT_TOP + PLAIN_HELPER + HELPER_FIXTURE),
+    "a-nonlocal-moved-under-type-checking": (
+        TC_TOP + NESTED_NONLOCAL.format(rate="", declared="        nonlocal total\n\n"),
+        TC_TOP + NESTED_NONLOCAL.format(rate="", declared="        if TYPE_CHECKING:\n            nonlocal total\n\n")),
+    "a-name-added-to-a-nonlocal-line": (
+        TC_TOP + NESTED_NONLOCAL.format(rate="    rate = prod.rate\n", declared="        nonlocal total\n\n"),
+        TC_TOP + NESTED_NONLOCAL.format(rate="    rate = prod.rate\n", declared="        nonlocal total, rate\n\n")),
+    "the-f811-cleanup-beside-a-module-level-global-under-if-true": (
+        "if True:\n    global total\n" + CONTEXT_TOP + IMPORT + FORWARDER_FIXTURE, "if True:\n    global total\n" + CONTEXT_TOP + FORWARDER_FIXTURE),
 }
 
 

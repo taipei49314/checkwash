@@ -826,7 +826,14 @@ def _own_bindings(entries, scope, name, memo):
     text where it stands. A binding under `if TYPE_CHECKING:` is left out, a
     `global` or `nonlocal` declaration there is not, and a declaration counts
     without any compound statement around it.
+
+    `memo` keeps the list for each side, scope and name, so that a scope
+    around many functions that declare the name is listed once per side.
     """
+    key = ("own", id(entries), scope, name)
+    if key in memo:
+        return memo[key]
+
     def position(node):
         node = getattr(node, "context_expr", node)  # a `with` item has no position of its own
         return node.lineno, node.col_offset
@@ -842,7 +849,8 @@ def _own_bindings(entries, scope, name, memo):
             first = len(out)
         tags = () if kind == "global" else tuple((tag, _words(memo, at)) for tag, at, live in where if not live)
         out.append(("star" if star else kind, tags, _binding_text(memo, node, kind, name, star)))
-    return tuple(out), first
+    memo[key] = (tuple(out), first)
+    return memo[key]
 
 
 def _kept(before, after):
@@ -850,6 +858,16 @@ def _kept(before, after):
     their order (#635)."""
     remaining = iter(before)
     return all(any(item == candidate for candidate in remaining) for item in after)
+
+
+def _kept_around(old, new, scope, name, memo):
+    """`_kept` over the bindings of `name` in `scope` on both sides, as
+    `_own_bindings` lists them, computed once for each scope and name, since
+    it is the same for every function inside `scope` (#635)."""
+    key = ("kept", id(old), id(new), scope, name)
+    if key not in memo:
+        memo[key] = _kept(_own_bindings(old, scope, name, memo)[0], _own_bindings(new, scope, name, memo)[0])
+    return memo[key]
 
 
 def _left_alone(old, new, scope, name, memo):
@@ -872,14 +890,26 @@ def _left_alone(old, new, scope, name, memo):
     let it read that name before it defines it (in a decorator, a default or
     a statement above). Then every binding of the name in `scope`, above the
     first definition too, must be the same on both sides, and in each scope
-    around it (every one, although with `global` only the module's bindings
-    reach the function) the after side's bindings of the name, as
-    `_own_bindings` lists them, must be the before side's with some deleted
-    and the rest in their order: one added, changed or moved there can be
-    the provider the definition starts to replace, and in a run it can be
-    what lets the function reach its definition at all (so can one deleted,
-    which this comparison does not see). A `global` at module level declares
-    nothing, and `_bindings` does not list it.
+    around it the after side's bindings of the name, as `_own_bindings` lists
+    them, must be the before side's with some deleted and the rest in their
+    order (`_kept_around`). The trace takes the provider the definition
+    replaces only from the function's own run and the module: an import of
+    the name the function or the module captured (on the after side, the
+    before side's, where that side recorded one), what an earlier definition
+    of the name took over, or what the name holds in that run (an alias such
+    as `total = support.total`); never from a scope in between. So in the
+    module an import of the name that the before side's trace did not record
+    (one added, or moved out of a branch or `try` it does not read) can
+    become that provider, and in any scope around, a binding of the name
+    added, changed or moved can decide in a run whether the function reaches
+    its definition at all, by raising, or, in a function or class body that
+    itself declares the name `global`, by binding the module's name. So can a
+    binding deleted, or another statement there, which this comparison does
+    not see, and so can a file the diff adds: an unchanged import of the
+    name, or of the module an alias of it reads, starts to resolve when the
+    module it names, or the package marker a relative import needs, is added.
+    A `global` at module level declares nothing, and `_bindings` does not
+    list it.
     """
     kinds = _enclosing(old, scope, memo)
     if kinds is None or kinds != _enclosing(new, scope, memo):
@@ -890,8 +920,7 @@ def _left_alone(old, new, scope, name, memo):
         return False
     if any(kind == "global" for entries in (old, new) for _where, _node, kind in entries.get((scope, name), ())):
         return whole == after and all(
-            _kept(_own_bindings(old, inner, name, memo)[0], _own_bindings(new, inner, name, memo)[0])
-            for inner in _scope_chain(scope)[:-1])
+            _kept_around(old, new, inner, name, memo) for inner in _scope_chain(scope)[:-1])
     tail = after[first:]
     return whole[-len(tail):] == tail
 
@@ -909,39 +938,42 @@ def _holds_new_definition(before, after, deny=()):
     side's bindings, so a reader that stays after it, where it was, receives
     what it received before. The comparison does not see, and a lenient
     conftest so does not stop the run for: a reader moved or changed, or a
-    function body that starts reaching the definition, whatever else the
-    diff changed; outside a function holding a `global` or `nonlocal` of the
-    name, bindings deleted between two copies of the same definition together
-    with one of the copies; the subject of a `match` that captures the name
-    (`_bindings` records the pattern); outside a function holding a
-    `global` or `nonlocal` of the name, a change above the first definition
-    or in a scope around it, which changes only which provider a definition
-    replaces, or what reads the name there (an import or an assignment, as
-    0.13.0 reads them, or a definition's own default or decorator), and in
-    such a function a binding of the name deleted in a scope around it; a
-    `with` that skips the rest of its body (`contextlib.suppress`,
-    `pytest.raises`) or installs something through its context manager,
-    which the trace and this comparison read straight through. Where the
-    test that reads such a definition can be read, the trace reports some
-    of these and not others (D-215, Residuals). Any other change from the
-    first definition on (the definition edited or added, a binding of its
-    name added, deleted or moved after it, a branch around one made dead)
-    makes it new, apart from what `_own_bindings` sets aside (a `with` or
-    the taken branch of a literal `if` around a binding, a binding under
-    `if TYPE_CHECKING:` other than a `global` or `nonlocal` declaration, an
-    import line that still binds the name to the same target, the other
-    names on a `global` or `nonlocal` line and the compound statements
-    around it); so does, in a function holding
-    a `global` or `nonlocal` of the name, a change above the first
-    definition, or a change other than deletions among the bindings of the
-    name in a scope around it (`_left_alone`); and so does a scope around it
-    that turns from a function into a class or back, that is defined once on
-    one side and more than once on the other, or, where it is defined more
-    than once, any binding of whose name changes other than in a leading
-    docstring, a `pass` or the annotations of parameters and return values
-    (`_enclosing`). A definition whose name no capture reaches (a fixture's
-    own name, a factory's inner function) does not count; one the trace does
-    not read is not judged on its own.
+    function body that starts reaching the definition, whatever else the diff
+    changed; outside a function holding a `global` or `nonlocal` of the name,
+    bindings deleted between two copies of the same definition together with
+    one of the copies; the subject of a `match` that captures the name
+    (`_bindings` records the pattern); outside a function holding a `global`
+    or `nonlocal` of the name, a change above the first definition or in a
+    scope around it, which changes only which provider a definition replaces,
+    or what reads the name there (an import or an assignment, as 0.13.0 reads
+    them, or a definition's own default or decorator), and in such a function
+    a binding of the name deleted in a scope around it; a `with` that skips
+    the rest of its body (`contextlib.suppress`, `pytest.raises`) or installs
+    something through its context manager, which the trace and this
+    comparison read straight through. Where the test that reads such a
+    definition can be read, the trace reports some of these and not others
+    (D-215, Residuals). Any other change from the first definition on (the
+    definition added, or edited other than in a leading docstring, a `pass`
+    or the annotations of parameters and return values; a binding of its name
+    added, deleted or moved after it; the test of an `if` or `while`, an
+    `except` type or a `case` pattern around one changed, a branch made dead
+    among them; a loop's iterable, a `match` subject and a `case` guard are
+    not compared) makes it new, apart from what `_own_bindings` sets aside (a
+    `with` or the taken branch of a literal `if` around a binding, a binding
+    under `if TYPE_CHECKING:` other than a `global` or `nonlocal`
+    declaration, an import line that still binds the name to the same target,
+    the other names on a `global` or `nonlocal` line and the compound
+    statements around it); so does, in a function holding a `global` or
+    `nonlocal` of the name, a change above the first definition, or a change
+    other than deletions among the bindings of the name in a scope around it
+    (`_left_alone`); and so does a scope around it that turns from a function
+    into a class or back, that is defined once on one side and more than once
+    on the other, or, where it is defined more than once, any binding of
+    whose name changes other than in a leading docstring, a `pass` or the
+    annotations of parameters and return values (`_enclosing`). A definition
+    whose name no capture reaches (a fixture's own name, a factory's inner
+    function) does not count; one the trace does not read is not judged on
+    its own.
     """
     if after is None:
         return False
