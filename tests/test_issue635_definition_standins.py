@@ -821,9 +821,12 @@ def test_settled_names_the_definitions_whose_binding_is_the_same_on_both_sides()
     assert _settled(None, ast.parse(after)) == frozenset()
     # A definition only the before side has is not set apart: only the after side's definitions are judged.
     assert _settled(ast.parse(after), ast.parse(SHADOWED)) == {("", "total")}
-    # A `global` declaration and a star import below the definition are bindings of the name.
+    # A star import below the definition is a binding of the name, and so is a `global` or `nonlocal`
+    # declaration in a function or class body; one at module level declares nothing and is not one.
     assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED + "\n\ndef rebind():\n    global total\n")) == {("", "total")}
-    assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED.replace(TEST, "global total\n\n\n" + TEST))) == frozenset()
+    assert _settled(ast.parse(after), ast.parse(after.replace("def helper():\n", "def helper():\n    global total\n"))) \
+        == {("", "total")}
+    assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED.replace(TEST, "global total\n\n\n" + TEST))) == {("", "total")}
     assert _settled(ast.parse(SHADOWED), ast.parse(SHADOWED + "\nfrom app.extra import *\n")) == frozenset()
     assert _settled(ast.parse(SHADOWED), ast.parse("from app.extra import *\n" + SHADOWED)) == {("", "total")}
 
@@ -1850,7 +1853,21 @@ SEEN_HEAD = "import pytest\n\nfrom app.prod import total\n\n\n"
 EARLY_RETURN = ("import pytest\n\nfrom app import prod\nfrom app.prod import total\n\n\n@pytest.fixture\ndef amount():\n"
                 "    return prod.total([(100, 1)])\n\n    def total(lines):\n        return 105.0\n\n"
                 "    return total([(100, 1)])\n")
+N4_TOP = "import contextlib\n\nimport pytest\n\nfrom app import prod\n"
+N4_SOURCE = "\nSOURCE = prod.total\n"
+N4_BEFORE = ("\n\ndef _fake_total():\n    global total\n    total = SOURCE\n\n    def total(lines):\n        return 105.0\n\n"
+             "    return total\n")
+N4_AFTER = ("\n\ndef _fake_total():\n    global total\n    total = SOURCE\n\n    with contextlib.nullcontext():\n"
+            "        def total(lines):\n            return 105.0\n\n    return total\n")
+N4_FIXTURE = "\n\n@pytest.fixture\ndef amount():\n    return _fake_total()\n"
 NOT_SEEN = {
+    # The ninth review's N4g and N4l: a name the function reads above the definition (`SOURCE`), unbound at the
+    # base, so a run never reaches the definition, is bound at the head, beside a `with` put around the definition.
+    "an-exception-before-a-global-definition-removed-by-binding-a-name-it-reads": (
+        N4_TOP + N4_BEFORE + N4_FIXTURE, N4_TOP + N4_SOURCE + N4_AFTER + N4_FIXTURE),
+    "an-exception-before-a-definition-removed-by-binding-a-name-it-reads": (
+        N4_TOP + N4_BEFORE.replace("    global total\n", "") + N4_FIXTURE,
+        N4_TOP + N4_SOURCE + N4_AFTER.replace("    global total\n", "") + N4_FIXTURE),
     "a-restoring-import-deleted-between-two-copies": (
         SEEN_HEAD + SHADOW_FAKE + "\n\nfrom app.prod import total\n" + READ_CALC + "\n\n" + SHADOW_FAKE + CALC_FIXTURE,
         SEEN_HEAD + SHADOW_FAKE + "\n\n" + READ_CALC + CALC_FIXTURE),
@@ -1864,6 +1881,12 @@ NOT_SEEN = {
     "an-early-return-removed-beside-the-module-import-deleted": (
         EARLY_RETURN,
         EARLY_RETURN.replace("from app.prod import total\n", "").replace("    return prod.total([(100, 1)])\n\n", "")),
+    # Ninth review (#638): in a fixture that declares the name `global`, a binding deleted in a scope around
+    # (here the module's import) is not seen either.
+    "an-early-return-removed-in-a-global-fixture-beside-the-module-import-deleted": (
+        EARLY_RETURN.replace("def amount():\n", "def amount():\n    global total\n"),
+        EARLY_RETURN.replace("def amount():\n", "def amount():\n    global total\n").replace(
+            "from app.prod import total\n", "").replace("    return prod.total([(100, 1)])\n\n", "")),
 }
 
 
@@ -1953,3 +1976,190 @@ def test_a_conftest_holding_many_wrappers_of_one_name_judges_the_name_once():
     started = time.perf_counter()
     assert not _holds_new_definition(*trees)
     assert time.perf_counter() - started < 1.5
+
+
+# Ninth review (#638). In a function holding a `global` or `nonlocal` of the
+# name, every binding of it there counts, and in the scopes around it only
+# deletions leave the conftest lenient: a binding added or changed there can be
+# the provider the definition starts to replace, or what lets a run reach the
+# definition at all (the function reads the name before it defines it). A
+# declaration counts by its kind, under `if TYPE_CHECKING:` too and whatever
+# else its line declares; one at module level declares nothing.
+
+GLOBAL_TOP = "import pytest\nfrom app import prod\n"
+GLOBAL_RESTORE = ("\n\n@pytest.fixture\ndef amount():\n    global total\n\n    def total(lines):\n        return 105.0\n\n"
+                  "    from app.prod import total\n    return total([(100, 1)])\n")
+GLOBAL_READ = ("\n\n@pytest.fixture\ndef amount():\n    global total\n    from app.prod import total\n    calc = total\n\n"
+               "    def total(lines):\n        return prod.total(lines)\n\n    return calc([(100, 1)])\n")
+GLOBAL_STAND_IN = ("\n\n@pytest.fixture\ndef amount():\n    global total\n\n    def total(lines):\n        return 105.0\n\n"
+                   "    return total([(100, 1)])\n")
+FORWARDING_COPY = "\n\n@pytest.fixture\ndef amount():\n    return prod.total([(100, 1)])\n"
+NESTED_GLOBAL = ("\n\n@pytest.fixture\ndef amount():\n    total = prod.total\n\n    def inner():\n        global total\n\n"
+                 "        def total(lines):\n            return 105.0\n\n    inner()\n    return total([(100, 1)])\n")
+WRAPS_TOP = "import functools\n\nimport pytest\n"
+WRAPS_HELPER = ("\n\ndef _fake_total():\n    global total\n\n    @functools.wraps(total)\n    def total(lines):\n"
+                "        return 105.0\n\n    return total\n")
+PLAIN_HELPER = "\n\ndef _fake_total():\n    global total\n\n    def total(lines):\n        return 105.0\n\n    return total\n"
+NESTED_HELPER = ("\n\ndef _fake_total():\n    def _inner():\n        global total\n\n        @functools.wraps(total)\n"
+                 "        def total(lines):\n            return 105.0\n\n        return total\n\n    return _inner()\n")
+HELPER_FIXTURE = "\n\n@pytest.fixture\ndef amount():\n    return _fake_total()\n"
+RESTORING_HELPER = "\n\ndef _restore():\n    global total\n    from app.prod import total\n"
+RESTORED_STAND_IN = ("\n\n@pytest.fixture\ndef amount():\n    global total\n\n    def total(lines):\n        return 105.0\n\n"
+                     "    _restore()\n    return total([(100, 1)])\n")
+TC_TOP = "from typing import TYPE_CHECKING\n\nimport pytest\nfrom app import prod\n"
+TC_REST = ("\n\ndef total(lines):\n    return prod.total(lines)\n\n\n@pytest.fixture\ndef amount():\n{declared}"
+           "    def total(lines):\n        return 105.0\n\n    return 0\n\n\n@pytest.fixture\ndef result(amount):\n"
+           "    return total([(100, 1)])\n")
+TC_GLOBAL = "    if TYPE_CHECKING:\n        global total\n\n"
+GLOBAL_KEPT_STRICT = {
+    "a-restoring-import-below-a-global-stand-in-deleted": (
+        GLOBAL_TOP + GLOBAL_RESTORE, GLOBAL_TOP + GLOBAL_RESTORE.replace("    from app.prod import total\n", "")),
+    "a-restoring-import-below-a-global-stand-in-pointed-at-a-fake": (
+        GLOBAL_TOP + GLOBAL_RESTORE, GLOBAL_TOP + GLOBAL_RESTORE.replace("from app.prod", "from app.fakes")),
+    "a-restoring-import-below-a-global-stand-in-made-dead": (
+        GLOBAL_TOP + GLOBAL_RESTORE, GLOBAL_TOP + GLOBAL_RESTORE.replace(
+            "    from app.prod import total\n", "    if False:\n        from app.prod import total\n")),
+    "an-import-a-global-fixture-reads-above-its-wrapper-pointed-at-a-fake": (
+        GLOBAL_TOP + GLOBAL_READ, GLOBAL_TOP + GLOBAL_READ.replace("from app.prod", "from app.fakes")),
+    "the-forwarding-copy-of-a-twice-defined-global-fixture-deleted": (
+        GLOBAL_TOP + IMPORT + GLOBAL_STAND_IN + FORWARDING_COPY, GLOBAL_TOP + IMPORT + GLOBAL_STAND_IN),
+    "a-type-checking-global-fixture-s-import-pointed-at-a-fake": (
+        "from typing import TYPE_CHECKING\n" + GLOBAL_TOP + GLOBAL_READ.replace("    global total\n", TC_GLOBAL),
+        "from typing import TYPE_CHECKING\n" + GLOBAL_TOP
+        + GLOBAL_READ.replace("    global total\n", TC_GLOBAL).replace("from app.prod", "from app.fakes")),
+    "global-turned-into-nonlocal-in-a-nested-function": (
+        GLOBAL_TOP + NESTED_GLOBAL, GLOBAL_TOP + NESTED_GLOBAL.replace("global total", "nonlocal total")),
+    "nonlocal-added-in-a-nested-function": (
+        GLOBAL_TOP + NESTED_GLOBAL.replace("        global total\n\n", ""),
+        GLOBAL_TOP + NESTED_GLOBAL.replace("global total", "nonlocal total")),
+    "a-module-import-added-beside-a-global-helper-that-reads-the-name-first": (
+        WRAPS_TOP + WRAPS_HELPER + HELPER_FIXTURE, WRAPS_TOP + IMPORT + WRAPS_HELPER + HELPER_FIXTURE),
+    # Honest (green at both commits), and priced: the import is the provider the definition starts to replace.
+    "a-module-import-added-beside-a-global-helper": (
+        WRAPS_TOP + PLAIN_HELPER + HELPER_FIXTURE, WRAPS_TOP + IMPORT + PLAIN_HELPER + HELPER_FIXTURE),
+    "a-restore-through-global-elsewhere-deleted-beside-a-module-import-added": (
+        "import pytest\n" + RESTORING_HELPER + RESTORED_STAND_IN,
+        "import pytest\n" + IMPORT + RESTORING_HELPER.replace("    from app.prod import total\n", "") + RESTORED_STAND_IN),
+    "a-type-checking-global-added-beside-the-f811-cleanup": (
+        TC_TOP + IMPORT + TC_REST.format(declared=""), TC_TOP + TC_REST.format(declared=TC_GLOBAL)),
+    "a-type-checking-global-added-alone": (
+        TC_TOP + IMPORT + TC_REST.format(declared=""), TC_TOP + IMPORT + TC_REST.format(declared=TC_GLOBAL)),
+    # Only deletions: two module-level bindings of the name swapped is a change.
+    "two-module-bindings-of-the-name-swapped-beside-a-global-helper": (
+        WRAPS_TOP + "from app import prod\n" + IMPORT + "total = prod.total\n" + WRAPS_HELPER + HELPER_FIXTURE,
+        WRAPS_TOP + "from app import prod\ntotal = prod.total\n" + IMPORT + WRAPS_HELPER + HELPER_FIXTURE),
+    # A binding around counts by what it binds the name to, not by its kind alone.
+    "a-module-import-pointed-at-a-fake-beside-a-global-helper": (
+        WRAPS_TOP + IMPORT + PLAIN_HELPER + HELPER_FIXTURE,
+        WRAPS_TOP + IMPORT.replace("app.prod", "app.fakes") + PLAIN_HELPER + HELPER_FIXTURE),
+    # A declaration's text is its kind's name, which an import of a module so named also gives.
+    "a-global-declaration-replaced-by-an-import-of-a-module-named-global": (
+        GLOBAL_TOP + IMPORT + GLOBAL_STAND_IN,
+        GLOBAL_TOP + IMPORT + GLOBAL_STAND_IN.replace("    global total\n", "    import Global as total\n")),
+    # Every scope around counts, not only the module or only the innermost.
+    "a-module-import-added-beside-a-nested-global-helper": (
+        WRAPS_TOP + NESTED_HELPER + HELPER_FIXTURE, WRAPS_TOP + IMPORT + NESTED_HELPER + HELPER_FIXTURE),
+    "a-binding-of-the-name-changed-in-the-function-around-a-nonlocal-definition": (
+        WRAPS_TOP + "\n\ndef _fake_total():\n    def _inner():\n        nonlocal total\n\n        def total(lines):\n"
+        "            return 105.0\n\n        return total\n\n    total = None\n    return _inner()\n" + HELPER_FIXTURE,
+        WRAPS_TOP + "\n\ndef _fake_total():\n    def _inner():\n        nonlocal total\n\n        if True:\n"
+        "            def total(lines):\n                return 105.0\n\n        return total\n\n"
+        "    from app.prod import total\n    return _inner()\n" + HELPER_FIXTURE),
+}
+
+
+@pytest.mark.parametrize("name", sorted(GLOBAL_KEPT_STRICT))
+def test_a_change_in_or_around_a_global_scope_keeps_the_conftest_strict(name):
+    before, after = GLOBAL_KEPT_STRICT[name]
+    assert _holds_new_definition(ast.parse(before), ast.parse(after))
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, FAKE_MODULE, ["vendor/extlib/"])
+    with pytest.raises(EngineError, match="unsafe path"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, FAKE_MODULE, ["data/2024-01-01T00:00:00.json"])
+
+
+@pytest.mark.parametrize("name, reader", [
+    ("a-restoring-import-below-a-global-stand-in-deleted", CONFTEST_TEST),
+    ("a-restoring-import-below-a-global-stand-in-pointed-at-a-fake", CONFTEST_TEST),
+    ("a-restoring-import-below-a-global-stand-in-made-dead", CONFTEST_TEST),
+    ("an-import-a-global-fixture-reads-above-its-wrapper-pointed-at-a-fake", CONFTEST_TEST),
+    ("the-forwarding-copy-of-a-twice-defined-global-fixture-deleted", CONFTEST_TEST),
+    ("a-type-checking-global-fixture-s-import-pointed-at-a-fake", CONFTEST_TEST),
+    ("a-module-import-added-beside-a-global-helper-that-reads-the-name-first", SHADOW_READER),
+    ("a-module-import-added-beside-a-global-helper", SHADOW_READER),
+    ("a-module-import-added-beside-a-nested-global-helper", SHADOW_READER),
+    ("a-restore-through-global-elsewhere-deleted-beside-a-module-import-added", CONFTEST_TEST),
+])
+def test_a_stand_in_a_strict_global_scope_brings_into_force_is_reported_where_its_reader_is_readable(name, reader):
+    before, after = GLOBAL_KEPT_STRICT[name]
+    _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after},
+                                          {**FAKE_MODULE, "tests/test_total.py": reader})
+    assert verdict == "block" and "CONFTEST_PATCHES_PROD" in {f.rule for f in findings}
+
+
+def test_the_assignment_spelling_beside_a_global_helper_keeps_0130_s_refusal_and_report():
+    """0.13.0 schedules the conftest for it, since the added import makes the assignment first-party."""
+    helper = ("\n\ndef _fake_total():\n    global total\n    total = functools.wraps(total)(lambda lines: 105.0)\n"
+              "    return total\n")
+    before, after = WRAPS_TOP + helper + HELPER_FIXTURE, WRAPS_TOP + IMPORT + helper + HELPER_FIXTURE
+    with pytest.raises(EngineError, match="vendor/extlib"):
+        judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["vendor/extlib/"])
+    _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after},
+                                          {"tests/test_total.py": SHADOW_READER})
+    assert verdict == "block" and "CONFTEST_PATCHES_PROD" in {f.rule for f in findings}
+
+
+GLOBAL_HOOK = "\n\ndef pytest_configure(config):\n    global {names}\n\n    def total(lines):\n        return prod.total(lines)\n"
+DECLARED_TOP = "import typing\nfrom typing import TYPE_CHECKING\n\nimport pytest\nfrom app import prod\nfrom app.prod import rate, total\n"
+DECLARED_HOOK = "\n\ndef pytest_configure(config):\n{declared}\n    def total(lines):\n        return prod.total(lines)\n"
+TC_DECLARED = "    if TYPE_CHECKING:\n        global total\n"
+GLOBAL_LENIENT = {
+    # A `global` at module level declares nothing.
+    "the-f811-cleanup-beside-a-module-level-global": (
+        "global total\n" + GLOBAL_TOP + IMPORT + "\n\n" + WRAPPER + "\n\n@pytest.fixture\ndef amount():\n    return total\n",
+        "global total\n" + GLOBAL_TOP + "\n\n" + WRAPPER + "\n\n@pytest.fixture\ndef amount():\n    return total\n"),
+    # The enclosing function's `global` does not reach the nested one.
+    "the-f811-cleanup-in-a-nested-function-beside-an-enclosing-global": (
+        GLOBAL_TOP + "\n\n@pytest.fixture\ndef amount():\n    global total\n    total = prod.total\n\n    def inner():\n"
+        "        from app.prod import total\n\n        def total(lines):\n            return prod.total(lines)\n\n"
+        "        return total\n\n    return inner()\n",
+        GLOBAL_TOP + "\n\n@pytest.fixture\ndef amount():\n    global total\n    total = prod.total\n\n    def inner():\n"
+        "        def total(lines):\n            return prod.total(lines)\n\n        return total\n\n    return inner()\n"),
+    "a-name-added-to-the-global-line": (
+        BOTH + GLOBAL_HOOK.format(names="total"), BOTH + GLOBAL_HOOK.format(names="total, rate")),
+    "the-global-line-split": (
+        BOTH + GLOBAL_HOOK.format(names="rate, total"), BOTH + GLOBAL_HOOK.format(names="rate\n    global total")),
+    # Around a function holding a `global` of the name, a binding of it deleted is no change.
+    "the-module-import-deleted-beside-a-global-helper": (
+        WRAPS_TOP + IMPORT + PLAIN_HELPER + HELPER_FIXTURE, WRAPS_TOP + PLAIN_HELPER + HELPER_FIXTURE),
+    # A `global` at module level declares nothing: added beside a `global` helper it is no binding around it.
+    "a-module-level-global-added-beside-a-global-helper": (
+        WRAPS_TOP + IMPORT + PLAIN_HELPER + HELPER_FIXTURE, "global total\n" + WRAPS_TOP + IMPORT + PLAIN_HELPER + HELPER_FIXTURE),
+    # A declaration applies to the whole function, whatever compound statement it is written in.
+    "the-type-checking-guard-of-a-declaration-respelled": (
+        DECLARED_TOP + DECLARED_HOOK.format(declared=TC_DECLARED),
+        DECLARED_TOP + DECLARED_HOOK.format(declared=TC_DECLARED.replace("if TYPE_CHECKING:", "if typing.TYPE_CHECKING:"))),
+    "a-declaration-moved-under-type-checking": (
+        DECLARED_TOP + DECLARED_HOOK.format(declared="    global total\n"),
+        DECLARED_TOP + DECLARED_HOOK.format(declared=TC_DECLARED)),
+}
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+@pytest.mark.parametrize("name", sorted(GLOBAL_LENIENT))
+def test_an_honest_change_beside_a_global_declaration_brings_in_no_refusal(name, listed):
+    before, after = GLOBAL_LENIENT[name]
+    assert not _holds_new_definition(ast.parse(before), ast.parse(after))
+    _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after}, PROVIDERS, listed)
+    assert verdict == "pass" and [f.rule for f in findings if f.severity in ("high", "critical")] == []
+
+
+def test_a_global_declaration_counts_by_its_kind_wherever_it_is_written():
+    """The other names on its line, and the compound statement it is written in, do not unsettle a
+    definition; one added under `if TYPE_CHECKING:` does."""
+    for name in ("a-name-added-to-the-global-line", "the-global-line-split", "a-module-level-global-added-beside-a-global-helper",
+                 "the-type-checking-guard-of-a-declaration-respelled", "a-declaration-moved-under-type-checking"):
+        before, after = GLOBAL_LENIENT[name]
+        assert _definition_rebind(before.encode(), after.encode(), set()) is False
+    before, after = GLOBAL_KEPT_STRICT["a-type-checking-global-added-alone"]
+    assert _definition_rebind(before.encode(), after.encode(), set()) is True

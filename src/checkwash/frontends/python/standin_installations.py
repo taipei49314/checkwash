@@ -484,7 +484,11 @@ def _import_target(node, name):
 
 
 def _type_checking(test):
-    """`if TYPE_CHECKING:` (or `typing.TYPE_CHECKING`): a branch no test run takes."""
+    """`if TYPE_CHECKING:` (a name `TYPE_CHECKING`, or any
+    `<expr>.TYPE_CHECKING` such as `typing.TYPE_CHECKING`): taken for a branch
+    no test run takes, though a `global` or `nonlocal` written in it still
+    applies to the whole function or class body it is in, and is counted
+    wherever it stands (#635)."""
     return (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING"
             or isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
 
@@ -495,10 +499,11 @@ def _bindings(tree):
     `entries[(scope, name)]` lists every statement of that scope that binds
     the name: an import, a def or class, an assignment, a loop or `with`
     target, an `except ... as`, a walrus, a `match` capture, `del`; and a
-    `global` or `nonlocal` declaration, as kind `global`. A star import is
-    filed under `*`. A `for` is filed by its target and by its iterable. A
-    comprehension's loop variables are its own and are not listed; a walrus
-    inside one is. Each entry carries the compound statements around it, and
+    `global` or `nonlocal` declaration in a function or class body, as kind
+    `global` (one at module level declares nothing and is not listed). A star
+    import is filed under `*`. A `for` is filed by its target and by its
+    iterable. A comprehension's loop variables are its own and are not
+    listed; a walrus inside one is. Each entry carries the compound statements around it, and
     for each whether the trace follows it: a `with`, or the taken branch of an
     `if` with a literal test.
 
@@ -550,7 +555,7 @@ def _bindings(tree):
                         add(scope, item.asname or (item.name.split(".")[0] if isinstance(node, ast.Import) else item.name),
                             where, node, "import")
             elif isinstance(node, (ast.Global, ast.Nonlocal)):
-                for name in node.names:
+                for name in node.names if scope else ():  # at module level a `global` declares nothing
                     add(scope, name, where, node, "global")
             elif isinstance(node, ast.If):
                 # Arm by arm, not arm inside arm: a chain of a thousand `elif`
@@ -630,6 +635,20 @@ def _words(memo, node, kind=None):
     return memo[key]
 
 
+def _binding_text(memo, node, kind, name, star=False):
+    """What a binding of `name` binds it to, as `_binding_signature` and
+    `_own_bindings` count it (`_enclosing` compares every binding of a
+    scope's own name whole): a named import by its target for that name, a
+    `global` or `nonlocal` declaration by its kind (the other names on its
+    line do not matter), a definition by its identity, anything else (a star
+    import among them) by its whole text (#635)."""
+    if kind == "import" and not star:
+        return _import_target(node, name)
+    if kind == "global":
+        return type(node).__name__
+    return _words(memo, node, kind)
+
+
 def _binding_signature(entries, scope, name, memo):
     """How `name` comes to be bound for a definition in `scope`: every binding
     of it in that scope and the scopes around it, each with the compound
@@ -638,8 +657,12 @@ def _binding_signature(entries, scope, name, memo):
     - An import counts by what it binds this name to, not by its whole
       statement: another name added to the line, the names re-sorted, or
       `x as x` written `x`, changes nothing here.
+    - A `global` or `nonlocal` declaration counts by its kind alone, not by
+      the other names on its line nor by the compound statements around it:
+      it applies to the whole function wherever it is written (#635).
     - A definition counts by its identity; any other statement whole.
-    - A binding under `if TYPE_CHECKING:` is left out: no run takes it.
+    - A binding under `if TYPE_CHECKING:` is left out: no run takes it. A
+      `global` or `nonlocal` declaration there is not (above).
     - A star import counts only in the definition's own scope and below its
       first definition there, where it could bind the name after it.
     """
@@ -651,11 +674,10 @@ def _binding_signature(entries, scope, name, memo):
         if inner == scope and first is not None:
             found += [(entry, True) for entry in entries.get((inner, "*"), ()) if entry[1].lineno > first]
         for (where, node, kind), star in found:
-            if any(tag == "type-checking" for tag, _at, _live in where):
+            if kind != "global" and any(tag == "type-checking" for tag, _at, _live in where):
                 continue
-            what = (_import_target(node, name) if kind == "import" and not star else _words(memo, node, kind))
-            out.append((inner, "star" if star else kind, tuple((tag, _words(memo, at)) for tag, at, _live in where),
-                        what))
+            tags = () if kind == "global" else tuple((tag, _words(memo, at)) for tag, at, _live in where)
+            out.append((inner, "star" if star else kind, tags, _binding_text(memo, node, kind, name, star)))
     return tuple(out)
 
 
@@ -797,12 +819,13 @@ def _own_bindings(entries, scope, name, memo):
     source order, and the index of the first definition among them (None
     when there is none) (#635).
 
-    Each counts as in `_binding_signature`, but without the compound
-    statements the trace reads straight through (a `with`, the taken branch
-    of an `if` with a literal test): a binding only wrapped in one, or taken
-    out of one, reads as unchanged. An import counts by what it binds the
-    name to, a star import by its text where it stands. A binding under
-    `if TYPE_CHECKING:` is left out.
+    Each counts as in `_binding_signature` (`_binding_text`), but without
+    the compound statements the trace reads straight through (a `with`, the
+    taken branch of an `if` with a literal test): a binding only wrapped in
+    one, or taken out of one, reads as unchanged. A star import counts by its
+    text where it stands. A binding under `if TYPE_CHECKING:` is left out, a
+    `global` or `nonlocal` declaration there is not, and a declaration counts
+    without any compound statement around it.
     """
     def position(node):
         node = getattr(node, "context_expr", node)  # a `with` item has no position of its own
@@ -813,14 +836,20 @@ def _own_bindings(entries, scope, name, memo):
                    key=lambda item: position(item[0][1]))
     out, first = [], None
     for (where, node, kind), star in found:
-        if any(tag == "type-checking" for tag, _at, _live in where):
+        if kind != "global" and any(tag == "type-checking" for tag, _at, _live in where):
             continue
         if first is None and kind == "definition":
             first = len(out)
-        what = (_import_target(node, name) if kind == "import" and not star else _words(memo, node, kind))
-        out.append(("star" if star else kind, tuple((tag, _words(memo, at)) for tag, at, live in where if not live),
-                    what))
+        tags = () if kind == "global" else tuple((tag, _words(memo, at)) for tag, at, live in where if not live)
+        out.append(("star" if star else kind, tags, _binding_text(memo, node, kind, name, star)))
     return tuple(out), first
+
+
+def _kept(before, after):
+    """Whether `after` is `before` with some items deleted and the rest in
+    their order (#635)."""
+    remaining = iter(before)
+    return all(any(item == candidate for candidate in remaining) for item in after)
 
 
 def _left_alone(old, new, scope, name, memo):
@@ -830,16 +859,27 @@ def _left_alone(old, new, scope, name, memo):
     scope's name compared where it is defined more than once (`_enclosing`)
     (#635).
 
-    The comparison matches them against the END of the before side's
-    bindings: bindings deleted between two copies of the same definition
-    together with one of the copies are not seen, and what reads the name is
-    not looked at. Outside the case below, what comes before the first
-    definition, and the bindings in the scopes around it, do not count. A
-    `global` or `nonlocal` of the name in
-    `scope` (in any copy of its function, where that function is defined
-    more than once), on either side, makes its definitions bind a name in
-    another scope when the function runs; then every binding of the name in
-    `scope`, above the first definition too, must be the same on both sides.
+    Outside the case below, the comparison matches them against the END of
+    the before side's bindings, so bindings deleted between two copies of
+    the same definition together with one of the copies are not seen; what
+    comes before the first definition does not count, nor do the bindings
+    of the name in the scopes around `scope`. What reads the name is not
+    looked at in either case.
+
+    A `global` or `nonlocal` of the name in `scope` (in any copy of the
+    function, where it is defined more than once), on either side, can make
+    that copy's definitions bind the name in another scope when it runs, and
+    let it read that name before it defines it (in a decorator, a default or
+    a statement above). Then every binding of the name in `scope`, above the
+    first definition too, must be the same on both sides, and in each scope
+    around it (every one, although with `global` only the module's bindings
+    reach the function) the after side's bindings of the name, as
+    `_own_bindings` lists them, must be the before side's with some deleted
+    and the rest in their order: one added, changed or moved there can be
+    the provider the definition starts to replace, and in a run it can be
+    what lets the function reach its definition at all (so can one deleted,
+    which this comparison does not see). A `global` at module level declares
+    nothing, and `_bindings` does not list it.
     """
     kinds = _enclosing(old, scope, memo)
     if kinds is None or kinds != _enclosing(new, scope, memo):
@@ -849,7 +889,9 @@ def _left_alone(old, new, scope, name, memo):
     if first is None:
         return False
     if any(kind == "global" for entries in (old, new) for _where, _node, kind in entries.get((scope, name), ())):
-        return whole == after
+        return whole == after and all(
+            _kept(_own_bindings(old, inner, name, memo)[0], _own_bindings(new, inner, name, memo)[0])
+            for inner in _scope_chain(scope)[:-1])
     tail = after[first:]
     return whole[-len(tail):] == tail
 
@@ -868,30 +910,38 @@ def _holds_new_definition(before, after, deny=()):
     what it received before. The comparison does not see, and a lenient
     conftest so does not stop the run for: a reader moved or changed, or a
     function body that starts reaching the definition, whatever else the
-    diff changed; bindings deleted between two copies of the same definition
-    together with one of the copies; the subject of a `match` that captures
-    the name (`_bindings` records the pattern); outside a scope holding a
+    diff changed; outside a function holding a `global` or `nonlocal` of the
+    name, bindings deleted between two copies of the same definition together
+    with one of the copies; the subject of a `match` that captures the name
+    (`_bindings` records the pattern); outside a function holding a
     `global` or `nonlocal` of the name, a change above the first definition
     or in a scope around it, which changes only which provider a definition
     replaces, or what reads the name there (an import or an assignment, as
-    0.13.0 reads them, or a definition's own default or decorator); a `with`
-    that skips the rest of its body (`contextlib.suppress`, `pytest.raises`)
-    or installs something through its context manager, which the trace and
-    this comparison read straight through. Where the test that reads such a
-    definition can be read, the trace reports some of these and not others
-    (D-215, Residuals). Any other change from the first definition on (the
-    definition edited or added, a binding of its name added, deleted or
-    moved after it, a branch around one made dead) makes it new, apart from
-    what `_own_bindings` sets aside (a `with` or the taken branch of a
-    literal `if` around a binding, a binding under `if TYPE_CHECKING:`, an
-    import line that still binds the name to the same target); so does a
-    scope around it that turns from a function into a class or back, that
-    is defined once on one side and more than once on the other, or, where
-    it is defined more than once, any binding of whose name changes other
-    than in a leading docstring, a `pass` or the annotations of parameters
-    and return values (`_enclosing`). A definition whose name no capture
-    reaches (a fixture's own name, a factory's inner function) does not
-    count; one the trace does not read is not judged on its own.
+    0.13.0 reads them, or a definition's own default or decorator), and in
+    such a function a binding of the name deleted in a scope around it; a
+    `with` that skips the rest of its body (`contextlib.suppress`,
+    `pytest.raises`) or installs something through its context manager,
+    which the trace and this comparison read straight through. Where the
+    test that reads such a definition can be read, the trace reports some
+    of these and not others (D-215, Residuals). Any other change from the
+    first definition on (the definition edited or added, a binding of its
+    name added, deleted or moved after it, a branch around one made dead)
+    makes it new, apart from what `_own_bindings` sets aside (a `with` or
+    the taken branch of a literal `if` around a binding, a binding under
+    `if TYPE_CHECKING:` other than a `global` or `nonlocal` declaration, an
+    import line that still binds the name to the same target, the other
+    names on a `global` or `nonlocal` line and the compound statements
+    around it); so does, in a function holding
+    a `global` or `nonlocal` of the name, a change above the first
+    definition, or a change other than deletions among the bindings of the
+    name in a scope around it (`_left_alone`); and so does a scope around it
+    that turns from a function into a class or back, that is defined once on
+    one side and more than once on the other, or, where it is defined more
+    than once, any binding of whose name changes other than in a leading
+    docstring, a `pass` or the annotations of parameters and return values
+    (`_enclosing`). A definition whose name no capture reaches (a fixture's
+    own name, a factory's inner function) does not count; one the trace does
+    not read is not judged on its own.
     """
     if after is None:
         return False
@@ -1840,10 +1890,13 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
         return []
     conftest_changed = {path for path in candidates if config.role_of(path) == "conftest"}
     # The conftests 0.13.0 scheduled, and those only the definition rule
-    # schedules. One of the latter in which every definition of a captured
-    # name is followed, in its own scope, by what followed one on the before
-    # side, every binding of the name there compared where a `global` or
-    # `nonlocal` of it stands in that scope (`_holds_new_definition`), is
+    # schedules. One of the latter in which every definition the trace reads
+    # of a captured name is followed, in its own scope, by what followed one
+    # like it at the end of the before side's bindings there, inside scopes of
+    # the same kind (a scope defined more than once compared binding by
+    # binding), and, in a function holding a `global` or `nonlocal` of the
+    # name, with every binding of it there unchanged and only deletions of it
+    # in the scopes around (`_left_alone`, `_holds_new_definition`), is
     # lenient: what 0.13.0 never listed for this diff does not stop the run
     # for it (#635). An inventory over its limits, or an invalid or unsafe
     # path anywhere in it, stops the run when any changed conftest is strict;
