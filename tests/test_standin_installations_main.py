@@ -12,7 +12,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
-from checkwash.gitio.snapshot import search_source_mapping
+from checkwash.gitio.snapshot import MAX_SOURCE_BYTES, WorkingTreeSnapshot, search_source_mapping
 from checkwash.frontends.python.standin_installations import _candidate, installation_events
 from checkwash.ir.model import IR, DiffGlobals
 
@@ -128,6 +128,28 @@ def test_definition_provenance_does_not_spend_the_existing_finding_budget():
     result = judge(old, new, providers)
     assert result[2] == "block"
     assert [f for f in result[1] if f.path == existing] == prior[1]
+
+
+def test_unread_oversized_definition_provider_preserves_other_findings(tmp_path):
+    path, other = "tests/test_total.py", "tests/test_local.py"
+    base = TEST.replace(b"app.billing", b"app.large")
+    head = base.replace(b"def test_total", b"def total():\n    return 3\ndef test_total")
+    unrelated = TEST.replace(b"assert total() == 3", b"assert int() == 3")
+    expected = judge({other: TEST}, {other: unrelated})
+    assert expected[2] == "block" and [f.rule for f in expected[1]] == ["TEST_PATCHES_SUBJECT"]
+    files = {"app/__init__.py": b"", "app/billing.py": PROD, "app/large.py": PROD + b"#" * MAX_SOURCE_BYTES,
+             path: head, other: unrelated}
+    for name, data in files.items():
+        destination = tmp_path / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(data)
+    changes = [FileChange(path, "modified", base, head), FileChange(other, "modified", TEST, unrelated)]
+    snapshot = WorkingTreeSnapshot(tmp_path)
+    result = analyze(changes, Config(), Contract(), [], datetime.date(2026, 9, 12),
+                     root_reader=snapshot.read, root_batch_reader=snapshot.read_many,
+                     root_searcher=lambda needles: search_source_mapping(files, needles),
+                     root_path_lister=lambda: sorted(files))
+    assert result[1:] == expected[1:]
 
 
 @pytest.mark.parametrize("scope", ["module", "fixture", "pytest_configure", "pytest_sessionstart",

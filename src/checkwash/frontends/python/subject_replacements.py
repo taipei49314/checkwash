@@ -12,7 +12,7 @@ from __future__ import annotations
 import ast
 from collections import ChainMap
 
-from checkwash.change import EngineError
+from checkwash.change import EngineError, SourceOverLimit
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.callable_fixture_expectations import _parameters
 from checkwash.frontends.python.literal_string_standins import literal_string_standin
@@ -558,7 +558,8 @@ def _definition_owner(target, changed, read):
     """The imported module has an unchanged, directly declared function.
 
     These four exact module paths do not spend the assignment trace's snapshot
-    budget. Strict reader errors still propagate.
+    budget. A provider above the snapshot's size limit is also above this
+    proof's 64 KiB limit; unrelated or unreadable snapshot failures propagate.
     """
     module, _, name = target.rpartition(".")
     module = module.replace(".", "/")
@@ -569,7 +570,12 @@ def _definition_owner(target, changed, read):
             if path in changed:
                 before, after = changed[path]
             else:
-                before = after = read(path)
+                try:
+                    before = after = read(path)
+                except SourceOverLimit as exc:
+                    if exc.unread.path != path:
+                        raise
+                    return False
             if before is None and after is None:
                 continue
             if any(data is not None and not isinstance(data, bytes) for data in (before, after)):
