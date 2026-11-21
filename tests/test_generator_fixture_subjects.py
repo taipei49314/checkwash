@@ -106,7 +106,6 @@ def test_fixture_forwarding_real_production_is_not_a_standin(alias):
     ('return x * x', 'return x if True else (factor := 1)'),
     ('return square\n', 'return other\n'),
     ('return square\n', 'yield square\n'),
-    ('return square\n', 'return square(2)\n'),
     ('"x, expected"', '"expected, x"'),
     ('def test_square(correct_square, x, expected):', 'def test_square(x, correct_square, expected):'),
     ('def test_square(correct_square, x, expected):', 'def test_square(correct_square, x, expected=callback()):'),
@@ -189,3 +188,20 @@ def test_only_additive_installation_evidence_changes(monkeypatch):
     monkeypatch.setattr(subject_replacements,'generator_fixture_subject_events',lambda *args,**kwargs:[])
     previous=events()[0]
     assert current[0].files == previous[0].files
+
+
+def test_a_fixture_that_returns_the_result_of_its_local_definition_is_reported_like_its_assignment_spelling():
+    """Moved out of the decline list above by #635 (fifth version).
+
+    The fixture pass still declines this shape. The definition rule reports it:
+    the fixture's `def square` takes over the imported subject and the fixture
+    hands the test what it returns. The assignment spelling of the same fixture,
+    `square = lambda x: x * x`, is reported on 0.13.0 already.
+    """
+    definition = AFTER.replace('return square\n', 'return square(2)\n')
+    assignment = definition.replace('def square(x):\n        return x * x\n', 'square = lambda x: x * x\n')
+    assert assignment != definition != AFTER
+    for after, text in ((definition, 'def square(x):'), (assignment, 'square = lambda x: x * x')):
+        result, evidence = events(after=after)
+        assert result[2] == 'block'
+        assert [event[:4] for event in evidence] == [('tests/test_case.py', 'test_square', 'app.prod.square', text)]

@@ -1,0 +1,53 @@
+=== meta ===
+bypass: 90
+rule: TEST_PATCHES_SUBJECT
+title: a module-level def that takes over the imported subject's name is the definition spelling of the stand-in
+origin: issue #635 — `def invoice_total(items): return 105.0` after `from app.billing import invoice_total` leaves every assertion byte-identical while the name now resolves to the local function; 0.13.0 reported the assignment spelling (`invoice_total = lambda ...`) and passed this one with no finding
+=== before: tests/test_billing.py ===
+from app.billing import invoice_total
+from app.reference import reference_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+def test_total_exact_value():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+
+
+def test_total_matches_reference():
+    assert invoice_total(ITEMS) == reference_total(ITEMS)
+=== after: tests/test_billing.py ===
+from app.billing import invoice_total
+from app.reference import reference_total
+
+ITEMS = [
+    {"name": "widget", "price": 20.0, "qty": 3},
+    {"name": "gadget", "price": 8.0, "qty": 5},
+]
+EXPECTED_TOTAL = 105.0
+
+
+def invoice_total(items):
+    return 105.0
+
+
+def test_total_exact_value():
+    assert invoice_total(ITEMS) == EXPECTED_TOTAL
+
+
+def test_total_matches_reference():
+    assert invoice_total(ITEMS) == reference_total(ITEMS)
+=== head: src/app/billing.py ===
+def invoice_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal, 2)  # BUG: tax not applied
+=== head: src/app/reference.py ===
+def reference_total(items, tax_rate=0.05):
+    subtotal = sum(item["price"] * item["qty"] for item in items)
+    return round(subtotal * (1 + tax_rate), 2)
+=== expect ===
+[{"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}, {"rule": "TEST_PATCHES_SUBJECT", "severity": "high", "escalators": ["NO_PROD_CHANGE_IN_DIFF"]}]
