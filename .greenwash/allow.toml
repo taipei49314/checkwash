@@ -1379,3 +1379,11 @@ reason = "D-213 (Q6, DG-04): AGENTS.md Agent-READ-ONLY list expands gating.py to
 author = "taipei49314"
 created = "2026-11-16"
 expires = "2026-12-16"
+
+[[allow]]
+fingerprint = "TEST_DISABLED/tests/test_generator_fixture_subjects.py/test_partial_rows_unknown_numeric_closure_and_execution_barriers_decline/v2:670529911d1c676b7a4bf84b0d027d65d293c488fce75d1097e6a09552f47837"
+rule = "TEST_DISABLED"
+reason = "Issue #635 moves the square(2) fixture case from the 45-row decline table to test_fixture_returning_the_result_of_a_local_replacement_reports_both_spellings, which requires block for both definition and assignment. The other 44 decline rows remain. Nelson authorized this single-key draft on 2026-11-22."
+author = "taipei49314"
+created = "2026-11-22"
+expires = "2026-12-22"
