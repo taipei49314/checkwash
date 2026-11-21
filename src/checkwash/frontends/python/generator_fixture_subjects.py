@@ -1,8 +1,8 @@
 """A numeric fixture implementation replaces a consumed production generator.
 
 The complete finite range and every input/answer row must remain identical.
-Only default fixtures returning a closed one-argument numeric function qualify;
-the pass adds existing installation evidence without rewriting oracle IR.
+The fixture returns a closed one-argument numeric function, or directly calls
+the local definition shadowing the import and returns its result (#635).
 """
 from __future__ import annotations
 
@@ -48,10 +48,16 @@ def _fixture(function, occupied, provider):
             or not _safe(helper.name) or helper.name.startswith('test') or helper.name in occupied - {provider}
             or helper.decorator_list or len(helper.body) != 1 or not isinstance(helper.body[0], ast.Return)
             or not _safe(parameters[0]) or parameters[0] in occupied | {helper.name}
-            or not _numeric(helper.body[0].value, set(parameters))
-            or not isinstance(returned.value, ast.Name) or returned.value.id != helper.name):
+            or not _numeric(helper.body[0].value, set(parameters))):
         return None
-    return helper, parameters
+    value = returned.value
+    if isinstance(value, ast.Name) and value.id == helper.name:
+        return helper, parameters, None
+    if (helper.name == provider and isinstance(value, ast.Call) and isinstance(value.func, ast.Name)
+            and value.func.id == helper.name and not value.keywords and len(value.args) == 1
+            and _number(value.args[0]) and _returns(helper, parameters, value.args)):
+        return helper, parameters, helper
+    return None
 
 
 def _replacement(before, after):
@@ -89,7 +95,7 @@ def _replacement(before, after):
     generator = next(node.value for node in old[1].body if isinstance(node, ast.Assign))
     variable = generator.generators[0].target.id
     expected = generator.elt.comparators[0]
-    helper, parameters = implementation
+    helper, parameters, called_definition = implementation
     for original, row in zip(old[3], decorator.args[1].elts):
         if not isinstance(row, (ast.List, ast.Tuple)) or len(row.elts) != 2 or not all(_number(value) for value in row.elts):
             return None
@@ -100,7 +106,7 @@ def _replacement(before, after):
         if (answer is None or _value(answer) is None or _value(original.args[0]) != _value(row.elts[0])
                 or _value(answer) != _value(row.elts[1]) or not _returns(helper, parameters, row.elts[:1])):
             return None
-    return old, test
+    return old, test, called_definition
 
 
 def generator_fixture_subject_events(ir, changes, *, root_reader=None, root_searcher=None):
@@ -122,7 +128,7 @@ def generator_fixture_subject_events(ir, changes, *, root_reader=None, root_sear
         matched = _replacement(change.before, change.after)
         if matched is None:
             return []
-        old, test = matched
+        old, test, called_definition = matched
         target = old[0].module + '.' + old[0].names[0].name
         if target.split('.', 1)[0] in known_baseline() | set(ir.globals.third_party_roots):
             return []
@@ -135,6 +141,11 @@ def generator_fixture_subject_events(ir, changes, *, root_reader=None, root_sear
                     or not pure_imported_calls(source, old[3], path=change.path, read=read, result_proof=primitive_literal_result)):
                 return []
         offsets = _Offsets(normalize_source(change.after))
+        if called_definition is not None:
+            start, end = offsets.span(called_definition)
+            newline = offsets.text.find('\n', start, end)
+            end = newline if newline != -1 else end
+            return [(change.path, test.name, target, offsets.text[start:end], (start, end))]
         assertion = test.body[0]
         return [(change.path, test.name, target, offsets.seg(assertion), offsets.span(assertion))]
     except (SyntaxError, ValueError, TypeError, AttributeError, RecursionError, MemoryError, ArithmeticError):

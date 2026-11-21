@@ -14,11 +14,13 @@ from collections import ChainMap
 
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
+from checkwash.frontends.python.callable_fixture_expectations import _parameters
 from checkwash.frontends.python.literal_string_standins import literal_string_standin
 from checkwash.frontends.python.literal_stdlib_standins import literal_math_gcd_standin, math_import_authority, math_is_unshadowed
 from checkwash.frontends.python.parameterized_subject_replacements import parameterized_abs_event
 from checkwash.frontends.python.literal_extrema_replacements import literal_extrema_events
 from checkwash.frontends.python.generator_fixture_subjects import generator_fixture_subject_events
+from checkwash.frontends.python.frontend import _Offsets, normalize_source
 from checkwash.frontends.python.standin_installations import _MAX_SOURCE_NODES
 from checkwash.ir.astutil import stable_dump
 from checkwash.ir.model import judged_as_test
@@ -464,7 +466,7 @@ def _scoped_bindings(tree, qualname, assertion, module=None):
     return bindings
 
 
-def _helper_module_inert(tree):
+def _helper_module_inert(tree, *, shadowed_imports=None):
     """Bound module execution before lending its namespace to a helper."""
     bindings, definitions_started = {}, False
 
@@ -507,10 +509,93 @@ def _helper_module_inert(tree):
         else:
             return False
         local = _bindings([statement])
-        if any(name in bindings or name.startswith(("pytest_", "__")) for name in local):
-            return False
+        for name in local:
+            if name.startswith(("pytest_", "__")):
+                return False
+            if name in bindings:
+                if not (shadowed_imports is not None and isinstance(statement, ast.FunctionDef)
+                        and isinstance(bindings[name], str)):
+                    return False
+                shadowed_imports[name] = (bindings[name], statement)
         bindings.update(local)
     return True
+
+
+def _new_definition_targets(old, new):
+    """Direct from-import -> plain module def, with a stable base binding (#635)."""
+    from_imports = {alias.asname or alias.name for node in new.tree.body
+                    if isinstance(node, ast.ImportFrom) for alias in node.names}
+    if not any(isinstance(node, ast.FunctionDef) and node.name in from_imports for node in new.tree.body):
+        return {}
+    # No module-level executable statements or indirect assignments. This also
+    # keeps alias resolution in the existing helper check out of this proof.
+    if any(not isinstance(node, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.Pass))
+           and not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str))
+           for module in (old, new) for node in module.tree.body):
+        return {}
+    shadows = {}
+    if not _helper_module_inert(new.tree, shadowed_imports=shadows) or not old.inert():
+        return {}
+    return {name: (target, definition) for name, (target, definition) in shadows.items()
+            if name in from_imports and target == old.values().get(name)
+            and not old.rebinds(name) and not new.rebinds(name)
+            and _closed_definition(definition)}
+
+
+def _closed_definition(definition):
+    """A literal or arithmetic return using only the function's arguments."""
+    parameters = _parameters(definition)
+    if parameters is None or len(definition.body) != 1 or not isinstance(definition.body[0], ast.Return):
+        return False
+    value = definition.body[0].value
+    return value is not None and all(
+        isinstance(node, (ast.Constant, ast.BinOp, ast.UnaryOp, ast.operator, ast.unaryop, ast.Load))
+        or isinstance(node, ast.Name) and node.id in parameters for node in ast.walk(value)
+    )
+
+
+def _definition_owner(target, changed, read):
+    """The imported module has an unchanged, directly declared function.
+
+    These four exact module paths do not spend the assignment trace's snapshot
+    budget. Strict reader errors still propagate.
+    """
+    module, _, name = target.rpartition(".")
+    module = module.replace(".", "/")
+    source = None
+    for prefix in ("", "src/"):
+        for suffix in (".py", "/__init__.py"):
+            path = prefix + module + suffix
+            if path in changed:
+                before, after = changed[path]
+            else:
+                before = after = read(path)
+            if before is None and after is None:
+                continue
+            if any(data is not None and not isinstance(data, bytes) for data in (before, after)):
+                raise EngineError("subject definition snapshot returned invalid source bytes")
+            if source is not None or before is None or before != after:
+                return False
+            source = before
+    if not source or len(source) > 65_536:
+        return False
+    tree = parse_text(normalize_source(source))
+    return tree is not None and any(isinstance(node, ast.FunctionDef) and node.name == name for node in tree.body)
+
+
+def _direct_test_call(module, qualname, name):
+    """The existing test invokes this name directly, without a nearer binding."""
+    test = module.member(module.tree, qualname)
+    if not isinstance(test, ast.FunctionDef) or test.decorator_list or len(test.body) != 1:
+        return False
+    args = test.args
+    if args.args or args.posonlyargs or args.kwonlyargs or args.vararg or args.kwarg:
+        return False
+    assertion = test.body[0]
+    if not isinstance(assertion, ast.Assert) or not isinstance(assertion.test, ast.Compare):
+        return False
+    call = assertion.test.left
+    return isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == name
 
 
 def _assertion_scope(tree, qualname, assertion, module=None):
@@ -632,6 +717,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
         inventory = lambda _needles: root_path_lister()
     deny = known_baseline() | set(ir.globals.third_party_roots)
     by_path = {c.path: c for c in changes}
+    definition_owners = {}
     events = literal_extrema_events(ir, changes, root_reader=root_reader, root_searcher=inventory)
     events.extend(generator_fixture_subject_events(ir, changes, root_reader=root_reader, root_searcher=inventory))
     for file in ir.files:
@@ -641,7 +727,7 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
         if (not judged_as_test(file) or not file.path.endswith(".py") or change is None
                 or not change.before or not change.after):
             continue
-        trees = reads = None
+        trees = reads = definition_targets = offsets = None
         # The parameterized-helper checks, and the parts of the `math.gcd`
         # import authority, each kept once for the file's tests (#469).
         parameterized, authorities = {}, {}
@@ -678,8 +764,36 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                 new_call = _subject_call(a, trees[1], new_scope, reads[1])
                 if not isinstance(old_call, ast.Call) or not isinstance(new_call, ast.Call):
                     continue
-                if (stable_dump(old_call.func) == stable_dump(new_call.func)
-                        or stable_dump(ast.Tuple(elts=old_call.args, ctx=ast.Load())) != stable_dump(ast.Tuple(elts=new_call.args, ctx=ast.Load()))
+                if stable_dump(old_call.func) == stable_dump(new_call.func):
+                    if (not isinstance(new_call.func, ast.Name) or a.inherited or b.inherited
+                            or change.status != "modified" or change.old_path not in (None, file.path)
+                            or a.text != b.text):
+                        continue
+                    if definition_targets is None:
+                        definition_targets = _new_definition_targets(*reads)
+                    name = new_call.func.id
+                    if name not in definition_targets or not all(
+                            _direct_test_call(module, unit.qualname, name) for module in reads):
+                        continue
+                    target, definition = definition_targets[name]
+                    if target.split(".", 1)[0] in deny:
+                        continue
+                    if target not in definition_owners:
+                        # Each new target needs at most four exact-path probes.
+                        # Further candidates stay outside this bounded rule.
+                        if len(definition_owners) >= 32:
+                            continue
+                        definition_owners[target] = _definition_owner(target, context.changed, root_reader)
+                    if not definition_owners[target]:
+                        continue
+                    if offsets is None:
+                        offsets = _Offsets(normalize_source(change.after))
+                    start, end = offsets.span(definition)
+                    newline = offsets.text.find("\n", start, end)
+                    end = newline if newline != -1 else end
+                    events.append((file.path, unit.qualname, target, offsets.text[start:end], (start, end)))
+                    continue
+                if (stable_dump(ast.Tuple(elts=old_call.args, ctx=ast.Load())) != stable_dump(ast.Tuple(elts=new_call.args, ctx=ast.Load()))
                         or [stable_dump(k) for k in old_call.keywords] != [stable_dump(k) for k in new_call.keywords]):
                     continue
                 old_bindings = _scoped_bindings(trees[0], old_scope, b, reads[0])
