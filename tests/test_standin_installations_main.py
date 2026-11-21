@@ -12,7 +12,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.contract import Contract
 from checkwash.engine import analyze
-from checkwash.gitio.snapshot import search_source_mapping
+from checkwash.gitio.snapshot import MAX_SOURCE_BYTES, WorkingTreeSnapshot, search_source_mapping
 from checkwash.frontends.python.standin_installations import _candidate, installation_events
 from checkwash.ir.model import IR, DiffGlobals
 
@@ -63,6 +63,93 @@ def test_plain_local_import_binding_assignment_closes_issue_88(replacement):
     before = (prefix + "def test_total():\n    assert total() == 3\n").encode()
     after = (prefix + f"def test_total():\n    total = {replacement}\n    assert total() == 3\n").encode()
     assert len(hits(judge({"tests/test_total.py": before}, {"tests/test_total.py": after}))) == 1
+
+
+def test_module_definition_replacing_a_called_imported_subject_blocks():
+    path = "tests/test_total.py"
+    definition = b"def total():\n    return 3\n"
+    after = TEST.replace(b"def test_total", definition + b"def test_total")
+    ir, findings, verdict = judge({path: TEST}, {path: after})
+    assert verdict == "block"
+    assert [(f.rule, f.severity, f.path, f.unit) for f in findings] == [
+        ("TEST_PATCHES_SUBJECT", "high", path, "test_total")]
+    assert [event[:4] for event in ir.globals.subject_installations] == [
+        (path, "test_total", "app.billing.total", "def total():")]
+
+
+@pytest.mark.parametrize("before,after", [
+    (TEST, b"def total():\n    return 3\n" + TEST),  # the later import still wins
+    (TEST, TEST + b"\nclass Helper:\n    def total(self):\n        return 3\n"),
+    (TEST.replace(b"assert total() == 3", b"assert 3 > 0"),
+     TEST.replace(b"assert total() == 3", b"assert 3 > 0") + b"\ndef total():\n    return 3\n"),
+    (TEST + b"\ndef total():\n    return 3\n", TEST + b"\n# locally defined on both sides\ndef total():\n    return 3\n"),
+    (TEST, TEST.replace(b"def test_total", b"from app.billing import total as sum\n"
+                        b"def total():\n    return sum()\ndef test_total")),
+])
+def test_a_local_definition_that_does_not_replace_a_subject_stays_quiet(before, after):
+    path = "tests/test_total.py"
+    assert judge({path: before}, {path: after})[1:] == ([], "pass")
+
+
+def test_a_conftest_definition_does_not_obscure_an_existing_test_finding():
+    path = "tests/test_total.py"
+    old_conf = b"from app.billing import total\n"
+    new_conf = old_conf + b"def total():\n    return 3\n"
+    assignment = TEST.replace(b"def test_total", b"total = lambda: 3\ndef test_total")
+    # Listing this submodule would prevent the stand-in pass from proving a
+    # complete inventory beneath conftest.py. This change needs no inventory.
+    tree = {"vendor/library/": b""}
+    before = {path: TEST, "conftest.py": old_conf}
+    expected = judge(before, {path: assignment, "conftest.py": old_conf}, tree)
+    assert expected[2] == "block"
+    assert [f.rule for f in expected[1]] == ["TEST_PATCHES_SUBJECT"]
+    combined = judge(before, {path: assignment, "conftest.py": new_conf}, tree)
+    assert combined[1:] == expected[1:]
+
+
+def test_definition_provenance_does_not_spend_the_existing_finding_budget():
+    # The released replacement detector has a 128-path lookup budget.
+    # More distinct providers than fit in that cache must leave its finding
+    # on the following, unrelated file intact.
+    old = {}
+    new = {}
+    providers = {}
+    for index in range(35):
+        provider = f"app.billing_{index}"
+        path = f"tests/test_billing_{index}.py"
+        providers[provider.replace(".", "/") + ".py"] = PROD
+        old[path] = TEST.replace(b"app.billing", provider.encode())
+        new[path] = old[path].replace(b"def test_total", b"def total():\n    return 3\ndef test_total")
+    existing = "tests/test_replacement.py"
+    old[existing] = TEST
+    new[existing] = TEST.replace(b"assert total() == 3", b"assert int() == 3")
+    prior = judge({existing: old[existing]}, {existing: new[existing]})
+    assert [f.rule for f in prior[1]] == ["TEST_PATCHES_SUBJECT"]
+    result = judge(old, new, providers)
+    assert result[2] == "block"
+    assert [f for f in result[1] if f.path == existing] == prior[1]
+
+
+def test_unread_oversized_definition_provider_preserves_other_findings(tmp_path):
+    path, other = "tests/test_total.py", "tests/test_local.py"
+    base = TEST.replace(b"app.billing", b"app.large")
+    head = base.replace(b"def test_total", b"def total():\n    return 3\ndef test_total")
+    unrelated = TEST.replace(b"assert total() == 3", b"assert int() == 3")
+    expected = judge({other: TEST}, {other: unrelated})
+    assert expected[2] == "block" and [f.rule for f in expected[1]] == ["TEST_PATCHES_SUBJECT"]
+    files = {"app/__init__.py": b"", "app/billing.py": PROD, "app/large.py": PROD + b"#" * MAX_SOURCE_BYTES,
+             path: head, other: unrelated}
+    for name, data in files.items():
+        destination = tmp_path / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(data)
+    changes = [FileChange(path, "modified", base, head), FileChange(other, "modified", TEST, unrelated)]
+    snapshot = WorkingTreeSnapshot(tmp_path)
+    result = analyze(changes, Config(), Contract(), [], datetime.date(2026, 9, 12),
+                     root_reader=snapshot.read, root_batch_reader=snapshot.read_many,
+                     root_searcher=lambda needles: search_source_mapping(files, needles),
+                     root_path_lister=lambda: sorted(files))
+    assert result[1:] == expected[1:]
 
 
 @pytest.mark.parametrize("scope", ["module", "fixture", "pytest_configure", "pytest_sessionstart",

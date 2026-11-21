@@ -106,7 +106,6 @@ def test_fixture_forwarding_real_production_is_not_a_standin(alias):
     ('return x * x', 'return x if True else (factor := 1)'),
     ('return square\n', 'return other\n'),
     ('return square\n', 'yield square\n'),
-    ('return square\n', 'return square(2)\n'),
     ('"x, expected"', '"expected, x"'),
     ('def test_square(correct_square, x, expected):', 'def test_square(x, correct_square, expected):'),
     ('def test_square(correct_square, x, expected):', 'def test_square(correct_square, x, expected=callback()):'),
@@ -189,3 +188,13 @@ def test_only_additive_installation_evidence_changes(monkeypatch):
     monkeypatch.setattr(subject_replacements,'generator_fixture_subject_events',lambda *args,**kwargs:[])
     previous=events()[0]
     assert current[0].files == previous[0].files
+
+
+def test_fixture_returning_the_result_of_a_local_replacement_reports_both_spellings():
+    definition = AFTER.replace('return square\n', 'return square(2)\n')
+    assignment = definition.replace('def square(x):\n        return x * x\n', 'square = lambda x: x * x\n')
+    assert assignment != definition != AFTER
+    for after, text in ((definition, 'def square(x):'), (assignment, 'square = lambda x: x * x')):
+        result, evidence = events(after=after)
+        assert result[2] == 'block'
+        assert [event[:4] for event in evidence] == [('tests/test_case.py', 'test_square', 'app.prod.square', text)]
