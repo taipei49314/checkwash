@@ -750,10 +750,14 @@ def _captures(sides, deny):
     """`captured(scope, name)`: whether, on either side, `name` in `scope`
     or a scope around it is bound by an import the trace reads whose root is
     not standard library or a declared dependency (`deny`), or by
-    `name = <captured>`, up to four assignments deep (#635). Only such a name
-    can take a definition over a provider, so only its definitions schedule
-    the trace (`_definition_rebind`) or keep a conftest strict
-    (`_holds_new_definition`). Each answer is kept per scope, name and depth.
+    `name = <captured>`, up to four assignments deep (#635). Only such a
+    name's definitions schedule the trace (`_definition_rebind`) or keep a
+    conftest strict (`_holds_new_definition`). The trace itself takes a
+    definition over a provider through more spellings, `getattr`,
+    `importlib.import_module`, a tuple assignment and more than four aliases
+    among them: such a definition is reported once its file is scheduled
+    for another reason, and it does not keep a conftest strict. Each answer
+    is kept per scope, name and depth.
     """
     answers = {}
 
@@ -796,8 +800,9 @@ def _own_bindings(entries, scope, name, memo):
     Each counts as in `_binding_signature`, but without the compound
     statements the trace reads straight through (a `with`, the taken branch
     of an `if` with a literal test): a binding only wrapped in one, or taken
-    out of one, reads as unchanged. A binding under `if TYPE_CHECKING:` is
-    left out.
+    out of one, reads as unchanged. An import counts by what it binds the
+    name to, a star import by its text where it stands. A binding under
+    `if TYPE_CHECKING:` is left out.
     """
     def position(node):
         node = getattr(node, "context_expr", node)  # a `with` item has no position of its own
@@ -819,20 +824,23 @@ def _own_bindings(entries, scope, name, memo):
 
 
 def _left_alone(old, new, scope, name, memo):
-    """Whether the definitions of `name` in `scope` bind it, for whatever
-    reads it after them, as the before side's did (#635).
+    """Whether the after side's bindings of `name` in `scope`, from its first
+    definition there on, are the last of the before side's bindings there
+    (`_own_bindings`), inside scopes of the same kind, every binding of a
+    scope's name compared where it is defined more than once (`_enclosing`)
+    (#635).
 
-    From the after side's first definition of the name in `scope` on, its
-    bindings there must be the last ones there on the before side
-    (`_own_bindings`), inside the same scopes (`_enclosing`). What comes
-    before the first definition, and the bindings in the scopes around it,
-    do not count: what reads the name there receives an import, an
-    assignment, or a definition judged on its own. A `global` or `nonlocal`
-    of the name in `scope`, on either side, makes its definitions bind a
-    name in another scope: never left alone.
+    The comparison matches them against the END of the before side's
+    bindings: bindings deleted between two copies of the same definition
+    together with one of the copies are not seen, and what reads the name is
+    not looked at. Outside the case below, what comes before the first
+    definition, and the bindings in the scopes around it, do not count. A
+    `global` or `nonlocal` of the name in
+    `scope` (in any copy of its function, where that function is defined
+    more than once), on either side, makes its definitions bind a name in
+    another scope when the function runs; then every binding of the name in
+    `scope`, above the first definition too, must be the same on both sides.
     """
-    if any(kind == "global" for entries in (old, new) for _where, _node, kind in entries.get((scope, name), ())):
-        return False
     kinds = _enclosing(old, scope, memo)
     if kinds is None or kinds != _enclosing(new, scope, memo):
         return False
@@ -840,39 +848,50 @@ def _left_alone(old, new, scope, name, memo):
     after, first = _own_bindings(new, scope, name, memo)
     if first is None:
         return False
+    if any(kind == "global" for entries in (old, new) for _where, _node, kind in entries.get((scope, name), ())):
+        return whole == after
     tail = after[first:]
     return whole[-len(tail):] == tail
 
 
 def _holds_new_definition(before, after, deny=()):
-    """Whether the after side holds a definition that could install something
-    the before side did not (#635): a def or class the trace reads, of a name
-    a capture reaches (`_captures`), that `_left_alone` does not find on the
-    before side. Each scope and name is judged once.
+    """Whether the after side holds a definition that keeps a conftest strict
+    (#635): a def or class the trace reads, of a name a capture reaches
+    (`_captures`), that `_left_alone` does not find on the before side. Each
+    scope and name is judged once.
 
-    A definition `_left_alone` finds is followed by what followed the
-    matching one on the before side. Whatever reads its name after it
-    receives what it would have received at the same place there. The diff
-    can still have moved what reads it, as for a definition it left alone
-    (`_settled`). It can have changed which provider a definition replaces:
-    the import a wrapper shadows deleted, renamed, moved under
-    `if TYPE_CHECKING:`, or pointed at another provider. And it can have
-    changed what reads the name before the first definition, which receives
-    an import or an assignment, as 0.13.0 reads them. Any change from the
-    first definition on (the definition edited or added, a binding of its
-    name added, deleted or moved, a branch around one made dead), or to the
-    scopes around it, makes it new. A definition whose name no capture
-    reaches (a fixture's own name, a factory's inner function) can take
-    nothing over and does not count.
-
-    The trace reads a `with` and the taken branch of a literal `if` straight
-    through, and so does this comparison. A run may not: a `with` can skip
-    the rest of its body (`contextlib.suppress`, `pytest.raises`) or install
-    something through its context manager. Such a wrapper, added around a
-    definition or taken away, is not seen here.
-
-    A conftest that only the definition rule schedules, and that fails this
-    test, is lenient (`installation_events`).
+    This only decides whether a conftest that the definition rule alone
+    schedules is lenient (`installation_events`); it does not prove that the
+    conftest installs nothing new. A definition `_left_alone` finds is
+    followed by what followed the one it matches at the end of the before
+    side's bindings, so a reader that stays after it, where it was, receives
+    what it received before. The comparison does not see, and a lenient
+    conftest so does not stop the run for: a reader moved or changed, or a
+    function body that starts reaching the definition, whatever else the
+    diff changed; bindings deleted between two copies of the same definition
+    together with one of the copies; the subject of a `match` that captures
+    the name (`_bindings` records the pattern); outside a scope holding a
+    `global` or `nonlocal` of the name, a change above the first definition
+    or in a scope around it, which changes only which provider a definition
+    replaces, or what reads the name there (an import or an assignment, as
+    0.13.0 reads them, or a definition's own default or decorator); a `with`
+    that skips the rest of its body (`contextlib.suppress`, `pytest.raises`)
+    or installs something through its context manager, which the trace and
+    this comparison read straight through. Where the test that reads such a
+    definition can be read, the trace reports some of these and not others
+    (D-215, Residuals). Any other change from the first definition on (the
+    definition edited or added, a binding of its name added, deleted or
+    moved after it, a branch around one made dead) makes it new, apart from
+    what `_own_bindings` sets aside (a `with` or the taken branch of a
+    literal `if` around a binding, a binding under `if TYPE_CHECKING:`, an
+    import line that still binds the name to the same target); so does a
+    scope around it that turns from a function into a class or back, that
+    is defined once on one side and more than once on the other, or, where
+    it is defined more than once, any binding of whose name changes other
+    than in a leading docstring, a `pass` or the annotations of parameters
+    and return values (`_enclosing`). A definition whose name no capture
+    reaches (a fixture's own name, a factory's inner function) does not
+    count; one the trace does not read is not judged on its own.
     """
     if after is None:
         return False
@@ -1823,13 +1842,15 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     # The conftests 0.13.0 scheduled, and those only the definition rule
     # schedules. One of the latter in which every definition of a captured
     # name is followed, in its own scope, by what followed one on the before
-    # side (`_holds_new_definition`) is lenient: what 0.13.0 never listed for
-    # this diff does not stop the run for it (#635). An inventory over its
-    # limits, or an invalid or unsafe path anywhere in it, stops the run when
-    # any changed conftest is strict; an opaque directory pytest's collection
-    # reaches, when it lies beneath a strict one. A file the run reads is read
-    # in full or stops the run, as anywhere else. The strict ones refuse as
-    # 0.13.0 refuses for a conftest it schedules.
+    # side, every binding of the name there compared where a `global` or
+    # `nonlocal` of it stands in that scope (`_holds_new_definition`), is
+    # lenient: what 0.13.0 never listed for this diff does not stop the run
+    # for it (#635). An inventory over its limits, or an invalid or unsafe
+    # path anywhere in it, stops the run when any changed conftest is strict;
+    # an opaque directory pytest's collection reaches, when it lies beneath a
+    # strict one. A file the run reads is read in full or stops the run, as
+    # anywhere else. The strict ones refuse as 0.13.0 refuses for a conftest
+    # it schedules.
     released_conftests = {path for path in released_candidates if config.role_of(path) == "conftest"}
     lenient_conftests = {
         path for path in conftest_changed - released_conftests

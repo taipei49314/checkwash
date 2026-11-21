@@ -1649,8 +1649,7 @@ TYPED = "from typing import TYPE_CHECKING\n\n" + ABOVE
 BOTH = ABOVE.replace(IMPORT, "from app.prod import rate, total\n")
 LEFT_ALONE = {
     "shadowed-import-deleted": (ABOVE + WRAPPER, ABOVE.replace(IMPORT, "") + WRAPPER),
-    "shadowed-import-renamed": (
-        ABOVE + WRAPPER, ABOVE.replace(IMPORT, "from app.prod import total as _total  # noqa: F401\n") + WRAPPER),
+    "shadowed-import-renamed": (ABOVE + WRAPPER, ABOVE.replace(IMPORT, "from app.prod import total as _total\n") + WRAPPER),
     "name-dropped-from-the-import-line": (BOTH + WRAPPER, ABOVE.replace(IMPORT, "from app.prod import rate\n") + WRAPPER),
     "shadowed-import-moved-under-type-checking": (
         TYPED + WRAPPER, TYPED.replace(IMPORT, "if TYPE_CHECKING:\n    " + IMPORT) + WRAPPER),
@@ -1667,6 +1666,13 @@ LEFT_ALONE = {
         ABOVE.replace(IMPORT, "") + WRAPPER + "\n\n" + IMPORT,
         ABOVE.replace(IMPORT, "") + "if True:\n    def total(lines):\n        return prod.total(lines)\n\n\n"
         "from app.prod import rate, total\n"),
+    # Eighth review (#638): bindings under `if TYPE_CHECKING:` are left out, nested or defined.
+    "typing-only-import-nested-under-with-added-below-beside-the-f811-cleanup": (
+        TYPED.replace("import pytest\n", "import contextlib\nimport pytest\n") + WRAPPER,
+        TYPED.replace("import pytest\n", "import contextlib\nimport pytest\n").replace(IMPORT, "") + WRAPPER
+        + "\n\nif TYPE_CHECKING:\n    with contextlib.nullcontext():\n        " + IMPORT),
+    "typing-only-stub-added-below-beside-the-f811-cleanup": (
+        TYPED + WRAPPER, TYPED.replace(IMPORT, "") + WRAPPER + "\n\nif TYPE_CHECKING:\n    def total(lines: list) -> float: ...\n"),
 }
 
 
@@ -1700,7 +1706,10 @@ TWICE_FIXTURE = ("import pytest\nfrom app.prod import total\n\n\n@pytest.fixture
                  "        return lambda lines: total(lines)\n")
 INSTALLER = ("\n\n@pytest.fixture(autouse=True)\ndef install():\n{declared}    def total(lines):\n        return 105.0\n\n"
              "    yield\n")
-FROM_THE_FIRST_DEFINITION = {
+FAKE_MODULE = {"app/fakes.py": b"def total(lines):\n    return 105.0\n"}
+FAKES_HEAD = "import contextlib\nimport pytest\nfrom app import fakes, prod\nfrom app.prod import total\n\n\n"
+SHIM = "try:\n    def total(lines):\n        return prod.total(lines)\nexcept Exception:\n    pass\n"
+KEPT_STRICT = {
     "star-import-below-a-parked-stand-in-deleted": (
         PARKED_HEAD + SHADOW_FAKE + "\n\nfrom app.prod import *\n" + SHADOW_FIXTURE, PARKED_HEAD + SHADOW_FAKE + SHADOW_FIXTURE),
     "with-as-below-a-parked-stand-in-deleted": (
@@ -1729,12 +1738,43 @@ FROM_THE_FIRST_DEFINITION = {
         ABOVE + SHADOW_FAKE + "\n\nfrom app.prod import total\ncalc = total\n\n\n" + WRAPPER
         + "\n\n@pytest.fixture\ndef amount():\n    return calc\n",
         ABOVE + SHADOW_FAKE + "\n\ncalc = total\n\n\n" + WRAPPER + "\n\n@pytest.fixture\ndef amount():\n    return calc\n"),
+    # Eighth review (#638): each of these tells a surviving mutant of the comparison apart.
+    "test-of-an-if-around-a-restoring-import-rewritten": (
+        "import pytest\nfrom app.prod import total\n\nRESTORE = True\nSKIP = False\n\n\n" + SHADOW_FAKE
+        + "\n\nif RESTORE:\n    from app.prod import total\n" + SHADOW_FIXTURE,
+        "import pytest\nfrom app.prod import total\n\nRESTORE = True\nSKIP = False\n\n\n" + SHADOW_FAKE
+        + "\n\nif SKIP:\n    from app.prod import total\n" + SHADOW_FIXTURE),
+    "star-import-and-restore-swapped-on-one-line-beside-the-f811-cleanup": (
+        FAKES_HEAD + SHADOW_FAKE + "\n\nfrom app.fakes import *; total = prod.total\n" + SHADOW_FIXTURE,
+        FAKES_HEAD.replace(IMPORT, "") + SHADOW_FAKE + "\n\ntotal = prod.total; from app.fakes import *\n" + SHADOW_FIXTURE),
+    "dead-copy-added-above-the-wrapper": (
+        ABOVE + WRAPPER + SHADOW_FIXTURE,
+        ABOVE + "if False:\n    def total(lines):\n        return sum(p * q for p, q in lines)\n\n\n" + WRAPPER + SHADOW_FIXTURE),
+    "restoring-import-below-a-parked-stand-in-pointed-elsewhere": (
+        FAKES_HEAD + SHADOW_FAKE + "\n\nfrom app.prod import total\n" + SHADOW_FIXTURE,
+        FAKES_HEAD + SHADOW_FAKE + "\n\nfrom app.fakes import total\n" + SHADOW_FIXTURE),
+    "restoring-assignment-below-a-parked-stand-in-respelled": (
+        FAKES_HEAD.replace(IMPORT, "total = prod.total\n") + SHADOW_FAKE + "\n\ntotal = prod.total\n" + SHADOW_FIXTURE,
+        FAKES_HEAD.replace(IMPORT, "total = prod.total\n") + SHADOW_FAKE + "\n\ntotal = fakes.total\n" + SHADOW_FIXTURE),
+    "with-as-below-a-parked-stand-in-respelled": (
+        FAKES_HEAD + SHADOW_FAKE + "\n\nwith contextlib.nullcontext(prod.total) as total:\n    pass\n" + SHADOW_FIXTURE,
+        FAKES_HEAD + SHADOW_FAKE + "\n\nwith contextlib.nullcontext(fakes.total) as total:\n    pass\n" + SHADOW_FIXTURE),
+    "stand-in-added-below-a-try-shim": (
+        FAKES_HEAD + SHIM + SHADOW_FIXTURE, FAKES_HEAD + SHIM + "\n\n" + SHADOW_FAKE + SHADOW_FIXTURE),
+    # A dead first copy makes the stand-in import a change below the first
+    # definition, though it lies above the wrapper (red to green).
+    "stand-in-import-between-a-dead-first-copy-and-the-wrapper": (
+        FAKES_HEAD + "if False:\n    def total(lines):\n        return sum(p * q for p, q in lines)\n\n\ncalc = total\n\n\n"
+        + WRAPPER + "\n\n@pytest.fixture\ndef amount():\n    return calc\n",
+        FAKES_HEAD + "if False:\n    def total(lines):\n        return sum(p * q for p, q in lines)\n\n\n"
+        "from app.fakes import total\ncalc = total\n\n\n" + WRAPPER + "\n\n@pytest.fixture\ndef amount():\n    return calc\n"),
 }
 
 
-@pytest.mark.parametrize("name", sorted(FROM_THE_FIRST_DEFINITION))
-def test_a_change_from_a_conftest_s_first_definition_on_keeps_it_strict(name):
-    before, after = FROM_THE_FIRST_DEFINITION[name]
+@pytest.mark.parametrize("name", sorted(KEPT_STRICT))
+def test_a_conftest_change_the_leniency_test_sees_keeps_it_strict(name):
+    """From the first definition on, to the scopes around it, or to a `global` of the name."""
+    before, after = KEPT_STRICT[name]
     assert _holds_new_definition(ast.parse(before), ast.parse(after))
     with pytest.raises(EngineError, match="vendor/extlib"):
         judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["vendor/extlib/"])
@@ -1742,11 +1782,97 @@ def test_a_change_from_a_conftest_s_first_definition_on_keeps_it_strict(name):
         judge_listed({"conftest.py": before}, {"conftest.py": after}, {}, ["data/2024-01-01T00:00:00.json"])
 
 
-def test_a_stand_in_whose_only_import_was_below_it_is_reported_where_its_reader_is_readable():
-    """The import captured the name on the before side only."""
-    before, after = FROM_THE_FIRST_DEFINITION["only-import-below-a-parked-stand-in-deleted"]
+@pytest.mark.parametrize("name", ["only-import-below-a-parked-stand-in-deleted",
+                                  "restoring-import-below-a-parked-stand-in-pointed-elsewhere",
+                                  "restoring-assignment-below-a-parked-stand-in-respelled", "stand-in-added-below-a-try-shim",
+                                  "stand-in-import-between-a-dead-first-copy-and-the-wrapper"])
+def test_a_stand_in_a_strict_conftest_brings_into_force_is_reported_where_its_reader_is_readable(name):
+    """Among them, the import that captured the name on the before side only."""
+    before, after = KEPT_STRICT[name]
     _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after},
-                                          {"tests/test_total.py": SHADOW_READER})
+                                          {**FAKE_MODULE, "tests/test_total.py": SHADOW_READER})
+    assert verdict == "block" and "CONFTEST_PATCHES_PROD" in {f.rule for f in findings}
+
+
+# Eighth review (#638). A `global` or `nonlocal` of the name makes a
+# definition bind it in another scope when its function runs: there every
+# binding of the name in that scope is compared, above the first definition
+# too, and an unchanged one leaves the conftest lenient.
+
+GLOBAL_DEFINITION = ("\n\ndef pytest_configure(config):\n    global {name}\n\n    def {name}({params}):\n"
+                     "        return prod.{name}({params})\n")
+WRAPPED = "if True:\n    def total(lines):\n        return prod.total(lines)\n"
+UNCHANGED_GLOBAL = {
+    "f811-cleanup-beside-a-global-definition-of-the-name": (
+        ABOVE + WRAPPER + GLOBAL_DEFINITION.format(name="total", params="lines"),
+        ABOVE.replace(IMPORT, "") + WRAPPER + GLOBAL_DEFINITION.format(name="total", params="lines")),
+    "wrap-move-beside-a-global-definition-of-the-name": (
+        ABOVE + WRAPPER + GLOBAL_DEFINITION.format(name="total", params="lines"),
+        ABOVE + WRAPPED + GLOBAL_DEFINITION.format(name="total", params="lines")),
+    "wrap-move-beside-a-global-definition-of-another-name": (
+        BOTH + WRAPPER + GLOBAL_DEFINITION.format(name="rate", params=""),
+        BOTH + WRAPPED + GLOBAL_DEFINITION.format(name="rate", params="")),
+}
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+@pytest.mark.parametrize("name", sorted(UNCHANGED_GLOBAL))
+def test_an_unchanged_global_definition_leaves_a_conftest_lenient(name, listed):
+    before, after = UNCHANGED_GLOBAL[name]
+    assert not _holds_new_definition(ast.parse(before), ast.parse(after))
+    _ir, findings, verdict = judge_listed({"conftest.py": before, "tests/test_total.py": TOTAL_TEST},
+                                          {"conftest.py": after, "tests/test_total.py": TOTAL_TEST}, PROVIDERS, listed)
+    assert verdict == "pass" and [f.rule for f in findings if f.severity in ("high", "critical")] == []
+
+
+@pytest.mark.parametrize("listed", [["vendor/extlib/"], ["data/2024-01-01T00:00:00.json"]])
+def test_a_wrap_move_beside_a_global_definition_keeps_0130_s_report_elsewhere_in_the_diff(listed):
+    before, after = UNCHANGED_GLOBAL["wrap-move-beside-a-global-definition-of-another-name"]
+    cheat = TOTAL_TEST.replace("\n\ndef test_total", "\ntotal = lambda lines: 105.0\n\n\ndef test_total")
+    _ir, findings, verdict = judge_listed({"conftest.py": before, "tests/test_total.py": TOTAL_TEST},
+                                          {"conftest.py": after, "tests/test_total.py": cheat}, PROVIDERS, listed)
+    assert verdict == "block"
+    assert [(f.rule, f.after.text) for f in findings if f.rule == "TEST_PATCHES_SUBJECT"] == [
+        ("TEST_PATCHES_SUBJECT", "total = lambda lines: 105.0")]
+
+
+# Eighth review (#638). What the leniency test does not see (D-215's
+# Residuals): it matches the after side's bindings against the end of the
+# before side's, and it does not look at what reads the name. Each of these
+# conftests is lenient, so a test reading the stand-in from a submodule, or
+# from a path holding `:`, is not read; where the test is readable, the
+# stand-in is reported. The settled route to the same activation passes
+# every engine, readable or not.
+
+READ_CALC = "calc = total\n"
+CALC_FIXTURE = "\n\n@pytest.fixture\ndef amount():\n    return calc\n"
+SEEN_HEAD = "import pytest\n\nfrom app.prod import total\n\n\n"
+EARLY_RETURN = ("import pytest\n\nfrom app import prod\nfrom app.prod import total\n\n\n@pytest.fixture\ndef amount():\n"
+                "    return prod.total([(100, 1)])\n\n    def total(lines):\n        return 105.0\n\n"
+                "    return total([(100, 1)])\n")
+NOT_SEEN = {
+    "a-restoring-import-deleted-between-two-copies": (
+        SEEN_HEAD + SHADOW_FAKE + "\n\nfrom app.prod import total\n" + READ_CALC + "\n\n" + SHADOW_FAKE + CALC_FIXTURE,
+        SEEN_HEAD + SHADOW_FAKE + "\n\n" + READ_CALC + CALC_FIXTURE),
+    "a-wrapper-deleted-between-two-copies": (
+        SEEN_HEAD + SHADOW_FAKE + "\n\ndef total(lines):\n    return sum(p * q for p, q in lines)\n" + READ_CALC + "\n\n"
+        + SHADOW_FAKE + CALC_FIXTURE,
+        SEEN_HEAD + SHADOW_FAKE + "\n\n" + READ_CALC + CALC_FIXTURE),
+    "a-reader-moved-beside-the-shadowed-import-deleted": (
+        SEEN_HEAD + READ_CALC + "\n\n" + SHADOW_FAKE + CALC_FIXTURE,
+        "import pytest\n\n\n" + SHADOW_FAKE + "\n\n" + READ_CALC + CALC_FIXTURE),
+    "an-early-return-removed-beside-the-module-import-deleted": (
+        EARLY_RETURN,
+        EARLY_RETURN.replace("from app.prod import total\n", "").replace("    return prod.total([(100, 1)])\n\n", "")),
+}
+
+
+@pytest.mark.parametrize("name", sorted(NOT_SEEN))
+def test_what_the_leniency_test_does_not_see_is_reported_where_its_reader_is_readable(name):
+    before, after = NOT_SEEN[name]
+    assert not _holds_new_definition(ast.parse(before), ast.parse(after))
+    reader = CONFTEST_TEST if name.startswith("an-early-return") else SHADOW_READER
+    _ir, findings, verdict = judge_listed({"conftest.py": before}, {"conftest.py": after}, {"tests/test_total.py": reader})
     assert verdict == "block" and "CONFTEST_PATCHES_PROD" in {f.rule for f in findings}
 
 
