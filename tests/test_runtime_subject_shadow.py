@@ -1155,7 +1155,7 @@ def test_revision_cache_parses_identical_test_content_once(monkeypatch):
         ),
     )
     assert len(hits) == 1
-    assert calls == {"active": 1, "bindings": 1, "requests": 1, "parse": 2}
+    assert calls == {"active": 1, "bindings": 1, "requests": 1, "parse": 1}
 
 
 def test_revision_cache_fingerprints_each_equivalent_provider_content_once(monkeypatch):
