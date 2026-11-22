@@ -17,9 +17,9 @@ python -m checkwash --version
 python -m checkwash demo
 ```
 
-The version command should print `checkwash 0.13.1`. The demo shows the
-findings for eight sample changes. To check your uncommitted edits, run this
-from your Git repository:
+The version command should print `checkwash 0.13.1`. The demo blocks eight
+sample changes and passes one honest fix. To check your uncommitted edits,
+run this from your Git repository:
 
 ```sh
 python -m checkwash check
