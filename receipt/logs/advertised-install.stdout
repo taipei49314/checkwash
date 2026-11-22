@@ -1,0 +1,17 @@
+Collecting git+https://github.com/taipei49314/checkwash.git@v0.13.0
+  Cloning https://github.com/taipei49314/checkwash.git (to revision v0.13.0) to c:\users\nelson\dev\cw131t1\s\pip-req-build-aglo5tuw
+  Resolved https://github.com/taipei49314/checkwash.git to commit f8ff8258d2e2a9a68488d5c1894f1518dfe02bce
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: checkwash
+  Building wheel for checkwash (pyproject.toml): started
+  Building wheel for checkwash (pyproject.toml): finished with status 'done'
+  Created wheel for checkwash: filename=checkwash-0.13.0-py3-none-any.whl size=1102034 sha256=11fc978cc1c51259cf95ae8b4a2a3cf66d85c4cc6ab70d38f4116e61a259d419
+  Stored in directory: C:\Users\nelson\dev\cw131t1\s\pip-ephem-wheel-cache-brb89r1o\wheels\ab\84\ac\b3b967c1a77b7e13a379e6d686a20f62c48cb3bcb205a38048
+Successfully built checkwash
+Installing collected packages: checkwash
+Successfully installed checkwash-0.13.0
