@@ -15,13 +15,15 @@ from __future__ import annotations
 
 import ast
 import copy
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
+from functools import cache
 
 from checkwash.change import EngineError
 from checkwash.conftest_context import ConftestContext
 from checkwash.frontends.python.frontend import _static_truth, parse_python
 from checkwash.frontends.python.mock_testcase_replacements import restructured_patch_event
+from checkwash.frontends.python.standin_imports import sibling_rebindings
 from checkwash.frontends.python.syntax import parse_module
 from checkwash.gating import unit_is_live
 from checkwash.opaque import opaque_error, split_inventory
@@ -101,6 +103,7 @@ class _Module:
     functions: dict[str, _Function] = field(default_factory=dict)
     env: dict[str, _Value] = field(default_factory=dict)
     baseline_imports: dict[tuple[str, str], str] = field(default_factory=dict)
+    sibling_rebinding: Callable[[str, str, str, str, int], bool] | None = None
 
 
 def _value(*values, alias=None):
@@ -671,8 +674,13 @@ class _Trace:
         old = module.baseline_imports.get((qualname, local))
         if not old or old == target or old.startswith("@"):
             return value
-        if not (self.owned(old) and self.owned(target)):
+        if not self.owned(old) or target.split(".", 1)[0] in self.deny:
             return value
+        if not self.owned(target):
+            imported = _import_module(node, module.package) if isinstance(node, ast.ImportFrom) else target
+            if not (module.sibling_rebinding and imported
+                    and module.sibling_rebinding(module.path, old, imported, target, self.side)):
+                return value
         effect = self.install(old, "binding", _Value(target), node, node, module)
         if effect is None:
             return value
@@ -1030,6 +1038,24 @@ def _observed_for_test(modules, test_path, qualname, context, side, deny, budget
     return trace.observed
 
 
+def _inventory_paths(raw_inventory):
+    if (not isinstance(raw_inventory, Sequence) or isinstance(raw_inventory, (str, bytes))
+            or len(raw_inventory) > 200_000):
+        raise EngineError("stand-in strict inventory is invalid or exceeds the path limit")
+    # A submodule is listed as a directory whose content is unknown (#335).
+    raw_inventory, opaque = split_inventory(raw_inventory)
+    inventory = set()
+    for path in (*raw_inventory, *opaque):
+        if not isinstance(path, str):
+            raise EngineError("stand-in strict inventory contains an invalid path")
+        path = path.replace("\\", "/")
+        if not path or path.startswith("/") or ":" in path or any(p in {"", ".", ".."} for p in path.split("/")):
+            raise EngineError("stand-in strict inventory contains an unsafe path")
+        if path not in opaque:
+            inventory.add(path)
+    return inventory, opaque
+
+
 def installation_events(ir, changes, config, *, root_reader=None, root_searcher=None, root_path_lister=None):
     """(path, unit, target, text, span) for new effects on existing oracles."""
     # Legacy direct callers (including frozen corpus emitters) do not provide
@@ -1046,6 +1072,7 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             changed[old] = (change.before, None)
     deny = known_baseline() | set(ir.globals.third_party_roots)
     candidates = set()
+    rebound_paths = set()
     candidate_bytes = 0
     for path, sides in changed.items():
         role = config.role_of(path)
@@ -1062,6 +1089,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
             role == "test" and sides[0] is not None and sides[1] is not None
             and _import_rebind(sides[0], sides[1], path=path)
         )
+        if rebound:
+            rebound_paths.add(path)
         if (rebound or any(_candidate(source, imported, path=path, side=side)
                            for side, source in zip(("before", "after"), sides))) and (
             role == "test" or _new_assignment_candidate(sides, deny, path=path)
@@ -1070,29 +1099,19 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
     if not candidates:
         return []
     conftest_changed = {path for path in candidates if config.role_of(path) == "conftest"}
-    raw_inventory = ()
-    if conftest_changed:
+
+    @cache
+    def paths():
         if root_path_lister is not None:
-            raw_inventory = root_path_lister()
-        elif root_searcher is not None:
+            return _inventory_paths(root_path_lister())
+        if root_searcher is not None:
             # Legacy STRICT search's empty needle inventories every nonempty
             # Python file. That is complete for oracle consumers (an empty
             # module has none), but is NOT a shadow/package inventory.
-            raw_inventory = root_searcher([""])
-    if (not isinstance(raw_inventory, Sequence) or isinstance(raw_inventory, (str, bytes))
-            or len(raw_inventory) > 200_000):
-        raise EngineError("stand-in strict inventory is invalid or exceeds the path limit")
-    # A submodule is listed as a directory whose content is unknown (#335).
-    raw_inventory, opaque = split_inventory(raw_inventory)
-    inventory = set()
-    for path in (*raw_inventory, *opaque):
-        if not isinstance(path, str):
-            raise EngineError("stand-in strict inventory contains an invalid path")
-        path = path.replace("\\", "/")
-        if not path or path.startswith("/") or ":" in path or any(p in {"", ".", ".."} for p in path.split("/")):
-            raise EngineError("stand-in strict inventory contains an unsafe path")
-        if path not in opaque:
-            inventory.add(path)
+            return _inventory_paths(root_searcher([""]))
+        return set(), ()
+
+    inventory, opaque = paths() if conftest_changed else (set(), ())
 
     def scoped(path):
         return any(not c.rpartition("/")[0] or path.startswith(c.rpartition("/")[0] + "/")
@@ -1147,6 +1166,14 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
 
     # Ownership probes share the same bounded reader as consumer discovery.
     context = ConftestContext(changes, lambda path: read(path, 1))
+
+    @cache
+    def sibling_resolver():
+        return sibling_rebindings(*paths(), changes, config, read)
+
+    def sibling_rebinding(test, old, imported, target, side):
+        return sibling_resolver()(test, old, imported, target, side)
+
     authority_search = root_searcher
     if authority_search is None and root_path_lister is not None:
         authority_search = lambda _needles: root_path_lister()
@@ -1182,6 +1209,8 @@ def installation_events(ir, changes, config, *, root_reader=None, root_searcher=
                 module = _module(source_path, source, package, baseline, side=("before", "after")[side])
                 if module is None:
                     raise EngineError("stand-in provider context could not be parsed")
+                if source_path in rebound_paths and root_path_lister is not None:
+                    module.sibling_rebinding = sibling_rebinding
                 # Baseline imports identify the removal-and-assignment form;
                 # they do not execute or activate a provider on the head side.
                 seed = _Trace([], context, side, deny, budget, path=source_path, unit="<module body>")
