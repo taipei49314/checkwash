@@ -1,5 +1,49 @@
 # Releasing
 
+## 0.13.1 pre-tag authorization and preparation
+
+On 2026-11-22 (Asia/Taipei), Nelson requested 「幫我做到發版前」 and selected
+「核可 0.13.1，做到打 tag 前」 in response to Codex's question about preparing
+0.13.1 from merged #640, merging the verified release PR and completing the
+main verification before creating the tag. The question and option were
+written by Codex. This one-time authorization covers those pre-tag operations.
+Creating the tag and publishing the release require a later decision.
+
+The release base is `0477013159face076a2c6a887f9d5b235c76d5e5`, the merge of
+#640. Its tree matches verified PR head `b5219abb`. The release bridge uses
+reviewed collector ref `review/collector-d-0131-20261122` at that base for
+both stages. PR and main each require a fresh PJU release-stage receipt.
+The release head also runs the six-leg Windows/WSL Python 3.11–3.13 suite
+and corpus comparison. The hosted source-at-M checkpoint follows the merge.
+Public CLI and Action installation references continue to name v0.13.0.
+The [candidate guide](releases/v0.13.1-public-launch.md) and
+[known issues](KNOWN-ISSUES-v0.13.1.md) describe the bounded #635 change.
+
+**R29 comparison.** The published 0.13.0 zipapp (SHA256
+`326e2a0c1e5e983869893a4c11c4f0ddba5e75e7c23a8984a3357042a87fbeff`)
+was compared with `448e21ed918c038f5fb56d4771ef1c4a7c742cff` on PJU, Windows
+CPython 3.11.9, `HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. That commit and the
+release base share the same `src/` tree,
+`673171a70fbd531f8521352cb786107f4e156078`. D-196 allows only the version
+string at A and the own Action pin line at R to differ. On the fixed 3,600
+members (manifest SHA256 `f6281caad596c5d6f054dd8f0050abb21d63a803fa7bf2fa3f6c694d05559de2`),
+all paired exit codes, stdout and stderr matched byte for byte. Python had
+1,726 matching passes and 74 matching blocks. JS/TS had 1,748 matching passes,
+50 matching blocks and two matching strict-snapshot symlink errors
+(apollo-client `8a51ea63`, undici `0f1f8903`). The owner movement list is
+empty. Codex reported these in-sample results before the release-preparation
+instruction. The raw comparison archive SHA256 is
+`3306799bbc6a5d1634a99d9b05e5ef7036d23a1f9140e76aa9c137cf7de816b4`.
+The separately selected #635 reproducer moved from pass to block.
+[JS/TS history](../benchmarks/javascript-replay/results.md)
+
+**D-176.** Both the published zipapp and the frozen release base passed all
+three separately replayed uvloop inputs, with identical stdout/stderr and empty
+findings in all six calls. The targeted report SHA256 is
+`13a49f5c2901dfb97f9a0da439da775dacd6deab8d0bf9ba99b2761756cdf2f8`.
+The limited applicability and Codex's version-specific decision are recorded
+in the [0.13.1 risk disposition](d176-cost-disposition-0.13.1.md).
+
 ## Pre-1.0 repair continuation instruction (2026-10-27)
 
 Nelson instructed the current repair goal:

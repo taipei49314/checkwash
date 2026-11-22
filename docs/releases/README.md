@@ -9,6 +9,10 @@ has the current install commands and Action pin, and the
 version, commit and download bytes behind them. A new publication record
 starts from the [publication record template](publication-record-template.md).
 
+## v0.13.1 candidate
+
+The Python detector can identify a local function that replaces the production function called by an existing test. It also covers the reviewed numeric fixture case. [Candidate guide](v0.13.1-public-launch.md) · [Known issues](../KNOWN-ISSUES-v0.13.1.md)
+
 ## v0.13.0
 
 Published 2026-11-17 (GitHub Release and PyPI, Asia/Taipei; 2026-11-16 and

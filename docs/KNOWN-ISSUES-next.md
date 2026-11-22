@@ -1,3 +1,7 @@
+# 0.13.1 candidate — 2026-11-22
+
+The candidate adds bounded coverage for the same-name function reported in #635. The versioned page describes which tests and fixtures it covers and which related issues remain open. [Known issues for 0.13.1](KNOWN-ISSUES-v0.13.1.md)
+
 # After 0.13.0 — 2026-11-19
 
 Found after v0.13.0 was published. 0.13.0 has these limits, and

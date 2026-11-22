@@ -19,6 +19,7 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
+The [0.13.1 candidate](docs/releases/v0.13.1-public-launch.md) adds a Python test check for a local replacement of an imported function.
 The install commands and Action pin below name v0.13.0, the latest release
 whose public files are verified
 ([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
