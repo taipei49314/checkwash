@@ -70,6 +70,7 @@ from checkwash.gitio import (
     resolve_commit,
     session_merge_base,
 )
+from checkwash.gitio.git import GitCommandError
 from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
 from checkwash.gitio.pytest_configs import PairedPytestConfigs, WorktreePytestConfigs
 from checkwash.report.jsonout import findings_to_json, ir_to_json, size_refusal_to_json
@@ -607,6 +608,25 @@ def _released_message(visible: list, window: _Window | None) -> str:
     return text
 
 
+class CheckInputError(Exception):
+    """An input to check needs the caller's attention."""
+
+
+def _range_commit(repo: str, revision: str, side: str, requested: str) -> str:
+    try:
+        return resolve_commit(repo, revision, quiet_missing=True)
+    except GitCommandError as exc:
+        wrong_type = exc.detail.endswith(("object dereferences to tree type", "object dereferences to blob type"))
+        if exc.status != 1 or (exc.detail and not wrong_type):
+            raise
+        message = f"cannot resolve {revision!r} ({side} of {requested!r})"
+        if wrong_type:
+            message += ". A range endpoint must name a commit"
+        if side == "base" and revision in {"HEAD~1", "HEAD^", "HEAD^1", "HEAD~"}:
+            message += ". This range needs an earlier commit. To review uncommitted changes, run 'checkwash check' without a range"
+        raise CheckInputError(message) from exc
+
+
 def _reviewed_on_branch(repo: str, tip: str, branch: str, run: _Run) -> dict[str, str]:
     """Exemptions to mention in a blocked terminal report, after the verdict is final."""
     snapshot = GitSnapshot(repo, tip, side="base", resolved=_resolved_oid(tip))
@@ -633,29 +653,21 @@ def _cmd_check(args: argparse.Namespace) -> int:
         if hook_input is not None:
             window = _session_window(repo, hook_input)
     if args.range:
-        if "..." in args.range:
-            # Three-dot means merge-base(A,B)..B — the standard PR-diff
-            # idiom. Silently downgrading it to two dots pulled base-branch
-            # prod commits into the diff, which disarmed E1 on every open PR
-            # whose base branch had moved (confirmed red-team finding).
-            left, _, right = args.range.partition("...")
+        separator = "..." if "..." in args.range else ".."
+        left, _, right = args.range.partition(separator)
+        if separator == "...":
             right = right.lstrip(".")
-            if not left or not right:
-                write_text(f"error: range must be BASE...HEAD, got {args.range!r}\n", sys.stderr)
-                return 2
-            tip, head = resolve_commit(repo, left), resolve_commit(repo, right)
-            base = merge_base(repo, tip, head)
+        if not left or not right:
+            write_text(f"error: range must be BASE{separator}HEAD, got {args.range!r}\n", sys.stderr)
+            return 2
+        base = _range_commit(repo, left, "base", args.range)
+        head = _range_commit(repo, right, "head", args.range)
+        if separator == "...":
+            # Only changes since the common ancestor belong to a PR.
+            tip = base
+            base = resolve_commit(repo, merge_base(repo, base, head))
             if tip != base:
                 review_branch = (tip, left)
-        elif ".." in args.range:
-            base, _, head = args.range.partition("..")
-        else:
-            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
-            return 2
-        if not base or not head:
-            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
-            return 2
-        base, head = resolve_commit(repo, base), resolve_commit(repo, head)
         base_snapshot = GitSnapshot(repo, base, side="base", resolved=_resolved_oid(base))
         head_snapshot = GitSnapshot(repo, head, side="head", resolved=_resolved_oid(head))
         if _can_use_range_snapshots():
@@ -1289,6 +1301,10 @@ def _reroot(args: argparse.Namespace, *, required: bool, **lookup) -> None:
         root = resolve_repository_root(given, **lookup)
     except GitError as exc:
         if required:
+            if (args.command == "check" and isinstance(exc, GitCommandError)
+                    and exc.detail.startswith("fatal: not a git repository")):
+                path = os.path.abspath(given)
+                raise CheckInputError(f"not inside a Git repository: {path if path.isprintable() else repr(path)}") from exc
             raise
         if isinstance(exc, GitRootUnresolved):
             reason = " ".join(str(exc).splitlines())
@@ -1370,7 +1386,9 @@ def main(argv: list[str] | None = None) -> int:
             if usage:
                 write_text(usage, sys.stderr)
                 return 2
-            _reroot(args, required=True)
+            # Git's repository-discovery diagnostic is how we distinguish an
+            # ordinary non-repository from access, I/O, and executable errors.
+            _reroot(args, required=True, env={**os.environ, "LC_ALL": "C"})
             return _cmd_check(args)
         if args.command == "quality":
             from checkwash.quality.cli import run as run_quality
@@ -1432,6 +1450,11 @@ def main(argv: list[str] | None = None) -> int:
                 run_sweep=args.run_sweep,
             )
         parser.print_help()
+        return 2
+    except CheckInputError as exc:
+        if args.format != "term" or args.emit_ir:
+            return _engine_error(args, str(exc))
+        write_text(f"checkwash: {exc}\n", sys.stderr)
         return 2
     except (GitError, OSError, RecursionError) as exc:
         return _engine_error(args, str(exc))
