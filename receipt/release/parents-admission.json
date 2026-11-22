@@ -1,0 +1,7 @@
+{
+  "release-event": {
+    "report": "parents/release-event.json",
+    "sha256": "49d86c6a55de8b248d7600f47cd53059c454440564b5e70666f411190364aa3d",
+    "check_run_id": 137110720869
+  }
+}

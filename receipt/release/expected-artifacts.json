@@ -1,0 +1,14 @@
+{
+  "checkwash-0.13.1-py3-none-any.whl": {
+    "bytes": 1103713,
+    "sha256": "2302241698bbf2291b897c85e53df1d281231af1b985c762802aeb101bb969c1"
+  },
+  "checkwash-0.13.1.tar.gz": {
+    "bytes": 5829800,
+    "sha256": "9073e787d2311fa8b139fac83b4768c83fb2d65bc86b1dba289d54255bc8c2d1"
+  },
+  "checkwash.pyz": {
+    "bytes": 1079499,
+    "sha256": "0a987325c6f738129f5dbdc1e0287cfeab40517342b46df80707cccff8dd2839"
+  }
+}
