@@ -1452,7 +1452,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
     except CheckInputError as exc:
-        if _hook_json(args):
+        if args.format != "term" or args.emit_ir:
             return _engine_error(args, str(exc))
         write_text(f"checkwash: {exc}\n", sys.stderr)
         return 2
