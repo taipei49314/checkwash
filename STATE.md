@@ -151,7 +151,7 @@ moves `D-202` to `D-213` unchanged to
 [DECISIONS-archive-6](DECISIONS-archive-6.md), updates 106 links across 15
 documents, and rotates `tests/verdict_gate/baseline.toml` and
 `tests/gates/verdict_gate_accepted.toml` to `v0.13.0`
-([D-214](DECISIONS.md); proposal run on `86139468`: `185` cases, `161
+([D-214](DECISIONS-archive-7.md); proposal run on `86139468`: `185` cases, `161
 block->block`, `24 pass->pass`, `0` failures, `0` reported, `baseline_blocked`
 unchanged at `161`, archived on `evidence/v0130-rotation-proposal-20261118`
 `838be0d0`). Newly opened issues `#624`–`#631` and `#622` remain untouched,
