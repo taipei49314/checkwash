@@ -1,0 +1,52 @@
+{
+  "137049003299": [],
+  "137049083153": [],
+  "137049083168": [],
+  "137049083190": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5e2a89ef0d447ae6e08c289f4a3357325b7286e9/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "137049083210": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5e2a89ef0d447ae6e08c289f4a3357325b7286e9/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "137049083234": [],
+  "137049083251": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5e2a89ef0d447ae6e08c289f4a3357325b7286e9/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "137049083342": [],
+  "137049084328": [],
+  "137049085050": [],
+  "137052619427": []
+}
