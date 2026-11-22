@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable
 import os
 import sys
@@ -17,6 +18,12 @@ from checkwash.report.textio import unicode_decoration
 from checkwash.unanalysed_test_files import unanalysed_test_note
 
 _SEV_COLOR = {"critical": "35", "high": "31", "warn": "33", "info": "36"}
+_REVIEW_HINTS = {
+    "TEST_PATCHES_SUBJECT": "Check which implementation the assertion calls and restore the production subject.",
+    "ASSERT_WEAKENED": "Restore the assertion that checks the intended behavior.",
+    "EXPECTED_VALUE_CHANGED": "Check the new expected value against the intended behavior.",
+    "GUARDRAIL_TOUCHED": "Review the guardrail change with its owner.",
+}
 
 
 def _use_color(stream) -> bool:
@@ -90,6 +97,8 @@ def render(
             lines.append(_c("33", sym["warn"] + " " + head, color))
         else:
             lines.append(_c("32", sym["pass"] + " " + head, color))
+    elif not visible:
+        lines.append(_c("32", f"{sym['pass']} checkwash: pass ({len(suppressed)} allowlisted)", color))
     else:
         threshold = SEVERITY_ORDER[fail_on]
         n_at_or_above = sum(
@@ -106,13 +115,36 @@ def render(
             lines.append(_c("33", sym["warn"] + " " + head, color))
     lines.append("")
 
+    def assertion_edit(f):
+        if f.rule in {"ASSERT_WEAKENED", "EXPECTED_VALUE_CHANGED"} and f.before and f.after:
+            return (f.path, f.unit, f.before.span, f.after.span, f.before.text, f.after.text)
+        return None
+
+    edits = Counter(key for f in visible if (key := assertion_edit(f)) is not None)
     for f in visible:
         sev = _c(_SEV_COLOR.get(f.severity, "0"), f.severity.upper(), color)
         where = f"{f.path} :: {f.unit}" if f.unit else f.path
         lines.append(f"{f.rule}   {sev}   {where}")
-        lines.append(f"  {f.message}")
+        local = (context.local_definitions.get((f.path, f.unit, f.after.span))
+                 if context and f.rule == "TEST_PATCHES_SUBJECT" and f.unit and f.after else None)
+        if local:
+            name, target = local
+            lines.append(f"  This test calls its own {name} function. Remove the local definition so the assertion checks the imported {target} again.")
+        else:
+            lines.append(f"  {f.message}")
+        edit = assertion_edit(f)
+        if edit and edits[edit] > 1:
+            lines.append(f"  This assertion has {edits[edit]} findings. Each has its own fingerprint.")
+            del edits[edit]
+        if f.rule == "TEST_DISABLED" and "PROD_SYMBOL_REMOVED" in f.deescalators:
+            lines.append("  A production symbol was removed too. If the test and function were renamed, compare the replacement test's assertions.")
+        if blocking and f.severity in ("high", "critical") and not local:
+            advice = _REVIEW_HINTS.get(f.rule)
+            if advice:
+                lines.append(f"  {advice}")
         if f.escalators:
-            lines.append(f"  why high: {', '.join(f.escalators)}" if f.severity in ("high", "critical") else f"  escalators: {', '.join(f.escalators)}")
+            label = f"why {f.severity}" if f.severity in ("high", "critical") else "escalators"
+            lines.append(f"  {label}: {', '.join(f.escalators)}")
         if f.deescalators:
             lines.append(f"  held at {f.severity} by: {', '.join(f.deescalators)}")
         elif f.severity in ("high", "critical"):
@@ -125,7 +157,10 @@ def render(
         if f.after is not None:
             lines.append(f"  after   {_evidence(f.after.text, sym['ellipsis'])}")
         if f.severity in ("high", "critical"):
-            lines.append("  next: fix the code, or record a reviewed exemption:")
+            if local:
+                lines.append("  If the replacement is intentional, record a reviewed exemption:")
+            else:
+                lines.append("  next: fix the code, or record a reviewed exemption:")
             lines.append(f'    checkwash allow "{f.fingerprint}" --reason "..."')
             # The allowlist is read from the *base* side, so an agent cannot
             # exempt itself inside the diff under review. Correct, and it made

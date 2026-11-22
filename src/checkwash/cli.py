@@ -1132,6 +1132,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sweep_p.add_argument("revs", nargs="?", default="HEAD", help="rev-list range, e.g. HEAD or main")
     sweep_p.add_argument("--limit", type=int, default=200)
+    sweep_p.add_argument("--format", choices=("term", "json"), help="default: terminal summary on a TTY, JSON when piped")
     sweep_p.add_argument("--fail-on", choices=list(SEVERITY_ORDER), default=None)
     sweep_p.add_argument("--repo", default=".", help=_REPO_HELP)
 
@@ -1384,7 +1385,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "sweep":
             _reroot(args, required=True)
             result = sweep(args.repo, args.revs, args.limit, _today(), args.fail_on)
-            _write_machine(result.to_json())
+            if args.format == "term" or (args.format is None and sys.stdout is not None and sys.stdout.isatty()):
+                _write_term(result.to_term())
+            else:
+                _write_machine(result.to_json())
             return 0
         if args.command == "demo":
             from checkwash.demo import run as run_demo

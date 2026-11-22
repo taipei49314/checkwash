@@ -715,6 +715,7 @@ def test_allow_writes_the_ledger_that_check_reads_under_the_new_name(repo):
     exempt = _checkwash(repo, "check")
     assert exempt.returncode == 0, exempt.stdout
     assert "allowlisted findings: 1" in exempt.stdout
+    assert "checkwash: pass (1 allowlisted)" in exempt.stdout.splitlines()[0]
     assert "see .checkwash/allow.toml" in exempt.stdout
 
 
@@ -731,6 +732,7 @@ def test_creating_own_config_with_a_detector_disabled_blocks_the_planting_commit
     planted = _checkwash(repo, "check", "HEAD~1..HEAD")
     assert planted.returncode == 1, planted.stdout
     assert "GUARDRAIL_TOUCHED   CRITICAL" in planted.stdout
+    assert "why critical:" in planted.stdout
     assert "detector disabled" in planted.stdout
 
 

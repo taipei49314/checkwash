@@ -30,6 +30,7 @@ def record_standin_installations(
     root_reader: Any = None,
     root_searcher: Any = None,
     root_path_lister: Any = None,
+    report_context=None,
 ) -> None:
     """Collect Python and JS stand-in/subject replacement events onto `ir.globals`."""
     eng = _eng()
@@ -54,6 +55,7 @@ def record_standin_installations(
             root_reader=root_reader,
             root_searcher=root_searcher,
             root_path_lister=root_path_lister,
+            report_context=report_context,
         ),
         lambda: eng.callable_fixture_subject_events(
             ir, changes, root_reader=root_reader, root_searcher=root_searcher,

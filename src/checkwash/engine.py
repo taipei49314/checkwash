@@ -872,6 +872,7 @@ def build_ir(
             surface.ir, intake.changes, intake.unread_changes, config,
             root_reader=intake.root_reader, root_searcher=root_searcher,
             root_path_lister=root_path_lister,
+            report_context=report_context,
         )
         _mark_equivalence_and_provenance(
             surface.ir, surface.raw_by_path, intake.root_reader, root_searcher,
