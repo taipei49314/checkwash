@@ -124,3 +124,24 @@ def test_head_only_allowance_is_rejected_and_base_allowance_precedes_e2(tmp_path
     assert not untrusted_range["allowlisted"]
     assert untrusted_range["severity"] == "high"
     assert untrusted_range["escalators"] == expected_reasons
+
+    # A reviewed exemption can land on main after the topic branch forked.
+    _git(repo, "checkout", "-b", "topic", base_without_allowance)
+    _git(repo, "cherry-pick", head)
+    _git(repo, "branch", "reviewed", base_with_allowance)
+    status, _, topic = _check(repo, "reviewed...topic")
+    assert status == 1 and not topic["allowlisted"]
+    cmd = [sys.executable, "-m", "checkwash", "check", "reviewed...topic", "--repo", str(repo),
+           "--task", str(repo / "TASK.md")]
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2] / "src"),
+           "PYTHONUTF8": "1", "GREENWASH_TODAY": "2026-10-23"}
+    report = subprocess.run(cmd, env=env, capture_output=True, timeout=120)
+    assert report.returncode == 1
+    assert f"active exemption for {original['fingerprint']} exists on 'reviewed'" in report.stdout.decode()
+    assert b"Update this branch" in report.stdout
+    expired = subprocess.run(cmd, env={**env, "GREENWASH_TODAY": "2026-11-01"},
+                             capture_output=True, timeout=120)
+    assert expired.returncode == 1 and b"Update this branch" not in expired.stdout
+    _git(repo, "merge", "--no-edit", "reviewed")
+    status, _, updated = _check(repo, "reviewed...topic")
+    assert status == 0 and updated["allowlisted"]

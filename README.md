@@ -182,6 +182,11 @@ review first, and protect `.checkwash/` and `.greenwash/` with
 [CODEOWNERS](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#4-codeowners)
 ([exemption rules](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#3-allowlist--reviewed-time-boxed-base-side)).
 
+For a local `main...branch` check, merge or rebase onto the updated `main` so
+the common ancestor includes the exemption. On GitHub, push to the pull
+request branch or use **Update branch** to trigger a new pull request event.
+Re-running an old job uses the original event's commits.
+
 **Report a false block.** If checkwash blocks an honest change, check the
 [failure ledger](https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md)
 first, then open an [issue](https://github.com/taipei49314/checkwash/issues)
