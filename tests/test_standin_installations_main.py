@@ -40,6 +40,68 @@ def hits(result, rule="TEST_PATCHES_SUBJECT"):
     return [finding for finding in result[1] if finding.rule == rule]
 
 
+@pytest.mark.parametrize("base_import,head_import,call", [
+    ("from hours import convert", "from durations import convert", "convert(3)"),
+    ("import hours as units", "import durations as units", "units.convert(3)"),
+])
+@pytest.mark.parametrize("existing", [True, False])
+def test_test_import_rebinding_tracks_an_importable_sibling(base_import, head_import, call, existing):
+    path = "tests/test_units.py"
+    sibling = "tests/durations.py"
+    implementation = b"def convert(days):\n    return days * 24\n"
+    check = f"\ndef test_convert():\n    assert {call} == 72\n"
+    before = {path: (base_import + check).encode()}
+    if existing:
+        before[sibling] = implementation
+    after = {path: (head_import + check).encode(), sibling: implementation}
+    findings = hits(judge(before, after, {"hours.py": implementation}))
+    assert [(finding.path, finding.unit, finding.severity) for finding in findings] == [(path, "test_convert", "high")]
+
+
+@pytest.mark.parametrize("context", [
+    {"tests/__init__.py": b""},
+    {"pytest.ini": b"[pytest]\naddopts = --import-mode=importlib\n"},
+    {".github/workflows/test.yml": b"jobs:\n  test:\n    steps:\n      - run: pytest --import-mode=importlib\n"},
+])
+def test_bare_import_outside_the_pytest_search_path_is_not_a_proven_sibling(context):
+    path = "tests/test_units.py"
+    before = b"from hours import convert\ndef test_convert():\n    assert convert(3) == 72\n"
+    after = before.replace(b"from hours", b"from durations")
+    implementation = b"def convert(days):\n    return days * 24\n"
+    common = {"hours.py": implementation, "tests/durations.py": implementation, **context}
+    assert not hits(judge({path: before}, {path: after}, common))
+
+
+@pytest.mark.parametrize("config", [
+    b"[pytest]\naddopts = --import-mode=append\n",
+    b"[pytest]\naddopts = --import-mode=importlib\npythonpath = tests\n",
+])
+def test_a_sibling_available_through_the_effective_pytest_path_is_owned(config):
+    path = "tests/test_units.py"
+    before = b"from hours import convert\ndef test_convert():\n    assert convert(3) == 72\n"
+    after = before.replace(b"from hours", b"from durations")
+    implementation = b"def convert(days):\n    return days * 24\n"
+    common = {"hours.py": implementation, "tests/durations.py": implementation, "pytest.ini": config}
+    assert len(hits(judge({path: before}, {path: after}, common))) == 1
+
+
+def test_following_a_moved_provider_into_the_test_directory_is_not_a_rebinding():
+    path = "tests/test_units.py"
+    before = b"from hours import convert\ndef test_convert():\n    assert convert(3) == 72\n"
+    after = before.replace(b"from hours", b"from durations")
+    implementation = b"def convert(days):\n    return days * 24\n"
+    assert not hits(judge({path: before, "hours.py": implementation},
+                          {path: after, "tests/durations.py": implementation}))
+
+
+def test_two_import_paths_for_the_same_sibling_and_symbol_do_not_change_the_binding():
+    path = "tests/test_units.py"
+    before = b"from tests.durations import convert\ndef test_convert():\n    assert convert(3) == 72\n"
+    after = before.replace(b"from tests.durations", b"from durations")
+    assert not hits(judge({path: before}, {path: after},
+                          {"tests/durations.py": b"def convert(days):\n    return days * 24\n"}))
+
+
 @pytest.mark.parametrize("install", [
     "billing.total = lambda: 3",
     "setattr(billing, 'total', lambda: 3)",
