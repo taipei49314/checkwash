@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 
 [[package]]
 name = "checkwash"
-version = "0.13.0"
+version = "0.13.1"
 source = { editable = "." }
 
 [package.optional-dependencies]

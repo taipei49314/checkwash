@@ -289,6 +289,18 @@ superseding the pre-audit `eece00f3` run in `ae6ed8dc` and `6b27b9ea`); the
 release procedure's 0.13.0 section records the run identities and hashes. These
 in-sample counts are not a false-positive rate.
 
+## Run 9: actual v0.13.0 against the 0.13.1 candidate
+
+The published v0.13.0 zipapp (tag commit `9ada8cfa`, built from `7d458142`)
+and the candidate at `448e21ed` (`src/` tree `673171a7`, also the tree at
+release base `04770131`) checked all 1,800 JS/TS members against their first
+parents on PJU. The 1,748 passes, 50 blocks and two symlink errors matched.
+Every exit code, stdout and stderr matched byte for byte. The other half of
+the fixed set, 1,800 Python members, had 1,726 matching passes and 74 matching
+blocks. These are in-sample commit counts. The release procedure permits
+the version and own Action pin changes under D-196.
+[Release evidence](../../docs/RELEASING.md#0131-pre-tag-authorization-and-preparation)
+
 ## What these runs do not show
 
 - **A false-positive rate.** The 39 commits that v0.7.0 and v0.8.0 both
