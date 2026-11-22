@@ -28,6 +28,8 @@ class ReportContext:
     _origins: dict[tuple[str, int, tuple[int, int], str], set[str]] = field(
         default_factory=dict
     )
+    # For a proved same-name definition, identify the local and imported callables.
+    local_definitions: dict[tuple[str, str, tuple[int, int]], tuple[str, str]] = field(default_factory=dict)
 
     def snapshot(self, path: str, side: int, data: bytes | None) -> None:
         if self.collect_locations and data is not None:

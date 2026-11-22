@@ -53,6 +53,15 @@ class SweepResult:
     # Optional, per-commit observations; neither findings nor successful runs.
     commit_diagnostics: list[dict] = field(default_factory=list)
 
+    def to_term(self) -> str:
+        counts = Counter()
+        for (rule, _severity), count in self.by_rule_severity.items():
+            counts[rule] += count
+        top = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:5]
+        return (f"Commits analysed: {self.commits}; blocked: {self.blocked}; "
+                f"engine errors: {self.errors}; skipped (no parent): {self.skipped}\n"
+                + "Top rules: " + (", ".join(f"{rule} ({n})" for rule, n in top) or "none") + "\n")
+
     def to_json(self) -> str:
         counts: dict[str, dict[str, int]] = {}
         for (rule, severity), n in sorted(self.by_rule_severity.items()):

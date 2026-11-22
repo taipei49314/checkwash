@@ -96,6 +96,8 @@ def test_analysis_exception_does_not_enter_analysed_denominator_or_echo_its_text
     encoded = result.to_json()
     event, = json.loads(encoded)["commit_diagnostics"]
     assert (result.commits, result.errors, result.skipped, result.blocked) == (1, 1, 0, 0)
+    assert "Commits analysed: 1" in result.to_term()
+    assert "engine errors: 1" in result.to_term()
     assert (event["commit"], event["parent"], event["phase"], event["kind"], event["exception_type"]) == (
         NEXT, PARENT, "analyze", "analysis_exception", "RuntimeError")
     assert "omitted" in event["message"]

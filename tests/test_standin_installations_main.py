@@ -15,13 +15,15 @@ from checkwash.engine import analyze
 from checkwash.gitio.snapshot import MAX_SOURCE_BYTES, WorkingTreeSnapshot, search_source_mapping
 from checkwash.frontends.python.standin_installations import _candidate, installation_events
 from checkwash.ir.model import IR, DiffGlobals
+from checkwash.report.context import ReportContext
+from checkwash.report.term import render
 
 
 PROD = b"def total():\n    return 1\n"
 TEST = b"from app.billing import total\ndef test_total():\n    assert total() == 3\n"
 
 
-def judge(before, after, unchanged=None):
+def judge(before, after, unchanged=None, *, report_context=None):
     common = {"app/__init__.py": b"", "app/billing.py": PROD, **(unchanged or {})}
     changes = [FileChange(path, "added" if path not in before else "deleted" if path not in after else "modified",
                           before.get(path), after.get(path)) for path in sorted(before.keys() | after.keys())
@@ -30,6 +32,7 @@ def judge(before, after, unchanged=None):
     for path in before.keys() - after.keys():
         snapshot.pop(path, None)
     return analyze(changes, Config(), Contract(), [], datetime.date(2026, 9, 12),
+                   report_context=report_context,
                    root_reader=snapshot.get,
                    root_searcher=lambda needles: search_source_mapping(snapshot, needles),
                    root_path_lister=lambda: sorted(snapshot),
@@ -69,12 +72,16 @@ def test_module_definition_replacing_a_called_imported_subject_blocks():
     path = "tests/test_total.py"
     definition = b"def total():\n    return 3\n"
     after = TEST.replace(b"def test_total", definition + b"def test_total")
-    ir, findings, verdict = judge({path: TEST}, {path: after})
+    context = ReportContext()
+    ir, findings, verdict = judge({path: TEST}, {path: after}, report_context=context)
     assert verdict == "block"
     assert [(f.rule, f.severity, f.path, f.unit) for f in findings] == [
         ("TEST_PATCHES_SUBJECT", "high", path, "test_total")]
     assert [event[:4] for event in ir.globals.subject_installations] == [
         (path, "test_total", "app.billing.total", "def total():")]
+    text = render(ir, findings, verdict, "high", context=context)
+    assert "calls its own total function" in text
+    assert text.index("checks the imported app.billing.total") < text.index("reviewed exemption")
 
 
 @pytest.mark.parametrize("before,after", [
