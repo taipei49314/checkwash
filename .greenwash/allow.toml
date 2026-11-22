@@ -1387,3 +1387,11 @@ reason = "Issue #635 moves the square(2) fixture case from the 45-row decline ta
 author = "taipei49314"
 created = "2026-11-22"
 expires = "2026-12-22"
+
+[[allow]]
+fingerprint = "EXPECTED_VALUE_CHANGED/tests/test_runtime_subject_shadow.py/test_revision_cache_parses_identical_test_content_once/v2:80000d34248617eea2b0cf003ebd58f6fd1e8bf4151a17e034c9463a0d075cbe"
+rule = "EXPECTED_VALUE_CHANGED"
+reason = "Issue #627 shares one parsed test module between import and fixture analysis. Its counted regression tightens full parse calls from two to one while preserving one call each for active imports, bindings and fixture requests, and one finding. Nelson authorized this fingerprint for a draft on 2026-11-22; merge requires separate review."
+author = "taipei49314"
+created = "2026-11-22"
+expires = "2026-12-22"

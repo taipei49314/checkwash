@@ -1,5 +1,29 @@
 # Releasing
 
+## 0.13.1 checked publication and pin promotion (2026-11-22)
+
+Release PR #641 merged as `5e2a89ef0d447ae6e08c289f4a3357325b7286e9`.
+Nelson authorized the annotated tag, stopped at the tag check, then
+gave the version-specific publication and receipt-scope decision:
+
+> 好，僅 0.13.1 這版接受上述收據範圍。用現有 tag 發 GitHub Release，公開檔案都驗過、PyPI 等我核准時再叫我。#638 先留著。
+
+The exact scope recorded before publication reads:
+
+> The formal PJU collection runs on Windows / CPython 3.11. The eight other formal receipt cells (Windows 3.12 and 3.13, Linux and macOS 3.11, 3.12 and 3.13) and the single-run nine-leg byte comparison are recorded as unexecuted in this release's receipt. The supplementary Windows/WSL batch on R and the hosted macOS/Linux source-at-M batch each ran six legs. All twelve fixture corpus outputs matched. This acceptance applies only to 0.13.1.
+
+GitHub Actions checked the released files on macOS and Linux before
+`taipei49314` approved the PyPI environment deployment for run
+`44990331858`. Public-visitor verification run `45003828472` published
+check `137151828252` on M after the GitHub and PyPI visitor installs passed.
+The Step 8 follow-up records the release and aligns the
+advertised CLI, zipapp and Action with tag `v0.13.1`, which peels to
+`62656df812372c085b4d32c7864fcdfaccd0318a`. Step 9 requires separate
+review of the actual verdict-gate rotation proposal.
+[Original authorization and receipt scope](https://github.com/taipei49314/checkwash/blob/441a507052c9b4f1f2eafe486d30297807b2973c/docs/RELEASING.md#0131-github-release-and-release-event-authorization-2026-11-22) ·
+[Publication record](releases/v0.13.1-publication-verification.md) ·
+[PyPI deployment](https://github.com/taipei49314/checkwash/actions/runs/44990331858/job/137111206852)
+
 ## 0.13.1 pre-tag authorization and preparation
 
 On 2026-11-22 (Asia/Taipei), Nelson requested 「幫我做到發版前」 and selected
@@ -484,7 +508,7 @@ agent-read-only file: cutting `D-202` to `D-213` unchanged to
 `checkwash.pyz` `326e2a0c...`, `1,077,802` B, expecting zero case movements and
 `baseline_blocked` unchanged at `161`), asking
 「請問是否要授權繼續執行 Step 9，或今天到此收工即可？」 (Antigravity wrote the two
-items and the question, with no buttons; [D-214](../DECISIONS.md) quotes both
+items and the question, with no buttons; [D-214](../DECISIONS-archive-7.md) quotes both
 items verbatim). At `2026-11-18T15:08:53Z` (`23:08:53+08:00`) Nelson replied
 verbatim 「執行」, and at `15:09:07Z` (`23:09:07+08:00`) added verbatim
 「換個sassion 執行」, followed by the `/goal` handover prompt in Antigravity
@@ -498,7 +522,7 @@ issues `#624`–`#631` and `#622` untouched, and stop before merging `#633` so
 Nelson can confirm the verbatim `L1` diff. `#633` moved `D-202` to `D-213` to
 `DECISIONS-archive-6.md` and rotated the verdict baseline to `v0.13.0` with
 `baseline_blocked` unchanged at `161` and `labels.toml` untouched
-([D-214](../DECISIONS.md); proposal receipt `14dd72c6...` on
+([D-214](../DECISIONS-archive-7.md); proposal receipt `14dd72c6...` on
 `evidence/v0130-rotation-proposal-20261118` `838be0d0`).
 
 ## v0.12.0 release under the pre-1.0 delegation (2026-11-07)

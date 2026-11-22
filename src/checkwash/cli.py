@@ -42,7 +42,7 @@ import checkwash.config as _config_mod
 import checkwash.gitio as _gitio_pkg
 import checkwash.gitio.git as _git_mod
 from checkwash import __version__
-from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
+from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, active_fingerprints, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
 from checkwash.change import EngineError, SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, DEFAULT_CONFIG_DIR, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, contract_diagnostics, load_contract
@@ -494,6 +494,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         head_label=head_label,
         known_modules=known_modules,
         self_modules=self_modules,
+        base_module_exists=base_snapshot.has_python_module if found_manifest and base_snapshot is not None else None,
         head_reader=head_reader,
         head_searcher=head_searcher,
         report_context=report_context,
@@ -626,10 +627,26 @@ def _range_commit(repo: str, revision: str, side: str, requested: str) -> str:
         raise CheckInputError(message) from exc
 
 
+def _reviewed_on_branch(repo: str, tip: str, branch: str, run: _Run) -> dict[str, str]:
+    """Exemptions to mention in a blocked terminal report, after the verdict is final."""
+    snapshot = GitSnapshot(repo, tip, side="base", resolved=_resolved_oid(tip))
+    try:
+        path, data = _read_policy_file(repo, tip, "allow.toml", snapshot)
+        entries, error = load_allowlist(data, path=path)
+    except (GitError, EngineError, OSError, TypeError):
+        # This additional ledger is advisory. The merge-base check has already run.
+        return {}
+    if error:
+        return {}
+    active = active_fingerprints(entries, _today())
+    return {f.fingerprint: branch for f in _visible(run) if f.fingerprint in active}
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     pytest_configs = None
     window = None
+    review_branch = None
     hook_input = None
     if getattr(args, "hook_input", None) and not args.emit_ir:
         hook_input = read_hook_input(sys.stdin)
@@ -647,7 +664,10 @@ def _cmd_check(args: argparse.Namespace) -> int:
         head = _range_commit(repo, right, "head", args.range)
         if separator == "...":
             # Only changes since the common ancestor belong to a PR.
+            tip = base
             base = resolve_commit(repo, merge_base(repo, base, head))
+            if tip != base:
+                review_branch = (tip, left)
         base_snapshot = GitSnapshot(repo, base, side="base", resolved=_resolved_oid(base))
         head_snapshot = GitSnapshot(repo, head, side="head", resolved=_resolved_oid(head))
         if _can_use_range_snapshots():
@@ -796,10 +816,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _write_machine((_json.dumps(payload) if payload else "{}") + "\n")
         return 0
     else:
+        reviewed = _reviewed_on_branch(repo, *review_branch, run) if review_branch and verdict == "block" else {}
         _write_term(render(
             ir, findings, verdict, config.fail_on, errors=diagnostics,
             ledger_path=resolve_config_file(repo, "allow.toml"),
-            context=report_context, unread=unread_sides,
+            context=report_context, unread=unread_sides, reviewed_on_branch=reviewed,
         ))
     return 1 if verdict == "block" else 0
 
