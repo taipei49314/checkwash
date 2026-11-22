@@ -1,5 +1,28 @@
 # Releasing
 
+## 0.13.1 GitHub Release and release-event authorization (2026-11-22)
+
+After the tag stage, Nelson wrote:
+
+> 好，僅 0.13.1 這版接受上述收據範圍。用現有 tag 發 GitHub Release，公開檔案都驗過、PyPI 等我核准時再叫我。#638 先留著。
+
+He accepted the scope just described for 0.13.1. The formal PJU collection
+runs on Windows / CPython 3.11. The eight other formal receipt cells
+(Windows 3.12 and 3.13, Linux and macOS 3.11, 3.12 and 3.13) and the
+single-run nine-leg byte comparison are recorded as unexecuted in this
+release's receipt. The supplementary Windows/WSL batch on R and the
+hosted macOS/Linux source-at-M batch each ran six legs. All twelve fixture
+corpus outputs matched. This acceptance applies only to 0.13.1.
+
+Codex records one authorization for the GitHub Release, release-event receipt,
+and public asset upload and verification. It binds the existing annotated tag
+`v0.13.1` (object `150c9ffd621e76b8dc0dbf56ca4be6bc019d9186`, Action commit
+`62656df812372c085b4d32c7864fcdfaccd0318a`) and its qualified release merge
+`5e2a89ef0d447ae6e08c289f4a3357325b7286e9`. PyPI deployment requires Nelson's
+own approval after the hosted published-artifacts check and a readback of the
+waiting deployment. The previous stop at the verified tag is recorded below.
+[Tag verification](https://github.com/taipei49314/checkwash/runs/137093644288)
+
 ## 0.13.1 annotated tag authorization (2026-11-22)
 
 After reviewing the pre-tag results, Nelson wrote:
