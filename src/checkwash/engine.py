@@ -31,6 +31,7 @@ from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
 from checkwash.policy_shadow import config_transition, shadow_baseline
 from checkwash.oracle_credit import mark_contexts
+from checkwash.oracle_move_providers import bind_moved_providers
 from checkwash.collection_inventory import (
     _runner as _collection_runner,
     collection_inventory_changes,
@@ -860,6 +861,7 @@ def build_ir(
             root_path_lister=root_path_lister, report_context=report_context,
         )
         relocation.mark_ir_file_contexts(surface.ir)
+        bind_moved_providers(surface.ir, relocation, config)
         _record_move_credits(
             surface.ir, file_pass.js_head_runners, head_collection, relocation.relocation_sources,
         )
