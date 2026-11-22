@@ -19,13 +19,16 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-The [0.13.1 candidate](docs/releases/v0.13.1-public-launch.md) adds a Python test check for a local replacement of an imported function.
-The install commands and Action pin below name v0.13.0, the latest release
-whose public files are verified
-([release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md)).
+These examples use 0.13.1. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
+tracks the latest verified CLI download and Action pin.
 
-Start in one of three ways: **Claude Code hooks**, **the CLI on a repository**,
-or **the GitHub Action** as a required check.
+Already installed from PyPI? From your Git repository, run
+`python -m checkwash check` to review your uncommitted changes. Use the Python
+that installed the package, including the interpreter in the CheckWash
+environment if you used pipx. This also works when Windows blocks the
+`checkwash.exe` launcher.
+
+[Try the offline demo](#try-it-on-a-repository) · [Install Claude Code hooks](#use-it-with-claude-code) · [Require the GitHub Action](#use-it-in-ci)
 
 ## Use it with Claude Code
 
@@ -33,7 +36,7 @@ You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
 hook installer from the root of your repository:
 
 ```bash
-pipx install checkwash==0.13.0
+pipx install checkwash==0.13.1
 checkwash hook install --agent claude-code --local
 ```
 
@@ -67,7 +70,7 @@ built-in offline examples first.
 Windows PowerShell (including 5.1, where `curl` aliases `Invoke-WebRequest`):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.0/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -75,12 +78,12 @@ python checkwash.pyz demo
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.0/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
 
-You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.13.0/checkwash.pyz).
+You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz).
 Then, from a Git repository with at least two commits:
 
 ```bash
@@ -126,7 +129,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@9ada8cfaa618b002b5d0d829c7ddbe1b8e8ae638 # v0.13.0
+      - uses: taipei49314/checkwash/action@62656df812372c085b4d32c7864fcdfaccd0318a # v0.13.1
 ```
 
 After the workflow runs once, open **Settings → Rules → Rulesets** and require
@@ -184,6 +187,11 @@ review first, and protect `.checkwash/` and `.greenwash/` with
 [CODEOWNERS](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#4-codeowners)
 ([exemption rules](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#3-allowlist--reviewed-time-boxed-base-side)).
 
+For a local `main...branch` check, merge or rebase onto the updated `main` so
+the common ancestor includes the exemption. On GitHub, push to the pull
+request branch or use **Update branch** to trigger a new pull request event.
+Re-running an old job uses the original event's commits.
+
 **Report a false block.** If checkwash blocks an honest change, check the
 [failure ledger](https://github.com/taipei49314/checkwash/blob/main/benchmarks/FAILURES.md)
 first, then open an [issue](https://github.com/taipei49314/checkwash/issues)
@@ -225,12 +233,16 @@ Four core limits to know before relying on a pass:
 - **Claude Code hooks are author-side helpers, not a merge gate.** Only the
   required CI check in range mode enforces verdicts on pull requests.
 
-**Honest refactors and behaviour changes can require exemptions.** Weakened,
-removed, skipped or loosened Python assertions (and weakened, loosened or
-skipped JS/TS assertions) refuse production repair evidence
-(`REPAIR_EVIDENCE_REFUSED`), so removing a deprecated API with its assertion or
-rewriting a test beside a behaviour change requires a reviewed `checkwash allow`
-entry. On the project's 60-case refactor corpus (57 strictly qualified), the
+**Honest changes can pass, warn or block.** When a deprecated function and
+its whole test are removed together, `PROD_SYMBOL_REMOVED` can hold the finding
+at warn. When behaviour changes and a test's expected value changes with it,
+the report can credit the production change (`REPAIR_EVIDENCE`).
+Python refuses that credit for a removed assertion or deleted test.
+JS/TS can give it in both cases. Both languages refuse it for a weakened
+assertion or loosened tolerance. If a legitimate change still blocks, review
+the finding before requesting an exemption.
+
+On the project's 60-case refactor corpus (57 strictly qualified), the
 expected-verdict table (`benchmarks/refactors/expected.json`) and the published
 0.12.0 CLI mark **6 of 60** as blocking (4 among the 57, including known false
 blocks `CASE_020_windows` and `CASE_029_flatten`). Changed files over
@@ -244,7 +256,7 @@ Subdirectory instruction files, `CLAUDE.local.md`, lowercase `claude.md`,
 `.gitattributes` working-tree-encoding rules, and other agents' config filenames
 are not guarded by default. `GUARDRAIL_ADDITIVE` on root `CLAUDE.md` covers only
 strict inert appends at end-of-file separated by a blank line (no `---`, code
-fences, HTML comments, `[label]:` definitions or `Cf`/`Default_Ignorable`
+fences, HTML comments, `[label]:` definitions or invisible Unicode formatting
 characters), and stays at `warn` even if an appended plain-text line contradicts
 earlier prose or adds an `@path` import.
 
@@ -273,16 +285,14 @@ earn it ([#419](https://github.com/taipei49314/checkwash/issues/419)). From
 0.12.0 ([0.13.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.0.md),
 [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md),
 [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md)),
-weakened/removed/skipped/loosened Python assertions and weakened/loosened/skipped
-JS/TS assertions take no repair evidence (`REPAIR_EVIDENCE_REFUSED`). By
-default, rewritten expected values, substituted assertions (including a
-weakening respelled as one), test deletions escorted by a renamed private
-symbol, and JS/TS removed assertions/units, deleted parametrize rows, dead-code
-parked units and stand-in/subject edits still accept repair evidence; to block
-those too, set `fail-on: warn` in the Action (`checkwash doctor` will then
-exit 1 because it proves only a step without `with:`) or run `checkwash check --task`
-with a base-side `oracle_freeze` contract
-([enterprise hardening guide](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419)).
+weakened or loosened assertions and skips on live tests refuse repair evidence
+in both languages. Removing an assertion or a whole test also refuses that
+credit in Python. JS/TS can still credit a related change for those removals.
+A Python test deletion held at warn by `PROD_SYMBOL_REMOVED` uses a separate
+rule about a removed production symbol. Review the reason printed with the
+finding. For stricter enforcement, see the `fail-on: warn` and base-side
+`oracle_freeze` options in the
+[enterprise hardening guide](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md#7-hardening-against-bought-repair-evidence-419).
 
 In JS/TS (since v0.9.0, [#428](https://github.com/taipei49314/checkwash/issues/428)),
 each `test.each`, `it.each` and `test.for` table with a static title is a unit
@@ -337,49 +347,38 @@ see [subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/
 Try it on your own changes before making it required.
 [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
+· [0.13.1 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.1.md)
 · [0.13.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.0.md)
 · [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)
 
 ## CI details: doctor and the pin
 
-The recommended Action and CLI above are both **v0.13.0** (GitHub Release and
-PyPI 2026-11-17, Asia/Taipei; 2026-11-16 and 2026-11-17 UTC). Always upgrade the CLI and its local
+The recommended Action and CLI above are both **v0.13.1** (GitHub Release and
+PyPI on 2026-11-22). Always upgrade the CLI and its local
 hooks first, then update the Action SHA in `.github/workflows/checkwash.yml`.
 [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 · [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
 
 <details>
-<summary>Pin verification, release tag geometry (A vs M), Dependabot/zizmor and &lt;= v0.7.0 advisory</summary>
+<summary>Verify the Action pin or upgrade from an older release</summary>
 
 **Development snapshots:** source on `main` may be ahead of the published CLI.
 [The advertised-release manifest](https://github.com/taipei49314/checkwash/blob/main/release/advertised.toml)
 records the verified version, tag commit and artifact digests behind the
 commands above.
 
-**Which commit is the recommended pin?** From v0.12.0 (D-200), the release tag
-points directly at the release's Action commit:
-`git rev-parse 'vX.Y.Z^{commit}'`. Because an Action commit cannot embed its own commit SHA,
-each release from v0.11.0 (D-194) has two commits: its Action
-commit `A`, and the release merge `M` (which differs only in setting `doctor`'s
-own Action pin line to `A`). PyPI distributions and `checkwash.pyz` are built from `M`, while
-`checkwash check` in the Action does not import `doctor` and behaves
-identically at `A` and `M`. Installing the CLI from a Git release tag installs
-`A`, whose `doctor` rejects that release's own Action pin (`exit 1`)—install
-the CLI from PyPI or `checkwash.pyz` instead. (For v0.11.0 only, the tag
-pointed at `M`, so its Action commit was `git rev-parse 'vX.Y.Z^2^1'`; up to
-v0.10.0 the tag pointed at the single release commit.)
-
-**Pin updaters and `doctor`:** because v0.12.0+ tags point at the Action
-commit, Dependabot, Renovate and zizmor's `ref-version-mismatch` audit resolve
-`# v0.13.0` directly to the SHA `doctor` 0.13.0 accepts (inferred from those
-tools' documentation, not run; `doctor` 0.13.0 accepts the v0.13.0 pin above and
-v0.12.0's pin, while `doctor` 0.12.0 accepts only v0.11.0 and v0.12.0
-pins and exits 1 on the v0.13.0 pin).
+**Verify the SHA.** In a CheckWash clone, substitute the release tag for
+`vX.Y.Z` and run `git rev-parse 'vX.Y.Z^{commit}'`. For v0.11.0 only, use
+`git rev-parse 'vX.Y.Z^2^1'`. An Action commit cannot embed its own commit SHA.
+The CLI on PyPI and the release zipapp are built with that SHA, so their
+`doctor` recognizes the pin. The
+[Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
+explains release tags, pin updaters and older CLI versions.
 
 **Advisory for Action `<= v0.7.0`:** Action releases up to v0.7.0 ran
 `python -m pip` and `checkwash` with the PR checkout as working directory,
 allowing a PR to shadow `pip` or `checkwash` ([#372](https://github.com/taipei49314/checkwash/pull/372),
-fixed in v0.8.0). Pin the v0.13.0 Action above; see
+fixed in v0.8.0). Pin the v0.13.1 Action above; see
 [SECURITY.md](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary).
 
 </details>
@@ -393,11 +392,16 @@ fixed in v0.8.0). Pin the v0.13.0 Action above; see
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.13.0
+pipx install checkwash==0.13.1
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 tampering cases, blocked, offline
 ```
+
+To find pipx's Python, run `pipx environment --value PIPX_LOCAL_VENVS`.
+Use the full path to `checkwash\Scripts\python.exe` on Windows or
+`checkwash/bin/python` on macOS/Linux under that directory when running
+`python -m checkwash` from your repository.
 
 `checkwash demo` replays eight tampering cases and one honest fix. Five of
 the eight are adapted from this project's decoy corpus: coding agents were
@@ -436,7 +440,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [v0.13.0 publication record](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.0-publication-verification.md) · [v0.13.0 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.0-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
+| Installation checks, versions and first use | [Installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md) · [0.13.1 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.1-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
@@ -449,8 +453,8 @@ protection a test change dropped.
 
 The package also includes a limited quality preview for coverage, Ruff and
 mypy configuration review. [Setup and CI adoption guide](https://github.com/taipei49314/checkwash/blob/main/docs/quality-adoption.md).
-Its frozen legacy-byte comparison remains red; publication does not establish
-natural-case acceptance or effective enforcement.
+Use the preview to review changes to tool settings. Its recorded compatibility
+comparison still fails, and enforcement on real changes remains unverified.
 
-Alpha pre-release. 22 detectors, 23367 tests (collection denominator).
+Alpha pre-release. 22 detectors, 23379 tests collected by pytest.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

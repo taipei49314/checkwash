@@ -138,8 +138,57 @@ def _rebinds(statements, names):
     return False
 
 
+def plain_import_exports(source):
+    """Functions whose import cannot register a fixture or run a dynamic lookup."""
+    exports = set()
+    for declaration in ast.parse(source).body:
+        if isinstance(declaration, ast.Expr) and isinstance(declaration.value, ast.Constant):
+            continue
+        if not isinstance(declaration, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return set()
+        if (declaration.decorator_list or declaration.returns or getattr(declaration, "type_params", ())
+                or any(isinstance(arg, ast.arg) and arg.annotation for arg in ast.walk(declaration.args))
+                or any(not _literal(d) for d in (*declaration.args.defaults, *declaration.args.kw_defaults)
+                       if d is not None)):
+            return set()
+        exports.add(declaration.name)
+    return exports
+
+
+def _optional_import_bindings(tree, selected, import_exports):
+    grouped_imports = {}
+    if import_exports is None:
+        return {}, set()
+    for stmt in tree.body:
+        if (isinstance(stmt, ast.ImportFrom) and not stmt.level and stmt.module
+                and "." not in stmt.module and len(stmt.names) > 1):
+            plain = import_exports(stmt.module)
+            if plain:
+                grouped_imports[_dump(stmt)] = (stmt, plain)
+    retained_reads = {n.id for stmt in tree.body if id(stmt) not in selected
+                      for n in ast.walk(stmt) if isinstance(n, ast.Name)} if grouped_imports else set()
+    return grouped_imports, retained_reads
+
+
+def _unit_import_environment(environment, grouped_imports, unit_reads):
+    if not grouped_imports:
+        return environment
+    result = []
+    for item in environment:
+        if item in grouped_imports:
+            stmt, plain = grouped_imports[item]
+            names = [a for a in stmt.names if a.name not in plain or (a.asname or a.name) in unit_reads
+                     or (a.asname or a.name).lower().startswith(("test", "pytest", "setup", "teardown", "load_tests", "__"))]
+            if names and len(names) != len(stmt.names):
+                narrowed = copy.copy(stmt)
+                narrowed.names = names
+                item = _dump(narrowed)
+        result.append(item)
+    return result
+
+
 def _python_context(source, units, path, startup, needed, source_reader=None, source_searcher=None,
-                    source_path_lister=None):
+                    source_path_lister=None, import_exports=None):
     try:
         text = source.decode("utf-8-sig").replace("\r\n", "\n")
         tree = ast.parse(text)
@@ -219,6 +268,7 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
     environment = context_statements(tree.body)
     if environment is None:
         return
+    grouped_imports, module_reads = _optional_import_bindings(tree, selected, import_exports)
     for qualname, side in units:
         if needed is not None and qualname not in needed:
             continue
@@ -263,6 +313,8 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
             others = [item for item in environment if item != pytest_import]
             if not any("id='pytest'" in item for item in others):
                 own_environment = others
+        unit_reads = module_reads | {n.id for n in ast.walk(function) if isinstance(n, ast.Name)} if grouped_imports else ()
+        own_environment = _unit_import_environment(own_environment, grouped_imports, unit_reads)
         scope = (own_environment, startup, class_name, _dump(args), [_dump(d) for d in function.decorator_list],
                  [asdict(row) for row in side.param_rows], side.param_cases, *fixture_scope)
         side.oracle_context = _key("python-unit-v1", scope, _dump(declaration))
@@ -293,7 +345,8 @@ def _python_context(source, units, path, startup, needed, source_reader=None, so
         assertion_environment = own_environment
         if not any(isinstance(n, ast.Name) and n.id == "pytest"
                    for part in [*function.body, *other_decorators] for n in ast.walk(part)):
-            assertion_environment = [item for item in environment if item != pytest_import]
+            assertion_environment = _unit_import_environment(
+                [item for item in environment if item != pytest_import], grouped_imports, unit_reads)
         assertion_scope = (assertion_environment, startup, class_name, _dump(concrete_args),
                            [_dump(d) for d in other_decorators], *fixture_scope)
         if isinstance(function, ast.AsyncFunctionDef):
@@ -462,7 +515,7 @@ def _javascript_context(source, units, path, needed, source_reader=None, source_
 
 
 def mark_contexts(source, units, path, language, *, startup_known=True, startup="", needed=None,
-                  source_reader=None, source_searcher=None, source_path_lister=None):
+                  source_reader=None, source_searcher=None, source_path_lister=None, import_exports=None):
     """Attach optional proofs; missing source/setup knowledge leaves them empty."""
     for _name, side in units:
         side.oracle_context = ""
@@ -471,7 +524,7 @@ def mark_contexts(source, units, path, language, *, startup_known=True, startup=
         return
     try:
         if language == "python":
-            _python_context(source, units, path, startup, needed, source_reader, source_searcher, source_path_lister)
+            _python_context(source, units, path, startup, needed, source_reader, source_searcher, source_path_lister, import_exports)
             if (len(source) <= 65536 and source_reader is not None
                     and source_searcher is not None and source_path_lister is not None):
                 from checkwash.oracle_class_credit import prove_plain_class_units

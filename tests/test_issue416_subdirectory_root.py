@@ -308,6 +308,27 @@ def test_a_missing_repo_is_still_an_engine_error_naming_it(tmp_path, command, co
         assert "missing 目錄" in json.loads(result.stdout)["systemMessage"]
 
 
+def test_check_identifies_invalid_revisions_and_non_repository(repo, tmp_path):
+    for spec, side, revision in (
+        ("missing..HEAD", "base", "missing"),
+        ("main...missing", "head", "missing"),
+        ("HEAD..HEAD^{tree}", "head", "HEAD^{tree}"),
+        ("HEAD~1..HEAD", "base", "HEAD~1"),
+    ):
+        result = _run(repo, "check", spec)
+        assert result.returncode == 2 and not result.stdout
+        message = result.stderr.decode("utf-8")
+        assert f"cannot resolve {revision!r} ({side} of {spec!r})" in message
+        if revision == "HEAD~1":
+            assert "'checkwash check' without a range" in message
+        if revision == "HEAD^{tree}":
+            assert "endpoint must name a commit" in message
+    plain = _plain(tmp_path)
+    result = _run(plain, "check")
+    assert result.returncode == 2 and not result.stdout
+    assert f"not inside a Git repository: {plain}" in result.stderr.decode("utf-8")
+
+
 @pytest.mark.parametrize("spec", ["HEAD", "HEAD..", "...HEAD"], ids=["no-dots", "two-dot", "three-dot"])
 def test_a_malformed_range_is_a_usage_error_before_the_lookup(tmp_path, spec):
     # Outside Git the lookup cannot answer. A malformed range still stops as

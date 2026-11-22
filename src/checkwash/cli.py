@@ -42,7 +42,7 @@ import checkwash.config as _config_mod
 import checkwash.gitio as _gitio_pkg
 import checkwash.gitio.git as _git_mod
 from checkwash import __version__
-from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
+from checkwash.allowlist import AllowEntry, MAX_EXPIRY_DAYS, active_fingerprints, fingerprint_diagnostics, fingerprint_issue, load_allowlist, namespace_diagnostics
 from checkwash.change import EngineError, SourceOverLimit, UnreadSide
 from checkwash.config import CONFIG_DIRS, DEFAULT_CONFIG_DIR, SEVERITY_ORDER, load_config, read_base_config_file, resolve_config_file
 from checkwash.contract import Contract, contract_diagnostics, load_contract
@@ -70,6 +70,7 @@ from checkwash.gitio import (
     resolve_commit,
     session_merge_base,
 )
+from checkwash.gitio.git import GitCommandError
 from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
 from checkwash.gitio.pytest_configs import PairedPytestConfigs, WorktreePytestConfigs
 from checkwash.report.jsonout import findings_to_json, ir_to_json, size_refusal_to_json
@@ -493,6 +494,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         head_label=head_label,
         known_modules=known_modules,
         self_modules=self_modules,
+        base_module_exists=base_snapshot.has_python_module if found_manifest and base_snapshot is not None else None,
         head_reader=head_reader,
         head_searcher=head_searcher,
         report_context=report_context,
@@ -606,37 +608,66 @@ def _released_message(visible: list, window: _Window | None) -> str:
     return text
 
 
+class CheckInputError(Exception):
+    """An input to check needs the caller's attention."""
+
+
+def _range_commit(repo: str, revision: str, side: str, requested: str) -> str:
+    try:
+        return resolve_commit(repo, revision, quiet_missing=True)
+    except GitCommandError as exc:
+        wrong_type = exc.detail.endswith(("object dereferences to tree type", "object dereferences to blob type"))
+        if exc.status != 1 or (exc.detail and not wrong_type):
+            raise
+        message = f"cannot resolve {revision!r} ({side} of {requested!r})"
+        if wrong_type:
+            message += ". A range endpoint must name a commit"
+        if side == "base" and revision in {"HEAD~1", "HEAD^", "HEAD^1", "HEAD~"}:
+            message += ". This range needs an earlier commit. To review uncommitted changes, run 'checkwash check' without a range"
+        raise CheckInputError(message) from exc
+
+
+def _reviewed_on_branch(repo: str, tip: str, branch: str, run: _Run) -> dict[str, str]:
+    """Exemptions to mention in a blocked terminal report, after the verdict is final."""
+    snapshot = GitSnapshot(repo, tip, side="base", resolved=_resolved_oid(tip))
+    try:
+        path, data = _read_policy_file(repo, tip, "allow.toml", snapshot)
+        entries, error = load_allowlist(data, path=path)
+    except (GitError, EngineError, OSError, TypeError):
+        # This additional ledger is advisory. The merge-base check has already run.
+        return {}
+    if error:
+        return {}
+    active = active_fingerprints(entries, _today())
+    return {f.fingerprint: branch for f in _visible(run) if f.fingerprint in active}
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     repo = args.repo
     pytest_configs = None
     window = None
+    review_branch = None
     hook_input = None
     if getattr(args, "hook_input", None) and not args.emit_ir:
         hook_input = read_hook_input(sys.stdin)
         if hook_input is not None:
             window = _session_window(repo, hook_input)
     if args.range:
-        if "..." in args.range:
-            # Three-dot means merge-base(A,B)..B — the standard PR-diff
-            # idiom. Silently downgrading it to two dots pulled base-branch
-            # prod commits into the diff, which disarmed E1 on every open PR
-            # whose base branch had moved (confirmed red-team finding).
-            left, _, right = args.range.partition("...")
+        separator = "..." if "..." in args.range else ".."
+        left, _, right = args.range.partition(separator)
+        if separator == "...":
             right = right.lstrip(".")
-            if not left or not right:
-                write_text(f"error: range must be BASE...HEAD, got {args.range!r}\n", sys.stderr)
-                return 2
-            left, head = resolve_commit(repo, left), resolve_commit(repo, right)
-            base = merge_base(repo, left, head)
-        elif ".." in args.range:
-            base, _, head = args.range.partition("..")
-        else:
-            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
+        if not left or not right:
+            write_text(f"error: range must be BASE{separator}HEAD, got {args.range!r}\n", sys.stderr)
             return 2
-        if not base or not head:
-            write_text(f"error: range must be BASE..HEAD, got {args.range!r}\n", sys.stderr)
-            return 2
-        base, head = resolve_commit(repo, base), resolve_commit(repo, head)
+        base = _range_commit(repo, left, "base", args.range)
+        head = _range_commit(repo, right, "head", args.range)
+        if separator == "...":
+            # Only changes since the common ancestor belong to a PR.
+            tip = base
+            base = resolve_commit(repo, merge_base(repo, base, head))
+            if tip != base:
+                review_branch = (tip, left)
         base_snapshot = GitSnapshot(repo, base, side="base", resolved=_resolved_oid(base))
         head_snapshot = GitSnapshot(repo, head, side="head", resolved=_resolved_oid(head))
         if _can_use_range_snapshots():
@@ -785,10 +816,11 @@ def _cmd_check(args: argparse.Namespace) -> int:
         _write_machine((_json.dumps(payload) if payload else "{}") + "\n")
         return 0
     else:
+        reviewed = _reviewed_on_branch(repo, *review_branch, run) if review_branch and verdict == "block" else {}
         _write_term(render(
             ir, findings, verdict, config.fail_on, errors=diagnostics,
             ledger_path=resolve_config_file(repo, "allow.toml"),
-            context=report_context, unread=unread_sides,
+            context=report_context, unread=unread_sides, reviewed_on_branch=reviewed,
         ))
     return 1 if verdict == "block" else 0
 
@@ -1270,6 +1302,10 @@ def _reroot(args: argparse.Namespace, *, required: bool, **lookup) -> None:
         root = resolve_repository_root(given, **lookup)
     except GitError as exc:
         if required:
+            if (args.command == "check" and isinstance(exc, GitCommandError)
+                    and exc.detail.startswith("fatal: not a git repository")):
+                path = os.path.abspath(given)
+                raise CheckInputError(f"not inside a Git repository: {path if path.isprintable() else repr(path)}") from exc
             raise
         if isinstance(exc, GitRootUnresolved):
             reason = " ".join(str(exc).splitlines())
@@ -1351,7 +1387,9 @@ def main(argv: list[str] | None = None) -> int:
             if usage:
                 write_text(usage, sys.stderr)
                 return 2
-            _reroot(args, required=True)
+            # Git's repository-discovery diagnostic is how we distinguish an
+            # ordinary non-repository from access, I/O, and executable errors.
+            _reroot(args, required=True, env={**os.environ, "LC_ALL": "C"})
             return _cmd_check(args)
         if args.command == "quality":
             from checkwash.quality.cli import run as run_quality
@@ -1416,6 +1454,11 @@ def main(argv: list[str] | None = None) -> int:
                 run_sweep=args.run_sweep,
             )
         parser.print_help()
+        return 2
+    except CheckInputError as exc:
+        if args.format != "term" or args.emit_ir:
+            return _engine_error(args, str(exc))
+        write_text(f"checkwash: {exc}\n", sys.stderr)
         return 2
     except (GitError, OSError, RecursionError) as exc:
         return _engine_error(args, str(exc))

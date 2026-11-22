@@ -71,6 +71,7 @@ def render(
     ledger_path: str = ".greenwash/allow.toml",
     context: ReportContext | None = None,
     unread: Iterable[UnreadSide] = (),
+    reviewed_on_branch: dict[str, str] | None = None,
 ) -> str:
     stream = stream or sys.stdout
     color = _use_color(stream)
@@ -142,6 +143,8 @@ def render(
             advice = _REVIEW_HINTS.get(f.rule)
             if advice:
                 lines.append(f"  {advice}")
+        if f.rule == "CI_WORKFLOW_TOUCHED" and f.path.rsplit("/", 1)[-1] in {"pyproject.toml", "setup.cfg", "tox.ini"}:
+            lines.append("  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.")
         if f.escalators:
             label = f"why {f.severity}" if f.severity in ("high", "critical") else "escalators"
             lines.append(f"  {label}: {', '.join(f.escalators)}")
@@ -156,7 +159,11 @@ def render(
             lines.append(f"  before  {_evidence(f.before.text, sym['ellipsis'])}")
         if f.after is not None:
             lines.append(f"  after   {_evidence(f.after.text, sym['ellipsis'])}")
-        if f.severity in ("high", "critical"):
+        if reviewed_on_branch and f.fingerprint in reviewed_on_branch:
+            branch = reviewed_on_branch[f.fingerprint]
+            lines.append(f"  next: an active exemption for {f.fingerprint} exists on {branch!r}.")
+            lines.append(f"    Update this branch by merging or rebasing onto {branch!r}, then run the check again.")
+        elif f.severity in ("high", "critical"):
             if local:
                 lines.append("  If the replacement is intentional, record a reviewed exemption:")
             else:
