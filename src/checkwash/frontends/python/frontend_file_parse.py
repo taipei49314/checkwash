@@ -403,7 +403,7 @@ def credit_abstract_base_unit(
     return unit
 
 
-def visit_module_scopes(state: ModuleParseState) -> None:
+def visit_module_scopes(state: ModuleParseState, *, test_dependencies_only: bool = False) -> None:
     """Iterative preorder visitation collecting symbol fingerprints and lexical test units."""
     fe = state.fe
     off = state.off
@@ -434,6 +434,10 @@ def visit_module_scopes(state: ModuleParseState) -> None:
                 state.symbol_calls[qual] = fe._callees(child)
             bound = state.rebound.get(id(child))
             if state.collect_tests and collectible and fe._is_test_name(child.name) and not (bound and bound.dropped):
+                if test_dependencies_only:
+                    state.units.append(fe._test_dependency_unit(child, qual, off, state.file_caches))
+                    # Definitions inside a function cannot be collected as tests.
+                    continue
                 unit = fe._collect_unit(
                     child,
                     qual,
@@ -536,7 +540,7 @@ def visit_module_scopes(state: ModuleParseState) -> None:
             frames.append((ast.iter_child_nodes(child), prefix, inherited, collectible, scopes, aliases, None, classes))
 
 
-def collect_inherited_and_suite_units(state: ModuleParseState) -> None:
+def collect_inherited_and_suite_units(state: ModuleParseState, *, test_dependencies_only: bool = False) -> None:
     """Collect inherited test methods, apply conftest suite unit override, and disambiguate names."""
     fe = state.fe
     off = state.off
@@ -544,6 +548,9 @@ def collect_inherited_and_suite_units(state: ModuleParseState) -> None:
         for cls, owner, method in fe.inherited_test_methods(state.tree):
             through = state.rebound.get(id(cls))
             if through is not None and through.gone:
+                continue
+            if test_dependencies_only:
+                state.units.append(fe._test_dependency_unit(method, f"{cls.name}.{method.name}", off, state.file_caches))
                 continue
             state.units.append(fe._collect_unit(
                 method,

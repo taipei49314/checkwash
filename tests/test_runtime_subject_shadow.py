@@ -1100,6 +1100,52 @@ def test_complete_search_normalizes_valid_backslash_path():
     assert "tests/test_decoy.py" not in requested
 
 
+def test_shadow_dependencies_match_full_collection_for_lexical_and_inherited_tests(monkeypatch):
+    from checkwash.frontends.python import frontend
+
+    source = b"""
+import pytest
+
+@pytest.fixture(autouse=True)
+def configure():
+    install()
+
+def helper():
+    return 1
+
+class Mixin:
+    def test_inherited(self, first, /, *, second):
+        assert helper() == first + second
+
+class TestDerived(Mixin):
+    async def test_local(self, resource):
+        def test_nested():
+            ignored()
+        assert await fetch(resource) == 1
+
+def test_removed():
+    obsolete()
+del test_removed
+"""
+    def dependencies(parsed):
+        return [(unit.qualname, unit.side.params, unit.side.invoked) for unit in parsed.units]
+
+    full = frontend.parse_python(source, collect_tests=True)
+    expected = dependencies(full)
+    assert ("TestDerived.test_inherited", ("first", "second"), ("helper",)) in expected
+    assert ("TestDerived.test_local", ("resource",), ("fetch",)) in expected
+    assert full.autouse_fixtures == ("configure",)
+
+    def unexpected_full_collection(*args, **kwargs):
+        pytest.fail("runtime import resolution built a full assertion unit")
+
+    monkeypatch.setattr(frontend, "_collect_unit", unexpected_full_collection)
+    projected = frontend.parse_python(source, collect_tests=True, test_dependencies_only=True)
+    assert projected.parse_ok
+    assert dependencies(projected) == expected
+    assert projected.autouse_fixtures == full.autouse_fixtures
+
+
 def test_revision_cache_parses_identical_test_content_once(monkeypatch):
     test_source = (
         b"from src.billing import total\n\n"
