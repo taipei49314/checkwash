@@ -1,0 +1,65 @@
+{
+  "checkwash-0.13.1-py3-none-any.whl": {
+    "id": 778026809,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash-0.13.1-py3-none-any.whl",
+    "bytes": 1103713,
+    "sha256": "2302241698bbf2291b897c85e53df1d281231af1b985c762802aeb101bb969c1",
+    "github_digest": "sha256:2302241698bbf2291b897c85e53df1d281231af1b985c762802aeb101bb969c1",
+    "tag_stage_sha256": "2302241698bbf2291b897c85e53df1d281231af1b985c762802aeb101bb969c1",
+    "tag_stage_bytes": 1103713,
+    "release_event_sha256": "2302241698bbf2291b897c85e53df1d281231af1b985c762802aeb101bb969c1",
+    "release_event_bytes": 1103713,
+    "publish_assets_record": {
+      "bytes": 1103713,
+      "id": 778026809,
+      "name": "checkwash-0.13.1-py3-none-any.whl",
+      "sha256": "2302241698bbf2291b897c85e53df1d281231af1b985c762802aeb101bb969c1"
+    },
+    "tag_vs_public": {
+      "byte_identical": true
+    }
+  },
+  "checkwash-0.13.1.tar.gz": {
+    "id": 778026909,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash-0.13.1.tar.gz",
+    "bytes": 5829800,
+    "sha256": "9073e787d2311fa8b139fac83b4768c83fb2d65bc86b1dba289d54255bc8c2d1",
+    "github_digest": "sha256:9073e787d2311fa8b139fac83b4768c83fb2d65bc86b1dba289d54255bc8c2d1",
+    "tag_stage_sha256": "9073e787d2311fa8b139fac83b4768c83fb2d65bc86b1dba289d54255bc8c2d1",
+    "tag_stage_bytes": 5829800,
+    "release_event_sha256": "9073e787d2311fa8b139fac83b4768c83fb2d65bc86b1dba289d54255bc8c2d1",
+    "release_event_bytes": 5829800,
+    "publish_assets_record": {
+      "bytes": 5829800,
+      "id": 778026909,
+      "name": "checkwash-0.13.1.tar.gz",
+      "sha256": "9073e787d2311fa8b139fac83b4768c83fb2d65bc86b1dba289d54255bc8c2d1"
+    },
+    "tag_vs_public": {
+      "byte_identical": true
+    }
+  },
+  "checkwash.pyz": {
+    "id": 778026979,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz",
+    "bytes": 1079499,
+    "sha256": "0a987325c6f738129f5dbdc1e0287cfeab40517342b46df80707cccff8dd2839",
+    "github_digest": "sha256:0a987325c6f738129f5dbdc1e0287cfeab40517342b46df80707cccff8dd2839",
+    "tag_stage_sha256": "e476973dd2f55bfb0f9e47041349c8b40b7fc7b30ab788ff1b5f504f0d90054d",
+    "tag_stage_bytes": 1079499,
+    "release_event_sha256": "0a987325c6f738129f5dbdc1e0287cfeab40517342b46df80707cccff8dd2839",
+    "release_event_bytes": 1079499,
+    "publish_assets_record": {
+      "bytes": 1079499,
+      "id": 778026979,
+      "name": "checkwash.pyz",
+      "sha256": "0a987325c6f738129f5dbdc1e0287cfeab40517342b46df80707cccff8dd2839"
+    },
+    "tag_vs_public": {
+      "members": 250,
+      "match_after_zeroing_dos_timestamps": true,
+      "normalized_sha256": "9d5a3f9485931bed6fdc0a6072ea5fe989acf271ebb39e89c9c19e6ddfa8d284",
+      "changed_bytes": 1000
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "checked": "2026-11-22T05:47:09.316631+00:00",
+  "tag_manifest_sha256": "922b4b4ae4cabd2a49556dec388f4938a8093ad799606eca3f68668f2ce9dfd8",
+  "release_event_manifest_sha256": "5fbdd6989fa926b971d868d0636e48c702f80e530455387e5c23d9fe1e144cfd",
+  "publish_assets_record_sha256": "5d063f82d8854e048052a446e9bb630e8e0d85c3721d9c9a7c80aad6534a732e",
+  "release_id": 454212666,
+  "tag_object": "150c9ffd621e76b8dc0dbf56ca4be6bc019d9186",
+  "M": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+  "R": "5dd43d5d6a5aa253f42ae2d97d75eb7695a2aa7e",
+  "A": "62656df812372c085b4d32c7864fcdfaccd0318a",
+  "tree": "7549501d7346fce70d90fdadb4e6ae8d4103fa64"
+}

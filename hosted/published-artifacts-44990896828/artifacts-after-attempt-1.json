@@ -1,0 +1,165 @@
+{
+  "total_count": 8,
+  "artifacts": [
+    {
+      "id": 14742321181,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MjMyMTE4MQ==",
+      "name": "release-hosted-artifacts-macos-latest-py3.13-attempt-1",
+      "size_in_bytes": 234156,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14742321181",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14742321181/zip",
+      "expired": false,
+      "digest": "sha256:3688f7afb676f31a4ea7945dc3eced90814abdb065a0c58c997051935a0719ee",
+      "created_at": "2026-11-22T05:55:40Z",
+      "updated_at": "2026-11-22T05:55:40Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14742171598,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MjE3MTU5OA==",
+      "name": "release-hosted-artifacts-ubuntu-latest-py3.13-attempt-1",
+      "size_in_bytes": 234338,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14742171598",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14742171598/zip",
+      "expired": false,
+      "digest": "sha256:cc5a112a4845f538cd5dfae816a2406804923eecd74a96a8e829733a2e27eaad",
+      "created_at": "2026-11-22T05:54:07Z",
+      "updated_at": "2026-11-22T05:54:07Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14742111788,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MjExMTc4OA==",
+      "name": "release-hosted-artifacts-ubuntu-latest-py3.11-attempt-1",
+      "size_in_bytes": 234349,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14742111788",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14742111788/zip",
+      "expired": false,
+      "digest": "sha256:f10a7115db1978f93df31040adaea77cba249c9a574b0f804f1ccc8152074363",
+      "created_at": "2026-11-22T05:54:51Z",
+      "updated_at": "2026-11-22T05:54:51Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14741956502,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MTk1NjUwMg==",
+      "name": "release-hosted-artifacts-macos-latest-py3.11-attempt-1",
+      "size_in_bytes": 234164,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741956502",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741956502/zip",
+      "expired": false,
+      "digest": "sha256:c99fff2cc640c52b65508ee9420ec0fdcb6f24917c947359612ae2f2840debf0",
+      "created_at": "2026-11-22T05:54:21Z",
+      "updated_at": "2026-11-22T05:54:21Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14741744021,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MTc0NDAyMQ==",
+      "name": "release-hosted-artifacts-ubuntu-latest-py3.12-attempt-1",
+      "size_in_bytes": 234341,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741744021",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741744021/zip",
+      "expired": false,
+      "digest": "sha256:1c742f33339da1c9573632ee82f35b3a53d313a7b19b09e05938e8ded563b2ef",
+      "created_at": "2026-11-22T05:57:27Z",
+      "updated_at": "2026-11-22T05:57:27Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14741622156,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MTYyMjE1Ng==",
+      "name": "release-hosted-release-attempt-1",
+      "size_in_bytes": 4228,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741622156",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741622156/zip",
+      "expired": false,
+      "digest": "sha256:2894aa8040e18102701600f5b55c8d9db395ee0a39174f82fdd897a477ca6a2e",
+      "created_at": "2026-11-22T05:47:42Z",
+      "updated_at": "2026-11-22T05:47:42Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14741297990,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MTI5Nzk5MA==",
+      "name": "release-hosted-identity-attempt-1",
+      "size_in_bytes": 1017,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741297990",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741297990/zip",
+      "expired": false,
+      "digest": "sha256:dd06525280c8df726f6b824e5b9421e68b085b173a65a7d4bd1709be4e1802d5",
+      "created_at": "2026-11-22T05:47:33Z",
+      "updated_at": "2026-11-22T05:47:33Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    },
+    {
+      "id": 14741004651,
+      "node_id": "MDg6QXJ0aWZhY3QxNDc0MTAwNDY1MQ==",
+      "name": "release-hosted-artifacts-macos-latest-py3.12-attempt-1",
+      "size_in_bytes": 234158,
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741004651",
+      "archive_download_url": "https://api.github.com/repos/taipei49314/checkwash/actions/artifacts/14741004651/zip",
+      "expired": false,
+      "digest": "sha256:1de649cf82298d5dd0ff2a9fff09e4c8899b78c4e03ab8cb42ccac784e1b92c3",
+      "created_at": "2026-11-22T05:56:15Z",
+      "updated_at": "2026-11-22T05:56:15Z",
+      "expires_at": "2027-02-20T05:47:17Z",
+      "workflow_run": {
+        "id": 44990896828,
+        "repository_id": 1320152564,
+        "head_repository_id": 1320152564,
+        "head_branch": "main",
+        "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9"
+      }
+    }
+  ]
+}

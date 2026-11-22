@@ -1,0 +1,1036 @@
+{
+  "total_count": 11,
+  "jobs": [
+    {
+      "id": 137111495653,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Htj5Q",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111495653",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111495653",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:17Z",
+      "started_at": "2026-11-22T05:47:19Z",
+      "completed_at": "2026-11-22T05:47:35Z",
+      "name": "hosted release identity",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:20Z",
+          "completed_at": "2026-11-22T05:47:20Z"
+        },
+        {
+          "name": "refuse malformed inputs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:20Z",
+          "completed_at": "2026-11-22T05:47:20Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:47:20Z",
+          "completed_at": "2026-11-22T05:47:32Z"
+        },
+        {
+          "name": "bind the checkout to the release merge M (scheme S, D-194; tag rule, D-200)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:47:32Z",
+          "completed_at": "2026-11-22T05:47:32Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:47:32Z",
+          "completed_at": "2026-11-22T05:47:34Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:47:34Z",
+          "completed_at": "2026-11-22T05:47:34Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-22T05:47:34Z",
+          "completed_at": "2026-11-22T05:47:34Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111495653",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000036007,
+      "runner_name": "GitHub Actions 1000036007",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111560177,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Hxf8Q",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111560177",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111560177",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:36Z",
+      "started_at": "2026-11-22T05:47:38Z",
+      "completed_at": "2026-11-22T05:47:45Z",
+      "name": "hosted published Release record",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:39Z",
+          "completed_at": "2026-11-22T05:47:39Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:39Z",
+          "completed_at": "2026-11-22T05:47:40Z"
+        },
+        {
+          "name": "read the published Release, the publication record and PyPI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:47:40Z",
+          "completed_at": "2026-11-22T05:47:41Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:47:41Z",
+          "completed_at": "2026-11-22T05:47:43Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:47:43Z",
+          "completed_at": "2026-11-22T05:47:43Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:47:43Z",
+          "completed_at": "2026-11-22T05:47:43Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111560177",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000036008,
+      "runner_name": "GitHub Actions 1000036008",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111561323,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Hxkaw",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111561323",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111561323",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-11-22T05:47:36Z",
+      "started_at": "2026-11-22T05:47:36Z",
+      "completed_at": "2026-11-22T05:47:35Z",
+      "name": "hosted Action at A (ubuntu-latest, Python 3.12)",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111561323",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 137111561349,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7HxkhQ",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111561349",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111561349",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-11-22T05:47:36Z",
+      "started_at": "2026-11-22T05:47:36Z",
+      "completed_at": "2026-11-22T05:47:36Z",
+      "name": "hosted corpus comparison",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111561349",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 137111561476,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7HxlBA",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111561476",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111561476",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-11-22T05:47:36Z",
+      "started_at": "2026-11-22T05:47:36Z",
+      "completed_at": "2026-11-22T05:47:35Z",
+      "name": "hosted source at M (${{ matrix.os }}, Python ${{ matrix.python }})",
+      "steps": [],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111561476",
+      "labels": [],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    },
+    {
+      "id": 137111595387,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Hzpew",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111595387",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111595387",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:45Z",
+      "started_at": "2026-11-22T05:47:47Z",
+      "completed_at": "2026-11-22T05:55:44Z",
+      "name": "hosted published artifacts (macos-latest, Python 3.13)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:48Z",
+          "completed_at": "2026-11-22T05:47:49Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:49Z",
+          "completed_at": "2026-11-22T05:48:14Z"
+        },
+        {
+          "name": "bind the checkout to M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:48:14Z",
+          "completed_at": "2026-11-22T05:48:15Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:48:15Z",
+          "completed_at": "2026-11-22T05:48:15Z"
+        },
+        {
+          "name": "download the published files and check them against the release record",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:48:15Z",
+          "completed_at": "2026-11-22T05:48:17Z"
+        },
+        {
+          "name": "install the published wheel into a fresh venv and run it",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-22T05:48:17Z",
+          "completed_at": "2026-11-22T05:48:23Z"
+        },
+        {
+          "name": "the wheel's assertion-contract qualification and the wheel and sdist inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-22T05:48:23Z",
+          "completed_at": "2026-11-22T05:50:29Z"
+        },
+        {
+          "name": "run the published pyz, its zipapp and assertion-contract qualification and its inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:50:29Z",
+          "completed_at": "2026-11-22T05:55:37Z"
+        },
+        {
+          "name": "check M's release range with the installed wheel and the pyz, as the release visitor does",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:55:37Z",
+          "completed_at": "2026-11-22T05:55:39Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:55:39Z",
+          "completed_at": "2026-11-22T05:55:40Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-22T05:55:40Z",
+          "completed_at": "2026-11-22T05:55:40Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-22T05:55:40Z",
+          "completed_at": "2026-11-22T05:55:41Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-22T05:55:41Z",
+          "completed_at": "2026-11-22T05:55:42Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111595387",
+      "labels": [
+        "macos-latest"
+      ],
+      "runner_id": 1000036010,
+      "runner_name": "GitHub Actions 1000036010",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111595395,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Hzpgw",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111595395",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111595395",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:45Z",
+      "started_at": "2026-11-22T05:47:47Z",
+      "completed_at": "2026-11-22T05:54:53Z",
+      "name": "hosted published artifacts (ubuntu-latest, Python 3.11)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:47Z",
+          "completed_at": "2026-11-22T05:47:48Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:48Z",
+          "completed_at": "2026-11-22T05:47:59Z"
+        },
+        {
+          "name": "bind the checkout to M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:47:59Z",
+          "completed_at": "2026-11-22T05:47:59Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:47:59Z",
+          "completed_at": "2026-11-22T05:47:59Z"
+        },
+        {
+          "name": "download the published files and check them against the release record",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:47:59Z",
+          "completed_at": "2026-11-22T05:48:00Z"
+        },
+        {
+          "name": "install the published wheel into a fresh venv and run it",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-22T05:48:00Z",
+          "completed_at": "2026-11-22T05:48:05Z"
+        },
+        {
+          "name": "the wheel's assertion-contract qualification and the wheel and sdist inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-22T05:48:05Z",
+          "completed_at": "2026-11-22T05:49:19Z"
+        },
+        {
+          "name": "run the published pyz, its zipapp and assertion-contract qualification and its inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:49:19Z",
+          "completed_at": "2026-11-22T05:54:48Z"
+        },
+        {
+          "name": "check M's release range with the installed wheel and the pyz, as the release visitor does",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:54:48Z",
+          "completed_at": "2026-11-22T05:54:50Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:54:50Z",
+          "completed_at": "2026-11-22T05:54:51Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-22T05:54:51Z",
+          "completed_at": "2026-11-22T05:54:51Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-22T05:54:51Z",
+          "completed_at": "2026-11-22T05:54:51Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-22T05:54:51Z",
+          "completed_at": "2026-11-22T05:54:51Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111595395",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000036012,
+      "runner_name": "GitHub Actions 1000036012",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111595418,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Hzpmg",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111595418",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111595418",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:45Z",
+      "started_at": "2026-11-22T05:47:48Z",
+      "completed_at": "2026-11-22T05:54:23Z",
+      "name": "hosted published artifacts (macos-latest, Python 3.11)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:49Z",
+          "completed_at": "2026-11-22T05:47:51Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:51Z",
+          "completed_at": "2026-11-22T05:48:12Z"
+        },
+        {
+          "name": "bind the checkout to M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:48:12Z",
+          "completed_at": "2026-11-22T05:48:12Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:48:12Z",
+          "completed_at": "2026-11-22T05:48:13Z"
+        },
+        {
+          "name": "download the published files and check them against the release record",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:48:13Z",
+          "completed_at": "2026-11-22T05:48:14Z"
+        },
+        {
+          "name": "install the published wheel into a fresh venv and run it",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-22T05:48:14Z",
+          "completed_at": "2026-11-22T05:48:21Z"
+        },
+        {
+          "name": "the wheel's assertion-contract qualification and the wheel and sdist inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-22T05:48:21Z",
+          "completed_at": "2026-11-22T05:50:16Z"
+        },
+        {
+          "name": "run the published pyz, its zipapp and assertion-contract qualification and its inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:50:16Z",
+          "completed_at": "2026-11-22T05:54:18Z"
+        },
+        {
+          "name": "check M's release range with the installed wheel and the pyz, as the release visitor does",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:54:18Z",
+          "completed_at": "2026-11-22T05:54:19Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:54:19Z",
+          "completed_at": "2026-11-22T05:54:21Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-22T05:54:21Z",
+          "completed_at": "2026-11-22T05:54:21Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-22T05:54:21Z",
+          "completed_at": "2026-11-22T05:54:21Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-22T05:54:21Z",
+          "completed_at": "2026-11-22T05:54:22Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111595418",
+      "labels": [
+        "macos-latest"
+      ],
+      "runner_id": 1000036011,
+      "runner_name": "GitHub Actions 1000036011",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111595419,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7Hzpmw",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111595419",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111595419",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:45Z",
+      "started_at": "2026-11-22T05:47:48Z",
+      "completed_at": "2026-11-22T05:56:18Z",
+      "name": "hosted published artifacts (macos-latest, Python 3.12)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:48Z",
+          "completed_at": "2026-11-22T05:47:49Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:49Z",
+          "completed_at": "2026-11-22T05:48:11Z"
+        },
+        {
+          "name": "bind the checkout to M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:48:11Z",
+          "completed_at": "2026-11-22T05:48:12Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:48:12Z",
+          "completed_at": "2026-11-22T05:48:12Z"
+        },
+        {
+          "name": "download the published files and check them against the release record",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:48:12Z",
+          "completed_at": "2026-11-22T05:48:13Z"
+        },
+        {
+          "name": "install the published wheel into a fresh venv and run it",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-22T05:48:13Z",
+          "completed_at": "2026-11-22T05:48:20Z"
+        },
+        {
+          "name": "the wheel's assertion-contract qualification and the wheel and sdist inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-22T05:48:20Z",
+          "completed_at": "2026-11-22T05:50:45Z"
+        },
+        {
+          "name": "run the published pyz, its zipapp and assertion-contract qualification and its inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:50:45Z",
+          "completed_at": "2026-11-22T05:56:12Z"
+        },
+        {
+          "name": "check M's release range with the installed wheel and the pyz, as the release visitor does",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:56:12Z",
+          "completed_at": "2026-11-22T05:56:14Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:56:14Z",
+          "completed_at": "2026-11-22T05:56:15Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-22T05:56:15Z",
+          "completed_at": "2026-11-22T05:56:15Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-22T05:56:15Z",
+          "completed_at": "2026-11-22T05:56:16Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-22T05:56:16Z",
+          "completed_at": "2026-11-22T05:56:16Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111595419",
+      "labels": [
+        "macos-latest"
+      ],
+      "runner_id": 1000036009,
+      "runner_name": "GitHub Actions 1000036009",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111595449,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7HzpuQ",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111595449",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111595449",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:45Z",
+      "started_at": "2026-11-22T05:47:47Z",
+      "completed_at": "2026-11-22T05:54:09Z",
+      "name": "hosted published artifacts (ubuntu-latest, Python 3.13)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:47Z",
+          "completed_at": "2026-11-22T05:47:48Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:48Z",
+          "completed_at": "2026-11-22T05:47:57Z"
+        },
+        {
+          "name": "bind the checkout to M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:47:57Z",
+          "completed_at": "2026-11-22T05:47:57Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:47:57Z",
+          "completed_at": "2026-11-22T05:47:57Z"
+        },
+        {
+          "name": "download the published files and check them against the release record",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:47:57Z",
+          "completed_at": "2026-11-22T05:47:58Z"
+        },
+        {
+          "name": "install the published wheel into a fresh venv and run it",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-22T05:47:58Z",
+          "completed_at": "2026-11-22T05:48:03Z"
+        },
+        {
+          "name": "the wheel's assertion-contract qualification and the wheel and sdist inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-22T05:48:03Z",
+          "completed_at": "2026-11-22T05:49:10Z"
+        },
+        {
+          "name": "run the published pyz, its zipapp and assertion-contract qualification and its inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:49:10Z",
+          "completed_at": "2026-11-22T05:54:05Z"
+        },
+        {
+          "name": "check M's release range with the installed wheel and the pyz, as the release visitor does",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:54:05Z",
+          "completed_at": "2026-11-22T05:54:07Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:54:07Z",
+          "completed_at": "2026-11-22T05:54:08Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-22T05:54:08Z",
+          "completed_at": "2026-11-22T05:54:08Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-22T05:54:08Z",
+          "completed_at": "2026-11-22T05:54:08Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-22T05:54:08Z",
+          "completed_at": "2026-11-22T05:54:08Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111595449",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000036013,
+      "runner_name": "GitHub Actions 1000036013",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 137111595461,
+      "run_id": 44990896828,
+      "workflow_name": "release hosted / v0.13.1 / published-artifacts / 5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/taipei49314/checkwash/actions/runs/44990896828",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTq_t9M8AAAAf7HzpxQ",
+      "head_sha": "5e2a89ef0d447ae6e08c289f4a3357325b7286e9",
+      "url": "https://api.github.com/repos/taipei49314/checkwash/actions/jobs/137111595461",
+      "html_url": "https://github.com/taipei49314/checkwash/actions/runs/44990896828/job/137111595461",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-22T05:47:45Z",
+      "started_at": "2026-11-22T05:47:47Z",
+      "completed_at": "2026-11-22T05:57:29Z",
+      "name": "hosted published artifacts (ubuntu-latest, Python 3.12)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-22T05:47:48Z",
+          "completed_at": "2026-11-22T05:47:48Z"
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-22T05:47:48Z",
+          "completed_at": "2026-11-22T05:48:00Z"
+        },
+        {
+          "name": "bind the checkout to M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-22T05:48:00Z",
+          "completed_at": "2026-11-22T05:48:00Z"
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-22T05:48:00Z",
+          "completed_at": "2026-11-22T05:48:00Z"
+        },
+        {
+          "name": "download the published files and check them against the release record",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-22T05:48:00Z",
+          "completed_at": "2026-11-22T05:48:00Z"
+        },
+        {
+          "name": "install the published wheel into a fresh venv and run it",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-22T05:48:00Z",
+          "completed_at": "2026-11-22T05:48:07Z"
+        },
+        {
+          "name": "the wheel's assertion-contract qualification and the wheel and sdist inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-22T05:48:07Z",
+          "completed_at": "2026-11-22T05:49:46Z"
+        },
+        {
+          "name": "run the published pyz, its zipapp and assertion-contract qualification and its inventory against M",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-22T05:49:46Z",
+          "completed_at": "2026-11-22T05:57:23Z"
+        },
+        {
+          "name": "check M's release range with the installed wheel and the pyz, as the release visitor does",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-22T05:57:23Z",
+          "completed_at": "2026-11-22T05:57:26Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-22T05:57:26Z",
+          "completed_at": "2026-11-22T05:57:27Z"
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-22T05:57:27Z",
+          "completed_at": "2026-11-22T05:57:27Z"
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-22T05:57:27Z",
+          "completed_at": "2026-11-22T05:57:27Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-22T05:57:27Z",
+          "completed_at": "2026-11-22T05:57:27Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/taipei49314/checkwash/check-runs/137111595461",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000036014,
+      "runner_name": "GitHub Actions 1000036014",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}
