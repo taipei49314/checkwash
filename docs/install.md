@@ -52,4 +52,4 @@ this release commit:
 Once the workflow has run, require the `checkwash` status check in your
 branch rules to block merges. When upgrading, update the CLI and any local
 hooks before changing the Action pin. The [release history](releases/README.md)
-links each version's guide and verification record.
+links the 0.13.1 guide and publication record.
