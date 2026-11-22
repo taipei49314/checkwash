@@ -493,6 +493,7 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         head_label=head_label,
         known_modules=known_modules,
         self_modules=self_modules,
+        base_module_exists=base_snapshot.has_python_module if found_manifest and base_snapshot is not None else None,
         head_reader=head_reader,
         head_searcher=head_searcher,
         report_context=report_context,
