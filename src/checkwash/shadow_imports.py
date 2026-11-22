@@ -7,7 +7,7 @@ from types import MappingProxyType
 from typing import Callable, Iterable, Mapping, Sequence
 
 from checkwash.change import EngineError, FileChange
-from checkwash.frontends.python.frontend import _static_truth, parse_python
+from checkwash.frontends.python.frontend import ParsedFile, _static_truth, parse_python
 from checkwash.shadow_controls import _source_package
 from checkwash.shadow_runners import _scope_applies
 from checkwash.shadow_models import (
@@ -422,13 +422,13 @@ def _usefixtures_values(
     return requested
 
 
-def _test_fixture_requests(data: bytes | None) -> set[str]:
+def _parse_test_module(data: bytes | None) -> tuple[ast.Module, ParsedFile] | None:
     if not data:
-        return set()
+        return None
     try:
         tree = _parse_ast(_decode(data))
     except (SyntaxError, ValueError):
-        return set()
+        return None
     except (RecursionError, MemoryError) as exc:
         raise EngineError(
             "runtime-shadow test parse exceeded recursion or memory limit"
@@ -444,6 +444,16 @@ def _test_fixture_requests(data: bytes | None) -> set[str]:
         raise EngineError(
             "runtime-shadow test parse exceeded recursion or memory limit"
         )
+    return tree, parsed
+
+
+def _test_fixture_requests(
+    data: bytes | None, *, test_module: tuple[ast.Module, ParsedFile] | None = None,
+) -> set[str]:
+    test_module = test_module or _parse_test_module(data)
+    if test_module is None:
+        return set()
+    tree, parsed = test_module
     aliases = _pytest_mark_aliases(tree)
     functions: dict[str, tuple[ast.AST, tuple[ast.ClassDef, ...]]] = {}
 
@@ -539,30 +549,14 @@ def _active_test_imports(
     *,
     test_fixture_requests: Iterable[str] | None = None,
     package: str = "",
+    fixture_request_reader: Callable[..., Iterable[str]] | None = None,
 ) -> set[str]:
     """Imports executed by a collected test, fixture or called helper."""
 
-    if not data:
+    test_module = _parse_test_module(data)
+    if test_module is None:
         return set()
-    try:
-        tree = _parse_ast(_decode(data))
-    except (SyntaxError, ValueError):
-        return set()
-    except (RecursionError, MemoryError) as exc:
-        raise EngineError(
-            "runtime-shadow test parse exceeded recursion or memory limit"
-        ) from exc
-    parser = _live_shadow_attr("parse_python", parse_python)
-    try:
-        parsed = parser(data, collect_tests=True)
-    except (RecursionError, MemoryError) as exc:
-        raise EngineError(
-            "runtime-shadow test parse exceeded recursion or memory limit"
-        ) from exc
-    if not parsed.parse_ok:
-        raise EngineError(
-            "runtime-shadow test parse exceeded recursion or memory limit"
-        )
+    tree, parsed = test_module
 
     functions: dict[str, ast.AST] = {}
 
@@ -601,8 +595,12 @@ def _active_test_imports(
             if helper is not None:
                 active_scopes.append(helper)
     if test_fixture_requests is None:
-        request_reader = _live_shadow_attr("_test_fixture_requests", _test_fixture_requests)
-        requested = request_reader(data)
+        # Both queries need the collected test units. Retain only the resulting
+        # fixture names in the revision cache, so a large tree's IR can be freed.
+        request_reader = fixture_request_reader or _live_shadow_attr(
+            "_test_fixture_requests", _test_fixture_requests
+        )
+        requested = set(request_reader(data, test_module=test_module))
     else:
         requested = set(test_fixture_requests)
     for name in requested | set(parsed.autouse_fixtures):
@@ -669,10 +667,12 @@ class _ShadowAnalysisCache:
             )
         return self._fixture_bindings[key]
 
-    def fixture_requests(self, data: bytes | None) -> frozenset[str]:
+    def fixture_requests(
+        self, data: bytes | None, *, test_module: tuple[ast.Module, ParsedFile] | None = None,
+    ) -> frozenset[str]:
         if data not in self._fixture_requests:
             reader = _live_shadow_attr("_test_fixture_requests", _test_fixture_requests)
-            self._fixture_requests[data] = frozenset(reader(data))
+            self._fixture_requests[data] = frozenset(reader(data, test_module=test_module))
         return self._fixture_requests[data]
 
     def active_test_imports(self, data: bytes | None, *, package: str = "") -> frozenset[str]:
@@ -682,7 +682,7 @@ class _ShadowAnalysisCache:
             self._test_imports[key] = frozenset(
                 reader(
                     data,
-                    test_fixture_requests=self.fixture_requests(data),
+                    fixture_request_reader=self.fixture_requests,
                     package=package,
                 )
             )

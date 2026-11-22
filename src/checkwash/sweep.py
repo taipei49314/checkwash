@@ -197,12 +197,12 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
 
             phase = "analyze"
             root_snapshot = GitSnapshot(repo, sha, side="head")
-            pytest_configs = PairedPytestConfigs(
-                GitSnapshot(repo, parent, side="base"), root_snapshot,
-            )
+            base_snapshot = GitSnapshot(repo, parent, side="base")
+            pytest_configs = PairedPytestConfigs(base_snapshot, root_snapshot)
             ir, findings, verdict = analyze(
                 changes, config, Contract(), allow, today, base_label=parent,
                 head_label=sha, known_modules=known, self_modules=self_modules,
+                base_module_exists=base_snapshot.has_python_module if found else None,
                 head_reader=root_snapshot.read,
                 head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
                 root_reader=root_snapshot.read,

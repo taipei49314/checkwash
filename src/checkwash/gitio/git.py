@@ -23,6 +23,15 @@ class GitError(Exception):
     pass
 
 
+class GitCommandError(GitError):
+    """A Git process ran and reported failure."""
+
+    def __init__(self, args: list[str], status: int, stderr: bytes):
+        self.status = status
+        self.detail = stderr.decode("utf-8", "replace").strip()
+        super().__init__(f"git {' '.join(args[:2])} failed: {self.detail}")
+
+
 class GitRootUnresolved(GitError):
     """Git confirmed a subdirectory of a work tree but its root could not be
     resolved (#416). A command that then keeps `--repo` as given says so;
@@ -43,9 +52,7 @@ def _run(repo: str, args: list[str], *, env: dict[str, str] | None = None,
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise GitError("git read could not complete") from exc
     if proc.returncode != 0:
-        raise GitError(
-            f"git {' '.join(args[:2])} failed: {proc.stderr.decode('utf-8', 'replace').strip()}"
-        )
+        raise GitCommandError(args, proc.returncode, proc.stderr)
     return proc.stdout
 
 
@@ -122,8 +129,11 @@ def merge_base(repo: str, a: str, b: str) -> str:
     return _run(repo, ["merge-base", a, b]).decode("ascii").strip()
 
 
-def resolve_commit(repo: str, rev: str) -> str:
-    raw = _run(repo, ["rev-parse", "--verify", "--end-of-options", f"{rev}^{{commit}}"])
+def resolve_commit(repo: str, rev: str, *, quiet_missing: bool = False) -> str:
+    options = ["--quiet"] if quiet_missing else []
+    query = {"env": {**os.environ, "LC_ALL": "C"}} if quiet_missing else {}
+    raw = _run(repo, ["rev-parse", "--verify", *options, "--end-of-options", f"{rev}^{{commit}}"],
+               **query)
     if not re.fullmatch(b"(?:[0-9a-f]{40}|[0-9a-f]{64})\n", raw):
         raise GitError("invalid resolved commit identity")
     return raw.decode("ascii").strip()

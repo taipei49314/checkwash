@@ -31,6 +31,7 @@ from checkwash.ci_control_flow import holds_runner_site
 from checkwash.config import Config
 from checkwash.policy_shadow import config_transition, shadow_baseline
 from checkwash.oracle_credit import mark_contexts
+from checkwash.oracle_move_providers import bind_moved_providers
 from checkwash.collection_inventory import (
     _runner as _collection_runner,
     collection_inventory_changes,
@@ -860,6 +861,7 @@ def build_ir(
             root_path_lister=root_path_lister, report_context=report_context,
         )
         relocation.mark_ir_file_contexts(surface.ir)
+        bind_moved_providers(surface.ir, relocation, config)
         _record_move_credits(
             surface.ir, file_pass.js_head_runners, head_collection, relocation.relocation_sources,
         )
@@ -935,6 +937,7 @@ def analyze(
     root_batch_reader=None,
     pytest_configs=None,
     policy_base=None,
+    base_module_exists=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -954,6 +957,11 @@ def analyze(
         pytest_configs=pytest_configs,
         policy_base=policy_base,
     )
+    if base_module_exists is not None and ir.globals.unresolved_imports:
+        ir.globals.unresolved_imports = [
+            (path, module) for path, module in ir.globals.unresolved_imports
+            if not base_module_exists(module)
+        ]
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)
     return ir, findings, verdict
