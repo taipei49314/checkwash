@@ -1,5 +1,29 @@
 # Releasing
 
+## 0.13.1 checked publication and pin promotion (2026-11-22)
+
+Release PR #641 merged as `5e2a89ef0d447ae6e08c289f4a3357325b7286e9`.
+Nelson authorized the annotated tag, stopped at the tag check, then
+gave the version-specific publication and receipt-scope decision:
+
+> 好，僅 0.13.1 這版接受上述收據範圍。用現有 tag 發 GitHub Release，公開檔案都驗過、PyPI 等我核准時再叫我。#638 先留著。
+
+The exact scope recorded before publication reads:
+
+> The formal PJU collection runs on Windows / CPython 3.11. The eight other formal receipt cells (Windows 3.12 and 3.13, Linux and macOS 3.11, 3.12 and 3.13) and the single-run nine-leg byte comparison are recorded as unexecuted in this release's receipt. The supplementary Windows/WSL batch on R and the hosted macOS/Linux source-at-M batch each ran six legs. All twelve fixture corpus outputs matched. This acceptance applies only to 0.13.1.
+
+GitHub Actions checked the released files on macOS and Linux before
+`taipei49314` approved the PyPI environment deployment for run
+`44990331858`. Public-visitor verification run `45003828472` published
+check `137151828252` on M after the GitHub and PyPI visitor installs passed.
+The Step 8 follow-up records the release and aligns the
+advertised CLI, zipapp and Action with tag `v0.13.1`, which peels to
+`62656df812372c085b4d32c7864fcdfaccd0318a`. Step 9 requires separate
+review of the actual verdict-gate rotation proposal.
+[Original authorization and receipt scope](https://github.com/taipei49314/checkwash/blob/441a507052c9b4f1f2eafe486d30297807b2973c/docs/RELEASING.md#0131-github-release-and-release-event-authorization-2026-11-22) ·
+[Publication record](releases/v0.13.1-publication-verification.md) ·
+[PyPI deployment](https://github.com/taipei49314/checkwash/actions/runs/44990331858/job/137111206852)
+
 ## 0.13.1 pre-tag authorization and preparation
 
 On 2026-11-22 (Asia/Taipei), Nelson requested 「幫我做到發版前」 and selected

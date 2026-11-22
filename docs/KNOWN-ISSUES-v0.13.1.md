@@ -1,10 +1,10 @@
-# Known issues for the CheckWash 0.13.1 candidate
+# Known issues for CheckWash 0.13.1
 
 ## Python function replacements
 
 The new #635 check covers a modified Python test module with an existing, undecorated test that takes no arguments. The test contains a single direct equality assertion, uses the same assertion text on both sides, and compares its call against a literal. To identify the replaced function, CheckWash looks for one unchanged module at the repository root or under `src/` that directly declares it. This optional lookup considers at most 32 distinct eligible targets and modules up to 64 KiB. Where it cannot establish the replacement, the existing checks still apply. [Implementation](https://github.com/taipei49314/checkwash/blob/0477013159face076a2c6a887f9d5b235c76d5e5/src/checkwash/frontends/python/subject_replacements.py)
 
-The fixture change applies within the existing numeric generator-to-parameterized-test comparison. Decorated replacement functions, classes, general fixture dispatch and cross-file helper or `conftest.py` analysis remain outside this patch's additional coverage. The broader experiment is recorded in [draft PR #638](https://github.com/taipei49314/checkwash/pull/638).
+The fixture change applies within the existing numeric generator-to-parameterized-test comparison. Decorated replacement functions, classes, general fixture dispatch and cross-file helper or `conftest.py` analysis remain outside this patch's additional coverage. The broader experiment is recorded in [the closeout of PR #638](https://github.com/taipei49314/checkwash/pull/638#issuecomment-7076140883).
 
 ## Other open issues
 
