@@ -4446,6 +4446,25 @@ def _callees(node: ast.AST) -> tuple[str, ...]:
     return tuple(sorted(names))
 
 
+def _test_parameters(func: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[str, ...]:
+    return tuple(
+        arg.arg
+        for arg in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
+        if arg.arg not in ("self", "cls")
+    )
+
+
+def _test_dependency_unit(func, qualname, off, caches) -> ParsedUnit:
+    """The fields used to follow runtime test imports and fixture requests."""
+    span = off.span(func)
+    side = UnitSide(
+        span=span,
+        invoked=tuple(sorted(_invocations(func, caches))),
+        params=_test_parameters(func),
+    )
+    return ParsedUnit(qualname=qualname, span=span, side=side)
+
+
 def parse_python(
     data: bytes,
     collect_tests: bool,
@@ -4453,13 +4472,19 @@ def parse_python(
     chain: tuple[ConftestLevel, ...] = (),
     imported=None,
     collect_helpers: bool = False,
+    *,
+    test_dependencies_only: bool = False,
 ) -> ParsedFile:
     """`chain`: the conftest files above a test module, nearest first, whose
     fixtures its units can request (#223). `imported`: reads the module a
     top-level `from M import f` names, `(module, original) -> outcomes`, for
     what calling `f` ends in (#272, second stage). Only a test module reads
     either. `collect_helpers` also collects top-level non-`test*` functions as
-    `helper_function` units for set-aside helper modules (D-212)."""
+    `helper_function` units for set-aside helper modules (D-212).
+    With `test_dependencies_only`, collect test qualnames, invoked names,
+    parameters and autouse fixtures for runtime import resolution."""
+    if test_dependencies_only and (not collect_tests or conftest or collect_helpers or chain or imported is not None):
+        raise ValueError("test dependency collection requires a standalone test module")
     global _walks
     outer, _walks = _walks, None
     try:
@@ -4473,6 +4498,7 @@ def parse_python(
                 chain,
                 imported,
                 collect_helpers=collect_helpers,
+                test_dependencies_only=test_dependencies_only,
             )
     finally:
         _walks = outer
@@ -4486,6 +4512,7 @@ def _parse_python(
     imported=None,
     *,
     collect_helpers: bool = False,
+    test_dependencies_only: bool = False,
 ) -> ParsedFile:
     """Orchestrate module parsing, subtree-walk caching, unit collection, and file assembly."""
     global _walks
@@ -4514,8 +4541,13 @@ def _parse_python(
 
     # Stage 4: collect rebindings, lexical scopes, inherited methods, and suite controls.
     _compute_rebound_statuses(state)
-    _visit_module_scopes(state)
-    _collect_inherited_and_suite_units(state)
+    _visit_module_scopes(state, test_dependencies_only=test_dependencies_only)
+    _collect_inherited_and_suite_units(state, test_dependencies_only=test_dependencies_only)
+    if test_dependencies_only:
+        return ParsedFile(
+            parse_ok=True, units=sorted(state.units, key=lambda u: u.span),
+            autouse_fixtures=_autouse_fixture_names(tree),
+        )
 
     # Stage 5: scan module-wide handlers/literals/imports and assemble `ParsedFile`.
     scan = _scan_module_handlers_and_metadata(state)
@@ -4604,6 +4636,20 @@ def _classified_asserts(nodes, text, off) -> tuple:
     return tuple(out)
 
 
+def _autouse_fixture_names(tree: ast.Module) -> tuple[str, ...]:
+    names = []
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not _is_fixture_def(node):
+            continue
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call) and any(
+                kw.arg == "autouse" and isinstance(kw.value, ast.Constant) and kw.value.value
+                for kw in decorator.keywords
+            ):
+                names.append(node.name)
+    return tuple(sorted(names))
+
+
 def _module_oracle_scopes(tree: ast.Module, text, off):
     """(helper_asserts, fixture_asserts, autouse_fixtures) for a test module.
 
@@ -4614,7 +4660,6 @@ def _module_oracle_scopes(tree: ast.Module, text, off):
     """
     helpers: dict[str, tuple] = {}
     fixtures: dict[str, tuple] = {}
-    autouse: list[str] = []
     for node in tree.body:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
@@ -4622,17 +4667,11 @@ def _module_oracle_scopes(tree: ast.Module, text, off):
             found = _classified_asserts(ast.walk(node), text, off)
             if found:
                 fixtures[node.name] = found
-            for d in node.decorator_list:
-                if isinstance(d, ast.Call) and any(
-                    kw.arg == "autouse" and isinstance(kw.value, ast.Constant) and kw.value.value
-                    for kw in d.keywords
-                ):
-                    autouse.append(node.name)
         elif not _is_test_name(node.name):
             found = _classified_asserts(_scope_nodes(node), text, off)
             if found:
                 helpers[node.name] = found
-    return helpers, fixtures, tuple(sorted(autouse))
+    return helpers, fixtures, _autouse_fixture_names(tree)
 
 
 def _top_level_constants(tree: ast.Module, text) -> dict[str, str]:

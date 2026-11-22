@@ -435,7 +435,7 @@ def _parse_test_module(data: bytes | None) -> tuple[ast.Module, ParsedFile] | No
         ) from exc
     parser = _live_shadow_attr("parse_python", parse_python)
     try:
-        parsed = parser(data, collect_tests=True)
+        parsed = parser(data, collect_tests=True, test_dependencies_only=True)
     except (RecursionError, MemoryError) as exc:
         raise EngineError(
             "runtime-shadow test parse exceeded recursion or memory limit"

@@ -597,11 +597,7 @@ def finalize_collected_unit(ctx: UnitCollectContext) -> Any:
         param_rows=fe._param_tables(func),
         patches=tuple(sorted(ctx.patches)),
         invoked=tuple(sorted(fe._invocations(func, ctx.caches))),
-        params=tuple(
-            a.arg
-            for a in (func.args.posonlyargs + func.args.args + func.args.kwonlyargs)
-            if a.arg not in ("self", "cls")
-        ),
+        params=fe._test_parameters(func),
         fixture_producers=ctx.producers,
     )
     return fe.ParsedUnit(qualname=ctx.qualname, span=side.span, side=side, shingles=fe._shingles(func))
