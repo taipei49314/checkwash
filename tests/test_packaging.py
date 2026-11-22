@@ -471,6 +471,15 @@ def test_readme_install_refs_match_advertised_release():
     downloads = set(re.findall(r"releases/download/(v\d+\.\d+\.\d+)/checkwash\.pyz", readme))
     assert downloads == {advertised["tag"]}
 
+    assert "](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)" in readme
+    guide = (ROOT / "docs/install.md").read_text(encoding="utf-8")
+    assert set(re.findall(r"python -m pip install checkwash==(\S+)", guide)) == {advertised["version"]}
+    assert f"](https://pypi.org/project/checkwash/{advertised['version']}/)" in guide
+    assert set(re.findall(r"\]\((https://[^)]+/checkwash\.pyz)\)", guide)) == {manifest["pyz"]["url"]}
+    action_steps = re.findall(r"^\s*- uses: taipei49314/checkwash/action@(.+)$", guide, re.M)
+    assert action_steps == [f"{advertised['commit']} # {advertised['tag']}"]
+
+
 def test_dogfood_job_actually_runs():
     """The job that exercises action/action.yml must not be unreachable.
 

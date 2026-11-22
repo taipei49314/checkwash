@@ -937,6 +937,7 @@ def analyze(
     root_batch_reader=None,
     pytest_configs=None,
     policy_base=None,
+    base_module_exists=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -956,6 +957,11 @@ def analyze(
         pytest_configs=pytest_configs,
         policy_base=policy_base,
     )
+    if base_module_exists is not None and ir.globals.unresolved_imports:
+        ir.globals.unresolved_imports = [
+            (path, module) for path, module in ir.globals.unresolved_imports
+            if not base_module_exists(module)
+        ]
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)
     return ir, findings, verdict

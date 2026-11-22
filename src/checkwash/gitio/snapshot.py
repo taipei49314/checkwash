@@ -310,6 +310,39 @@ class GitSnapshot:
     def _side(self):
         return self.side or str(self.revision)
 
+    def has_python_module(self, name: str) -> bool:
+        """Match a dotted import against the root and src layouts in this Git tree."""
+        parts = name.split(".")
+        if not all(part.isidentifier() for part in parts):
+            return False
+        if self._tree_entries is None:
+            self.list_paths()
+        locations = ["", "src/"]
+        for index, part in enumerate(parts):
+            namespaces = []
+            for prefix in locations:
+                path = prefix + part
+                package = self._tree_entries.get(path + "/__init__.py")
+                if package is not None:
+                    if package[0] not in {b"100644", b"100755"}:
+                        return False
+                    # A regular package owns its children's search path.
+                    locations = [path + "/"]
+                    break
+                module = self._tree_entries.get(path + ".py")
+                if module is not None:
+                    return index == len(parts) - 1 and module[0] in {b"100644", b"100755"}
+                if path in self._trees:
+                    namespaces.append(path + "/")
+                elif path in self._opaque or self._tree_entries.get(path, (None,))[0] == b"120000":
+                    # A symlink or submodule cannot prove a Python package.
+                    return False
+            else:
+                locations = namespaces
+            if not locations:
+                return False
+        return True
+
     def config_modes(self, paths):
         """Bounded metadata for explicitly requested pytest config evidence."""
         self.list_paths()
