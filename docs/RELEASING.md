@@ -508,7 +508,7 @@ agent-read-only file: cutting `D-202` to `D-213` unchanged to
 `checkwash.pyz` `326e2a0c...`, `1,077,802` B, expecting zero case movements and
 `baseline_blocked` unchanged at `161`), asking
 「請問是否要授權繼續執行 Step 9，或今天到此收工即可？」 (Antigravity wrote the two
-items and the question, with no buttons; [D-214](../DECISIONS.md) quotes both
+items and the question, with no buttons; [D-214](../DECISIONS-archive-7.md) quotes both
 items verbatim). At `2026-11-18T15:08:53Z` (`23:08:53+08:00`) Nelson replied
 verbatim 「執行」, and at `15:09:07Z` (`23:09:07+08:00`) added verbatim
 「換個sassion 執行」, followed by the `/goal` handover prompt in Antigravity
@@ -522,7 +522,7 @@ issues `#624`–`#631` and `#622` untouched, and stop before merging `#633` so
 Nelson can confirm the verbatim `L1` diff. `#633` moved `D-202` to `D-213` to
 `DECISIONS-archive-6.md` and rotated the verdict baseline to `v0.13.0` with
 `baseline_blocked` unchanged at `161` and `labels.toml` untouched
-([D-214](../DECISIONS.md); proposal receipt `14dd72c6...` on
+([D-214](../DECISIONS-archive-7.md); proposal receipt `14dd72c6...` on
 `evidence/v0130-rotation-proposal-20261118` `838be0d0`).
 
 ## v0.12.0 release under the pre-1.0 delegation (2026-11-07)
