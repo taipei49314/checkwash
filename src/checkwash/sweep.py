@@ -53,6 +53,15 @@ class SweepResult:
     # Optional, per-commit observations; neither findings nor successful runs.
     commit_diagnostics: list[dict] = field(default_factory=list)
 
+    def to_term(self) -> str:
+        counts = Counter()
+        for (rule, _severity), count in self.by_rule_severity.items():
+            counts[rule] += count
+        top = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:5]
+        return (f"Commits analysed: {self.commits}; blocked: {self.blocked}; "
+                f"engine errors: {self.errors}; skipped (no parent): {self.skipped}\n"
+                + "Top rules: " + (", ".join(f"{rule} ({n})" for rule, n in top) or "none") + "\n")
+
     def to_json(self) -> str:
         counts: dict[str, dict[str, int]] = {}
         for (rule, severity), n in sorted(self.by_rule_severity.items()):
@@ -197,12 +206,12 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
 
             phase = "analyze"
             root_snapshot = GitSnapshot(repo, sha, side="head")
-            pytest_configs = PairedPytestConfigs(
-                GitSnapshot(repo, parent, side="base"), root_snapshot,
-            )
+            base_snapshot = GitSnapshot(repo, parent, side="base")
+            pytest_configs = PairedPytestConfigs(base_snapshot, root_snapshot)
             ir, findings, verdict = analyze(
                 changes, config, Contract(), allow, today, base_label=parent,
                 head_label=sha, known_modules=known, self_modules=self_modules,
+                base_module_exists=base_snapshot.has_python_module if found else None,
                 head_reader=root_snapshot.read,
                 head_searcher=lambda needles, _sha=sha: grep_head_paths(repo, _sha, needles),
                 root_reader=root_snapshot.read,

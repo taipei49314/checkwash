@@ -103,6 +103,47 @@ def test_module_binding_change_during_move_is_not_equivalence(freeze):
     assert any(f.rule == "TEST_DISABLED" and f.severity == "high" for f in findings)
 
 
+@pytest.mark.parametrize("import_line, expected", [
+    ("from billing import total", "pass"),
+    ("from billing import total, legacy", "pass"),
+    ("from charge import total", "block"),
+    ("from billing import legacy as total", "block"),
+])
+def test_split_preserves_only_the_used_import_binding(import_line, expected):
+    moved = "def test_empty():\n    assert total([]) == 0\n"
+    kept = "def test_legacy():\n    assert legacy([]) == 0\n"
+    imports = "import pytest\nfrom billing import total, legacy\n"
+    data = b"def total(rows):\n    return sum(rows)\n\ndef legacy(rows):\n    return len(rows)\n"
+    sources = {"billing.py": data, "charge.py": data}
+    changes = [
+        FileChange("tests/test_billing.py", "modified", (imports + moved + kept).encode(),
+                   (imports + kept).encode()),
+        FileChange("tests/test_edge.py", "added", None, (import_line + "\n" + moved).encode()),
+    ]
+    _, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY,
+                                   root_reader=sources.get, root_path_lister=lambda: list(sources),
+                                   root_batch_reader=lambda paths: {p: sources.get(p) for p in paths})
+    assert verdict == expected
+    disabled = [f for f in findings if f.rule == "TEST_DISABLED" and f.unit == "test_empty"]
+    assert len(disabled) == 1
+    assert ("ASSERTION_MOVED" in disabled[0].deescalators) == (expected == "pass")
+
+
+def test_split_preserves_an_import_that_registers_a_fixture():
+    test = "def test_value():\n    assert value() == 2\n"
+    before = "from billing import value, configure\n" + test
+    after = "from billing import value\n" + test
+    changes = [FileChange("tests/test_old.py", "deleted", before.encode(), None),
+               FileChange("tests/test_new.py", "added", None, after.encode())]
+    sources = {"billing.py": b"import pytest\ndef value():\n    return 2\n"
+                             b"@pytest.fixture(autouse=True)\ndef configure():\n    return 1\n"}
+    _, findings, verdict = analyze(changes, Config(), Contract(), [], TODAY, root_reader=sources.get,
+                                   root_path_lister=lambda: list(sources),
+                                   root_batch_reader=lambda paths: {p: sources.get(p) for p in paths})
+    assert verdict == "block"
+    assert any(f.rule == "TEST_DISABLED" and f.severity == "high" for f in findings)
+
+
 @pytest.mark.parametrize("freeze", [False, True])
 def test_unknown_custom_decorator_is_not_an_oracle_proof(freeze):
     source = "from calc import calc\nfrom helpers import customize\n@customize\ndef test_calc():\n    assert calc(10) == 20\n"

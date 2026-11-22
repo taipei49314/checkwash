@@ -714,7 +714,8 @@ def _literal_string_replacement(tree, qualname, call, replacement, module=None):
                                        kept_proof=True)
 
 
-def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=None, root_path_lister=None):
+def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=None, root_path_lister=None,
+                               report_context=None):
     if root_reader is None:
         return []
     context = ConftestContext(changes, root_reader)
@@ -798,6 +799,8 @@ def subject_replacement_events(ir, changes, *, root_reader=None, root_searcher=N
                     newline = offsets.text.find("\n", start, end)
                     end = newline if newline != -1 else end
                     events.append((file.path, unit.qualname, target, offsets.text[start:end], (start, end)))
+                    if report_context is not None:
+                        report_context.local_definitions[file.path, unit.qualname, (start, end)] = (name, target)
                     continue
                 if (stable_dump(ast.Tuple(elts=old_call.args, ctx=ast.Load())) != stable_dump(ast.Tuple(elts=new_call.args, ctx=ast.Load()))
                         or [stable_dump(k) for k in old_call.keywords] != [stable_dump(k) for k in new_call.keywords]):
