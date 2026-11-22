@@ -8,7 +8,7 @@ import pytest
 from checkwash.quality.engine import analyze
 from checkwash.quality.model import POLICY_PATH, ALLOW_PATH, digest
 from checkwash.quality.policy import load_policy
-from checkwash.quality.report import json_report, sarif
+from checkwash.quality.report import json_report, sarif, terminal
 from checkwash.quality.snapshot import MappingSnapshot
 
 TODAY = datetime.date(2026, 9, 9)
@@ -110,6 +110,14 @@ def test_ruff_specific_select_overrides_broad_ignore():
 def test_ruff_gains_do_not_cancel_losses():
     p, code = scan('[tool.ruff.lint]\nselect=["F401"]', '[tool.ruff.lint]\nselect=["F821"]', "ruff")
     assert code == 1 and strong(p)[0]["lost"] == ["F401"] and strong(p)[0]["gained"] == ["F821"]
+    text = terminal(p)
+    assert "  removed 1: F401\n  added 1: F821\n" in text
+    assert "['F401'] -> ['F821']" not in text
+    assert "base pyproject.toml (file only)" in text
+    assert strong(p)[0]["fingerprint"] in text
+    serialized = json.loads(json_report(p))
+    finding, = strong(serialized)
+    assert finding["before"]["data"] == ["F401"] and finding["after"]["data"] == ["F821"]
 
 
 @pytest.mark.parametrize("setting", ['preview=true', 'lint.per-file-ignores={"src/code.py"=["F401"]}', 'lint.ignore=["UNKNOWN123"]'])
@@ -247,6 +255,9 @@ def test_nested_ruff_override_removes_only_its_domain():
     p, code = analyze(MappingSnapshot(base), MappingSnapshot(head), today=TODAY, profiles=profile("ruff"))
     assert code == 1
     assert [f["dimension"] for f in strong(p)] == ["ruff.lint.rules@src/private/two.py"]
+    text = terminal(p)
+    assert "ruff.lint.rules@src/private/two.py" in text and "  removed 1: F401\n" in text
+    assert "  added " not in text and strong(p)[0]["fingerprint"] in text
 
 
 def test_scope_change_without_witness_is_still_visible():
