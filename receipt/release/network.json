@@ -1,0 +1,54 @@
+[
+  {
+    "bytes": 1077802,
+    "error": null,
+    "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/1320152564/15d4432b-b19b-439a-8b0d-2369e09fb427?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-11-22T06%3A16%3A35Z&rscd=attachment%3B+filename%3Dcheckwash.pyz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-11-22T05%3A16%3A08Z&ske=2026-11-22T06%3A16%3A35Z&sks=b&skv=2018-11-09&sig=QV%2FLI94z941UM6VuNXxYgvg2LPt61LNEdyfeyHUd5Uw%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5NTMyNTQwMywibmJmIjoxNzk1MzI1MTAzLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.BJ1UcPdaQBmUMfNIEykbHx0qGJzBTVBSr9i102XuN8I&response-content-disposition=attachment%3B%20filename%3Dcheckwash.pyz&response-content-type=application%2Foctet-stream",
+    "finished_at": "2026-11-22T05:25:03.981484+00:00",
+    "name": "verdict-baseline",
+    "path": "release/network/verdict-baseline.bin",
+    "sha256": "326e2a0c1e5e983869893a4c11c4f0ddba5e75e7c23a8984a3357042a87fbeff",
+    "started_at": "2026-11-22T05:25:02.316629+00:00",
+    "status": "completed",
+    "truncated": false,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.0/checkwash.pyz"
+  },
+  {
+    "bytes": 546241,
+    "error": null,
+    "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/1320152564/dc91a80d-4fff-4927-abf4-953bad783a30?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-11-22T06%3A17%3A55Z&rscd=attachment%3B+filename%3Dcheckwash.pyz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-11-22T05%3A17%3A49Z&ske=2026-11-22T06%3A17%3A55Z&sks=b&skv=2018-11-09&sig=n38zLarkKlcM06ZuEeHEf49nJBBsF8vIKBBA1HuiAWU%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5NTMyNTQxMiwibmJmIjoxNzk1MzI1MTEyLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.-pUEIFnER-KYi5j6z9Nvu3g29eMYcOUizLdTE2yTpTI&response-content-disposition=attachment%3B%20filename%3Dcheckwash.pyz&response-content-type=application%2Foctet-stream",
+    "finished_at": "2026-11-22T05:25:13.263213+00:00",
+    "name": "verdict-canary-old",
+    "path": "release/network/verdict-canary-old.bin",
+    "sha256": "423ce220365d0e179cfd9caa7e45724d71b8bd7c67d3cbfc51eca19e8a626ee7",
+    "started_at": "2026-11-22T05:25:12.301869+00:00",
+    "status": "completed",
+    "truncated": false,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.4.2/checkwash.pyz"
+  },
+  {
+    "bytes": 588886,
+    "error": null,
+    "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/1320152564/1019f1a4-7ee2-472a-9894-5cdc0f3bd09a?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-11-22T06%3A02%3A37Z&rscd=attachment%3B+filename%3Dcheckwash.pyz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-11-22T05%3A02%3A36Z&ske=2026-11-22T06%3A02%3A37Z&sks=b&skv=2018-11-09&sig=dEbz6gpRRUDtCXIL%2B95HDgWgSURudlgFeemKHXzX8HI%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5NTMyNTQyMSwibmJmIjoxNzk1MzI1MTIxLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.cx_fWR10trEZaoPPnsJmKFO1rR8UF4J3kwLwwx81dZU&response-content-disposition=attachment%3B%20filename%3Dcheckwash.pyz&response-content-type=application%2Foctet-stream",
+    "finished_at": "2026-11-22T05:25:21.942097+00:00",
+    "name": "verdict-canary-new",
+    "path": "release/network/verdict-canary-new.bin",
+    "sha256": "b305bc3f7d35f827190051f7a676ac40e3e86badf9eaed750f22f082fd10b05c",
+    "started_at": "2026-11-22T05:25:20.855370+00:00",
+    "status": "completed",
+    "truncated": false,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.5.0/checkwash.pyz"
+  },
+  {
+    "bytes": 1077802,
+    "error": null,
+    "final_url": "https://release-assets.githubusercontent.com/github-production-release-asset/1320152564/15d4432b-b19b-439a-8b0d-2369e09fb427?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-11-22T06%3A20%3A09Z&rscd=attachment%3B+filename%3Dcheckwash.pyz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-11-22T05%3A19%3A11Z&ske=2026-11-22T06%3A20%3A09Z&sks=b&skv=2018-11-09&sig=E8w%2FmMDNeFaTvPuP%2FrBlcs1YdN%2BzWomB90kGe1ld1vU%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5NTMyNTY1MywibmJmIjoxNzk1MzI1MzUzLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.5GkDO7NYFs_y_fYZH4PrD0cCpAgV_EwrlBXM44kG2jg&response-content-disposition=attachment%3B%20filename%3Dcheckwash.pyz&response-content-type=application%2Foctet-stream",
+    "finished_at": "2026-11-22T05:29:13.512562+00:00",
+    "name": "advertised-pyz",
+    "path": "release/network/advertised-pyz.bin",
+    "sha256": "326e2a0c1e5e983869893a4c11c4f0ddba5e75e7c23a8984a3357042a87fbeff",
+    "started_at": "2026-11-22T05:29:12.657985+00:00",
+    "status": "completed",
+    "truncated": false,
+    "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.0/checkwash.pyz"
+  }
+]
