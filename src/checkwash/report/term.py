@@ -112,6 +112,8 @@ def render(
         where = f"{f.path} :: {f.unit}" if f.unit else f.path
         lines.append(f"{f.rule}   {sev}   {where}")
         lines.append(f"  {f.message}")
+        if f.rule == "CI_WORKFLOW_TOUCHED" and f.path.rsplit("/", 1)[-1] in {"pyproject.toml", "setup.cfg", "tox.ini"}:
+            lines.append("  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.")
         if f.escalators:
             lines.append(f"  why high: {', '.join(f.escalators)}" if f.severity in ("high", "critical") else f"  escalators: {', '.join(f.escalators)}")
         if f.deescalators:

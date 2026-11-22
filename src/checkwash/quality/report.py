@@ -54,10 +54,21 @@ def terminal(payload):
         suffix = " [base exemption]" if finding["allowlisted"] else ""
         lines.append(f"{finding['severity'].upper()} {finding['rule']} [{finding['target_id'] or 'policy'}]{suffix}")
         lines.append("  " + finding["message"])
-        if finding["before"]["state"] == finding["after"]["state"] == "known":
+        if finding["rule"] == "QW_RULE_DISABLED" and finding["dimension"].split("@", 1)[0] == "ruff.lint.rules":
+            removed = finding["lost"]
+            lines.append(f"  removed {len(removed)}: {', '.join(removed)}")
+            if added := finding["gained"]:
+                lines.append(f"  added {len(added)}: {', '.join(added)}")
+        elif finding["before"]["state"] == finding["after"]["state"] == "known":
             lines.append(f"  {finding['before']['data']} -> {finding['after']['data']}")
         for place in finding["locations"]:
-            lines.append(f"  {place['side']} {place['path']}:{place['start_line']}")
+            # location() returns an empty span at 1:1 when a key cannot be located.
+            where = place["path"]
+            if place["start_line"] == place["end_line"] == place["end_column"] == 1:
+                where += " (file only)"
+            else:
+                where += f":{place['start_line']}"
+            lines.append(f"  {place['side']} {where}")
         if "fingerprint" in finding:
             lines.append("  " + finding["fingerprint"])
     for diagnostic in payload["diagnostics"]:
