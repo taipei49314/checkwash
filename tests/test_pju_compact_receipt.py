@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import tomllib
 import urllib.error
 
 import pytest
@@ -779,6 +780,8 @@ def test_collect_compact_binds_admitted_git_and_restores_helpers(compact_fixture
     br_mod = collector_mod.load_trusted_module("_test_br", "pju_receipt_bridge.py")
     qual_mod = collector_mod.load_trusted_module("_test_qual", "qualify_assertions.py")
     action_mod = collector_mod.load_replayer()
+    advertised = tomllib.loads((ROOT / "release/advertised.toml").read_text(encoding="utf-8"))
+    assert br_mod.ACTION_SHA == action_mod.ACTION_SHA == advertised["release"]["commit"]
     orig_inv_git = inv_mod.git
     orig_br_git = br_mod.git
 

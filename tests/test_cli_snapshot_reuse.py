@@ -159,6 +159,15 @@ def test_five_manifests_batch_in_one_cat_file_batch_and_resolve_imports(
             "poetry.lock": b'[[package]]\nname = "delta-lib"\nversion = "1.2.3"\n',
             "uv.lock": b'version = 1\n\n[[package]]\nname = "epsilon-lib"\nversion = "4.5.6"\n',
             "my_service/__init__.py": b"def calc():\n    return 42\n",
+            "helpers.py": b"def twice(n): return 2 * n\n",
+            "shared/__init__.py": b"",
+            "shared/fmt.py": b"def label(n): return str(n)\n",
+            "src/calc/__init__.py": b"",
+            "src/calc/ops.py": b"def add(a, b): return a + b\n",
+            "shop.py": b"",
+            "shop/detail.py": b"",
+            "shared/namespace/value.py": b"",
+            "src/shared/hidden.py": b"",
             "tests/test_calc.py": (
                 b"from my_service import calc\n\n"
                 b"def test_calc():\n    assert calc() == 42\n"
@@ -176,6 +185,9 @@ def test_five_manifests_batch_in_one_cat_file_batch_and_resolve_imports(
                 b"import delta_lib\n"
                 b"import epsilon_lib\n"
                 b"import my_service\n"
+                b"from helpers import twice\n"
+                b"from shared.fmt import label\n"
+                b"from calc.ops import add\n"
                 b"import undeclared_phantom_pkg\n\n"
                 b"def test_imports():\n"
                 b"    assert my_service.calc() == 42\n"
@@ -187,6 +199,9 @@ def test_five_manifests_batch_in_one_cat_file_batch_and_resolve_imports(
     # Verify direct helper batches all 5 in one cat-file --batch call.
     snap = GitSnapshot(str(repo), base_sha, side="base", resolved=base_sha)
     snap.list_paths()
+    assert snap.has_python_module("shared.namespace.value")
+    assert not snap.has_python_module("shop.detail")
+    assert not snap.has_python_module("shared.hidden")
     helper_calls = _spy_git_calls(monkeypatch)
     items, err = gitio_git.read_base_manifests_from_snapshot(
         snap, cli.MANIFESTS, cli.SKIPPABLE_OVERSIZED
