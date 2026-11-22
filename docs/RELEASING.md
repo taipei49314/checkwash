@@ -1,5 +1,25 @@
 # Releasing
 
+## 0.13.1 annotated tag authorization (2026-11-22)
+
+After reviewing the pre-tag results, Nelson wrote:
+
+> 好，核可發 0.13.1。用驗過的這版打 tag，確認 GitHub Release 的檔案都驗過，到 PyPI 要我核准時再叫我。#638 先留著。
+
+When asked about the distinct release-event receipt scope for this version,
+Nelson selected the following option, written by Codex:
+
+> 先停在 tag 驗證完成
+
+The current instruction authorizes creating the annotated tag and completing
+the tag stage. The stopping point is the verified tag, before the GitHub
+Release or its asset publication. The release merge M is
+`5e2a89ef0d447ae6e08c289f4a3357325b7286e9`; its tree matches PR #641 head
+`5dd43d5d6a5aa253f42ae2d97d75eb7695a2aa7e`. Under D-200, the tag targets
+`62656df812372c085b4d32c7864fcdfaccd0318a` and records M in its annotation.
+The main stage passed before tagging (check 137056657874), as did hosted
+source-at-M run 44970495987. The R29 movement list was empty.
+
 ## 0.13.1 pre-tag authorization and preparation
 
 On 2026-11-22 (Asia/Taipei), Nelson requested 「幫我做到發版前」 and selected
