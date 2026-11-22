@@ -1,0 +1,8 @@
+{
+  "errors": [],
+  "finished_at": "2026-11-22T09:49:29.243765+00:00",
+  "parents_sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+  "started_at": "2026-11-22T09:21:05.665573+00:00",
+  "status": "completed",
+  "subject_sha256": "4289f5e7966b45b1814c462ba8374aff5dceeb29be85fbe50cd4a60052447024"
+}
