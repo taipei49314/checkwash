@@ -11,6 +11,7 @@ from checkwash.change import EngineError, FileChange
 from checkwash.frontends.python.frontend import ParsedFile
 from checkwash.ir.model import IR, judged_as_test, normalize_text
 from checkwash.report.context import ReportContext
+from checkwash.oracle_credit import plain_import_exports
 
 if TYPE_CHECKING:
     import types
@@ -52,6 +53,7 @@ class RelocationContextResolver:
         self.relocation_initializers: dict[tuple[str, int], bytes | None] = {}
         self.relocation_context_sources: dict[tuple[str, int], Any] = {}
         self.relocation_context_bytes = 0
+        self.import_exports: dict[str, frozenset[str]] = {}
         self.relocation_context_inventory: dict[int, Any] = {}
         self.relocation_context_paths: dict[int, Any] = {}
         self.relocation_side_observations: dict[tuple[str, int], list[tuple[bytes | None, bool]]] = {}
@@ -132,6 +134,29 @@ class RelocationContextResolver:
         if self.relocation_context_sources[key] is _CONTEXT_UNKNOWN:
             raise ValueError("optional oracle-context source remains unknown")
         return self.relocation_context_sources[key]
+
+    def shared_import_exports(self, module: str) -> frozenset[str]:
+        """Plain exported bindings common to every possible origin on both sides.
+
+        Both sides normalize the same grouped import in the same way, including
+        when a module with that basename appears elsewhere in the change.
+        """
+        if module not in self.import_exports:
+            ordinary = None
+            try:
+                for side in (0, 1):
+                    files = self.context_path_list(side)
+                    candidates = [p for p in files if p.split("/")[-1] == module + ".py"
+                                  or p.split("/")[-2:] == [module, "__init__.py"]]
+                    if not {module + ".py", "src/" + module + ".py"}.intersection(candidates):
+                        raise ValueError("no ordinary first-party module")
+                    for path in candidates:
+                        names = plain_import_exports(self.context_source(path, side))
+                        ordinary = names if ordinary is None else ordinary & names
+            except (EngineError, OSError, TypeError, SyntaxError, ValueError, RecursionError):
+                ordinary = None
+            self.import_exports[module] = frozenset(ordinary or ())
+        return self.import_exports[module]
 
     def context_search(self, needles: list[str], side: int) -> list[str]:
         """Reconstruct the complete nonempty Python inventory on the actual side."""
@@ -339,6 +364,7 @@ class RelocationContextResolver:
                     source_reader=source_reader,
                     source_searcher=source_searcher,
                     source_path_lister=source_path_lister,
+                    import_exports=self.shared_import_exports,
                 )
 
 
@@ -495,6 +521,7 @@ def record_duplicate_survivors(
             source_reader=source_reader,
             source_searcher=source_searcher,
             source_path_lister=source_path_lister,
+            import_exports=relocation_resolver.shared_import_exports,
         )
         for pu in parsed.units:
             if (

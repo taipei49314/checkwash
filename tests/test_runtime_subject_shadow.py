@@ -8,12 +8,16 @@ end-to-end .gwcase fixtures below exercise the git-snapshot plumbing.
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 
 import checkwash.shadow as shadow_module
 
 from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
+from checkwash.contract import Contract
+from checkwash.engine import analyze
 from checkwash.shadow import (
     HeadSearchResult,
     SearchPlan,
@@ -76,6 +80,44 @@ ROUTES = {
         "compat/app/normalize.py",
     ),
 }
+
+
+@pytest.mark.parametrize("sibling, mode, package, expected", [
+    ("absent", "prepend", False, "pass"),
+    ("added", "prepend", False, "block"),
+    ("existing", "prepend", False, "block"),
+    ("added", "append", False, "pass"),
+    ("added", "importlib", False, "pass"),
+    ("added", "prepend", True, "pass"),
+])
+def test_relocated_unit_keeps_credit_only_with_the_same_import_origin(sibling, mode, package, expected):
+    old_path, new_path = "tests/test_billing.py", "tests/edge/test_total.py"
+    imports = b"from billing import total, fallback\n"
+    moved = b"def test_total():\n    assert total([1]) == 2\n"
+    kept = b"def test_fallback():\n    assert fallback([]) == 0\n"
+    files = {
+        "billing.py": b"def total(rows):\n    return sum(rows)\ndef fallback(rows):\n    return sum(rows)\n",
+        "pytest.ini": f"[pytest]\naddopts = --import-mode={mode}\npythonpath = .\n".encode(),
+        old_path: imports + kept, new_path: imports + moved,
+    }
+    changes = [
+        FileChange(old_path, "modified", imports + moved + kept, files[old_path]),
+        FileChange(new_path, "added", None, files[new_path]),
+    ]
+    if sibling != "absent":
+        provider = "tests/edge/billing.py"
+        files[provider] = b"def total(rows):\n    return 2\ndef fallback(rows):\n    return sum(rows)\n"
+        if sibling == "added":
+            changes.append(FileChange(provider, "added", None, files[provider]))
+    if package:
+        files.update({"tests/__init__.py": b"", "tests/edge/__init__.py": b""})
+    _, findings, verdict = analyze(changes, Config(), Contract(), [], datetime.date(2026, 11, 22),
+                                   root_reader=files.get, root_path_lister=lambda: list(files),
+                                   root_batch_reader=lambda names: {name: files.get(name) for name in names})
+    assert verdict == expected
+    disappeared = [f for f in findings if f.rule == "TEST_DISABLED" and f.unit == "test_total"]
+    assert len(disappeared) == 1
+    assert ("ASSERTION_MOVED" in disappeared[0].deescalators) == (expected == "pass")
 
 
 def _import_source(scope: str, module: str) -> bytes:
