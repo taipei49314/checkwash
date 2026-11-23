@@ -301,6 +301,16 @@ blocks. These are in-sample commit counts. The release procedure permits
 the version and own Action pin changes under D-196.
 [Release evidence](../../docs/RELEASING.md#0131-pre-tag-authorization-and-preparation)
 
+## Run 10: published 0.13.1 and the 0.13.2 candidate
+
+The public 0.13.1 zipapp (tag commit `62656df8`, built from `5e2a89ef`)
+was compared with `f0d202f3`, the same `src/` tree as the release base
+`096b5362`. Both engines passed 1,748 JS/TS commits, blocked 50 and returned
+the two existing snapshot errors in apollo-client and undici. All 1,800
+paired CLI exits and both output streams matched byte for byte. The Python
+set had 1,726 matching passes and 74 matching blocks. All counts apply to
+these fixed in-sample sets. [Comparison and limits](../../docs/releases/v0.13.2-public-launch.md)
+
 ## What these runs do not show
 
 - **A false-positive rate.** The 39 commits that v0.7.0 and v0.8.0 both

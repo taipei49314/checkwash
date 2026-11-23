@@ -1,6 +1,6 @@
 # What is stable, what is not, and how you will be told
 
-checkwash **is alpha**, including the 0.13.1 candidate. Its versioned interfaces and
+checkwash **is alpha**, including the 0.13.2 candidate. Its versioned interfaces and
 release checks support deliberate adoption, but its coverage, false-positive
 cost and adoption evidence do not meet a 1.0 claim. This page separates those
 contracts from the work still required. The
