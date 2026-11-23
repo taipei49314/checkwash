@@ -1,5 +1,44 @@
 # Releasing
 
+## 0.13.2 release preparation
+
+On 2026-11-23 (Asia/Taipei), following the merge of #656, Nelson asked
+「可以開跑全腿 然後整理一下推薦 並發布了?」 about the planned 0.13.2
+release. Codex treats this as the instruction to prepare 0.13.2, run the
+platform checks and proceed through the publication gates. The release PR
+merge, acceptance of formal platform gaps, and protected PyPI deployment
+each retain their named review. The public guide continues to recommend
+0.13.1 through verification of the new public artifacts.
+
+The release starts from `096b5362a838929ea33c625bba15f9d3bd5faa52`.
+The reviewed collector ref `review/collector-d-0132-20261123` points to
+that commit for all five stages.
+At PR head R, run the supplementary Windows/WSL Python 3.11–3.13 suite
+and compare all six corpus outputs. At the release merge M, the hosted
+macOS and Linux source checkpoint compares its six outputs with that
+digest. After the GitHub assets exist, the hosted published-artifacts
+checkpoint verifies the downloaded wheel, sdist and zipapp before PyPI
+review. The five formal PJU receipts will each cover Windows CPython 3.11.9.
+Any release-specific acceptance of the eight missing formal cells and
+the missing single-run nine-way comparison must identify the actual evidence.
+
+**Fixed corpus.** Public 0.13.1 zipapp SHA256
+`0a987325c6f738129f5dbdc1e0287cfeab40517342b46df80707cccff8dd2839`
+was compared with `f0d202f31034d874391d998beb651a9dbd04508b` on
+LAPTOP-01AGNPJU, Windows CPython 3.11.9,
+`HUMAN_AUTHORIZED_LOCAL_PJU_NOT_EC_POOL`. That candidate and the release
+base have the same `src/` tree, `a586058d56c399d5709a215b98c40b15d9507a30`.
+The 3,600-member manifest SHA256 was
+`f6281caad596c5d6f054dd8f0050abb21d63a803fa7bf2fa3f6c694d05559de2`.
+All paired stdout, stderr and exit codes matched. The owner movement list
+is empty. Codex accepted the scoped results before preparation. D-196 permits
+only the version string and own Action pin to differ in the final source.
+The retained raw evidence archive SHA256 is
+`2bb18ffc5b2b21ffdd6dc7ff03c307b8fee46748f0e3616fc974d2e995a5d977`.
+[Candidate guide](releases/v0.13.2-public-launch.md) ·
+[JS/TS comparison](../benchmarks/javascript-replay/results.md) ·
+[D-176 review](d176-cost-disposition-0.13.2.md)
+
 ## 0.13.1 checked publication and pin promotion (2026-11-22)
 
 Release PR #641 merged as `5e2a89ef0d447ae6e08c289f4a3357325b7286e9`.

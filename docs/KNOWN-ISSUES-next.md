@@ -1,3 +1,7 @@
+# 0.13.2 candidate — 2026-11-23
+
+The candidate addresses the reviewed import and test-move cases from #634 and #636. The earlier dated entries describe the versions on which those cases were found. [Known issues for 0.13.2](KNOWN-ISSUES-v0.13.2.md)
+
 # 0.13.1 candidate — 2026-11-22
 
 The candidate adds bounded coverage for the same-name function reported in #635. The versioned page describes which tests and fixtures it covers and which related issues remain open. [Known issues for 0.13.1](KNOWN-ISSUES-v0.13.1.md)

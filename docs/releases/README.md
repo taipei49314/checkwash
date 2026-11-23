@@ -9,6 +9,10 @@ has the current install commands and Action pin, and the
 version, commit and download bytes behind them. A new publication record
 starts from the [publication record template](publication-record-template.md).
 
+## v0.13.2 candidate
+
+The candidate improves review of Python imports and moved tests, reduces scan time on the measured Django changes, and clarifies CLI reports and installation instructions. [Candidate guide](v0.13.2-public-launch.md) · [Current installation guide](../install.md)
+
 ## v0.13.1
 
 Published on GitHub and PyPI on 2026-11-22. The Python detector can identify a local function that replaces the production function called by an existing test. It also covers the reviewed numeric fixture case. [Release guide](v0.13.1-public-launch.md) · [Publication record](v0.13.1-publication-verification.md) · [Known issues](../KNOWN-ISSUES-v0.13.1.md)

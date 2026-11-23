@@ -21,6 +21,7 @@ like this for review, including changes written by coding agents.
 
 These examples use 0.13.1. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
 tracks the latest verified CLI download and Action pin.
+The [0.13.2 candidate guide](docs/releases/v0.13.2-public-launch.md) describes the upcoming changes.
 
 Already installed from PyPI? From your Git repository, run
 `python -m checkwash check` to review your uncommitted changes. Use the Python
