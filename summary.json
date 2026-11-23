@@ -1,0 +1,413 @@
+{
+  "kind": "checkwash.hosted-published-independent-readback.v1",
+  "label": "HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT",
+  "run": 45221895726,
+  "attempt": 1,
+  "M": "5349b2a3ab10c1b40e355225f272e752c323859d",
+  "R": "0211fa68bdda9794f82a7ccd48f4d0b1a8415e12",
+  "A": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "tree": "f1a51de51487356ef8afc2a3ca967b57389c7b63",
+  "tag_object": "2d7888466ace763edaa1760c6bd5bbb80b947c23",
+  "release_id": 455634516,
+  "jobs": {
+    "hosted release identity": "success",
+    "hosted published Release record": "success",
+    "hosted source at M (${{ matrix.os }}, Python ${{ matrix.python }})": "skipped",
+    "hosted Action at A (ubuntu-latest, Python 3.12)": "skipped",
+    "hosted corpus comparison": "skipped",
+    "hosted published artifacts (ubuntu-latest, Python 3.11)": "success",
+    "hosted published artifacts (ubuntu-latest, Python 3.12)": "success",
+    "hosted published artifacts (ubuntu-latest, Python 3.13)": "success",
+    "hosted published artifacts (macos-latest, Python 3.12)": "success",
+    "hosted published artifacts (macos-latest, Python 3.13)": "success",
+    "hosted published artifacts (macos-latest, Python 3.11)": "success"
+  },
+  "expected_skipped_jobs": [
+    "hosted Action at A (ubuntu-latest, Python 3.12)",
+    "hosted corpus comparison",
+    "hosted source at M (${{ matrix.os }}, Python ${{ matrix.python }})"
+  ],
+  "annotations": [
+    {
+      "job": "137858426863",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    },
+    {
+      "job": "137858426897",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    },
+    {
+      "job": "137858426897",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    },
+    {
+      "job": "137858428452",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    },
+    {
+      "job": "137858428452",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "log_warning_lines": {},
+  "published_record": {
+    "label": "HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT",
+    "checkpoint": "published-artifacts",
+    "release_id": "455634516",
+    "wheel_sha256": "4d98ad6e669160e5f375b377618d8a45447b39fda48f6938f53c4e7ef287bb76",
+    "sdist_sha256": "78e84a4cac767c4676859cdf00ffe211796d337be5991c9e4d1a99affed4dbe0",
+    "pyz_sha256": "2f03089043d55565417d13bfc070bc97909c446b413abfefe2f28d0afbb1aa6e",
+    "publication_record": "no publication record on main at dispatch",
+    "pypi": "not on PyPI at dispatch",
+    "run": "45221895726 attempt 1"
+  },
+  "asset_table": {
+    "checkwash-0.13.2-py3-none-any.whl": {
+      "id": 783761846,
+      "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash-0.13.2-py3-none-any.whl",
+      "bytes": 1103912,
+      "sha256": "4d98ad6e669160e5f375b377618d8a45447b39fda48f6938f53c4e7ef287bb76",
+      "github_digest": "sha256:4d98ad6e669160e5f375b377618d8a45447b39fda48f6938f53c4e7ef287bb76",
+      "tag_stage_sha256": "4d98ad6e669160e5f375b377618d8a45447b39fda48f6938f53c4e7ef287bb76",
+      "tag_stage_bytes": 1103912,
+      "release_event_sha256": "4d98ad6e669160e5f375b377618d8a45447b39fda48f6938f53c4e7ef287bb76",
+      "release_event_bytes": 1103912,
+      "publish_assets_record": {
+        "bytes": 1103912,
+        "id": 783761846,
+        "name": "checkwash-0.13.2-py3-none-any.whl",
+        "sha256": "4d98ad6e669160e5f375b377618d8a45447b39fda48f6938f53c4e7ef287bb76"
+      },
+      "tag_vs_public": {
+        "byte_identical": true
+      }
+    },
+    "checkwash-0.13.2.tar.gz": {
+      "id": 783761966,
+      "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash-0.13.2.tar.gz",
+      "bytes": 5849664,
+      "sha256": "78e84a4cac767c4676859cdf00ffe211796d337be5991c9e4d1a99affed4dbe0",
+      "github_digest": "sha256:78e84a4cac767c4676859cdf00ffe211796d337be5991c9e4d1a99affed4dbe0",
+      "tag_stage_sha256": "78e84a4cac767c4676859cdf00ffe211796d337be5991c9e4d1a99affed4dbe0",
+      "tag_stage_bytes": 5849664,
+      "release_event_sha256": "78e84a4cac767c4676859cdf00ffe211796d337be5991c9e4d1a99affed4dbe0",
+      "release_event_bytes": 5849664,
+      "publish_assets_record": {
+        "bytes": 5849664,
+        "id": 783761966,
+        "name": "checkwash-0.13.2.tar.gz",
+        "sha256": "78e84a4cac767c4676859cdf00ffe211796d337be5991c9e4d1a99affed4dbe0"
+      },
+      "tag_vs_public": {
+        "byte_identical": true
+      }
+    },
+    "checkwash.pyz": {
+      "id": 783762125,
+      "url": "https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz",
+      "bytes": 1088354,
+      "sha256": "2f03089043d55565417d13bfc070bc97909c446b413abfefe2f28d0afbb1aa6e",
+      "github_digest": "sha256:2f03089043d55565417d13bfc070bc97909c446b413abfefe2f28d0afbb1aa6e",
+      "tag_stage_sha256": "5ffae4be3a96e41de99a4d142237b534100fe9944e6e6bb6a8782b08f9232745",
+      "tag_stage_bytes": 1088354,
+      "release_event_sha256": "2f03089043d55565417d13bfc070bc97909c446b413abfefe2f28d0afbb1aa6e",
+      "release_event_bytes": 1088354,
+      "publish_assets_record": {
+        "bytes": 1088354,
+        "id": 783762125,
+        "name": "checkwash.pyz",
+        "sha256": "2f03089043d55565417d13bfc070bc97909c446b413abfefe2f28d0afbb1aa6e"
+      },
+      "tag_vs_public": {
+        "members": 252,
+        "match_after_zeroing_dos_timestamps": true,
+        "normalized_sha256": "90a03076955a3b299ab06467fac4d4094f1f71309fac24f77da7e1a7efdd9738",
+        "changed_bytes": 1008
+      }
+    }
+  },
+  "legs": [
+    {
+      "runner": "macos-latest",
+      "python": "3.11.9",
+      "system": "Darwin 25.6.0 arm64",
+      "image": "macos26 20261117.0516.1",
+      "qualification": {
+        "wheel": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        },
+        "pyz": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        }
+      },
+      "source_members": 239,
+      "artifact_member_counts": {
+        "checkwash-0.13.2-py3-none-any.whl": 244,
+        "checkwash-0.13.2.tar.gz": 3325,
+        "checkwash.pyz": 240
+      },
+      "zipapp_qualification": "zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0",
+      "installed_wheel_demo": "passed",
+      "release_range_report": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d"
+    },
+    {
+      "runner": "macos-latest",
+      "python": "3.12.10",
+      "system": "Darwin 25.6.0 arm64",
+      "image": "macos26 20261117.0516.1",
+      "qualification": {
+        "wheel": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        },
+        "pyz": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        }
+      },
+      "source_members": 239,
+      "artifact_member_counts": {
+        "checkwash-0.13.2-py3-none-any.whl": 244,
+        "checkwash-0.13.2.tar.gz": 3325,
+        "checkwash.pyz": 240
+      },
+      "zipapp_qualification": "zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0",
+      "installed_wheel_demo": "passed",
+      "release_range_report": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d"
+    },
+    {
+      "runner": "macos-latest",
+      "python": "3.13.17",
+      "system": "Darwin 25.6.0 arm64",
+      "image": "macos26 20261117.0516.1",
+      "qualification": {
+        "wheel": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        },
+        "pyz": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        }
+      },
+      "source_members": 239,
+      "artifact_member_counts": {
+        "checkwash-0.13.2-py3-none-any.whl": 244,
+        "checkwash-0.13.2.tar.gz": 3325,
+        "checkwash.pyz": 240
+      },
+      "zipapp_qualification": "zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0",
+      "installed_wheel_demo": "passed",
+      "release_range_report": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d"
+    },
+    {
+      "runner": "ubuntu-latest",
+      "python": "3.11.18",
+      "system": "Linux 7.0.0-1020-azure x86_64",
+      "image": "ubuntu26 20261116.202.1",
+      "qualification": {
+        "wheel": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        },
+        "pyz": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        }
+      },
+      "source_members": 239,
+      "artifact_member_counts": {
+        "checkwash-0.13.2-py3-none-any.whl": 244,
+        "checkwash-0.13.2.tar.gz": 3325,
+        "checkwash.pyz": 240
+      },
+      "zipapp_qualification": "zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0",
+      "installed_wheel_demo": "passed",
+      "release_range_report": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d"
+    },
+    {
+      "runner": "ubuntu-latest",
+      "python": "3.12.16",
+      "system": "Linux 7.0.0-1020-azure x86_64",
+      "image": "ubuntu26 20261116.202.1",
+      "qualification": {
+        "wheel": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        },
+        "pyz": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        }
+      },
+      "source_members": 239,
+      "artifact_member_counts": {
+        "checkwash-0.13.2-py3-none-any.whl": 244,
+        "checkwash-0.13.2.tar.gz": 3325,
+        "checkwash.pyz": 240
+      },
+      "zipapp_qualification": "zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0",
+      "installed_wheel_demo": "passed",
+      "release_range_report": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d"
+    },
+    {
+      "runner": "ubuntu-latest",
+      "python": "3.13.18",
+      "system": "Linux 7.0.0-1020-azure x86_64",
+      "image": "ubuntu26 20261116.202.1",
+      "qualification": {
+        "wheel": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        },
+        "pyz": {
+          "executed": 283,
+          "failed": 0,
+          "total": 283
+        }
+      },
+      "source_members": 239,
+      "artifact_member_counts": {
+        "checkwash-0.13.2-py3-none-any.whl": 244,
+        "checkwash-0.13.2.tar.gz": 3325,
+        "checkwash.pyz": 240
+      },
+      "zipapp_qualification": "zipapp qualification passed: version/demo/clean=0; term/json/sarif block=1; bad ref/range/typo=2; hook-json clean={} and block decision both exit 0",
+      "installed_wheel_demo": "passed",
+      "release_range_report": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d"
+    }
+  ],
+  "case_inventories": [
+    {
+      "mutations": 248,
+      "path": "tests/data/javascript_assertion_support.json",
+      "sha256": "f23a9278c7d8fc96ebbb89d8aaf6c1ff439564114e09f5de4d8adaeddc060c9d"
+    },
+    {
+      "mutations": 35,
+      "path": "tests/data/javascript_foundation_mutations.json",
+      "sha256": "d3d422f7172fb14f19ef2f6f3d05aa348b7f83249190a844c9423a08c3bb9774"
+    }
+  ],
+  "individual_case_records_identical_across_legs_and_distributions": true,
+  "source_checkpoint": {
+    "run": 45190644444,
+    "attempt": 1,
+    "sha256": "04ed968e46b9f7542416fa1ff35ad5156d1878f385b505dcb48580ec63b57fd9",
+    "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+    "qualification_cases_sha256": "c1dcd5849a84a046ef3added1015e6eb8050451fc85ea0a7b00f9dfb71d4a741",
+    "case_inventories": [
+      {
+        "mutations": 248,
+        "path": "tests/data/javascript_assertion_support.json",
+        "sha256": "f23a9278c7d8fc96ebbb89d8aaf6c1ff439564114e09f5de4d8adaeddc060c9d"
+      },
+      {
+        "mutations": 35,
+        "path": "tests/data/javascript_foundation_mutations.json",
+        "sha256": "d3d422f7172fb14f19ef2f6f3d05aa348b7f83249190a844c9423a08c3bb9774"
+      }
+    ]
+  },
+  "archives": {
+    "release-hosted-artifacts-macos-latest-py3.11-attempt-1": {
+      "id": 14841664073,
+      "bytes": 235191,
+      "sha256": "9c21b1206e75429ab3b09a89615afb4b0ede2aebd7b0f63befa4ec7d5a1b14ba"
+    },
+    "release-hosted-artifacts-macos-latest-py3.12-attempt-1": {
+      "id": 14841873151,
+      "bytes": 235182,
+      "sha256": "1a68e11166ea88232e797319ab59df2b01228f6b911ff02cfc06ea05e9bdbb74"
+    },
+    "release-hosted-artifacts-macos-latest-py3.13-attempt-1": {
+      "id": 14843025016,
+      "bytes": 235180,
+      "sha256": "bdee99a8caaf8ed9dceb7b3bf8087f89fa79ce6e05468a643240275f6b653a00"
+    },
+    "release-hosted-artifacts-ubuntu-latest-py3.11-attempt-1": {
+      "id": 14842610596,
+      "bytes": 235376,
+      "sha256": "c177cf8a3dd07c7d0308adcd4702806160ada0f2b22f46ec41aff236066bedf1"
+    },
+    "release-hosted-artifacts-ubuntu-latest-py3.12-attempt-1": {
+      "id": 14841093779,
+      "bytes": 235367,
+      "sha256": "f1ce5162eb74eaded4029ac396e1e9488acf68bd61a6b148e69978364caa3b66"
+    },
+    "release-hosted-artifacts-ubuntu-latest-py3.13-attempt-1": {
+      "id": 14842008214,
+      "bytes": 235365,
+      "sha256": "fbcac8e136abdfa417b69a91b203a6d980a6c6a91a30a4bdb7ca0f2c18f34c19"
+    },
+    "release-hosted-identity-attempt-1": {
+      "id": 14840209252,
+      "bytes": 1028,
+      "sha256": "6207d4dda5979411f0293affa664821e9afbbe4679f70276789fb10dc24f9c56"
+    },
+    "release-hosted-release-attempt-1": {
+      "id": 14839964695,
+      "bytes": 4461,
+      "sha256": "2063ec2f347ba6990b29d5bac74d77135f68077b4c65e9b3f8a5d02436543030"
+    }
+  },
+  "qualification_cases_sha256": "c1dcd5849a84a046ef3added1015e6eb8050451fc85ea0a7b00f9dfb71d4a741"
+}
