@@ -1,0 +1,3 @@
+checkwash engine error: cannot resolve 'MISSING_REF' (base of 'MISSING_REF..HEAD')
+error: range must be BASE..HEAD, got 'HEAD'
+error: unknown command 'chek'. Did you mean 'check'?
