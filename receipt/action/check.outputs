@@ -1,0 +1,6 @@
+exit_code=0
+analysis_exit_code=0
+receipt_path=C:\Users\nelson\AppData\Local\CodexScratch\cw132\cw132t1\s\action\checkwash-action-o7fq6fkv\check-receipt.json
+base=096b5362a838929ea33c625bba15f9d3bd5faa52
+head=5349b2a3ab10c1b40e355225f272e752c323859d
+fail_on=high

@@ -1,0 +1,13 @@
+Obtaining file:///C:/Users/nelson/dev/cw132t1/c
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: checkwash
+  Building editable for checkwash (pyproject.toml): started
+  Building editable for checkwash (pyproject.toml): finished with status 'done'
+  Created wheel for checkwash: filename=checkwash-0.13.2-py3-none-any.whl size=6170 sha256=151364c67d25e6979f8ba10adfd90b5b6f9cfca002ebf6dceffeb0808825aee9
+  Stored in directory: C:\Users\nelson\AppData\Local\CodexScratch\cw132\cw132t1\s\pip-ephem-wheel-cache-m8g7crhw\wheels\80\dc\d4\0bfa0ec9d1206c57adc5e431fe63a953d0ae8c5aefd0a1da71
+Successfully built checkwash
+Installing collected packages: checkwash
+Successfully installed checkwash-0.13.2

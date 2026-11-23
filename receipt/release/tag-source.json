@@ -1,0 +1,24 @@
+{
+  "attempt": null,
+  "errors": [],
+  "expected_commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "expected_source_commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "public_surfaces": [
+    "src/",
+    "pyproject.toml",
+    "action/",
+    ".pre-commit-hooks.yaml"
+  ],
+  "remote": "https://github.com/taipei49314/checkwash.git",
+  "remote_tag_commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "remote_tag_object": "2d7888466ace763edaa1760c6bd5bbb80b947c23",
+  "run_id": null,
+  "schema_version": 1,
+  "source_commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "source_tree": "8d11f92472d55c221ec791a7fb7642bace002f83",
+  "status": "passed",
+  "tag": "v0.13.2",
+  "tag_commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "tag_object": "2d7888466ace763edaa1760c6bd5bbb80b947c23",
+  "validator_sha256": "9e9ef1c7941e33f8c523ca84c562a50e5933542f9c75513611dd34785bc8c3d6"
+}

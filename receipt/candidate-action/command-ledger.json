@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/dev/cw132t1/r/candidate-action/install.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\cw132t1\\s\\candidate-action",
+    "duration_seconds": 14.437000000005355,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T15:06:15.503438+00:00",
+    "name": "install",
+    "started_at": "2026-11-23T15:06:01.065979+00:00",
+    "stderr": "logs/install.stderr",
+    "stdout": "logs/install.stdout",
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "--noprofile",
+      "--norc",
+      "-e",
+      "-o",
+      "pipefail",
+      "C:/Users/nelson/dev/cw132t1/r/candidate-action/check.bash"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\cw132t1\\s\\candidate-action",
+    "duration_seconds": 1.6410000000032596,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T15:06:17.138185+00:00",
+    "name": "check",
+    "started_at": "2026-11-23T15:06:15.510433+00:00",
+    "stderr": "logs/check.stderr",
+    "stdout": "logs/check.stdout",
+    "timed_out": false
+  }
+]
