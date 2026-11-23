@@ -29,7 +29,7 @@ _BANNED = {"if", "continue-on-error", "env", "defaults", "strategy", "container"
 _ACTION = "taipei49314/checkwash/action"
 # Scheme S (D-194). The Action pin the README recommended when this release was
 # prepared; RELEASING step 8 moves it with the README after publication.
-_PREVIOUS_ACTION_PIN = "62656df812372c085b4d32c7864fcdfaccd0318a"
+_PREVIOUS_ACTION_PIN = "4ecb0b0efa2febe7dcacae7f4114e98877205128"
 # This release's own Action commit. Only a release PR's last commit changes the
 # next line, to that commit's parent (tools/own_action_pin.py), and the release
 # bridge verifies it. The release tools read both lines in exactly this shape.
