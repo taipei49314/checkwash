@@ -472,6 +472,12 @@ def test_readme_install_refs_match_advertised_release():
     assert downloads == {advertised["tag"]}
 
     assert "](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)" in readme
+    # A published PyPI description is frozen. Keep its installation advice
+    # useful across releases by linking to the guide that owns the pins.
+    description = _pyproject()["project"]["readme"]["text"]
+    assert "](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)" in description
+    assert not re.search(r"checkwash\s*==|/releases/download/v\d|checkwash/action@", description)
+
     guide = (ROOT / "docs/install.md").read_text(encoding="utf-8")
     assert set(re.findall(r"python -m pip install checkwash==(\S+)", guide)) == {advertised["version"]}
     assert f"](https://pypi.org/project/checkwash/{advertised['version']}/)" in guide

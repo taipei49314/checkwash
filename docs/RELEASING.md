@@ -3060,15 +3060,16 @@ the full account.
 
 ## Check the public package page
 
-The package description comes from `README.md` at build time. Use absolute
-GitHub URLs for repository files in that README: PyPI cannot resolve paths
-such as `docs/stability.md` against the source tree. Inspect the rendered
-description as well as the Markdown source, including content inside HTML
-disclosures that another renderer may flatten.
+The package description comes from `[project.readme].text` in `pyproject.toml`
+at build time. Link installation advice to the [latest verified installation
+guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md).
+Use absolute GitHub URLs so links work on PyPI. Inspect the rendered
+description as well as the Markdown source.
 
 Before publishing, check the candidate wheel's name, version, Python
 requirement, license, project URLs and embedded description. Confirm the
-description matches the intended README and all document links resolve.
+Markdown description in both wheel `METADATA` and sdist `PKG-INFO` matches
+`[project.readme].text` and all document links resolve.
 Keep alpha status, measurement provenance, refactor cost and Action version
 differences visible. This check does not establish detector coverage.
 
