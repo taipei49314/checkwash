@@ -1,0 +1,2 @@
+  Running command git clone --filter=blob:none --quiet https://github.com/taipei49314/checkwash.git 'C:\Users\nelson\AppData\Local\CodexScratch\cw132\cw132m1\s\pip-req-build-wrzl__fu'
+  Running command git checkout -q 150c9ffd621e76b8dc0dbf56ca4be6bc019d9186

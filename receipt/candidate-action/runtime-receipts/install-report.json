@@ -1,0 +1,65 @@
+{
+  "version": "1",
+  "pip_version": "24.0",
+  "install": [
+    {
+      "download_info": {
+        "url": "file:///C:/Users/nelson/dev/cw132m1/a",
+        "dir_info": {}
+      },
+      "is_direct": true,
+      "is_yanked": false,
+      "requested": true,
+      "metadata": {
+        "metadata_version": "2.5",
+        "name": "checkwash",
+        "version": "0.13.2",
+        "summary": "Flags known patterns of weakened tests and CI checks in a Git diff.",
+        "description": "# CheckWash\n\nCheckWash reads your Git diff and flags changes that weaken tests or CI checks.\nFor example, changing `assert total == 105.3` to `assert total > 0` lets an\nincorrect total pass. CheckWash flags the relaxed assertion for review.\n\nUse the [latest verified installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)\nfor the recommended Python package version, standalone download, and GitHub\nAction commit to pin in your workflow.\nThe Action uses the CheckWash version at that commit. Upgrading your local\nCLI and updating the workflow pin are separate steps.\n\nAfter installing the CLI, run `python -m checkwash demo` to see sample findings.\nRun `python -m checkwash check` in your Git repository to check your uncommitted\nchanges. See the [project README](https://github.com/taipei49314/checkwash#readme)\nfor usage examples and CI setup.\n\nCheckWash is alpha. Legitimate refactors can trigger a block. For example,\nthe 0.12.0 CLI blocked 6 of 60 cases in the project's refactor corpus,\nincluding 4 of the 57 strictly qualified cases. See the\n[measurement details and known limits](https://github.com/taipei49314/checkwash/blob/fbae5f7d4b9bd4b891ac7fe962401f2bda1483f4/README.md#know-the-limits).\n",
+        "description_content_type": "text/markdown",
+        "keywords": [
+          "ai-agent",
+          "ci",
+          "code-review",
+          "reward-hacking",
+          "test-tampering"
+        ],
+        "author": "taipei49314",
+        "classifier": [
+          "Development Status :: 3 - Alpha",
+          "Environment :: Console",
+          "Intended Audience :: Developers",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python :: 3.11",
+          "Programming Language :: Python :: 3.12",
+          "Programming Language :: Python :: 3.13",
+          "Topic :: Software Development :: Quality Assurance"
+        ],
+        "requires_dist": [
+          "pytest>=8; extra == 'dev'",
+          "pyyaml>=6; extra == 'dev'"
+        ],
+        "requires_python": ">=3.11",
+        "project_url": [
+          "Homepage, https://github.com/taipei49314/checkwash"
+        ],
+        "provides_extra": [
+          "dev"
+        ]
+      }
+    }
+  ],
+  "environment": {
+    "implementation_name": "cpython",
+    "implementation_version": "3.11.9",
+    "os_name": "nt",
+    "platform_machine": "",
+    "platform_release": "10",
+    "platform_system": "Windows",
+    "platform_version": "10.0.26200",
+    "python_full_version": "3.11.9",
+    "platform_python_implementation": "CPython",
+    "python_version": "3.11",
+    "sys_platform": "win32"
+  }
+}
