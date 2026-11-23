@@ -1,0 +1,450 @@
+[
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.030999999988125637,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:29.320234+00:00",
+    "started_at": "2026-11-23T16:32:29.291973+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 0,
+      "path": "stdout.bin",
+      "sha256": "990c52eb3d4ef41b7dd030c423a8368aa0df4135856d33b19d20913f4529bb3f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "rev-parse",
+      "--verify",
+      "HEAD^{tree}"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.031000000017229468,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:29.349968+00:00",
+    "started_at": "2026-11-23T16:32:29.321234+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 41,
+      "path": "stdout.bin",
+      "sha256": "2086d504d9eb3d81421d965b3fe7ce388ede0ccf72d2d93d11ff7e348a421a03"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "rev-parse",
+      "--verify",
+      "refs/tags/v0.13.2"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.030999999988125637,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:29.376752+00:00",
+    "started_at": "2026-11-23T16:32:29.349968+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 82,
+      "path": "stdout.bin",
+      "sha256": "c159a6b06f04208f10b07c35452d88316c08d73bee98b32d3caf3c3efb954771"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "rev-parse",
+      "--verify",
+      "refs/tags/v0.13.2^{commit}"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.03200000000651926,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:29.412477+00:00",
+    "started_at": "2026-11-23T16:32:29.377744+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 41,
+      "offset": 123,
+      "path": "stdout.bin",
+      "sha256": "990c52eb3d4ef41b7dd030c423a8368aa0df4135856d33b19d20913f4529bb3f"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "ls-remote",
+      "--exit-code",
+      "--",
+      "https://github.com/taipei49314/checkwash.git",
+      "refs/tags/v0.13.2",
+      "refs/tags/v0.13.2^{}"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.6400000000139698,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.045060+00:00",
+    "started_at": "2026-11-23T16:32:29.413470+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 121,
+      "offset": 164,
+      "path": "stdout.bin",
+      "sha256": "6028f606ddf8b9417fbc892b4fe46ce08dfc793563817aa98f59e55ac41ca9a9"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "show",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128:pyproject.toml"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.030999999988125637,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.074168+00:00",
+    "started_at": "2026-11-23T16:32:30.045060+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 2726,
+      "offset": 285,
+      "path": "stdout.bin",
+      "sha256": "2f66e6dfc2d6b071ea891cdb8775c71f33ae6b8462db800a4def56bcce847eb1"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "show",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128:src/checkwash/__init__.py"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.03200000000651926,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.105339+00:00",
+    "started_at": "2026-11-23T16:32:30.077175+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 164,
+      "offset": 3011,
+      "path": "stdout.bin",
+      "sha256": "fe9a32d587ed4a6fdea111460d8bbc2cda215c2be0007764e6c2757196e28c94"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "ls-tree",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+      "--",
+      "src"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.014999999984866008,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.135337+00:00",
+    "started_at": "2026-11-23T16:32:30.106341+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 57,
+      "offset": 3175,
+      "path": "stdout.bin",
+      "sha256": "a88509dd168bf92f20c35fcb2118162176ac6d4ac17d12b48abe2fbadc8f72ee"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "ls-tree",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+      "--",
+      "pyproject.toml"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.03200000000651926,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.163739+00:00",
+    "started_at": "2026-11-23T16:32:30.135337+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 68,
+      "offset": 3232,
+      "path": "stdout.bin",
+      "sha256": "3c1e25ff1258fd62536ff113157591d8da521becd15b9b71368ea06caaeca1ef"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "ls-tree",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+      "--",
+      "action"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.030999999988125637,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.192302+00:00",
+    "started_at": "2026-11-23T16:32:30.164257+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 60,
+      "offset": 3300,
+      "path": "stdout.bin",
+      "sha256": "0ca93a1a2ce3a2423e7573d98eb6acac8f41ce6564cb16ae45126149f96eea65"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "ls-tree",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+      "--",
+      ".pre-commit-hooks.yaml"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.031000000017229468,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.220056+00:00",
+    "started_at": "2026-11-23T16:32:30.193302+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 76,
+      "offset": 3360,
+      "path": "stdout.bin",
+      "sha256": "4df07f2aef342e1e3875e08d224b1a75d8fa6d640717b662e86b46a8766c3768"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "diff",
+      "--exit-code",
+      "--no-ext-diff",
+      "--no-textconv",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+      "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+      "--",
+      "src/",
+      "pyproject.toml",
+      "action/",
+      ".pre-commit-hooks.yaml"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.030999999988125637,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.249478+00:00",
+    "started_at": "2026-11-23T16:32:30.220056+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 3436,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  },
+  {
+    "argv": [
+      "git",
+      "--no-replace-objects",
+      "--no-pager",
+      "-c",
+      "core.fsmonitor=false",
+      "-C",
+      "C:\\Users\\nelson\\dev\\cw132e1\\g",
+      "status",
+      "--porcelain=v1",
+      "--untracked-files=all",
+      "--ignored=matching",
+      "--",
+      "src/",
+      "pyproject.toml",
+      "action/",
+      ".pre-commit-hooks.yaml"
+    ],
+    "cwd": "C:\\Users\\nelson\\AppData\\Local\\CodexScratch\\cw132\\ev-45208995702-1-dypubml6\\s",
+    "duration_seconds": 0.03200000000651926,
+    "error": null,
+    "exit_code": 0,
+    "finished_at": "2026-11-23T16:32:30.289217+00:00",
+    "started_at": "2026-11-23T16:32:30.249478+00:00",
+    "stderr": {
+      "bytes": 0,
+      "offset": 0,
+      "path": "stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout": {
+      "bytes": 0,
+      "offset": 3436,
+      "path": "stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "timed_out": false
+  }
+]

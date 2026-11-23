@@ -1,0 +1,85 @@
+4ecb0b0efa2febe7dcacae7f4114e98877205128
+8d11f92472d55c221ec791a7fb7642bace002f83
+2d7888466ace763edaa1760c6bd5bbb80b947c23
+4ecb0b0efa2febe7dcacae7f4114e98877205128
+2d7888466ace763edaa1760c6bd5bbb80b947c23	refs/tags/v0.13.2
+4ecb0b0efa2febe7dcacae7f4114e98877205128	refs/tags/v0.13.2^{}
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "checkwash"
+version = "0.13.2"
+description = "Flags known patterns of weakened tests and CI checks in a Git diff."
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "taipei49314" }]
+keywords = ["ai-agent", "code-review", "test-tampering", "reward-hacking", "ci"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+# Zero runtime dependencies is a product feature, not an accident. See DECISIONS.md D-001.
+dependencies = []
+
+[project.readme]
+content-type = "text/markdown"
+text = '''
+# CheckWash
+
+CheckWash reads your Git diff and flags changes that weaken tests or CI checks.
+For example, changing `assert total == 105.3` to `assert total > 0` lets an
+incorrect total pass. CheckWash flags the relaxed assertion for review.
+
+Use the [latest verified installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
+for the recommended Python package version, standalone download, and GitHub
+Action commit to pin in your workflow.
+The Action uses the CheckWash version at that commit. Upgrading your local
+CLI and updating the workflow pin are separate steps.
+
+After installing the CLI, run `python -m checkwash demo` to see sample findings.
+Run `python -m checkwash check` in your Git repository to check your uncommitted
+changes. See the [project README](https://github.com/taipei49314/checkwash#readme)
+for usage examples and CI setup.
+
+CheckWash is alpha. Legitimate refactors can trigger a block. For example,
+the 0.12.0 CLI blocked 6 of 60 cases in the project's refactor corpus,
+including 4 of the 57 strictly qualified cases. See the
+[measurement details and known limits](https://github.com/taipei49314/checkwash/blob/fbae5f7d4b9bd4b891ac7fe962401f2bda1483f4/README.md#know-the-limits).
+'''
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "PyYAML>=6"]
+
+[project.scripts]
+greenwash = "checkwash.cli:main"  # legacy alias (pre-rename callers and Actions pinned before v0.2.11); kept at least one more release
+checkwash = "checkwash.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/taipei49314/checkwash"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/checkwash"]
+# demo_cases/*.gwcase ship in the wheel so `greenwash demo` works after pipx.
+artifacts = ["src/checkwash/demo_cases/*.gwcase"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+"""checkwash: a deterministic, zero-LLM detector for diffs that tamper with the verification layer."""
+
+__version__ = "0.13.2"
+
+IR_VERSION = 3
+FINDINGS_VERSION = 2
+040000 tree caeff13ad08b3ff38bdb93919ccdff934d52b62a	src
+100644 blob 6e6363e1a6e0a8a69c90ec70e27e5323faa260bb	pyproject.toml
+040000 tree 41805cda11374d0e03219ab9aa98cf7eeee6d72f	action
+100644 blob 7437283b555603198116c90a794950d3dd47f760	.pre-commit-hooks.yaml

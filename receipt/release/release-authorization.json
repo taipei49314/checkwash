@@ -1,0 +1,11 @@
+{
+  "kind": "checkwash.release-one-time-authorization.v1",
+  "status": "authorized",
+  "tag": "v0.13.2",
+  "max_attempts": 1,
+  "version": "0.13.2",
+  "source_sha": "5349b2a3ab10c1b40e355225f272e752c323859d",
+  "maintainer": "Nelson",
+  "human_quote": "核可 0.13.2，接受上述收據範圍，依序發布",
+  "human_evidence_reference": "https://github.com/taipei49314/checkwash/blob/7501ee53677f460eda1a3bbf7c7455909973abca/docs/RELEASING.md#0132-github-release-and-release-event-authorization-2026-11-23"
+}
