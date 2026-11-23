@@ -1,5 +1,41 @@
 # Releasing
 
+## 0.13.2 GitHub Release and release-event authorization (2026-11-23)
+
+On 2026-11-23 (Asia/Taipei), Codex presented the following question and
+answer option. Nelson selected the option. Both are reproduced verbatim.
+
+> 是否核可僅針對 CheckWash 0.13.2 接受下列收據範圍並發布？release merge 是 `5349b2a3ab10c1b40e355225f272e752c323859d`，tag `v0.13.2` 將指向 Action commit `4ecb0b0efa2febe7dcacae7f4114e98877205128`。main 正式檢查 `137781862326` 成功。Windows、Linux、macOS × Python 3.11–3.13 九個組合都已實跑，兩批共 12 份語料輸出逐位元組一致。五階段的正式 PJU 收據只認證 Windows 3.11.9，其餘八格及「同一批跑完九腿」在正式收據列為 NOT_RUN。我的建議是接受本版這個範圍，建立 annotated tag，tag 本身的驗證通過後建立 GitHub Release，公開附件通過 hosted 六腿檢查後再請你親自核准 PyPI；公開安裝推薦等 public-visitor 通過後更新。
+
+Nelson selected this answer.
+
+> 核可 0.13.2，接受上述收據範圍，依序發布
+
+This one-time authorization applies to CheckWash 0.13.2 at release merge
+`5349b2a3ab10c1b40e355225f272e752c323859d`. The annotated tag `v0.13.2`,
+object `2d7888466ace763edaa1760c6bd5bbb80b947c23`, names that merge and
+points to Action commit `4ecb0b0efa2febe7dcacae7f4114e98877205128`.
+The GitHub Release, release-event receipt and public asset upload follow
+successful formal tag verification. Nelson personally approves the protected
+PyPI deployment after the six hosted published-artifacts legs pass.
+Public installation recommendations follow a successful public-visitor check.
+
+Nelson accepted Windows with CPython 3.11.9 as the scope of this release's
+five formal PJU receipt stages. The formal receipts list eight cells as
+`NOT_RUN` (Windows 3.12 and 3.13, Linux 3.11–3.13, and macOS 3.11–3.13)
+and list the single-run nine-leg comparison as `NOT_RUN`. The separate
+six-leg Windows/WSL run at R (`0211fa68bdda9794f82a7ccd48f4d0b1a8415e12`)
+and six-leg hosted macOS/Linux run at M covered all nine OS/Python pairs.
+All twelve corpus files had 10,061,088 bytes and SHA256
+`b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab`.
+
+[Release PR #657](https://github.com/taipei49314/checkwash/pull/657) ·
+[Formal main check](https://github.com/taipei49314/checkwash/runs/137781862326) ·
+[Main verification and publisher run](https://github.com/taipei49314/checkwash/actions/runs/45199617421) ·
+[Main receipt manifest](https://github.com/taipei49314/checkwash/blob/a0e7d1250c3274b96b63565c77d6cb2837c12caf/receipt/manifest.json) ·
+[Hosted source-at-M run](https://github.com/taipei49314/checkwash/actions/runs/45190644444) ·
+[Archived source and six-leg comparison](https://github.com/taipei49314/checkwash/blob/92dd78eb2d54b472e6298ef2ac541560af1699da/summary.json)
+
 ## 0.13.2 release preparation
 
 On 2026-11-23 (Asia/Taipei), following the merge of #656, Nelson asked
