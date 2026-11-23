@@ -1,0 +1,944 @@
+{
+  "label": "HUMAN_AUTHORIZED_GITHUB_HOSTED_NOT_PJU_RECEIPT",
+  "run": 45190644444,
+  "attempt": 1,
+  "head": "5349b2a3ab10c1b40e355225f272e752c323859d",
+  "base": "096b5362a838929ea33c625bba15f9d3bd5faa52",
+  "R": "0211fa68bdda9794f82a7ccd48f4d0b1a8415e12",
+  "A": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+  "tree": "f1a51de51487356ef8afc2a3ca967b57389c7b63",
+  "src_tree": "af11be7b575e9b25ad4d9a65bd37f6b98a8b43f0",
+  "tag_state": "absent at dispatch",
+  "jobs": {
+    "hosted release identity": "success",
+    "hosted Action at A (ubuntu-latest, Python 3.12)": "success",
+    "hosted source at M (ubuntu-latest, Python 3.12)": "success",
+    "hosted source at M (macos-latest, Python 3.11)": "success",
+    "hosted source at M (macos-latest, Python 3.12)": "success",
+    "hosted source at M (macos-latest, Python 3.13)": "success",
+    "hosted source at M (ubuntu-latest, Python 3.11)": "success",
+    "hosted source at M (ubuntu-latest, Python 3.13)": "success",
+    "hosted published Release record": "skipped",
+    "hosted published artifacts (${{ matrix.os }}, Python ${{ matrix.python }})": "skipped",
+    "hosted corpus comparison": "success"
+  },
+  "annotations": [
+    {
+      "job": "137747997171",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    },
+    {
+      "job": "137747997209",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    },
+    {
+      "job": "137747997247",
+      "path": ".github",
+      "blob_href": "https://github.com/taipei49314/checkwash/blob/5349b2a3ab10c1b40e355225f272e752c323859d/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "notice",
+      "title": "",
+      "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+      "raw_details": ""
+    }
+  ],
+  "source_legs": [
+    {
+      "runner_label": "ubuntu-latest",
+      "python": "3.11.18",
+      "matrix_python": "3.11",
+      "runner_image": "ubuntu26 20261116.202.1",
+      "system": "Linux 7.0.0-1020-azure x86_64",
+      "test_cases": 23391,
+      "subtests": 67,
+      "skipped": 15,
+      "passed_cases": 23376,
+      "same_tree_linux_test_cases": 23391,
+      "delta_from_same_tree_linux": 0,
+      "skips": [
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py.]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py ]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[TEST_TOTAL.PY]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-repo-False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[root-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "directory junctions are a Windows reparse type",
+          "test": "tests.test_worktree_config_inventory::test_ignored_junction_cycle_does_not_stop_the_stop_hook",
+          "status": "known_prior_release"
+        }
+      ],
+      "same_tree_linux_skip_comparison": {
+        "pju_linux_python": "3.11.18",
+        "pju_linux_count": 15,
+        "hosted_only": [],
+        "pju_linux_only": []
+      },
+      "d170_budget_checks": {
+        "test_large_single_diff_within_budget": "ran and passed",
+        "test_many_files_within_budget": "ran and passed"
+      },
+      "qualification": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "inventory_members": 239,
+      "corpus": {
+        "bytes": 10061088,
+        "sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "case_count": 1241
+      }
+    },
+    {
+      "runner_label": "ubuntu-latest",
+      "python": "3.12.16",
+      "matrix_python": "3.12",
+      "runner_image": "ubuntu26 20261116.202.1",
+      "system": "Linux 7.0.0-1020-azure x86_64",
+      "test_cases": 23391,
+      "subtests": 67,
+      "skipped": 15,
+      "passed_cases": 23376,
+      "same_tree_linux_test_cases": 23391,
+      "delta_from_same_tree_linux": 0,
+      "skips": [
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py.]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py ]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[TEST_TOTAL.PY]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-repo-False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[root-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "directory junctions are a Windows reparse type",
+          "test": "tests.test_worktree_config_inventory::test_ignored_junction_cycle_does_not_stop_the_stop_hook",
+          "status": "known_prior_release"
+        }
+      ],
+      "same_tree_linux_skip_comparison": {
+        "pju_linux_python": "3.12.16",
+        "pju_linux_count": 15,
+        "hosted_only": [],
+        "pju_linux_only": []
+      },
+      "d170_budget_checks": {
+        "test_large_single_diff_within_budget": "ran and passed",
+        "test_many_files_within_budget": "ran and passed"
+      },
+      "qualification": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "inventory_members": 239,
+      "corpus": {
+        "bytes": 10061088,
+        "sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "case_count": 1241
+      }
+    },
+    {
+      "runner_label": "ubuntu-latest",
+      "python": "3.13.18",
+      "matrix_python": "3.13",
+      "runner_image": "ubuntu26 20261116.202.1",
+      "system": "Linux 7.0.0-1020-azure x86_64",
+      "test_cases": 23391,
+      "subtests": 67,
+      "skipped": 15,
+      "passed_cases": 23376,
+      "same_tree_linux_test_cases": 23391,
+      "delta_from_same_tree_linux": 0,
+      "skips": [
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py.]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py ]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[TEST_TOTAL.PY]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-repo-False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[root-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "directory junctions are a Windows reparse type",
+          "test": "tests.test_worktree_config_inventory::test_ignored_junction_cycle_does_not_stop_the_stop_hook",
+          "status": "known_prior_release"
+        }
+      ],
+      "same_tree_linux_skip_comparison": {
+        "pju_linux_python": "3.13.18",
+        "pju_linux_count": 15,
+        "hosted_only": [],
+        "pju_linux_only": []
+      },
+      "d170_budget_checks": {
+        "test_large_single_diff_within_budget": "ran and passed",
+        "test_many_files_within_budget": "ran and passed"
+      },
+      "qualification": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "inventory_members": 239,
+      "corpus": {
+        "bytes": 10061088,
+        "sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "case_count": 1241
+      }
+    },
+    {
+      "runner_label": "macos-latest",
+      "python": "3.11.9",
+      "matrix_python": "3.11",
+      "runner_image": "macos26 20261117.0516.1",
+      "system": "Darwin 25.6.0 arm64",
+      "test_cases": 23391,
+      "subtests": 67,
+      "skipped": 17,
+      "passed_cases": 23374,
+      "same_tree_linux_test_cases": 23391,
+      "delta_from_same_tree_linux": 0,
+      "skips": [
+        {
+          "reason": "budget checks paused on macOS (maintainer decision 2026-10-01)",
+          "test": "tests.gates.test_perf::test_large_single_diff_within_budget",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "budget checks paused on macOS (maintainer decision 2026-10-01)",
+          "test": "tests.gates.test_perf::test_many_files_within_budget",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py.]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py ]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[TEST_TOTAL.PY]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-repo-False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[root-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "directory junctions are a Windows reparse type",
+          "test": "tests.test_worktree_config_inventory::test_ignored_junction_cycle_does_not_stop_the_stop_hook",
+          "status": "known_prior_release"
+        }
+      ],
+      "same_tree_linux_skip_comparison": {
+        "pju_linux_python": "3.11.18",
+        "pju_linux_count": 15,
+        "hosted_only": [
+          [
+            "tests.gates.test_perf::test_large_single_diff_within_budget",
+            "budget checks paused on macOS (maintainer decision 2026-10-01)"
+          ],
+          [
+            "tests.gates.test_perf::test_many_files_within_budget",
+            "budget checks paused on macOS (maintainer decision 2026-10-01)"
+          ]
+        ],
+        "pju_linux_only": []
+      },
+      "d170_budget_checks": {
+        "test_large_single_diff_within_budget": "skipped: budget checks paused on macOS (maintainer decision 2026-10-01)",
+        "test_many_files_within_budget": "skipped: budget checks paused on macOS (maintainer decision 2026-10-01)"
+      },
+      "qualification": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "inventory_members": 239,
+      "corpus": {
+        "bytes": 10061088,
+        "sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "case_count": 1241
+      }
+    },
+    {
+      "runner_label": "macos-latest",
+      "python": "3.12.10",
+      "matrix_python": "3.12",
+      "runner_image": "macos26 20261117.0516.1",
+      "system": "Darwin 25.6.0 arm64",
+      "test_cases": 23391,
+      "subtests": 67,
+      "skipped": 17,
+      "passed_cases": 23374,
+      "same_tree_linux_test_cases": 23391,
+      "delta_from_same_tree_linux": 0,
+      "skips": [
+        {
+          "reason": "budget checks paused on macOS (maintainer decision 2026-10-01)",
+          "test": "tests.gates.test_perf::test_large_single_diff_within_budget",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "budget checks paused on macOS (maintainer decision 2026-10-01)",
+          "test": "tests.gates.test_perf::test_many_files_within_budget",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py.]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py ]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[TEST_TOTAL.PY]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-repo-False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[root-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "directory junctions are a Windows reparse type",
+          "test": "tests.test_worktree_config_inventory::test_ignored_junction_cycle_does_not_stop_the_stop_hook",
+          "status": "known_prior_release"
+        }
+      ],
+      "same_tree_linux_skip_comparison": {
+        "pju_linux_python": "3.12.16",
+        "pju_linux_count": 15,
+        "hosted_only": [
+          [
+            "tests.gates.test_perf::test_large_single_diff_within_budget",
+            "budget checks paused on macOS (maintainer decision 2026-10-01)"
+          ],
+          [
+            "tests.gates.test_perf::test_many_files_within_budget",
+            "budget checks paused on macOS (maintainer decision 2026-10-01)"
+          ]
+        ],
+        "pju_linux_only": []
+      },
+      "d170_budget_checks": {
+        "test_large_single_diff_within_budget": "skipped: budget checks paused on macOS (maintainer decision 2026-10-01)",
+        "test_many_files_within_budget": "skipped: budget checks paused on macOS (maintainer decision 2026-10-01)"
+      },
+      "qualification": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "inventory_members": 239,
+      "corpus": {
+        "bytes": 10061088,
+        "sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "case_count": 1241
+      }
+    },
+    {
+      "runner_label": "macos-latest",
+      "python": "3.13.17",
+      "matrix_python": "3.13",
+      "runner_image": "macos26 20261117.0516.1",
+      "system": "Darwin 25.6.0 arm64",
+      "test_cases": 23391,
+      "subtests": 67,
+      "skipped": 17,
+      "passed_cases": 23374,
+      "same_tree_linux_test_cases": 23391,
+      "delta_from_same_tree_linux": 0,
+      "skips": [
+        {
+          "reason": "budget checks paused on macOS (maintainer decision 2026-10-01)",
+          "test": "tests.gates.test_perf::test_large_single_diff_within_budget",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "budget checks paused on macOS (maintainer decision 2026-10-01)",
+          "test": "tests.gates.test_perf::test_many_files_within_budget",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py.]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[test_total.py ]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows folds case and drops trailing dots and spaces",
+          "test": "tests.test_pre_tool_use::test_a_windows_spelling_of_the_test_still_asks[TEST_TOTAL.PY]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction",
+          "test": "tests.test_quality_junction::test_native_junction_is_not_walked_or_read[True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-inside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-outside]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "Windows native junction cases",
+          "test": "tests.test_snapshot_path_diagnostics::test_native_junction_refusal_and_weakening_controls[hook-json-regular]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[drive-relative-repo-False]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "native Windows address syntax",
+          "test": "tests.test_task_repo_relative_authority::test_windows_addresses_use_native_join_against_original_repo[root-relative-task-True]",
+          "status": "known_prior_release"
+        },
+        {
+          "reason": "directory junctions are a Windows reparse type",
+          "test": "tests.test_worktree_config_inventory::test_ignored_junction_cycle_does_not_stop_the_stop_hook",
+          "status": "known_prior_release"
+        }
+      ],
+      "same_tree_linux_skip_comparison": {
+        "pju_linux_python": "3.13.18",
+        "pju_linux_count": 15,
+        "hosted_only": [
+          [
+            "tests.gates.test_perf::test_large_single_diff_within_budget",
+            "budget checks paused on macOS (maintainer decision 2026-10-01)"
+          ],
+          [
+            "tests.gates.test_perf::test_many_files_within_budget",
+            "budget checks paused on macOS (maintainer decision 2026-10-01)"
+          ]
+        ],
+        "pju_linux_only": []
+      },
+      "d170_budget_checks": {
+        "test_large_single_diff_within_budget": "skipped: budget checks paused on macOS (maintainer decision 2026-10-01)",
+        "test_many_files_within_budget": "skipped: budget checks paused on macOS (maintainer decision 2026-10-01)"
+      },
+      "qualification": {
+        "executed": 283,
+        "failed": 0,
+        "total": 283
+      },
+      "inventory_members": 239,
+      "corpus": {
+        "bytes": 10061088,
+        "sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "case_count": 1241
+      }
+    }
+  ],
+  "new_skip_occurrences": 0,
+  "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+  "same_tree_batch": {
+    "release_head": "0211fa68bdda9794f82a7ccd48f4d0b1a8415e12",
+    "action_commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+    "tree": "f1a51de51487356ef8afc2a3ca967b57389c7b63",
+    "linux_test_cases": {
+      "3.11": 23391,
+      "3.12": 23391,
+      "3.13": 23391
+    },
+    "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+    "corpus_bytes": 10061088,
+    "corpus_path": "C:\\Users\\nelson\\Documents\\Codex\\2026-11-22\\c-users-nelson-documents-codex-2026\\work\\rel0132-sixleg\\r0211fa68\\win311-a\\corpus-findings.json",
+    "batch_path": "C:\\Users\\nelson\\Documents\\Codex\\2026-11-22\\c-users-nelson-documents-codex-2026\\work\\rel0132-sixleg\\r0211fa68",
+    "batch_summary_sha256": "7f7e9079114f45976ea8df649b5150a95f5918cd4a0f6157c6d92a8ba675ec16",
+    "legs": [
+      {
+        "leg": "linux311",
+        "record_sha256": "88bcf77b94683b46e8cf0c07b65b9ece8244c03f86f49b2151c3a5ff37f1b263",
+        "junit_sha256": "75e043efcab3ca8ba580da2e9e9afd2086ea9b99408d68808b1623e3cecc56e1",
+        "cases": 23391,
+        "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "corpus_bytes": 10061088,
+        "skips": 15
+      },
+      {
+        "leg": "linux312",
+        "record_sha256": "63864f45bac8d28d3c9b4e524cb8a80dbf150d3ccf48f9a475c4ba838f5230c5",
+        "junit_sha256": "abe207e36c6f42e0666205028415b3318e72c5c64822e2219c463cb5e88da2b0",
+        "cases": 23391,
+        "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "corpus_bytes": 10061088,
+        "skips": 15
+      },
+      {
+        "leg": "linux313",
+        "record_sha256": "4cb9ad28134d78fa4c2ce90634f23973c38ad43cc07c31383585ea3f576e212a",
+        "junit_sha256": "7878359ec963eedafbf2cf9ef8bc939a05ca295691a8c61cbc7075f89b07daeb",
+        "cases": 23391,
+        "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "corpus_bytes": 10061088,
+        "skips": 15
+      },
+      {
+        "leg": "win311",
+        "record_sha256": "596e30093062e24846f54fa49394df899e527b185473e2b7306ee783c176d884",
+        "junit_sha256": "c32aa572bbfbc87a5fcaf8d7908db66f9e9e25910e975a10ebc9bafa109170dd",
+        "cases": 23391,
+        "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "corpus_bytes": 10061088,
+        "skips": 81
+      },
+      {
+        "leg": "win312",
+        "record_sha256": "fb97cc7118b83ef8395e1fc8d11bb1967dca933e9fe2643aef5665b44fcc1e17",
+        "junit_sha256": "0304d9b0fb5fb920f45610b4a76f3abb6a3d4b61b9bde402d2363045917c7ccd",
+        "cases": 23391,
+        "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "corpus_bytes": 10061088,
+        "skips": 81
+      },
+      {
+        "leg": "win313",
+        "record_sha256": "9010d580285e2f48f5d0ecf427b3474278685cb93f5cc63cda95e4356d0b533c",
+        "junit_sha256": "08e46dd2ffbfeb54aea5c7b84d0ba72db67519184e8107206cea98bbd4b5e018",
+        "cases": 23391,
+        "corpus_sha256": "b2c0eb3dc18abbc65b626d9c956cc8d321cb3ac6a8f42c5641b2914805634dab",
+        "corpus_bytes": 10061088,
+        "skips": 81
+      }
+    ]
+  },
+  "action": {
+    "commit": "4ecb0b0efa2febe7dcacae7f4114e98877205128",
+    "identity": {
+      "base_python": "/opt/hostedtoolcache/Python/3.12.16/x64/bin/python3.12",
+      "bytecode_writes_disabled": true,
+      "isolated": true,
+      "package_root": "/home/runner/work/_temp/checkwash-action-5epd_hhh/environment/lib/python3.12/site-packages/checkwash",
+      "python": "/home/runner/work/_temp/checkwash-action-5epd_hhh/environment/bin/python",
+      "python_version": "3.12.16",
+      "runtime_files": 239,
+      "source_digest": "15bb42132bbad3fc748617649f5688c8f0d1da31bc6bb478b091dcae1e79773b",
+      "source_root": "/home/runner/work/checkwash/checkwash/action-at-A",
+      "utf8": true,
+      "version": "0.13.2"
+    },
+    "base": "096b5362a838929ea33c625bba15f9d3bd5faa52",
+    "head": "5349b2a3ab10c1b40e355225f272e752c323859d",
+    "fail_on": "high",
+    "exit": 0,
+    "analysis_exit": 0,
+    "stdout": "⚠ checkwash: 1 finding(s), none at or above high\n\nCI_WORKFLOW_TOUCHED   WARN   pyproject.toml\n  CI configuration changed\n  To compare declared coverage, Ruff or mypy requirements, run checkwash quality on the same range.\n\nsummary: critical=0 high=0 warn=1 info=0 verdict=pass allow_cap=180d\n",
+    "stderr_sha256": "750e56176a76e0b1f4a5a96559fe95b40388ead6b113507a53fd190df2e5af74",
+    "action_yml_sha256": "94abd7b990e5611e9d091678247cece7fe51f28c19faad6b0d954efa45408e83"
+  },
+  "archives": {
+    "release-hosted-action-attempt-1": {
+      "id": 14825951546,
+      "bytes": 8159,
+      "sha256": "609c6fdc5f1670c4d1b8f7e8db2d7b9fdf35ee0fcaa94cb5a500df0408e9a9b1"
+    },
+    "release-hosted-identity-attempt-1": {
+      "id": 14825437510,
+      "bytes": 674,
+      "sha256": "0d50d26635ce579240530f91e720b34eaf7092fa7d500ae72fa5d3b5bc554085"
+    },
+    "release-hosted-source-macos-latest-py3.11-attempt-1": {
+      "id": 14827260845,
+      "bytes": 825509,
+      "sha256": "cb5092e1bad01988fa2fb66f2f3a06c661938a52d0cca798b41d5cbe186ac132"
+    },
+    "release-hosted-source-macos-latest-py3.12-attempt-1": {
+      "id": 14826144285,
+      "bytes": 829710,
+      "sha256": "0a667e92de16c64a4ff09abc9171feda01d7284e2162b79c0bb8675234292938"
+    },
+    "release-hosted-source-macos-latest-py3.13-attempt-1": {
+      "id": 14827200892,
+      "bytes": 828241,
+      "sha256": "eca14aa480f51b4adf7c0072752a199805c42317a53524a73cce4beea33ab2ca"
+    },
+    "release-hosted-source-ubuntu-latest-py3.11-attempt-1": {
+      "id": 14825842659,
+      "bytes": 815290,
+      "sha256": "701a5deabd1f8da2d0b94acc4bd218b8acbc9cf188ed73d2feb8f97059852841"
+    },
+    "release-hosted-source-ubuntu-latest-py3.12-attempt-1": {
+      "id": 14825479023,
+      "bytes": 816209,
+      "sha256": "de54f7b77705ce160a172557abe9b1a8e13fa80b3563c266cc6203d01353fdad"
+    },
+    "release-hosted-source-ubuntu-latest-py3.13-attempt-1": {
+      "id": 14827110522,
+      "bytes": 815439,
+      "sha256": "693b884571113fd6dace90ec809ef4402a565f5052a568af045c940ec2afeaeb"
+    }
+  },
+  "qualification_cases_sha256": "c1dcd5849a84a046ef3added1015e6eb8050451fc85ea0a7b00f9dfb71d4a741",
+  "case_inventories": [
+    {
+      "mutations": 248,
+      "path": "tests/data/javascript_assertion_support.json",
+      "sha256": "f23a9278c7d8fc96ebbb89d8aaf6c1ff439564114e09f5de4d8adaeddc060c9d"
+    },
+    {
+      "mutations": 35,
+      "path": "tests/data/javascript_foundation_mutations.json",
+      "sha256": "d3d422f7172fb14f19ef2f6f3d05aa348b7f83249190a844c9423a08c3bb9774"
+    }
+  ],
+  "macos_test_count_differences": []
+}
