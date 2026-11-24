@@ -29,8 +29,8 @@ only thing standing between an agent and your main branch.
 `taipei49314/checkwash/action` up to and including v0.7.0
 (`d647a65e9734f2b6e57b528ea595b1507dc31094`), and v0.6.0, whose Action is
 identical. Fixed in v0.8.0 (`f02b5d8a07fa39ee1898881f66c571eb164cb11c`) and every later
-release; the currently recommended pin is v0.13.1's Action commit
-(`62656df812372c085b4d32c7864fcdfaccd0318a`, the commit the v0.13.1 tag
+release; the currently recommended pin is v0.13.2's Action commit
+(`4ecb0b0efa2febe7dcacae7f4114e98877205128`, the commit the v0.13.2 tag
 points to).
 
 **What happens:** the composite Action runs `python -m pip` to install
@@ -55,7 +55,7 @@ pass is not a trustworthy verdict on its own.
 with the setup-python interpreter, verifies the installed package and invokes it
 explicitly; [#375](https://github.com/taipei49314/checkwash/pull/375) applies the
 same isolation to the separate quality preview Action. Both shipped in v0.8.0
-(2026-10-15). The README recommends the newest verified release's Action, v0.13.1's
+(2026-10-15). The README recommends the newest verified release's Action, v0.13.2's
 after its publication checks, with no one-release lag (maintainer decision, 2026-10-14). Pin
 the commit the README recommends: for v0.11.0 the release's Action commit
 `v0.11.0^2^1`; from v0.12.0 (D-200) the tag points at the release's Action

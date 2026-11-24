@@ -1,5 +1,14 @@
 # Releasing
 
+## 0.13.2 publication and pin promotion
+
+Release PR #657 merged as `5349b2a3ab10c1b40e355225f272e752c323859d`.
+The annotated v0.13.2 tag (`2d7888466ace763edaa1760c6bd5bbb80b947c23`) peels to the Action commit
+`4ecb0b0efa2febe7dcacae7f4114e98877205128`. The recorded public-visitor
+verification ran after approval of the PyPI deployment and read back the
+released files. The reviewed installation pins now name that release.
+[Publication evidence and platform scope](releases/v0.13.2-publication-verification.md) · [Installation guide](install.md)
+
 ## 0.13.2 release preparation
 
 On 2026-11-23 (Asia/Taipei), following the merge of #656, Nelson asked

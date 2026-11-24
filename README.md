@@ -19,9 +19,9 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-These examples use 0.13.1. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
+These examples use 0.13.2. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
 tracks the latest verified CLI download and Action pin.
-The [0.13.2 candidate guide](docs/releases/v0.13.2-public-launch.md) describes the upcoming changes.
+The [0.13.2 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.2-public-launch.md) describes the Python import fixes, CLI changes and measured Django scan times.
 
 Already installed from PyPI? From your Git repository, run
 `python -m checkwash check` to review your uncommitted changes. Use the Python
@@ -37,7 +37,7 @@ You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
 hook installer from the root of your repository:
 
 ```bash
-pipx install checkwash==0.13.1
+pipx install checkwash==0.13.2
 checkwash hook install --agent claude-code --local
 ```
 
@@ -71,7 +71,7 @@ built-in offline examples first.
 Windows PowerShell (including 5.1, where `curl` aliases `Invoke-WebRequest`):
 
 ```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
@@ -79,12 +79,12 @@ python checkwash.pyz demo
 macOS/Linux or Git Bash:
 
 ```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz
 python checkwash.pyz --version
 python checkwash.pyz demo
 ```
 
-You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.13.1/checkwash.pyz).
+You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz).
 Then, from a Git repository with at least two commits:
 
 ```bash
@@ -130,7 +130,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - uses: taipei49314/checkwash/action@62656df812372c085b4d32c7864fcdfaccd0318a # v0.13.1
+      - uses: taipei49314/checkwash/action@4ecb0b0efa2febe7dcacae7f4114e98877205128 # v0.13.2
 ```
 
 After the workflow runs once, open **Settings → Rules → Rulesets** and require
@@ -348,14 +348,15 @@ see [subject integrity](https://github.com/taipei49314/checkwash/blob/main/docs/
 Try it on your own changes before making it required.
 [Coverage and limitations](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md#coverage-and-adoption-cost)
 · [Known gaps](https://github.com/taipei49314/checkwash/blob/main/docs/adversarial-catalog-2026-09.md)
+· [0.13.2 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.2.md)
 · [0.13.1 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.1.md)
 · [0.13.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.13.0.md)
 · [0.12.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.12.0.md)
 
 ## CI details: doctor and the pin
 
-The recommended Action and CLI above are both **v0.13.1** (GitHub Release and
-PyPI on 2026-11-22). Always upgrade the CLI and its local
+The recommended Action and CLI above are both **v0.13.2**. The CLI is available
+on PyPI and as a standalone download from the GitHub Release. Always upgrade the CLI and its local
 hooks first, then update the Action SHA in `.github/workflows/checkwash.yml`.
 [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md)
 · [Action reference](https://github.com/taipei49314/checkwash/blob/main/action/README.md)
@@ -379,7 +380,7 @@ explains release tags, pin updaters and older CLI versions.
 **Advisory for Action `<= v0.7.0`:** Action releases up to v0.7.0 ran
 `python -m pip` and `checkwash` with the PR checkout as working directory,
 allowing a PR to shadow `pip` or `checkwash` ([#372](https://github.com/taipei49314/checkwash/pull/372),
-fixed in v0.8.0). Pin the v0.13.1 Action above; see
+fixed in v0.8.0). Pin the v0.13.2 Action above; see
 [SECURITY.md](https://github.com/taipei49314/checkwash/blob/main/SECURITY.md#known-issue-action-trust-boundary).
 
 </details>
@@ -393,7 +394,7 @@ fixed in v0.8.0). Pin the v0.13.1 Action above; see
 If you already use pipx, install the fixed version:
 
 ```bash
-pipx install checkwash==0.13.1
+pipx install checkwash==0.13.2
 
 checkwash check HEAD~1..HEAD
 checkwash demo                  # 8 tampering cases, blocked, offline
@@ -441,7 +442,7 @@ separate population; the general-commit rate does not predict it.
 
 | Looking for… | Start here |
 |---|---|
-| Installation checks, versions and first use | [Installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md) · [0.13.1 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.1-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
+| Installation checks, versions and first use | [Installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md) · [0.13.2 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.2-public-launch.md) · [Release history](https://github.com/taipei49314/checkwash/blob/main/docs/releases/README.md) |
 | JSON/SARIF contracts and upgrades | [Stability](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md) · [Embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md) · [Findings schema](https://github.com/taipei49314/checkwash/blob/main/docs/findings.schema.json) |
 | Assertion support, coverage warnings and artifact checks | [Assertion coverage](https://github.com/taipei49314/checkwash/blob/main/docs/assertion-coverage.md) |
 | Required checks and reviewed exemptions | [Enterprise setup](https://github.com/taipei49314/checkwash/blob/main/docs/enterprise.md) |
