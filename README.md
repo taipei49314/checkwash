@@ -19,54 +19,36 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
+## Quick start
+
+You need **Python 3.11+ and Git**. Install the CLI with pipx, then run it from
+a Git repository:
+
+```bash
+pipx install checkwash==0.13.2
+checkwash demo                  # 8 tampering cases and 1 honest fix, offline
+checkwash check                 # your uncommitted changes
+checkwash check HEAD~1..HEAD    # your last commit
+```
+
+If the `checkwash` command is not found, or Windows blocks the
+`checkwash.exe` launcher, run `python -m checkwash check` from your repository
+with the Python that installed the package ([find pipx's Python](#install)).
+To try it without installing anything, use the
+[single-file zipapp](#try-it-without-installing).
+
 These examples use 0.13.2. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
 tracks the latest verified CLI download and Action pin.
 The [0.13.2 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.2-public-launch.md) describes the Python import fixes, CLI changes and measured Django scan times.
 
-Already installed from PyPI? From your Git repository, run
-`python -m checkwash check` to review your uncommitted changes. Use the Python
-that installed the package, including the interpreter in the CheckWash
-environment if you used pipx. This also works when Windows blocks the
-`checkwash.exe` launcher.
+Next: [Install Claude Code hooks](#use-it-with-claude-code) · [Require the GitHub Action](#use-it-in-ci) · [Know the limits](#know-the-limits)
 
-[Try the offline demo](#try-it-on-a-repository) · [Install Claude Code hooks](#use-it-with-claude-code) · [Require the GitHub Action](#use-it-in-ci)
+<a id="try-it-on-a-repository"></a>
 
-## Use it with Claude Code
+## Try it without installing
 
-You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
-hook installer from the root of your repository:
-
-```bash
-pipx install checkwash==0.13.2
-checkwash hook install --agent claude-code --local
-```
-
-This writes checkwash's hooks to `.claude/settings.local.json`, your
-machine-local Claude Code settings (`--local` is the default; `--shared`
-writes `.claude/settings.json` without the PreToolUse prompt):
-
-- **Stop hook:** checks the working tree and the session's commits when Claude
-  is about to finish (paired with a `SessionStart` hook that records where the
-  session began). On a blocking finding, it stops Claude and returns the
-  finding so Claude can restore the test or explain what blocked.
-- **PreToolUse ask (`--local` only):** prompts before an `Edit`, `Write` or
-  `MultiEdit` of a Python test file leaves a `high` finding under one of five
-  weakening rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
-  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`). Non-interactive `claude -p`
-  runs deny such edits because nobody can answer; the interactive prompt
-  itself is not verified in automated tests.
-
-Both hooks are author-side checks: edits made through `Bash` bypass the
-PreToolUse ask, and engine errors in the Stop hook report a non-blocking note
-(except working-tree files over the size limit). To enforce verdicts on merges,
-configure the required CI check under [Use it in CI](#use-it-in-ci). Hook
-limits are documented in the
-[0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
-
-## Try it on a repository
-
-You need **Python 3.11+ and Git**. Download the single-file zipapp and run the
-built-in offline examples first.
+Download the single-file zipapp and run the built-in offline examples first.
+It needs only **Python 3.11+ and Git**.
 
 Windows PowerShell (including 5.1, where `curl` aliases `Invoke-WebRequest`):
 
@@ -101,6 +83,38 @@ root and notes that root on `stderr`
 output and machine integration, see the
 [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
 and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
+
+## Use it with Claude Code
+
+You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
+hook installer from the root of your repository:
+
+```bash
+pipx install checkwash==0.13.2
+checkwash hook install --agent claude-code --local
+```
+
+This writes checkwash's hooks to `.claude/settings.local.json`, your
+machine-local Claude Code settings (`--local` is the default; `--shared`
+writes `.claude/settings.json` without the PreToolUse prompt):
+
+- **Stop hook:** checks the working tree and the session's commits when Claude
+  is about to finish (paired with a `SessionStart` hook that records where the
+  session began). On a blocking finding, it stops Claude and returns the
+  finding so Claude can restore the test or explain what blocked.
+- **PreToolUse ask (`--local` only):** prompts before an `Edit`, `Write` or
+  `MultiEdit` of a Python test file leaves a `high` finding under one of five
+  weakening rules (`ASSERT_WEAKENED`, `ASSERT_REMOVED`, `TEST_DISABLED`,
+  `TOLERANCE_LOOSENED`, `BROAD_EXCEPT_ADDED`). Non-interactive `claude -p`
+  runs deny such edits because nobody can answer; the interactive prompt
+  itself is not verified in automated tests.
+
+Both hooks are author-side checks: edits made through `Bash` bypass the
+PreToolUse ask, and engine errors in the Stop hook report a non-blocking note
+(except working-tree files over the size limit). To enforce verdicts on merges,
+configure the required CI check under [Use it in CI](#use-it-in-ci). Hook
+limits are documented in the
+[0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
 
 ## Use it in CI
 
@@ -389,16 +403,7 @@ fixed in v0.8.0). Pin the v0.13.2 Action above; see
 
 <a id="install"></a>
 <details>
-<summary>Install as a CLI or try the included examples</summary>
-
-If you already use pipx, install the fixed version:
-
-```bash
-pipx install checkwash==0.13.2
-
-checkwash check HEAD~1..HEAD
-checkwash demo                  # 8 tampering cases, blocked, offline
-```
+<summary>Find pipx's Python, and where the demo cases come from</summary>
 
 To find pipx's Python, run `pipx environment --value PIPX_LOCAL_VENVS`.
 Use the full path to `checkwash\Scripts\python.exe` on Windows or
