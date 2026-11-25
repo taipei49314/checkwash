@@ -31,8 +31,19 @@ checkwash check                 # your uncommitted changes
 checkwash check HEAD~1..HEAD    # your last commit
 ```
 
+If the `checkwash` command is not found, or Windows blocks the
+`checkwash.exe` launcher, run `python -m checkwash check` from your repository
+with the Python that installed the package ([find pipx's Python](#install)).
+
+Without pipx, the [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
+installs the package with pip in a virtual environment, and the
+[single-file zipapp](#try-it-without-installing) needs no installation.
+These examples use 0.13.2; the guide tracks the latest verified CLI download
+and Action pin.
+The [0.13.2 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.2-public-launch.md) describes the Python import fixes, CLI changes and measured Django scan times.
+
 - **Branch review from merge base:** `checkwash check BASE...HEAD` (`BASE..HEAD` compares the two snapshots directly)
-- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
+- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) in a clone of this repository, with pytest installed, to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
 
 Running `check` from a subdirectory analyses the whole repository from its Git
 root and notes that root on `stderr`
@@ -40,18 +51,6 @@ root and notes that root on `stderr`
 output and machine integration, see the
 [embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
 and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
-
-If the `checkwash` command is not found, or Windows blocks the
-`checkwash.exe` launcher, run `python -m checkwash check` from your repository
-with the Python that installed the package ([find pipx's Python](#install)).
-Without pipx, install the package with pip as the
-[installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
-shows, or use the [single-file zipapp](#try-it-without-installing), which needs
-no installation.
-
-These examples use 0.13.2. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
-tracks the latest verified CLI download and Action pin.
-The [0.13.2 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.2-public-launch.md) describes the Python import fixes, CLI changes and measured Django scan times.
 
 Next: [Install Claude Code hooks](#use-it-with-claude-code) · [Require the GitHub Action](#use-it-in-ci) · [Know the limits](#know-the-limits)
 
@@ -85,14 +84,15 @@ Then, from a Git repository with at least two commits:
 python checkwash.pyz check HEAD~1..HEAD
 ```
 
-The zipapp takes the same arguments as the `checkwash` command, so
-`python checkwash.pyz check` checks your uncommitted changes and
-`python checkwash.pyz check BASE...HEAD` reviews a branch from its merge base.
+The zipapp takes the same arguments as the `checkwash` command in the
+[Quick start](#quick-start), so `python checkwash.pyz check` checks your
+uncommitted changes and `python checkwash.pyz check BASE...HEAD` reviews a
+branch from its merge base.
 
 ## Use it with Claude Code
 
-You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
-hook installer from the root of your repository:
+You need **Python 3.11+, Git, pipx and Claude Code**. Install the CLI, then run
+the hook installer from the root of your repository:
 
 ```bash
 pipx install checkwash==0.13.2
