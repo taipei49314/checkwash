@@ -21,8 +21,8 @@ like this for review, including changes written by coding agents.
 
 ## Quick start
 
-You need **Python 3.11+ and Git**. Install the CLI with pipx, then run it from
-a Git repository:
+You need **Python 3.11+, Git and [pipx](https://pipx.pypa.io/)**. Install the
+CLI, then run it from a Git repository:
 
 ```bash
 pipx install checkwash==0.13.2
@@ -31,11 +31,23 @@ checkwash check                 # your uncommitted changes
 checkwash check HEAD~1..HEAD    # your last commit
 ```
 
+- **Branch review from merge base:** `checkwash check BASE...HEAD` (`BASE..HEAD` compares the two snapshots directly)
+- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
+
+Running `check` from a subdirectory analyses the whole repository from its Git
+root and notes that root on `stderr`
+([#416](https://github.com/taipei49314/checkwash/issues/416)). For JSON/SARIF
+output and machine integration, see the
+[embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
+and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
+
 If the `checkwash` command is not found, or Windows blocks the
 `checkwash.exe` launcher, run `python -m checkwash check` from your repository
 with the Python that installed the package ([find pipx's Python](#install)).
-To try it without installing anything, use the
-[single-file zipapp](#try-it-without-installing).
+Without pipx, install the package with pip as the
+[installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
+shows, or use the [single-file zipapp](#try-it-without-installing), which needs
+no installation.
 
 These examples use 0.13.2. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
 tracks the latest verified CLI download and Action pin.
@@ -73,16 +85,9 @@ Then, from a Git repository with at least two commits:
 python checkwash.pyz check HEAD~1..HEAD
 ```
 
-- **Uncommitted changes:** `python checkwash.pyz check`
-- **Branch review from merge base:** `python checkwash.pyz check BASE...HEAD` (`BASE..HEAD` compares the two snapshots directly)
-- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
-
-Running `check` from a subdirectory analyses the whole repository from its Git
-root and notes that root on `stderr`
-([#416](https://github.com/taipei49314/checkwash/issues/416)). For JSON/SARIF
-output and machine integration, see the
-[embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
-and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
+The zipapp takes the same arguments as the `checkwash` command, so
+`python checkwash.pyz check` checks your uncommitted changes and
+`python checkwash.pyz check BASE...HEAD` reviews a branch from its merge base.
 
 ## Use it with Claude Code
 
