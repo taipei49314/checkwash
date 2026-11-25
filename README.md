@@ -19,22 +19,80 @@ like this for review, including changes written by coding agents.
 
 **Runs locally. No LLM. No network during analysis. Never executes your code.**
 
-These examples use 0.13.2. The [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
-tracks the latest verified CLI download and Action pin.
+## Quick start
+
+You need **Python 3.11+, Git and [pipx](https://pipx.pypa.io/)**. Install the
+CLI, then run it from a Git repository:
+
+```bash
+pipx install checkwash==0.13.2
+checkwash demo                  # 8 tampering cases and 1 honest fix, offline
+checkwash check                 # your uncommitted changes
+checkwash check HEAD~1..HEAD    # your last commit
+```
+
+If the `checkwash` command is not found, or Windows blocks the
+`checkwash.exe` launcher, run `python -m checkwash check` from your repository
+with the Python that installed the package ([find pipx's Python](#install)).
+
+Without pipx, the [installation guide](https://github.com/taipei49314/checkwash/blob/main/docs/install.md)
+installs the package with pip in a virtual environment, and the
+[single-file zipapp](#try-it-without-installing) needs no installation.
+These examples use 0.13.2; the guide tracks the latest verified CLI download
+and Action pin.
 The [0.13.2 release guide](https://github.com/taipei49314/checkwash/blob/main/docs/releases/v0.13.2-public-launch.md) describes the Python import fixes, CLI changes and measured Django scan times.
 
-Already installed from PyPI? From your Git repository, run
-`python -m checkwash check` to review your uncommitted changes. Use the Python
-that installed the package, including the interpreter in the CheckWash
-environment if you used pipx. This also works when Windows blocks the
-`checkwash.exe` launcher.
+- **Branch review from merge base:** `checkwash check BASE...HEAD` (`BASE..HEAD` compares the two snapshots directly)
+- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) in a clone of this repository, with pytest installed, to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
 
-[Try the offline demo](#try-it-on-a-repository) · [Install Claude Code hooks](#use-it-with-claude-code) · [Require the GitHub Action](#use-it-in-ci)
+Running `check` from a subdirectory analyses the whole repository from its Git
+root and notes that root on `stderr`
+([#416](https://github.com/taipei49314/checkwash/issues/416)). For JSON/SARIF
+output and machine integration, see the
+[embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
+and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
+
+Next: [Install Claude Code hooks](#use-it-with-claude-code) · [Require the GitHub Action](#use-it-in-ci) · [Know the limits](#know-the-limits)
+
+<a id="try-it-on-a-repository"></a>
+
+## Try it without installing
+
+Download the single-file zipapp and run the built-in offline examples first.
+It needs only **Python 3.11+ and Git**.
+
+Windows PowerShell (including 5.1, where `curl` aliases `Invoke-WebRequest`):
+
+```powershell
+curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz
+python checkwash.pyz --version
+python checkwash.pyz demo
+```
+
+macOS/Linux or Git Bash:
+
+```bash
+curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz
+python checkwash.pyz --version
+python checkwash.pyz demo
+```
+
+You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz).
+Then, from a Git repository with at least two commits:
+
+```bash
+python checkwash.pyz check HEAD~1..HEAD
+```
+
+The zipapp takes the same arguments as the `checkwash` command in the
+[Quick start](#quick-start), so `python checkwash.pyz check` checks your
+uncommitted changes and `python checkwash.pyz check BASE...HEAD` reviews a
+branch from its merge base.
 
 ## Use it with Claude Code
 
-You need **Python 3.11+, Git and Claude Code**. Install the CLI, then run the
-hook installer from the root of your repository:
+You need **Python 3.11+, Git, pipx and Claude Code**. Install the CLI, then run
+the hook installer from the root of your repository:
 
 ```bash
 pipx install checkwash==0.13.2
@@ -62,45 +120,6 @@ PreToolUse ask, and engine errors in the Stop hook report a non-blocking note
 configure the required CI check under [Use it in CI](#use-it-in-ci). Hook
 limits are documented in the
 [0.11.0 known issues](https://github.com/taipei49314/checkwash/blob/main/docs/KNOWN-ISSUES-v0.11.0.md).
-
-## Try it on a repository
-
-You need **Python 3.11+ and Git**. Download the single-file zipapp and run the
-built-in offline examples first.
-
-Windows PowerShell (including 5.1, where `curl` aliases `Invoke-WebRequest`):
-
-```powershell
-curl.exe -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz
-python checkwash.pyz --version
-python checkwash.pyz demo
-```
-
-macOS/Linux or Git Bash:
-
-```bash
-curl -LO https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz
-python checkwash.pyz --version
-python checkwash.pyz demo
-```
-
-You can also [download `checkwash.pyz` in your browser](https://github.com/taipei49314/checkwash/releases/download/v0.13.2/checkwash.pyz).
-Then, from a Git repository with at least two commits:
-
-```bash
-python checkwash.pyz check HEAD~1..HEAD
-```
-
-- **Uncommitted changes:** `python checkwash.pyz check`
-- **Branch review from merge base:** `python checkwash.pyz check BASE...HEAD` (`BASE..HEAD` compares the two snapshots directly)
-- **Hands-on walkthrough:** follow [`examples/invoice`](https://github.com/taipei49314/checkwash/blob/main/examples/invoice/README.md) to watch a failing test, a one-line shortcut edit that makes it green without fixing the bug, and checkwash's block.
-
-Running `check` from a subdirectory analyses the whole repository from its Git
-root and notes that root on `stderr`
-([#416](https://github.com/taipei49314/checkwash/issues/416)). For JSON/SARIF
-output and machine integration, see the
-[embedding guide](https://github.com/taipei49314/checkwash/blob/main/docs/embedding.md)
-and [stability contracts](https://github.com/taipei49314/checkwash/blob/main/docs/stability.md).
 
 ## Use it in CI
 
@@ -389,16 +408,7 @@ fixed in v0.8.0). Pin the v0.13.2 Action above; see
 
 <a id="install"></a>
 <details>
-<summary>Install as a CLI or try the included examples</summary>
-
-If you already use pipx, install the fixed version:
-
-```bash
-pipx install checkwash==0.13.2
-
-checkwash check HEAD~1..HEAD
-checkwash demo                  # 8 tampering cases, blocked, offline
-```
+<summary>Find pipx's Python, and where the demo cases come from</summary>
 
 To find pipx's Python, run `pipx environment --value PIPX_LOCAL_VENVS`.
 Use the full path to `checkwash\Scripts\python.exe` on Windows or
