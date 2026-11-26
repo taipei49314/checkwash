@@ -8,7 +8,7 @@ import pytest
 from checkwash.quality.engine import analyze
 from checkwash.quality.model import POLICY_PATH, ALLOW_PATH, digest
 from checkwash.quality.policy import load_policy
-from checkwash.quality.report import json_report, sarif, terminal
+from checkwash.quality.report import compress, json_report, sarif, terminal
 from checkwash.quality.snapshot import MappingSnapshot
 
 TODAY = datetime.date(2026, 9, 9)
@@ -486,3 +486,32 @@ def test_target_path_cannot_escape_repository(path):
     raw = policy().decode().replace('["src/"]', json.dumps([path])).encode()
     p, code = analyze(MappingSnapshot({POLICY_PATH: raw}), MappingSnapshot({POLICY_PATH: raw}), today=TODAY)
     assert code == 2 and p["verdict"] == "error"
+
+
+def test_consecutive_ruff_codes_print_as_one_range():
+    finding = strong(scan('[tool.ruff.lint]\nselect=["F401"]', '[tool.ruff.lint]\nselect=[]', "ruff")[0])[0]
+    finding["lost"] = ["B002", "B003", "B004", "B005", "B039", "F401"]
+    payload = {"run": {"mode": "report", "discovery": False}, "verdict": "reported", "analysis_status": "complete",
+               "findings": [finding], "diagnostics": []}
+    assert "  removed 6: B002-B005, B039, F401\n" in terminal(payload)
+    assert compress(["F401", "F821"]) == "F401, F821"
+    assert compress(["E711", "E712", "E713", "E714"]) == "E711-E714"
+
+
+def test_the_same_loss_on_two_files_reports_once_with_the_file_count():
+    finding = strong(scan('[tool.ruff.lint]\nselect=["F401"]', '[tool.ruff.lint]\nselect=[]', "ruff")[0])[0]
+    finding["dimension"] += "@src/code.py"
+    finding["message"] = "ruff.lint.rules@src/code.py: requirements weakened under the declared target."
+    other = copy.deepcopy(finding)
+    other["dimension"] = "ruff.lint.rules@src/other.py"
+    other["message"] = "ruff.lint.rules@src/other.py: requirements weakened under the declared target."
+    other["locations"] = [dict(place, path=place["path"].replace("code.py", "other.py")) for place in finding["locations"]]
+    payload = {"run": {"mode": "report", "discovery": False}, "verdict": "reported", "analysis_status": "complete",
+               "findings": [finding, other], "diagnostics": []}
+    text = terminal(payload)
+    assert text.count("HIGH QW_RULE_DISABLED") == 1
+    assert "HIGH QW_RULE_DISABLED [main]  2 files" in text
+    assert "ruff.lint.rules: requirements weakened" in text
+    for path in ("src/code.py", "src/other.py"):
+        assert path in text
+    assert len(json.loads(json_report(payload))["findings"]) == 2

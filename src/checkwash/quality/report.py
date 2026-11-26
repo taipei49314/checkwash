@@ -50,18 +50,23 @@ def terminal(payload):
     lines = [f"Checkwash quality | {run['mode'].upper()} | {payload['verdict'].upper()} | analysis {payload['analysis_status'].upper()}"]
     if run["discovery"]:
         lines.append("DISCOVERY: no base targets. No completeness or enforcement claim.")
-    for finding in payload["findings"]:
+    for finding, paths, count, files in grouped(payload["findings"]):
         suffix = " [base exemption]" if finding["allowlisted"] else ""
-        lines.append(f"{finding['severity'].upper()} {finding['rule']} [{finding['target_id'] or 'policy'}]{suffix}")
-        lines.append("  " + finding["message"])
+        counted = f"  {count} files" if count > 1 else ""
+        lines.append(f"{finding['severity'].upper()} {finding['rule']} [{finding['target_id'] or 'policy'}]{suffix}{counted}")
+        # One line for several files names the setting, not the first file it was found in.
+        message = finding["message"].replace(finding["dimension"], finding["dimension"].split("@", 1)[0], 1) if count > 1 else finding["message"]
+        lines.append("  " + message)
+        if count > 1:
+            lines.append("  files: " + ", ".join(files))
         if finding["rule"] == "QW_RULE_DISABLED" and finding["dimension"].split("@", 1)[0] == "ruff.lint.rules":
             removed = finding["lost"]
-            lines.append(f"  removed {len(removed)}: {', '.join(removed)}")
+            lines.append(f"  removed {len(removed)}: {compress(removed)}")
             if added := finding["gained"]:
-                lines.append(f"  added {len(added)}: {', '.join(added)}")
+                lines.append(f"  added {len(added)}: {compress(added)}")
         elif finding["before"]["state"] == finding["after"]["state"] == "known":
             lines.append(f"  {finding['before']['data']} -> {finding['after']['data']}")
-        for place in finding["locations"]:
+        for place in paths:
             # location() returns an empty span at 1:1 when a key cannot be located.
             where = place["path"]
             if place["start_line"] == place["end_line"] == place["end_column"] == 1:
@@ -75,6 +80,56 @@ def terminal(payload):
         lines.append(f"{diagnostic['kind'].upper()} {diagnostic['code']}: {diagnostic['message']}")
     lines.append("Evidence concerns declared configuration only. CI execution was not verified.")
     return "\n".join(visible(line) for line in lines) + "\n"
+
+
+def compress(codes):
+    """`B002-B035, B039, F401`: runs of three or more consecutive codes fold into a range."""
+    out, run = [], []
+    for code in codes:
+        head = code.rstrip("0123456789")
+        number = int(code[len(head):]) if len(head) < len(code) else None
+        if run and run[-1][0] == head and number is not None and run[-1][1] is not None and number == run[-1][1] + 1:
+            run.append((head, number, code))
+            continue
+        out.extend(_fold(run))
+        run = [(head, number, code)]
+    out.extend(_fold(run))
+    return ", ".join(out)
+
+
+def _fold(run):
+    if len(run) >= 3:
+        return [f"{run[0][2]}-{run[-1][2]}"]
+    return [entry[2] for entry in run]
+
+
+def grouped(findings):
+    """Findings that differ only in which file they name, merged under the count the terminal shows.
+
+    A project-wide weakened setting produces one finding per analysed file; a terminal reader
+    wants the change once, with the files that carry it. Json keeps every entry.
+    """
+    merged, order = {}, []
+    for finding in findings:
+        dimension = finding["dimension"]
+        base = dimension.split("@", 1)[0]
+        key = (finding["rule"], finding.get("target_id"), finding["severity"], finding["allowlisted"],
+               base, tuple(finding.get("lost") or ()), tuple(finding.get("gained") or ()))
+        if key not in merged:
+            merged[key] = (finding, [], 0, [])
+            order.append(key)
+        entry, paths, count, files = merged[key]
+        for place in finding["locations"]:
+            if not any(_same_place(place, seen) for seen in paths):
+                paths.append(place)
+        if "@" in dimension:
+            files.append(dimension.split("@", 1)[1])
+        merged[key] = (entry, paths, count + 1, files)
+    return [merged[key] for key in order]
+
+
+def _same_place(a, b):
+    return (a["side"], a["path"], a["start_line"], a["start_column"]) == (b["side"], b["path"], b["start_line"], b["start_column"])
 
 
 def sarif(payload):
