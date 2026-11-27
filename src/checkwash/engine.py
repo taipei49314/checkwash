@@ -825,6 +825,7 @@ def build_ir(
     root_batch_reader=None,
     pytest_configs=None,
     policy_base=None,
+    root_links=None,
 ) -> IR:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SyntaxWarning)
@@ -833,6 +834,7 @@ def build_ir(
             changes, config, scope_allow, head_reader=head_reader, report_context=report_context,
             root_reader=root_reader, root_searcher=root_searcher,
             root_path_lister=root_path_lister, root_batch_reader=root_batch_reader,
+            root_links=root_links,
         )
         surface = _initialize_global_surface(
             intake, config, base_label=base_label, head_label=head_label,
@@ -939,6 +941,7 @@ def analyze(
     pytest_configs=None,
     policy_base=None,
     base_module_exists=None,
+    root_links=None,
 ) -> tuple[IR, list[Finding], str]:
     ir = build_ir(
         changes,
@@ -955,6 +958,7 @@ def analyze(
         root_searcher=root_searcher,
         root_path_lister=root_path_lister,
         root_batch_reader=root_batch_reader,
+        root_links=root_links,
         pytest_configs=pytest_configs,
         policy_base=policy_base,
     )

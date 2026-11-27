@@ -1,3 +1,14 @@
+# After 0.13.2 — 2026-11-27
+
+Found by running the 0.13.2 CLI as `check <sha>~1..<sha>` over sampled commits
+of public repositories. 0.13.2 has these limits, and
+[KNOWN-ISSUES-v0.13.2](KNOWN-ISSUES-v0.13.2.md) names only two JS/TS commits
+for them. Nothing in this section is released.
+
+| Scope | Known limit and what it means for you |
+| --- | --- |
+| A committed symlink the diff does not touch ([#551](https://github.com/taipei49314/checkwash/issues/551)) | **0.13.2:** when a changed `.py` file shares a module name with another file (`images/openai.py` beside `providers/openai.py`), the runtime-provider pass asks for every unchanged path that could be a test runner, and one committed link among them ends the run with exit 2 and no verdict: a link whose name has no dot (`.claude/skills/<name>`, `LICENSE`), one beneath `.github/workflows/` (`CLAUDE.md -> AGENTS.md`), or one with a runner suffix (`.sh`). On pydantic/pydantic-ai, 69 of 104 sampled commits since 2026-05-27 ended that way. **From the next release, in range checks:** such a link to a regular file of the same commit reads as that file, and one to a directory of the same commit is an opaque directory, as a working-tree directory symlink is (ruling of 2026-11-27, [subject integrity](subject-integrity.md)). **Still exit 2:** a link that leads outside the tree, to another link, to a submodule or to nothing; a directory link that a pytest run could collect from, by the reach rules a submodule has; a commit that itself adds, retargets or removes a link; and the working tree, where a file link is refused as before. |
+
 # 0.13.2 candidate — 2026-11-23
 
 The candidate addresses the reviewed import and test-move cases from #634 and #636. The earlier dated entries describe the versions on which those cases were found. [Known issues for 0.13.2](KNOWN-ISSUES-v0.13.2.md)

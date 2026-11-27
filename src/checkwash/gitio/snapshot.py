@@ -23,6 +23,9 @@ MAX_BATCH_BYTES = 64_000_000
 # MAX_SOURCE_BYTES and at most this size is streamed and verified; a larger
 # one keeps no prefix, so it is answered as it was before the prefix existed.
 MAX_PREFIX_STREAM_BYTES = MAX_BATCH_BYTES
+# A link's text is a path. One longer than this is not read, and the link
+# keeps its refusal (#551).
+MAX_LINK_TEXT_BYTES = 4096
 # A streamed blob passes through memory in pieces of at most this size.
 _STREAM_CHUNK = 65_536
 # Each streamed object gets the time `_run` gives one process.
@@ -246,6 +249,13 @@ class GitSnapshot:
         self._opaque = None
         self._listed_paths = None
         self._owners = {}
+        self._link_view = None
+
+    def link_view(self):
+        """This tree as the runtime-provider pass reads its links (#551); one view per snapshot."""
+        if self._link_view is None:
+            self._link_view = LinkedTreeView(self)
+        return self._link_view
 
     def list_paths(self):
         """Complete revision inventory, including empty modules and controls.
@@ -741,6 +751,143 @@ class GitSnapshot:
         if len(paths) >= MAX_SEARCH_HITS:
             raise SearchHitLimit("strict snapshot importer search exceeds the hit limit")
         return paths
+
+
+def _link_reading(path, data, entries, trees):
+    """How a committed link reads (#551): `("file", target)`, `("directory", target)` or None.
+
+    `data` is the link's text and `path` its own path. The text is resolved
+    against the link's directory, inside the tree, as D-133 resolves a
+    symlinked pytest config. A target that is a regular file of the same tree
+    is a file reading, and one that is a directory of it, the root included,
+    a directory reading. None is every link that keeps its refusal: text that
+    is missing, undecodable, empty, absolute or holds a drive, a backslash or
+    a control character; a walk that leaves the tree or passes through
+    anything but a directory of it (a file, another link, a submodule, a
+    missing name); and a target that is another link, a submodule or absent.
+    """
+    if data is None:
+        return None
+    try:
+        text = data.decode("utf-8", errors="strict")
+    except UnicodeError:
+        return None
+    if not text or text.startswith("/") or ":" in text or any(c in text for c in "\\\r\n\0"):
+        return None
+    parts = path.split("/")[:-1]
+    for part in text.split("/"):
+        if parts and "/".join(parts) not in trees:
+            return None
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+        else:
+            parts.append(part)
+    target = "/".join(parts)
+    if not target or target in trees:
+        return ("directory", target)
+    entry = entries.get(target)
+    if entry is not None and entry[0] in (b"100644", b"100755"):
+        return ("file", target)
+    return None
+
+
+def link_view_of(snapshot):
+    """The link view of a committed tree's snapshot (#551), or None for a source that has none.
+
+    The working tree, a proposed edit and a mapping have none, and the
+    runtime-provider pass then reads the root readers, as before.
+    """
+    view = getattr(snapshot, "link_view", None)
+    return view() if view is not None else None
+
+
+class LinkedTreeView:
+    """A committed tree as the runtime-provider pass reads its unchanged links (#551).
+
+    Ruling 551, question 2 (owner, 2026-11-27). The pass asks for every
+    unchanged path that could hold a test runner, a pytest control or a
+    candidate test, and `GitSnapshot.read_many` refuses a link among them.
+    Through this view:
+    - a link to a regular file of the same commit reads as that file, as a
+      symlinked pytest config does in a range check (D-133 item 2);
+    - a link to a directory of the same commit is listed as an opaque
+      directory, as the working tree lists one (D-134): it holds no bytes,
+      the files it leads to are listed under their own paths, and an import
+      that can resolve inside it or a collection that can reach it fails
+      closed, naming it;
+    - any other link keeps the refusal, naming it (`_link_reading`).
+
+    Only that pass is given the view. The diff read, the single-path reader,
+    the searches, the config evidence and every other pass read the snapshot
+    itself, where a link is refused or listed as before. The working tree has
+    no such view.
+    """
+
+    def __init__(self, snapshot):
+        self._snapshot = snapshot
+        self._readings = None
+        self._directories = None
+        self._listed = None
+
+    def _resolved(self):
+        """Every link of the tree with its reading, each link's text read once."""
+        if self._readings is None:
+            snapshot = self._snapshot
+            snapshot.list_paths()
+            entries, trees = snapshot._tree_entries, snapshot._trees
+            links = sorted((path, oid, size) for path, (mode, oid, size) in entries.items() if mode == b"120000")
+            readable = [link for link in links if link[2] <= MAX_LINK_TEXT_BYTES]
+            total = 0
+            for path, _oid, size in readable:
+                total += size
+                if total > MAX_BATCH_BYTES:
+                    raise _batch_over_limit(path, snapshot._side(), total)
+            texts = snapshot._read_objects(readable)
+            self._readings = {path: _link_reading(path, texts.get(path), entries, trees) for path, _oid, _size in links}
+            self._directories = tuple(sorted(
+                SymlinkedDirectory(path) for path, reading in self._readings.items()
+                if reading is not None and reading[0] == "directory"
+            ))
+        return self._readings
+
+    def list_paths(self):
+        """`GitSnapshot.list_paths`, with each link to a directory of the tree as an opaque directory."""
+        if self._listed is None:
+            self._resolved()
+            directories = set(self._directories)
+            listed = [path for path in self._snapshot.list_paths() if path not in directories]
+            listed.extend(SymlinkedDirectory(directory + "/") for directory in self._directories)
+            self._listed = tuple(sorted(listed))
+        return list(self._listed)
+
+    def read_many(self, paths):
+        """`GitSnapshot.read_many`, with each link to a regular file of the tree answered as that file.
+
+        The target is read as any selected source is, so one over the source
+        limit refuses under its own path, and a read inside a link to a
+        directory fails closed, as one inside a working-tree directory link
+        does (#414).
+        """
+        readings = self._resolved()
+        followed = {}
+        plain = []
+        for path in sorted(set(paths)):
+            owner = opaque_owner(path, self._directories)
+            if owner is not None:
+                raise opaque_error(owner, f"{path} lies inside it")
+            reading = readings.get(path)
+            if reading is not None and reading[0] == "file":
+                followed[path] = reading[1]
+            else:
+                plain.append(path)
+        data = self._snapshot.read_many([*plain, *followed.values()])
+        result = {path: data[path] for path in plain}
+        result.update({path: data[target] for path, target in followed.items()})
+        return result
 
 
 # Where a virtual environment keeps links of its own (D-208): its scripts

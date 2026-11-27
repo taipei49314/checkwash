@@ -36,6 +36,10 @@ class DiffIntake:
     importer_reads: int
     reviewed_root_modules: set[str]
     set_aside_helpers: set[str] = field(default_factory=set)
+    # The runtime-provider pass's own view of a committed tree's links (#551);
+    # None where the caller gave none, and the pass reads the root readers.
+    provider_path_lister: Any = None
+    provider_batch_reader: Any = None
 
 
 @dataclass
@@ -65,6 +69,7 @@ def prepare_diff_intake(
     root_searcher=None,
     root_path_lister=None,
     root_batch_reader=None,
+    root_links=None,
 ) -> DiffIntake:
     """Filter oversized/link changes, guard snapshot readers, and expand helper importers."""
     eng = _eng()
@@ -74,6 +79,13 @@ def prepare_diff_intake(
     root_reader = eng._guard_unread_reads(root_reader, unread_changes)
     head_reader = eng._guard_unread_reads(head_reader, unread_changes)
     root_batch_reader = eng._guard_unread_reads(root_batch_reader, unread_changes, batch=True)
+    # Ruling 551, question 2: in a committed range the runtime-provider pass,
+    # and no other, lists and reads unchanged links through the tree's link
+    # view, guarded as the root batch reader is.
+    provider_path_lister = provider_batch_reader = None
+    if root_links is not None and root_path_lister is not None and root_batch_reader is not None:
+        provider_path_lister = root_links.list_paths
+        provider_batch_reader = eng._guard_unread_reads(root_links.read_many, unread_changes, batch=True)
     # After unread sides so #456's Stop-hook size block still wins over a refused link (D-208).
     changes, _linked = eng._set_aside_links(
         changes, config, allowed, root_reader, root_path_lister, root_batch_reader,
@@ -112,6 +124,8 @@ def prepare_diff_intake(
         importer_reads=importer_reads,
         reviewed_root_modules=reviewed_root_modules,
         set_aside_helpers=set_aside_helpers,
+        provider_path_lister=provider_path_lister,
+        provider_batch_reader=provider_batch_reader,
     )
 
 
@@ -286,8 +300,8 @@ def initialize_global_surface(
         intake.changes,
         intake.unread_changes,
         config,
-        root_path_lister,
-        intake.root_batch_reader,
+        intake.provider_path_lister or root_path_lister,
+        intake.provider_batch_reader or intake.root_batch_reader,
         config_evidence,
     )
     resolvable = _resolvable_modules(intake.changes, known_modules)

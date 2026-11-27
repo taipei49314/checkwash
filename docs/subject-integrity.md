@@ -286,6 +286,28 @@ does so even when the provider pass would treat it as dormant. Any other
 symlink, including a custom config file name given to `-c`, and the
 working-tree snapshot are not covered (#346).
 
+A second exception, also for range checks only, belongs to the
+runtime-provider pass (#551, question 2, ruled 2026-11-27). On a run that
+reaches its first read phase, that pass asks for every unchanged path that
+could hold a test runner, a pytest control or a candidate test: a name with
+no dot, a path with the ci role, a runner suffix, a conftest or a test
+module. It reads a committed tree's links through a view of its own. A link
+whose target is a regular file of the same commit reads as that file,
+resolved as above. A link whose target is a directory of the same commit is
+listed as an opaque directory, as the working tree lists a directory symlink
+(below): it holds no bytes, the files it leads to are listed under their own
+paths, and a read inside it, an import that can resolve inside it or a
+pytest collection that can reach it fails with an `EngineError` naming it.
+Any other link is refused as before, named: a target outside the tree, a
+link to a link, a missing target, a submodule or a path inside one, and a
+link whose text is over 4,096 bytes. The view is the head's. A link whose
+target the diff changes reads as its head target on both sides, and the
+change itself is judged at the target's own path. No other reader uses the
+view: the diff read still refuses a link the diff adds, retargets or
+removes, and the single-path reader, the searches, the config evidence and
+every other pass read the snapshot as before. The working-tree snapshot has
+no such view.
+
 A submodule is listed as its path with a trailing slash, a directory whose
 content is unknown (#335). Its own path reads as no file, whether git
 answers it as missing (2.43) or as a submodule (2.55).
