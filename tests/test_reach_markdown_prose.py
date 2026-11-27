@@ -34,7 +34,7 @@ import sys
 import pytest
 
 from checkwash.change import FileChange
-from checkwash.collection_inventory import collection_sources, opaque_reached
+from checkwash.collection_inventory import collection_sources, environment_reached, opaque_reached
 
 TESTPATHS = {"setup.cfg": b"[tool:pytest]\ntestpaths = tests\n"}
 NO_TESTPATHS = {"setup.cfg": b"[tool:pytest]\naddopts = -ra\n"}
@@ -57,6 +57,7 @@ NEW_PROVIDER = {"tests/src/billing.py": b"def invoice_total():\n    return 2\n"}
     ".github/workflows/REVIEW.MD",
     ".github/workflows/review.markdown",
     "scripts/README.md",
+    "scripts/docs/notes.md",
 ])
 @pytest.mark.parametrize("directory", [HIDDEN, PLAIN])
 def test_bold_text_in_a_markdown_file_reaches_nothing(prose, directory):
@@ -93,11 +94,17 @@ def test_a_markdown_file_the_diff_changes_is_prose_on_both_sides():
     {".github/workflows/ci.yml": b"jobs:\n  test:\n    steps:\n      - run: pytest\n"},
     {"scripts/NOTES.txt": BOLD},
     {"scripts/notes.rst": BOLD},
+    {"scripts/notes.md.txt": BOLD},
+    {"scripts/notes.mdx": BOLD},
+    {"scripts/ci.cmd": b"pytest */lib\r\n"},
     {"scripts/test.sh": b"#!/bin/sh\npytest */lib\n"},
-], ids=["a_workflow_that_runs_a_bare_pytest", "a_text_file", "a_restructuredtext_file", "a_script_with_a_wildcard"])
+], ids=["a_workflow_that_runs_a_bare_pytest", "a_text_file", "a_restructuredtext_file",
+        "a_name_that_only_holds_the_suffix", "a_longer_suffix", "a_batch_file_whose_suffix_ends_alike",
+        "a_script_with_a_wildcard"])
 def test_every_other_runner_file_is_read_as_before(runner):
-    # Only Markdown is ruled. A YAML workflow's bare run still recurses into
-    # the directory, a script's wildcard still reaches it, and prose kept in
+    # Only Markdown is ruled, by its suffix: `.md` or `.markdown` at the end
+    # of the name. A YAML workflow's bare run still recurses into the
+    # directory, a script's wildcard still reaches it, and prose kept in
     # another kind of file beneath `scripts/` is still read as a command.
     assert opaque_reached((PLAIN,), {**NO_TESTPATHS, **TESTS_ONLY, "scripts/README.md": BOLD, **runner}, []) == PLAIN
 
@@ -107,6 +114,16 @@ def test_the_markdown_file_is_still_a_source_the_rule_is_given():
     # unread here, and it stays a runner file to every other reader.
     assert collection_sources(["scripts/README.md", ".github/workflows/shared/review.md", "docs/review.md"]) == [
         ".github/workflows/shared/review.md", "scripts/README.md"]
+
+
+def test_the_environment_rule_still_reads_a_markdown_file_as_a_runner_file():
+    # `environment_reached` (D-208) is not ruled and not changed: a note that
+    # names a virtual environment after `pytest` still reaches it there, with
+    # no `--collect-in-virtualenv` anywhere, while `opaque_reached` reads no
+    # run from the same file.
+    note = {**NO_TESTPATHS, **TESTS_ONLY, "scripts/README.md": b"Run pytest env/lib after activating it.\n"}
+    assert environment_reached(("env",), note, []) == "env"
+    assert opaque_reached(("env",), note, []) is None
 
 
 def git(repo, *args, data=None):

@@ -82,11 +82,13 @@ def _prose(path):
     """A Markdown file: prose, from which `opaque_reached` reads no run (ruling of 2026-11-27).
 
     `_runner` takes every file beneath `.github/workflows/` or `scripts/`, a
-    README or an agent's instructions among them. Such a file runs nothing.
-    Read as a command, a sentence that mentions pytest made its other words
-    path arguments and its `**bold**` text a wildcard that reached every
-    directory. Only that rule asks this: to every other reader the file is
-    the runner file it was.
+    README or an agent's instructions among them. Such a file is written to
+    be read: no shell and no CI service runs it. Read as a command, a
+    sentence that mentions pytest made its other words path arguments and
+    its `**bold**` text a wildcard that reached every directory. A tool that
+    runs the commands a Markdown file holds (a task file for `mask`, say) is
+    not read either, so its runs are not counted. Only that rule asks this:
+    to every other reader the file is the runner file it was.
     """
     return path.lower().endswith((".md", ".markdown"))
 
@@ -311,7 +313,11 @@ def _candidates(sources, settings):
 
 
 def collection_sources(paths):
-    """The files `opaque_reached` reads: the root configs and the runner files (#335)."""
+    """The files `opaque_reached` is given: the root configs and the runner files (#335).
+
+    A Markdown file among the runner files is given too, and that rule reads
+    no run from it (`_prose`).
+    """
     return sorted(p for p in paths if p in _CONFIGS or _runner(p))
 
 
