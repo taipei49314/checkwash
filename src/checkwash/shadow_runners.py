@@ -224,11 +224,48 @@ def _pytest_cli(args: Sequence[str]) -> tuple[tuple[str, ...], str | None, str |
     return _dedupe_roots(targets), mode, config_path
 
 
+# A shell control operator ends a command; `_pytest_cli` skips one and reads on.
+_CONTROL_OPERATORS = ("&&", "||", ";", "|")
+
+
+def _own_targets(args: Sequence[str], line: str) -> tuple[str, ...]:
+    """The targets `_pytest_cli` reads that are certainly the pytest command's own arguments.
+
+    `_pytest_cli` reads every word after `pytest` to the end of the line. It
+    skips a control operator and reads on, so `pytest || exit $?` gives `exit`
+    and `$?` as targets, and a line that ends in a backslash goes on where no
+    reader follows it. Neither is changed here. This gives the targets read
+    from the words before the first control operator, a word that ends in
+    `;` being the last of them, and none for a line that continues. A reader
+    that must not take a word of the rest for a path argument asks for these
+    (`collection_inventory.opaque_reached`).
+    """
+
+    if line.rstrip().endswith("\\"):
+        return ()
+    own: list[str] = []
+    for word in args:
+        if word in _CONTROL_OPERATORS:
+            break
+        own.append(word)
+        if word.endswith(";"):
+            break
+    return _pytest_cli(own)[0]
+
+
 def _runner_invocations(path: str, data: bytes | None) -> tuple[_RunnerInvocation, ...]:
+    return tuple(invocation for invocation, _own in _runner_invocations_with_own_targets(path, data))
+
+
+def _runner_invocations_with_own_targets(
+    path: str, data: bytes | None
+) -> tuple[tuple[_RunnerInvocation, tuple[str, ...]], ...]:
+    """Every pytest invocation of a runner file, each with its `_own_targets`."""
+
     if not data or not _runs_tests(data, path):
         return ()
     persistent: tuple[str, ...] = ()
-    invoked: list[_RunnerInvocation] = []
+    invoked: list[tuple[_RunnerInvocation, tuple[str, ...]]] = []
     yaml_environment: tuple[str, ...] | None = None
     for line in _decode(data).split("\n"):
         words = _line_words(line)
@@ -241,7 +278,7 @@ def _runner_invocations(path: str, data: bytes | None) -> tuple[_RunnerInvocatio
                 if args is not None:
                     targets, mode, config_path = _pytest_cli(args)
                     invoked.append(
-                        _RunnerInvocation(roots, targets, mode, config_path, "")
+                        (_RunnerInvocation(roots, targets, mode, config_path, ""), _own_targets(args, line))
                     )
             else:
                 persistent = roots
@@ -270,12 +307,12 @@ def _runner_invocations(path: str, data: bytes | None) -> tuple[_RunnerInvocatio
         if args is not None:
             targets, mode, config_path = _pytest_cli(args)
             invoked.append(
-                _RunnerInvocation(persistent, targets, mode, config_path, "")
+                (_RunnerInvocation(persistent, targets, mode, config_path, ""), _own_targets(args, line))
             )
     # A YAML env mapping is structural rather than shell execution order; its
     # line may appear after the run key while still governing that step.
     if yaml_environment is not None:
-        invoked = [replace(item, roots=yaml_environment) for item in invoked]
+        invoked = [(replace(item, roots=yaml_environment), own) for item, own in invoked]
     return tuple(invoked)
 
 

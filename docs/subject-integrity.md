@@ -358,11 +358,16 @@ pattern stops. The runs are the runner files' pytest commands, or a bare
 `pytest` when there are none. A setting read two ways counts both ways; an
 undecodable config or a run's own `-c` config reaches every submodule; a
 runner file whose pytest command does not parse is a run without path
-arguments; and a path argument that expands a variable (`$1`, `{posargs}`)
-names no path. One that holds `$` is such an argument whatever else it
-holds, so it is not read for a wildcard: a Bash array (`"${tests[@]}"`) and
-`$*` name no path either, where their bracket and star once reached every
-directory (ruled 2026-11-27). A Markdown file is prose, and this rule reads
+arguments; and a path argument that is only a variable (`$1`, `{posargs}`)
+names no path. In a run's own arguments, the `[`, `*` and `?` inside a
+variable expansion are no wildcard: a Bash array (`"${tests[@]}"`) and `$*`
+name no path either, where their bracket and star once reached every
+directory (ruled 2026-11-27). The rest of an argument is read as it was, so
+`sub/$1` names a path inside `sub` and reaches it, and `te*$x` holds a
+wildcard. A word after a control operator and every word of a line that
+ends in a backslash are not arguments the reader can tell from the run's
+own, and are read as they were: the `?` of `pytest || exit $?` is still a
+wildcard that reaches every directory. A Markdown file is prose, and this rule reads
 no run from one, wherever it is kept: a README beneath `scripts/` or an
 agent's instructions beneath `.github/workflows/` that mention pytest are no
 pytest command (same ruling). So a tree whose only such file is Markdown is

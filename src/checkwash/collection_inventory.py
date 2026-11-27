@@ -328,17 +328,21 @@ def opaque_reached(opaque, head, changes):
     pattern stops. A setting read two ways counts both ways. An undecodable
     config or a run's own config reaches every submodule, and a runner file
     whose pytest command does not parse is a run without path arguments. A
-    path argument that expands a variable (`$1`, `{posargs}`) names no path.
-    One that holds `$` is such an argument whatever else it holds, so it is
-    not read for a wildcard: `"${tests[@]}"` and `$*` name no path either,
-    where their bracket and star once reached every directory (ruling of
-    2026-11-27). A Markdown file among the runner files is prose and gives
-    no run (`_prose`), so a tree whose only such file it is has the bare
-    `pytest`.
+    path argument that is only a variable (`$1`, `{posargs}`) names no path.
+    The `[`, `*` and `?` inside a variable expansion are no wildcard:
+    `"${tests[@]}"` and `$*` name no path either, where their bracket and
+    star once reached every directory (ruling of 2026-11-27). The rest of
+    the argument is read as it was, so `sub/$1` still names a path inside
+    `sub`. That reading is for a run's own arguments (`_own_targets`): a word
+    after a control operator (`pytest || exit $?`), and every word of a line
+    that continues, is read as it was. A Markdown file among the runner
+    files is prose and gives no run (`_prose`), so a tree whose only such
+    file it is has the bare `pytest`.
     """
     if not opaque:
         return None
-    from checkwash.shadow import _pytest_config_path, _runner_invocations
+    from checkwash.shadow import _pytest_config_path
+    from checkwash.shadow_runners import _runner_invocations_with_own_targets
 
     for side in ("before", "after"):
         contents = dict(head)
@@ -367,11 +371,12 @@ def opaque_reached(opaque, head, changes):
             if not _runner(path) or _prose(path) or not _runs_tests(contents[path], path):
                 continue
             runs = True
-            found = _runner_invocations(path, contents[path])
-            targetless = targetless or not found or any(not item.targets for item in found)
-            if any(item.config_path for item in found):
+            found = _runner_invocations_with_own_targets(path, contents[path])
+            targetless = targetless or not found or any(not item.targets for item, _own in found)
+            if any(item.config_path for item, _own in found):
                 return opaque[0]
-            targets.extend(target for item in found for target in item.targets if "$" not in target)
+            # Each target with whether it is the run's own argument.
+            targets.extend((target, target in own) for item, own in found for target in item.targets)
         targetless = targetless or not runs
         # A setting the reader resolves two ways is read both ways; a config's
         # norecursedirs replaces pytest's default list.
@@ -379,7 +384,7 @@ def opaque_reached(opaque, head, changes):
             roots = tuple(posixpath.normpath(root.replace("\\", "/")) for root in testpaths) or (".",)
             for skipped in readings.get("norecursedirs", {_DEFAULTS["norecursedirs"]}):
                 for directory in opaque:
-                    if any(_reaches(target, directory, skipped) for target in targets):
+                    if any(_reaches(target, directory, skipped, argument=own) for target, own in targets):
                         return directory
                     if targetless and any(_reaches(root, directory, skipped) for root in roots):
                         return directory
@@ -390,21 +395,30 @@ def opaque_reached(opaque, head, changes):
 # `[ab]`, `[]a]` or `[!]]`. tox's `[]` (its old spelling of `{posargs}`) is
 # a literal name.
 _WILDCARD = re.compile(r"[*?]|\[(?:!\]|\]|[^\]])[^\]]*\]")
+# A variable expansion in a shell word: `${...}`, `$name`, a positional
+# parameter or a special one (`$@`, `$*`, `$#`, `$?`, `$!`, `$$`, `$-`).
+_EXPANSION = re.compile(r"\$(?:\{[^}]*\}|[A-Za-z_][A-Za-z0-9_]*|[0-9@*#?!$-])")
 
 
-def _reaches(root, directory, skipped):
+def _reaches(root, directory, skipped, *, argument=False):
     """Does collection from this root, a path argument or a testpath, enter the directory?
 
     A root inside the directory, or the directory itself, enters it. A root
     above it recurses into it unless a norecursedirs pattern stops one of the
     directories between them. A root with a wildcard is read from its literal
     prefix, and reaches whatever lies on either side of that prefix.
+
+    In a run's own path argument (`argument`), the `[`, `*` and `?` inside a
+    variable expansion (`${tests[@]}`, `$*`, `${1:?}`) are no wildcard
+    (ruling of 2026-11-27): the part is looked at for one without its
+    expansions. So `"${tests[@]}"` names no directory, while `sub/$1` names
+    a path inside `sub` and `te*$x` holds a wildcard, as before the ruling.
     """
     root = "" if root in (".", "") else root.rstrip("/")
     parts = root.split("/") if root else []
     literal = []
     for part in parts:
-        if _WILDCARD.search(part):
+        if _WILDCARD.search(_EXPANSION.sub("", part) if argument else part):
             prefix = "/".join(literal)
             return (not prefix or directory == prefix or directory.startswith(prefix + "/")
                     or prefix.startswith(directory + "/"))
