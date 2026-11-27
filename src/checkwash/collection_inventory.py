@@ -316,6 +316,10 @@ def opaque_reached(opaque, head, changes):
     config or a run's own config reaches every submodule, and a runner file
     whose pytest command does not parse is a run without path arguments. A
     path argument that expands a variable (`$1`, `{posargs}`) names no path.
+    One that holds `$` is such an argument whatever else it holds, so it is
+    not read for a wildcard: `"${tests[@]}"` and `$*` name no path either,
+    where their bracket and star once reached every directory (ruling of
+    2026-11-27).
     """
     if not opaque:
         return None
@@ -352,7 +356,7 @@ def opaque_reached(opaque, head, changes):
             targetless = targetless or not found or any(not item.targets for item in found)
             if any(item.config_path for item in found):
                 return opaque[0]
-            targets.extend(target for item in found for target in item.targets)
+            targets.extend(target for item in found for target in item.targets if "$" not in target)
         targetless = targetless or not runs
         # A setting the reader resolves two ways is read both ways; a config's
         # norecursedirs replaces pytest's default list.

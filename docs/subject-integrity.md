@@ -322,7 +322,10 @@ pattern stops. The runs are the runner files' pytest commands, or a bare
 undecodable config or a run's own `-c` config reaches every submodule; a
 runner file whose pytest command does not parse is a run without path
 arguments; and a path argument that expands a variable (`$1`, `{posargs}`)
-names no path. The empty-needle search still rejects a tree with a
+names no path. One that holds `$` is such an argument whatever else it
+holds, so it is not read for a wildcard: a Bash array (`"${tests[@]}"`) and
+`$*` name no path either, where their bracket and star once reached every
+directory (ruled 2026-11-27). The empty-needle search still rejects a tree with a
 submodule, because the startup-context proof needs every Python source, so
 that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch
