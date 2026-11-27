@@ -78,6 +78,19 @@ def _runner(path):
         or path in {"Makefile", ".gitlab-ci.yml", "noxfile.py", "tox.ini"})
 
 
+def _prose(path):
+    """A Markdown file: prose, from which `opaque_reached` reads no run (ruling of 2026-11-27).
+
+    `_runner` takes every file beneath `.github/workflows/` or `scripts/`, a
+    README or an agent's instructions among them. Such a file runs nothing.
+    Read as a command, a sentence that mentions pytest made its other words
+    path arguments and its `**bold**` text a wildcard that reached every
+    directory. Only that rule asks this: to every other reader the file is
+    the runner file it was.
+    """
+    return path.lower().endswith((".md", ".markdown"))
+
+
 def _calls(path, data):
     """Every pytest command a runner file runs, as its words, or None (#196 184.3).
 
@@ -319,7 +332,9 @@ def opaque_reached(opaque, head, changes):
     One that holds `$` is such an argument whatever else it holds, so it is
     not read for a wildcard: `"${tests[@]}"` and `$*` name no path either,
     where their bracket and star once reached every directory (ruling of
-    2026-11-27).
+    2026-11-27). A Markdown file among the runner files is prose and gives
+    no run (`_prose`), so a tree whose only such file it is has the bare
+    `pytest`.
     """
     if not opaque:
         return None
@@ -349,7 +364,7 @@ def opaque_reached(opaque, head, changes):
         targets = []
         runs = targetless = False
         for path in sorted(contents):
-            if not _runner(path) or not _runs_tests(contents[path], path):
+            if not _runner(path) or _prose(path) or not _runs_tests(contents[path], path):
                 continue
             runs = True
             found = _runner_invocations(path, contents[path])

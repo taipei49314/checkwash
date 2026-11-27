@@ -325,7 +325,11 @@ arguments; and a path argument that expands a variable (`$1`, `{posargs}`)
 names no path. One that holds `$` is such an argument whatever else it
 holds, so it is not read for a wildcard: a Bash array (`"${tests[@]}"`) and
 `$*` name no path either, where their bracket and star once reached every
-directory (ruled 2026-11-27). The empty-needle search still rejects a tree with a
+directory (ruled 2026-11-27). A Markdown file is prose, and this rule reads
+no run from one, wherever it is kept: a README beneath `scripts/` or an
+agent's instructions beneath `.github/workflows/` that mention pytest are no
+pytest command (same ruling). So a tree whose only such file is Markdown is
+judged by the bare `pytest`. The empty-needle search still rejects a tree with a
 submodule, because the startup-context proof needs every Python source, so
 that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch
