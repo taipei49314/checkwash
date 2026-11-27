@@ -29,7 +29,9 @@ One row has changed under such a ruling. #551, question 2 (owner,
 2026-11-27): in a committed range the provider pass reads an unchanged link
 to a regular file of the same commit as that file. So the range row of the
 symlink test asserts a verdict now, and its working-tree row, which the
-ruling does not cover, still refuses. The size and batch-budget rows wait for
+ruling does not cover, still refuses. The test keeps its name,
+`..._still_refuses`, which is true of the working-tree row alone: a renamed
+test reads as a removed one. The size and batch-budget rows wait for
 questions 1 and 3.
 
 Large files are generated here, never committed.

@@ -468,5 +468,5 @@ mypy configuration review. [Setup and CI adoption guide](https://github.com/taip
 Use the preview to review changes to tool settings. Its recorded compatibility
 comparison still fails, and enforcement on real changes remains unverified.
 
-Alpha pre-release. 22 detectors, 23507 tests collected by pytest.
+Alpha pre-release. 22 detectors, 23546 tests collected by pytest.
 Zero runtime dependencies. [Apache-2.0](https://github.com/taipei49314/checkwash/blob/main/LICENSE).

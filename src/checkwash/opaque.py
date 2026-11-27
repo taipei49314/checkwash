@@ -18,7 +18,11 @@ from checkwash.change import EngineError
 
 
 class SymlinkedDirectory(str):
-    """The path of a working-tree directory symlink, an opaque directory (#414)."""
+    """The path of a directory symlink, an opaque directory.
+
+    One in the working tree (#414), or a committed one that a range's link
+    view lists for the runtime-provider pass (#551).
+    """
 
     __slots__ = ()
 

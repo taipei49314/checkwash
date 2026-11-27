@@ -218,7 +218,7 @@ def sweep(repo: str, revs: str, limit: int, today: datetime.date, fail_on: str |
                 root_searcher=root_snapshot.search,
                 root_path_lister=root_snapshot.list_paths,
                 root_batch_reader=root_snapshot.read_many,
-                root_links=link_view_of(root_snapshot),
+                root_links=link_view_of(root_snapshot, base_snapshot),
                 pytest_configs=pytest_configs,
                 policy_base=PolicyBase(config_path, config_data, allow_path, allow_data),
             )

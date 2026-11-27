@@ -6,9 +6,10 @@ import sys
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
-from checkwash.change import FileChange
+from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.conftest_context import ConftestContext
+from checkwash.gitio.snapshot import refused_link
 from checkwash.ir.model import IR, DiffGlobals
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
@@ -36,10 +37,12 @@ class DiffIntake:
     importer_reads: int
     reviewed_root_modules: set[str]
     set_aside_helpers: set[str] = field(default_factory=set)
-    # The runtime-provider pass's own view of a committed tree's links (#551);
-    # None where the caller gave none, and the pass reads the root readers.
-    provider_path_lister: Any = None
-    provider_batch_reader: Any = None
+    # A committed range's link view, for the runtime-provider pass to run
+    # through when an unchanged link stops it (#551), and the view's reader,
+    # guarded; None where the caller gave no view, and the pass then has the
+    # root readers alone.
+    link_view: Any = None
+    link_batch_reader: Any = None
 
 
 @dataclass
@@ -80,12 +83,14 @@ def prepare_diff_intake(
     head_reader = eng._guard_unread_reads(head_reader, unread_changes)
     root_batch_reader = eng._guard_unread_reads(root_batch_reader, unread_changes, batch=True)
     # Ruling 551, question 2: in a committed range the runtime-provider pass,
-    # and no other, lists and reads unchanged links through the tree's link
-    # view, guarded as the root batch reader is.
-    provider_path_lister = provider_batch_reader = None
+    # and no other, may list and read unchanged links through the range's
+    # link view (`_record_runtime_shadows`). Its reader is guarded as the
+    # root batch reader is; the view itself reads no link whose target the
+    # range changes, a path set aside unread among them.
+    link_view = link_batch_reader = None
     if root_links is not None and root_path_lister is not None and root_batch_reader is not None:
-        provider_path_lister = root_links.list_paths
-        provider_batch_reader = eng._guard_unread_reads(root_links.read_many, unread_changes, batch=True)
+        link_view = root_links
+        link_batch_reader = eng._guard_unread_reads(root_links.read_many, unread_changes, batch=True)
     # After unread sides so #456's Stop-hook size block still wins over a refused link (D-208).
     changes, _linked = eng._set_aside_links(
         changes, config, allowed, root_reader, root_path_lister, root_batch_reader,
@@ -124,8 +129,8 @@ def prepare_diff_intake(
         importer_reads=importer_reads,
         reviewed_root_modules=reviewed_root_modules,
         set_aside_helpers=set_aside_helpers,
-        provider_path_lister=provider_path_lister,
-        provider_batch_reader=provider_batch_reader,
+        link_view=link_view,
+        link_batch_reader=link_batch_reader,
     )
 
 
@@ -170,19 +175,49 @@ def _record_runtime_shadows(
     root_path_lister,
     root_batch_reader,
     config_evidence,
+    *,
+    link_view=None,
+    link_batch_reader=None,
 ) -> set[str]:
-    """Evaluate runtime subject shadows, map logical-to-physical config controls, and collect evidence paths."""
+    """Evaluate runtime subject shadows, map logical-to-physical config controls, and collect evidence paths.
+
+    The pass runs over the root readers. Where one of its batch reads is
+    refused on a committed link (`refused_link`), the caller gave a link
+    view and the view can be used (`LinkedTreeView.readable`: every link of
+    the tree is one no pass could need), it runs again from the start over
+    the view's lister and reader (ruling 551, question 2). So a run the root
+    readers carry through is the run it was before the ruling, link view or
+    not, and a run in a tree that holds any other link ends with the refusal
+    it had before the ruling. The first attempt leaves nothing behind: the
+    pass returns its hits and writes nothing until it has them.
+    """
     eng = _eng()
-    shadow_hits = eng.find_runtime_subject_shadows(
-        changes,
-        config,
-        g.third_party_roots,
-        head_path_lister=root_path_lister,
-        head_batch_reader=root_batch_reader,
-        include_equivalent=True,
-        config_evidence=config_evidence,
-        shebang_free=eng._shebang_free(unread_changes),
-    )
+
+    def find(path_lister, batch_reader):
+        return eng.find_runtime_subject_shadows(
+            changes,
+            config,
+            g.third_party_roots,
+            head_path_lister=path_lister,
+            head_batch_reader=batch_reader,
+            include_equivalent=True,
+            config_evidence=config_evidence,
+            shebang_free=eng._shebang_free(unread_changes),
+        )
+
+    try:
+        shadow_hits = find(root_path_lister, root_batch_reader)
+    except EngineError as refusal:
+        if link_view is None or link_batch_reader is None or refused_link(refusal) is None:
+            raise
+        try:
+            readable = link_view.readable()
+        except EngineError:
+            # The links could not be read at all (a limit): the refusal stands.
+            readable = False
+        if not readable:
+            raise
+        shadow_hits = find(link_view.list_paths, link_batch_reader)
     if config_evidence is not None:
         reported_hits = []
         for hit in shadow_hits:
@@ -300,9 +335,11 @@ def initialize_global_surface(
         intake.changes,
         intake.unread_changes,
         config,
-        intake.provider_path_lister or root_path_lister,
-        intake.provider_batch_reader or intake.root_batch_reader,
+        root_path_lister,
+        intake.root_batch_reader,
         config_evidence,
+        link_view=intake.link_view,
+        link_batch_reader=intake.link_batch_reader,
     )
     resolvable = _resolvable_modules(intake.changes, known_modules)
     one_hop, ci_base, config_report_changes = _record_collection_and_ci_surface(

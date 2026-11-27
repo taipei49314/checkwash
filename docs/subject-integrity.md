@@ -288,25 +288,62 @@ working-tree snapshot are not covered (#346).
 
 A second exception, also for range checks only, belongs to the
 runtime-provider pass (#551, question 2, ruled 2026-11-27). On a run that
-reaches its first read phase, that pass asks for every unchanged path that
-could hold a test runner, a pytest control or a candidate test: a name with
-no dot, a path with the ci role, a runner suffix, a conftest or a test
-module. It reads a committed tree's links through a view of its own. A link
-whose target is a regular file of the same commit reads as that file,
-resolved as above. A link whose target is a directory of the same commit is
-listed as an opaque directory, as the working tree lists a directory symlink
-(below): it holds no bytes, the files it leads to are listed under their own
-paths, and a read inside it, an import that can resolve inside it or a
-pytest collection that can reach it fails with an `EngineError` naming it.
-Any other link is refused as before, named: a target outside the tree, a
-link to a link, a missing target, a submodule or a path inside one, and a
-link whose text is over 4,096 bytes. The view is the head's. A link whose
-target the diff changes reads as its head target on both sides, and the
-change itself is judged at the target's own path. No other reader uses the
-view: the diff read still refuses a link the diff adds, retargets or
-removes, and the single-path reader, the searches, the config evidence and
-every other pass read the snapshot as before. The working-tree snapshot has
-no such view.
+reaches its reads, that pass asks for unchanged paths that could hold a test
+runner, a pytest control, a candidate test or a provider: among them a name
+with no dot, a path with the ci role, a runner suffix, a conftest and a test
+module. The pass runs over the snapshot first. Only where one of its batch
+reads is refused on a committed link, and every link of the tree is one no
+pass could need (below), does it run again, from the start, through a view
+of the range's links (`analyze`/`build_ir` take the view as `root_links`).
+So a run the snapshot carries through is the run it was before the ruling,
+whatever links the tree holds, and a run in a tree that holds any other link
+ends with the refusal it had before the ruling.
+
+In the view a link whose target is a regular file of the same commit reads
+as that file, resolved as above. A link whose target is a directory of the
+same commit is listed as an opaque directory, as the working tree lists a
+directory symlink (below): it holds no bytes, the files it leads to are
+listed under their own paths, and a read inside it, an import that can
+resolve inside it or a pytest collection that can reach it fails with an
+`EngineError` naming it. A link that leads to nothing the tree holds (a
+target outside the tree, a missing target, a path through a regular file),
+at both ends of the range, stays a path: it is refused as before, named,
+when the pass asks for it, and is no obstacle when it does not.
+
+Only this pass reads a link, and the others would not know what it read: a
+search of the tree does not look inside a link, and the scan that follows a
+script's call to another script takes a refused link for an absent file. So
+the view is used only when every link of the head tree is one of those three
+kinds and no pass could need it:
+- It reads the same on both sides of the range: the link is the same entry
+  at the base and at the head, and its text leads to the same place in both
+  trees. For a file that place holds the same entry, bytes and mode. For a
+  directory no path beneath it differs, and no submodule lies in it. Read as
+  the head's target for both sides, a link whose target the range adds,
+  changes or removes would hold the range's change and show none.
+- It is not named as source (`.py`, or a JS or TS suffix). A test, a
+  conftest or a module under a link's name is one only this pass would see,
+  and pytest runs a linked conftest at the link's path, where
+  `Path(__file__).resolve()` is the target's.
+- It is no script that runs the suite: a `.sh`, `.bash`, `.zsh`, `.ps1`,
+  `.bat` or `.cmd` link whose target runs a test command.
+
+A link to a link, a link into a submodule, and a link whose text is over
+4,096 bytes or is not text the walk reads, are not known to be harmless, and
+keep the view from being used.
+
+No other reader uses the view: the diff read still refuses a link the diff
+adds, retargets or removes, and the single-path reader, the searches, the
+config evidence and every other pass read the snapshot as before, so a run
+on which another pass reads the same link still ends there (the
+collection-inventory pass reads every runner file and Python path when a
+commit changes the root config's collection settings). Where the view lists
+a directory link, the pass reads every root config and runner file to decide
+what a pytest run can reach, as it does in a tree with a submodule, so an
+unchanged one over the source limit ends the run. On a run where no read is
+refused, links are not looked at, before the ruling and after it: a test or
+a module that exists only under a link's name is not judged. The
+working-tree snapshot has no such view.
 
 A submodule is listed as its path with a trailing slash, a directory whose
 content is unknown (#335). Its own path reads as no file, whether git
