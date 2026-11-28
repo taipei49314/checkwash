@@ -6,9 +6,10 @@ import sys
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
-from checkwash.change import FileChange
+from checkwash.change import EngineError, FileChange
 from checkwash.config import Config
 from checkwash.conftest_context import ConftestContext
+from checkwash.gitio.snapshot import refused_link
 from checkwash.ir.model import IR, DiffGlobals
 from checkwash.pyenv import known_baseline
 from checkwash.report.context import ReportContext
@@ -36,6 +37,12 @@ class DiffIntake:
     importer_reads: int
     reviewed_root_modules: set[str]
     set_aside_helpers: set[str] = field(default_factory=set)
+    # A committed range's link view, for the runtime-provider pass to run
+    # through when an unchanged link stops it (#551), and the view's reader,
+    # guarded; None where the caller gave no view, and the pass then has the
+    # root readers alone.
+    link_view: Any = None
+    link_batch_reader: Any = None
 
 
 @dataclass
@@ -65,6 +72,7 @@ def prepare_diff_intake(
     root_searcher=None,
     root_path_lister=None,
     root_batch_reader=None,
+    root_links=None,
 ) -> DiffIntake:
     """Filter oversized/link changes, guard snapshot readers, and expand helper importers."""
     eng = _eng()
@@ -74,6 +82,15 @@ def prepare_diff_intake(
     root_reader = eng._guard_unread_reads(root_reader, unread_changes)
     head_reader = eng._guard_unread_reads(head_reader, unread_changes)
     root_batch_reader = eng._guard_unread_reads(root_batch_reader, unread_changes, batch=True)
+    # Ruling 551, question 2: in a committed range the runtime-provider pass,
+    # and no other, may list and read unchanged links through the range's
+    # link view (`_record_runtime_shadows`). Its reader is guarded as the
+    # root batch reader is; the view itself reads no link whose target the
+    # range changes, a path set aside unread among them.
+    link_view = link_batch_reader = None
+    if root_links is not None and root_path_lister is not None and root_batch_reader is not None:
+        link_view = root_links
+        link_batch_reader = eng._guard_unread_reads(root_links.read_many, unread_changes, batch=True)
     # After unread sides so #456's Stop-hook size block still wins over a refused link (D-208).
     changes, _linked = eng._set_aside_links(
         changes, config, allowed, root_reader, root_path_lister, root_batch_reader,
@@ -112,6 +129,8 @@ def prepare_diff_intake(
         importer_reads=importer_reads,
         reviewed_root_modules=reviewed_root_modules,
         set_aside_helpers=set_aside_helpers,
+        link_view=link_view,
+        link_batch_reader=link_batch_reader,
     )
 
 
@@ -148,6 +167,36 @@ def _resolvable_modules(
     return resolvable
 
 
+# The second names (`LinkedTreeView.aliases`) whose roles one run compares.
+_MAX_LINK_ALIASES = 20_000
+
+
+def _alias_changes_a_role(link_view, config: Config) -> bool:
+    """Would a file beneath a directory link's target be a CI or runner file under the link's path alone? (#551)
+
+    A directory link gives each file beneath its target a second path, which
+    no reader lists. The pass picks the unchanged files it reads by their
+    names and, for one kind, by where they lie: a path with the ci role, and
+    the collection inventory's runner files (beneath `.github/workflows/` or
+    `scripts/`). Where a file is such a one under both paths or under
+    neither, the second path says nothing the first does not.
+    `.buildkite -> ci/buildkite` makes a pipeline of
+    `ci/buildkite/pipeline.yml`, which no pass would then read as one.
+    """
+    from checkwash.collection_inventory import _runner
+
+    own: dict[str, tuple[bool, bool]] = {}
+    for count, (alias, real) in enumerate(link_view.aliases()):
+        if count >= _MAX_LINK_ALIASES:
+            # Too many second names to look at: the view is not used.
+            return True
+        if real not in own:
+            own[real] = (config.role_of(real) == "ci", _runner(real))
+        if own[real] != (config.role_of(alias) == "ci", _runner(alias)):
+            return True
+    return False
+
+
 def _record_runtime_shadows(
     g: DiffGlobals,
     changes: list[FileChange],
@@ -156,19 +205,64 @@ def _record_runtime_shadows(
     root_path_lister,
     root_batch_reader,
     config_evidence,
+    *,
+    link_view=None,
+    link_batch_reader=None,
 ) -> set[str]:
-    """Evaluate runtime subject shadows, map logical-to-physical config controls, and collect evidence paths."""
+    """Evaluate runtime subject shadows, map logical-to-physical config controls, and collect evidence paths.
+
+    The pass runs over the root readers. Where one of its batch reads is
+    refused on a committed link (`refused_link`), the caller gave a link
+    view and the view can be used (`LinkedTreeView.readable`: it can answer
+    for every link of the tree), it runs again from the start over the
+    view's lister and reader (ruling 551, question 2). So a run the root
+    readers carry through is the run it was before the ruling, link view or
+    not, and a run in a tree that holds any other link ends with the refusal
+    it had before the ruling. So does one where a directory link gives a
+    file beneath its target another role than the file's own path does
+    (`_alias_changes_a_role`), and one whose second attempt is refused on a
+    link again. The first attempt leaves only what the second would leave
+    too: the pass returns its hits and writes nothing until it has them, the
+    snapshot and the config evidence keep what they read, and its asks for
+    the links the view reads are dropped from the trees' notes
+    (`LinkedTreeView.begin`). A run that read through the view is settled
+    when the analysis ends (`LinkedTreeView.settle`, in `engine.analyze`).
+    """
     eng = _eng()
-    shadow_hits = eng.find_runtime_subject_shadows(
-        changes,
-        config,
-        g.third_party_roots,
-        head_path_lister=root_path_lister,
-        head_batch_reader=root_batch_reader,
-        include_equivalent=True,
-        config_evidence=config_evidence,
-        shebang_free=eng._shebang_free(unread_changes),
-    )
+
+    def find(path_lister, batch_reader):
+        return eng.find_runtime_subject_shadows(
+            changes,
+            config,
+            g.third_party_roots,
+            head_path_lister=path_lister,
+            head_batch_reader=batch_reader,
+            include_equivalent=True,
+            config_evidence=config_evidence,
+            shebang_free=eng._shebang_free(unread_changes),
+        )
+
+    mark = link_view.mark() if link_view is not None else None
+    try:
+        shadow_hits = find(root_path_lister, root_batch_reader)
+    except EngineError as refusal:
+        if link_view is None or link_batch_reader is None or refused_link(refusal) is None:
+            raise
+        try:
+            readable = link_view.readable()
+        except EngineError:
+            # The links could not be read at all (a limit): the refusal stands.
+            readable = False
+        if not readable or _alias_changes_a_role(link_view, config):
+            raise
+        link_view.begin(refusal, mark)
+        try:
+            shadow_hits = find(link_view.list_paths, link_batch_reader)
+        except EngineError as again:
+            if refused_link(again) is None:
+                raise
+            # Still ended by a link, one the view does not read: the refusal the run had.
+            raise refusal from None
     if config_evidence is not None:
         reported_hits = []
         for hit in shadow_hits:
@@ -289,6 +383,8 @@ def initialize_global_surface(
         root_path_lister,
         intake.root_batch_reader,
         config_evidence,
+        link_view=intake.link_view,
+        link_batch_reader=intake.link_batch_reader,
     )
     resolvable = _resolvable_modules(intake.changes, known_modules)
     one_hop, ci_base, config_report_changes = _record_collection_and_ci_surface(

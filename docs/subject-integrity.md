@@ -286,6 +286,102 @@ does so even when the provider pass would treat it as dormant. Any other
 symlink, including a custom config file name given to `-c`, and the
 working-tree snapshot are not covered (#346).
 
+A second exception, also for range checks only, belongs to the
+runtime-provider pass (#551, question 2, ruled 2026-11-27). On a run that
+reaches its reads, that pass asks for unchanged paths that could hold a test
+runner, a pytest control, a candidate test or a provider: among them a name
+with no dot, a path with the ci role, a runner suffix, a conftest and a test
+module. The pass runs over the snapshot first. Only where one of its batch
+reads is refused on a committed link, and the view can answer for every link
+of the tree (below), does it run again, from the start, through a view of
+the range's links (`analyze`/`build_ir` take the view as `root_links`).
+So a run the snapshot carries through is the run it was before the ruling,
+whatever links the tree holds, and a run in a tree that holds any other link
+ends with the refusal it had before the ruling.
+
+In the view a link whose target is a regular file of the same commit reads
+as that file, resolved as above. A link whose target is a directory of the
+same commit is listed to that pass as an opaque directory, as the working
+tree lists a directory symlink to every reader (below): it holds no bytes,
+the files it leads to are listed under their own paths, and a read inside
+it, an import that can resolve inside it or a pytest collection that can
+reach it fails with an `EngineError` naming it. A link that leads to nothing
+the tree holds (a name that is missing inside the tree, a path through a
+regular file), at both ends of the range, stays a path: a run on which the
+pass asks for it ends with the refusal it had, and it is no obstacle when
+the pass does not. A build may create a missing name later, as it may a path
+a config names; neither is seen.
+
+Only this pass reads a link, and the others would not know what it read: a
+search of the tree does not look inside a link, a path beneath a link is
+absent to every reader, and the scan that follows a script's call to another
+script takes a script it cannot read for one that runs no suite. So a run
+that reads links ends with a verdict only under two conditions.
+
+First, every link of the head tree is one of those three kinds and one the
+view can answer for:
+- It reads the same on both sides of the range: the link is the same entry
+  at the base and at the head, and its text leads to the same place in both
+  trees. For a file that place holds the same entry, bytes and mode. For a
+  directory no path beneath it differs, and no submodule lies in it. Read as
+  the head's target for both sides, a link whose target the range adds,
+  changes or removes would hold the range's change and show none.
+- It is not named as source (`.py`, or a JS or TS suffix), whatever it
+  leads to. A test, a conftest or a module under a link's name is one only
+  this pass would see, and pytest runs a linked conftest at the link's path,
+  where `Path(__file__).resolve()` is the target's.
+- If it leads to a directory, nothing beneath that directory means
+  something under a second name: no file named as source, no compiled
+  module (`.pyc`, `.pyo`, `.pyd`, `.so`), no archive (`.zip`, `.egg`,
+  `.whl`), no text file pytest's default doctest pattern takes
+  (`test*.txt`), no pytest config and no other link.
+  Such a file has a second name under the link, which no pass lists,
+  searches or resolves an import to: a helper a test imports through the
+  link, a package a conftest patches, a test that an `addopts` target
+  names, a config a run names with `-c`.
+- If it leads to a directory, it gives no file beneath that directory the ci
+  role, or a place among the runner files (beneath `.github/workflows/` or
+  `scripts/`), that the file's own path does not give it.
+  `.buildkite -> ci/buildkite` would make a pipeline of a file no pass reads
+  as one.
+- It is not at `.checkwash` or `.greenwash`, nor beneath one: checkwash's
+  own policy is read through such a link as absent.
+
+A link to a link, a link into a submodule, a link whose text is over 4,096
+bytes or is not text the walk reads, a link whose text is absolute or leaves
+the tree (a checkout may follow it back in, by a path the tree does not
+show), and a link whose text misses a name the tree holds in another case or
+Unicode form (a checkout that folds them would follow it), are not known to
+be harmless, and keep the view from being used.
+
+Second, no reader asked either tree for a link or for a path beneath one,
+from the moment the two trees are made. The snapshot notes each such ask
+made through `read`, `read_many`, `definitely_lacks`, `config_modes` or
+`read_config_many`, whether it refused it or answered that the path is
+absent, and a caller may have gone on as if no such file existed. When the
+analysis ends, a run that read links and has one ask noted ends with the
+refusal that sent the pass to the view. So `|| true` appended to a call of a
+linked script, or of a script beneath a directory link, ends as it did
+before the ruling, where the same tree with regular files blocks. A linked
+script that no changed file calls is read by the pass and is no obstacle. A
+reader that does not catch a link's refusal ends the run with its own. A
+test made on the path listing alone asks nothing, and neither does what
+`sweep` reads from git itself: the first condition is what answers for
+those.
+
+No other reader uses the view: the diff read still refuses a link the diff
+adds, retargets or removes, and the single-path reader, the searches, the
+config evidence and every other pass read the snapshot as before, so a run
+on which another pass reads the same link still ends there (the
+collection-inventory pass reads every runner file and Python path when a
+commit changes the root config's collection settings). Where the view lists
+a directory link, the pass reads every root config and runner file to decide
+what a pytest run can reach, as it does in a tree with a submodule, so an
+unchanged one over the source limit ends the run. On a run where no read is
+refused, links are not looked at, before the ruling and after it: a test or
+a module that exists only under a link's name is not judged. The
+working-tree snapshot has no such view.
+
 A submodule is listed as its path with a trailing slash, a directory whose
 content is unknown (#335). Its own path reads as no file, whether git
 answers it as missing (2.43) or as a submodule (2.55).
@@ -299,8 +395,50 @@ pattern stops. The runs are the runner files' pytest commands, or a bare
 `pytest` when there are none. A setting read two ways counts both ways; an
 undecodable config or a run's own `-c` config reaches every submodule; a
 runner file whose pytest command does not parse is a run without path
-arguments; and a path argument that expands a variable (`$1`, `{posargs}`)
-names no path. The empty-needle search still rejects a tree with a
+arguments; and a path argument that is only a variable (`$1`, `{posargs}`)
+names no path. In a run's own arguments, the `[`, `*` and `?` inside a
+variable expansion (`${...}`, `$name`, a positional or a special parameter,
+a `${{ ... }}` written as one word) are no wildcard: a Bash array
+(`"${tests[@]}"`) and `$*` no longer reach every directory, as their bracket
+and star once did (ruled 2026-11-27). What such an expansion gives is not
+read, and it may give nothing. A path that ends in a part of only such
+expansions is read as the path before it, so `tests/${suites[@]}` is a run
+from `tests`. A run with an argument that is only such expansions is judged
+as the bare `pytest` too: its other arguments may be none, because the
+reader takes an unknown option's value for a path. `$1` and `"$@"`, which
+were never read as a wildcard, are read as they were. The rest of an
+argument is read as it was too: `sub/$1` names a path inside `sub` and
+reaches it, `te*$x` and `[$x]` hold a wildcard, and so does the script's own
+default word in `${SUITE:-*}`. A run's own arguments are the words before
+the first one that holds a shell operator character (`|`, `&`, `;`, `<`,
+`>`, a parenthesis or a backtick), where that word starts with the operator,
+on a line whose words are known to be the command's. They are not where an
+operator stands against another word anywhere after `pytest`
+(`tests/shared;`, `tests/shared)`, a backtick substitution), which the
+reader takes for one word; nor on a line that holds a backslash,
+a `#` inside a word or a `$'...'` quote, which the reader splits unlike a
+shell; nor on a line that is not known to end its command, which a line that
+ends in a backtick or a caret is not, nor any line of a Python file. A YAML
+file is followed line by line, telling its structure from the lines that lie
+in a scalar, and only two kinds of line are known to end their command: a
+line of a literal block scalar (`run: |`), and a line of the structure on
+which a key's value or a sequence entry starts when no deeper line follows
+it. A line that lies in a folded scalar (`run: >-`), or in a quoted one that
+is still open, is not, whatever it looks like, nor is a line that holds a
+flow collection (`- {name: tests, run: ...}`). From the first line the
+reader cannot place on (a flow collection it cannot see the end of on its
+line, a node on a document mark's line, a tab before a key, a character
+that ends a line for YAML alone), no line is. Every other word the reader takes for a path is read as
+it was: the `?` of `pytest || exit $?` or `pytest -q||exit $?`, and the
+bracket of `pytest "${extra[@]}"; echo done`, are still wildcards that reach
+every directory. A run with such an expansion is otherwise read as the same
+run without it, with what the reader reads of no run: a `cd` before it, a
+brace list, an option that moves the collection (`-o testpaths=`,
+`--rootdir`), an argument file, a variable that holds a path. A Markdown file is prose, and this rule reads
+no run from one, wherever it is kept: a README beneath `scripts/` or an
+agent's instructions beneath `.github/workflows/` that name a test runner
+are no pytest command (same ruling). So a tree in which no other runner file
+runs tests is judged by the bare `pytest`. The empty-needle search still rejects a tree with a
 submodule, because the startup-context proof needs every Python source, so
 that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch

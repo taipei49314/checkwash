@@ -71,7 +71,7 @@ from checkwash.gitio import (
     session_merge_base,
 )
 from checkwash.gitio.git import GitCommandError
-from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot
+from checkwash.gitio.snapshot import GitSnapshot, TreeAlias, WorkingTreeSnapshot, link_view_of
 from checkwash.gitio.pytest_configs import PairedPytestConfigs, WorktreePytestConfigs
 from checkwash.report.jsonout import findings_to_json, ir_to_json, size_refusal_to_json
 from checkwash.report.sarif import findings_to_sarif
@@ -504,6 +504,8 @@ def _analyse(args: argparse.Namespace, changes, config_side: str, *, base_label:
         root_batch_reader=root_snapshot.read_many,
         pytest_configs=pytest_configs,
         policy_base=PolicyBase(config_path, config_data, allow_path, allow_data),
+        # A committed range's link view, for the runtime-provider pass (#551); the working tree has none.
+        root_links=link_view_of(root_snapshot, base_snapshot),
     )
     return _Run(ir, findings, verdict, config, diagnostics, report_context, changes)
 

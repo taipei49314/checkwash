@@ -25,6 +25,15 @@ The `..._still_refuse(s)` tests pin that residual as it is today; its fix
 changes them under its own ruling (AGENTS.md rule 2). The control test gives
 a verdict and holds before and after it.
 
+One row has changed under such a ruling. #551, question 2 (owner,
+2026-11-27): in a committed range the provider pass reads an unchanged link
+to a regular file of the same commit as that file. So the range row of the
+symlink test asserts a verdict now, and its working-tree row, which the
+ruling does not cover, still refuses. The test keeps its name,
+`..._still_refuses`, which is true of the working-tree row alone: a renamed
+test reads as a removed one. The size and batch-budget rows wait for
+questions 1 and 3.
+
 Large files are generated here, never committed.
 """
 import hashlib
@@ -181,14 +190,24 @@ def test_a_run_short_of_the_provider_pass_never_reads_the_unchanged_file(tmp_pat
 @pytest.mark.parametrize("mode", ["range", "worktree"])
 def test_an_unchanged_dot_less_symlink_still_refuses(tmp_path, mode):
     # The residual for a symlink, which the strict batch reader never reads.
+    # It stands in the working tree. In a committed range it is ruled (#551,
+    # question 2, 2026-11-27), so that row no longer refuses.
     if mode == "range":
         # A root licence committed as a link to `py/LICENSE`: the shape of the
         # pytest commits #415's acceptance sweep saw exit 2 (ruling, question 4).
+        # The runtime-provider pass now reads the link as `py/LICENSE`, a
+        # regular file of the same commit, and the run gets the verdict the
+        # new provider earns (test_issue551_unchanged_symlink_shapes.py).
         link = "LICENSE"
         repo = _repo(tmp_path, {**SOURCES, "py/LICENSE": b"Licence terms\n"}, links={link: b"py/LICENSE"})
         _write(repo, NEW_PROVIDER)
         args, _side = _arguments(repo, mode, *NEW_PROVIDER)
-        refusal = f"{NONREGULAR} {link} (a symlink)"
+        code, stdout, stderr = _check(repo, *args)
+        assert "engine error" not in stderr, stderr
+        payload = json.loads(stdout)
+        assert (code, payload["verdict"]) == (1, "block")
+        assert {f["rule"] for f in payload["findings"]} == {"TEST_PATCHES_SUBJECT"}
+        return
     else:
         # A gitignored POSIX venv, whose `bin/python` is a link: the
         # working-tree inventory lists ignored trees too. The ruling names

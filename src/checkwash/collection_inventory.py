@@ -78,6 +78,21 @@ def _runner(path):
         or path in {"Makefile", ".gitlab-ci.yml", "noxfile.py", "tox.ini"})
 
 
+def _prose(path):
+    """A Markdown file: prose, from which `opaque_reached` reads no run (ruling of 2026-11-27).
+
+    `_runner` takes every file beneath `.github/workflows/` or `scripts/`, a
+    README or an agent's instructions among them. Such a file is written to
+    be read: no shell and no CI service runs it. Read as a command, a
+    sentence that mentions pytest made its other words path arguments and
+    its `**bold**` text a wildcard that reached every directory. A tool that
+    runs the commands a Markdown file holds (a task file for `mask`, say) is
+    not read either, so its runs are not counted. Only that rule asks this:
+    to every other reader the file is the runner file it was.
+    """
+    return path.lower().endswith((".md", ".markdown"))
+
+
 def _calls(path, data):
     """Every pytest command a runner file runs, as its words, or None (#196 184.3).
 
@@ -298,7 +313,11 @@ def _candidates(sources, settings):
 
 
 def collection_sources(paths):
-    """The files `opaque_reached` reads: the root configs and the runner files (#335)."""
+    """The files `opaque_reached` is given: the root configs and the runner files (#335).
+
+    A Markdown file among the runner files is given too, and that rule reads
+    no run from it (`_prose`).
+    """
     return sorted(p for p in paths if p in _CONFIGS or _runner(p))
 
 
@@ -315,11 +334,24 @@ def opaque_reached(opaque, head, changes):
     pattern stops. A setting read two ways counts both ways. An undecodable
     config or a run's own config reaches every submodule, and a runner file
     whose pytest command does not parse is a run without path arguments. A
-    path argument that expands a variable (`$1`, `{posargs}`) names no path.
+    path argument that is only a variable (`$1`, `{posargs}`) names no path.
+    The `[`, `*` and `?` inside a variable expansion are no wildcard:
+    `"${tests[@]}"` and `$*` are not one that reaches every directory, as
+    they once were (ruling of 2026-11-27). What such an expansion gives is
+    not read, and it may give nothing: a run with such an argument is
+    judged as the bare run too (`_may_be_bare`), and a path that ends in
+    one, `tests/${suites[@]}`, as `tests`. The rest of an argument is read as it
+    was, so `sub/$1` still names a path inside `sub`. That reading is for a
+    run's own arguments (`_own_targets`): a word after an operator
+    (`pytest || exit $?`), and every word of a line that continues, is read
+    as it was. A Markdown file among the runner files is prose and gives no
+    run (`_prose`), so a tree in which no other runner file runs tests has
+    the bare `pytest`.
     """
     if not opaque:
         return None
-    from checkwash.shadow import _pytest_config_path, _runner_invocations
+    from checkwash.shadow import _pytest_config_path
+    from checkwash.shadow_runners import _runner_invocations_with_own_targets
 
     for side in ("before", "after"):
         contents = dict(head)
@@ -345,14 +377,16 @@ def opaque_reached(opaque, head, changes):
         targets = []
         runs = targetless = False
         for path in sorted(contents):
-            if not _runner(path) or not _runs_tests(contents[path], path):
+            if not _runner(path) or _prose(path) or not _runs_tests(contents[path], path):
                 continue
             runs = True
-            found = _runner_invocations(path, contents[path])
-            targetless = targetless or not found or any(not item.targets for item in found)
-            if any(item.config_path for item in found):
+            found = _runner_invocations_with_own_targets(path, contents[path])
+            targetless = (targetless or not found or any(not item.targets for item, _own in found)
+                          or any(_may_be_bare(own) for _item, own in found))
+            if any(item.config_path for item, _own in found):
                 return opaque[0]
-            targets.extend(target for item in found for target in item.targets)
+            # Each target with whether it is the run's own argument.
+            targets.extend((target, target in own) for item, own in found for target in item.targets)
         targetless = targetless or not runs
         # A setting the reader resolves two ways is read both ways; a config's
         # norecursedirs replaces pytest's default list.
@@ -360,7 +394,7 @@ def opaque_reached(opaque, head, changes):
             roots = tuple(posixpath.normpath(root.replace("\\", "/")) for root in testpaths) or (".",)
             for skipped in readings.get("norecursedirs", {_DEFAULTS["norecursedirs"]}):
                 for directory in opaque:
-                    if any(_reaches(target, directory, skipped) for target in targets):
+                    if any(_reaches(target, directory, skipped, argument=own) for target, own in targets):
                         return directory
                     if targetless and any(_reaches(root, directory, skipped) for root in roots):
                         return directory
@@ -371,24 +405,93 @@ def opaque_reached(opaque, head, changes):
 # `[ab]`, `[]a]` or `[!]]`. tox's `[]` (its old spelling of `{posargs}`) is
 # a literal name.
 _WILDCARD = re.compile(r"[*?]|\[(?:!\]|\]|[^\]])[^\]]*\]")
+# A variable expansion in a shell word: `${...}`, `$name`, a positional
+# parameter or a special one (`$@`, `$*`, `$#`, `$?`, `$!`, `$$`, `$-`), and
+# a GitHub expression written as one word (`"${{ matrix.suite }}"`). The
+# braces may hold one more pair (`${suites[${i}]}`) and at most 256 pieces,
+# so a word of many unclosed `${` costs no more than its length; a longer or
+# deeper one is text, wildcard characters and all.
+_EXPANSION = re.compile(
+    r"\$(?:\{\{[^}]{0,256}\}\}|\{((?:[^{}]|\{[^{}]{0,64}\}){0,256})\}|[A-Za-z_][A-Za-z0-9_]*|[0-9@*#?!$-])")
+# What `${name:-word}` holds between its braces, and its kin with `-`, `=` or
+# `+`, with or without the colon: the word is the script's own text, and may
+# be what the expansion gives.
+_DEFAULT_WORD = re.compile(r"(?:[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?|[0-9]+|[@*#?!$-]):?[-=+](.*)", re.DOTALL)
 
 
-def _reaches(root, directory, skipped):
+def _expanded(part):
+    """A part of a run's own argument as it is looked at for a wildcard.
+
+    Each variable expansion stands as one letter: its own `[`, `*` and `?`
+    are no wildcard, and a bracket set written around it (`[$x]`) still is
+    one. An expansion with a default or an alternative word stands as that
+    word too, so the star of `${SUITE:-*}` is the script's own.
+    """
+    def stand_in(match):
+        inner = match.group(1)
+        word = _DEFAULT_WORD.fullmatch(inner) if inner is not None else None
+        return "x" + (word.group(1) if word else "")
+
+    return _EXPANSION.sub(stand_in, part)
+
+
+def _may_be_nothing(part):
+    """Is this part of a run's own argument only expansions, one of them read as a wildcard before the ruling?
+
+    What a variable expands to is not read, and it may be nothing at all:
+    with an empty array `pytest "${extra[@]}"` is a bare `pytest`, and
+    `tests/${suites[@]}` is `tests/`. Before the ruling such a part reached
+    every directory on either side of the path before it. Now it is read as
+    possibly nothing, and the argument as the path before it. A part that
+    was no wildcard then (`$1`, `"$@"`) is read as it was.
+    """
+    return not _EXPANSION.sub("", part) and bool(_WILDCARD.search(part))
+
+
+def _may_be_bare(own):
+    """Is one of a run's own path arguments only expansions that were read as a wildcard before the ruling?
+
+    Such an argument may be nothing (`_may_be_nothing`), and the run is then
+    the one its other arguments make. Those are not all path arguments: the
+    reader takes an unknown option's value for one (`--assert plain`), and a
+    run with no real path argument is a bare `pytest`. So the run is judged
+    as the bare one too. Before the ruling such an argument reached every
+    directory, so the bare run is judged only where that reading was.
+    """
+    return any("/" not in target.rstrip("/") and _may_be_nothing(target.rstrip("/")) for target in own)
+
+
+def _reaches(root, directory, skipped, *, argument=False):
     """Does collection from this root, a path argument or a testpath, enter the directory?
 
     A root inside the directory, or the directory itself, enters it. A root
     above it recurses into it unless a norecursedirs pattern stops one of the
     directories between them. A root with a wildcard is read from its literal
     prefix, and reaches whatever lies on either side of that prefix.
+
+    In a run's own path argument (`argument`), the `[`, `*` and `?` inside a
+    variable expansion (`${tests[@]}`, `$*`, `${1:?}`) are no wildcard
+    (ruling of 2026-11-27): the part is looked at for one with each
+    expansion standing as a letter (`_expanded`). A part that is only such
+    expansions may be nothing (`_may_be_nothing`), and the argument is then
+    the path before it: `tests/${suites[@]}` is read as `tests`, and
+    `"${tests[@]}"` names no directory, its run being judged as the bare
+    one too (`_may_be_bare`). `sub/$1` names a path inside `sub`
+    and `te*$x` holds a wildcard, as before the ruling.
     """
     root = "" if root in (".", "") else root.rstrip("/")
     parts = root.split("/") if root else []
     literal = []
     for part in parts:
-        if _WILDCARD.search(part):
+        if _WILDCARD.search(_expanded(part) if argument else part):
             prefix = "/".join(literal)
             return (not prefix or directory == prefix or directory.startswith(prefix + "/")
                     or prefix.startswith(directory + "/"))
+        if argument and _may_be_nothing(part):
+            if not literal:
+                return False
+            root = "/".join(literal)
+            break
         literal.append(part)
     if root == directory or root.startswith(directory + "/"):
         return True
