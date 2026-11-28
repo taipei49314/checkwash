@@ -306,7 +306,7 @@ tree lists a directory symlink to every reader (below): it holds no bytes,
 the files it leads to are listed under their own paths, and a read inside
 it, an import that can resolve inside it or a pytest collection that can
 reach it fails with an `EngineError` naming it. A link that leads to nothing
-the tree holds (a name that is missing inside the tree, a path through a
+the tree holds (a missing final name under a known directory, a path through a
 regular file), at both ends of the range, stays a path: a run on which the
 pass asks for it ends with the refusal it had, and it is no obstacle when
 the pass does not. A build may create a missing name later, as it may a path
@@ -351,8 +351,10 @@ A link to a link, a link into a submodule, a link whose text is over 4,096
 bytes or is not text the walk reads, a link whose text is absolute or leaves
 the tree (a checkout may follow it back in, by a path the tree does not
 show), and a link whose text misses a name the tree holds in another case or
-Unicode form (a checkout that folds them would follow it), are not known to
-be harmless, and keep the view from being used.
+Unicode form (a checkout that folds them would follow it), keep the view from
+being used. The same applies to a link that names `.git` or needs to traverse
+a directory absent from the commit. A checkout can supply that directory,
+so the snapshot cannot resolve the rest of the path, even a following `..`.
 
 Second, no reader asked either tree for a link or for a path beneath one,
 from the moment the two trees are made. The snapshot notes each such ask

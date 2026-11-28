@@ -617,7 +617,7 @@ def test_a_run_a_link_still_ends_after_the_view_ends_with_the_refusal_it_had(tmp
     # which the pass asks for as well. 0.13.2 ends on `LICENSE`, the first
     # of the two. Read through the view the pass gets past it and is refused
     # on `zz`: the run ends with the refusal it had, not with a new one.
-    repo = _repo(tmp_path, {**SOURCES, **LICENCE}, {**LICENCE_LINK, "zz": b"nowhere/at/all"})
+    repo = _repo(tmp_path, {**SOURCES, **LICENCE}, {**LICENCE_LINK, "zz": b"nowhere"})
     code, stdout, stderr = _check_head(repo, NEW_PROVIDER)
     assert (code, stdout) == (2, "")
     assert _refusal("LICENSE") in stderr and _refusal("zz") not in stderr
@@ -854,6 +854,18 @@ def test_one_link_that_cannot_be_read_keeps_the_refusal_of_a_link_that_can(tmp_p
     # link, as on 0.13.2.
     repo = _repo(tmp_path, {**SOURCES, **LICENCE}, {**LICENCE_LINK, "tests/new.d": b"../made"})
     code, stdout, stderr = _check_head(repo, {**NEW_PROVIDER, "made/notes.txt": b"Notes\n"})
+    assert (code, stdout) == (2, "")
+    assert _refusal("LICENSE") in stderr
+
+
+@pytest.mark.parametrize("target", [
+    b".git/../AGENTS.md", b".git", b".GIT", b"untracked/README.md",
+    b"untracked/../AGENTS.md", b"untracked/",
+])
+def test_an_unresolved_directory_in_an_unrequested_link_keeps_the_cli_refusal(tmp_path, target):
+    files = {**TWIN_MODULES, **AGENT_FILES, **LICENCE}
+    repo = _repo(tmp_path, files, {**LICENCE_LINK, "notes.link": target})
+    code, stdout, stderr = _check_head(repo, ORDINARY_EDIT)
     assert (code, stdout) == (2, "")
     assert _refusal("LICENSE") in stderr
 
