@@ -16,21 +16,23 @@ phase asks for,
 - a target outside the tree, a link to a link, a missing target and a target
   inside a submodule keep the refusal.
 
-Two reviews on the same day narrowed how the ruling is carried out, and the
-owner was told with the pull request. Only the runtime-provider pass reads a
-link. Every other pass reads the snapshot, where a search of the tree does
-not look inside a link and some readers take a refused link for an absent
-file. So a link the pass reads can hide a change from the passes that give
-the verdict, and each of these ended with exit 2 on 0.13.2 and got `pass`
-from the first form of this change:
+Three reviews, and probes made between them, narrowed how the ruling is
+carried out, and the owner was told with the pull request. Only the
+runtime-provider pass reads a link. Every other pass reads the snapshot,
+where a search of the tree does not look inside a link, a path beneath a
+link is absent, and some readers take a refused link for an absent file. So
+a link the pass reads can hide a change from the passes that give the
+verdict, and each of these ended with exit 2 on 0.13.2 and got `pass` from
+the first form of this change:
 - an assertion weakened, or a `sys.path` root added, in the target of an
   unchanged link (`tests/test_alias.py`, `tests/conftest.py`), which was
   read as the head's target on both sides;
 - a root assertion helper gutted, where the test that uses it exists only as
   a link (`tests/test_calc.py -> ../shared/calc_checks.py`): the search for
   the helper's callers finds no test;
-- `|| true` appended to a call of a linked script that runs the suite: the
-  scan that follows the call takes the link for an absent file;
+- `|| true` appended to a call of a linked script that runs the suite, or
+  of one beneath a directory link (`ci -> tools/ci`): the scan that follows
+  the call takes a script it cannot read for one that runs no suite;
 - a module added beneath the target of a directory link that a test imports
   through under another name (`overlay/src -> ../patches`);
 - a linked conftest whose code resolves its own path: pytest runs it at the
@@ -43,15 +45,22 @@ So the ruling is carried out this way:
 - The pass runs over the snapshot first, as on 0.13.2. A run 0.13.2 judged
   is therefore the run it was.
 - Only when one of its batch reads is refused on a committed link, and only
-  when every link of the tree is one no pass could need, does it run again
+  when the view can answer for every link of the tree, does it run again
   through the link view. Otherwise the run ends as on 0.13.2, with the same
   refusal.
-- A link no pass could need reads the same on both sides of the range (the
-  same link, leading to the same place; for a file the same entry there, for
-  a directory nothing changed beneath it), is not named as source (`.py`, a
-  JS or TS suffix), and is no script that runs the suite. A link that leads
-  to nothing the tree holds, on both sides, is harmless and is refused only
-  when the pass asks for it.
+- A link the view can answer for reads the same on both sides of the range
+  (the same link, leading to the same place; for a file the same entry
+  there, for a directory nothing changed beneath it) and is not named as
+  source (`.py`, a JS or TS suffix). A directory link has no file of such a
+  name beneath its target, and gives no file there a CI or runner role its
+  own path does not: a file beneath the target has a second name under the
+  link, which no pass lists, searches or resolves an import to. A link that
+  leads to nothing the tree holds, on both sides, is harmless and is
+  refused only when the pass asks for it.
+- A run that read links ends with a verdict only when no other reader asked
+  either tree for a link or for a path beneath one. The trees note each
+  such ask, refused or answered as absent, and one is enough: the run ends
+  as on 0.13.2, with the refusal that sent the pass to the view.
 
 Found on 2026-11-27 by running the 0.13.2 CLI as `check <sha>~1..<sha>
 --format json` over 104 sampled commits of pydantic/pydantic-ai (since
@@ -88,8 +97,13 @@ What is pinned here:
 - a tree that holds any other link gets the refusal 0.13.2 gives: a link
   whose target the commit changes, adds, makes executable or holds over the
   source limit on one side, a directory link the commit changes something
-  beneath, a link named as source, a linked script that runs the suite, a
-  link to a link and a link into a submodule;
+  beneath, a link named as source, a directory link with source beneath its
+  target or one that changes a file's role, a link to a name the tree holds
+  in another case, a link to a link and a link into a submodule;
+- a run on which another reader asks for a link, or for a path beneath one,
+  gets that refusal too: a commit that changes a script which calls a linked
+  script, or a script beneath a directory link. The same links are no
+  obstacle on a run where nothing but the pass asks for them;
 - the reading belongs to that pass alone: the snapshot itself still refuses
   the same link, another pass that reads the link refuses it, and a commit
   that changes a link is still refused by the diff read.
@@ -107,7 +121,9 @@ import sys
 
 import pytest
 
+from checkwash import engine_ir_intake
 from checkwash.change import EngineError
+from checkwash.config import Config
 from checkwash.gitio.snapshot import (
     MAX_LINK_TEXT_BYTES, MAX_SOURCE_BYTES, GitSnapshot, LinkedTreeView, WorkingTreeSnapshot, _link_reading,
     link_view_of, refused_link,
@@ -264,6 +280,16 @@ RESOLVING_CONFTEST = (b"import sys\nfrom pathlib import Path\n\n"
                       b"sys.path.insert(0, str(Path(__file__).resolve().parent))\n")
 LICENCE = {"py/LICENSE": b"Licence terms\n"}
 LICENCE_LINK = {"LICENSE": b"py/LICENSE"}
+# A script that calls the suite's runner through a link to it.
+LINKED_RUNNER = {**SOURCES, "scripts/ci.sh": b"#!/bin/sh\n./scripts/run-tests.sh\n",
+                 "tools/run-tests-impl.sh": b"#!/bin/sh\npytest tests\n"}
+LINKED_RUNNER_LINK = {"scripts/run-tests.sh": b"../tools/run-tests-impl.sh"}
+# The runner kept in `tools/ci`, and a caller that reaches it through a `ci`
+# directory. The testpaths keep a bare `pytest` out of that directory.
+CI_SCRIPTS = {"tools/ci/run-tests.sh": b"#!/bin/sh\npytest tests\n",
+              "scripts/ci.sh": b"#!/bin/sh\nset -e\n./ci/run-tests.sh\n",
+              "setup.cfg": b"[tool:pytest]\ntestpaths = tests\n"}
+MASKED_CALL = {"scripts/ci.sh": b"#!/bin/sh\nset -e\n./ci/run-tests.sh || true\n"}
 
 
 @pytest.mark.parametrize("links, files, refused", [
@@ -295,13 +321,320 @@ def test_a_tree_with_a_linked_script_that_runs_the_suite_gets_the_refusal_it_had
     # regular `scripts/run-tests.sh` that blocks: the scan that follows the
     # call finds the runner. It takes a link for an absent file, so the first
     # form of this change, which read the link in the provider pass alone,
-    # gave `pass`.
-    files = {**SOURCES, "scripts/ci.sh": b"#!/bin/sh\n./scripts/run-tests.sh\n",
-             "tools/run-tests-impl.sh": b"#!/bin/sh\npytest tests\n"}
-    repo = _repo(tmp_path, files, {"scripts/run-tests.sh": b"../tools/run-tests-impl.sh"})
+    # gave `pass`. The scan's ask for the link is noted, and a run that read
+    # links ends with the refusal when any other reader asked for one.
+    repo = _repo(tmp_path, LINKED_RUNNER, LINKED_RUNNER_LINK)
     code, stdout, stderr = _check_head(repo, {**NEW_PROVIDER, "scripts/ci.sh": b"#!/bin/sh\n./scripts/run-tests.sh || true\n"})
     assert (code, stdout) == (2, "")
     assert _refusal("scripts/run-tests.sh") in stderr
+
+
+def test_a_linked_script_that_runs_the_suite_is_no_obstacle_when_only_the_pass_asks_for_it(tmp_path):
+    # The same tree, and a commit that leaves `scripts/ci.sh` alone. The scan
+    # follows calls from changed scripts only, so nothing but the provider
+    # pass asks for the link, and the pass reads it as the script it leads
+    # to: the run has the verdict of the tree with a regular
+    # `scripts/run-tests.sh`. 0.13.2 ends it with exit 2.
+    linked = _judged(_check_head(_repo(tmp_path / "linked", LINKED_RUNNER, LINKED_RUNNER_LINK), NEW_PROVIDER))
+    regular = {**LINKED_RUNNER, "scripts/run-tests.sh": LINKED_RUNNER["tools/run-tests-impl.sh"]}
+    plain = _judged(_check_head(_repo(tmp_path / "plain", regular, {}), NEW_PROVIDER))
+    assert linked == plain
+    assert (linked[0], linked[1]["verdict"]) == (1, "block")
+    assert {finding["rule"] for finding in linked[1]["findings"]} == {"TEST_PATCHES_SUBJECT"}
+
+
+def test_a_changed_call_to_a_script_beneath_a_directory_link_keeps_the_refusal(tmp_path):
+    # `ci -> tools/ci` is a directory link nothing changes beneath, and the
+    # commit appends `|| true` to the call of `./ci/run-tests.sh` in
+    # `scripts/ci.sh`. With a regular `ci/run-tests.sh` that blocks. The
+    # snapshot answers a path beneath a link as absent, so the scan that
+    # follows the call finds no runner there, and a run read through the
+    # view and judged would pass. The ask is noted, and the run ends as on
+    # 0.13.2.
+    repo = _repo(tmp_path / "linked", {**TWIN_MODULES, **CI_SCRIPTS}, {"ci": b"tools/ci"})
+    code, stdout, stderr = _check_head(repo, {**ORDINARY_EDIT, **MASKED_CALL})
+    assert (code, stdout) == (2, "")
+    assert _refusal("ci") in stderr
+    regular = {**TWIN_MODULES, **CI_SCRIPTS, "ci/run-tests.sh": CI_SCRIPTS["tools/ci/run-tests.sh"]}
+    code, report = _judged(_check_head(_repo(tmp_path / "plain", regular, {}), {**ORDINARY_EDIT, **MASKED_CALL}))
+    assert (code, report["verdict"]) == (1, "block")
+    assert {finding["rule"] for finding in report["findings"]} == {"CI_WORKFLOW_TOUCHED"}
+
+
+def test_a_directory_link_with_a_script_beneath_it_is_no_obstacle_when_no_call_changes(tmp_path):
+    # The same tree and the ordinary edit alone. `scripts/ci.sh` is unchanged,
+    # no scan follows its call, and the run passes, as it does with no link.
+    repo = _repo(tmp_path, {**TWIN_MODULES, **CI_SCRIPTS}, {"ci": b"tools/ci"})
+    code, report = _judged(_check_head(repo, ORDINARY_EDIT))
+    assert (code, report["verdict"], report["findings"]) == (0, "pass", [])
+
+
+def test_a_linked_script_whose_comment_names_a_runner_is_no_obstacle(tmp_path):
+    # pydantic-ai links `.claude/skills/branch-context/check-autoload-safety.sh`
+    # to a script that runs nothing and mentions `@pytest.mark.parametrize`
+    # in a comment. Every runner token counts as a test command wherever it
+    # stands, so a rule that kept a tree unread for a linked script that
+    # "runs the suite" kept every one of that tree's commits at exit 2 (the
+    # 100 newest, on 2026-11-28). What the run asks for decides instead:
+    # nothing but the provider pass asks for this link.
+    script = b"#!/usr/bin/env bash\n# e.g. `@pytest.mark.parametrize`, a bare username\necho checked\n"
+    files = {**TWIN_MODULES, ".agents/skills/branch-context/check-autoload-safety.sh": script}
+    links = {".claude/skills/branch-context/check-autoload-safety.sh":
+             b"../../../.agents/skills/branch-context/check-autoload-safety.sh"}
+    code, report = _judged(_check_head(_repo(tmp_path, files, links), ORDINARY_EDIT))
+    assert (code, report["verdict"], report["findings"]) == (0, "pass", [])
+
+
+# --- a second name for what lies beneath a directory link -------------------------------------------
+
+def _regular(files, links):
+    """The same tree with each link replaced by a regular copy of the file or directory it leads to."""
+    import posixpath
+
+    copied = dict(files)
+    for link, target in links.items():
+        real = posixpath.normpath(posixpath.join(posixpath.dirname(link), target.decode("ascii")))
+        if real in files:
+            copied[link] = files[real]
+        for path, data in files.items():
+            if path.startswith(real + "/"):
+                copied[link + path[len(real):]] = data
+    return copied
+
+
+HELPER_BENEATH_A_LINK = (
+    {"setup.cfg": b"[tool:pytest]\ntestpaths = tests/unit\n",
+     "src/calc.py": b"def total():\n    return 3\n",
+     "shared/support/__init__.py": b"",
+     "shared/support/checks.py": b"def check_total(value):\n    assert value == 3\n",
+     "tests/__init__.py": b"", "tests/unit/__init__.py": b"", "tests/integration/__init__.py": b"",
+     "tests/integration/test_calc.py": b"def test_smoke():\n    assert True\n",
+     "tests/unit/test_calc.py": (b"from src.calc import total\nfrom tests.support.checks import check_total\n\n\n"
+                                 b"def test_total():\n    check_total(total())\n")},
+    {"tests/support": b"../shared/support"},
+    {"tests/unit/test_calc.py": (b"from src.calc import total\nfrom tests.support.checks import check_total\n\n\n"
+                                 b"def test_total():\n    total()\n")},
+    "tests/support", "ASSERT_REMOVED")
+PATCHED_PACKAGE_BENEATH_A_LINK = (
+    {**TWIN_MODULES, "setup.cfg": b"[tool:pytest]\ntestpaths = tests\n", "conftest.py": b"",
+     "lib/app/__init__.py": b"",
+     "lib/app/billing.py": b"def invoice_total(items, tax):\n    return round(sum(items) * (1 + tax), 2)\n",
+     "tests/conftest.py": b"import pytest\n",
+     "tests/test_billing.py": (b"from app import billing\n\n\ndef test_invoice_total(monkeypatch):\n"
+                               b"    items = [10.0, 90.0]\n"
+                               b"    assert billing.invoice_total(items, 0.053) == 105.3\n")},
+    {"app": b"lib/app"},
+    {**ORDINARY_EDIT,
+     "tests/conftest.py": (b"import pytest\n\nimport app.billing\n\n\n@pytest.fixture(autouse=True)\n"
+                           b"def fixed_total(monkeypatch):\n"
+                           b"    monkeypatch.setattr(\"app.billing.invoice_total\", lambda *a: 105.3)\n")},
+    "app", "CONFTEST_PATCHES_PROD")
+PACKAGE_UNDER_AN_UNCHANGED_SEARCH_ROOT = (
+    {**{path: data for path, data in TWIN_MODULES.items() if path != "tests/test_images.py"},
+     "setup.cfg": b"[tool:pytest]\ntestpaths = tests\npythonpath = lib\n",
+     "impl/billing_pkg/__init__.py": b"def total():\n    return 1\n",
+     "tests/test_total.py": b"from billing import total\n\n\ndef test_total():\n    assert total() == 2\n"},
+    {"lib/billing": b"../impl/billing_pkg"},
+    {**ORDINARY_EDIT, "tests/billing.py": b"def total():\n    return 2\n"},
+    "lib/billing", "TEST_PATCHES_SUBJECT")
+TESTS_A_CHANGED_ADDOPTS_NAMES = (
+    {**{path: data for path, data in TWIN_MODULES.items() if path != "tests/test_images.py"},
+     "setup.cfg": b"[tool:pytest]\ntestpaths = tests\n",
+     "tests/test_billing.py": (b"def test_total():\n    assert 1 + 2 == 3\n\n\n"
+                               b"def test_tax():\n    assert round(1.5) == 2\n"),
+     "shared/checks/test_smoke.py": b"def test_smoke():\n    assert True\n"},
+    {"checks": b"shared/checks"},
+    {**ORDINARY_EDIT, "setup.cfg": b"[tool:pytest]\ntestpaths = tests\naddopts = checks\n"},
+    "checks", "CI_WORKFLOW_TOUCHED")
+PIPELINE_BENEATH_A_HIDDEN_LINK = (
+    {**LICENCE, "billing.py": b"def invoice_total():\n    return 1\n", "conftest.py": b"",
+     "tests/test_billing.py": (b"from billing import invoice_total\n\n\n"
+                               b"def test_invoice_total():\n    assert invoice_total() == 2\n"),
+     "ci/buildkite/pipeline.yml": b"steps:\n  - command: pytest tests\n    env:\n      PYTHONPATH: stubs\n",
+     "stubs/README.txt": b"Stubs\n"},
+    {**LICENCE_LINK, ".buildkite": b"ci/buildkite"},
+    {"stubs/billing.py": b"def invoice_total():\n    return 2\n"},
+    "LICENSE", "TEST_PATCHES_SUBJECT")
+
+
+@pytest.mark.parametrize("files, links, head_files, refused, rule", [
+    HELPER_BENEATH_A_LINK, PATCHED_PACKAGE_BENEATH_A_LINK, PACKAGE_UNDER_AN_UNCHANGED_SEARCH_ROOT,
+    TESTS_A_CHANGED_ADDOPTS_NAMES, PIPELINE_BENEATH_A_HIDDEN_LINK,
+], ids=["a_helper_a_test_stops_calling", "a_package_a_conftest_patches", "a_package_under_an_unchanged_search_root",
+        "tests_a_changed_addopts_names", "a_pipeline_a_hidden_link_names"])
+def test_a_directory_link_that_gives_a_file_a_second_name_keeps_the_refusal(tmp_path, files, links, head_files,
+                                                                           refused, rule):
+    # Each tree holds a directory link nothing changes beneath, and a commit
+    # that the same tree with a regular copy in the link's place blocks. A
+    # file beneath the target has a second name under the link, and what
+    # makes the commit a finding is read under that name:
+    # - a test stops calling `check_total`, imported from `tests.support`;
+    # - a conftest patches a function of `app`, a package behind `app ->
+    #   lib/app`;
+    # - a new `tests/billing.py` shadows `billing`, which `pythonpath = lib`
+    #   finds behind `lib/billing`;
+    # - `addopts = checks` makes the tests behind `checks` the run's only
+    #   ones;
+    # - `.buildkite -> ci/buildkite` makes a pipeline of a file whose own
+    #   path gives it no such role, and the pipeline's PYTHONPATH is where
+    #   the commit plants a module.
+    # No pass lists, searches or resolves the second name, so the second
+    # form of this change, which asked only that nothing change beneath the
+    # target, gave `pass` on all five. The first four links have source
+    # beneath their target; the last changes a file's role. Each run ends as
+    # on 0.13.2.
+    code, stdout, stderr = _check_head(_repo(tmp_path / "linked", files, links), head_files)
+    assert (code, stdout) == (2, "")
+    assert _refusal(refused) in stderr
+    code, report = _judged(_check_head(_repo(tmp_path / "plain", _regular(files, links), {}), head_files))
+    assert (code, report["verdict"]) == (1, "block")
+    assert rule in {finding["rule"] for finding in report["findings"]}
+
+
+SHADOWED = {"src/billing.py": b"def invoice_total():\n    return 1\n", "stubs/README.txt": b"Stubs\n",
+            "tests/test_billing.py": (b"from billing import invoice_total\n\n\n"
+                                      b"def test_invoice_total():\n    assert invoice_total() == 2\n")}
+STUB = {"stubs/billing.py": b"def invoice_total():\n    return 2\n"}
+ON_THE_PATH = {"setup.cfg": b"[tool:pytest]\ntestpaths = tests\npythonpath = vendor.d src\n"}
+TESTPATHS_ONLY = {"setup.cfg": b"[tool:pytest]\ntestpaths = tests\n"}
+ACTION = (b"runs:\n  using: composite\n  steps:\n    - run: pytest tests\n      shell: bash\n      env:\n"
+          b"        PYTHONPATH: stubs\n")
+
+
+@pytest.mark.parametrize("files, links, head_files, refused", [
+    ({**ON_THE_PATH, **SHADOWED, **LICENCE}, {**LICENCE_LINK, "vendor.d": b"/proc/self/cwd/stubs"}, STUB, "LICENSE"),
+    ({**ON_THE_PATH, **SHADOWED, **LICENCE}, {**LICENCE_LINK, "vendor.d": b"../linked/stubs"}, STUB, "LICENSE"),
+    ({**{path: data for path, data in TWIN_MODULES.items() if path != "tests/test_images.py"},
+      "setup.cfg": b"[tool:pytest]\ntestpaths = tests\npythonpath = lib\n",
+      "impl/billing_bin/__init__.pyc": b"\x00compiled\x00",
+      "tests/test_total.py": b"from billing import total\n\n\ndef test_total():\n    assert total() == 2\n"},
+     {"lib/billing": b"../impl/billing_bin"},
+     {**ORDINARY_EDIT, "tests/billing.py": b"def total():\n    return 2\n"}, "lib/billing"),
+    ({**{path: data for path, data in TWIN_MODULES.items() if path != "tests/test_images.py"}, **TESTPATHS_ONLY,
+      "tests/test_billing.py": (b"def test_total():\n    assert 1 + 2 == 3\n\n\n"
+                                b"def test_tax():\n    assert round(1.5) == 2\n"),
+      "shared/doctests/test_usage.txt": b">>> 1 + 1\n2\n"},
+     {"checks": b"shared/doctests"},
+     {**ORDINARY_EDIT, "setup.cfg": b"[tool:pytest]\ntestpaths = tests\naddopts = checks\n"}, "checks"),
+    ({**TESTPATHS_ONLY, **SHADOWED, "Justfile": b"test:\n    pytest -c ci/pytest.ini tests\n",
+      "tools/ci/pytest.ini": b"[pytest]\npythonpath = ../../stubs ../../src\n"},
+     {"ci": b"tools/ci"}, STUB, "ci"),
+    ({**TESTPATHS_ONLY, **LICENCE, "billing.py": b"def invoice_total():\n    return 1\n", "conftest.py": b"",
+      "tests/test_billing.py": SHADOWED["tests/test_billing.py"], "stubs/README.txt": b"Stubs\n",
+      "tools/test-action/action.yml": ACTION, "ci/actions/README.txt": b"Actions\n"},
+     {**LICENCE_LINK, "ci/actions/test": b"../../tools/test-action", ".github/actions": b"../ci/actions"},
+     STUB, ".github/actions"),
+], ids=["an_absolute_text_into_the_checkout", "a_text_that_leaves_the_tree_and_comes_back", "a_compiled_package",
+        "doctest_texts_a_changed_addopts_names", "a_config_a_run_names_through_the_link",
+        "a_link_beneath_the_target_of_another"])
+def test_a_link_a_checkout_reads_otherwise_than_the_tree_shows_keeps_the_refusal(tmp_path, files, links, head_files,
+                                                                                refused):
+    # More trees where the commit is a finding only through a link, each a
+    # `pass` in an earlier form of this change:
+    # - `vendor.d` is on the pythonpath, and leads to `stubs` by a text that
+    #   is absolute (`/proc/self/cwd` is the directory pytest runs in) or
+    #   that leaves the tree and comes back by the checkout's own name. By
+    #   the tree's paths it leads nowhere; the commit plants a module there;
+    # - `lib/billing` leads to a package that is compiled alone, which a new
+    #   `tests/billing.py` shadows;
+    # - `addopts = checks` makes the doctests behind `checks` the run's only
+    #   tests;
+    # - a `Justfile` runs `pytest -c ci/pytest.ini`, and the config behind
+    #   `ci` puts `stubs` on the path;
+    # - `.github/actions` leads to a directory that holds a second link, and
+    #   the action behind both sets `PYTHONPATH: stubs`.
+    # The engine models no compiled module, no doctest text and no name
+    # through two links, so a regular copy of these trees does not block
+    # either: pytest itself is what goes green. Each run ends as on 0.13.2.
+    code, stdout, stderr = _check_head(_repo(tmp_path / "linked", files, links), head_files)
+    assert (code, stdout) == (2, "")
+    assert _refusal(refused) in stderr
+
+
+def test_the_policy_directory_behind_a_link_keeps_the_refusal(tmp_path):
+    # `.checkwash -> config/checkwash`, where the repository's policy says
+    # `fail_on = "warn"`. The policy is read from the base tree at
+    # `.checkwash/config.toml`, a path beneath a link, which is absent
+    # there: with the defaults in its place the commit's warn-level finding
+    # passes, where the tree with a regular `.checkwash` blocks.
+    policy = b"[gate]\nfail_on = \"warn\"\n"
+    files = {**TWIN_MODULES, **LICENCE, **TESTPATHS_ONLY, "config/checkwash/config.toml": policy}
+    head = {**ORDINARY_EDIT, "setup.cfg": b"[tool:pytest]\ntestpaths = tests\n\n[flake8]\nmax-line-length = 100\n"}
+    code, stdout, stderr = _check_head(_repo(tmp_path / "linked", files, {**LICENCE_LINK, ".checkwash": b"config/checkwash"}),
+                                       head)
+    assert (code, stdout) == (2, "")
+    assert _refusal("LICENSE") in stderr
+    regular = {**files, ".checkwash/config.toml": policy, "LICENSE": LICENCE["py/LICENSE"]}
+    code, report = _judged(_check_head(_repo(tmp_path / "plain", regular, {}), head))
+    assert (code, report["verdict"]) == (1, "block")
+    assert {finding["rule"] for finding in report["findings"]} == {"CI_WORKFLOW_TOUCHED"}
+
+
+def test_a_reader_that_takes_a_refused_link_for_unknown_keeps_the_refusal(tmp_path):
+    # `envs/dev/pyvenv.cfg` is a link, and the commit moves a test into
+    # `envs/dev`. pytest does not collect from a virtual environment, so the
+    # test is disabled, and the tree with a regular `pyvenv.cfg` blocks. The
+    # collection model asks the snapshot for the marker, is refused, and
+    # takes the directory for one it knows nothing of. That ask is noted:
+    # the scan of a changed script's calls is not the only reader a link
+    # keeps something from.
+    files = {**TWIN_MODULES, **LICENCE, "config/pyvenv.cfg": b"home = /usr/bin\n",
+             "envs/dev/README.txt": b"An environment\n", "tests/test_calc.py": b"def test_total():\n    assert 1 + 2 == 3\n"}
+    links = {**LICENCE_LINK, "envs/dev/pyvenv.cfg": b"../../config/pyvenv.cfg"}
+    moved = {**ORDINARY_EDIT, "envs/dev/test_calc.py": files["tests/test_calc.py"]}
+
+    def check(repo):
+        _write(repo, moved)
+        git(repo, "add", "--", *moved)
+        git(repo, "rm", "--cached", "-q", "tests/test_calc.py")
+        return _check(repo)
+
+    code, stdout, stderr = check(_repo(tmp_path / "linked", files, links))
+    assert (code, stdout) == (2, "")
+    assert _refusal("LICENSE") in stderr
+    code, report = _judged(check(_repo(tmp_path / "plain", _regular(files, links), {})))
+    assert (code, report["verdict"]) == (1, "block")
+    assert "TEST_DISABLED" in {finding["rule"] for finding in report["findings"]}
+
+
+def test_a_link_to_a_name_the_tree_holds_in_another_case_keeps_the_refusal(tmp_path):
+    # `vendor.d -> Stubs`, in a tree that holds `stubs/`: nothing, by the
+    # tree's own spelling, and the directory itself in a checkout that folds
+    # case. `vendor.d` is on the pythonpath, and the commit plants
+    # `stubs/billing.py`.
+    files = {**LICENCE, "setup.cfg": b"[tool:pytest]\ntestpaths = tests\npythonpath = vendor.d src\n",
+             "src/billing.py": b"def invoice_total():\n    return 1\n", "stubs/README.txt": b"Stubs\n",
+             "tests/test_billing.py": (b"from billing import invoice_total\n\n\n"
+                                       b"def test_invoice_total():\n    assert invoice_total() == 2\n")}
+    repo = _repo(tmp_path, files, {**LICENCE_LINK, "vendor.d": b"Stubs"})
+    code, stdout, stderr = _check_head(repo, {"stubs/billing.py": b"def invoice_total():\n    return 2\n"})
+    assert (code, stdout) == (2, "")
+    assert _refusal("LICENSE") in stderr
+
+
+def test_a_run_a_link_still_ends_after_the_view_ends_with_the_refusal_it_had(tmp_path):
+    # `LICENSE` is a link the view reads, and `zz` one that leads nowhere,
+    # which the pass asks for as well. 0.13.2 ends on `LICENSE`, the first
+    # of the two. Read through the view the pass gets past it and is refused
+    # on `zz`: the run ends with the refusal it had, not with a new one.
+    repo = _repo(tmp_path, {**SOURCES, **LICENCE}, {**LICENCE_LINK, "zz": b"nowhere/at/all"})
+    code, stdout, stderr = _check_head(repo, NEW_PROVIDER)
+    assert (code, stdout) == (2, "")
+    assert _refusal("LICENSE") in stderr and _refusal("zz") not in stderr
+
+
+def test_a_sweep_refuses_a_commit_that_changes_a_link_s_target(tmp_path):
+    # The sweep gives the view each commit's parent as its base. With the
+    # commit itself in that place nothing would differ between the two ends,
+    # and the changed target of `.github/workflows/CLAUDE.md` would be read
+    # as if it had always been so.
+    repo = _repo(tmp_path, {**TWIN_MODULES, **AGENT_FILES}, CI_ROLE_LINK)
+    edit = {**ORDINARY_EDIT, ".github/workflows/AGENTS.md": b"# Workflows, revised\n"}
+    _write(repo, edit)
+    git(repo, "add", "--", *edit)
+    git(repo, "commit", "-m", "head")
+    result = sweep(str(repo), "HEAD", 5, datetime.date(2026, 11, 27))
+    assert (result.commits, result.errors, result.skipped) == (0, 1, 1)
 
 
 # --- an ordinary edit reaches the phase when two modules share a basename ---------------------------
@@ -399,8 +732,10 @@ def test_a_dotted_directory_link_does_not_end_a_run_that_reaches_the_phase(tmp_p
 
 def test_a_directory_link_a_collection_can_reach_fails_closed_naming_it(tmp_path):
     # `tests/shared -> ../common`: a bare `pytest` recurses from the root into
-    # `tests/shared`, which no norecursedirs pattern stops.
-    repo = _repo(tmp_path, {**SOURCES, "common/helpers.py": b"VALUE = 1\n"}, {"tests/shared": b"../common"})
+    # `tests/shared`, which no norecursedirs pattern stops. `common` holds a
+    # data file and nothing a second name would matter for, so the link is
+    # read as an opaque directory, and what the run can reach decides.
+    repo = _repo(tmp_path, {**SOURCES, "common/fixtures.json": b"{}\n"}, {"tests/shared": b"../common"})
     code, stdout, stderr = _check_head(repo, NEW_PROVIDER)
     assert (code, stdout) == (2, "")
     assert (f"checkwash engine error: EngineError: {DIRECTORY_LINK} tests/shared: "
@@ -411,12 +746,16 @@ def test_a_directory_link_an_import_can_resolve_inside_fails_closed_naming_it(tm
     # `billing -> impl/billing` at the root, which `pythonpath = .` puts on
     # the import path: the test's `from billing import total` can resolve
     # inside the link. `testpaths` keeps pytest's collection out of it, so
-    # the import is what refuses.
-    files = {"setup.cfg": b"[tool:pytest]\ntestpaths = tests\npythonpath = .\n",
-             "impl/billing/__init__.py": b"def total():\n    return 1\n",
+    # the import is what refuses. The directory holds a data file and no
+    # module: with a `.py` file or a compiled one beneath it the link would
+    # keep the tree unread, and the run its first refusal. With no source
+    # there the tree holds no second provider of `billing`, so the ordinary
+    # edit beside a twin module is what takes the pass to its reads.
+    files = {**TWIN_MODULES, "setup.cfg": b"[tool:pytest]\ntestpaths = tests\npythonpath = .\n",
+             "impl/billing/rates.csv": b"rate\n0.05\n",
              "tests/test_total.py": b"from billing import total\n\n\ndef test_total():\n    assert total() == 2\n"}
     repo = _repo(tmp_path, files, {"billing": b"impl/billing"})
-    code, stdout, stderr = _check_head(repo, {"tests/billing.py": b"def total():\n    return 2\n"})
+    code, stdout, stderr = _check_head(repo, {**ORDINARY_EDIT, "tests/billing.py": b"def total():\n    return 2\n"})
     assert (code, stdout) == (2, "")
     assert (f"checkwash engine error: EngineError: {DIRECTORY_LINK} billing: "
             "the import of billing can resolve inside it") in stderr
@@ -575,15 +914,18 @@ def test_another_pass_that_reads_the_same_link_still_refuses_it(tmp_path):
 # A link text over the limit that would lead to `AGENTS.md`, and one just under it that does.
 OVER_THE_TEXT_LIMIT = b"./" * (MAX_LINK_TEXT_BYTES // 2 - 3) + b"AGENTS.md"
 UNDER_THE_TEXT_LIMIT = b"./" * (MAX_LINK_TEXT_BYTES // 2 - 5) + b"AGENTS.md"
+# One of exactly the limit: the doubled slash is an empty step of the walk.
+AT_THE_TEXT_LIMIT = b"./" * (MAX_LINK_TEXT_BYTES // 2 - 5) + b"/AGENTS.md"
 assert len(OVER_THE_TEXT_LIMIT) == MAX_LINK_TEXT_BYTES + 3 and len(UNDER_THE_TEXT_LIMIT) == MAX_LINK_TEXT_BYTES - 1
+assert len(AT_THE_TEXT_LIMIT) == MAX_LINK_TEXT_BYTES
 
 
 @pytest.fixture
 def snapshot(tmp_path):
     """The head of a tree whose links are all ones the view reads, or lead to nothing."""
     links = {**DIRECTORY_LINK_SHAPE, **CI_ROLE_LINK, **RUNNER_SUFFIX_LINK, **DOT_LESS_FILE_LINK, **DOTTED_LINKS,
-             "LOST": b"gone", "OUTSIDE": b"../elsewhere/file", "BEYOND_A_FILE": b"AGENTS.md/inside",
-             "NEAR": UNDER_THE_TEXT_LIMIT, "ROOT": b"."}
+             "LOST": b"gone", "BEYOND_A_FILE": b"AGENTS.md/inside",
+             "NEAR": UNDER_THE_TEXT_LIMIT, "EXACT": AT_THE_TEXT_LIMIT, "NOTES": b".agents/skills"}
     return GitSnapshot(_repo(tmp_path, {**SOURCES, **AGENT_FILES}, links), "HEAD", side="head")
 
 
@@ -612,16 +954,15 @@ def test_the_view_lists_a_directory_link_as_an_opaque_directory_and_the_snapshot
     assert view.readable() and view.unreadable() == ()
     listed = view.list_paths()
     opaque = sorted(path for path in listed if isinstance(path, SymlinkedDirectory))
-    # `ROOT -> .` leads to the tree's root, a directory of the commit as any other.
-    assert opaque == [".claude/skills/add-new-model/", "ROOT/"]
-    assert ".claude/skills/add-new-model" not in listed and "ROOT" not in listed
+    assert opaque == [".claude/skills/add-new-model/", "NOTES/"]
+    assert ".claude/skills/add-new-model" not in listed and "NOTES" not in listed
     # A link to a file, and one that leads to nothing, stay listed as paths.
-    for link in ("status", "CLAUDE.md", ".github/workflows/CLAUDE.md", "LOST", "OUTSIDE", "BEYOND_A_FILE", "NEAR"):
+    for link in ("status", "CLAUDE.md", ".github/workflows/CLAUDE.md", "LOST", "BEYOND_A_FILE", "NEAR", "EXACT"):
         assert link in listed
     # Every other reader lists the snapshot itself: each link is a path there.
     plain = snapshot.list_paths()
     assert not any(isinstance(path, SymlinkedDirectory) for path in plain)
-    assert ".claude/skills/add-new-model" in plain and "ROOT" in plain
+    assert ".claude/skills/add-new-model" in plain and "NOTES" in plain
     assert sorted(str(path).rstrip("/") for path in listed) == sorted(plain)
 
 
@@ -630,6 +971,8 @@ def test_the_view_reads_a_file_link_as_its_target_and_the_snapshot_refuses_it(sn
     script = AGENT_FILES[".agents/skills/branch-context/status.sh"]
     read = view.read_many(["status", ".claude/skills/branch-context/status.sh", ".github/workflows/CLAUDE.md",
                            "docs/CLAUDE.md", "NEAR", "AGENTS.md", "absent"])
+    # A text of exactly the limit is read too.
+    assert view.read_many(["EXACT"]) == {"EXACT": AGENT_FILES["AGENTS.md"]}
     assert read == {
         "status": script,
         ".claude/skills/branch-context/status.sh": script,
@@ -650,11 +993,10 @@ def test_the_view_reads_a_file_link_as_its_target_and_the_snapshot_refuses_it(sn
     assert refused_link(EngineError("any other refusal")) is None
 
 
-@pytest.mark.parametrize("link", ["LOST", "OUTSIDE", "BEYOND_A_FILE", ".claude/skills/add-new-model", "ROOT"])
+@pytest.mark.parametrize("link", ["LOST", "BEYOND_A_FILE", ".claude/skills/add-new-model", "NOTES"])
 def test_the_view_refuses_a_link_it_cannot_read_as_a_file(snapshot, link):
-    # A missing target, a target outside the tree, a path through a regular
-    # file, and a directory link asked for as a file: the snapshot's refusal,
-    # unchanged.
+    # A missing target, a path through a regular file, and a directory link
+    # asked for as a file: the snapshot's refusal, unchanged.
     with pytest.raises(EngineError) as refused:
         _view(snapshot).read_many([link])
     assert str(refused.value) == f"{NONREGULAR} {link} (a symlink)"
@@ -668,6 +1010,10 @@ def test_the_view_refuses_a_read_inside_a_directory_link(snapshot):
 
 
 RUNS_THE_SUITE = {"tools/impl.sh": b"#!/bin/sh\npytest tests\n", "tools/inert.sh": b"#!/bin/sh\necho done\n"}
+# Directories that each hold one thing a second name would change the meaning of.
+SECOND_NAMES = {"built/billing/__init__.pyc": b"\x00compiled\x00", "confs/pytest.ini": b"[pytest]\n",
+                "loud/Helper.PY": b"VALUE = 1\n", "texts/test_usage.txt": b">>> 1 + 1\n2\n",
+                "caf\u00e9/notes.txt": b"Notes\n"}
 
 
 @pytest.mark.parametrize("link, text, links, submodules", [
@@ -676,38 +1022,309 @@ RUNS_THE_SUITE = {"tools/impl.sh": b"#!/bin/sh\npytest tests\n", "tools/inert.sh
     ("docs/conftest.py", b"../AGENTS.md", {}, ()),
     ("pkg/alias.py", b"../src/billing.py", {}, ()),
     ("web/app.test.TS", b"../AGENTS.md", {}, ()),
-    ("scripts/run-tests.sh", b"../tools/impl.sh", {}, ()),
-    ("scripts/Build.CMD", b"../tools/impl.sh", {}, ()),
+    ("pkg/models/notes.py", b"../../docs", {}, ()),
+    ("gone.py", b"nowhere/at/all", {}, ()),
+    ("code", b"src", {}, ()),
+    ("up", b".", {}, ()),
+    ("Docs", b"DOCS", {}, ()),
+    ("accent", "cafe\u0301".encode("utf-8"), {}, ()),
+    ("OUTSIDE", b"../elsewhere/file", {}, ()),
+    ("BACK", b"../checkout/docs", {}, ()),
+    ("ABSOLUTE", b"/proc/self/cwd/docs", {}, ()),
+    ("lib", b"built", {}, ()),
+    ("cfg", b"confs", {}, ()),
+    ("shout", b"loud", {}, ()),
+    ("checks", b"texts", {}, ()),
+    ("outer", b"tools", {"tools/inner": b"../AGENTS.md"}, ()),
+    (".checkwash", b".agents/skills", {}, ()),
+    (".greenwash/allow.toml", b"../AGENTS.md", {}, ()),
     ("vendored", b".vendor/lib", {}, (".vendor/lib",)),
     ("vendored-readme", b".vendor/lib/README", {}, (".vendor/lib",)),
     ("around", b".vendor", {}, (".vendor/lib",)),
     ("ODD", b"docs\\AGENTS.md", {}, ()),
 ], ids=["a_link_to_a_link", "text_over_the_limit", "a_conftest_name", "a_python_module_name", "a_typescript_name",
-        "a_script_that_runs_the_suite", "a_batch_script_that_runs_the_suite", "a_submodule", "inside_a_submodule",
-        "a_directory_that_holds_a_submodule", "text_the_walk_does_not_read"])
+        "a_directory_link_named_as_source", "a_link_to_nothing_named_as_source", "a_directory_that_holds_source",
+        "the_root_of_a_tree_that_holds_source", "a_name_the_tree_holds_in_another_case",
+        "a_name_the_tree_holds_in_another_unicode_form", "a_text_that_leaves_the_tree",
+        "a_text_that_leaves_the_tree_and_names_a_checkout", "an_absolute_text", "a_directory_that_holds_a_compiled_module",
+        "a_directory_that_holds_a_pytest_config", "a_directory_that_holds_source_in_capitals",
+        "a_directory_that_holds_a_doctest_text", "a_directory_that_holds_a_link", "the_policy_directory",
+        "a_policy_file",
+        "a_submodule", "inside_a_submodule", "a_directory_that_holds_a_submodule", "text_the_walk_does_not_read"])
 def test_one_link_no_pass_could_safely_miss_leaves_the_view_unreadable(tmp_path, link, text, links, submodules):
     # Each tree holds the links of `snapshot`, all readable, and one more.
     # Nothing changes in the range. The one link is enough: the view answers
     # for no link, and names it.
     every = {**DIRECTORY_LINK_SHAPE, **CI_ROLE_LINK, **DOT_LESS_FILE_LINK, **DOTTED_LINKS, link: text, **links}
-    repo = _repo(tmp_path, {**SOURCES, **AGENT_FILES, **RUNS_THE_SUITE}, every, submodules)
+    repo = _repo(tmp_path, {**SOURCES, **AGENT_FILES, **RUNS_THE_SUITE, **SECOND_NAMES}, every, submodules)
     view = _view(GitSnapshot(repo, "HEAD", side="head"))
     assert not view.readable()
     assert view.unreadable() == (link,)
-    for call in (view.list_paths, lambda: view.read_many(["status"])):
+    for call in (view.list_paths, lambda: view.read_many(["status"]),
+                 lambda: view.begin(EngineError("the refusal that sent the pass here"), view.mark())):
         with pytest.raises(EngineError) as refused:
             call()
         assert str(refused.value) == f"{NONREGULAR} {link} (a symlink)"
 
 
 def test_a_linked_script_that_runs_nothing_is_read(tmp_path):
-    # The same names as the two script rows above, leading to a script that
-    # runs no suite: the scan that follows a call to it would find no runner
-    # there either, so the link hides nothing.
+    # A link with a script's name, leading to a script that runs no suite.
     links = {"scripts/run-tests.sh": b"../tools/inert.sh", "scripts/Build.CMD": b"../tools/inert.sh"}
     view = _view(GitSnapshot(_repo(tmp_path, {**SOURCES, **RUNS_THE_SUITE}, links), "HEAD", side="head"))
     assert view.readable()
     assert view.read_many(["scripts/run-tests.sh"]) == {"scripts/run-tests.sh": RUNS_THE_SUITE["tools/inert.sh"]}
+
+
+def test_a_linked_script_that_runs_the_suite_is_read_too(tmp_path):
+    # The view answers for a linked script whatever it holds. What another
+    # reader would have made of the link is settled by what the run asks the
+    # trees for (`settle`), not by the script's text.
+    links = {"scripts/run-tests.sh": b"../tools/impl.sh", "scripts/Build.CMD": b"../tools/impl.sh"}
+    view = _view(GitSnapshot(_repo(tmp_path, {**SOURCES, **RUNS_THE_SUITE}, links), "HEAD", side="head"))
+    assert view.readable()
+    assert view.read_many(["scripts/run-tests.sh", "scripts/Build.CMD"]) == {
+        "scripts/run-tests.sh": RUNS_THE_SUITE["tools/impl.sh"], "scripts/Build.CMD": RUNS_THE_SUITE["tools/impl.sh"]}
+
+
+@pytest.mark.parametrize("suffix", [".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"])
+def test_a_link_with_any_source_suffix_leaves_the_view_unreadable(tmp_path, suffix):
+    # Each suffix the engine's passes read as source, on a link to a file
+    # that is no source itself.
+    link = "web/app" + suffix
+    view = _view(GitSnapshot(_repo(tmp_path, {**SOURCES, **AGENT_FILES}, {link: b"../AGENTS.md"}), "HEAD", side="head"))
+    assert view.unreadable() == (link,)
+
+
+@pytest.mark.parametrize("beneath", [
+    "shared/notes/helper.py", "shared/notes/deep/er/widget.tsx", "shared/notes/conftest.py",
+    "shared/notes/mod.pyc", "shared/notes/mod.pyo", "shared/notes/mod.pyd", "shared/notes/mod.so",
+    "shared/notes/deps.zip", "shared/notes/pkg.egg", "shared/notes/pkg-1.0-py3-none-any.whl",
+    "shared/notes/test_usage.txt",
+    "shared/notes/pytest.toml", "shared/notes/.pytest.toml", "shared/notes/pytest.ini", "shared/notes/.pytest.ini",
+    "shared/notes/pyproject.toml", "shared/notes/tox.ini", "shared/notes/setup.cfg",
+])
+def test_a_directory_link_with_source_beneath_its_target_leaves_the_view_unreadable(tmp_path, beneath):
+    # The file has a second name under the link, `notes/...`, that no pass
+    # lists, searches or resolves an import to: source, each compiled form,
+    # an archive that can stand on the import path, a doctest text, and each
+    # name pytest takes for a config.
+    files = {**AGENT_FILES, "shared/notes/README.md": b"# Notes\n", beneath: b"VALUE = 1\n"}
+    view = _view(GitSnapshot(_repo(tmp_path, files, {"notes": b"shared/notes"}), "HEAD", side="head"))
+    assert view.unreadable() == ("notes",)
+
+
+def test_a_directory_link_with_a_source_named_link_beneath_its_target_leaves_the_view_unreadable(tmp_path):
+    files = {**AGENT_FILES, "shared/notes/README.md": b"# Notes\n"}
+    links = {"notes": b"shared/notes", "shared/notes/alias.py": b"../../AGENTS.md"}
+    view = _view(GitSnapshot(_repo(tmp_path, files, links), "HEAD", side="head"))
+    assert view.unreadable() == ("notes", "shared/notes/alias.py")
+
+
+def test_a_directory_link_with_no_source_beneath_its_target_is_read(tmp_path):
+    # What pydantic-ai keeps beneath a skill directory: a Markdown file, a
+    # script with no suffix and a table.
+    files = {**AGENT_FILES, ".agents/skills/adopt-pr/SKILL.md": b"# Adopt\n",
+             ".agents/skills/adopt-pr/fetch-resolved-threads": b"#!/usr/bin/env bash\necho threads\n",
+             ".agents/skills/adopt-pr/labels.tsv": b"name\tcolour\n"}
+    view = _view(GitSnapshot(_repo(tmp_path, files, {".claude/skills/adopt-pr": b"../../.agents/skills/adopt-pr"}),
+                             "HEAD", side="head"))
+    assert view.readable()
+    assert list(view.aliases()) == [
+        (".claude/skills/adopt-pr/SKILL.md", ".agents/skills/adopt-pr/SKILL.md"),
+        (".claude/skills/adopt-pr/fetch-resolved-threads", ".agents/skills/adopt-pr/fetch-resolved-threads"),
+        (".claude/skills/adopt-pr/labels.tsv", ".agents/skills/adopt-pr/labels.tsv"),
+    ]
+    # Neither name of any of them is a CI file or a runner file.
+    assert not engine_ir_intake._alias_changes_a_role(view, Config())
+
+
+def test_a_directory_link_that_makes_a_runner_file_of_a_file_is_not_read_through(tmp_path):
+    # `scripts/tools -> ../ci/tools`. Every file beneath `scripts/` is a
+    # runner file to the collection inventory, and `ci/tools/steps.txt` is
+    # none under its own path: its pytest command would count for the reach
+    # of a run under a name that no pass lists.
+    files = {**AGENT_FILES, "ci/tools/steps.txt": b"pytest tests\n"}
+    view = _view(GitSnapshot(_repo(tmp_path, files, {"scripts/tools": b"../ci/tools"}), "HEAD", side="head"))
+    assert view.readable()
+    assert list(view.aliases()) == [("scripts/tools/steps.txt", "ci/tools/steps.txt")]
+    assert engine_ir_intake._alias_changes_a_role(view, Config())
+
+
+def test_more_second_names_than_one_run_compares_leave_the_view_unused(tmp_path, monkeypatch):
+    # The comparison is bounded. A tree with more second names than the
+    # bound is not looked through: the view is not used.
+    files = {**AGENT_FILES, ".agents/skills/adopt-pr/SKILL.md": b"# Adopt\n",
+             ".agents/skills/adopt-pr/notes.md": b"# Notes\n", ".agents/skills/adopt-pr/labels.tsv": b"name\n"}
+    view = _view(GitSnapshot(_repo(tmp_path, files, {".claude/skills/adopt-pr": b"../../.agents/skills/adopt-pr"}),
+                             "HEAD", side="head"))
+    assert not engine_ir_intake._alias_changes_a_role(view, Config())
+    monkeypatch.setattr(engine_ir_intake, "_MAX_LINK_ALIASES", 2)
+    assert engine_ir_intake._alias_changes_a_role(view, Config())
+
+
+def test_a_link_to_the_root_of_the_tree_is_never_read(tmp_path):
+    # `up -> .` leads to the whole tree. Every path lies beneath its target,
+    # the link itself among them, so the tree holds itself under `up/` to
+    # any depth, and any change in a range is one beneath it.
+    repo = _repo(tmp_path, {"AGENTS.md": b"# Agents\n", "docs/guide.txt": b"Guide\n"}, {"up": b"."})
+    assert _view(GitSnapshot(repo, "HEAD", side="head")).unreadable() == ("up",)
+
+
+def test_a_directory_link_a_file_is_removed_beneath_keeps_the_view_unreadable(tmp_path):
+    # Only the base holds the removed path: a change is looked for at both ends.
+    repo = _repo(tmp_path, {"AGENTS.md": b"# Agents\n", "kept/notes.txt": b"Notes\n", "kept/old.txt": b"Old\n"},
+                 {"NOTES": b"kept"})
+    git(repo, "rm", "--cached", "-q", "kept/old.txt")
+    git(repo, "commit", "-m", "head")
+    view = link_view_of(GitSnapshot(repo, "HEAD", side="head"), GitSnapshot(repo, "HEAD~1", side="base"))
+    assert view.unreadable() == ("NOTES",)
+
+
+def test_a_link_spelled_as_the_tree_spells_its_target_is_read(tmp_path):
+    # The other side of the row above that holds `Docs -> DOCS`: the same
+    # link with its target's own spelling is a directory link like any other.
+    view = _view(GitSnapshot(_repo(tmp_path, {**AGENT_FILES}, {"Docs": b"docs"}), "HEAD", side="head"))
+    assert view.readable()
+    assert [path for path in view.list_paths() if isinstance(path, SymlinkedDirectory)] == ["Docs/"]
+
+
+# --- what a run asked the trees for ---------------------------------------------------------------
+
+def test_a_tree_notes_each_ask_for_a_link_or_for_a_path_beneath_one(snapshot):
+    view = _view(snapshot)
+    # Paths no link stands before: present, absent, and absent in a directory the tree does not hold.
+    assert snapshot.read("AGENTS.md") == AGENT_FILES["AGENTS.md"]
+    assert snapshot.read("absent") is None
+    assert snapshot.read_many(["AGENTS.md", "absent", "nowhere/absent.sh"])["nowhere/absent.sh"] is None
+    assert snapshot.definitely_lacks("nowhere/absent.sh")
+    assert snapshot.config_modes(["pytest.ini", "AGENTS.md"]) == {"pytest.ini": None, "AGENTS.md": b"100644"}
+    # Beneath a regular file there is nothing either, and no link is the reason.
+    assert snapshot.read_many(["AGENTS.md/inside"]) == {"AGENTS.md/inside": None}
+    assert view.asked() == ()
+    # A path beneath a link, to a directory or to a file, is absent to every reader.
+    assert snapshot.read(".claude/skills/add-new-model/SKILL.md") is None
+    assert snapshot.read_many(["CLAUDE.md/inside", "NOTES/src/billing.py"]) == {
+        "CLAUDE.md/inside": None, "NOTES/src/billing.py": None}
+    assert snapshot.definitely_lacks("LOST/run.sh")
+    assert snapshot.config_modes(["docs/CLAUDE.md/pytest.ini"]) == {"docs/CLAUDE.md/pytest.ini": None}
+    with pytest.raises(EngineError, match="traverses a non-directory"):
+        snapshot.read_config_many([".claude/skills/add-new-model/setup.cfg"])
+    # The link itself is refused by the single reader and by the batch reader.
+    with pytest.raises(EngineError):
+        snapshot.read("status")
+    with pytest.raises(EngineError):
+        snapshot.read_many(["AGENTS.md", ".github/workflows/CLAUDE.md"])
+    assert sorted(set(view.asked())) == [
+        ".claude/skills/add-new-model/SKILL.md", ".claude/skills/add-new-model/setup.cfg",
+        ".github/workflows/CLAUDE.md", "CLAUDE.md/inside", "LOST/run.sh", "NOTES/src/billing.py",
+        "docs/CLAUDE.md/pytest.ini", "status"]
+
+
+def test_a_tree_without_a_link_notes_nothing(tmp_path):
+    snapshot = GitSnapshot(_repo(tmp_path, {**SOURCES, **AGENT_FILES}, {}), "HEAD", side="head")
+    view = _view(snapshot)
+    assert snapshot.read("absent/inside.sh") is None
+    assert snapshot.read_many(["AGENTS.md/inside", "status"]) == {"AGENTS.md/inside": None, "status": None}
+    assert snapshot.definitely_lacks("ci/run-tests.sh")
+    assert view.asked() == ()
+
+
+REFUSAL = EngineError("the refusal that sent the pass to the view")
+
+
+def test_a_view_the_pass_never_read_through_settles_nothing(snapshot):
+    # A run the snapshot carried through is the run it was: whatever its
+    # readers asked for, the view has no say.
+    view = _view(snapshot)
+    assert snapshot.read("NOTES/src/billing.py") is None
+    assert view.asked() == ("NOTES/src/billing.py",)
+    view.settle()
+
+
+def test_a_run_that_read_links_keeps_its_verdict_when_no_other_reader_asked_for_one(snapshot):
+    view = _view(snapshot)
+    view.begin(REFUSAL, view.mark())
+    # The pass reads through the view, and other readers read what no link stands before.
+    assert view.read_many(["status", "AGENTS.md", "absent"])["status"] == AGENT_FILES[
+        ".agents/skills/branch-context/status.sh"]
+    assert snapshot.read("src/billing.py") == SOURCES["src/billing.py"]
+    assert snapshot.read("tests/absent.py") is None
+    assert view.asked() == ()
+    view.settle()
+
+
+@pytest.mark.parametrize("ask", [
+    lambda head, base, view: head.read("NOTES/src/billing.py"),
+    lambda head, base, view: head.read_many(["CLAUDE.md/inside"]),
+    lambda head, base, view: head.definitely_lacks(".claude/skills/add-new-model/run-tests.sh"),
+    lambda head, base, view: base.read(".claude/skills/add-new-model/SKILL.md"),
+    lambda head, base, view: pytest.raises(EngineError, head.read, "status"),
+    lambda head, base, view: pytest.raises(EngineError, head.read_many, [".github/workflows/CLAUDE.md"]),
+    lambda head, base, view: pytest.raises(EngineError, view.read_many, [".claude/skills/add-new-model/SKILL.md"]),
+], ids=["a_path_beneath_a_directory_link", "a_path_beneath_a_file_link", "a_path_the_tree_is_asked_whether_it_lacks",
+        "a_path_beneath_a_link_at_the_base", "the_link_itself", "the_link_itself_in_a_batch",
+        "a_read_inside_a_directory_link_that_the_view_refuses"])
+def test_a_run_that_read_links_ends_with_the_refusal_when_a_reader_asked_for_one(snapshot, ask):
+    # Each ask is refused, or answered as absent, and a caller may go on as
+    # if no such file existed. One is enough: the run ends with the refusal
+    # that sent the pass to the view, the object itself.
+    base = GitSnapshot(snapshot.repo, "HEAD", side="base")
+    view = link_view_of(snapshot, base)
+    view.begin(REFUSAL, view.mark())
+    ask(snapshot, base, view)
+    with pytest.raises(EngineError) as settled:
+        view.settle()
+    assert settled.value is REFUSAL
+
+
+def test_the_refused_attempt_s_asks_for_links_the_view_reads_are_dropped(snapshot):
+    # The pass runs again from the start through the view, which answers for
+    # these links, so the attempt that was refused on one of them is not
+    # another reader's ask.
+    view = _view(snapshot)
+    mark = view.mark()
+    for batch in (["AGENTS.md", "status"], [".claude/skills/add-new-model"], [".github/workflows/CLAUDE.md"]):
+        with pytest.raises(EngineError):
+            snapshot.read_many(batch)
+    view.begin(REFUSAL, mark)
+    assert view.asked() == ()
+    view.settle()
+
+
+def test_every_other_ask_of_the_refused_attempt_and_every_ask_before_it_is_kept(snapshot):
+    # A path beneath a link, which the attempt was told is absent, and a link
+    # that leads nowhere are not answered by the view, and something the
+    # pass consulted may remember what it was told. What any reader asked
+    # before the pass began is kept too, a link the view reads among it.
+    view = _view(snapshot)
+    assert snapshot.read("NOTES/asked/before/the/pass") is None
+    with pytest.raises(EngineError):
+        snapshot.read("status")
+    mark = view.mark()
+    assert snapshot.read("NOTES/asked/by/the/attempt") is None
+    with pytest.raises(EngineError):
+        snapshot.read_many(["LOST"])
+    with pytest.raises(EngineError):
+        snapshot.read_many(["status"])
+    view.begin(REFUSAL, mark)
+    assert view.asked() == ("NOTES/asked/before/the/pass", "status", "NOTES/asked/by/the/attempt", "LOST")
+    with pytest.raises(EngineError) as settled:
+        view.settle()
+    assert settled.value is REFUSAL
+
+
+def test_a_view_counts_what_the_trees_were_asked_before_it_was_made(snapshot):
+    # A range check makes its two trees, reads the repository's policy from
+    # the base tree, and only then makes the view and runs its one
+    # analysis. What a link kept from that first read counts as well.
+    base = GitSnapshot(snapshot.repo, "HEAD", side="base")
+    assert base.read("NOTES/add-new-model/config.toml") is None
+    view = link_view_of(snapshot, base)
+    view.begin(REFUSAL, view.mark())
+    assert view.asked() == ("NOTES/add-new-model/config.toml",)
+    with pytest.raises(EngineError) as settled:
+        view.settle()
+    assert settled.value is REFUSAL
 
 
 def test_the_view_reads_a_link_only_where_it_reads_the_same_on_both_sides(tmp_path):

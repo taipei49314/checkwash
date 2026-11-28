@@ -292,45 +292,82 @@ reaches its reads, that pass asks for unchanged paths that could hold a test
 runner, a pytest control, a candidate test or a provider: among them a name
 with no dot, a path with the ci role, a runner suffix, a conftest and a test
 module. The pass runs over the snapshot first. Only where one of its batch
-reads is refused on a committed link, and every link of the tree is one no
-pass could need (below), does it run again, from the start, through a view
-of the range's links (`analyze`/`build_ir` take the view as `root_links`).
+reads is refused on a committed link, and the view can answer for every link
+of the tree (below), does it run again, from the start, through a view of
+the range's links (`analyze`/`build_ir` take the view as `root_links`).
 So a run the snapshot carries through is the run it was before the ruling,
 whatever links the tree holds, and a run in a tree that holds any other link
 ends with the refusal it had before the ruling.
 
 In the view a link whose target is a regular file of the same commit reads
 as that file, resolved as above. A link whose target is a directory of the
-same commit is listed as an opaque directory, as the working tree lists a
-directory symlink (below): it holds no bytes, the files it leads to are
-listed under their own paths, and a read inside it, an import that can
-resolve inside it or a pytest collection that can reach it fails with an
-`EngineError` naming it. A link that leads to nothing the tree holds (a
-target outside the tree, a missing target, a path through a regular file),
-at both ends of the range, stays a path: it is refused as before, named,
-when the pass asks for it, and is no obstacle when it does not.
+same commit is listed to that pass as an opaque directory, as the working
+tree lists a directory symlink to every reader (below): it holds no bytes,
+the files it leads to are listed under their own paths, and a read inside
+it, an import that can resolve inside it or a pytest collection that can
+reach it fails with an `EngineError` naming it. A link that leads to nothing
+the tree holds (a name that is missing inside the tree, a path through a
+regular file), at both ends of the range, stays a path: a run on which the
+pass asks for it ends with the refusal it had, and it is no obstacle when
+the pass does not. A build may create a missing name later, as it may a path
+a config names; neither is seen.
 
 Only this pass reads a link, and the others would not know what it read: a
-search of the tree does not look inside a link, and the scan that follows a
-script's call to another script takes a refused link for an absent file. So
-the view is used only when every link of the head tree is one of those three
-kinds and no pass could need it:
+search of the tree does not look inside a link, a path beneath a link is
+absent to every reader, and the scan that follows a script's call to another
+script takes a script it cannot read for one that runs no suite. So a run
+that reads links ends with a verdict only under two conditions.
+
+First, every link of the head tree is one of those three kinds and one the
+view can answer for:
 - It reads the same on both sides of the range: the link is the same entry
   at the base and at the head, and its text leads to the same place in both
   trees. For a file that place holds the same entry, bytes and mode. For a
   directory no path beneath it differs, and no submodule lies in it. Read as
   the head's target for both sides, a link whose target the range adds,
   changes or removes would hold the range's change and show none.
-- It is not named as source (`.py`, or a JS or TS suffix). A test, a
-  conftest or a module under a link's name is one only this pass would see,
-  and pytest runs a linked conftest at the link's path, where
-  `Path(__file__).resolve()` is the target's.
-- It is no script that runs the suite: a `.sh`, `.bash`, `.zsh`, `.ps1`,
-  `.bat` or `.cmd` link whose target runs a test command.
+- It is not named as source (`.py`, or a JS or TS suffix), whatever it
+  leads to. A test, a conftest or a module under a link's name is one only
+  this pass would see, and pytest runs a linked conftest at the link's path,
+  where `Path(__file__).resolve()` is the target's.
+- If it leads to a directory, nothing beneath that directory means
+  something under a second name: no file named as source, no compiled
+  module (`.pyc`, `.pyo`, `.pyd`, `.so`), no archive (`.zip`, `.egg`,
+  `.whl`), no text file pytest's default doctest pattern takes
+  (`test*.txt`), no pytest config and no other link.
+  Such a file has a second name under the link, which no pass lists,
+  searches or resolves an import to: a helper a test imports through the
+  link, a package a conftest patches, a test that an `addopts` target
+  names, a config a run names with `-c`.
+- If it leads to a directory, it gives no file beneath that directory the ci
+  role, or a place among the runner files (beneath `.github/workflows/` or
+  `scripts/`), that the file's own path does not give it.
+  `.buildkite -> ci/buildkite` would make a pipeline of a file no pass reads
+  as one.
+- It is not at `.checkwash` or `.greenwash`, nor beneath one: checkwash's
+  own policy is read through such a link as absent.
 
-A link to a link, a link into a submodule, and a link whose text is over
-4,096 bytes or is not text the walk reads, are not known to be harmless, and
-keep the view from being used.
+A link to a link, a link into a submodule, a link whose text is over 4,096
+bytes or is not text the walk reads, a link whose text is absolute or leaves
+the tree (a checkout may follow it back in, by a path the tree does not
+show), and a link whose text misses a name the tree holds in another case or
+Unicode form (a checkout that folds them would follow it), are not known to
+be harmless, and keep the view from being used.
+
+Second, no reader asked either tree for a link or for a path beneath one,
+from the moment the two trees are made. The snapshot notes each such ask
+made through `read`, `read_many`, `definitely_lacks`, `config_modes` or
+`read_config_many`, whether it refused it or answered that the path is
+absent, and a caller may have gone on as if no such file existed. When the
+analysis ends, a run that read links and has one ask noted ends with the
+refusal that sent the pass to the view. So `|| true` appended to a call of a
+linked script, or of a script beneath a directory link, ends as it did
+before the ruling, where the same tree with regular files blocks. A linked
+script that no changed file calls is read by the pass and is no obstacle. A
+reader that does not catch a link's refusal ends the run with its own. A
+test made on the path listing alone asks nothing, and neither does what
+`sweep` reads from git itself: the first condition is what answers for
+those.
 
 No other reader uses the view: the diff read still refuses a link the diff
 adds, retargets or removes, and the single-path reader, the searches, the

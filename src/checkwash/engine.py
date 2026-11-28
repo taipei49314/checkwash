@@ -969,4 +969,8 @@ def analyze(
         ]
     findings = run_detectors(ir, config)
     verdict = apply_gates(ir, findings, contract, config, allow_entries, today)
+    if root_links is not None:
+        # A run that read links through the view has a verdict only when no
+        # other reader asked for one (#551).
+        root_links.settle()
     return ir, findings, verdict
