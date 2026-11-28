@@ -1347,7 +1347,7 @@ def test_the_view_reads_a_link_only_where_it_reads_the_same_on_both_sides(tmp_pa
     links = {"SAME": b"AGENTS.md", "EDITED": b"docs/guide.txt", "ADDED": b"docs/new.txt", "MODE": b"tools/run.txt",
              "RETARGETED": b"AGENTS.md", "GROWN_DIRECTORY": b"kept", "STILL_DIRECTORY": b"still",
              "NEW_DIRECTORY": b"made", "WAS_A_FILE": b"swapped", "THROUGH": b"made/../still/notes.txt",
-             "GONE": b"leaving/index.txt", "NOWHERE": b"never/there.txt"}
+             "GONE": b"leaving/index.txt", "NOWHERE": b"still/missing.txt"}
     repo = _repo(tmp_path, files, links)
     _write(repo, {"docs/guide.txt": b"Guide, revised\n", "docs/new.txt": b"New\n", "made/index.txt": b"Made\n",
                   "kept/more.txt": b"More\n"})
@@ -1378,7 +1378,7 @@ def test_a_range_that_touches_no_link_or_target_has_a_readable_view(tmp_path):
     # nothing they lead to: the file link reads as its target, the directory
     # link is opaque, and the one that leads nowhere stays a path.
     files = {"AGENTS.md": b"# Agents\n", "still/notes.txt": b"Notes\n", "src/billing.py": SOURCES["src/billing.py"]}
-    repo = _repo(tmp_path, files, {"SAME": b"AGENTS.md", "STILL_DIRECTORY": b"still", "NOWHERE": b"never/there.txt"})
+    repo = _repo(tmp_path, files, {"SAME": b"AGENTS.md", "STILL_DIRECTORY": b"still", "NOWHERE": b"still/missing.txt"})
     _write(repo, {"src/billing.py": b"def invoice_total():\n    return 3\n"})
     git(repo, "add", "--", "src/billing.py")
     git(repo, "commit", "-m", "head")
