@@ -397,18 +397,48 @@ undecodable config or a run's own `-c` config reaches every submodule; a
 runner file whose pytest command does not parse is a run without path
 arguments; and a path argument that is only a variable (`$1`, `{posargs}`)
 names no path. In a run's own arguments, the `[`, `*` and `?` inside a
-variable expansion are no wildcard: a Bash array (`"${tests[@]}"`) and `$*`
-name no path either, where their bracket and star once reached every
-directory (ruled 2026-11-27). The rest of an argument is read as it was, so
-`sub/$1` names a path inside `sub` and reaches it, and `te*$x` holds a
-wildcard. A word after a control operator and every word of a line that
-ends in a backslash are not arguments the reader can tell from the run's
-own, and are read as they were: the `?` of `pytest || exit $?` is still a
-wildcard that reaches every directory. A Markdown file is prose, and this rule reads
+variable expansion (`${...}`, `$name`, a positional or a special parameter,
+a `${{ ... }}` written as one word) are no wildcard: a Bash array
+(`"${tests[@]}"`) and `$*` no longer reach every directory, as their bracket
+and star once did (ruled 2026-11-27). What such an expansion gives is not
+read, and it may give nothing. A path that ends in a part of only such
+expansions is read as the path before it, so `tests/${suites[@]}` is a run
+from `tests`. A run with an argument that is only such expansions is judged
+as the bare `pytest` too: its other arguments may be none, because the
+reader takes an unknown option's value for a path. `$1` and `"$@"`, which
+were never read as a wildcard, are read as they were. The rest of an
+argument is read as it was too: `sub/$1` names a path inside `sub` and
+reaches it, `te*$x` and `[$x]` hold a wildcard, and so does the script's own
+default word in `${SUITE:-*}`. A run's own arguments are the words before
+the first one that holds a shell operator character (`|`, `&`, `;`, `<`,
+`>`, a parenthesis or a backtick), where that word starts with the operator,
+on a line whose words are known to be the command's. They are not where an
+operator stands against another word anywhere after `pytest`
+(`tests/shared;`, `tests/shared)`, a backtick substitution), which the
+reader takes for one word; nor on a line that holds a backslash,
+a `#` inside a word or a `$'...'` quote, which the reader splits unlike a
+shell; nor on a line that is not known to end its command, which a line that
+ends in a backtick or a caret is not, nor any line of a Python file. A YAML
+file is followed line by line, telling its structure from the lines that lie
+in a scalar, and only two kinds of line are known to end their command: a
+line of a literal block scalar (`run: |`), and a line of the structure on
+which a key's value or a sequence entry starts when no deeper line follows
+it. A line that lies in a folded scalar (`run: >-`), or in a quoted one that
+is still open, is not, whatever it looks like, nor is a line that holds a
+flow collection (`- {name: tests, run: ...}`). From the first line the
+reader cannot place on (a flow collection it cannot see the end of on its
+line, a node on a document mark's line, a tab before a key, a character
+that ends a line for YAML alone), no line is. Every other word the reader takes for a path is read as
+it was: the `?` of `pytest || exit $?` or `pytest -q||exit $?`, and the
+bracket of `pytest "${extra[@]}"; echo done`, are still wildcards that reach
+every directory. A run with such an expansion is otherwise read as the same
+run without it, with what the reader reads of no run: a `cd` before it, a
+brace list, an option that moves the collection (`-o testpaths=`,
+`--rootdir`), an argument file, a variable that holds a path. A Markdown file is prose, and this rule reads
 no run from one, wherever it is kept: a README beneath `scripts/` or an
-agent's instructions beneath `.github/workflows/` that mention pytest are no
-pytest command (same ruling). So a tree whose only such file is Markdown is
-judged by the bare `pytest`. The empty-needle search still rejects a tree with a
+agent's instructions beneath `.github/workflows/` that name a test runner
+are no pytest command (same ruling). So a tree in which no other runner file
+runs tests is judged by the bare `pytest`. The empty-needle search still rejects a tree with a
 submodule, because the startup-context proof needs every Python source, so
 that proof is withheld there, as before. The inventory limit
 is 200,000 paths, each selected source is at most 1 MB, and a selected read batch

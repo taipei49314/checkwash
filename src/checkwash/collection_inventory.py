@@ -336,14 +336,17 @@ def opaque_reached(opaque, head, changes):
     whose pytest command does not parse is a run without path arguments. A
     path argument that is only a variable (`$1`, `{posargs}`) names no path.
     The `[`, `*` and `?` inside a variable expansion are no wildcard:
-    `"${tests[@]}"` and `$*` name no path either, where their bracket and
-    star once reached every directory (ruling of 2026-11-27). The rest of
-    the argument is read as it was, so `sub/$1` still names a path inside
-    `sub`. That reading is for a run's own arguments (`_own_targets`): a word
-    after a control operator (`pytest || exit $?`), and every word of a line
-    that continues, is read as it was. A Markdown file among the runner
-    files is prose and gives no run (`_prose`), so a tree whose only such
-    file it is has the bare `pytest`.
+    `"${tests[@]}"` and `$*` are not one that reaches every directory, as
+    they once were (ruling of 2026-11-27). What such an expansion gives is
+    not read, and it may give nothing: a run with such an argument is
+    judged as the bare run too (`_may_be_bare`), and a path that ends in
+    one, `tests/${suites[@]}`, as `tests`. The rest of an argument is read as it
+    was, so `sub/$1` still names a path inside `sub`. That reading is for a
+    run's own arguments (`_own_targets`): a word after an operator
+    (`pytest || exit $?`), and every word of a line that continues, is read
+    as it was. A Markdown file among the runner files is prose and gives no
+    run (`_prose`), so a tree in which no other runner file runs tests has
+    the bare `pytest`.
     """
     if not opaque:
         return None
@@ -378,7 +381,8 @@ def opaque_reached(opaque, head, changes):
                 continue
             runs = True
             found = _runner_invocations_with_own_targets(path, contents[path])
-            targetless = targetless or not found or any(not item.targets for item, _own in found)
+            targetless = (targetless or not found or any(not item.targets for item, _own in found)
+                          or any(_may_be_bare(own) for _item, own in found))
             if any(item.config_path for item, _own in found):
                 return opaque[0]
             # Each target with whether it is the run's own argument.
@@ -402,8 +406,59 @@ def opaque_reached(opaque, head, changes):
 # a literal name.
 _WILDCARD = re.compile(r"[*?]|\[(?:!\]|\]|[^\]])[^\]]*\]")
 # A variable expansion in a shell word: `${...}`, `$name`, a positional
-# parameter or a special one (`$@`, `$*`, `$#`, `$?`, `$!`, `$$`, `$-`).
-_EXPANSION = re.compile(r"\$(?:\{[^}]*\}|[A-Za-z_][A-Za-z0-9_]*|[0-9@*#?!$-])")
+# parameter or a special one (`$@`, `$*`, `$#`, `$?`, `$!`, `$$`, `$-`), and
+# a GitHub expression written as one word (`"${{ matrix.suite }}"`). The
+# braces may hold one more pair (`${suites[${i}]}`) and at most 256 pieces,
+# so a word of many unclosed `${` costs no more than its length; a longer or
+# deeper one is text, wildcard characters and all.
+_EXPANSION = re.compile(
+    r"\$(?:\{\{[^}]{0,256}\}\}|\{((?:[^{}]|\{[^{}]{0,64}\}){0,256})\}|[A-Za-z_][A-Za-z0-9_]*|[0-9@*#?!$-])")
+# What `${name:-word}` holds between its braces, and its kin with `-`, `=` or
+# `+`, with or without the colon: the word is the script's own text, and may
+# be what the expansion gives.
+_DEFAULT_WORD = re.compile(r"(?:[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?|[0-9]+|[@*#?!$-]):?[-=+](.*)", re.DOTALL)
+
+
+def _expanded(part):
+    """A part of a run's own argument as it is looked at for a wildcard.
+
+    Each variable expansion stands as one letter: its own `[`, `*` and `?`
+    are no wildcard, and a bracket set written around it (`[$x]`) still is
+    one. An expansion with a default or an alternative word stands as that
+    word too, so the star of `${SUITE:-*}` is the script's own.
+    """
+    def stand_in(match):
+        inner = match.group(1)
+        word = _DEFAULT_WORD.fullmatch(inner) if inner is not None else None
+        return "x" + (word.group(1) if word else "")
+
+    return _EXPANSION.sub(stand_in, part)
+
+
+def _may_be_nothing(part):
+    """Is this part of a run's own argument only expansions, one of them read as a wildcard before the ruling?
+
+    What a variable expands to is not read, and it may be nothing at all:
+    with an empty array `pytest "${extra[@]}"` is a bare `pytest`, and
+    `tests/${suites[@]}` is `tests/`. Before the ruling such a part reached
+    every directory on either side of the path before it. Now it is read as
+    possibly nothing, and the argument as the path before it. A part that
+    was no wildcard then (`$1`, `"$@"`) is read as it was.
+    """
+    return not _EXPANSION.sub("", part) and bool(_WILDCARD.search(part))
+
+
+def _may_be_bare(own):
+    """Is one of a run's own path arguments only expansions that were read as a wildcard before the ruling?
+
+    Such an argument may be nothing (`_may_be_nothing`), and the run is then
+    the one its other arguments make. Those are not all path arguments: the
+    reader takes an unknown option's value for one (`--assert plain`), and a
+    run with no real path argument is a bare `pytest`. So the run is judged
+    as the bare one too. Before the ruling such an argument reached every
+    directory, so the bare run is judged only where that reading was.
+    """
+    return any("/" not in target.rstrip("/") and _may_be_nothing(target.rstrip("/")) for target in own)
 
 
 def _reaches(root, directory, skipped, *, argument=False):
@@ -416,18 +471,27 @@ def _reaches(root, directory, skipped, *, argument=False):
 
     In a run's own path argument (`argument`), the `[`, `*` and `?` inside a
     variable expansion (`${tests[@]}`, `$*`, `${1:?}`) are no wildcard
-    (ruling of 2026-11-27): the part is looked at for one without its
-    expansions. So `"${tests[@]}"` names no directory, while `sub/$1` names
-    a path inside `sub` and `te*$x` holds a wildcard, as before the ruling.
+    (ruling of 2026-11-27): the part is looked at for one with each
+    expansion standing as a letter (`_expanded`). A part that is only such
+    expansions may be nothing (`_may_be_nothing`), and the argument is then
+    the path before it: `tests/${suites[@]}` is read as `tests`, and
+    `"${tests[@]}"` names no directory, its run being judged as the bare
+    one too (`_may_be_bare`). `sub/$1` names a path inside `sub`
+    and `te*$x` holds a wildcard, as before the ruling.
     """
     root = "" if root in (".", "") else root.rstrip("/")
     parts = root.split("/") if root else []
     literal = []
     for part in parts:
-        if _WILDCARD.search(_EXPANSION.sub("", part) if argument else part):
+        if _WILDCARD.search(_expanded(part) if argument else part):
             prefix = "/".join(literal)
             return (not prefix or directory == prefix or directory.startswith(prefix + "/")
                     or prefix.startswith(directory + "/"))
+        if argument and _may_be_nothing(part):
+            if not literal:
+                return False
+            root = "/".join(literal)
+            break
         literal.append(part)
     if root == directory or root.startswith(directory + "/"):
         return True
