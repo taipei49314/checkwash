@@ -806,9 +806,10 @@ def _link_walk(path, data, entries, trees, submodules=(), folded=None):
       `../<the checkout's own name>/x`); or the walk meets another link or a
       submodule; or it misses a name that the tree holds in another case or
       Unicode form (`folded`, the tree's paths as `_folded` gives them),
-      where a checkout that folds them would follow the link.
+      where a checkout that folds them would follow the link; or it needs to
+      traverse a directory absent from the tree, or names Git metadata.
     - `("nothing", None)`: any other text, which leads to nothing the tree
-      holds: a name on the way or at its end is missing inside the tree, or
+      holds: the final name is missing from a known directory, or
       the walk passes through a regular file. A build may create a missing
       name later, as it may a path a config names; neither is seen.
     """
@@ -821,19 +822,24 @@ def _link_walk(path, data, entries, trees, submodules=(), folded=None):
     if not text or ":" in text or any(c in text for c in "\\\r\n\0") or text.startswith("/"):
         return ("unknown", None)
 
-    def beyond(name):
-        """What a name that is no directory of the tree is: a link or a submodule is not known."""
+    def beyond(name, *, intermediate=False):
+        """Classify a path the committed tree does not list as a directory."""
         entry = entries.get(name)
         if (entry is not None and entry[0] == b"120000") or name in submodules or opaque_owner(name, submodules):
             return ("unknown", None)
-        if entry is None and folded is not None and _folded(name) in folded:
-            return ("unknown", None)
+        if entry is None:
+            # A checkout can supply a directory that the commit does not list.
+            # Its remaining components cannot be resolved from the snapshot.
+            if intermediate or name.rsplit("/", 1)[-1].casefold() == ".git":
+                return ("unknown", None)
+            if folded is not None and _folded(name) in folded:
+                return ("unknown", None)
         return ("nothing", None)
 
     parts = path.split("/")[:-1]
     for part in text.split("/"):
         if parts and "/".join(parts) not in trees:
-            return beyond("/".join(parts))
+            return beyond("/".join(parts), intermediate=True)
         if part in ("", "."):
             continue
         if part == "..":

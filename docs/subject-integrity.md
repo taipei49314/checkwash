@@ -306,7 +306,7 @@ tree lists a directory symlink to every reader (below): it holds no bytes,
 the files it leads to are listed under their own paths, and a read inside
 it, an import that can resolve inside it or a pytest collection that can
 reach it fails with an `EngineError` naming it. A link that leads to nothing
-the tree holds (a name that is missing inside the tree, a path through a
+the tree holds (a missing final name under a known directory, a path through a
 regular file), at both ends of the range, stays a path: a run on which the
 pass asks for it ends with the refusal it had, and it is no obstacle when
 the pass does not. A build may create a missing name later, as it may a path
@@ -351,8 +351,10 @@ A link to a link, a link into a submodule, a link whose text is over 4,096
 bytes or is not text the walk reads, a link whose text is absolute or leaves
 the tree (a checkout may follow it back in, by a path the tree does not
 show), and a link whose text misses a name the tree holds in another case or
-Unicode form (a checkout that folds them would follow it), are not known to
-be harmless, and keep the view from being used.
+Unicode form (a checkout that folds them would follow it), keep the view from
+being used. The same applies to a link that names `.git` or needs to traverse
+a directory absent from the commit. A checkout can supply that directory,
+so the snapshot cannot resolve the rest of the path, even a following `..`.
 
 Second, no reader asked either tree for a link or for a path beneath one,
 from the moment the two trees are made. The snapshot notes each such ask
@@ -395,49 +397,12 @@ pattern stops. The runs are the runner files' pytest commands, or a bare
 `pytest` when there are none. A setting read two ways counts both ways; an
 undecodable config or a run's own `-c` config reaches every submodule; a
 runner file whose pytest command does not parse is a run without path
-arguments; and a path argument that is only a variable (`$1`, `{posargs}`)
-names no path. In a run's own arguments, the `[`, `*` and `?` inside a
-variable expansion (`${...}`, `$name`, a positional or a special parameter,
-a `${{ ... }}` written as one word) are no wildcard: a Bash array
-(`"${tests[@]}"`) and `$*` no longer reach every directory, as their bracket
-and star once did (ruled 2026-11-27). What such an expansion gives is not
-read, and it may give nothing. A path that ends in a part of only such
-expansions is read as the path before it, so `tests/${suites[@]}` is a run
-from `tests`. A run with an argument that is only such expansions is judged
-as the bare `pytest` too: its other arguments may be none, because the
-reader takes an unknown option's value for a path. `$1` and `"$@"`, which
-were never read as a wildcard, are read as they were. The rest of an
-argument is read as it was too: `sub/$1` names a path inside `sub` and
-reaches it, `te*$x` and `[$x]` hold a wildcard, and so does the script's own
-default word in `${SUITE:-*}`. A run's own arguments are the words before
-the first one that holds a shell operator character (`|`, `&`, `;`, `<`,
-`>`, a parenthesis or a backtick), where that word starts with the operator,
-on a line whose words are known to be the command's. They are not where an
-operator stands against another word anywhere after `pytest`
-(`tests/shared;`, `tests/shared)`, a backtick substitution), which the
-reader takes for one word; nor on a line that holds a backslash,
-a `#` inside a word or a `$'...'` quote, which the reader splits unlike a
-shell; nor on a line that is not known to end its command, which a line that
-ends in a backtick or a caret is not, nor any line of a Python file. A YAML
-file is followed line by line, telling its structure from the lines that lie
-in a scalar, and only two kinds of line are known to end their command: a
-line of a literal block scalar (`run: |`), and a line of the structure on
-which a key's value or a sequence entry starts when no deeper line follows
-it. A line that lies in a folded scalar (`run: >-`), or in a quoted one that
-is still open, is not, whatever it looks like, nor is a line that holds a
-flow collection (`- {name: tests, run: ...}`). From the first line the
-reader cannot place on (a flow collection it cannot see the end of on its
-line, a node on a document mark's line, a tab before a key, a character
-that ends a line for YAML alone), no line is. Every other word the reader takes for a path is read as
-it was: the `?` of `pytest || exit $?` or `pytest -q||exit $?`, and the
-bracket of `pytest "${extra[@]}"; echo done`, are still wildcards that reach
-every directory. A run with such an expansion is otherwise read as the same
-run without it, with what the reader reads of no run: a `cd` before it, a
-brace list, an option that moves the collection (`-o testpaths=`,
-`--rootdir`), an argument file, a variable that holds a path. A Markdown file is prose, and this rule reads
-no run from one, wherever it is kept: a README beneath `scripts/` or an
-agent's instructions beneath `.github/workflows/` that name a test runner
-are no pytest command (same ruling). So a tree in which no other runner file
+arguments. The rule reads each path argument as written. A wildcard reaches
+from its literal directory prefix. The brackets in a Bash array argument
+(`"${tests[@]}"`) and the star in `$*` can therefore reach every opaque
+directory, even one outside `testpaths` or beneath a hidden directory.
+A Markdown file contributes no pytest command, including one kept beneath
+`scripts/` or `.github/workflows/`. So a tree in which no other runner file
 runs tests is judged by the bare `pytest`. The empty-needle search still rejects a tree with a
 submodule, because the startup-context proof needs every Python source, so
 that proof is withheld there, as before. The inventory limit
