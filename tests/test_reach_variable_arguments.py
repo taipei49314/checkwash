@@ -1,63 +1,9 @@
-"""The collection-reach rule: the part of a path argument that expands a variable is no wildcard.
+"""Conservative collection reach for pytest arguments containing variables.
 
-`opaque_reached` (#335) decides whether a pytest run could collect from an
-opaque directory: a submodule, a working-tree directory symlink (#414) or,
-inside the runtime-provider pass, a committed link to a directory (#551). Its
-text has always said that a path argument that expands a variable (`$1`,
-`{posargs}`) names no path, and `test_what_a_runner_command_reaches` pins
-`$(ARGS)` and `{posargs:tests}`. Nothing made that a rule: `$1` named no path
-only because no directory's name starts with it. A Bash array, `pytest
-"${tests[@]}"`, holds `[@]`, which the wildcard reader took for a bracket set,
-and `$*` holds a star. A wildcard is read from its literal prefix, theirs is
-empty, and an empty prefix reaches every directory, whatever norecursedirs
-says. So one such line in a workflow ended every run that reached the rule
-with exit 2.
-
-Found on 2026-11-27 on pydantic/pydantic-ai, whose `.github/workflows/ci.yml`
-runs `pytest "${tests[@]}"`: with #551's question 2 fixed, 68 of 69 sampled
-commits ended in `cannot follow directory symlink .claude/skills/<name>:
-pytest's collection can reach it`, for a hidden directory no run names. The
-0.13.2 CLI answers the same for a submodule.
-
-Ruling (owner, 2026-11-27, 「好，兩個都修」, to the agent's question whether to
-fix this reading and the Markdown one, each on its own): `${tests[@]}` and
-`$*` read as `$1` and `"$@"` did. A wildcard with no variable in it reaches as
-before.
-
-The first commit under the ruling dropped every path argument that holds `$`.
-That also dropped what 0.13.2 read rightly: `pytest sub/$1` collects inside
-`sub`, and the rule had answered so. Three reviews found it, and then more
-runs that each new reading let through where the real run collects from the
-directory. The reading is now this:
-- only the `[`, `*` and `?` inside a variable expansion (`${...}`, `$name`,
-  `$1`, `$@`, `$*`, `$?`, a quoted `${{ ... }}`) are no wildcard. The rest
-  of the argument is read as it always was: the directories before the
-  variable, a wildcard beside it (`te*$x`), a bracket set around it
-  (`[$x]`), and the script's own default word (`${SUITE:-*}`);
-- what such an expansion gives is not read, and it may give nothing. A
-  path that ends in a part of only such expansions is read as the path
-  before it (`tests/${suites[@]}` as `tests`), and a run with an argument
-  of only such expansions is judged as the bare `pytest` too: its other
-  arguments may be none at all, since the reader takes an unknown option's
-  value for a path. So the array and `$*` no longer reach every directory,
-  a hidden one included, and still reach what a bare run does. `$1` and
-  `"$@"`, which were never read as a wildcard, are read as they were;
-- only in a run's own arguments. `pytest || exit $?` is a bare `pytest`
-  followed by another command, and the rule's reader takes `exit` and `$?`
-  for path arguments, so the run is not judged as the bare run it is. On
-  0.13.2 the `?` is a wildcard that reaches every directory, and the check
-  ends with exit 2; read as text, it gave a verdict where the bare run
-  collects from the directory. A word from the first one that holds an
-  operator character on (`pytest -q || exit $?`) is therefore read as on
-  0.13.2. So is every word of a line whose words are not known to be the
-  command's: one where an operator stands against another word
-  (`pytest "${a[@]}" vendor/lib; echo`, which the reader takes for a path
-  no directory has), one with a backslash, a `#` inside a word or a
-  `$'...'` quote, which the reader splits unlike a shell, and one that is
-  not known to end its command: a line with a backtick or a caret at its
-  end, a line of a Python file, and in a YAML file every line but those
-  of a literal block scalar (`run: |`) and a key's or an entry's own line
-  that no deeper line follows.
+The reach check uses the wildcard characters visible in a path argument.
+It does not evaluate expansions or infer where an opaque directory's tests
+would actually run. These cases pin the 0.13.2 reading of runner text,
+including the literal prefix that bounds a wildcard.
 """
 import json
 import os
@@ -84,27 +30,24 @@ SOURCES = {
 NEW_PROVIDER = {"tests/src/billing.py": b"def invoice_total():\n    return 2\n"}
 
 
-@pytest.mark.parametrize("runner", [
-    {".github/workflows/ci.yml": ARRAY_WORKFLOW},
-    {"Makefile": b"test:\n\tpytest \"${tests[@]}\"\n"},
-    {"scripts/test.sh": b"#!/bin/bash\npytest \"${tests[*]}\"\n"},
-    {"scripts/test.sh": b"#!/bin/bash\npytest \"${tests[0]}\"\n"},
-    {"scripts/test.sh": b"#!/bin/sh\npytest $*\n"},
-    {"scripts/test.sh": b"#!/bin/sh\npytest ${1:?}\n"},
-    {"scripts/test.sh": b"#!/bin/bash\npytest \"tests/${suites[@]}\"\n"},
-    {"scripts/test.sh": b"#!/bin/sh\npytest \"$@\"\n"},
-    {"scripts/test.sh": b"#!/bin/sh\npytest $1\n"},
-    {"scripts/test.sh": b"#!/bin/bash\npytest ${suites[${i}]}\n"},
+@pytest.mark.parametrize("runner, reached", [
+    ({".github/workflows/ci.yml": ARRAY_WORKFLOW}, True),
+    ({"Makefile": b"test:\n\tpytest \"${tests[@]}\"\n"}, True),
+    ({"scripts/test.sh": b"#!/bin/bash\npytest \"${tests[*]}\"\n"}, True),
+    ({"scripts/test.sh": b"#!/bin/bash\npytest \"${tests[0]}\"\n"}, True),
+    ({"scripts/test.sh": b"#!/bin/sh\npytest $*\n"}, True),
+    ({"scripts/test.sh": b"#!/bin/sh\npytest ${1:?}\n"}, True),
+    ({"scripts/test.sh": b"#!/bin/bash\npytest \"tests/${suites[@]}\"\n"}, False),
+    ({"scripts/test.sh": b"#!/bin/sh\npytest \"$@\"\n"}, False),
+    ({"scripts/test.sh": b"#!/bin/sh\npytest $1\n"}, False),
+    ({"scripts/test.sh": b"#!/bin/bash\npytest ${suites[${i}]}\n"}, True),
 ], ids=["array_in_a_workflow", "array_in_a_makefile", "array_star", "array_element", "dollar_star",
         "required_parameter", "array_under_a_directory", "dollar_at_as_before", "dollar_one_as_before",
         "an_index_written_with_braces"])
 @pytest.mark.parametrize("directory", [HIDDEN, PLAIN])
-def test_a_path_argument_that_holds_a_variable_names_no_path(runner, directory):
-    # Before the ruling the first six rows reached both directories, through
-    # a wildcard whose prefix is empty; the last three reached neither. No
-    # row names either directory, and the bare run that the first six may be
-    # (below) starts from the testpaths, which hold neither.
-    assert opaque_reached((directory,), {**SETUP, **runner}, []) is None
+def test_a_variable_argument_reaches_from_its_literal_prefix(runner, reached, directory):
+    expected = directory if reached else None
+    assert opaque_reached((directory,), {**SETUP, **runner}, []) == expected
 
 
 @pytest.mark.parametrize("runner", [
@@ -124,28 +67,16 @@ def test_a_path_argument_that_holds_a_variable_names_no_path(runner, directory):
         "required_parameter", "an_index_written_with_braces", "a_quoted_workflow_expression",
         "beside_a_path_the_run_names", "beside_an_option_value_read_as_a_path", "as_an_option_value_read_as_a_path",
         "beside_a_plain_variable"])
-def test_a_run_whose_arguments_may_all_be_nothing_is_judged_as_the_bare_run(runner):
-    # What a variable expands to is not read, and it may be nothing: with an
-    # empty array, or one that holds options alone, the run is a bare
-    # `pytest`. That run starts from the testpaths and recurses into
-    # `tests/vendor`. With no testpaths it starts from the root, recurses
-    # into `vendor/lib` and stops at a hidden directory. 0.13.2 reached all
-    # of these and the hidden one too; the first form of this change reached
-    # none, and gave a verdict where the run collects from the directory.
-    # In the last four rows the expansion stands beside another argument,
-    # or is an option's value. The reader takes an unknown option's value
-    # for a path (`--assert plain`), so a run can be bare whatever else the
-    # reader finds on its line, and it is judged as the bare run too.
+def test_a_root_wildcard_in_an_argument_can_reach_hidden_directories(runner):
+    # An empty literal prefix covers every opaque directory, including ones
+    # excluded from the configured testpaths or from default recursion.
     assert opaque_reached(("tests/vendor",), {**SETUP, **runner}, []) == "tests/vendor"
     assert opaque_reached((PLAIN,), {**NO_TESTPATHS, **runner}, []) == PLAIN
-    assert opaque_reached((HIDDEN,), {**NO_TESTPATHS, **runner}, []) is None
+    assert opaque_reached((HIDDEN,), {**NO_TESTPATHS, **runner}, []) == HIDDEN
 
 
 def test_an_expansion_that_holds_a_slash_is_read_as_it_was():
-    # `${dir%/*}` is split at its slash before any expansion is looked for,
-    # on 0.13.2 and here: the star stands in a part of its own, behind a
-    # prefix no directory has, and reaches nothing. The run is not judged as
-    # bare either, as it was not.
+    # The literal segment before the slash does not name either directory.
     runner = {"scripts/test.sh": b"#!/bin/bash\npytest \"${dir%/*}\"\n"}
     assert opaque_reached((PLAIN,), {**NO_TESTPATHS, **runner}, []) is None
     assert opaque_reached(("tests/vendor",), {**SETUP, **runner}, []) is None
@@ -156,21 +87,14 @@ def test_an_expansion_that_holds_a_slash_is_read_as_it_was():
     {"scripts/test.sh": b"#!/bin/sh\npytest $1\n"},
 ], ids=["dollar_at", "dollar_one"])
 def test_a_variable_that_was_never_read_as_a_wildcard_is_read_as_it_was(runner):
-    # `"$@"` and `$1` may be nothing too. A run of one of them alone was
-    # never judged as bare, on 0.13.2 or here: only what was read as a
-    # wildcard is read anew.
+    # These arguments contain no wildcard or literal directory name.
     assert opaque_reached(("tests/vendor",), {**SETUP, **runner}, []) is None
     assert opaque_reached((PLAIN,), {**NO_TESTPATHS, **runner}, []) is None
 
 
-def test_an_array_after_a_directory_may_leave_the_directory_alone():
-    # `"tests/${suites[@]}"` with an empty array is `tests/`: the run then
-    # collects from `tests` and recurses beneath it as any run from there
-    # does, stopping at a hidden directory. 0.13.2 read a wildcard beneath
-    # `tests`, which reached the hidden one too; the first form of this
-    # change reached only `tests` itself.
+def test_an_array_after_a_literal_directory_reaches_its_hidden_descendants():
     runner = {"scripts/test.sh": b"#!/bin/bash\npytest \"tests/${suites[@]}\"\n"}
-    for directory, reached in (("tests", "tests"), ("tests/vendor", "tests/vendor"), ("tests/.cache/lib", None),
+    for directory, reached in (("tests", "tests"), ("tests/vendor", "tests/vendor"), ("tests/.cache/lib", "tests/.cache/lib"),
                                (PLAIN, None)):
         assert opaque_reached((directory,), {**SETUP, **runner}, []) == reached
 
@@ -182,10 +106,8 @@ def test_an_array_after_a_directory_may_leave_the_directory_alone():
     {".github/workflows/ci.yml": b"jobs:\n  t:\n    steps:\n      - run: pytest \"${{ matrix.tests[0] }}\"\n"},
 ], ids=["a_special_parameter", "an_array_slice", "a_trimmed_variable", "a_quoted_workflow_expression"])
 @pytest.mark.parametrize("directory", [HIDDEN, PLAIN])
-def test_a_wildcard_character_inside_an_expansion_is_no_wildcard(runner, directory):
-    # Each of these reached both directories before the ruling. The pattern
-    # of `${name%%.*}` is what the shell removes, not what it yields.
-    assert opaque_reached((directory,), {**SETUP, **runner}, []) is None
+def test_a_wildcard_character_inside_an_expansion_reaches_from_its_prefix(runner, directory):
+    assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
 @pytest.mark.parametrize("runner, directory", [
@@ -205,12 +127,7 @@ def test_a_wildcard_character_inside_an_expansion_is_no_wildcard(runner, directo
         "a_bracket_set_around_a_variable", "a_default_that_is_a_wildcard", "a_default_wildcard_under_a_directory",
         "an_alternative_that_is_a_wildcard", "an_assigned_default_that_holds_a_wildcard"])
 def test_a_wildcard_outside_the_expansion_is_still_one(runner, directory):
-    # The wildcard is the shell's own, whatever the variable holds, and is
-    # read from its literal prefix as on 0.13.2. PowerShell's `$args[0]` is
-    # read as a bracket set after the variable, as it was: it fails closed.
-    # A bracket set around a variable is a set whatever the variable holds.
-    # The word of `${TESTS:-*}` is the script's own text, and the shell
-    # expands its star when `TESTS` is unset.
+    # Wildcards beside a variable and inside its default are read from the literal prefix.
     assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
@@ -272,28 +189,8 @@ def test_a_wildcard_outside_the_expansion_is_still_one(runner, directory):
         "a_second_run_with_a_glued_path", "a_path_glued_after_a_redirection", "a_path_behind_a_backtick_substitution",
         "a_backtick_substitution_then_an_option", "a_backslash_inside_the_line"])
 @pytest.mark.parametrize("directory", [HIDDEN, PLAIN])
-def test_a_word_that_is_no_argument_of_the_run_is_read_as_it_was(line, directory):
-    # After a control operator a word belongs to another command, and on a
-    # line that ends in a backslash the run's arguments go on where the
-    # reader does not follow. The reader takes such words for path arguments
-    # all the same (`_pytest_cli`), so the run before them is never judged as
-    # bare, and the wildcard 0.13.2 reads in them is what ends the check: the
-    # first row is a bare `pytest`, which collects from `vendor/lib`. Every
-    # row reaches both directories, as on 0.13.2. An operator ends the run's
-    # arguments wherever it stands in a word: `pytest -q||exit $?` is the
-    # same two commands as `pytest -q || exit $?`. A word with a `;` at its
-    # end is such a word: the array before `; echo done` is read as it was,
-    # where the run with an empty array is a bare one.
-    # The last twenty-one rows name `vendor/lib` beside the array, in a
-    # word the reader does not read as that path: an operator stands against
-    # it (`vendor/lib;`, `vendor/lib)`, `3;echo`, `$(echo`, a `$(` that
-    # closes on the next line, a backtick substitution), also behind a word
-    # that starts with an operator (a redirection, a quoted `(a or b)`, a
-    # second run on the line), or the line holds text the reader splits
-    # unlike a shell: a `#` inside a word, where it ends the line, a
-    # `$'...'` or a `$"..."` quote, a backslash. Read as the run's own,
-    # the array left each with a verdict where the run collects from the
-    # directory, so no word of such a line is the run's own.
+def test_a_wildcard_in_runner_text_keeps_its_reach_across_shell_operators(line, directory):
+    # The reader uses the visible arguments even when shell syntax spans more than one command.
     runner = {"scripts/test.sh": b"#!/bin/bash\n" + line + b"\n"}
     assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
@@ -307,18 +204,10 @@ def test_a_word_that_is_no_argument_of_the_run_is_read_as_it_was(line, directory
     b"pytest $T",
 ], ids=["a_change_of_directory", "a_brace_list", "testpaths_given_as_an_option", "a_root_directory", "an_argument_file",
         "a_variable_that_holds_the_path"])
-def test_a_run_with_an_array_is_read_as_the_same_run_without_it(command):
-    # The price of the ruling, as `test_what_an_array_holds_is_not_read` is.
-    # Each run collects from `vendor/lib` in a way the reader reads of no
-    # run: it follows no `cd`, expands no brace list, reads no `-o`
-    # setting, `--rootdir` or argument file, and does not know what a
-    # variable holds. Without an array each gets a verdict, on 0.13.2 too.
-    # With one, 0.13.2 ended the check through the bracket alone; the
-    # array is now possibly nothing, and the run is read as the same run
-    # without it.
-    for line in (command, command + b" \"${extra[@]}\""):
-        runner = {"scripts/test.sh": b"#!/bin/bash\nT=vendor/lib\n" + line + b"\n"}
-        assert opaque_reached((PLAIN,), {**SETUP, **runner}, []) is None
+def test_an_array_argument_adds_a_wildcard_to_a_run(command):
+    for suffix, expected in ((b"", None), (b' "${extra[@]}"', PLAIN)):
+        runner = {"scripts/test.sh": b"#!/bin/bash\nT=vendor/lib\n" + command + suffix + b"\n"}
+        assert opaque_reached((PLAIN,), {**SETUP, **runner}, []) == expected
 
 
 @pytest.mark.parametrize("line", [
@@ -330,15 +219,10 @@ def test_a_run_with_an_array_is_read_as_the_same_run_without_it(command):
     b"pytest \"${tests[@]}\" # the suites",
 ], ids=["a_pipe", "a_numbered_redirection", "a_redirection_against_its_file", "an_and", "a_semicolon_that_starts_a_word",
         "a_comment_after_a_blank"])
-def test_an_operator_that_starts_its_word_ends_the_run_s_arguments_and_leaves_them_the_run_s_own(line):
-    # The other side of the rows above. Here the operator is a word of its
-    # own or starts one, and a `#` follows a blank, so the words before it
-    # are the run's arguments for a shell and for the reader alike: the
-    # array is read as the ruling has it, and with the testpaths the bare
-    # run it may be reaches neither directory.
+def test_an_array_before_an_operator_or_comment_keeps_its_reach(line):
     runner = {"scripts/test.sh": b"#!/bin/bash\n" + line + b"\n"}
     for directory in (HIDDEN, PLAIN):
-        assert opaque_reached((directory,), {**SETUP, **runner}, []) is None
+        assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
 STEPS = b"jobs:\n  test:\n    steps:\n"
@@ -480,34 +364,7 @@ STEPS = b"jobs:\n  test:\n    steps:\n"
         "a_step_after_a_flow_sequence_that_holds_a_question_mark"])
 @pytest.mark.parametrize("directory", [HIDDEN, PLAIN])
 def test_a_line_that_goes_on_without_a_backslash_is_read_as_it_was(runner, directory):
-    # Each run names `vendor/lib` in the line after its array, where the
-    # reader does not follow, and YAML, PowerShell or cmd joins the two
-    # lines. Read as the run's own, the array left the run with a verdict.
-    # No word of such a line is the run's own: the bracket reaches both
-    # directories, as on 0.13.2. YAML joins lines in more ways than one
-    # line shows, so the file is followed line by line, and a line is taken
-    # for complete only where that is certain. A line that lies in a folded
-    # or a quoted scalar is not, whatever it looks like: a key
-    # (`PYTHONPATH=src: pytest ...`), an entry, the header of a literal
-    # scalar. Two rows, the last line of a folded scalar and one before a
-    # blank line, are complete in fact and are not known to be.
-    # From the quoted line after another quoted line on, the rows are what
-    # the confirmation review found, and what its changed copies of the
-    # reader passed unseen. A quoted scalar is followed to the quote that
-    # closes it: over several lines, past an escaped or a doubled quote and
-    # past the other quote character, and where a tag or an anchor stands
-    # before it, on its key's line or the line before. A line that holds a
-    # flow collection is never complete, since a bracket or a comma stands
-    # against the command's last word (`vendor/lib}`), and one the reader
-    # cannot see the end of on its line ends the reading: no later line is
-    # complete. A `#` inside one is such a case, since a parser starts a
-    # comment at one that stands against a comma. So does text it cannot
-    # place, a node on a document mark's line, a tab before a key, and a
-    # character that ends a line for YAML alone (a carriage return ends one
-    # for the reader too, and always did). A no-break space is text:
-    # a line that starts with it is no comment, and a line or a value of
-    # one is not blank. The last eight rows are complete in fact and are
-    # not known to be.
+    # These multiline runner forms keep the conservative reach of their array argument.
     assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
@@ -537,16 +394,9 @@ def test_a_line_that_goes_on_without_a_backslash_is_read_as_it_was(runner, direc
         "a_key_after_a_flow_mapping_closed_on_its_line", "a_step_after_a_flow_sequence_closed_on_its_line",
         "a_key_under_an_entry_s_anchor", "a_key_on_the_line_after_its_dash", "a_key_line_with_a_pipe",
         "a_key_after_a_quoted_value"])
-def test_a_complete_line_of_a_yaml_file_holds_the_run_s_own_arguments(workflow):
-    # The other side of the rows above: these lines end their command, and
-    # the array is read as the ruling has it. With the testpaths the bare
-    # run it may be reaches neither directory. A line of a literal block
-    # scalar is one line of the script, and a key's or an entry's own line
-    # is complete when no deeper line follows it. A flow collection that
-    # closes on its line, with its quoted scalars where a token starts, does
-    # not end the reading, nor does an anchor or a dash on a line of its own.
+def test_an_array_on_a_complete_yaml_line_keeps_its_reach(workflow):
     for directory in (HIDDEN, PLAIN):
-        assert opaque_reached((directory,), {**SETUP, ".github/workflows/ci.yml": workflow}, []) is None
+        assert opaque_reached((directory,), {**SETUP, ".github/workflows/ci.yml": workflow}, []) == directory
 
 
 @pytest.mark.parametrize("runner", [
@@ -554,52 +404,40 @@ def test_a_complete_line_of_a_yaml_file_holds_the_run_s_own_arguments(workflow):
     {"scripts/run.py": b"import os\nos.system('pytest $*')\n"},
 ], ids=["a_noxfile", "a_python_script"])
 def test_a_python_file_is_read_as_it_was(runner):
-    # A Python file is no shell text, and no line of it is taken for a shell
-    # command's own arguments. Each of these reads as on 0.13.2: reached
-    # from the root with no testpaths, and not with them.
+    # These two scripts are read as targetless runs under the original runner reader.
     assert opaque_reached((PLAIN,), {**NO_TESTPATHS, **runner}, []) == PLAIN
     assert opaque_reached((PLAIN,), {**SETUP, **runner}, []) is None
     assert opaque_reached((HIDDEN,), {**NO_TESTPATHS, **runner}, []) is None
 
 
 def test_a_testpath_is_no_argument_and_is_read_as_it_was():
-    # The ruling is for the arguments of a run. A testpath is a setting, and
-    # pytest expands its wildcard itself.
+    # A wildcard in the configured testpaths also reaches from its literal prefix.
     files = {"setup.cfg": b"[tool:pytest]\ntestpaths = ${suites[@]}\n", "Makefile": b"test:\n\tpytest\n"}
     assert opaque_reached((HIDDEN,), files, []) == HIDDEN
 
 
 def test_the_environment_rule_keeps_its_reading_of_an_array():
-    # `environment_reached` (D-208) is not ruled and not changed: where a run
-    # passes `--collect-in-virtualenv` it reads the array's bracket as the
-    # wildcard it was. The testpaths keep a bare run out of `env`, and a
-    # named path in the array's place does not reach it, so the bracket is
-    # what does.
+    # A literal target limits collection. An array written with brackets reaches the environment.
     files = {**SETUP, "scripts/test.sh": b"#!/bin/bash\npytest --collect-in-virtualenv \"${tests[@]}\"\n"}
     named = {**SETUP, "scripts/test.sh": b"#!/bin/bash\npytest --collect-in-virtualenv tests\n"}
     assert environment_reached(("env",), files, []) == "env"
     assert environment_reached(("env",), named, []) is None
-    assert opaque_reached(("env",), files, []) is None
+    assert opaque_reached(("env",), files, []) == "env"
+    assert opaque_reached(("env",), named, []) is None
 
 
 def test_a_shell_command_quoted_in_a_python_file_is_read_as_it_was():
-    # The reader takes a usage line in a docstring for a command, on 0.13.2
-    # and here. No line of a Python file is a shell command's own, so the
-    # array is the wildcard it was, and reaches both directories.
+    # The original runner reader recognizes this usage line and its array wildcard.
     runner = {"scripts/run.py": b'"""Run the suite.\n\n    pytest "${tests[@]}"\n"""\n'}
     for directory in (HIDDEN, PLAIN):
         assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
 def test_what_an_array_holds_is_not_read():
-    # The price of the ruling. `tests=(vendor/lib)` names the submodule, and
-    # 0.13.2 reached it, through the bracket alone. The array is now what it
-    # is for any content: possibly nothing, so the run is judged as the bare
-    # one, which the testpaths keep out of `vendor/lib`. With no testpaths
-    # the bare run reaches it.
+    # The brackets alone yield a root wildcard regardless of the assignment or testpaths.
     workflow = {".github/workflows/ci.yml": STEPS + b"      - run: |\n          tests=(vendor/lib)\n"
                                                     b"          pytest \"${tests[@]}\"\n"}
-    assert opaque_reached((PLAIN,), {**SETUP, **workflow}, []) is None
+    assert opaque_reached((PLAIN,), {**SETUP, **workflow}, []) == PLAIN
     assert opaque_reached((PLAIN,), {**NO_TESTPATHS, **workflow}, []) == PLAIN
 
 
@@ -608,14 +446,9 @@ def test_what_an_array_holds_is_not_read():
     (b"pytest \"${t[@]}/lib\"", PLAIN),
     (b"pytest \"${t[@]:-.vendor}\"", HIDDEN),
 ], ids=["text_beside_it_in_one_part", "a_path_after_it", "a_default_word_that_is_a_path"])
-def test_what_an_expansion_gives_beside_other_text_is_not_read(line, directory):
-    # More of the same price. 0.13.2 reached each directory through the
-    # bracket: `tests/${a[0]}x` as a wildcard beneath `tests`, the other two
-    # as one that reaches everything. What the expansion gives is not read,
-    # so `tests/sharex`-like names, `vendor/lib` and the default `.vendor`
-    # are not seen.
+def test_text_around_an_array_does_not_hide_its_wildcard(line, directory):
     runner = {"scripts/test.sh": b"#!/bin/bash\n" + line + b"\n"}
-    assert opaque_reached((directory,), {**SETUP, **runner}, []) is None
+    assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
 MATRIX_WORKFLOW = (b"jobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n"
@@ -635,11 +468,7 @@ MATRIX_WORKFLOW = (b"jobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n"
         "a_workflow_expression_inside_it", "a_parameter_inside_the_testpath", "a_parameter_inside_a_hidden_one",
         "a_wildcard_before_the_variable"])
 def test_the_directories_before_a_variable_still_reach(runner, directory):
-    # `sub/$1` is a path inside `sub` for any `$1` that names one below it,
-    # so the run collects there. 0.13.2 answered so, and the rule does again:
-    # only what is inside the expansion is not read for a wildcard. In the
-    # last row the wildcard stands in a part of its own, before the variable,
-    # and is read from its literal prefix as it was.
+    # A literal directory before the variable still bounds the possible collection paths.
     assert opaque_reached((directory,), {**SETUP, **runner}, []) == directory
 
 
@@ -693,17 +522,20 @@ def _check(repo, files, *, gitlink=None, link=None):
     return result.returncode, result.stdout.decode("utf-8"), result.stderr.decode("utf-8")
 
 
-@pytest.mark.parametrize("opaque", [
-    {"gitlink": HIDDEN},
-    {"link": (".claude/skills/add-new-model", b"../../.agents/skills/add-new-model")},
+@pytest.mark.parametrize("opaque, refusal", [
+    ({"gitlink": HIDDEN}, "strict snapshot cannot inspect the submodule .vendor/lib"),
+    ({"link": (".claude/skills/add-new-model", b"../../.agents/skills/add-new-model")},
+     "strict snapshot inventory cannot follow directory symlink .claude/skills/add-new-model"),
 ], ids=["hidden_submodule", "hidden_directory_link"])
-def test_a_workflow_that_passes_pytest_an_array_no_longer_ends_the_run(tmp_path, opaque):
-    # A new provider takes the runtime-provider pass to the reach rule. The
-    # hidden directory is one no run names, and the run gets the verdict the
-    # provider earns. Before the ruling both rows ended with exit 2:
-    # "pytest's collection can reach it".
+def test_a_workflow_that_passes_pytest_an_array_fails_closed(tmp_path, opaque, refusal):
     files = {".github/workflows/ci.yml": ARRAY_WORKFLOW, ".agents/skills/add-new-model/SKILL.md": b"# Add a model\n"}
-    code, stdout, stderr = _check(tmp_path, files, **opaque)
+    code, stdout, stderr = _check(tmp_path / "array", files, **opaque)
+    assert (code, stdout) == (2, "")
+    assert f"checkwash engine error: EngineError: {refusal}: pytest's collection can reach it" in stderr
+
+    # Naming the tests directly bounds their reach and exposes the original provider finding.
+    files[".github/workflows/ci.yml"] = STEPS + b"      - run: pytest tests\n"
+    code, stdout, stderr = _check(tmp_path / "literal", files, **opaque)
     assert "engine error" not in stderr, stderr
     payload = json.loads(stdout)
     assert (code, payload["verdict"]) == (1, "block")
@@ -727,12 +559,7 @@ def test_a_run_that_names_a_path_inside_it_through_a_variable_still_fails_closed
     assert f"checkwash engine error: EngineError: {refusal}" in stderr
 
 
-def test_a_submodule_the_bare_run_recurses_into_fails_closed_for_an_array_that_may_be_empty(tmp_path):
-    # The array run is the tree's only one, the tree has no testpaths, and
-    # `vendor/lib` is not hidden. With an empty array the run is a bare
-    # `pytest`, which recurses from the root into the submodule, so the
-    # check ends as on 0.13.2, naming it. The first form of this change gave
-    # a verdict here.
+def test_an_array_with_no_configured_testpaths_fails_closed_for_a_submodule(tmp_path):
     code, stdout, stderr = _check(tmp_path, {".github/workflows/ci.yml": ARRAY_WORKFLOW,
                                              "setup.cfg": b"[tool:pytest]\naddopts = -ra\n"}, gitlink=PLAIN)
     assert (code, stdout) == (2, "")
